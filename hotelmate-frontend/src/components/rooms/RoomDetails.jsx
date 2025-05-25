@@ -14,7 +14,7 @@ function RoomDetails() {
     const fetchRoomDetails = async () => {
       try {
         const response = await api.get(`/rooms/${roomNumber}/`);
-        console.log("Room details response:", response.data);
+        
         setRoom(response.data);
       } catch (err) {
         setError("Failed to fetch room details");
