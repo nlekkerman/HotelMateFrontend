@@ -104,17 +104,25 @@ function RoomList() {
                         />
                       </div>
                     )}
+                    
                     <div className="button-wraper w-100 d-flex justify-content-center mt-2">
-                      <button
-                        className="btn btn-outline-primary"
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent parent click
-                          navigate(`/rooms/${room.room_number}/add-guest`);
-                        }}
-                      >
-                        Assign Guest
-                      </button>
-                    </div>
+  {!room.is_occupied && (
+    <button
+      className="btn btn-outline-primary"
+      onClick={(e) => {
+        e.stopPropagation(); // Prevent parent click
+        navigate(`/rooms/${room.room_number}/add-guest`);
+      }}
+    >
+      Assign Guest
+    </button>
+  )}
+</div>
+                    {room.is_occupied && (
+                      <div className="text-danger text-center mt-1">
+                        Room is already occupied
+                      </div>
+                    )}
                   </div>
 
                   {/* Optional: add a spacer to push pagination to bottom if needed */}

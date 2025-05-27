@@ -1,0 +1,156 @@
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+
+import api from '@/services/api';
+
+const TIME_SLOTS = [
+  '7:00-8:00',
+  '8:00-8:30',
+  '8:30-9:00',
+  '9:00-9:30',
+  '9:30-10:00',
+  '10:00-10:30',
+];
+
+const Breakfast = ({ isAdmin = false }) => {
+  const { roomNumber } = useParams();
+  const [items, setItems] = useState([]);
+  const [selectedItems, setSelectedItems] = useState({});
+  const [timeSlot, setTimeSlot] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  // Fetch breakfast items
+  useEffect(() => {
+    api.get(`room_services/room/${roomNumber}/breakfast/`)
+      .then((res) => {
+        const formatted = res.data.map(item => ({ ...item, quantity: 1 }));
+        setItems(formatted);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch breakfast items:", err);
+      });
+  }, [roomNumber]);
+
+  // Handle item checkbox toggle
+  const toggleItem = (itemId) => {
+    setSelectedItems(prev => ({
+      ...prev,
+      [itemId]: prev[itemId] ? undefined : 1,
+    }));
+  };
+
+  // Handle quantity change
+  const handleQuantityChange = (itemId, qty) => {
+    setSelectedItems(prev => ({
+      ...prev,
+      [itemId]: qty,
+    }));
+  };
+
+  // Submit order
+  const handleSubmit = async () => {
+    setLoading(true);
+    const selected = Object.entries(selectedItems)
+      .filter(([_, qty]) => qty && qty > 0)
+      .map(([id, qty]) => ({ id: parseInt(id), quantity: qty }));
+
+    try {
+      await api.post('room_services/breakfastorder/', {
+        room_number: roomNumber,
+        delivery_time: timeSlot || null,
+        items: selected,
+      });
+      setSubmitted(true);
+    } catch (err) {
+      console.error("Error submitting breakfast order:", err.response?.data || err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto p-4">
+      <h2 className="text-2xl font-bold mb-4">Breakfast Menu for Room {roomNumber}</h2>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {items.map(item => (
+          <div key={item.id} className="border rounded-xl p-4 shadow-sm">
+            {item.image && (
+              <img src={item.image} alt={item.name} className="w-full h-40 object-cover rounded-md mb-2" />
+            )}
+            <h3 className="text-lg font-semibold">{item.name}</h3>
+            <p className="text-sm text-gray-600">{item.description}</p>
+            <p className="text-sm italic">{item.category}</p>
+
+            <div className="mt-2">
+              <label>
+                <input
+                  type="checkbox"
+                  className="mr-2"
+                  checked={!!selectedItems[item.id]}
+                  onChange={() => toggleItem(item.id)}
+                />
+                Add to order
+              </label>
+
+              {selectedItems[item.id] && (
+                <input
+                  type="number"
+                  min="1"
+                  value={selectedItems[item.id]}
+                  onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value))}
+                  className="ml-3 border rounded px-2 py-1 w-16"
+                />
+              )}
+            </div>
+
+            {isAdmin && (
+              <div className="mt-2">
+                <label>
+                  <input
+                    type="checkbox"
+                    className="mr-2"
+                    checked={item.is_on_stock}
+                    onChange={() => alert("Admin stock toggle logic needed")}
+                  />
+                  In Stock
+                </label>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6">
+        <label className="block mb-2 font-semibold">Select Delivery Time (optional):</label>
+        <select
+          value={timeSlot}
+          onChange={(e) => setTimeSlot(e.target.value)}
+          className="border rounded p-2 w-full max-w-xs"
+        >
+          <option value="">-- Select a Time Slot --</option>
+          {TIME_SLOTS.map(slot => (
+            <option key={slot} value={slot}>{slot}</option>
+          ))}
+        </select>
+      </div>
+
+      <button
+        onClick={handleSubmit}
+        disabled={loading || Object.keys(selectedItems).length === 0}
+        className="mt-6 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:bg-gray-300"
+      >
+        {loading ? "Submitting..." : "Submit Breakfast Order"}
+      </button>
+
+      {submitted && (
+        <div className="mt-4 text-green-600 font-semibold">
+          Order submitted successfully!
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Breakfast;
