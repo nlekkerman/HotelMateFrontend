@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import api from '@/services/api';
+import { useState } from "react";
+import axios from "axios"; // Import raw axios
+import api from "@/services/api"; // Your custom axios with interceptors
 
 function useAxiosPost(endpoint) {
   const [data, setData] = useState(null);
@@ -11,9 +12,15 @@ function useAxiosPost(endpoint) {
     setError(null);
 
     try {
-      const response = await api.post(endpoint, postData);
+      const client = endpoint === "staff/login/" ? axios : api;
+      const baseURL = import.meta.env.VITE_API_URL;
+      const response = await client.post(baseURL + endpoint, postData, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
       setData(response.data);
-      return response.data;  // return for immediate use if needed
+      return response.data;
     } catch (err) {
       setError(err.response?.data || err.message);
       throw err;
