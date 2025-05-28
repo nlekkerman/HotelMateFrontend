@@ -1,37 +1,30 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
-import api from '@/services/api'; // adjust path if needed
+// src/context/AuthContext.jsx
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '@/services/api';
 
-// Create context object
 const AuthContext = createContext(null);
 
-// Provider component that wraps your app and provides auth state
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const stored = localStorage.getItem('user');
+    return stored ? JSON.parse(stored) : null;
+  });
 
-  // Load user from localStorage on mount and set axios auth header if token exists
-  useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem('user'));
-    if (storedUser && storedUser.token) {
-      setUser(storedUser);
-      api.defaults.headers.common['Authorization'] = `Token ${storedUser.token}`;
-    }
-  }, []);
-
-  // Login method updates user state, localStorage, and axios header
-  const login = (userData) => {
+  const login = async (credentials) => {
+    const response = await api.post('/staff/login/', credentials);
+    const userData = response.data;
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
-    if (userData.token) {
-      api.defaults.headers.common['Authorization'] = `Token ${userData.token}`;
-    }
   };
 
-  // Logout method clears user, localStorage and removes axios header
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
-    delete api.defaults.headers.common['Authorization'];
   };
+
+  useEffect(() => {
+    // Add token refresh logic or fetch profile if needed
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
@@ -40,7 +33,7 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Custom hook for easy usage inside components
+// ✅ Exported once, outside of any component, and never changes
 export const useAuth = () => {
   return useContext(AuthContext);
 };

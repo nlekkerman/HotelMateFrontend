@@ -9,6 +9,8 @@ import RoomList from "@/components/rooms/RoomList";
 import Reception from "@/components/Reception";
 import Login from "@/components/auth/Login";
 import Register from "@/components/auth/Register";
+import RequirePin from "@/components/auth/RequirePin";
+import PinAuth from "@/components/auth/PinAuth";
 import Staff from "@/components/staff/Staff";
 import StaffCreate from "@/components/staff/StaffCreate";
 import StaffDetails from "@/components/staff/StaffDetails";
@@ -35,15 +37,24 @@ function App() {
             <div className="container-fluid bg-light min-vh-100 vw-100 d-flex flex-column">
               <Routes>
                 <Route path="/reception" element={<Reception />} />
+                <Route path="/room/:roomNumber/pin" element={<PinAuth />} />
                 <Route path="/rooms" element={<RoomList />} />
-                <Route
-                  path="/breakfast/:roomNumber"
-                  element={<Breakfast />}
-                />
-               
+                {/* Protected routes */}
                 <Route
                   path="/room/:roomNumber/menu"
-                  element={<RoomService />}
+                  element={
+                    <RequirePin>
+                      <RoomService />
+                    </RequirePin>
+                  }
+                />
+                <Route
+                  path="/breakfast/:roomNumber"
+                  element={
+                    <RequirePin>
+                      <Breakfast />
+                    </RequirePin>
+                  }
                 />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />

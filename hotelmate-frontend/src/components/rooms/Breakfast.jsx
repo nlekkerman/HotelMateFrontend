@@ -22,8 +22,10 @@ const Breakfast = ({ isAdmin = false }) => {
 
   // Fetch breakfast items
   useEffect(() => {
+    console.log(`Fetching breakfast items for room ${roomNumber}...`);
     api.get(`room_services/room/${roomNumber}/breakfast/`)
       .then((res) => {
+        console.log('Breakfast items fetched:', res.data);
         const formatted = res.data.map(item => ({ ...item, quantity: 1 }));
         setItems(formatted);
       })
@@ -34,40 +36,57 @@ const Breakfast = ({ isAdmin = false }) => {
 
   // Handle item checkbox toggle
   const toggleItem = (itemId) => {
-    setSelectedItems(prev => ({
-      ...prev,
-      [itemId]: prev[itemId] ? undefined : 1,
-    }));
+    setSelectedItems(prev => {
+      const newSelected = {
+        ...prev,
+        [itemId]: prev[itemId] ? undefined : 1,
+      };
+      console.log('Toggled item selection:', newSelected);
+      return newSelected;
+    });
   };
 
   // Handle quantity change
   const handleQuantityChange = (itemId, qty) => {
-    setSelectedItems(prev => ({
-      ...prev,
-      [itemId]: qty,
-    }));
+    setSelectedItems(prev => {
+      const newSelected = {
+        ...prev,
+        [itemId]: qty,
+      };
+      console.log(`Quantity changed for item ${itemId}:`, qty);
+      return newSelected;
+    });
   };
 
   // Submit order
   const handleSubmit = async () => {
-    setLoading(true);
-    const selected = Object.entries(selectedItems)
-      .filter(([_, qty]) => qty && qty > 0)
-      .map(([id, qty]) => ({ id: parseInt(id), quantity: qty }));
+  setLoading(true);
 
-    try {
-      await api.post('room_services/breakfastorder/', {
-        room_number: roomNumber,
-        delivery_time: timeSlot || null,
-        items: selected,
-      });
-      setSubmitted(true);
-    } catch (err) {
-      console.error("Error submitting breakfast order:", err.response?.data || err);
-    } finally {
-      setLoading(false);
-    }
+  const itemsPayload = Object.entries(selectedItems).map(([id, quantity]) => ({
+    item_id: parseInt(id),
+    quantity,
+  }));
+
+  const payload = {
+    room_number: parseInt(roomNumber),
+    delivery_time: timeSlot || null,
+    items: itemsPayload,
   };
+
+  try {
+    const response = await api.post('room_services/breakfast-orders/', payload);
+    console.log('Order submitted successfully:', response.data);
+    alert('Breakfast order submitted successfully!');
+    setSubmitted(true);
+    setSelectedItems({});
+    setTimeSlot('');
+  } catch (error) {
+    alert(error.response?.data || error.message || 'Failed to submit order');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="max-w-3xl mx-auto p-4">
@@ -99,7 +118,7 @@ const Breakfast = ({ isAdmin = false }) => {
                   type="number"
                   min="1"
                   value={selectedItems[item.id]}
-                  onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value))}
+                  onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
                   className="ml-3 border rounded px-2 py-1 w-16"
                 />
               )}

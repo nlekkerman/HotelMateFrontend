@@ -45,6 +45,17 @@ function StaffDetails() {
       <p><strong>Phone Number:</strong> {staff.phone_number}</p>
       <p><strong>Active:</strong> {staff.is_active ? 'Yes' : 'No'}</p>
 
+    {/* New Hotel Info */}
+      {staff.hotel && (
+        <>
+          <h3>Hotel Info</h3>
+          <p><strong>Hotel ID:</strong> {staff.user.staff_profile.hotel.id}</p>
+          <p><strong>Hotel Name:</strong> {staff.user.staff_profile.hotel.name}</p>
+          <p><strong>Hotel Slug:</strong> {staff.user.staff_profile.hotel.slug}</p>
+        </>
+      )}
+
+
       <button onClick={() => navigate('/staff')} className="btn btn-secondary mt-3">
         Back to Staff List
       </button>

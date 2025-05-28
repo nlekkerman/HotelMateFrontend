@@ -11,6 +11,7 @@ const Navbar = () => {
   const [staffProfile, setStaffProfile] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOnDuty, setIsOnDuty] = useState(false);
+  const [isNavbarCollapsed, setIsNavbarCollapsed] = useState(true);
 
   useEffect(() => {
     async function fetchStaffProfile() {
@@ -36,6 +37,15 @@ const Navbar = () => {
   const isAdminOrSuperUser = user && (user.is_staff || user.is_superuser);
   const isStaff = !!staffProfile;
 
+  const toggleNavbar = () => {
+    setIsNavbarCollapsed(!isNavbarCollapsed);
+  };
+
+  // Close navbar on link click (mobile)
+  const handleNavLinkClick = () => {
+    if (!isNavbarCollapsed) setIsNavbarCollapsed(true);
+  };
+
   return (
     <>
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
@@ -43,37 +53,48 @@ const Navbar = () => {
           <Link className="navbar-brand fw-bold" to="/">
             🏨 HotelMate
           </Link>
+          <button
+            className="navbar-toggler"
+            type="button"
+            aria-controls="navbarSupportedContent"
+            aria-expanded={!isNavbarCollapsed}
+            aria-label="Toggle navigation"
+            onClick={toggleNavbar}
+          >
+            <span className="navbar-toggler-icon"></span>
+          </button>
 
-          <div className="collapse navbar-collapse">
+          <div
+            className={`collapse navbar-collapse ${!isNavbarCollapsed ? "show" : ""}`}
+            id="navbarSupportedContent"
+          >
             <ul className="navbar-nav ms-auto mb-2 mb-lg-0 gap-3">
               <li className="nav-item">
                 <button
-  className={`btn btn-${isOnDuty ? "success" : "danger"}`}
-  onClick={() => setIsModalOpen(true)}
-  disabled={!staffProfile}
->
-  {isOnDuty ? "Clock Out" : "Clock In"}
-</button>
+                  className={`btn btn-${isOnDuty ? "success" : "danger"}`}
+                  onClick={() => setIsModalOpen(true)}
+                  disabled={!staffProfile}
+                >
+                  {isOnDuty ? "Clock Out" : "Clock In"}
+                </button>
               </li>
 
               {!user && (
                 <>
                   <li className="nav-item">
                     <Link
-                      className={`nav-link ${
-                        isActive("/login") ? "active" : ""
-                      }`}
+                      className={`nav-link ${isActive("/login") ? "active" : ""}`}
                       to="/login"
+                      onClick={handleNavLinkClick}
                     >
                       Login
                     </Link>
                   </li>
                   <li className="nav-item">
                     <Link
-                      className={`nav-link ${
-                        isActive("/register") ? "active" : ""
-                      }`}
+                      className={`nav-link ${isActive("/register") ? "active" : ""}`}
                       to="/register"
+                      onClick={handleNavLinkClick}
                     >
                       Register
                     </Link>
@@ -85,40 +106,36 @@ const Navbar = () => {
                 <>
                   <li className="nav-item">
                     <Link
-                      className={`nav-link ${
-                        isActive("/rooms") ? "active" : ""
-                      }`}
+                      className={`nav-link ${isActive("/rooms") ? "active" : ""}`}
                       to="/rooms"
+                      onClick={handleNavLinkClick}
                     >
                       Rooms
                     </Link>
                   </li>
                   <li className="nav-item">
                     <Link
-                      className={`nav-link ${
-                        isActive("/reception") ? "active" : ""
-                      }`}
+                      className={`nav-link ${isActive("/reception") ? "active" : ""}`}
                       to="/reception"
+                      onClick={handleNavLinkClick}
                     >
                       Reception
                     </Link>
                   </li>
                   <li className="nav-item">
                     <Link
-                      className={`nav-link ${
-                        isActive("/guests") ? "active" : ""
-                      }`}
+                      className={`nav-link ${isActive("/guests") ? "active" : ""}`}
                       to="/guests"
+                      onClick={handleNavLinkClick}
                     >
                       Guests
                     </Link>
                   </li>
                   <li className="nav-item">
                     <Link
-                      className={`nav-link ${
-                        isActive("/staff") ? "active" : ""
-                      }`}
+                      className={`nav-link ${isActive("/staff") ? "active" : ""}`}
                       to="/staff"
+                      onClick={handleNavLinkClick}
                     >
                       Staff
                     </Link>
@@ -129,10 +146,9 @@ const Navbar = () => {
               {isStaff && (
                 <li className="nav-item">
                   <Link
-                    className={`nav-link ${
-                      isActive("/staff/me") ? "active" : ""
-                    }`}
+                    className={`nav-link ${isActive("/staff/me") ? "active" : ""}`}
                     to="/staff/me"
+                    onClick={handleNavLinkClick}
                   >
                     Profile
                   </Link>
@@ -141,7 +157,7 @@ const Navbar = () => {
 
               {user && (
                 <li className="nav-item">
-                  <button className="btn btn-link nav-link" onClick={logout}>
+                  <button className="btn btn-link nav-link" onClick={() => { logout(); handleNavLinkClick(); }}>
                     Logout
                   </button>
                 </li>
