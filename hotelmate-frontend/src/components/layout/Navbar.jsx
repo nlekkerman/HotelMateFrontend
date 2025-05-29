@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation,useNavigate  } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import ClockModal from "@/components/staff/ClockModal";
 import api from "@/services/api";
@@ -12,7 +12,8 @@ const Navbar = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [isNavbarCollapsed, setIsNavbarCollapsed] = useState(true);
-
+  const navigate = useNavigate();
+  
   useEffect(() => {
     async function fetchStaffProfile() {
       if (!user) {
@@ -45,7 +46,11 @@ const Navbar = () => {
   const handleNavLinkClick = () => {
     if (!isNavbarCollapsed) setIsNavbarCollapsed(true);
   };
-
+const handleLogout = () => {
+  logout();           // clear user & localStorage
+  handleNavLinkClick(); // close navbar if open (mobile)
+  navigate('/login');  // redirect to login page
+};
   return (
     <>
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
@@ -157,7 +162,7 @@ const Navbar = () => {
 
               {user && (
                 <li className="nav-item">
-                  <button className="btn btn-link nav-link" onClick={() => { logout(); handleNavLinkClick(); }}>
+                  <button className="btn btn-link nav-link" onClick={() => { logout(); handleLogout(); }}>
                     Logout
                   </button>
                 </li>

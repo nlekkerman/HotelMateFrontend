@@ -1,7 +1,6 @@
 // src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import api from '@/services/api';
-
+import { useNavigate } from 'react-router-dom';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
@@ -10,9 +9,8 @@ export const AuthProvider = ({ children }) => {
     return stored ? JSON.parse(stored) : null;
   });
 
-  const login = async (credentials) => {
-    const response = await api.post('/staff/login/', credentials);
-    const userData = response.data;
+  // ✅ This function now just stores the user data
+  const login = (userData) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
   };
@@ -20,6 +18,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    
   };
 
   useEffect(() => {
@@ -33,7 +32,6 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// ✅ Exported once, outside of any component, and never changes
 export const useAuth = () => {
   return useContext(AuthContext);
 };

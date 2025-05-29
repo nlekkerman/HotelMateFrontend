@@ -6,12 +6,29 @@ import api from "@/services/api";
 import Search from "@/components/utils/Search"; // Adjust alias if needed
 
 const fetchRooms = async ({ queryKey }) => {
-  const token = localStorage.getItem("token");
-  console.log("ROOM fetch token from localStorage:", token);
   const [_key, page, search] = queryKey;
+  const userData = JSON.parse(localStorage.getItem("user"));
+  const hotelId = userData?.hotel_id;
 
-  const response = await api.get("/rooms/", { params: { page, search } });
-  return response.data;
+  console.log("[fetchRooms] Page:", page);
+  console.log("[fetchRooms] Search Query:", search);
+  console.log("[fetchRooms] Hotel ID from localStorage:", hotelId);
+
+  try {
+    const response = await api.get("/rooms/rooms/", {
+      params: {
+        page,
+        search,
+        hotel_id: hotelId,
+      },
+    });
+
+    console.log("[fetchRooms] API Response:", response.data);
+    return response.data;
+  } catch (err) {
+    console.error("[fetchRooms] API Error:", err);
+    throw err;
+  }
 };
 
 function RoomList() {
