@@ -1,66 +1,58 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
-import useAxiosPost from "@/hooks/useAxiosPost";
+import useLogin from "@/hooks/useLogin";
 
 const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  // Pass the endpoint here (no need to pass it on postData calls)
-  const {
-    postData,
-    loading,
-    error: requestError,
-  } = useAxiosPost("staff/login/");
-  const [error, setError] = useState(null);
+
+  const { loginUser, loading, error } = useLogin();
+  const [localError, setLocalError] = useState(null);
   const navigate = useNavigate();
-  const { login } = useAuth();
 
   useEffect(() => {
-    console.log("[Login] Hook error updated:", requestError);
-    setError(requestError);
-  }, [requestError]);
+    setLocalError(error);
+  }, [error]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
-    console.log("[Login] Submitting login with:", { username, password });
+    setLocalError(null);
+
+    if (!username || !password) {
+      setLocalError("Username and password are required.");
+      return;
+    }
 
     try {
-      // Only pass the data here, not the endpoint
-      const data = await postData({ username, password });
-      console.log("[Login] Login response data:", data);
+      const data = await loginUser(username, password);
 
-      login({
-        username: data.username,
-        token: data.token,
-        isAdmin: data.is_staff || data.is_superuser || false,
-        is_staff: data.is_staff || false,
-        is_superuser: data.is_superuser || false,
-      });
+      // Defensive check
+      if (!data) {
+        setLocalError("No data received from server.");
+        return;
+      }
 
-      console.log("[Login] Login success, navigating to /rooms");
       navigate("/reception");
-    } catch (err) {
-      console.error("[Login] Login failed with error:", err);
-      // error state already set by hook
+    } catch {
+      // error is already handled in the hook, no need to re-handle here
     }
   };
 
   const togglePasswordVisibility = () => {
     setShowPassword((prev) => !prev);
-    console.log("[Login] Toggled password visibility:", !showPassword);
   };
 
   return (
     <div className="container mt-4">
       <h2>Login</h2>
-      {error && (
+
+      {localError && (
         <div className="alert alert-danger">
-          {typeof error === "string" ? error : JSON.stringify(error)}
+          {typeof localError === "string" ? localError : JSON.stringify(localError)}
         </div>
       )}
+
       <form onSubmit={handleSubmit} className="w-50">
         <div className="mb-3">
           <label className="form-label" htmlFor="username">
@@ -71,14 +63,12 @@ const Login = () => {
             type="text"
             className="form-control"
             value={username}
-            onChange={(e) => {
-              setUsername(e.target.value);
-              console.log("[Login] Username changed:", e.target.value);
-            }}
+            onChange={(e) => setUsername(e.target.value)}
             required
             autoFocus
           />
         </div>
+
         <div className="mb-3 position-relative">
           <label className="form-label" htmlFor="password">
             Password
@@ -88,13 +78,7 @@ const Login = () => {
             type={showPassword ? "text" : "password"}
             className="form-control"
             value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              console.log(
-                "[Login] Password changed:",
-                e.target.value ? "***" : ""
-              );
-            }}
+            onChange={(e) => setPassword(e.target.value)}
             required
           />
           <button
@@ -107,6 +91,7 @@ const Login = () => {
             {showPassword ? "Hide" : "Show"}
           </button>
         </div>
+
         <button type="submit" className="btn btn-primary" disabled={loading}>
           {loading ? "Logging in..." : "Login"}
         </button>

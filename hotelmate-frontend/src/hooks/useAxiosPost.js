@@ -20,13 +20,33 @@ function useAxiosPost(endpoint) {
         },
       });
       setData(response.data);
+
+      // If this is a login request, save hotel_id and hotel_name (and token etc.) to localStorage
+      if (endpoint === "staff/login/") {
+        const { token, username, hotel_id, hotel_name, is_staff, is_superuser } = response.data;
+        const userToStore = {
+          token,
+          username,
+          hotel_id,
+          hotel_name,
+          is_staff,
+          is_superuser,
+        };
+        localStorage.setItem("user", JSON.stringify(userToStore));
+        console.log("[useAxiosPost] Stored user info in localStorage:", userToStore);
+      }
+
       return response.data;
     } catch (err) {
-      setError(err.response?.data || err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
+  console.error("[Login] Login failed with error:", err);
+  if (err.response?.data?.non_field_errors) {
+    setError(err.response.data.non_field_errors.join(' '));
+  } else if (err.response?.data) {
+    setError(JSON.stringify(err.response.data));
+  } else {
+    setError(err.message || "Login failed.");
+  }
+}
   };
 
   return { data, loading, error, postData };
