@@ -6,20 +6,20 @@ export default function PinAuth() {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { roomNumber } = useParams();
+  const { hotelIdentifier, roomNumber } = useParams();
   const location = useLocation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      const response = await api.post(`/room_services/${roomNumber}/validate-pin/`, {
+      const response = await api.post(`/room_services/${hotelIdentifier}/room/${roomNumber}/validate-pin/`, {
         pin,
       });
 
       if (response.data.valid) {
         sessionStorage.setItem(`pin_ok_${roomNumber}`, "true");
-        navigate(location.state?.next || `/room/${roomNumber}/menu`);
+        navigate(location.state?.next || `/${hotelIdentifier}/room/${roomNumber}/menu`);
       } else {
         setError("Invalid PIN. Please try again.");
       }

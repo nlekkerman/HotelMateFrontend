@@ -37,7 +37,10 @@ function App() {
             <div className="container-fluid bg-light min-vh-100 vw-100 d-flex flex-column">
               <Routes>
                 <Route path="/" element={<Reception />} />
-                <Route path="/room/:roomNumber/pin" element={<PinAuth />} />
+                <Route
+                  path="/:hotelIdentifier/room/:roomNumber/validate-pin"
+                  element={<PinAuth />}
+                />
                 <Route path="/rooms" element={<RoomList />} />
                 {/* Protected routes */}
                 <Route
@@ -50,7 +53,7 @@ function App() {
                 />
 
                 <Route
-                  path="/:hotelIdentifier/breakfast/:roomNumber"
+                  path="/room_services/:hotelIdentifier/room/:roomNumber/breakfast/"
                   element={
                     <RequirePin>
                       <Breakfast />
