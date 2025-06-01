@@ -44,7 +44,7 @@ function App() {
                 <Route path="/rooms" element={<RoomList />} />
                 {/* Protected routes */}
                 <Route
-                  path="/:hotelIdentifier/room/:roomNumber/menu"
+                  path="/room_services/:hotelIdentifier/room/:roomNumber/menu"
                   element={
                     <RequirePin>
                       <RoomService />
