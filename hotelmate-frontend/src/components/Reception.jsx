@@ -32,9 +32,9 @@ const Reception = () => {
 
   return (
     <div className="container py-5">
-      <h1 className="mb-5 text-center fw-bold">🏨<strong> asdasdasd{hotelName}  </strong> Reception</h1>
+      <h1 className="mb-5 text-center fw-bold"> {hotelName} Reception</h1>
       <p className="text-center text-secondary mb-5 fs-5">
-        Manage rooms and guests from the reception dashboard bro.
+        Manage rooms and guests from the reception dashboard.
       </p>
       <div className="border rounded p-4 shadow-sm bg-white mb-5">
         <Search placeholder="Search rooms by number, status, etc." />
