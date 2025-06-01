@@ -104,7 +104,7 @@ const Breakfast = ({ isAdmin = false }) => {
         { params: { room_number: roomNumber } }
       );
       setOrders(response.data.results);
-      console.log("Fetched orders:", response.data.results);
+      console.log("Fetched orders:", response.data);
       setShowOrders(true);
     } catch (error) {
       alert("Failed to load orders");
