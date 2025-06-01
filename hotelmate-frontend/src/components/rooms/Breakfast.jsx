@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import api from "@/services/api";
+import ViewOrders from "@/components/rooms/ViewOrders";
 
 const TIME_SLOTS = [
   "7:00-8:00",
@@ -19,7 +20,9 @@ const Breakfast = ({ isAdmin = false }) => {
   const [timeSlot, setTimeSlot] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [showOrders, setShowOrders] = useState(false);
   // Fetch breakfast items
   useEffect(() => {
     console.log(`Fetching breakfast items for room ${roomNumber}...`);
@@ -92,12 +95,46 @@ const Breakfast = ({ isAdmin = false }) => {
       setLoading(false);
     }
   };
-
+  // Fetch existing orders for this room + hotel
+  const fetchOrders = async () => {
+    setLoadingOrders(true);
+    try {
+      const response = await api.get(
+        `room_services/${hotelIdentifier}/breakfast-orders/`,
+        { params: { room_number: roomNumber } }
+      );
+      setOrders(response.data.results);
+      console.log("Fetched orders:", response.data.results);
+      setShowOrders(true);
+    } catch (error) {
+      alert("Failed to load orders");
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
   return (
     <div className="max-w-3xl mx-auto p-4">
       <h2 className="text-2xl font-bold mb-4">
         Breakfast Menu for Room {roomNumber}
       </h2>
+         <div>
+      {/* Your existing breakfast menu UI */}
+      
+      {/* Button to toggle and load orders */}
+      <button
+        onClick={() => {
+          if (!showOrders) fetchOrders();
+          setShowOrders(!showOrders);
+        }}
+        className="mt-6 bg-green-600 text-white px-6 py-2 rounded"
+      >
+        {showOrders ? "Hide Your Breakfast Orders" : "View Your Breakfast Orders"}
+      </button>
+
+      {loadingOrders && <p>Loading orders...</p>}
+
+      {showOrders && !loadingOrders && <ViewOrders orders={orders} />}
+    </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {items.map((item) => (
