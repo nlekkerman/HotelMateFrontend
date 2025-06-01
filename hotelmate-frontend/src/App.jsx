@@ -36,26 +36,28 @@ function App() {
             <Navbar />
             <div className="container-fluid bg-light min-vh-100 vw-100 d-flex flex-column">
               <Routes>
-                <Route path="/reception" element={<Reception />} />
+                <Route path="/" element={<Reception />} />
                 <Route path="/room/:roomNumber/pin" element={<PinAuth />} />
                 <Route path="/rooms" element={<RoomList />} />
                 {/* Protected routes */}
                 <Route
-                  path="/room/:roomNumber/menu"
+                  path="/:hotelIdentifier/room/:roomNumber/menu"
                   element={
                     <RequirePin>
                       <RoomService />
                     </RequirePin>
                   }
                 />
+
                 <Route
-                  path="/breakfast/:roomNumber"
+                  path="/:hotelIdentifier/breakfast/:roomNumber"
                   element={
                     <RequirePin>
                       <Breakfast />
                     </RequirePin>
                   }
                 />
+
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/staff" element={<Staff />} />

@@ -1,24 +1,28 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import api from "@/services/api";
+import api, { setHotelIdentifier } from "@/services/apiWithHotel"; 
 
 export default function RoomService({ isAdmin }) {
-  const { roomNumber } = useParams(); // get roomNumber from URL
+  const { roomNumber, hotelIdentifier,  } = useParams(); // get roomNumber from URL
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Track quantities user wants to order per item (default 1)
   const [quantities, setQuantities] = useState({});
 
-  useEffect(() => {
-    if (!roomNumber) return; // safety check
+   useEffect(() => {
+    if (!roomNumber || !hotelIdentifier) return;
+
+    // Set the hotelIdentifier in the API before any request
+    setHotelIdentifier(hotelIdentifier);
 
     api
       .get(`/room_services/room/${roomNumber}/menu/`)
       .then((res) => {
         setItems(res.data);
         setLoading(false);
-        // initialize quantities with 1 for each item
+
+        // initialize quantities
         const initialQuantities = {};
         res.data.forEach(item => {
           initialQuantities[item.id] = 1;
@@ -29,7 +33,7 @@ export default function RoomService({ isAdmin }) {
         console.error(err);
         setLoading(false);
       });
-  }, [roomNumber]);
+  }, [roomNumber, hotelIdentifier]);
 
   const toggleStock = (itemId, currentStock) => {
     setItems((prev) =>

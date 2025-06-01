@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 
-const LOGIN_ENDPOINT = `${import.meta.env.VITE_API_URL}staff/login/`;
+const LOGIN_ENDPOINT = `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/staff/login/`;
 
 export default function useLogin() {
   const [loading, setLoading] = useState(false);
@@ -49,18 +49,25 @@ export default function useLogin() {
       setLoading(false);
       return data;
     } catch (err) {
-      setLoading(false);
+  setLoading(false);
 
-      if (err.response?.data?.non_field_errors) {
-        setError(err.response.data.non_field_errors.join(" "));
-      } else if (err.response?.data) {
-        setError(JSON.stringify(err.response.data));
-      } else {
-        setError(err.message || "Login failed. Please try again.");
-      }
-
-      throw err;
+  if (err.response) {
+    console.error("Login error response:", err.response);
+    if (err.response.data?.non_field_errors) {
+      setError(err.response.data.non_field_errors.join(" "));
+    } else if (err.response.data) {
+      setError(JSON.stringify(err.response.data));
+    } else {
+      setError("Login failed due to unknown error.");
     }
+  } else {
+    console.error("Login error:", err.message);
+    setError(err.message || "Login failed. Please try again.");
+  }
+
+  throw err;
+}
+
   };
 
   return { loginUser, loading, error };
