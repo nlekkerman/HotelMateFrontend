@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import api from "@/services/api";
-import { useNavigate } from 'react-router-dom'; // ✅ useParams removed
+import { useNavigate } from 'react-router-dom';
 
-function Search({ placeholder = "Search...", delay = 300, apiEndpoint = "/rooms/" }) {
+function Search({ placeholder = "Search...", delay = 300, apiEndpoint = "/rooms/rooms/", hotelId }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const navigate = useNavigate(); // ✅ Make sure this is defined
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!query) {
@@ -21,8 +21,14 @@ function Search({ placeholder = "Search...", delay = 300, apiEndpoint = "/rooms/
       setError(null);
 
       api
-        .get(apiEndpoint, { params: { search: query } })
+        .get(apiEndpoint, {
+          params: { search: query },
+          headers: {
+            'x-hotel-id': hotelId // Add this header here!
+          }
+        })
         .then((res) => {
+          console.log("RESPONSE response data:", res.data);
           setResults(res.data.results || []);
           setLoading(false);
         })
@@ -33,7 +39,7 @@ function Search({ placeholder = "Search...", delay = 300, apiEndpoint = "/rooms/
     }, delay);
 
     return () => clearTimeout(handler);
-  }, [query, apiEndpoint, delay]);
+  }, [query, apiEndpoint, delay, hotelId]);
 
   return (
     <div>
