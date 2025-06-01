@@ -1,32 +1,33 @@
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 
-import api from '@/services/api';
+import api from "@/services/api";
 
 const TIME_SLOTS = [
-  '7:00-8:00',
-  '8:00-8:30',
-  '8:30-9:00',
-  '9:00-9:30',
-  '9:30-10:00',
-  '10:00-10:30',
+  "7:00-8:00",
+  "8:00-8:30",
+  "8:30-9:00",
+  "9:00-9:30",
+  "9:30-10:00",
+  "10:00-10:30",
 ];
 
 const Breakfast = ({ isAdmin = false }) => {
-  const { roomNumber } = useParams();
+  const { roomNumber, hotelIdentifier } = useParams();
   const [items, setItems] = useState([]);
   const [selectedItems, setSelectedItems] = useState({});
-  const [timeSlot, setTimeSlot] = useState('');
+  const [timeSlot, setTimeSlot] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   // Fetch breakfast items
   useEffect(() => {
     console.log(`Fetching breakfast items for room ${roomNumber}...`);
-    api.get(`room_services/room/${roomNumber}/breakfast/`)
+    api
+      .get(`room_services/${hotelIdentifier}/room/${roomNumber}/breakfast/`)
       .then((res) => {
-        console.log('Breakfast items fetched:', res.data);
-        const formatted = res.data.map(item => ({ ...item, quantity: 1 }));
+        console.log("Breakfast items fetched:", res.data);
+        const formatted = res.data.map((item) => ({ ...item, quantity: 1 }));
         setItems(formatted);
       })
       .catch((err) => {
@@ -36,19 +37,19 @@ const Breakfast = ({ isAdmin = false }) => {
 
   // Handle item checkbox toggle
   const toggleItem = (itemId) => {
-    setSelectedItems(prev => {
+    setSelectedItems((prev) => {
       const newSelected = {
         ...prev,
         [itemId]: prev[itemId] ? undefined : 1,
       };
-      console.log('Toggled item selection:', newSelected);
+      console.log("Toggled item selection:", newSelected);
       return newSelected;
     });
   };
 
   // Handle quantity change
   const handleQuantityChange = (itemId, qty) => {
-    setSelectedItems(prev => {
+    setSelectedItems((prev) => {
       const newSelected = {
         ...prev,
         [itemId]: qty,
@@ -60,43 +61,53 @@ const Breakfast = ({ isAdmin = false }) => {
 
   // Submit order
   const handleSubmit = async () => {
-  setLoading(true);
+    setLoading(true);
 
-  const itemsPayload = Object.entries(selectedItems).map(([id, quantity]) => ({
-    item_id: parseInt(id),
-    quantity,
-  }));
+    const itemsPayload = Object.entries(selectedItems).map(
+      ([id, quantity]) => ({
+        item_id: parseInt(id),
+        quantity,
+      })
+    );
 
-  const payload = {
-    room_number: parseInt(roomNumber),
-    delivery_time: timeSlot || null,
-    items: itemsPayload,
+    const payload = {
+      room_number: parseInt(roomNumber),
+      delivery_time: timeSlot || null,
+      items: itemsPayload,
+    };
+
+    try {
+      const response = await api.post(
+        `room_services/${hotelIdentifier}/breakfast-orders/`,
+        payload
+      );
+      console.log("Order submitted successfully:", response.data);
+      alert("Breakfast order submitted successfully!");
+      setSubmitted(true);
+      setSelectedItems({});
+      setTimeSlot("");
+    } catch (error) {
+      alert(error.response?.data || error.message || "Failed to submit order");
+    } finally {
+      setLoading(false);
+    }
   };
-
-  try {
-    const response = await api.post('room_services/breakfast-orders/', payload);
-    console.log('Order submitted successfully:', response.data);
-    alert('Breakfast order submitted successfully!');
-    setSubmitted(true);
-    setSelectedItems({});
-    setTimeSlot('');
-  } catch (error) {
-    alert(error.response?.data || error.message || 'Failed to submit order');
-  } finally {
-    setLoading(false);
-  }
-};
-
 
   return (
     <div className="max-w-3xl mx-auto p-4">
-      <h2 className="text-2xl font-bold mb-4">Breakfast Menu for Room {roomNumber}</h2>
+      <h2 className="text-2xl font-bold mb-4">
+        Breakfast Menu for Room {roomNumber}
+      </h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {items.map(item => (
+        {items.map((item) => (
           <div key={item.id} className="border rounded-xl p-4 shadow-sm">
             {item.image && (
-              <img src={item.image} alt={item.name} className="w-full h-40 object-cover rounded-md mb-2" />
+              <img
+                src={item.image}
+                alt={item.name}
+                className="w-full h-40 object-cover rounded-md mb-2"
+              />
             )}
             <h3 className="text-lg font-semibold">{item.name}</h3>
             <p className="text-sm text-gray-600">{item.description}</p>
@@ -118,7 +129,9 @@ const Breakfast = ({ isAdmin = false }) => {
                   type="number"
                   min="1"
                   value={selectedItems[item.id]}
-                  onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
+                  onChange={(e) =>
+                    handleQuantityChange(item.id, parseInt(e.target.value) || 1)
+                  }
                   className="ml-3 border rounded px-2 py-1 w-16"
                 />
               )}
@@ -142,15 +155,19 @@ const Breakfast = ({ isAdmin = false }) => {
       </div>
 
       <div className="mt-6">
-        <label className="block mb-2 font-semibold">Select Delivery Time (optional):</label>
+        <label className="block mb-2 font-semibold">
+          Select Delivery Time (optional):
+        </label>
         <select
           value={timeSlot}
           onChange={(e) => setTimeSlot(e.target.value)}
           className="border rounded p-2 w-full max-w-xs"
         >
           <option value="">-- Select a Time Slot --</option>
-          {TIME_SLOTS.map(slot => (
-            <option key={slot} value={slot}>{slot}</option>
+          {TIME_SLOTS.map((slot) => (
+            <option key={slot} value={slot}>
+              {slot}
+            </option>
           ))}
         </select>
       </div>

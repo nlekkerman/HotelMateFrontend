@@ -1,30 +1,28 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import api, { setHotelIdentifier } from "@/services/apiWithHotel"; 
+import api, { setHotelIdentifier } from "@/services/apiWithHotel";
 
 export default function RoomService({ isAdmin }) {
-  const { roomNumber, hotelIdentifier,  } = useParams(); // get roomNumber from URL
+  const { roomNumber, hotelIdentifier } = useParams(); // get roomNumber from URL
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Track quantities user wants to order per item (default 1)
   const [quantities, setQuantities] = useState({});
 
-   useEffect(() => {
+  useEffect(() => {
     if (!roomNumber || !hotelIdentifier) return;
 
-    // Set the hotelIdentifier in the API before any request
     setHotelIdentifier(hotelIdentifier);
 
     api
-      .get(`/room_services/room/${roomNumber}/menu/`)
+      .get(`/room_services/${hotelIdentifier}/room/${roomNumber}/menu/`)
       .then((res) => {
         setItems(res.data);
         setLoading(false);
 
-        // initialize quantities
         const initialQuantities = {};
-        res.data.forEach(item => {
+        res.data.forEach((item) => {
           initialQuantities[item.id] = 1;
         });
         setQuantities(initialQuantities);
@@ -69,7 +67,9 @@ export default function RoomService({ isAdmin }) {
   const handleAddToOrder = (item) => {
     const qty = quantities[item.id] || 1;
     // For now just console log, replace with your add-to-order logic
-    console.log(`Adding to order: Item ${item.name} (ID: ${item.id}) Quantity: ${qty} for Room ${roomNumber}`);
+    console.log(
+      `Adding to order: Item ${item.name} (ID: ${item.id}) Quantity: ${qty} for Room ${roomNumber}`
+    );
 
     // TODO: implement API call to add items to order for roomNumber
   };
@@ -95,13 +95,18 @@ export default function RoomService({ isAdmin }) {
               <div className="card-body d-flex flex-column">
                 <h5 className="card-title">{item.name}</h5>
                 <p className="card-text flex-grow-1">{item.description}</p>
-                <p><strong>Category:</strong> {item.category}</p>
                 <p>
-                  <strong>Price:</strong> {item.price != null && !isNaN(Number(item.price))
-  ? Number(item.price).toFixed(2)
-  : "N/A"}
-</p>
-                <p><strong>Quantity Available:</strong> {item.quantity || "-"}</p>
+                  <strong>Category:</strong> {item.category}
+                </p>
+                <p>
+                  <strong>Price:</strong>{" "}
+                  {item.price != null && !isNaN(Number(item.price))
+                    ? Number(item.price).toFixed(2)
+                    : "N/A"}
+                </p>
+                <p>
+                  <strong>Quantity Available:</strong> {item.quantity || "-"}
+                </p>
 
                 <div className="d-flex justify-content-center align-items-center mt-auto">
                   {/* Quantity Selector */}
@@ -110,7 +115,9 @@ export default function RoomService({ isAdmin }) {
                     min="1"
                     max="99"
                     value={quantities[item.id] || 1}
-                    onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                    onChange={(e) =>
+                      handleQuantityChange(item.id, e.target.value)
+                    }
                     className="form-control"
                     style={{ width: "70px", marginRight: "10px" }}
                     disabled={!item.is_on_stock}
@@ -138,13 +145,19 @@ export default function RoomService({ isAdmin }) {
                       />
                       <label
                         htmlFor={`stock-${item.id}`}
-                        className={`form-check-label ${item.is_on_stock ? "text-success" : "text-danger"}`}
+                        className={`form-check-label ${
+                          item.is_on_stock ? "text-success" : "text-danger"
+                        }`}
                       >
                         {item.is_on_stock ? "In Stock" : "Out of Stock"}
                       </label>
                     </>
                   ) : (
-                    <small className={item.is_on_stock ? "text-success" : "text-danger"}>
+                    <small
+                      className={
+                        item.is_on_stock ? "text-success" : "text-danger"
+                      }
+                    >
                       {item.is_on_stock ? "In Stock" : "Out of Stock"}
                     </small>
                   )}
