@@ -19,6 +19,7 @@ import RoomDetails from "@/components/rooms/RoomDetails";
 import Breakfast from "@/components/rooms/Breakfast";
 import RoomService from "@/components/rooms/RoomService";
 import AssignGuestForm from "@/components/guests/AssignGuestForm"; // Adjust path if needed
+import GuestList from "@/components/guests/GuestList"; // Adjust path if needed
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -67,7 +68,11 @@ function App() {
                 <Route path="/staff/create" element={<StaffCreate />} />
                 <Route path="/staff/:id" element={<StaffDetails />} />
                 <Route path="/staff/me" element={<StaffProfile />} />
-                <Route path="/rooms/:roomNumber" element={<RoomDetails />} />
+                 <Route path="/:hotelIdentifier/guests" element={<GuestList />} />
+                <Route
+                  path="/rooms/:hotelIdentifier/rooms/:roomNumber"
+                  element={<RoomDetails />}
+                />
                 <Route
                   path="/rooms/:roomNumber/add-guest"
                   element={<AssignGuestForm />}

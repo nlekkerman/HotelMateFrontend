@@ -3,18 +3,21 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "@/services/api";
 
 function RoomDetails() {
-  const { id } = useParams();
+  
+  const { hotelIdentifier, roomNumber,id } = useParams();
+
+  console.log("Hotel Identifier:", hotelIdentifier);
   const navigate = useNavigate();
   const [room, setRoom] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { roomNumber } = useParams();
 
   useEffect(() => {
     const fetchRoomDetails = async () => {
       try {
-        const response = await api.get(`/rooms/${roomNumber}/`);
-        
+        const response = await api.get(`/rooms/${hotelIdentifier}/rooms/${roomNumber}/`);
+
+
         setRoom(response.data);
       } catch (err) {
         setError("Failed to fetch room details");
@@ -46,18 +49,18 @@ function RoomDetails() {
         <strong>Occupied:</strong> {room.is_occupied ? "Yes" : "No"}
       </p>
 
-     <p>
-  <strong>Guests:</strong>{" "}
-  {room.guests_in_room && room.guests_in_room.length > 0 ? (
-    room.guests_in_room.map((guest) => (
-      <span key={guest.id}>
-        {guest.first_name} {guest.last_name}
-      </span>
-    ))
-  ) : (
-    <span className="text-muted">None</span>
-  )}
-</p>
+      <p>
+        <strong>Guests:</strong>{" "}
+        {room.guests_in_room && room.guests_in_room.length > 0 ? (
+          room.guests_in_room.map((guest) => (
+            <span key={guest.id}>
+              {guest.first_name} {guest.last_name}
+            </span>
+          ))
+        ) : (
+          <span className="text-muted">None</span>
+        )}
+      </p>
 
       <div className="mb-4">
         {room.room_service_qr_code && (
@@ -81,10 +84,11 @@ function RoomDetails() {
           </div>
         )}
       </div>
-
+      <div className="d-flex justify-content-center">
       <button className="btn btn-secondary" onClick={() => navigate("/rooms")}>
         Back to Rooms List
       </button>
+      </div>
     </div>
   );
 }

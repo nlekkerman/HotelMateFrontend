@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation,useNavigate  } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import ClockModal from "@/components/staff/ClockModal";
 import api from "@/services/api";
@@ -7,13 +7,13 @@ import api from "@/services/api";
 const Navbar = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
-
+  const hotelIdentifier = user?.hotel?.slug;
   const [staffProfile, setStaffProfile] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [isNavbarCollapsed, setIsNavbarCollapsed] = useState(true);
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     async function fetchStaffProfile() {
       if (!user) {
@@ -46,11 +46,11 @@ const Navbar = () => {
   const handleNavLinkClick = () => {
     if (!isNavbarCollapsed) setIsNavbarCollapsed(true);
   };
-const handleLogout = () => {
-  logout();           // clear user & localStorage
-  handleNavLinkClick(); // close navbar if open (mobile)
-  navigate('/login');  // redirect to login page
-};
+  const handleLogout = () => {
+    logout(); // clear user & localStorage
+    handleNavLinkClick(); // close navbar if open (mobile)
+    navigate("/login"); // redirect to login page
+  };
   return (
     <>
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
@@ -70,7 +70,9 @@ const handleLogout = () => {
           </button>
 
           <div
-            className={`collapse navbar-collapse ${!isNavbarCollapsed ? "show" : ""}`}
+            className={`collapse navbar-collapse ${
+              !isNavbarCollapsed ? "show" : ""
+            }`}
             id="navbarSupportedContent"
           >
             <ul className="navbar-nav ms-auto mb-2 mb-lg-0 gap-3">
@@ -88,7 +90,9 @@ const handleLogout = () => {
                 <>
                   <li className="nav-item">
                     <Link
-                      className={`nav-link ${isActive("/login") ? "active" : ""}`}
+                      className={`nav-link ${
+                        isActive("/login") ? "active" : ""
+                      }`}
                       to="/login"
                       onClick={handleNavLinkClick}
                     >
@@ -97,7 +101,9 @@ const handleLogout = () => {
                   </li>
                   <li className="nav-item">
                     <Link
-                      className={`nav-link ${isActive("/register") ? "active" : ""}`}
+                      className={`nav-link ${
+                        isActive("/register") ? "active" : ""
+                      }`}
                       to="/register"
                       onClick={handleNavLinkClick}
                     >
@@ -111,26 +117,22 @@ const handleLogout = () => {
                 <>
                   <li className="nav-item">
                     <Link
-                      className={`nav-link ${isActive("/rooms") ? "active" : ""}`}
+                      className={`nav-link ${
+                        isActive("/rooms") ? "active" : ""
+                      }`}
                       to="/rooms"
                       onClick={handleNavLinkClick}
                     >
                       Rooms
                     </Link>
                   </li>
+
                   <li className="nav-item">
                     <Link
-                      className={`nav-link ${isActive("/reception") ? "active" : ""}`}
-                      to="/reception"
-                      onClick={handleNavLinkClick}
-                    >
-                      Reception
-                    </Link>
-                  </li>
-                  <li className="nav-item">
-                    <Link
-                      className={`nav-link ${isActive("/guests") ? "active" : ""}`}
-                      to="/guests"
+                      className={`nav-link ${
+                        isActive(`/${hotelIdentifier}/guests`) ? "active" : ""
+                      }`}
+                      to={`/${hotelIdentifier}/guests`}
                       onClick={handleNavLinkClick}
                     >
                       Guests
@@ -138,7 +140,9 @@ const handleLogout = () => {
                   </li>
                   <li className="nav-item">
                     <Link
-                      className={`nav-link ${isActive("/staff") ? "active" : ""}`}
+                      className={`nav-link ${
+                        isActive("/staff") ? "active" : ""
+                      }`}
                       to="/staff"
                       onClick={handleNavLinkClick}
                     >
@@ -151,7 +155,9 @@ const handleLogout = () => {
               {isStaff && (
                 <li className="nav-item">
                   <Link
-                    className={`nav-link ${isActive("/staff/me") ? "active" : ""}`}
+                    className={`nav-link ${
+                      isActive("/staff/me") ? "active" : ""
+                    }`}
                     to="/staff/me"
                     onClick={handleNavLinkClick}
                   >
@@ -162,7 +168,13 @@ const handleLogout = () => {
 
               {user && (
                 <li className="nav-item">
-                  <button className="btn btn-link nav-link" onClick={() => { logout(); handleLogout(); }}>
+                  <button
+                    className="btn btn-link nav-link"
+                    onClick={() => {
+                      logout();
+                      handleLogout();
+                    }}
+                  >
                     Logout
                   </button>
                 </li>
