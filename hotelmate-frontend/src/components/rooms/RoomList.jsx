@@ -9,9 +9,8 @@ const fetchRooms = async ({ queryKey }) => {
   const [_key, page, search] = queryKey;
   const userData = JSON.parse(localStorage.getItem("user"));
   const hotelId = userData?.hotel_id;
-
   console.log("[fetchRooms] Page:", page);
-  console.log("[fetchRooms] Search Query:", search);
+  console.log("[AAAAAAAAAAAAAa] Search Query:", userData?.searchQuery);
   console.log("[fetchRooms] Hotel ID from localStorage:", hotelId);
 
   try {
@@ -35,7 +34,7 @@ function RoomList() {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
-
+  const { hotelIdentifier, roomNumber } = useParams();
   const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ["rooms", page, searchQuery],
     queryFn: fetchRooms,
@@ -79,7 +78,7 @@ function RoomList() {
               key={room.id}
               className="col"
               style={{ cursor: "pointer" }}
-              onClick={() => navigate(`/rooms/${room.room_number}`)}
+              onClick={() => navigate(`/rooms/${room.hotel_slug}/rooms/${room.room_number}`)}
             >
               <div className="card h-100 shadow-sm">
                 <div className="card-body d-flex flex-column">
