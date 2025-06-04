@@ -7,7 +7,7 @@ import api from "@/services/api";
 const Navbar = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
-  const hotelIdentifier = user?.hotel?.slug;
+  const hotelIdentifier = user?.hotel_slug;
   const [staffProfile, setStaffProfile] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOnDuty, setIsOnDuty] = useState(false);
