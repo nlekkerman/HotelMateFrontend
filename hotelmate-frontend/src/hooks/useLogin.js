@@ -30,6 +30,7 @@ export default function useLogin() {
           username: data.username,
           hotel_id: data.hotel_id,
           hotel_name: data.hotel_name,
+          hotel_slug: data.hotel_slug,
           is_staff: data.is_staff,
           is_superuser: data.is_superuser,
         })
@@ -41,6 +42,7 @@ export default function useLogin() {
         token: data.token,
         hotel_id: data.hotel_id,
         hotel_name: data.hotel_name,
+        hotel_slug: data.hotel_slug,
         isAdmin: data.is_staff || data.is_superuser,
         is_staff: data.is_staff,
         is_superuser: data.is_superuser,

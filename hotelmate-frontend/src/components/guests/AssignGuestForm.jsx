@@ -202,17 +202,6 @@ function AssignGuestForm() {
         </div>
 
         <div className="mb-3">
-          <label className="form-label">Days Booked</label>
-          <input
-            type="number"
-            className="form-control"
-            name="days_booked"
-            value={formData.days_booked}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div className="mb-3">
           <label className="form-label">Check-out Date</label>
           <DatePicker
             selected={formData.check_out_date}
@@ -222,6 +211,18 @@ function AssignGuestForm() {
             placeholderText="Select check-out date"
           />
         </div>
+        <div className="mb-3">
+          <label className="form-label">Days Booked</label>
+          <input
+            type="number"
+            className="form-control"
+            name="days_booked"
+            value={formData.days_booked}
+            onChange={handleChange}
+            readOnly
+          />
+        </div>
+
 
         {/* ID PIN */}
         <div className="mb-3">
