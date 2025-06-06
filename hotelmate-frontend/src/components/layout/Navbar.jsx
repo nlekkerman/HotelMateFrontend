@@ -1,3 +1,5 @@
+// src/components/layout/Navbar.jsx
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -7,7 +9,7 @@ import api from "@/services/api";
 const Navbar = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
-  const hotelIdentifier = user?.hotel_slug;
+  const hotelIdentifier = user?.hotel_slug; // hotel slug from localStorage via AuthContext
   const [staffProfile, setStaffProfile] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOnDuty, setIsOnDuty] = useState(false);
@@ -20,7 +22,6 @@ const Navbar = () => {
         setStaffProfile(null);
         return;
       }
-
       try {
         const res = await api.get("/staff/me/");
         setStaffProfile(res.data);
@@ -30,7 +31,6 @@ const Navbar = () => {
         setStaffProfile(null);
       }
     }
-
     fetchStaffProfile();
   }, [user]);
 
@@ -41,16 +41,15 @@ const Navbar = () => {
   const toggleNavbar = () => {
     setIsNavbarCollapsed(!isNavbarCollapsed);
   };
-
-  // Close navbar on link click (mobile)
   const handleNavLinkClick = () => {
     if (!isNavbarCollapsed) setIsNavbarCollapsed(true);
   };
   const handleLogout = () => {
-    logout(); // clear user & localStorage
-    handleNavLinkClick(); // close navbar if open (mobile)
-    navigate("/login"); // redirect to login page
+    logout();
+    handleNavLinkClick();
+    navigate("/login");
   };
+
   return (
     <>
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
@@ -76,6 +75,7 @@ const Navbar = () => {
             id="navbarSupportedContent"
           >
             <ul className="navbar-nav ms-auto mb-2 mb-lg-0 gap-3">
+              {/* Clock In/Out (Staff only) */}
               <li className="nav-item">
                 <button
                   className={`btn btn-${isOnDuty ? "success" : "danger"}`}
@@ -113,71 +113,92 @@ const Navbar = () => {
                 </>
               )}
 
-              {isAdminOrSuperUser && (
+              {user && (
                 <>
+                  {/* Rooms (Admin only) */}
+                  {isAdminOrSuperUser && (
+                    <li className="nav-item">
+                      <Link
+                        className={`nav-link ${
+                          isActive("/rooms") ? "active" : ""
+                        }`}
+                        to="/rooms"
+                        onClick={handleNavLinkClick}
+                      >
+                        Rooms
+                      </Link>
+                    </li>
+                  )}
+
+                  {/* Guests (Admin only) */}
+                  {isAdminOrSuperUser && (
+                    <li className="nav-item">
+                      <Link
+                        className={`nav-link ${
+                          isActive(`/${hotelIdentifier}/guests`) ? "active" : ""
+                        }`}
+                        to={`/${hotelIdentifier}/guests`}
+                        onClick={handleNavLinkClick}
+                      >
+                        Guests
+                      </Link>
+                    </li>
+                  )}
+
+                  {/* Staff List (Admin only) */}
+                  {isAdminOrSuperUser && (
+                    <li className="nav-item">
+                      <Link
+                        className={`nav-link ${
+                          isActive("/staff") ? "active" : ""
+                        }`}
+                        to="/staff"
+                        onClick={handleNavLinkClick}
+                      >
+                        Staff
+                      </Link>
+                    </li>
+                  )}
+
+                  {/* Profile (Staff only) */}
+                  {isStaff && (
+                    <li className="nav-item">
+                      <Link
+                        className={`nav-link ${
+                          isActive("/staff/me") ? "active" : ""
+                        }`}
+                        to="/staff/me"
+                        onClick={handleNavLinkClick}
+                      >
+                        Profile
+                      </Link>
+                    </li>
+                  )}
+
+                  {/* ───────────────────────── */}
+                  {/* NEW: Bookings Link */}
                   <li className="nav-item">
                     <Link
                       className={`nav-link ${
-                        isActive("/rooms") ? "active" : ""
+                        isActive("/bookings") ? "active" : ""
                       }`}
-                      to="/rooms"
+                      to="/bookings"
                       onClick={handleNavLinkClick}
                     >
-                      Rooms
+                      Bookings
                     </Link>
                   </li>
 
+                  {/* Logout */}
                   <li className="nav-item">
-                    <Link
-                      className={`nav-link ${
-                        isActive(`/${hotelIdentifier}/guests`) ? "active" : ""
-                      }`}
-                      to={`/${hotelIdentifier}/guests`}
-                      onClick={handleNavLinkClick}
+                    <button
+                      className="btn btn-link nav-link"
+                      onClick={handleLogout}
                     >
-                      Guests
-                    </Link>
-                  </li>
-                  <li className="nav-item">
-                    <Link
-                      className={`nav-link ${
-                        isActive("/staff") ? "active" : ""
-                      }`}
-                      to="/staff"
-                      onClick={handleNavLinkClick}
-                    >
-                      Staff
-                    </Link>
+                      Logout
+                    </button>
                   </li>
                 </>
-              )}
-
-              {isStaff && (
-                <li className="nav-item">
-                  <Link
-                    className={`nav-link ${
-                      isActive("/staff/me") ? "active" : ""
-                    }`}
-                    to="/staff/me"
-                    onClick={handleNavLinkClick}
-                  >
-                    Profile
-                  </Link>
-                </li>
-              )}
-
-              {user && (
-                <li className="nav-item">
-                  <button
-                    className="btn btn-link nav-link"
-                    onClick={() => {
-                      logout();
-                      handleLogout();
-                    }}
-                  >
-                    Logout
-                  </button>
-                </li>
               )}
             </ul>
           </div>

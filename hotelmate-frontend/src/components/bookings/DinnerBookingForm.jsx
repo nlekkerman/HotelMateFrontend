@@ -14,6 +14,7 @@ const DinnerBookingForm = () => {
     adults: 1,
     children: 0,
     infants: 0,
+    seats: 1,
   });
 
   const [submitted, setSubmitted] = useState(false);
@@ -37,20 +38,33 @@ const DinnerBookingForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
+      let formattedDate = "";
+      if (formData.date) {
+        const d = formData.date;
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        formattedDate = `${y}-${m}-${dd}`;
+      }
+
       await api.post(
-        `bookings/${hotelSlug}/restaurant/${restaurantSlug}/room/${roomNumber}/`,
+        `bookings/guest-booking/${hotelSlug}/restaurant/${restaurantSlug}/room/${roomNumber}/`,
         {
-          date: formData.date?.toISOString().split("T")[0],
+          date: formattedDate,
           time: formData.time,
           note: formData.note,
           adults: formData.adults,
           children: formData.children,
           infants: formData.infants,
+          seats: {
+            adults: formData.adults,
+            children: formData.children,
+            infants: formData.infants,
+            total: formData.adults + formData.children + formData.infants,
+          },
         }
       );
-
       setSubmitted(true);
     } catch (err) {
       setError("Failed to submit booking. Please try again.");
@@ -165,6 +179,21 @@ const DinnerBookingForm = () => {
                 value={formData.infants}
                 onChange={handleChange}
                 className="form-control"
+              />
+            </div>
+            <div className="mb-3">
+              <label htmlFor="seats" className="form-label">
+                Seats
+              </label>
+              <input
+                type="number"
+                id="seats"
+                name="seats"
+                min={1}
+                value={formData.seats || ""}
+                onChange={handleChange}
+                className="form-control"
+                required
               />
             </div>
           </div>
