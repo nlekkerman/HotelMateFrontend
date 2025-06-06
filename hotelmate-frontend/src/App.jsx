@@ -21,7 +21,9 @@ import RoomService from "@/components/rooms/RoomService";
 import AssignGuestForm from "@/components/guests/AssignGuestForm"; // Adjust path if needed
 import GuestList from "@/components/guests/GuestList";
 import GuestEdit from '@/components/guests/GuestEdit';
-import DinnerBookingForm from '@/components//bookings/DinnerBookingForm';
+import DinnerBookingForm from '@/components/bookings/DinnerBookingForm';
+import DinnerBookingList from '@/components/bookings/DinnerBookingList';
+import Bookings from "@/components/bookings/Bookings";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // ✅ Add this import:
@@ -80,7 +82,10 @@ function App() {
                 />
 
                 <Route path="/:hotelIdentifier/guests/:guestId/edit" element={<GuestEdit />} />
-                <Route path="/bookings/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/" element={<DinnerBookingForm />} />
+                <Route path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/" element={<DinnerBookingForm />} />
+                <Route path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/" element={<DinnerBookingList />} />
+                <Route path="/bookings" element={<Bookings />} />
+                {/* Fallback route */}
               </Routes>
             </div>
           </BrowserRouter>
