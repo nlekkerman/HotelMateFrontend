@@ -22,6 +22,7 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
         let data = res.data;
         if (data && Array.isArray(data.results)) {
           data = data.results;
+          console.log("AAAAAAAAAAAAAAAAAAPI bookings response:", data);
         } else if (!Array.isArray(data)) {
           console.warn("Unexpected bookings response:", data);
           data = [];
@@ -40,20 +41,35 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
       });
   }, [hotelSlug, restaurantId]);
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // *** Make sure this is the ONLY “today” calculation ***
-  // (remove any `toISOString().slice(0,10)` usage)
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0"); // Months are 0-based
-  const day = String(now.getDate()).padStart(2, "0");
-  const today = `${year}-${month}-${day}`;
-  // ───────────────────────────────────────────────────────────────────────────
+  const todayMid = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    0,
+    0,
+    0,
+    0
+  );
+  const displayDate = new Date(
+    todayMid.getFullYear(),
+    todayMid.getMonth(),
+    todayMid.getDate()
+  )
+    .toISOString()
+    .slice(0, 10);
+  // Partition bookings using Date objects
+  const todaysBookings = bookings.filter((b) => {
+    const bd = new Date(b.date); // parse API date (ISO or "June 8, 2025")
+    bd.setHours(0, 0, 0, 0); // normalize to midnight
+    return bd.getTime() === todayMid.getTime();
+  });
 
-  // Partition bookings into "today" vs "future"
-  const todaysBookings = bookings.filter((b) => b.date === today);
-  const upcomingBookings = bookings.filter((b) => b.date > today);
-
+  const upcomingBookings = bookings.filter((b) => {
+    const bd = new Date(b.date);
+    bd.setHours(0, 0, 0, 0);
+    return bd.getTime() > todayMid.getTime();
+  });
   if (loading) {
     return (
       <div className="text-center my-4">
@@ -127,9 +143,7 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
                 <td className="border-secondary py-2">{booking.id}</td>
                 <td className="border-secondary py-2">{booking.date}</td>
                 <td className="border-secondary py-2">{booking.time}</td>
-                <td className="border-secondary py-2">
-                  {booking.note || "—"}
-                </td>
+                <td className="border-secondary py-2">{booking.note || "—"}</td>
                 <td className="border-secondary py-2">{totalSeats}</td>
                 <td className="border-secondary py-2">{adults}</td>
                 <td className="border-secondary py-2">{children}</td>
@@ -150,7 +164,7 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
       {/* Card for Today’s Bookings (if any) */}
       <div className="card bg-dark text-light mb-4 shadow">
         <div className="card-header bg-secondary">
-          <h5 className="mb-0">Today’s Bookings ({today})</h5>
+          <h5 className="mb-0">Today’s Bookings ({displayDate})</h5>
         </div>
         <div className="card-body p-0">
           {todaysBookings.length > 0 ? (
