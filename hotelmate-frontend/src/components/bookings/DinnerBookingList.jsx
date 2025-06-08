@@ -78,6 +78,7 @@ export default function DinnerBookingList() {
       .then((res) => {
         setBookings(res.data);
         setLoadingBookings(false);
+        console.log("Fetched dinner bookings:", res.data);
       })
       .catch((err) => {
         console.error("Failed to fetch dinner bookings:", err);
