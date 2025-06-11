@@ -2,7 +2,7 @@
 import React from "react";
 import "@/styles/main.css";
 import "bootstrap/dist/css/bootstrap.min.css";
-import 'bootstrap-icons/font/bootstrap-icons.css';
+import "bootstrap-icons/font/bootstrap-icons.css";
 import { UIProvider } from "@/context/UIContext";
 import { AuthProvider } from "@/context/AuthContext";
 import Navbar from "@/components/layout/Navbar";
@@ -25,6 +25,7 @@ import GuestEdit from "@/components/guests/GuestEdit";
 import DinnerBookingForm from "@/components/bookings/DinnerBookingForm";
 import DinnerBookingList from "@/components/bookings/DinnerBookingList";
 import Bookings from "@/components/bookings/Bookings";
+import RoomServiceOrders from "@/components/room_service/RoomServiceOrders";
 
 import HotelInfo from "@/pages/hotel_info/HotelInfo";
 
@@ -57,6 +58,14 @@ function App() {
                     <RequirePin>
                       <RoomService />
                     </RequirePin>
+                  }
+                />
+                <Route
+                  path="/room_services/:hotelIdentifier/orders"
+                  element={
+                    
+                      <RoomServiceOrders />
+                    
                   }
                 />
 
@@ -108,8 +117,6 @@ function App() {
                   path="/hotel_info/:hotel_slug/:category"
                   element={<HotelInfo />}
                 />
-
-              
               </Routes>
             </div>
           </BrowserRouter>
