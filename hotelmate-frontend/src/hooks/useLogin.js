@@ -33,6 +33,7 @@ export default function useLogin() {
           hotel_slug: data.hotel_slug,
           is_staff: data.is_staff,
           is_superuser: data.is_superuser,
+          access_level: data.access_level,
         })
       );
 
@@ -46,6 +47,7 @@ export default function useLogin() {
         isAdmin: data.is_staff || data.is_superuser,
         is_staff: data.is_staff,
         is_superuser: data.is_superuser,
+        access_level: data.access_level,
       });
 
       setLoading(false);

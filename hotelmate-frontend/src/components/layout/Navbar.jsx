@@ -1,5 +1,3 @@
-// src/components/layout/Navbar.jsx
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -8,213 +6,154 @@ import api from "@/services/api";
 
 const Navbar = () => {
   const location = useLocation();
-  const { user, logout } = useAuth();
-  const hotelIdentifier = user?.hotel_slug; // hotel slug from localStorage via AuthContext
-  const [staffProfile, setStaffProfile] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isOnDuty, setIsOnDuty] = useState(false);
-  const [isNavbarCollapsed, setIsNavbarCollapsed] = useState(true);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const hotelSlug = user?.hotel_slug;
+
+  const [staffProfile, setStaffProfile] = useState(null);
+  const [isOnDuty, setIsOnDuty] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    async function fetchStaffProfile() {
-      if (!user) {
-        setStaffProfile(null);
-        return;
-      }
-      try {
-        const res = await api.get("/staff/me/");
-        setStaffProfile(res.data);
-        setIsOnDuty(res.data.is_on_duty || false);
-      } catch (error) {
-        console.error("Failed to fetch staff profile", error);
-        setStaffProfile(null);
-      }
+    if (!user) {
+      setStaffProfile(null);
+      return;
     }
-    fetchStaffProfile();
+    api.get("/staff/me/")
+      .then(res => {
+        setStaffProfile(res.data);
+        setIsOnDuty(res.data.is_on_duty);
+      })
+      .catch(() => setStaffProfile(null));
   }, [user]);
 
-  const isActive = (path) => location.pathname === path;
-  const isAdminOrSuperUser = user && (user.is_staff || user.is_superuser);
-  const isStaff = !!staffProfile;
-
-  const toggleNavbar = () => {
-    setIsNavbarCollapsed(!isNavbarCollapsed);
-  };
-  const handleNavLinkClick = () => {
-    if (!isNavbarCollapsed) setIsNavbarCollapsed(true);
-  };
+  const toggleNavbar = () => setCollapsed(prev => !prev);
   const handleLogout = () => {
     logout();
-    handleNavLinkClick();
     navigate("/login");
   };
 
+  // Permission checks
+  const isSuperUser = user?.is_superuser;
+  const accessLevel = staffProfile?.access_level;
+  const isSuperStaffAdmin = accessLevel === "super_staff_admin";
+  const showFullNav = isSuperUser || isSuperStaffAdmin;
+  const isActive = path => location.pathname === path;
+
   return (
-    <>
-      <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
-        <div className="container-fluid">
-          <Link className="navbar-brand fw-bold" to="/">
-            🏨 HotelMate
-          </Link>
-          <button
-            className="navbar-toggler"
-            type="button"
-            aria-controls="navbarSupportedContent"
-            aria-expanded={!isNavbarCollapsed}
-            aria-label="Toggle navigation"
-            onClick={toggleNavbar}
-          >
-            <span className="navbar-toggler-icon"></span>
-          </button>
+    <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+      <div className="container-fluid">
+        <Link className="navbar-brand fw-bold" to="/">🏨 HotelMate</Link>
+        <button
+          className="navbar-toggler"
+          type="button"
+          aria-controls="navbarSupportedContent"
+          aria-expanded={!collapsed}
+          aria-label="Toggle navigation"
+          onClick={toggleNavbar}
+        >
+          <span className="navbar-toggler-icon"></span>
+        </button>
 
-          <div
-            className={`collapse navbar-collapse ${
-              !isNavbarCollapsed ? "show" : ""
-            }`}
-            id="navbarSupportedContent"
-          >
-            <ul className="navbar-nav ms-auto mb-2 mb-lg-0 gap-3">
-              {/* Clock In/Out (Staff only) */}
-              <li className="nav-item">
-                <button
-                  className={`btn btn-${isOnDuty ? "success" : "danger"}`}
-                  onClick={() => setIsModalOpen(true)}
-                  disabled={!staffProfile}
-                >
-                  {isOnDuty ? "Clock Out" : "Clock In"}
-                </button>
-              </li>
+        <div className={`collapse navbar-collapse ${!collapsed ? "show" : ""}`}>
+          <ul className="navbar-nav ms-auto mb-2 mb-lg-0 gap-3">
 
-              {!user && (
-                <>
-                  <li className="nav-item">
-                    <Link
-                      className={`nav-link ${
-                        isActive("/login") ? "active" : ""
-                      }`}
-                      to="/login"
-                      onClick={handleNavLinkClick}
-                    >
-                      Login
-                    </Link>
-                  </li>
-                  <li className="nav-item">
-                    <Link
-                      className={`nav-link ${
-                        isActive("/register") ? "active" : ""
-                      }`}
-                      to="/register"
-                      onClick={handleNavLinkClick}
-                    >
-                      Register
-                    </Link>
-                  </li>
-                </>
-              )}
+            {/* Unauthenticated: Login/Register */}
+            {!user && (
+              <>
+                <li className="nav-item">
+                  <Link
+                    className={`nav-link ${isActive("/login") && "active"}`}
+                    to="/login"
+                    onClick={toggleNavbar}
+                  >Login</Link>
+                </li>
+                <li className="nav-item">
+                  <Link
+                    className={`nav-link ${isActive("/register") && "active"}`}
+                    to="/register"
+                    onClick={toggleNavbar}
+                  >Register</Link>
+                </li>
+              </>
+            )}
 
-              {user && (
-                <>
-                  {/* Rooms (Admin only) */}
-                  {isAdminOrSuperUser && (
-                    <li className="nav-item">
-                      <Link
-                        className={`nav-link ${
-                          isActive("/rooms") ? "active" : ""
-                        }`}
-                        to="/rooms"
-                        onClick={handleNavLinkClick}
-                      >
-                        Rooms
-                      </Link>
-                    </li>
-                  )}
-
-                  {/* Guests (Admin only) */}
-                  {isAdminOrSuperUser && (
-                    <li className="nav-item">
-                      <Link
-                        className={`nav-link ${
-                          isActive(`/${hotelIdentifier}/guests`) ? "active" : ""
-                        }`}
-                        to={`/${hotelIdentifier}/guests`}
-                        onClick={handleNavLinkClick}
-                      >
-                        Guests
-                      </Link>
-                    </li>
-                  )}
-
-                  {/* Staff List (Admin only) */}
-                  {isAdminOrSuperUser && (
-                    <li className="nav-item">
-                      <Link
-                        className={`nav-link ${
-                          isActive("/staff") ? "active" : ""
-                        }`}
-                        to="/staff"
-                        onClick={handleNavLinkClick}
-                      >
-                        Staff
-                      </Link>
-                    </li>
-                  )}
-
-                  {/* Profile (Staff only) */}
-                  {isStaff && (
-                    <li className="nav-item">
-                      <Link
-                        className={`nav-link ${
-                          isActive("/staff/me") ? "active" : ""
-                        }`}
-                        to="/staff/me"
-                        onClick={handleNavLinkClick}
-                      >
-                        Profile
-                      </Link>
-                    </li>
-                  )}
-
-                  {/* ───────────────────────── */}
-                  {/* NEW: Bookings Link */}
-                  <li className="nav-item">
-                    <Link
-                      className={`nav-link ${
-                        isActive("/bookings") ? "active" : ""
-                      }`}
-                      to="/bookings"
-                      onClick={handleNavLinkClick}
-                    >
-                      Bookings
-                    </Link>
-                  </li>
-
-                  {/* Logout */}
+            {/* Regular staff: only clock & logout */}
+            {user && !showFullNav && (
+              <>  
+                {staffProfile && (
                   <li className="nav-item">
                     <button
-                      className="btn btn-link nav-link"
-                      onClick={handleLogout}
-                    >
-                      Logout
-                    </button>
+                      className={`btn btn-${isOnDuty ? "success" : "danger"}`}
+                      onClick={() => setIsModalOpen(true)}
+                    >{isOnDuty ? "Clock Out" : "Clock In"}</button>
                   </li>
-                </>
-              )}
-            </ul>
-          </div>
-        </div>
-      </nav>
+                )}
+                <li className="nav-item">
+                  <button className="btn btn-link nav-link" onClick={handleLogout}>Logout</button>
+                </li>
+              </>
+            )}
 
-      {isStaff && (
+            {/* Superusers & super_staff_admin: full nav */}
+            {user && showFullNav && (
+              <>
+                {staffProfile && (
+                  <li className="nav-item">
+                    <button
+                      className={`btn btn-${isOnDuty ? "success" : "danger"}`}
+                      onClick={() => setIsModalOpen(true)}
+                    >{isOnDuty ? "Clock Out" : "Clock In"}</button>
+                  </li>
+                )}
+                <li className="nav-item">
+                  <Link className={`nav-link ${isActive("/") && "active"}`} to="/" onClick={toggleNavbar}>Reception</Link>
+                </li>
+                <li className="nav-item">
+                  <Link className={`nav-link ${isActive("/rooms") && "active"}`} to="/rooms" onClick={toggleNavbar}>Rooms</Link>
+                </li>
+                <li className="nav-item">
+                  <Link className={`nav-link ${isActive(`/${hotelSlug}/guests`) && "active"}`} to={`/${hotelSlug}/guests`} onClick={toggleNavbar}>Guests</Link>
+                </li>
+                <li className="nav-item">
+                  <Link className={`nav-link ${isActive("/staff") && "active"}`} to="/staff" onClick={toggleNavbar}>Staff</Link>
+                </li>
+                {staffProfile && (
+                  <li className="nav-item">
+                    <Link className={`nav-link ${isActive("/staff/me") && "active"}`} to="/staff/me" onClick={toggleNavbar}>Profile</Link>
+                  </li>
+                )}
+                <li className="nav-item">
+                  <Link className={`nav-link ${isActive("/bookings") && "active"}`} to="/bookings" onClick={toggleNavbar}>Bookings</Link>
+                </li>
+                <li className="nav-item">
+                  <Link className={`nav-link ${isActive(`/hotel_info/${hotelSlug}`) && "active"}`} to={`/hotel_info/${hotelSlug}`} onClick={toggleNavbar}>Info</Link>
+                </li>
+                <li className="nav-item">
+                  <button className="btn btn-link nav-link" onClick={handleLogout}>Logout</button>
+                </li>
+              </>
+            )}
+
+          </ul>
+        </div>
+      </div>
+
+      {/* ClockModal opens only when clock button clicked */}
+      {staffProfile && (
         <ClockModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          staffId={staffProfile?.id}
+          staffId={staffProfile.id}
           initialStatus={isOnDuty}
-          onStatusChange={setIsOnDuty}
+          onStatusChange={(newStatus) => {
+            setIsOnDuty(newStatus);
+            setIsModalOpen(false);
+          }}
         />
       )}
-    </>
+    </nav>
   );
 };
 
