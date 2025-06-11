@@ -34,7 +34,7 @@ export default function HotelInfo() {
     async function fetchCategories() {
       try {
         const res = await api.get(`/hotel_info/categories/`, {
-          params: { infos__hotel__slug: hotelSlug }
+          params: { infos__hotel__slug: hotelSlug },
         });
         setCategories(res.data.results || []);
       } catch (err) {
@@ -67,7 +67,7 @@ export default function HotelInfo() {
       try {
         // 1. Fetch the info items
         const infoRes = await api.get(`/hotel_info/hotelinfo/`, {
-          params: { hotel__slug: hotelSlug, category__slug: activeCategory }
+          params: { hotel__slug: hotelSlug, category__slug: activeCategory },
         });
         const items = Array.isArray(infoRes.data)
           ? infoRes.data
@@ -79,7 +79,7 @@ export default function HotelInfo() {
         // 2. Only authenticated users fetch the QR code URL
         if (user) {
           const qrRes = await api.get(`/hotel_info/category_qr/`, {
-            params: { hotel_slug: hotelSlug, category_slug: activeCategory }
+            params: { hotel_slug: hotelSlug, category_slug: activeCategory },
           });
           setCategoryQr(qrRes.data.qr_url || null);
         }
@@ -101,32 +101,41 @@ export default function HotelInfo() {
   // Helper to get full image URLs
   const getFullImageUrl = (path) => {
     if (!path) return null;
-    return path.startsWith("http") ? path : `https://res.cloudinary.com/dg0ssec7u/${path}`;
+    return path.startsWith("http")
+      ? path
+      : `https://res.cloudinary.com/dg0ssec7u/${path}`;
   };
 
   return (
     <div className="my-4">
       {/* Category buttons + Create toggle */}
-      <div className="d-flex flex-wrap gap-2 mb-3 align-items-center">
-        {categories.map(cat => (
+      {user && (
+        <div className="d-flex flex-wrap gap-2 mb-3 align-items-center">
+          {categories.map((cat) => (
+            <button
+              key={cat.slug}
+              className={`btn ${
+                cat.slug === activeCategory
+                  ? "btn-primary"
+                  : "btn-outline-primary"
+              }`}
+              onClick={() => {
+                setShowCreateForm(false);
+                navigate(`/hotel_info/${hotelSlug}/${cat.slug}`);
+              }}
+            >
+              {cat.name}
+            </button>
+          ))}
+
           <button
-            key={cat.slug}
-            className={`btn ${cat.slug === activeCategory ? "btn-primary" : "btn-outline-primary"}`}
-            onClick={() => {
-              setShowCreateForm(false);
-              navigate(`/hotel_info/${hotelSlug}/${cat.slug}`);
-            }}
+            className="btn btn-success ms-auto"
+            onClick={() => setShowCreateForm((v) => !v)}
           >
-            {cat.name}
+            {showCreateForm ? "Cancel" : "Create Info"}
           </button>
-        ))}
-        <button
-          className="btn btn-success ms-auto"
-          onClick={() => setShowCreateForm(v => !v)}
-        >
-          {showCreateForm ? "Cancel" : "Create Info"}
-        </button>
-      </div>
+        </div>
+      )}
 
       {/* Create form */}
       {showCreateForm && <HotelInfoCreateForm hotelSlug={hotelSlug} />}
@@ -135,17 +144,24 @@ export default function HotelInfo() {
       {!showCreateForm && (
         <>
           {loadingCategoryData && <p>Loading category data…</p>}
-          {errorCategoryData && <p className="text-danger">{errorCategoryData}</p>}
+          {errorCategoryData && (
+            <p className="text-danger">{errorCategoryData}</p>
+          )}
 
           {activeCategory && categoryData && (
             <div>
-              <h3>{categories.find(c => c.slug === activeCategory)?.name || activeCategory.replace(/[_-]/g, " ")}</h3>
+              <h3>
+                {categories.find((c) => c.slug === activeCategory)?.name ||
+                  activeCategory.replace(/[_-]/g, " ")}
+              </h3>
 
               {/* Category image */}
-              {categories.find(c => c.slug === activeCategory)?.image && (
+              {categories.find((c) => c.slug === activeCategory)?.image && (
                 <div className="mb-3">
                   <img
-                    src={categories.find(c => c.slug === activeCategory).image}
+                    src={
+                      categories.find((c) => c.slug === activeCategory).image
+                    }
                     alt={activeCategory}
                     style={{ maxWidth: 300, marginBottom: 16 }}
                   />
@@ -157,7 +173,11 @@ export default function HotelInfo() {
                 categoryQr ? (
                   <div className="mb-3">
                     <h5>Category QR Code:</h5>
-                    <img src={categoryQr} alt="Category QR code" style={{ maxWidth: 150 }} />
+                    <img
+                      src={categoryQr}
+                      alt="Category QR code"
+                      style={{ maxWidth: 150 }}
+                    />
                   </div>
                 ) : (
                   <p>No QR code available for this category.</p>
@@ -173,11 +193,13 @@ export default function HotelInfo() {
                 <p>No data found for this category.</p>
               ) : (
                 <ul className="list-group">
-                  {categoryData.map(item => (
+                  {categoryData.map((item) => (
                     <li key={item.id} className="list-group-item">
                       <h5>{item.title}</h5>
                       <p>{item.description}</p>
-                      <p>{item.event_date} {item.event_time}</p>
+                      <p>
+                        {item.event_date} {item.event_time}
+                      </p>
                       {item.image && (
                         <img
                           src={getFullImageUrl(item.image)}
