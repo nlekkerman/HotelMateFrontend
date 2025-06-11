@@ -120,6 +120,20 @@ function RoomList() {
                         />
                       </div>
                     )}
+                    {room.dinner_booking_qr_code && (
+                      <div className="text-center">
+                        <h6 className="mb-1">Dinner Booking QR Code</h6>
+                        <img
+                          src={room.dinner_booking_qr_code}
+                          alt="Dinner Booking QR"
+                          style={{
+                            width: 120,
+                            height: 120,
+                            objectFit: "contain",
+                          }}
+                        />
+                      </div>
+                    )}
                     
                     <div className="button-wraper w-100 d-flex justify-content-center mt-2">
   {!room.is_occupied && (

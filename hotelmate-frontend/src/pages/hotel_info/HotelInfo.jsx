@@ -142,6 +142,7 @@ export default function HotelInfo() {
   if (loadingCategories) return <p>Loading categories…</p>;
   if (errorCategories) return <p className="text-danger">{errorCategories}</p>;
 
+  const CLOUD_BASE = "https://res.cloudinary.com/dg0ssec7u/image/upload";
   // Helper URL builder – guards against null paths
   const getFullImageUrl = (path) => {
     if (!path) return null; // nothing to show
