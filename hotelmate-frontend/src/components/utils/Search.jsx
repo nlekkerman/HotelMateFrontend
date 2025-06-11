@@ -88,7 +88,7 @@ function Search({ placeholder = "Search...", delay = 300, apiEndpoint = "/rooms/
                   )}
                   {room.in_room_breakfast_qr_code && (
                     <div className="text-center">
-                      <h6 className="mb-1">In-Room Breakfast QR Code</h6>
+                      <h6 className="mb-1">Breakfast QR Code</h6>
                       <img
                         src={room.in_room_breakfast_qr_code}
                         alt="Breakfast QR"
@@ -100,6 +100,20 @@ function Search({ placeholder = "Search...", delay = 300, apiEndpoint = "/rooms/
                       />
                     </div>
                   )}
+                  {room.dinner_booking_qr_code && (
+                      <div className="text-center">
+                        <h6 className="mb-1">Dinner Booking QR</h6>
+                        <img
+                          src={room.dinner_booking_qr_code}
+                          alt="Dinner Booking QR"
+                          style={{
+                            width: 100,
+                            height: 100,
+                            objectFit: "contain",
+                          }}
+                        />
+                      </div>
+                    )}
                 </div>
 
                 <div className="button-wraper w-100 d-flex justify-content-center mt-2">

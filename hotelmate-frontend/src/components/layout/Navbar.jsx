@@ -8,7 +8,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const hotelSlug = user?.hotel_slug;
+  const hotelIdentifier = user?.hotel_slug;
 
   const [staffProfile, setStaffProfile] = useState(null);
   const [isOnDuty, setIsOnDuty] = useState(false);
@@ -37,9 +37,10 @@ const Navbar = () => {
   // Permission checks
   const isSuperUser = user?.is_superuser;
   const accessLevel = staffProfile?.access_level;
+  const isStaffAdmin = accessLevel === "staff_admin";
   const isSuperStaffAdmin = accessLevel === "super_staff_admin";
-  const showFullNav = isSuperUser || isSuperStaffAdmin;
-  const isActive = path => location.pathname === path;
+  const showFullNav = isSuperUser || isSuperStaffAdmin || isStaffAdmin;
+  const isActive = (path) => location.pathname.startsWith(path);
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
@@ -59,7 +60,6 @@ const Navbar = () => {
         <div className={`collapse navbar-collapse ${!collapsed ? "show" : ""}`}>
           <ul className="navbar-nav ms-auto mb-2 mb-lg-0 gap-3">
 
-            {/* Unauthenticated: Login/Register */}
             {!user && (
               <>
                 <li className="nav-item">
@@ -79,7 +79,6 @@ const Navbar = () => {
               </>
             )}
 
-            {/* Regular staff: only clock & logout */}
             {user && !showFullNav && (
               <>  
                 {staffProfile && (
@@ -96,7 +95,6 @@ const Navbar = () => {
               </>
             )}
 
-            {/* Superusers & super_staff_admin: full nav */}
             {user && showFullNav && (
               <>
                 {staffProfile && (
@@ -108,30 +106,67 @@ const Navbar = () => {
                   </li>
                 )}
                 <li className="nav-item">
-                  <Link className={`nav-link ${isActive("/") && "active"}`} to="/" onClick={toggleNavbar}>Reception</Link>
+                  <Link
+                    className={`nav-link ${isActive("/") && "active"}`}
+                    to="/"
+                    onClick={toggleNavbar}
+                  >Reception</Link>
                 </li>
                 <li className="nav-item">
-                  <Link className={`nav-link ${isActive("/rooms") && "active"}`} to="/rooms" onClick={toggleNavbar}>Rooms</Link>
+                  <Link
+                    className={`nav-link ${isActive("/rooms") && "active"}`}
+                    to="/rooms"
+                    onClick={toggleNavbar}
+                  >Rooms</Link>
                 </li>
                 <li className="nav-item">
-                  <Link className={`nav-link ${isActive(`/${hotelSlug}/guests`) && "active"}`} to={`/${hotelSlug}/guests`} onClick={toggleNavbar}>Guests</Link>
+                  <Link
+                    className={`nav-link ${isActive(`/${hotelIdentifier}/guests`) && "active"}`}
+                    to={`/${hotelIdentifier}/guests`}
+                    onClick={toggleNavbar}
+                  >Guests</Link>
                 </li>
                 <li className="nav-item">
-                  <Link className={`nav-link ${isActive("/staff") && "active"}`} to="/staff" onClick={toggleNavbar}>Staff</Link>
-                </li>
-                {staffProfile && (
-                  <li className="nav-item">
-                    <Link className={`nav-link ${isActive("/staff/me") && "active"}`} to="/staff/me" onClick={toggleNavbar}>Profile</Link>
-                  </li>
-                )}
-                <li className="nav-item">
-                  <Link className={`nav-link ${isActive("/bookings") && "active"}`} to="/bookings" onClick={toggleNavbar}>Bookings</Link>
+                  <Link
+                    className={`nav-link ${isActive("/staff") && "active"}`}
+                    to="/staff"
+                    onClick={toggleNavbar}
+                  >Staff</Link>
                 </li>
                 <li className="nav-item">
-                  <Link className={`nav-link ${isActive(`/hotel_info/${hotelSlug}`) && "active"}`} to={`/hotel_info/${hotelSlug}`} onClick={toggleNavbar}>Info</Link>
+                  <Link
+                    className={`nav-link ${isActive("/staff/me") && "active"}`}
+                    to="/staff/me"
+                    onClick={toggleNavbar}
+                  >Profile</Link>
                 </li>
                 <li className="nav-item">
-                  <button className="btn btn-link nav-link" onClick={handleLogout}>Logout</button>
+                  <Link
+                    className={`nav-link ${isActive("/bookings") && "active"}`}
+                    to="/bookings"
+                    onClick={toggleNavbar}
+                  >Bookings</Link>
+                </li>
+                <li className="nav-item">
+                  <Link
+                    className={`nav-link ${isActive(`/hotel_info/${hotelIdentifier}`) && "active"}`}
+                    to={`/hotel_info/${hotelIdentifier}`}
+                    onClick={toggleNavbar}
+                  >Info</Link>
+                </li>
+                <li className="nav-item">
+                  <Link
+                    className={`nav-link ${isActive(`/room_services/${hotelIdentifier}/orders`) && "active"}`}
+                    to={`/room_services/${hotelIdentifier}/orders`}
+                    onClick={toggleNavbar}
+                  >Room Service</Link>
+                </li>
+                
+                <li className="nav-item">
+                  <button
+                    className="btn btn-link nav-link"
+                    onClick={handleLogout}
+                  >Logout</button>
                 </li>
               </>
             )}
@@ -140,7 +175,6 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* ClockModal opens only when clock button clicked */}
       {staffProfile && (
         <ClockModal
           isOpen={isModalOpen}

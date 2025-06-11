@@ -1,5 +1,3 @@
-// src/components/bookings/Bookings.jsx
-
 import React, { useEffect, useState } from "react";
 import api from "@/services/api";
 
@@ -60,9 +58,9 @@ export default function Bookings() {
       });
   }, []);
 
+  // Toggle selection: deselect if clicking same button
   const handleClick = (restId) => {
-    setSelectedRestaurantId(restId);
-    // Now that selectedRestaurantId is set, <RestaurantBookings /> will appear
+    setSelectedRestaurantId((prev) => (prev === restId ? null : restId));
   };
 
   const { name: hotelName, slug: hotelSlug } = getHotelInfo();
