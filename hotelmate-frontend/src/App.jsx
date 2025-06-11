@@ -2,6 +2,7 @@
 import React from "react";
 import "@/styles/main.css";
 import "bootstrap/dist/css/bootstrap.min.css";
+import 'bootstrap-icons/font/bootstrap-icons.css';
 import { UIProvider } from "@/context/UIContext";
 import { AuthProvider } from "@/context/AuthContext";
 import Navbar from "@/components/layout/Navbar";
