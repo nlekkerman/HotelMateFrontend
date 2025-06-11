@@ -50,6 +50,9 @@ function StaffProfile() {
               <strong>Email:</strong> {staff.email}
             </li>
             <li className="list-group-item">
+              <strong>Access Level:</strong> {staff.access_level || "N/A"}
+            </li>
+            <li className="list-group-item">
               <strong>Phone:</strong> {staff.phone_number || "N/A"}
             </li>
             <li className="list-group-item">

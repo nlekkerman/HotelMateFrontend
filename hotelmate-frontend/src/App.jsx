@@ -20,10 +20,13 @@ import Breakfast from "@/components/rooms/Breakfast";
 import RoomService from "@/components/rooms/RoomService";
 import AssignGuestForm from "@/components/guests/AssignGuestForm"; // Adjust path if needed
 import GuestList from "@/components/guests/GuestList";
-import GuestEdit from '@/components/guests/GuestEdit';
-import DinnerBookingForm from '@/components/bookings/DinnerBookingForm';
-import DinnerBookingList from '@/components/bookings/DinnerBookingList';
+import GuestEdit from "@/components/guests/GuestEdit";
+import DinnerBookingForm from "@/components/bookings/DinnerBookingForm";
+import DinnerBookingList from "@/components/bookings/DinnerBookingList";
 import Bookings from "@/components/bookings/Bookings";
+
+import HotelInfo from "@/pages/hotel_info/HotelInfo";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // ✅ Add this import:
@@ -71,7 +74,10 @@ function App() {
                 <Route path="/staff/create" element={<StaffCreate />} />
                 <Route path="/staff/:id" element={<StaffDetails />} />
                 <Route path="/staff/me" element={<StaffProfile />} />
-                 <Route path="/:hotelIdentifier/guests" element={<GuestList />} />
+                <Route
+                  path="/:hotelIdentifier/guests"
+                  element={<GuestList />}
+                />
                 <Route
                   path="/rooms/:hotelIdentifier/rooms/:roomNumber"
                   element={<RoomDetails />}
@@ -81,11 +87,28 @@ function App() {
                   element={<AssignGuestForm />}
                 />
 
-                <Route path="/:hotelIdentifier/guests/:guestId/edit" element={<GuestEdit />} />
-                <Route path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/" element={<DinnerBookingForm />} />
-                <Route path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/" element={<DinnerBookingList />} />
+                <Route
+                  path="/:hotelIdentifier/guests/:guestId/edit"
+                  element={<GuestEdit />}
+                />
+                <Route
+                  path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/"
+                  element={<DinnerBookingForm />}
+                />
+                <Route
+                  path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/"
+                  element={<DinnerBookingList />}
+                />
                 <Route path="/bookings" element={<Bookings />} />
-                {/* Fallback route */}
+                <Route path="/hotel_info/:hotel_slug" element={<HotelInfo />} />
+
+                {/* 2) If you hit /hotel_info/:hotel_slug/:category */}
+                <Route
+                  path="/hotel_info/:hotel_slug/:category"
+                  element={<HotelInfo />}
+                />
+
+              
               </Routes>
             </div>
           </BrowserRouter>
