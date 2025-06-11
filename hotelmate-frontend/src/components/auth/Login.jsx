@@ -33,7 +33,7 @@ const Login = () => {
         return;
       }
 
-      navigate("/reception");
+      navigate("/");
     } catch {
       // error is already handled in the hook, no need to re-handle here
     }
@@ -88,7 +88,7 @@ const Login = () => {
             style={{ zIndex: 10 }}
             aria-label={showPassword ? "Hide password" : "Show password"}
           >
-            {showPassword ? "Hide" : "Show"}
+            <i className={showPassword ? "bi bi-eye-slash" : "bi bi-eye"} />
           </button>
         </div>
 
