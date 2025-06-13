@@ -20,15 +20,26 @@ const Navbar = () => {
       setStaffProfile(null);
       return;
     }
-    api.get("/staff/me/")
-      .then(res => {
+    api
+      .get("/staff/me/")
+      .then((res) => {
         setStaffProfile(res.data);
         setIsOnDuty(res.data.is_on_duty);
       })
       .catch(() => setStaffProfile(null));
   }, [user]);
+  // ─── Now we can decide whether to render ───
+  const { pathname } = location;
+  const hiddenNavPatterns = [
+    /^\/room_services\/[^/]+\/room\/[^/]+\/breakfast\/?$/,
+    /^\/room_services\/[^/]+\/room\/[^/]+\/menu\/?$/,
+    /^\/hotel_info\/[^/]+(\/[^/]+)?\/?$/,
+  ];
+  if (!user && hiddenNavPatterns.some((re) => re.test(pathname))) {
+    return null;
+  }
 
-  const toggleNavbar = () => setCollapsed(prev => !prev);
+  const toggleNavbar = () => setCollapsed((prev) => !prev);
   const handleLogout = () => {
     logout();
     navigate("/login");
@@ -43,9 +54,11 @@ const Navbar = () => {
   const isActive = (path) => location.pathname.startsWith(path);
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+    <nav className="navbar navbar-expand-lg navbar-dark shadow-sm main-bg">
       <div className="container-fluid">
-        <Link className="navbar-brand fw-bold" to="/">🏨 HotelMate</Link>
+        <Link className="navbar-brand fw-bold" to="/">
+          🏨 HotelMate
+        </Link>
         <button
           className="navbar-toggler"
           type="button"
@@ -59,7 +72,6 @@ const Navbar = () => {
 
         <div className={`collapse navbar-collapse ${!collapsed ? "show" : ""}`}>
           <ul className="navbar-nav ms-auto mb-2 mb-lg-0 gap-3">
-
             {!user && (
               <>
                 <li className="nav-item">
@@ -67,30 +79,41 @@ const Navbar = () => {
                     className={`nav-link ${isActive("/login") && "active"}`}
                     to="/login"
                     onClick={toggleNavbar}
-                  >Login</Link>
+                  >
+                    Login
+                  </Link>
                 </li>
                 <li className="nav-item">
                   <Link
                     className={`nav-link ${isActive("/register") && "active"}`}
                     to="/register"
                     onClick={toggleNavbar}
-                  >Register</Link>
+                  >
+                    Register
+                  </Link>
                 </li>
               </>
             )}
 
             {user && !showFullNav && (
-              <>  
+              <>
                 {staffProfile && (
                   <li className="nav-item">
                     <button
                       className={`btn btn-${isOnDuty ? "success" : "danger"}`}
                       onClick={() => setIsModalOpen(true)}
-                    >{isOnDuty ? "Clock Out" : "Clock In"}</button>
+                    >
+                      {isOnDuty ? "Clock Out" : "Clock In"}
+                    </button>
                   </li>
                 )}
                 <li className="nav-item">
-                  <button className="btn btn-link nav-link" onClick={handleLogout}>Logout</button>
+                  <button
+                    className="btn btn-link nav-link"
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </button>
                 </li>
               </>
             )}
@@ -102,7 +125,9 @@ const Navbar = () => {
                     <button
                       className={`btn btn-${isOnDuty ? "success" : "danger"}`}
                       onClick={() => setIsModalOpen(true)}
-                    >{isOnDuty ? "Clock Out" : "Clock In"}</button>
+                    >
+                      {isOnDuty ? "Clock Out" : "Clock In"}
+                    </button>
                   </li>
                 )}
                 <li className="nav-item">
@@ -110,67 +135,104 @@ const Navbar = () => {
                     className={`nav-link ${isActive("/") && "active"}`}
                     to="/"
                     onClick={toggleNavbar}
-                  >Reception</Link>
+                  >
+                    Reception
+                  </Link>
                 </li>
                 <li className="nav-item">
                   <Link
                     className={`nav-link ${isActive("/rooms") && "active"}`}
                     to="/rooms"
                     onClick={toggleNavbar}
-                  >Rooms</Link>
+                  >
+                    Rooms
+                  </Link>
                 </li>
                 <li className="nav-item">
                   <Link
-                    className={`nav-link ${isActive(`/${hotelIdentifier}/guests`) && "active"}`}
+                    className={`nav-link ${
+                      isActive(`/${hotelIdentifier}/guests`) && "active"
+                    }`}
                     to={`/${hotelIdentifier}/guests`}
                     onClick={toggleNavbar}
-                  >Guests</Link>
+                  >
+                    Guests
+                  </Link>
                 </li>
                 <li className="nav-item">
                   <Link
                     className={`nav-link ${isActive("/staff") && "active"}`}
                     to="/staff"
                     onClick={toggleNavbar}
-                  >Staff</Link>
+                  >
+                    Staff
+                  </Link>
                 </li>
                 <li className="nav-item">
                   <Link
                     className={`nav-link ${isActive("/staff/me") && "active"}`}
                     to="/staff/me"
                     onClick={toggleNavbar}
-                  >Profile</Link>
+                  >
+                    Profile
+                  </Link>
                 </li>
                 <li className="nav-item">
                   <Link
                     className={`nav-link ${isActive("/bookings") && "active"}`}
                     to="/bookings"
                     onClick={toggleNavbar}
-                  >Bookings</Link>
+                  >
+                    Bookings
+                  </Link>
                 </li>
                 <li className="nav-item">
                   <Link
-                    className={`nav-link ${isActive(`/hotel_info/${hotelIdentifier}`) && "active"}`}
+                    className={`nav-link ${
+                      isActive(`/hotel_info/${hotelIdentifier}`) && "active"
+                    }`}
                     to={`/hotel_info/${hotelIdentifier}`}
                     onClick={toggleNavbar}
-                  >Info</Link>
+                  >
+                    Info
+                  </Link>
                 </li>
                 <li className="nav-item">
                   <Link
-                    className={`nav-link ${isActive(`/room_services/${hotelIdentifier}/orders`) && "active"}`}
+                    className={`nav-link ${
+                      isActive(`/room_services/${hotelIdentifier}/orders`) &&
+                      "active"
+                    }`}
                     to={`/room_services/${hotelIdentifier}/orders`}
                     onClick={toggleNavbar}
-                  >Room Service</Link>
+                  >
+                    Room Service
+                  </Link>
                 </li>
-                
+                {isSuperStaffAdmin && (
+                  <li className="nav-item">
+                    <Link
+                      className={`nav-link ${
+                        isActive("/settings") && "active"
+                      }`}
+                      to="/settings"
+                      onClick={toggleNavbar}
+                    >
+                      Settings
+                    </Link>
+                  </li>
+                )}
+
                 <li className="nav-item">
                   <button
                     className="btn btn-link nav-link"
                     onClick={handleLogout}
-                  >Logout</button>
+                  >
+                    Logout
+                  </button>
                 </li>
               </>
             )}
-
           </ul>
         </div>
       </div>

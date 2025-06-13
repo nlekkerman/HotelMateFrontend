@@ -194,44 +194,91 @@ export default function HotelInfo() {
 
           {activeCategory && (
             <section>
-              <h3>
+              <h3 className="mb-4">
                 {categories.find((c) => c.slug === activeCategory)?.name ||
                   activeCategory}
               </h3>
+                  {/* 👉 Show the QR code for this category */}
+    {categoryQr && (
+      <div className="mb-4 text-center">
+        <img
+          src={categoryQr}
+          alt={`QR for ${activeCategory}`}
+          className="img-fluid img-thumbnail"
+          style={{ maxWidth: '200px' }}
+        />
+      </div>
+    )}
+              {sections.map(({ label, items, date }) => {
+                // determine border color
+                const borderClass =
+                  label === "Today"
+                    ? "bg-success bg-opacity-10"
+                    : label === "Tomorrow"
+                    ? "bg-info bg-opacity-10"
+                    : "bg-secondary bg-opacity-10";
 
-              {sections.map(({ label, items, date }) => (
-                <div key={date} className="mb-4">
-                  <h4>{label}</h4>
-                  <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-                    {items.map((item) => {
-                      const imageUrl =
-                        getFullImageUrl(item.image) ||
-                        "https://via.placeholder.com/400x250?text=No+Image";
-                      return (
-                        <div key={item.id} className="col">
-                          <div className="card h-100 shadow-sm">
-                            <img
-                              src={imageUrl}
-                              className="card-img-top"
-                              alt={item.title}
-                              style={{ objectFit: "cover", height: "200px" }}
-                            />
-                            <div className="card-body d-flex flex-column">
-                              <h5 className="card-title">{item.title}</h5>
-                              <p className="card-text flex-grow-1">
-                                {item.description}
-                              </p>
-                            </div>
-                            <div className="card-footer text-muted">
-                              {item.event_date} @ {item.event_time || "TBA"}
-                            </div>
-                          </div>
+                // determine header background
+                const headerBg =
+                  label === "Today"
+                    ? "bg-success"
+                    : label === "Tomorrow"
+                    ? "bg-info"
+                    : "bg-secondary";
+
+                return (
+                  <div
+                    key={date}
+                    className={`mb-5 rounded ${borderClass}`}
+                    style={{ overflow: "hidden" }}
+                  >
+                    {/* Section Header */}
+                    <div className={`p-3 text-white ${headerBg}`}>
+                      <h4 className="mb-0">{label}</h4>
+                    </div>
+
+                    {/* Section Body */}
+                    <div className="p-3">
+                      {items.length === 0 ? (
+                        <p className="text-muted mb-0">No events on {label}.</p>
+                      ) : (
+                        <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                          {items.map((item) => {
+                            const img =
+                              getFullImageUrl(item.image) ||
+                              "https://via.placeholder.com/400x250?text=No+Image";
+                            return (
+                              <div key={item.id} className="col">
+                                <div className="card h-100 shadow-sm">
+                                  <img
+                                    src={img}
+                                    className="card-img-top"
+                                    alt={item.title}
+                                    style={{
+                                      objectFit: "cover",
+                                      height: "200px",
+                                    }}
+                                  />
+                                  <div className="card-body d-flex flex-column">
+                                    <h5 className="card-title">{item.title}</h5>
+                                    <p className="card-text flex-grow-1">
+                                      {item.description}
+                                    </p>
+                                  </div>
+                                  <div className="card-footer text-muted small">
+                                    {item.event_date} @{" "}
+                                    {item.event_time || "TBA"}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </section>
           )}
         </>

@@ -23,3 +23,9 @@ html, body, #root {
   border-radius: 8px;
   box-shadow: 0 0 15px rgba(0,0,0,0.1);
 }
+
+/* Text and background utilities: */
+.main-text   { color: var(--main-color)       !important; }
+.main-bg     { background-color: var(--main-color) !important; }
+.second-text { color: var(--secondary-color)  !important; }
+.second-bg   { background-color: var(--secondary-color) !important; }

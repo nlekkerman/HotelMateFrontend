@@ -118,19 +118,20 @@ const Breakfast = ({ isAdmin = false }) => {
         Breakfast Menu for Room {roomNumber}
       </h2>
          <div>
-      {/* Your existing breakfast menu UI */}
+      <div className="breakfast-price-for-non-included bg-warning rounded bg-opacity-50 p-2 mb-2">If you do not have included breakfast you will be charged <strong>17.50 Euro</strong> for Aduld and <strong>12.50 Euro</strong> for a child. By sending this order you are agree with stated above </div>
       
       {/* Button to toggle and load orders */}
+      <div className="d-flex justify-content-center ">
       <button
         onClick={() => {
           if (!showOrders) fetchOrders();
           setShowOrders(!showOrders);
         }}
-        className="mt-6 bg-green-600 text-white px-6 py-2 rounded"
+        className="mt-6 bg-green-600 text-white px-6 py-2 rounded mb-4 hover:bg-green-700 disabled:bg-gray-300"
       >
         {showOrders ? "Hide Your Breakfast Orders" : "View Your Breakfast Orders"}
       </button>
-
+</div>
       {loadingOrders && <p>Loading orders...</p>}
 
       {showOrders && !loadingOrders && <ViewOrders orders={orders} />}
@@ -193,7 +194,7 @@ const Breakfast = ({ isAdmin = false }) => {
 
       <div className="mt-6">
         <label className="block mb-2 font-semibold">
-          Select Delivery Time (optional):
+          Select Delivery Time:
         </label>
         <select
           value={timeSlot}
