@@ -1,17 +1,14 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import api from "@/services/api";
-import Search from "@/components/utils/Search"; // Adjust alias if needed
 
 const fetchRooms = async ({ queryKey }) => {
   const [_key, page, search] = queryKey;
   const userData = JSON.parse(localStorage.getItem("user"));
   const hotelId = userData?.hotel_id;
-  console.log("[fetchRooms] Page:", page);
-  console.log("[AAAAAAAAAAAAAa] Search Query:", userData?.searchQuery);
-  console.log("[fetchRooms] Hotel ID from localStorage:", hotelId);
+  const hotelIdentifier = userData?.hotel_slug;
 
   try {
     const response = await api.get("/rooms/rooms/", {
@@ -33,6 +30,7 @@ const fetchRooms = async ({ queryKey }) => {
 function RoomList() {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRooms, setSelectedRooms] = useState([]);
   const navigate = useNavigate();
   const { hotelIdentifier, roomNumber } = useParams();
   const { data, isLoading, isError, error, isFetching } = useQuery({
@@ -43,6 +41,7 @@ function RoomList() {
   const rooms = data?.results || [];
   const totalCount = data?.count || 0;
   const totalPages = Math.ceil(totalCount / 10);
+  const qc = useQueryClient();
 
   const next = data?.next;
   const previous = data?.previous;
@@ -56,6 +55,29 @@ function RoomList() {
   React.useEffect(() => {
     setPage(1);
   }, [searchQuery]);
+  const handleCheckboxChange = (roomId) => {
+    setSelectedRooms((prev) =>
+      prev.includes(roomId)
+        ? prev.filter((id) => id !== roomId)
+        : [...prev, roomId]
+    );
+  };
+
+  const handleCheckout = async () => {
+     const userData = JSON.parse(localStorage.getItem("user"));
+
+  const hotelIdentifier = userData?.hotel_slug;
+    try {
+      await api.post(`rooms/${hotelIdentifier}/checkout/`, {
+        room_ids: selectedRooms,
+      });
+      setSelectedRooms([]);
+      qc.invalidateQueries(["rooms", page, searchQuery]);
+    } catch (err) {
+      console.error("Checkout failed", err);
+      alert("Failed to checkout selected rooms.");
+    }
+  };
 
   if (isLoading) return <p className="text-center">Loading rooms...</p>;
   if (isError)
@@ -68,7 +90,11 @@ function RoomList() {
         {isFetching && <small className="text-muted">(Updating...)</small>}
       </h2>
 
-      {/* Search input */}
+      {selectedRooms.length > 0 && (
+        <button className="btn btn-danger ms-auto mb-2" onClick={handleCheckout}>
+          Checkout selected ({selectedRooms.length})
+        </button>
+      )}
 
       {/* Rooms list */}
       {rooms.length > 0 ? (
@@ -78,9 +104,37 @@ function RoomList() {
               key={room.id}
               className="col"
               style={{ cursor: "pointer" }}
-              onClick={() => navigate(`/rooms/${room.hotel_slug}/rooms/${room.room_number}`)}
+              onClick={() =>
+                navigate(`/rooms/${room.hotel_slug}/rooms/${room.room_number}`)
+              }
             >
               <div className="card h-100 shadow-sm">
+                <div
+                  className="form-check position-absolute top-0 end-0 m-2  text-black bg-light p-1 rounded"
+                  onClick={(e) => e.stopPropagation()}
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="left"
+                  title="Select this room for batch checkout"
+                >
+                  <input
+                    id={`select-room-${room.id}`}
+                    className="form-check-input "
+                    type="checkbox"
+                    checked={selectedRooms.includes(room.id)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handleCheckboxChange(room.id);
+                    }}
+                  />
+                  <label
+                    htmlFor={`select-room-${room.id}`}
+                    className="form-check-label small"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Select room for checkout.
+                  </label>
+                </div>
+
                 <div className="card-body d-flex flex-column">
                   <h5 className="card-title mb-3">Room {room.room_number}</h5>
                   <p className="card-text mb-3">
@@ -134,20 +188,20 @@ function RoomList() {
                         />
                       </div>
                     )}
-                    
+
                     <div className="button-wraper w-100 d-flex justify-content-center mt-2">
-  {!room.is_occupied && (
-    <button
-      className="btn btn-outline-primary"
-      onClick={(e) => {
-        e.stopPropagation(); // Prevent parent click
-        navigate(`/rooms/${room.room_number}/add-guest`);
-      }}
-    >
-      Assign Guest
-    </button>
-  )}
-</div>
+                      {!room.is_occupied && (
+                        <button
+                          className="btn main-text second-text btn-outline-secondary me-2"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent parent click
+                            navigate(`/rooms/${room.room_number}/add-guest`);
+                          }}
+                        >
+                          Assign Guest
+                        </button>
+                      )}
+                    </div>
                     {room.is_occupied && (
                       <div className="text-danger text-center mt-1">
                         Room is already occupied

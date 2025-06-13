@@ -26,6 +26,9 @@ import DinnerBookingForm from "@/components/bookings/DinnerBookingForm";
 import DinnerBookingList from "@/components/bookings/DinnerBookingList";
 import Bookings from "@/components/bookings/Bookings";
 import RoomServiceOrders from "@/components/room_service/RoomServiceOrders";
+import Settings from "@/components/utils/Settings";
+
+
 
 import HotelInfo from "@/pages/hotel_info/HotelInfo";
 
@@ -116,7 +119,9 @@ function App() {
                 <Route
                   path="/hotel_info/:hotel_slug/:category"
                   element={<HotelInfo />}
+                  
                 />
+                <Route path="/settings" element={<Settings />} />
               </Routes>
             </div>
           </BrowserRouter>
