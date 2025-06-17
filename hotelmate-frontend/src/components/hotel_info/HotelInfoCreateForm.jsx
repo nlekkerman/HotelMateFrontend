@@ -1,184 +1,144 @@
 import React, { useState, useEffect } from "react";
 import api from "@/services/api";
 
-export default function HotelInfoCreateForm({ hotelSlug, onSuccess }) {
+export default function HotelInfoCreateForm({ hotelSlug, onSuccess, onClose }) {
   const [categories, setCategories] = useState([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
-
-  const [selectedCategorySlug, setSelectedCategorySlug] = useState("");
-  const [newCategoryName, setNewCategoryName] = useState("");
+  const [categorySlug, setCategorySlug] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [imageFile, setImageFile] = useState(null);
-
+  const [eventDate, setEventDate] = useState("");
+  const [eventTime, setEventTime] = useState("");
+  const [image, setImage] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const res = await api.get("/hotel_info/categories/");
+    if (!hotelSlug) return;
+    api
+      .get("/hotel_info/categories/", {
+        
+      })
+      .then(res => {
         setCategories(res.data.results || []);
-      } catch (err) {
-        setError("Failed to load categories.");
-      } finally {
-        setLoadingCategories(false);
-      }
-    };
-    fetchCategories();
-  }, []);
-
-  // Helper to slugify category name for new category creation
-  const slugify = (text) =>
-    text
-      .toString()
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, "-")
-      .replace(/[^\w\-]+/g, "")
-      .replace(/\-\-+/g, "-") + "-info";
+      })
+      .catch(() => {
+        setCategories([]);
+      });
+  }, [hotelSlug]);
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError(null);
-  setLoading(true);
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
 
-  try {
-    let categorySlug = selectedCategorySlug;
+    // Get the name of the selected category
+    const selectedCategory = categories.find(cat => cat.slug === categorySlug);
+    const categoryName = selectedCategory ? selectedCategory.name : "";
 
-    // Create new category if needed
-    if (newCategoryName.trim()) {
-      const newSlug = slugify(newCategoryName);
-      await api.post("/hotel_info/categories/", {
-        name: newCategoryName.trim(),
-        slug: newSlug,
+    try {
+      const formData = new FormData();
+      formData.append("hotel_slug", hotelSlug);
+      formData.append("category_name", categoryName);
+      formData.append("title", title);
+      formData.append("description", description);
+      formData.append("event_date", eventDate);
+      formData.append("event_time", eventTime);
+      if (image) formData.append("image", image);
+
+      const res = await api.post("/hotel_info/hotelinfo/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-      categorySlug = newSlug;
+
+      // Use the slug for navigation or API calls
+      onSuccess && onSuccess(categorySlug);
+      onClose && onClose();
+    } catch (err) {
+      setError("Could not create hotel info.");
+    } finally {
+      setSaving(false);
     }
-
-    if (!categorySlug) {
-      setError("Please select or create a category.");
-      setLoading(false);
-      return;
-    }
-
-    // Build form data
-    const formData = new FormData();
-    formData.append("hotel_slug", hotelSlug);
-    formData.append(
-      "category_name",
-      newCategoryName.trim() || categories.find((c) => c.slug === categorySlug)?.name || ""
-    );
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("active", true);
-
-    if (imageFile) {
-      formData.append("image", imageFile);
-    }
-
-    // Use axios or your api client to send multipart/form-data
-    await api.post("/hotel_info/hotelinfo/", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
-    if (onSuccess) onSuccess();
-    setTitle("");
-    setDescription("");
-    setSelectedCategorySlug("");
-    setNewCategoryName("");
-    setImageFile(null);
-  } catch (err) {
-    setError("Failed to create hotel info.");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="border p-3 rounded">
-      <h4>Create Hotel Info</h4>
-
-      <div className="mb-3">
-        <label className="form-label">Select Existing Category</label>
+    <form onSubmit={handleSubmit} className="mb-3">
+      <div className="mb-2">
+        <label className="form-label">Category</label>
         <select
           className="form-select"
-          value={selectedCategorySlug}
-          onChange={(e) => {
-            setSelectedCategorySlug(e.target.value);
-            setNewCategoryName("");
-          }}
-          disabled={loading}
+          value={categorySlug}
+          onChange={e => setCategorySlug(e.target.value)}
+          required
         >
-          <option value="">-- Select category --</option>
-          {categories.map((cat) => (
+          <option value="">Select category…</option>
+          {categories.map(cat => (
             <option key={cat.slug} value={cat.slug}>
               {cat.name}
             </option>
           ))}
         </select>
       </div>
-
-      <div className="mb-3">
-        <label className="form-label">Or Create New Category</label>
-        <input
-          type="text"
-          className="form-control"
-          placeholder="New category name"
-          value={newCategoryName}
-          onChange={(e) => {
-            setNewCategoryName(e.target.value);
-            if (e.target.value.trim()) setSelectedCategorySlug("");
-          }}
-          disabled={loading}
-        />
-        <small className="form-text text-muted">
-          New category slug will be auto-generated with '-info' suffix.
-        </small>
-      </div>
-
-      <div className="mb-3">
+      {/* ...rest is unchanged... */}
+      <div className="mb-2">
         <label className="form-label">Title</label>
         <input
-          required
           type="text"
           className="form-control"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          disabled={loading}
+          required
         />
       </div>
-
-      <div className="mb-3">
+      <div className="mb-2">
         <label className="form-label">Description</label>
         <textarea
-          required
           className="form-control"
-          rows={4}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          disabled={loading}
+          rows={3}
         />
       </div>
-
-      <div className="mb-3">
-        <label className="form-label">Upload Image</label>
+      <div className="mb-2">
+        <label className="form-label">Event Date</label>
+        <input
+          type="date"
+          className="form-control"
+          value={eventDate}
+          onChange={(e) => setEventDate(e.target.value)}
+        />
+      </div>
+      <div className="mb-2">
+        <label className="form-label">Event Time</label>
+        <input
+          type="time"
+          className="form-control"
+          value={eventTime}
+          onChange={(e) => setEventTime(e.target.value)}
+        />
+      </div>
+      <div className="mb-2">
+        <label className="form-label">Image</label>
         <input
           type="file"
-          accept="image/*"
           className="form-control"
-          onChange={(e) => setImageFile(e.target.files[0])}
-          disabled={loading}
+          accept="image/*"
+          onChange={(e) => setImage(e.target.files[0])}
         />
       </div>
-      {error && <p className="text-danger">{error}</p>}
-
-      <button type="submit" className="btn btn-primary" disabled={loading}>
-        {loading ? "Saving…" : "Create Info"}
-      </button>
+      {error && <div className="text-danger mb-2">{error}</div>}
+      <div className="d-flex gap-2">
+        <button className="btn btn-primary" type="submit" disabled={saving}>
+          {saving ? "Creating..." : "Create Info"}
+        </button>
+        {onClose && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   );
 }

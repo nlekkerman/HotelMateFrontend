@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/services/api";
 import HotelInfoCreateForm from "@/components/hotel_info/HotelInfoCreateForm";
+import HotelInfoModal from "@/components/modals/HotelInfoModal.jsx";
+import CreateCategoryForm from "@/components/hotel_info/CreateCategoryForm";
+// import GenerateQrForm from "@/components/hotel_info/GenerateQrForm"; // <-- REMOVE THIS
 
 export default function HotelInfo() {
   const { hotel_slug, category } = useParams();
@@ -11,90 +14,137 @@ export default function HotelInfo() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // State variables
+  // ── State ─────────────────────────────────────────────────────────
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [errorCategories, setErrorCategories] = useState(null);
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
+  // const [showGenerateQr, setShowGenerateQr] = useState(false); // <-- REMOVE THIS
+
   const [categoryData, setCategoryData] = useState([]);
   const [loadingCategoryData, setLoadingCategoryData] = useState(false);
   const [errorCategoryData, setErrorCategoryData] = useState(null);
+
   const [categoryQr, setCategoryQr] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  // Fetch categories
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
-        const res = await api.get(`/hotel_info/categories/`, {
-          params: { infos__hotel__slug: hotelSlug },
-        });
-        setCategories(res.data.results || []);
-      } catch {
-        setErrorCategories("Failed to load categories.");
-      } finally {
-        setLoadingCategories(false);
-      }
-    }
-    if (!hotelSlug) {
-      setErrorCategories("No hotel selected.");
+  const CLOUD_BASE = "https://res.cloudinary.com/dg0ssec7u/";
+
+  // ── 1) Fetch categories ────────────────────────────────────────────
+  const fetchCategories = useCallback(async () => {
+    setLoadingCategories(true);
+    setErrorCategories(null);
+    try {
+      const res = await api.get("/hotel_info/categories/", {
+        params: { infos__hotel__slug: hotelSlug },
+      });
+      setCategories(res.data.results || []);
+    } catch {
+      setErrorCategories("Failed to load categories.");
+    } finally {
       setLoadingCategories(false);
-    } else {
-      fetchCategories();
     }
   }, [hotelSlug]);
 
-  // Fetch category data + QR
-  useEffect(() => {
+  // ── 2) Fetch category data & QR ───────────────────────────────────
+  const fetchCategoryData = useCallback(async () => {
     if (!activeCategory) {
       setCategoryData([]);
       setCategoryQr(null);
       return;
     }
-    async function fetchData() {
-      setLoadingCategoryData(true);
-      setErrorCategoryData(null);
-      try {
-        const infoRes = await api.get(`/hotel_info/hotelinfo/`, {
-          params: { hotel__slug: hotelSlug, category__slug: activeCategory },
+    setLoadingCategoryData(true);
+    setErrorCategoryData(null);
+
+    try {
+      const infoRes = await api.get("/hotel_info/hotelinfo/", {
+        params: { hotel__slug: hotelSlug, category__slug: activeCategory },
+      });
+      const items = Array.isArray(infoRes.data)
+        ? infoRes.data
+        : Array.isArray(infoRes.data.results)
+        ? infoRes.data.results
+        : [];
+      setCategoryData(items);
+
+      if (user) {
+        const qrRes = await api.get("/hotel_info/category_qr/", {
+          params: { hotel_slug: hotelSlug, category_slug: activeCategory },
         });
-        const items = Array.isArray(infoRes.data)
-          ? infoRes.data
-          : Array.isArray(infoRes.data.results)
-          ? infoRes.data.results
-          : [];
-        setCategoryData(items);
-        if (user) {
-          const qrRes = await api.get(`/hotel_info/category_qr/`, {
-            params: { hotel_slug: hotelSlug, category_slug: activeCategory },
-          });
-          setCategoryQr(qrRes.data.qr_url || null);
-        } else {
-          setCategoryQr(null);
-        }
-      } catch {
-        setErrorCategoryData("Failed to load category data.");
-        setCategoryData([]);
+        setCategoryQr(qrRes.data.qr_url || null);
+      } else {
         setCategoryQr(null);
-      } finally {
-        setLoadingCategoryData(false);
       }
+    } catch {
+      setErrorCategoryData("Failed to load category data.");
+      setCategoryData([]);
+      setCategoryQr(null);
+    } finally {
+      setLoadingCategoryData(false);
     }
-    fetchData();
   }, [activeCategory, hotelSlug, user]);
 
-  // Compute grouped events
+  // ── 3) Pre-check & generate QR before navigating ───────────────────
+  const handleCategoryClick = useCallback(
+    async (cat) => {
+      setShowCreateForm(false);
+
+      try {
+        // Try fetching existing QR
+        await api.get("/hotel_info/category_qr/", {
+          params: { hotel_slug: hotelSlug, category_slug: cat.slug },
+        });
+        // If it exists, navigate right away
+        navigate(`/hotel_info/${hotelSlug}/${cat.slug}`);
+      } catch (err) {
+        if (err.response?.status === 404) {
+          // Not found: ask the user
+          const ok = window.confirm(
+            `There’s no QR for “${cat.name}” yet. Generate it now?`
+          );
+          if (!ok) return;
+
+          // User agreed: generate new QR
+          const genRes = await api.post("/hotel_info/category_qr/", {
+            hotel_slug: hotelSlug,
+            category_slug: cat.slug,
+          });
+          setCategoryQr(genRes.data.qr_url);
+
+          // Then navigate
+          navigate(`/hotel_info/${hotelSlug}/${cat.slug}`);
+        } else {
+          setErrorCategoryData("Failed to check QR code.");
+        }
+      }
+    },
+    [hotelSlug, navigate]
+  );
+
+  // ── Effects ────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!hotelSlug) {
+      setErrorCategories("No hotel selected.");
+      setLoadingCategories(false);
+      return;
+    }
+    fetchCategories();
+  }, [hotelSlug, fetchCategories]);
+
+  useEffect(() => {
+    fetchCategoryData();
+  }, [fetchCategoryData]);
+
+  // ── Group events into date‐sections ────────────────────────────────
   const sections = useMemo(() => {
     const now = new Date();
     const todayStr = now.toISOString().slice(0, 10);
-
-    // Helper: build a map of date → items
     const itemsByDate = categoryData.reduce((map, item) => {
       map[item.event_date] = map[item.event_date] || [];
       map[item.event_date].push(item);
       return map;
     }, {});
 
-    // Sort each date’s items by datetime
     Object.values(itemsByDate).forEach((arr) =>
       arr.sort(
         (a, b) =>
@@ -103,8 +153,7 @@ export default function HotelInfo() {
       )
     );
 
-    // Build the first two labels
-    const sections = [
+    const base = [
       { label: "Today", date: todayStr, items: itemsByDate[todayStr] || [] },
       {
         label: "Tomorrow",
@@ -116,9 +165,8 @@ export default function HotelInfo() {
         items: [],
       },
     ];
-    sections[1].items = itemsByDate[sections[1].date] || [];
+    base[1].items = itemsByDate[base[1].date] || [];
 
-    // Next 10 days
     for (let i = 2; i < 12; i++) {
       const d = new Date(now);
       d.setDate(now.getDate() + i);
@@ -127,65 +175,96 @@ export default function HotelInfo() {
         month: "long",
         day: "numeric",
       });
-      sections.push({
-        label,
-        date: iso,
-        items: itemsByDate[iso] || [],
-      });
+      base.push({ label, date: iso, items: itemsByDate[iso] || [] });
     }
 
-    // Only keep days that actually have events
-    return sections.filter((sec) => sec.items.length > 0);
+    return base.filter((sec) => sec.items.length > 0);
   }, [categoryData]);
 
-  // Early returns
+  // ── Early exits ────────────────────────────────────────────────────
   if (loadingCategories) return <p>Loading categories…</p>;
   if (errorCategories) return <p className="text-danger">{errorCategories}</p>;
 
-  const CLOUD_BASE = "https://res.cloudinary.com/dg0ssec7u/image/upload";
-  // Helper URL builder – guards against null paths
   const getFullImageUrl = (path) => {
-    if (!path) return null; // nothing to show
-    return path.startsWith("http")
-      ? path // absolute URL from API
-      : `https://res.cloudinary.com/dg0ssec7u/${path}`; // your Cloudinary base
+    if (!path) return null;
+    return path.startsWith("http") ? path : `${CLOUD_BASE}${path}`;
   };
 
+  // ── Render ─────────────────────────────────────────────────────────
   return (
     <div className="my-4">
-      {/* Category selector + create toggle (authenticated only) */}
-      {user && (
-        <div className="d-flex flex-wrap gap-2 mb-3 align-items-center">
-          {categories.map((cat) => (
+      {/* Category selector */}
+      {user && !showCreateForm && (
+        <>
+          <div className="d-flex flex-wrap gap-2 mb-3 align-items-center">
+            {categories.map((cat) => (
+              <button
+                key={cat.slug}
+                className={`btn ${
+                  cat.slug === activeCategory
+                    ? "btn-primary"
+                    : "btn-outline-primary"
+                }`}
+                onClick={() => handleCategoryClick(cat)}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Action buttons in a separate row */}
+          <div className="d-flex gap-2 mb-4">
             <button
-              key={cat.slug}
-              className={`btn ${
-                cat.slug === activeCategory
-                  ? "btn-primary"
-                  : "btn-outline-primary"
-              }`}
-              onClick={() => {
-                setShowCreateForm(false);
-                navigate(`/hotel_info/${hotelSlug}/${cat.slug}`);
-              }}
+              className="btn btn-secondary"
+              onClick={() => setShowCreateCategory(true)}
             >
-              {cat.name}
+              Create Info Category
             </button>
-          ))}
-          <button
-            className="btn btn-success ms-auto"
-            onClick={() => setShowCreateForm((v) => !v)}
-          >
-            {showCreateForm ? "Cancel" : "Create Info"}
-          </button>
-        </div>
+            {/* <button
+              className="btn btn-outline-dark"
+              disabled={!activeCategory}
+              onClick={() => setShowGenerateQr(true)}
+            >
+              Generate QR for Category
+            </button> */}
+            <button
+              className="btn btn-success"
+              onClick={() => setShowCreateForm(true)}
+            >
+              Create Info
+            </button>
+          </div>
+        </>
       )}
 
-      {/* Create form */}
-      {showCreateForm && <HotelInfoCreateForm hotelSlug={hotelSlug} />}
+      {/* MODALS */}
+      {showCreateCategory && (
+        <HotelInfoModal onClose={() => setShowCreateCategory(false)}>
+          <CreateCategoryForm
+            hotelSlug={hotelSlug}
+            onSuccess={() => {
+              setShowCreateCategory(false);
+              fetchCategories();
+            }}
+            onClose={() => setShowCreateCategory(false)}
+          />
+        </HotelInfoModal>
+      )}
 
-      {/* Event listings */}
-      {!showCreateForm && (
+      {/* The QR modal is now completely removed! */}
+
+      {/* Create form or listings */}
+      {showCreateForm ? (
+        <HotelInfoCreateForm
+          hotelSlug={hotelSlug}
+          onSuccess={(newCategorySlug) => {
+            setShowCreateForm(false);
+            fetchCategories();
+            fetchCategoryData();
+            navigate(`/hotel_info/${hotelSlug}/${newCategorySlug}`);
+          }}
+        />
+      ) : (
         <>
           {loadingCategoryData && <p>Loading category data…</p>}
           {errorCategoryData && (
@@ -198,27 +277,25 @@ export default function HotelInfo() {
                 {categories.find((c) => c.slug === activeCategory)?.name ||
                   activeCategory}
               </h3>
-                  {/* 👉 Show the QR code for this category */}
-    {categoryQr && (
-      <div className="mb-4 text-center">
-        <img
-          src={categoryQr}
-          alt={`QR for ${activeCategory}`}
-          className="img-fluid img-thumbnail"
-          style={{ maxWidth: '200px' }}
-        />
-      </div>
-    )}
+
+              {categoryQr && (
+                <div className="mb-4 text-center">
+                  <img
+                    src={categoryQr}
+                    alt={`QR for ${activeCategory}`}
+                    className="img-fluid img-thumbnail"
+                    style={{ maxWidth: "200px" }}
+                  />
+                </div>
+              )}
+
               {sections.map(({ label, items, date }) => {
-                // determine border color
                 const borderClass =
                   label === "Today"
                     ? "bg-success bg-opacity-10"
                     : label === "Tomorrow"
                     ? "bg-info bg-opacity-10"
                     : "bg-secondary bg-opacity-10";
-
-                // determine header background
                 const headerBg =
                   label === "Today"
                     ? "bg-success"
@@ -232,12 +309,9 @@ export default function HotelInfo() {
                     className={`mb-5 rounded ${borderClass}`}
                     style={{ overflow: "hidden" }}
                   >
-                    {/* Section Header */}
                     <div className={`p-3 text-white ${headerBg}`}>
                       <h4 className="mb-0">{label}</h4>
                     </div>
-
-                    {/* Section Body */}
                     <div className="p-3">
                       {items.length === 0 ? (
                         <p className="text-muted mb-0">No events on {label}.</p>
