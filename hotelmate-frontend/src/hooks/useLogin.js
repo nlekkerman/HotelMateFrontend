@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
+import { requestFirebaseNotificationPermission, listenForFirebaseMessages } from "@/utils/firebaseNotifications";
 
 const LOGIN_ENDPOINT = `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/staff/login/`;
 
@@ -22,7 +23,7 @@ export default function useLogin() {
 
       const data = response.data;
 
-      // Save user data to localStorage
+      // 1. Save user data to localStorage
       localStorage.setItem(
         "user",
         JSON.stringify({
@@ -37,7 +38,7 @@ export default function useLogin() {
         })
       );
 
-      // Update AuthContext state
+      // 2. Update AuthContext state (so axios interceptor sees token)
       login({
         username: data.username,
         token: data.token,
@@ -50,28 +51,35 @@ export default function useLogin() {
         access_level: data.access_level,
       });
 
+      // 3. Now register FCM token!
+      const VAPID_KEY = "BDcFvIGZd9lTrPb3R4CCSIUpLjzhk87TpslsmfexVFuPZsPSrwl2TdSJ4M3-TAfBWAmfHM2GVMOowd-LtnoUmdU";
+      try {
+        await requestFirebaseNotificationPermission(VAPID_KEY);
+      } catch (notifyError) {
+        console.warn("Could not register FCM token:", notifyError);
+      }
+
       setLoading(false);
       return data;
     } catch (err) {
-  setLoading(false);
+      setLoading(false);
 
-  if (err.response) {
-    console.error("Login error response:", err.response);
-    if (err.response.data?.non_field_errors) {
-      setError(err.response.data.non_field_errors.join(" "));
-    } else if (err.response.data) {
-      setError(JSON.stringify(err.response.data));
-    } else {
-      setError("Login failed due to unknown error.");
+      if (err.response) {
+        console.error("Login error response:", err.response);
+        if (err.response.data?.non_field_errors) {
+          setError(err.response.data.non_field_errors.join(" "));
+        } else if (err.response.data) {
+          setError(JSON.stringify(err.response.data));
+        } else {
+          setError("Login failed due to unknown error.");
+        }
+      } else {
+        console.error("Login error:", err.message);
+        setError(err.message || "Login failed. Please try again.");
+      }
+
+      throw err;
     }
-  } else {
-    console.error("Login error:", err.message);
-    setError(err.message || "Login failed. Please try again.");
-  }
-
-  throw err;
-}
-
   };
 
   return { loginUser, loading, error };
