@@ -14,7 +14,6 @@ const DinnerBookingForm = () => {
     adults: 1,
     children: 0,
     infants: 0,
-    seats: 1,
   });
 
   const [submitted, setSubmitted] = useState(false);
@@ -33,7 +32,12 @@ const DinnerBookingForm = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: ["adults", "children", "infants"].includes(name)
+        ? Math.max(0, parseInt(value, 10) || 0)
+        : value,
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -48,20 +52,26 @@ const DinnerBookingForm = () => {
         formattedDate = `${y}-${m}-${dd}`;
       }
 
+      // Calculate total seats
+      const totalSeats =
+        (Number(formData.adults) || 0) +
+        (Number(formData.children) || 0) +
+        (Number(formData.infants) || 0);
+
       await api.post(
         `bookings/guest-booking/${hotelSlug}/restaurant/${restaurantSlug}/room/${roomNumber}/`,
         {
           date: formattedDate,
           time: formData.time,
           note: formData.note,
-          adults: formData.adults,
-          children: formData.children,
-          infants: formData.infants,
+          adults: Number(formData.adults) || 0,
+          children: Number(formData.children) || 0,
+          infants: Number(formData.infants) || 0,
           seats: {
-            adults: formData.adults,
-            children: formData.children,
-            infants: formData.infants,
-            total: formData.adults + formData.children + formData.infants,
+            adults: Number(formData.adults) || 0,
+            children: Number(formData.children) || 0,
+            infants: Number(formData.infants) || 0,
+            total: totalSeats,
           },
         }
       );
@@ -80,6 +90,12 @@ const DinnerBookingForm = () => {
       </div>
     );
   }
+
+  // Calculate total seats for display
+  const totalSeats =
+    (Number(formData.adults) || 0) +
+    (Number(formData.children) || 0) +
+    (Number(formData.infants) || 0);
 
   return (
     <div className="container mt-5">
@@ -181,19 +197,18 @@ const DinnerBookingForm = () => {
                 className="form-control"
               />
             </div>
-            <div className="mb-3">
+            <div className="col">
               <label htmlFor="seats" className="form-label">
-                Seats
+                Total Seats
               </label>
               <input
                 type="number"
                 id="seats"
                 name="seats"
-                min={1}
-                value={formData.seats || ""}
-                onChange={handleChange}
+                value={totalSeats}
                 className="form-control"
-                required
+                readOnly
+                disabled
               />
             </div>
           </div>

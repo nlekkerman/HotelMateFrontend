@@ -1,5 +1,8 @@
 // src/App.jsx
 import React from "react";
+import { useEffect } from "react";
+import "@/firebase"; // Ensure Firebase is initialized
+// Import your Firebase messaging service worker
 import "@/styles/main.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
@@ -27,6 +30,8 @@ import DinnerBookingList from "@/components/bookings/DinnerBookingList";
 import Bookings from "@/components/bookings/Bookings";
 import RoomServiceOrders from "@/components/room_service/RoomServiceOrders";
 import Settings from "@/components/utils/Settings";
+import { requestFirebaseNotificationPermission, listenForFirebaseMessages } from "@/utils/firebaseNotifications";
+
 
 
 
@@ -40,6 +45,14 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 const queryClient = new QueryClient();
 
 function App() {
+  useEffect(() => {
+    // Replace with your actual VAPID key!
+    requestFirebaseNotificationPermission("BDcFvIGZd9lTrPb3R4CCSIUpLjzhk87TpslsmfexVFuPZsPSrwl2TdSJ4M3-TAfBWAmfHM2GVMOowd-LtnoUmdU");
+
+    listenForFirebaseMessages((payload) => {
+      alert(`Push notification: ${payload.notification?.title}\n${payload.notification?.body}`);
+    });
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <UIProvider>

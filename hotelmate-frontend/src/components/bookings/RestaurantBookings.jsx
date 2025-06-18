@@ -22,7 +22,7 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
         let data = res.data;
         if (data && Array.isArray(data.results)) {
           data = data.results;
-          console.log("AAAAAAAAAAAAAAAAAAPI bookings response:", data);
+         
         } else if (!Array.isArray(data)) {
           console.warn("Unexpected bookings response:", data);
           data = [];
@@ -33,6 +33,7 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
       .catch((err) => {
         console.error("Failed to fetch bookings for restaurant:", err);
         if (err.response) {
+          
           setError(`Error ${err.response.status}: ${err.response.statusText}`);
         } else {
           setError("Network error while fetching bookings.");
