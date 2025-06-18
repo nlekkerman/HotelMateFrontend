@@ -44,12 +44,14 @@ const Login = () => {
   };
 
   return (
-    <div className="container mt-4">
+    <div className="container mt-4 d-flex flex-column align-items-center">
       <h2>Login</h2>
 
       {localError && (
         <div className="alert alert-danger">
-          {typeof localError === "string" ? localError : JSON.stringify(localError)}
+          {typeof localError === "string"
+            ? localError
+            : JSON.stringify(localError)}
         </div>
       )}
 
@@ -81,20 +83,22 @@ const Login = () => {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+
           <button
             type="button"
             onClick={togglePasswordVisibility}
-            className="btn btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2"
+            className="btn text-info position-absolute top-50 end-0  "
             style={{ zIndex: 10 }}
             aria-label={showPassword ? "Hide password" : "Show password"}
           >
             <i className={showPassword ? "bi bi-eye-slash" : "bi bi-eye"} />
           </button>
         </div>
-
-        <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
-        </button>
+        <div className="d-flex justify-content-center">
+          <button type="submit" className="btn btn-primary" disabled={loading}>
+            {loading ? "Logging in..." : "Login"}
+          </button>
+        </div>
       </form>
     </div>
   );
