@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api, { setHotelIdentifier } from "@/services/apiWithHotel";
+import { toast } from "react-toastify";
+import DeletionModal from "@/components/modals/DeletionModal";
+import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 
 export default function RoomService({ isAdmin }) {
   const { roomNumber, hotelIdentifier } = useParams();
@@ -12,8 +15,14 @@ export default function RoomService({ isAdmin }) {
   const [previousOrders, setPreviousOrders] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
-  const [toast, setToast] = useState({ show: false, message: "" });
   const [showOrderPanel, setShowOrderPanel] = useState(false);
+
+  const { refresh: refreshCount } = useOrderCount(hotelIdentifier);
+
+  const [delModal, setDelModal] = useState({ show: false, itemId: null });
+
+  const openDeleteModal = (itemId) => setDelModal({ show: true, itemId });
+  const closeDeleteModal = () => setDelModal({ show: false, itemId: null });
 
   const trayCharge = 5;
 
@@ -73,43 +82,46 @@ export default function RoomService({ isAdmin }) {
       ...prev,
       [item.id]: (prev[item.id] || 0) + qtyToAdd,
     }));
-    setToast({ show: true, message: `Added ${item.name} × ${qtyToAdd}` });
-    setTimeout(() => setToast({ show: false, message: "" }), 2000);
+    toast.success(`Added ${item.name} × ${qtyToAdd}`, { autoClose: 1500 });
   };
 
   const handlePlaceOrder = async () => {
-    setSubmitting(true);
-    setSubmitError(null);
+  setSubmitting(true);
+  setSubmitError(null);
 
-    const payload = {
-      room_number: Number(roomNumber),
-      items: Object.entries(orderItems).map(([itemId, qty]) => ({
-        item_id: Number(itemId),
-        quantity: qty,
-      })),
-    };
-
-    try {
-      setHotelIdentifier(hotelIdentifier);
-      // POST to hotel-scoped orders endpoint
-      const response = await api.post(
-        `/room_services/${hotelIdentifier}/orders/`,
-        payload
-      );
-      setCurrentOrder(response.data);
-      // 3) Clear out the active cart
-      setOrderItems({});
-
-      // 4) Optionally collapse the panel
-      setShowOrderPanel(false);
-      setToast({ show: true, message: "Order submitted successfully" });
-      setPreviousOrders((prev) => [response.data, ...prev]);
-    } catch (err) {
-      setSubmitError(err.response?.data || err.message);
-    } finally {
-      setSubmitting(false);
-    }
+  const payload = {
+    room_number: Number(roomNumber),
+    items: Object.entries(orderItems).map(([itemId, qty]) => ({
+      item_id: Number(itemId),
+      quantity: qty,
+    })),
   };
+
+  try {
+    setHotelIdentifier(hotelIdentifier);
+
+    // POST to hotel-scoped orders endpoint
+    const orderResp = await api.post(
+      `/room_services/${hotelIdentifier}/orders/`,
+      payload
+    );
+
+    // 1) Update local state
+    setCurrentOrder(orderResp.data);
+    setOrderItems({});
+    setShowOrderPanel(false);
+    toast.success("Order submitted successfully!");
+    setPreviousOrders(prev => [orderResp.data, ...prev]);
+
+    // 2) Refresh the navbar badge count
+    refreshCount();
+  } catch (err) {
+    setSubmitError(err.response?.data || err.message);
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   if (loading) return <div className="text-center mt-4">Loading…</div>;
 
@@ -119,18 +131,32 @@ export default function RoomService({ isAdmin }) {
   }, 0);
   const total = subTotal + trayCharge;
 
+  //  Deletion Modal state & handlers ────────────────────────────────
+
+  const confirmDelete = () => {
+    const { itemId } = delModal;
+    const item = items.find((i) => i.id === itemId);
+    setOrderItems((prev) => {
+      const copy = { ...prev };
+      delete copy[itemId];
+      return copy;
+    });
+    toast.warn(`Removed ${item.name}`, { autoClose: 1500 });
+    closeDeleteModal();
+  };
+
+  // ─── NEW: Edit quantity for active items ────────────────────────────────
+  const handleActiveQtyChange = (itemId, raw) => {
+    const qty = Math.max(1, Math.min(99, Number(raw)));
+    setOrderItems((prev) => ({ ...prev, [itemId]: qty }));
+    const item = items.find((i) => i.id === itemId);
+    toast.info(`Updated ${item.name} to ${qty}`, { autoClose: 1500 });
+  };
+
   return (
     <div className="container my-4">
-      {toast.show && (
-        <div
-          className="alert alert-success position-fixed top-0 end-0 m-3"
-          style={{ zIndex: 2000 }}
-        >
-          {toast.message}
-        </div>
-      )}
-
       <h2>Room Service — Room {roomNumber}</h2>
+
       {/* Menu grid */}
       <div className="row">
         {items.map((item) => {
@@ -151,8 +177,8 @@ export default function RoomService({ isAdmin }) {
                     {item.name} — €{price.toFixed(2)}
                   </h5>
                   <p className="card-text flex-grow-1">{item.description}</p>
-                  <div className="mb-2">
-                    <label className="form-label me-2">Qty:</label>
+                  <div className="mb-2 d-flex align-items-center">
+                    <label className="form-label me-2 mb-0">Qty:</label>
                     <input
                       type="number"
                       min="1"
@@ -193,7 +219,7 @@ export default function RoomService({ isAdmin }) {
       {/* Order Panel */}
       {showOrderPanel && (
         <div
-          className="order-panel position-fixed bottom-0 bg-black border-top p-1"
+          className="position-fixed bottom-0 bg-black border-top p-3"
           style={{ maxHeight: "70%", overflowY: "auto", zIndex: 1000 }}
         >
           <div className="d-flex justify-content-between align-items-center mb-3">
@@ -204,25 +230,41 @@ export default function RoomService({ isAdmin }) {
             />
           </div>
 
-          {/* Active items */}
           {Object.keys(orderItems).length > 0 ? (
             <ul className="list-group mb-3 bg-transparent">
               {Object.entries(orderItems).map(([id, qty]) => {
-                const itm = items.find((i) => i.id === +id);
-                const price = Number(itm?.price) || 0;
+                const item = items.find((i) => i.id === +id);
+                const price = Number(item?.price) || 0;
                 return (
                   <li
                     key={id}
-                    className="list-group-item d-flex justify-content-between bg-transparent text-white"
+                    className="list-group-item d-flex justify-content-between align-items-center bg-transparent text-white"
                   >
-                    <span>
-                      {itm?.name} × {qty}
-                    </span>
+                    <div className="d-flex align-items-center">
+                      <span>{item?.name}</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="99"
+                        value={qty}
+                        onChange={(e) =>
+                          handleActiveQtyChange(item.id, e.target.value)
+                        }
+                        className="form-control form-control-sm mx-2"
+                        style={{ width: "60px" }}
+                      />
+                      <button
+                        className="btn btn-outline-danger btn-sm"
+                        onClick={() => openDeleteModal(item.id)}
+                      >
+                        Remove
+                      </button>
+                    </div>
                     <span>€{(price * qty).toFixed(2)}</span>
                   </li>
                 );
               })}
-              <li className="list-group-item d-flex justify-content-between  bg-transparent text-white">
+              <li className="list-group-item d-flex justify-content-between bg-transparent text-white">
                 <em>Tray charge</em>
                 <span>€{trayCharge.toFixed(2)}</span>
               </li>
@@ -232,12 +274,13 @@ export default function RoomService({ isAdmin }) {
               </li>
             </ul>
           ) : (
-            <p className="text-white bg-dark">No active items.</p>
+            <p className="text-white bg-dark p-2">No active items.</p>
           )}
 
           {submitError && (
             <div className="alert alert-danger">{String(submitError)}</div>
           )}
+
           <button
             className="btn btn-success w-100 mb-4"
             onClick={handlePlaceOrder}
@@ -283,6 +326,22 @@ export default function RoomService({ isAdmin }) {
           </div>
         </div>
       )}
+
+      {/* Deletion confirmation modal */}
+      <DeletionModal
+        show={delModal.show}
+        title="Remove Item"
+        confirmText="Delete"
+        cancelText="Cancel"
+        onClose={closeDeleteModal}
+        onConfirm={confirmDelete}
+      >
+        <p>
+          Are you sure you want to remove{" "}
+          <strong>{items.find((i) => i.id === delModal.itemId)?.name}</strong>{" "}
+          from your order?
+        </p>
+      </DeletionModal>
     </div>
   );
 }

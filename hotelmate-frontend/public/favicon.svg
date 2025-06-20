@@ -1,0 +1,14 @@
+<!-- public/favicon.svg -->
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="64" height="64" viewBox="0 0 64 64">
+  <!-- background -->
+  <rect width="64" height="64" rx="8" ry="8" fill="#3498db"/>
+  
+  <!-- HM letters -->
+  <text x="50%" y="50%" text-anchor="middle" dy=".35em"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="32" font-weight="700"
+        fill="#ffffff">
+    HM
+  </text>
+</svg>

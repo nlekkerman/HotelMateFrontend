@@ -6,6 +6,8 @@ import "@/firebase"; // Ensure Firebase is initialized
 import "@/styles/main.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { UIProvider } from "@/context/UIContext";
 import { AuthProvider } from "@/context/AuthContext";
 import Navbar from "@/components/layout/Navbar";
@@ -46,7 +48,18 @@ const queryClient = new QueryClient();
 function App() {
   
   return (
+    
     <QueryClientProvider client={queryClient}>
+       <ToastContainer
+        position="top-center"
+        autoClose={5000}           // auto-dismiss after 5s
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        pauseOnHover
+        draggable
+        theme="colored"            // gives you a nice colored style
+      />
       <UIProvider>
         <AuthProvider>
           <BrowserRouter>

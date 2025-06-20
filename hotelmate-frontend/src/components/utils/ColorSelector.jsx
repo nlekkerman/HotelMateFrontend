@@ -62,24 +62,35 @@ export default function ColorSelector() {
 
   if (loading) return <p>Loading theme…</p>;
 
-  return (
-    <>
-      <div className="mb-4">
+ return (
+  <>
+    {/* pickers stay in their responsive row/column */}
+    <div className="d-flex flex-column flex-md-row gap-4">
+      {/* Main Color Picker */}
+      <div className="flex-fill" style={{ minWidth: "250px" }}>
         <h5>Main Color</h5>
         <SketchPicker
           color={mainColor}
-          onChangeComplete={(c) => setMainColor(c.hex)}
+          onChangeComplete={c => setMainColor(c.hex)}
           disableAlpha
+          width="100%"
         />
       </div>
-      <div className="mb-4">
+
+      {/* Secondary Color Picker */}
+      <div className="flex-fill" style={{ minWidth: "250px" }}>
         <h5>Secondary Color</h5>
         <SketchPicker
           color={secondaryColor}
-          onChangeComplete={(c) => setSecondaryColor(c.hex)}
+          onChangeComplete={c => setSecondaryColor(c.hex)}
           disableAlpha
+          width="100%"
         />
       </div>
+    </div>
+
+    {/* button out below, always centered */}
+    <div className="d-flex justify-content-center mt-4">
       <button
         className="btn btn-primary"
         onClick={handleSave}
@@ -87,6 +98,8 @@ export default function ColorSelector() {
       >
         {saving ? "Saving…" : "Save Colors"}
       </button>
-    </>
-  );
+    </div>
+  </>
+);
+
 }

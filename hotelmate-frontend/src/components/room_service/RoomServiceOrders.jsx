@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/services/api";
+import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 
 export default function RoomServiceOrders() {
   const { user } = useAuth();
   const hotelSlug = user?.hotel_slug;
-
+  const { refresh: refreshCount } = useOrderCount(hotelSlug);
   const [view, setView] = useState("roomService"); // "roomService" or "breakfast"
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -50,14 +51,24 @@ export default function RoomServiceOrders() {
       all.map((o) => (o.id === order.id ? { ...o, status: newStatus } : o))
     );
 
-    api.patch(endpoint, { status: newStatus }).catch((err) => {
-      setOrders((all) =>
-        all.map((o) =>
-          o.id === order.id ? { ...o, status: prev } : o
-        )
-      );
-      setError("Error updating status.");
-    });
+    api
+  .patch(endpoint, { status: newStatus })
+  .then(() => {
+    // 1) Refresh the navbar badge count
+    refreshCount();
+  })
+  .catch((err) => {
+    // 2) Roll back the optimistic UI update
+    setOrders((all) =>
+      all.map((o) =>
+        o.id === order.id ? { ...o, status: prev } : o
+      )
+    );
+    // 3) Surface the error
+    setError("Error updating status.");
+    console.error("Failed to update order status:", err);
+  });
+
   };
 
   const renderItemsCell = (order) => {
@@ -94,56 +105,6 @@ export default function RoomServiceOrders() {
     return view === "roomService" ? base + 5 : base;
   };
 
-  const renderOrderRow = (order) => {
-    const statusOptions =
-      view === "breakfast" ? ["pending", "completed"] : ["pending", "accepted", "completed"];
-    const total = calculateTotal(order);
-
-    // Bootstrap badges for statuses
-    const statusBadge = (status) => {
-      const map = {
-        pending: "warning",
-        accepted: "primary",
-        completed: "success"
-      };
-      return <span className={`badge bg-${map[status] || "secondary"}`}>{status.charAt(0).toUpperCase() + status.slice(1)}</span>;
-    };
-
-    return (
-      <tr key={order.id}>
-        <td className="text-center">{order.id}</td>
-        <td className="text-center">{order.room_number}</td>
-        {view === "breakfast" && <td className="text-center">{order.delivery_time}</td>}
-        <td>{renderItemsCell(order)}</td>
-        <td>
-          <div className="d-flex align-items-center gap-2">
-            <select
-              className="form-select form-select-sm"
-              style={{ width: "auto" }}
-              value={order.status}
-              onChange={(e) => handleStatusChange(order, e.target.value)}
-            >
-              {statusOptions.map((s) => (
-                <option key={s} value={s}>
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
-                </option>
-              ))}
-            </select>
-            {statusBadge(order.status)}
-          </div>
-        </td>
-        <td>
-          €{total.toFixed(2)}
-          {view === "roomService" && (
-            <small className="ms-1 fst-italic text-muted">
-              (incl. €5 tray)
-            </small>
-          )}
-        </td>
-        <td className="text-nowrap">{new Date(order.created_at).toLocaleString()}</td>
-      </tr>
-    );
-  };
 
 return (
   <div className="container my-4">
