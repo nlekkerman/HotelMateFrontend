@@ -4,13 +4,15 @@ import { useAuth } from "@/context/AuthContext";
 import ClockModal from "@/components/staff/ClockModal";
 import api from "@/services/api";
 import logo from "@/assets/hotel-mate.png";
+import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const hotelIdentifier = user?.hotel_slug;
-
+  const { count: newOrderCount, refresh: refreshCount } =
+    useOrderCount(hotelIdentifier);
   const [staffProfile, setStaffProfile] = useState(null);
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
@@ -55,11 +57,12 @@ const Navbar = () => {
   const isActive = (path) => location.pathname.startsWith(path);
 
   return (
-    <nav className="navbar navbar-expand-lg bg-danger text-white shadow-sm main-bg">
+    <nav className="navbar navbar-expand-lg  text-white shadow-sm main-bg">
       <div className="container-fluid">
-        <Link to="/" className="flex items-center space-x-2 logo-container">
-         
-        </Link>
+        <Link
+          to="/"
+          className="flex items-center space-x-2 logo-container"
+        ></Link>
         <Link to="/" className="flex items-center space-x-2 logo-container">
           <img
             src={logo}
@@ -214,14 +217,20 @@ const Navbar = () => {
                 </li>
                 <li className="nav-item">
                   <Link
-                    className={`nav-link ${
-                      isActive(`/room_services/${hotelIdentifier}/orders`) &&
-                      "active"
-                    }`}
                     to={`/room_services/${hotelIdentifier}/orders`}
                     onClick={toggleNavbar}
+                    className={`
+              nav-link
+              
+              ${isActive(`/room_services/${hotelIdentifier}/orders`) && "active"}
+            `}
                   >
                     Room Service
+                    {newOrderCount > 0 && (
+                      <span className="badge bg-danger ms-1">
+                        {newOrderCount}
+                      </span>
+                    )}
                   </Link>
                 </li>
                 {isSuperStaffAdmin && (
