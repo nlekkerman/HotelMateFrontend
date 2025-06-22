@@ -32,9 +32,8 @@ import DinnerBookingList from "@/components/bookings/DinnerBookingList";
 import Bookings from "@/components/bookings/Bookings";
 import RoomServiceOrders from "@/components/room_service/RoomServiceOrders";
 import Settings from "@/components/utils/Settings";
-
-
-
+import StockDashboard from "@/pages/stock_tracker/StockDashboard";
+import CategoryStock from "@/components/stock_tracker/CategoryStock";
 
 import HotelInfo from "@/pages/hotel_info/HotelInfo";
 
@@ -46,19 +45,17 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 const queryClient = new QueryClient();
 
 function App() {
-  
   return (
-    
     <QueryClientProvider client={queryClient}>
-       <ToastContainer
+      <ToastContainer
         position="top-center"
-        autoClose={5000}           // auto-dismiss after 5s
+        autoClose={5000} // auto-dismiss after 5s
         hideProgressBar={false}
         newestOnTop={true}
         closeOnClick
         pauseOnHover
         draggable
-        theme="colored"            // gives you a nice colored style
+        theme="colored" // gives you a nice colored style
       />
       <UIProvider>
         <AuthProvider>
@@ -83,11 +80,7 @@ function App() {
                 />
                 <Route
                   path="/room_services/:hotelIdentifier/orders"
-                  element={
-                    
-                      <RoomServiceOrders />
-                    
-                  }
+                  element={<RoomServiceOrders />}
                 />
 
                 <Route
@@ -137,9 +130,15 @@ function App() {
                 <Route
                   path="/hotel_info/:hotel_slug/:category"
                   element={<HotelInfo />}
-                  
                 />
-                <Route path="/settings" element={<Settings />} />
+                <Route
+                  path="/stock_tracker/:hotel_slug/:category_slug"
+                  element={<CategoryStock />}
+                />
+                <Route
+                  path="/stock_tracker/:hotel_slug"
+                  element={<StockDashboard />}
+                />
               </Routes>
             </div>
           </BrowserRouter>
