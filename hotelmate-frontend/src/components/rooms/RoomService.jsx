@@ -208,8 +208,8 @@ export default function RoomService({ isAdmin }) {
 
       {/* Floating Cart Button */}
       <button
-        className={`btn position-fixed bottom-0 end-0 m-4 rounded-circle p-3 ${
-          showOrderPanel ? "bg-light primary-color" : "btn-primary"
+        className={`btn position-fixed bottom-0 end-0 m-5 rounded-circle p-3 ${
+          showOrderPanel ? 'bg-warning text-dark' : 'bg-danger text-white'
         }`}
         onClick={() => setShowOrderPanel((p) => !p)}
       >
