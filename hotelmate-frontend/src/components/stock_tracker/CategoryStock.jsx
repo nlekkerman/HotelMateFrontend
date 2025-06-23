@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import api from "@/services/api";
+import LowStock from "@/components/stock_tracker/LowStock";
+import { useAuth } from "@/context/AuthContext";
+import StockSettings from "@/components/stock_tracker/StockSettings";
 
 export default function CategoryStock() {
   const { hotel_slug, category_slug } = useParams();
@@ -8,10 +11,27 @@ export default function CategoryStock() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [transactions, setTransactions] = useState([]);
-  const [direction, setDirection] = useState("in"); // Default is 'in' (add to stock)
-  const [quantities, setQuantities] = useState({}); // Track quantities for each item
+  const [direction, setDirection] = useState("in");
+  const [quantities, setQuantities] = useState({});
+  const [refreshLowStock, setRefreshLowStock] = useState(0);
+  const { user } = useAuth();
+  const [staffProfile, setStaffProfile] = useState(null);
+  const canAccessSettings = user?.is_superuser || user?.is_staff;
+  const [stocks, setStocks] = useState([]);
+  const [stock, setStock] = useState(null);
 
-  // Clean up category and hotel names
+  useEffect(() => {
+    if (!user) return;
+    api
+      .get("/staff/me/")
+      .then((res) => setStaffProfile(res.data))
+      .catch(() => setStaffProfile(null));
+  }, [user]);
+
+  const isStaffAdmin = staffProfile?.access_level === "staff_admin";
+  const isSuperStaffAdmin = staffProfile?.access_level === "super_staff_admin";
+  const canViewSettings = isStaffAdmin || isSuperStaffAdmin;
+
   const prettyCategory = category_slug
     .split("-")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -27,11 +47,16 @@ export default function CategoryStock() {
     api
       .get(endpoint)
       .then((res) => {
+        setStocks(res.data.results);
+        if (res.data.results.length > 0) {
+          setStock(res.data.results[0]);
+        }
         const flatItems = res.data.results.flatMap((stock) =>
           stock.inventory_lines.map((line) => ({
             id: line.item.id,
             name: line.item.name,
             qty: line.quantity,
+            active: line.item.active_stock_item,
           }))
         );
         setItems(flatItems);
@@ -43,19 +68,25 @@ export default function CategoryStock() {
   const handleAddTransaction = (item) => {
     const qty = parseFloat(quantities[item.id]);
     if (!qty) return;
+
+    if (direction === "out" && qty > item.qty) {
+      alert(
+        `Cannot remove more than available stock (${item.qty}) for ${item.name}`
+      );
+      return;
+    }
+
     const updatedTransactions = [...transactions, { ...item, qty, direction }];
     setTransactions(updatedTransactions);
     setQuantities({ ...quantities, [item.id]: "" });
   };
 
   const handleCompleteStockAction = () => {
-    // Send all transactions (add/remove items) to the backend
     api
       .post(`/stock_tracker/${hotel_slug}/movements/bulk/`, {
         transactions,
       })
-      .then((response) => {
-        // Optionally, update the stock items to reflect the changes
+      .then(() => {
         setItems((items) =>
           items.map((item) => {
             const relatedTransactions = transactions.filter(
@@ -68,9 +99,35 @@ export default function CategoryStock() {
             return { ...item, qty: item.qty + netQtyChange };
           })
         );
-        setTransactions([]); // Clear transactions after completion
+        setTransactions([]);
+        setRefreshLowStock((v) => v + 1);
       })
       .catch((err) => console.error(err));
+  };
+
+  // 🔁 Updated: toggle item and update UI immediately
+  const toggleItemActive = async (item) => {
+    try {
+      const action = item.active ? "deactivate" : "activate";
+      await api.post(`/stock_tracker/${hotel_slug}/items/${item.id}/${action}/`);
+      setItems((prevItems) =>
+        prevItems.map((i) =>
+          i.id === item.id ? { ...i, active: !item.active } : i
+        )
+      );
+    } catch (error) {
+      console.error("Error toggling item:", error);
+      alert("Failed to toggle item active status.");
+    }
+  };
+
+  // ✅ New: Allow StockSettings to update item active state too
+  const handleToggleFromSettings = (itemId, newStatus) => {
+    setItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === itemId ? { ...item, active: newStatus } : item
+      )
+    );
   };
 
   if (loading) return <p>Loading “{prettyCategory}” stock…</p>;
@@ -79,11 +136,23 @@ export default function CategoryStock() {
 
   return (
     <div className="container mt-4">
+      {/* ⬇️ Pass toggle callback to settings */}
+      {canAccessSettings && (
+        <div className="mb-4">
+          <StockSettings
+            stock={stock}
+            hotelSlug={hotel_slug}
+            categorySlug={category_slug}
+            onToggleActive={handleToggleFromSettings} // ✅ pass the handler
+          />
+        </div>
+      )}
+
+      <LowStock hotelSlug={hotel_slug} refresh={refreshLowStock} />
       <h1>
         {prettyCategory} for “{prettyHotel}”
       </h1>
 
-      {/* Direction Toggle */}
       <div className="mb-3">
         <label className="form-label">Select action type:</label>
         <div>
@@ -106,22 +175,36 @@ export default function CategoryStock() {
         </div>
       </div>
 
-      {/* Item List with Inputs and Add Button */}
       <ul className="list-group mb-3">
         {items.map((item) => (
           <li
             key={item.id}
             className="list-group-item d-flex justify-content-between align-items-center"
           >
-            <div class="d-flex align-items-center gap-2">
-              <span class="fw-bold text-primary">{item.name}</span>
-              <span class="text-muted ml-2 bg-warning">({item.qty})</span>
+            <div className="d-flex align-items-center gap-3">
+              <span
+                className={`fw-bold ${
+                  item.active
+                    ? "text-primary"
+                    : "text-muted text-decoration-line-through"
+                }`}
+              >
+                {item.name}
+              </span>
+              <span className="text-muted bg-warning">({item.qty})</span>
             </div>
 
-            <div className="d-flex align-items-center">
+            <div className="d-flex align-items-center gap-2">
+              <label className="form-check-label small">Active</label>
+              <input
+                type="checkbox"
+                checked={item.active}
+                onChange={() => toggleItemActive(item)}
+                className="form-check-input"
+              />
               <input
                 type="number"
-                className="form-control form-control-sm me-2"
+                className="form-control form-control-sm"
                 value={quantities[item.id] || ""}
                 onChange={(e) =>
                   setQuantities({ ...quantities, [item.id]: e.target.value })
@@ -130,6 +213,7 @@ export default function CategoryStock() {
               <button
                 className="btn btn-sm btn-primary"
                 onClick={() => handleAddTransaction(item)}
+                disabled={!item.active}
               >
                 Add
               </button>
@@ -138,7 +222,6 @@ export default function CategoryStock() {
         ))}
       </ul>
 
-      {/* Display Pending Transactions */}
       {transactions.length > 0 && (
         <>
           <h5>Pending Transactions:</h5>
