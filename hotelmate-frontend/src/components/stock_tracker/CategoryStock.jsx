@@ -4,7 +4,9 @@ import api from "@/services/api";
 import LowStock from "@/components/stock_tracker/LowStock";
 import { useAuth } from "@/context/AuthContext";
 import StockSettings from "@/components/stock_tracker/StockSettings";
-
+const StockMovements = React.lazy(() =>
+  import("@/components/stock_tracker/StockMovements")
+);
 export default function CategoryStock() {
   const { hotel_slug, category_slug } = useParams();
   const [items, setItems] = useState([]);
@@ -19,6 +21,8 @@ export default function CategoryStock() {
   const canAccessSettings = user?.is_superuser || user?.is_staff;
   const [stocks, setStocks] = useState([]);
   const [stock, setStock] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showMovements, setShowMovements] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -109,7 +113,9 @@ export default function CategoryStock() {
   const toggleItemActive = async (item) => {
     try {
       const action = item.active ? "deactivate" : "activate";
-      await api.post(`/stock_tracker/${hotel_slug}/items/${item.id}/${action}/`);
+      await api.post(
+        `/stock_tracker/${hotel_slug}/items/${item.id}/${action}/`
+      );
       setItems((prevItems) =>
         prevItems.map((i) =>
           i.id === item.id ? { ...i, active: !item.active } : i
@@ -139,12 +145,52 @@ export default function CategoryStock() {
       {/* ⬇️ Pass toggle callback to settings */}
       {canAccessSettings && (
         <div className="mb-4">
-          <StockSettings
-            stock={stock}
-            hotelSlug={hotel_slug}
-            categorySlug={category_slug}
-            onToggleActive={handleToggleFromSettings} // ✅ pass the handler
-          />
+          <div className="d-flex gap-2 mb-2">
+            <button
+              className={`btn btn-outline-secondary btn-sm ${
+                showSettings ? "active" : ""
+              }`}
+              onClick={() => {
+                setShowSettings((prev) => !prev);
+                if (!showSettings) setShowMovements(false);
+              }}
+            >
+              {showSettings ? "Hide" : "Show"} Stock Settings
+            </button>
+            <button
+              className={`btn btn-outline-secondary btn-sm ${
+                showMovements ? "active" : ""
+              }`}
+              onClick={() => {
+                setShowMovements((prev) => !prev);
+                if (!showMovements) setShowSettings(false);
+              }}
+            >
+              {showMovements ? "Hide" : "Show"} Stock Movements
+            </button>
+          </div>
+
+          {showSettings && (
+            <StockSettings
+              stock={stock}
+              hotelSlug={hotel_slug}
+              categorySlug={category_slug}
+              onToggleActive={handleToggleFromSettings}
+            />
+          )}
+
+          {showMovements && (
+            <div className="mt-3">
+              {/* Lazy load StockMovement when you add the file */}
+              <React.Suspense fallback={<div>Loading movements…</div>}>
+                <StockMovements
+                  stock={stock}
+                  hotelSlug={hotel_slug}
+                  categorySlug={category_slug}
+                />
+              </React.Suspense>
+            </div>
+          )}
         </div>
       )}
 
