@@ -245,7 +245,19 @@ const Navbar = () => {
                       Settings
                     </Link>
                   </li>
+                  
                 )}
+                <li className="nav-item">
+  <Link
+    className={`nav-link ${
+      isActive(`/stock_tracker/${hotelIdentifier}`) && "active"
+    }`}
+    to={`/stock_tracker/${hotelIdentifier}`}
+    onClick={toggleNavbar}
+  >
+    Stock Dashboard
+  </Link>
+</li>
 
                 <li className="nav-item">
                   <button
