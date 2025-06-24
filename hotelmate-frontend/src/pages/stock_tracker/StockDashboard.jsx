@@ -45,8 +45,9 @@ export default function StockDashboard() {
               navigate(`/stock_tracker/${hotel_slug}/${cat.slug}`);
             }}
             style={{ padding: '.5rem 1rem', cursor: 'pointer' }}
+            className='text-capitalize btn btn-outline-primary'
           >
-            {cat.name} <small>({cat.slug})</small>
+            {cat.name} 
           </button>
         ))}
       </div>

@@ -124,6 +124,7 @@ function App() {
                   element={<DinnerBookingList />}
                 />
                 <Route path="/bookings" element={<Bookings />} />
+                <Route path="/settings" element={<Settings  />} />
                 <Route path="/hotel_info/:hotel_slug" element={<HotelInfo />} />
 
                 {/* 2) If you hit /hotel_info/:hotel_slug/:category */}

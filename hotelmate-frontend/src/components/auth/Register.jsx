@@ -23,7 +23,7 @@ const Register = () => {
   const [hotels, setHotels] = useState([]);
   const navigate = useNavigate();
 
-  const { postData, loading, error: requestError } = useAxiosPost('staff/register/');
+  const { postData, loading, error: requestError } = useAxiosPost('/staff/register/');
 
   useEffect(() => {
     if (requestError) setError(requestError);

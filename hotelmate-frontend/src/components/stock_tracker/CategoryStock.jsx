@@ -109,23 +109,7 @@ export default function CategoryStock() {
       .catch((err) => console.error(err));
   };
 
-  // 🔁 Updated: toggle item and update UI immediately
-  const toggleItemActive = async (item) => {
-    try {
-      const action = item.active ? "deactivate" : "activate";
-      await api.post(
-        `/stock_tracker/${hotel_slug}/items/${item.id}/${action}/`
-      );
-      setItems((prevItems) =>
-        prevItems.map((i) =>
-          i.id === item.id ? { ...i, active: !item.active } : i
-        )
-      );
-    } catch (error) {
-      console.error("Error toggling item:", error);
-      alert("Failed to toggle item active status.");
-    }
-  };
+
 
   // ✅ New: Allow StockSettings to update item active state too
   const handleToggleFromSettings = (itemId, newStatus) => {
@@ -225,9 +209,9 @@ export default function CategoryStock() {
         {items.map((item) => (
           <li
             key={item.id}
-            className="list-group-item d-flex justify-content-between align-items-center"
+            className="list-group-item d-flex justify-content-between bg-white mb-3 shadow-sm align-items-center"
           >
-            <div className="d-flex align-items-center gap-3">
+            <div className="d-flex align-items-center justify-content-between w-100 gap-3">
               <span
                 className={`fw-bold ${
                   item.active
@@ -237,20 +221,14 @@ export default function CategoryStock() {
               >
                 {item.name}
               </span>
-              <span className="text-muted bg-warning">({item.qty})</span>
+              <span className=" border rounded shadow-sm p-1 me-5 text-white bg-danger">{item.qty}</span>
             </div>
 
             <div className="d-flex align-items-center gap-2">
-              <label className="form-check-label small">Active</label>
-              <input
-                type="checkbox"
-                checked={item.active}
-                onChange={() => toggleItemActive(item)}
-                className="form-check-input"
-              />
+             
               <input
                 type="number"
-                className="form-control form-control-sm"
+                className="form-control form-control-sm mx-2"
                 value={quantities[item.id] || ""}
                 onChange={(e) =>
                   setQuantities({ ...quantities, [item.id]: e.target.value })
