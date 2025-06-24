@@ -24,9 +24,9 @@ export default function LowStock({ hotelSlug, refresh }) {
           <li className="list-group-item">All good, no low stock!</li>
         )}
         {lowStockItems.map((item) => (
-          <li key={item.id} className="list-group-item d-flex justify-content-between bg-warning text-white">
+          <li key={item.id} className="list-group-item d-flex justify-content-between  alpha-5 text-danger">
             <span>{item.name}</span>
-            <span className="badge bg-danger">{item.quantity}</span>
+            <span className="p-1 rounded text-bold bg-white text-dark">{item.quantity}</span>
           </li>
         ))}
       </ul>

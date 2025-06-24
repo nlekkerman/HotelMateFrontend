@@ -40,23 +40,32 @@ export default function StockMovements({ stock, hotelSlug, categorySlug }) {
         {movements.map((m) => {
           const isIn = m.direction === "in";
           // Use bg-success and bg-warning for background colors
-          const bgClass = isIn ? "bg-success" : "bg-warning";
+          const bgClass = isIn ? "bg-white" : "bg-light";
           // Optional: text color for contrast
-          const textColorStyle = { color: isIn ? "orange" : "green" };
+          const textColorStyle = { color: isIn ? "green" : "red" };
 
           return (
             <li
               key={m.id}
               className={`list-group-item d-flex justify-content-between ${bgClass}`}
             >
-              <div>
-                <strong style={textColorStyle}>{isIn ? "In" : "Out"}</strong>{" "}
-                <span className="border p-1 bg-danger text-white" style={textColorStyle}>{m.quantity} items</span>{" "}
-                <span className="text-white">{m.item.name}</span>
+              <div className="d-flex align-items-center gap-3  p-2">
+                <span className="text-black">{m.item.name}</span>
+                <strong style={textColorStyle}>
+                  {isIn ? "In" : "Out"}
+                </strong>{" "}
+                <span
+                  className="border p-1 bg-gray-200 text-black"
+                  style={textColorStyle}
+                >
+                  {m.quantity} items
+                </span>{" "}
               </div>
               <div className="text-muted small text-end">
-                <div className="text-white text-capitalize">Action by {m.staff_name}</div>
-                <div>{format(new Date(m.timestamp), "yyyy-MM-dd HH:mm")}</div>
+                <div className="text-muted text-capitalize">
+                  {m.staff_name}
+                </div>
+                <div>{format(new Date(m.timestamp), "dd/MM/yy HH:mm")}</div>
               </div>
             </li>
           );

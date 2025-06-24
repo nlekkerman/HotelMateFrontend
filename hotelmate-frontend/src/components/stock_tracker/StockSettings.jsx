@@ -179,11 +179,11 @@ const StockSettings = ({ stock }) => {
         {itemList.length === 0 ? (
           <p className="text-gray-500">No items yet.</p>
         ) : (
-          <ul className="space-y-2">
+          <ol className="space-y-2">
             {itemList.map((item) => (
               <li
                 key={item.id}
-                className="border rounded p-2 flex justify-between items-center"
+                className="border rounded p-2 flex justify-between items-center mb-2 bg-white shadow-sm"
               >
                 <span>{item.name}</span>
                 <span className="text-sm text-gray-500">
@@ -204,7 +204,7 @@ const StockSettings = ({ stock }) => {
                 </button>
               </li>
             ))}
-          </ul>
+          </ol>
         )}
       </div>
     </div>
@@ -212,3 +212,4 @@ const StockSettings = ({ stock }) => {
 };
 
 export default StockSettings;
+
