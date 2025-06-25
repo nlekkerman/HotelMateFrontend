@@ -1,9 +1,15 @@
 import { useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
-import { requestFirebaseNotificationPermission, listenForFirebaseMessages } from "@/utils/firebaseNotifications";
+import {
+  requestFirebaseNotificationPermission,
+  listenForFirebaseMessages,
+} from "@/utils/firebaseNotifications";
 
-const LOGIN_ENDPOINT = `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/staff/login/`;
+const LOGIN_ENDPOINT = `${import.meta.env.VITE_API_URL.replace(
+  /\/$/,
+  ""
+)}/staff/login/`;
 
 export default function useLogin() {
   const [loading, setLoading] = useState(false);
@@ -50,9 +56,10 @@ export default function useLogin() {
         is_superuser: data.is_superuser,
         access_level: data.access_level,
       });
+   
 
       // 3. Now register FCM token!
-      const VAPID_KEY = "BDcFvIGZd9lTrPb3R4CCSIUpLjzhk87TpslsmfexVFuPZsPSrwl2TdSJ4M3-TAfBWAmfHM2GVMOowd-LtnoUmdU";
+      const VAPID_KEY = import.meta.env.REACT_APP_FIREBASE_VAPID_KEY;
       try {
         await requestFirebaseNotificationPermission(VAPID_KEY);
       } catch (notifyError) {

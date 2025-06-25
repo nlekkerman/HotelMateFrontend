@@ -18,8 +18,9 @@ export default function CategoryStock() {
   const [refreshLowStock, setRefreshLowStock] = useState(0);
   const { user } = useAuth();
   const [staffProfile, setStaffProfile] = useState(null);
-  const canAccessSettings = user?.is_superuser || user?.is_staff;
-  const [stocks, setStocks] = useState([]);
+const canAccessSettings =
+  user?.is_superuser ||
+  user?.access_level === "super_staff_admin";  const [stocks, setStocks] = useState([]);
   const [stock, setStock] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showMovements, setShowMovements] = useState(false);
