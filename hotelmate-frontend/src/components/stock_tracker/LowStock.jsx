@@ -17,8 +17,8 @@ export default function LowStock({ hotelSlug, refresh }) {
   if (loading) return <p>Loading low stock items…</p>;
 
   return (
-    <div className="mb-4">
-      <h4>Low Stock Items</h4>
+    <div className="mb-4 ">
+      <h4 className="bg-warning">Low Stock Items</h4>
       <ul className="list-group">
         {lowStockItems.length === 0 && (
           <li className="list-group-item">All good, no low stock!</li>

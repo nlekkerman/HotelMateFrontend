@@ -13,14 +13,14 @@ export default function CategoryStock() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [transactions, setTransactions] = useState([]);
-  const [direction, setDirection] = useState("in");
+  const [direction, setDirection] = useState("out");
   const [quantities, setQuantities] = useState({});
   const [refreshLowStock, setRefreshLowStock] = useState(0);
   const { user } = useAuth();
   const [staffProfile, setStaffProfile] = useState(null);
-const canAccessSettings =
-  user?.is_superuser ||
-  user?.access_level === "super_staff_admin";  const [stocks, setStocks] = useState([]);
+  const canAccessSettings =
+    user?.is_superuser || user?.access_level === "super_staff_admin";
+  const [stocks, setStocks] = useState([]);
   const [stock, setStock] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showMovements, setShowMovements] = useState(false);
@@ -62,6 +62,8 @@ const canAccessSettings =
             name: line.item.name,
             qty: line.quantity,
             active: line.item.active_stock_item,
+            volume_per_unit: line.item.volume_per_unit,
+            unit: line.item.unit,
           }))
         );
         setItems(flatItems);
@@ -73,13 +75,6 @@ const canAccessSettings =
   const handleAddTransaction = (item) => {
     const qty = parseFloat(quantities[item.id]);
     if (!qty) return;
-
-    if (direction === "out" && qty > item.qty) {
-      alert(
-        `Cannot remove more than available stock (${item.qty}) for ${item.name}`
-      );
-      return;
-    }
 
     const updatedTransactions = [...transactions, { ...item, qty, direction }];
     setTransactions(updatedTransactions);
@@ -110,15 +105,31 @@ const canAccessSettings =
       .catch((err) => console.error(err));
   };
 
-
-
   // ✅ New: Allow StockSettings to update item active state too
   const handleToggleFromSettings = (itemId, newStatus) => {
-    setItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === itemId ? { ...item, active: newStatus } : item
-      )
-    );
+    if (newStatus) {
+      // 🔼 Activated: fetch the item from API and add to list
+      api
+        .get(`/stock_tracker/${hotel_slug}/items/${itemId}/`)
+        .then((res) => {
+          const newItem = res.data;
+          setItems((prev) => [
+            ...prev,
+            {
+              id: newItem.id,
+              name: newItem.name,
+              qty: newItem.quantity || 0,
+              active: true,
+            },
+          ]);
+        })
+        .catch((err) => {
+          console.error("Failed to re-add item:", err);
+        });
+    } else {
+      // 🔽 Deactivated: remove from list
+      setItems((prev) => prev.filter((item) => item.id !== itemId));
+    }
   };
 
   if (loading) return <p>Loading “{prettyCategory}” stock…</p>;
@@ -220,16 +231,27 @@ const canAccessSettings =
                     : "text-muted text-decoration-line-through"
                 }`}
               >
-                {item.name}
+                {item.name}{" "}
+                {item.volume_per_unit && item.unit && (
+                  <small className="text-muted ms-2">
+                    ({item.volume_per_unit} {item.unit})
+                  </small>
+                )}
               </span>
-              <span className=" border rounded shadow-sm p-1 me-5 text-white bg-danger">{item.qty}</span>
+
+              <span
+                className={`border rounded shadow-sm p-1 text-white ${
+                  item.qty >= 0 ? "bg-success" : "bg-danger"
+                }`}
+              >
+                {item.qty} (pcs)
+              </span>
             </div>
 
             <div className="d-flex align-items-center gap-2">
-             
               <input
                 type="number"
-                className="form-control form-control-sm mx-2"
+                className="form-control form-control-sm  bg-white mx-2"
                 value={quantities[item.id] || ""}
                 onChange={(e) =>
                   setQuantities({ ...quantities, [item.id]: e.target.value })

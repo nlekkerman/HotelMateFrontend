@@ -1,25 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import api from '@/services/api';
-import { useNavigate, useParams  } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const StaffCreate = () => {
   const [users, setUsers] = useState([]);
+  const [hotels, setHotels] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedHotelId, setSelectedHotelId] = useState('');
   const [staffData, setStaffData] = useState({
     first_name: '',
     last_name: '',
     department: '',
     role: '',
-    position: '',
+    access_level: 'regular_staff',
+    email: '',
     phone_number: '',
     is_active: true,
-    is_staff: false,
-    is_superuser: false,
+    is_on_duty: false,
   });
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Fetch users
     const fetchUsers = async () => {
       try {
         const response = await api.get('staff/users/');
@@ -29,28 +32,41 @@ const StaffCreate = () => {
         console.error(err);
       }
     };
+    // Fetch hotels
+    const fetchHotels = async () => {
+      try {
+        const response = await api.get('hotel/hotels/');
+        setHotels(response.data.results || response.data);
+      } catch (err) {
+        setError('Failed to fetch hotels');
+        console.error(err);
+      }
+    };
+
     fetchUsers();
+    fetchHotels();
   }, []);
 
   const openModal = (user) => {
-    console.log('Selected user ID:', user.id);
     setSelectedUser(user);
     setStaffData({
       first_name: '',
       last_name: '',
       department: '',
       role: '',
-      position: '',
+      access_level: 'regular_staff',
+      email: '',
       phone_number: '',
       is_active: true,
-      is_staff: false,
-      is_superuser: false,
+      is_on_duty: false,
     });
+    setSelectedHotelId(''); // reset hotel selection
   };
 
   const closeModal = () => {
     setSelectedUser(null);
     setError(null);
+    setSelectedHotelId('');
   };
 
   const handleChange = (e) => {
@@ -61,28 +77,43 @@ const StaffCreate = () => {
     }));
   };
 
+  const handleHotelChange = (e) => {
+    setSelectedHotelId(e.target.value);
+  };
+
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!selectedUser) return;
+    e.preventDefault();
 
-  try {
-    const response = await api.post('staff/register/', {
-      user_id: selectedUser.id,
+    if (!selectedUser) {
+      setError('Please select a user');
+      return;
+    }
 
-      ...staffData,
-    });
-console.log("DEBUG: Full response from staff/register:", response.data);
+    if (!selectedHotelId) {
+      setError('Please select a hotel');
+      return;
+    }
 
-    const staffId = response.data.staff_id; 
-    console.log('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaStaff created successfully:', staffId);
-    closeModal();
-    navigate(`/staff/${staffId}`);
-  } catch (err) {
-    setError('Failed to create staff');
-    console.error(err);
-  }
-};
+    try {
+      const payload = {
+        user_id: selectedUser.id,
+        ...staffData,
+      };
 
+      const response = await api.post('staff/register/', payload, {
+        headers: {
+          'X-Hotel-ID': selectedHotelId,
+        }
+      });
+
+      console.log("Staff created:", response.data);
+      closeModal();
+      navigate(`/staff/${response.data.staff_id}`);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to create staff');
+      console.error(err);
+    }
+  };
 
   return (
     <div>
@@ -103,48 +134,39 @@ console.log("DEBUG: Full response from staff/register:", response.data);
       </ul>
 
       {selectedUser && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex', justifyContent: 'center', alignItems: 'center',
-          }}
-        >
-          <div style={{ backgroundColor: 'white', padding: 20, borderRadius: 5, minWidth: 300 }}>
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex', justifyContent: 'center', alignItems: 'center',
+        }}>
+          <div style={{ backgroundColor: 'white', padding: 20, borderRadius: 5, minWidth: 320 }}>
             <h3>Create Staff for {selectedUser.username}</h3>
+
             <form onSubmit={handleSubmit}>
+              <div>
+                <label>Hotel</label>
+                <select value={selectedHotelId} onChange={handleHotelChange} required>
+                  <option value="">Select Hotel</option>
+                  {hotels.map(hotel => (
+                    <option key={hotel.id} value={hotel.id}>{hotel.name}</option>
+                  ))}
+                </select>
+              </div>
 
               <div>
                 <label>First Name</label>
-                <input
-                  type="text"
-                  name="first_name"
-                  value={staffData.first_name}
-                  onChange={handleChange}
-                  required
-                />
+                <input type="text" name="first_name" value={staffData.first_name} onChange={handleChange} required />
               </div>
 
               <div>
                 <label>Last Name</label>
-                <input
-                  type="text"
-                  name="last_name"
-                  value={staffData.last_name}
-                  onChange={handleChange}
-                  required
-                />
+                <input type="text" name="last_name" value={staffData.last_name} onChange={handleChange} required />
               </div>
 
               <div>
                 <label>Department</label>
-                <select
-                  name="department"
-                  value={staffData.department}
-                  onChange={handleChange}
-                  required
-                >
+                <select name="department" value={staffData.department} onChange={handleChange} required>
                   <option value="">Select Department</option>
                   <option value="front_office">Front Office</option>
                   <option value="front_house">Front House</option>
@@ -158,12 +180,7 @@ console.log("DEBUG: Full response from staff/register:", response.data);
 
               <div>
                 <label>Role</label>
-                <select
-                  name="role"
-                  value={staffData.role}
-                  onChange={handleChange}
-                  required
-                >
+                <select name="role" value={staffData.role} onChange={handleChange}>
                   <option value="">Select Role</option>
                   <option value="porter">Porter</option>
                   <option value="receptionist">Receptionist</option>
@@ -173,66 +190,51 @@ console.log("DEBUG: Full response from staff/register:", response.data);
                   <option value="housekeeping_attendant">Housekeeping Attendant</option>
                   <option value="manager">Manager</option>
                   <option value="technician">Technician</option>
+                  <option value="security">Security</option>
+                  <option value="concierge">Concierge</option>
+                  <option value="leisure_staff">Leisure Staff</option>
+                  <option value="maintenance_staff">Maintenance Staff</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
 
+             
+
               <div>
-                <label>Position</label>
-                <input
-                  type="text"
-                  name="position"
-                  value={staffData.position}
-                  onChange={handleChange}
-                />
+                <label>Email</label>
+                <input type="email" name="email" value={staffData.email} onChange={handleChange} />
               </div>
 
               <div>
                 <label>Phone Number</label>
-                <input
-                  type="text"
-                  name="phone_number"
-                  value={staffData.phone_number}
-                  onChange={handleChange}
-                />
+                <input type="text" name="phone_number" value={staffData.phone_number} onChange={handleChange} />
+              </div>
+
+              <div>
+                <label>Access Level</label>
+                <select name="access_level" value={staffData.access_level} onChange={handleChange} required>
+                  <option value="regular_staff">Regular Staff</option>
+                  <option value="staff_admin">Staff Admin</option>
+                  <option value="super_staff_admin">Super Staff Admin</option>
+                </select>
               </div>
 
               <div>
                 <label>
-                  <input
-                    type="checkbox"
-                    name="is_active"
-                    checked={staffData.is_active}
-                    onChange={handleChange}
-                  /> Active
+                  <input type="checkbox" name="is_active" checked={staffData.is_active} onChange={handleChange} />
+                  Active
                 </label>
               </div>
 
               <div>
                 <label>
-                  <input
-                    type="checkbox"
-                    name="is_staff"
-                    checked={staffData.is_staff}
-                    onChange={handleChange}
-                  /> Is Admin
-                </label>
-              </div>
-
-              <div>
-                <label>
-                  <input
-                    type="checkbox"
-                    name="is_superuser"
-                    checked={staffData.is_superuser}
-                    onChange={handleChange}
-                  /> Is Superuser
+                  <input type="checkbox" name="is_on_duty" checked={staffData.is_on_duty} onChange={handleChange} />
+                  On Duty
                 </label>
               </div>
 
               <button type="submit">Create Staff</button>
-              <button type="button" onClick={closeModal} style={{ marginLeft: 10 }}>
-                Cancel
-              </button>
+              <button type="button" onClick={closeModal} style={{ marginLeft: 10 }}>Cancel</button>
             </form>
           </div>
         </div>
