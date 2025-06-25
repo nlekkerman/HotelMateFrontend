@@ -116,7 +116,7 @@ export default function Staff() {
                   <td>{staff.role || 'N/A'}</td>
                   <td>{staff.position || 'N/A'}</td>
                   <td>{staff.phone_number || 'N/A'}</td>
-                  <td>{hotels[staff.hotel]?.name || '—'}</td>
+                  <td>{staff.hotel_name || '-'}</td>
                   <td>{staff.is_active ? 'Yes' : 'No'}</td>
                 </tr>
               ))}

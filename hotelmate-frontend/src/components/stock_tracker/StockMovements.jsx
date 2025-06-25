@@ -17,6 +17,7 @@ export default function StockMovements({ stock, hotelSlug }) {
   // Pagination
   const [page, setPage] = useState(1);
   const [count, setCount] = useState(0);
+  const [fetchAll, setFetchAll] = useState(false);
 
   // PDF Export
   const { generateStockMovementsPdf } = usePdfExporter();
@@ -29,7 +30,13 @@ export default function StockMovements({ stock, hotelSlug }) {
       try {
         const params = new URLSearchParams();
         params.append("stock", stock.id);
-        params.append("page", page);
+
+        if (fetchAll) {
+          params.append("page_size", "33"); // 👈 get all
+        } else {
+          params.append("page", page);
+        }
+
         if (direction) params.append("direction", direction);
         if (date) params.append("start_date", date);
         if (staff) params.append("staff", staff);
@@ -50,7 +57,7 @@ export default function StockMovements({ stock, hotelSlug }) {
     };
 
     fetchMovements();
-  }, [stock, hotelSlug, direction, date, staff, page, itemName]);
+  }, [stock, hotelSlug, direction, date, staff, page, itemName, fetchAll]); // 👈 add fetchAll here
 
   const totalPages = Math.ceil(count / 10); // 10 = PAGE_SIZE
 
@@ -67,7 +74,7 @@ export default function StockMovements({ stock, hotelSlug }) {
             value={direction}
             onChange={(e) => {
               setDirection(e.target.value);
-              setPage(1); // Reset page on filter change
+              setPage(1);
             }}
           >
             <option value="">All</option>
@@ -117,22 +124,27 @@ export default function StockMovements({ stock, hotelSlug }) {
         </div>
       </div>
 
+      {/* Buttons */}
+      <div className="mb-3 d-flex gap-2">
+        <button
+          className="btn btn-outline-primary"
+          onClick={() => generateStockMovementsPdf(movements)}
+        >
+          Download PDF
+        </button>
+
+        <button
+          className="btn btn-outline-secondary"
+          onClick={() => setFetchAll(!fetchAll)}
+        >
+          {fetchAll ? "Back to Pagination" : "See All"}
+        </button>
+      </div>
+
       {loading && <p>Loading stock movements…</p>}
       {error && <p className="text-danger">Error: {JSON.stringify(error)}</p>}
       {!loading && movements.length === 0 && <p>No stock movements found.</p>}
-      <button
-        className="btn btn-outline-primary mb-3"
-        onClick={() => generateStockMovementsPdf(movements)}
-      >
-        Download PDF
-      </button>
-      {/* New Print Button */}
-      <button
-        className="btn btn-outline-secondary"
-        onClick={() => window.print()}
-      >
-        Print
-      </button>
+
       <ul className="list-group">
         {movements.map((m) => {
           const isIn = m.direction === "in";
@@ -163,8 +175,8 @@ export default function StockMovements({ stock, hotelSlug }) {
         })}
       </ul>
 
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
+      {/* Pagination */}
+      {!fetchAll && totalPages > 1 && (
         <div className="d-flex justify-content-between align-items-center mt-3">
           <button
             className="btn btn-secondary"

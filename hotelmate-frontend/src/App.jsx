@@ -1,6 +1,5 @@
 // src/App.jsx
 import React from "react";
-import { useEffect } from "react";
 import "@/firebase"; // Ensure Firebase is initialized
 // Import your Firebase messaging service worker
 import "@/styles/main.css";
@@ -34,6 +33,8 @@ import RoomServiceOrders from "@/components/room_service/RoomServiceOrders";
 import Settings from "@/components/utils/Settings";
 import StockDashboard from "@/pages/stock_tracker/StockDashboard";
 import CategoryStock from "@/components/stock_tracker/CategoryStock";
+import NetworkHandler from "@/components/offline/NetworkHandler";
+import NoInternet from "@/components/offline/NoInternet";
 
 import HotelInfo from "@/pages/hotel_info/HotelInfo";
 
@@ -45,6 +46,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 const queryClient = new QueryClient();
 
 function App() {
+ 
   return (
     <QueryClientProvider client={queryClient}>
       <ToastContainer
@@ -60,9 +62,11 @@ function App() {
       <UIProvider>
         <AuthProvider>
           <BrowserRouter>
+            <NetworkHandler />
             <Navbar />
             <div className="container-fluid bg-light min-vh-100 vw-100 d-flex flex-column">
               <Routes>
+                <Route path="/no-internet" element={<NoInternet />} />
                 <Route path="/" element={<Reception />} />
                 <Route
                   path="/:hotelIdentifier/room/:roomNumber/validate-pin"
