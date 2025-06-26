@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Search from "@/components/utils/Search";
 import api from "@/services/api";
-
+import backgroundImage from "@/assets/images/reception-background.png";
 const CLOUDINARY_BASE = "https://res.cloudinary.com/dg0ssec7u/";
 
 const Reception = () => {
@@ -35,7 +35,15 @@ const Reception = () => {
   }, []);
 
   return (
-    <div className="container py-5">
+    <div className="container py-5 vw-100"
+    style={{
+    backgroundImage: `url(${backgroundImage})`,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    backgroundRepeat: "no-repeat",
+    minHeight: "100vh",
+  }}>
+
       {hotelLogo && (
         <div className="text-center mb-4">
           <img
@@ -50,11 +58,11 @@ const Reception = () => {
           />
         </div>
       )}
-      <h1 className="mb-5 text-center fw-bold">{hotelName} Reception</h1>
-      <p className="text-center text-secondary mb-5 fs-5">
+      <h1 className="mb-5 text-center fw-bold text-white">{hotelName} Reception</h1>
+      <p className="text-center text-secondary mb-5 fs-5 text-white">
         Manage rooms and guests from the reception dashboard.
       </p>
-      <div className="border rounded p-4 shadow-sm bg-white mb-5">
+      <div className="border rounded p-4 shadow-sm  mb-5">
         <Search placeholder="Search rooms by number, status, etc." />
       </div>
     </div>

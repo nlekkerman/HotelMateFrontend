@@ -8,27 +8,22 @@ html, body, #root {
   font-family: Arial, sans-serif; /* or whatever you want */
   background-color: #f8f9fa; /* light gray background */
 }
-
-/* Container stretching full height */
-.fullscreen-container {
-  min-height: 100vh; /* full viewport height */
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start; /* or center */
-  padding: 2rem;
-  box-sizing: border-box;
-  background-color: white; /* white bg for main content */
-  max-width: 1200px; /* optional max width for content */
-  margin: 0 auto; /* center horizontally */
-  border-radius: 8px;
-  box-shadow: 0 0 15px rgba(0,0,0,0.1);
+body {
+  margin-left: 260px;
+  transition: margin-left 0.3s ease;
 }
+
+body.sidebar-collapsed {
+  margin-left: 90px;
+}
+/* Container stretching full height */
 
 /* Text and background utilities: */
 .main-text   { color: var(--main-color)       !important; }
 .main-bg     { background-color: var(--main-color) !important; }
 .second-text { color: var(--secondary-color)  !important; }
 .second-bg   { background-color: var(--secondary-color) !important; }
+/* Fallback background for elements missing .main-bg */
 
 .logo-container{
 
@@ -51,6 +46,11 @@ html, body, #root {
   color: #f8f9fa !important;
 }
 
+.staff-list-container{
+
+  min-height: 100vh;
+}
+
 @media (max-width: 576px) {
   .sm-border-bottom {
     border-bottom: 2px solid #0d6efd; /* Bootstrap primary blue */
@@ -58,5 +58,21 @@ html, body, #root {
     padding-bottom: 4px;
     width: 100%;
     text-align: center;
+  }
+}
+
+@media (max-width: 991.98px) {
+  nav.mobile-nav {
+    position: fixed;
+    top: 56px; /* adjust based on header height */
+    left: 0;
+    width: 260px;
+    height: calc(100vh - 56px);
+    z-index: 1050;
+    transition: transform 0.3s ease;
+    transform: translateX(-100%);
+  }
+  nav.mobile-nav.show {
+    transform: translateX(0);
   }
 }

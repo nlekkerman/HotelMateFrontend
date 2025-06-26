@@ -69,21 +69,23 @@ export default function Staff() {
   }
 
   return (
-    <div>
-      <h2>Staff List</h2>
-      <div className="button-wrapper">
-        <button
-          className="btn btn-primary mb-3"
-          onClick={() => navigate('/staff/create')}
-        >
-          Create New Staff
-        </button>
-      </div>
+    <div className='staff-list-container bg-warning '>
+      
+      <div className="button-wrapper my-5 d-flex flex-column align-items-center text-center mb-4">
+  <h2 className="mb-2">Staff List</h2>
+  <button
+    className="btn btn-sm btn-primary"
+    onClick={() => navigate("/staff/create")}
+  >
+    Create New Staff
+  </button>
+</div>
+
 
       {staffList.length === 0 ? (
         <p>No staff available.</p>
       ) : (
-        <div className="table-responsive">
+        <div className="table-responsive ">
           <table className="table table-striped table-hover">
             <thead>
               <tr>

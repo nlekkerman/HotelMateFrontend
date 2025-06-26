@@ -9,7 +9,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { UIProvider } from "@/context/UIContext";
 import { AuthProvider } from "@/context/AuthContext";
-import Navbar from "@/components/layout/Navbar";
+import NavbarWrapper from "@/components/layout/NavbarWrapper";
 import RoomList from "@/components/rooms/RoomList";
 import Reception from "@/components/Reception";
 import Login from "@/components/auth/Login";
@@ -35,7 +35,7 @@ import StockDashboard from "@/pages/stock_tracker/StockDashboard";
 import CategoryStock from "@/components/stock_tracker/CategoryStock";
 import NetworkHandler from "@/components/offline/NetworkHandler";
 import NoInternet from "@/components/offline/NoInternet";
-
+import {ThemeProvider} from "@/context/ThemeContext"; // Import ThemeProvider
 import HotelInfo from "@/pages/hotel_info/HotelInfo";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -61,9 +61,10 @@ function App() {
       />
       <UIProvider>
         <AuthProvider>
+          <ThemeProvider>
           <BrowserRouter>
             <NetworkHandler />
-            <Navbar />
+            <NavbarWrapper />
             <div className="container-fluid bg-light min-vh-100 vw-100 d-flex flex-column">
               <Routes>
                 <Route path="/no-internet" element={<NoInternet />} />
@@ -147,6 +148,7 @@ function App() {
               </Routes>
             </div>
           </BrowserRouter>
+          </ThemeProvider>
         </AuthProvider>
       </UIProvider>
     </QueryClientProvider>
