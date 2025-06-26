@@ -38,7 +38,7 @@ export default function StockMovements({ stock, hotelSlug }) {
         }
 
         if (direction) params.append("direction", direction);
-        if (date) params.append("start_date", date);
+        if (date) params.append("date", date);
         if (staff) params.append("staff", staff);
         if (itemName) params.append("item_name", itemName);
 
@@ -101,7 +101,7 @@ export default function StockMovements({ stock, hotelSlug }) {
           <input
             type="text"
             className="form-control"
-            placeholder="Enter username"
+            placeholder="Enter Staff username"
             value={staff}
             onChange={(e) => {
               setStaff(e.target.value);
@@ -137,7 +137,7 @@ export default function StockMovements({ stock, hotelSlug }) {
           className="btn btn-outline-secondary"
           onClick={() => setFetchAll(!fetchAll)}
         >
-          {fetchAll ? "Back to Pagination" : "See All"}
+          {fetchAll ? "Less" : "Load More"}
         </button>
       </div>
 

@@ -14,7 +14,6 @@ const Register = () => {
     hotel: '',
     department: '',
     role: '',
-    position: '',
     phone_number: '',
     is_active: true,
     is_on_duty: false,
@@ -69,7 +68,6 @@ const Register = () => {
       last_name: formData.last_name,
       department: formData.department,
       role: formData.role,
-      position: formData.position,
       email: formData.email,
       phone_number: formData.phone_number,
       is_active: formData.is_active,
@@ -131,10 +129,7 @@ const Register = () => {
           <input name="role" type="text" value={formData.role} onChange={handleChange} className="form-control" />
         </div>
 
-        <div className="mb-3">
-          <label>Position</label>
-          <input name="position" type="text" value={formData.position} onChange={handleChange} className="form-control" />
-        </div>
+       
 
         <div className="mb-3">
           <label>Phone Number</label>

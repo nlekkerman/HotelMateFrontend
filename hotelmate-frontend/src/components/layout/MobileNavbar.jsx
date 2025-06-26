@@ -7,59 +7,46 @@ import logo from "@/assets/hotel-mate.png";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useTheme } from "@/context/ThemeContext";
 
-
-const Navbar = () => {
+const MobileNavbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const hotelIdentifier = user?.hotel_slug;
-    const { mainColor } = useTheme();
+  const { mainColor } = useTheme();
 
-  const { count: newOrderCount, refresh: refreshCount } =
-    useOrderCount(hotelIdentifier);
+  const { count: newOrderCount } = useOrderCount(hotelIdentifier);
   const [staffProfile, setStaffProfile] = useState(null);
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      setStaffProfile(null);
-      return;
-    }
-    api
-      .get("/staff/me/")
-      .then((res) => {
-        setStaffProfile(res.data);
-        setIsOnDuty(res.data.is_on_duty);
-      })
-      .catch(() => setStaffProfile(null));
+    if (!user) return setStaffProfile(null);
+    api.get("/staff/me/").then(res => {
+      setStaffProfile(res.data);
+      setIsOnDuty(res.data.is_on_duty);
+    }).catch(() => setStaffProfile(null));
   }, [user]);
-  // ─── Now we can decide whether to render ───
-  const { pathname } = location;
+
   const hiddenNavPatterns = [
     /^\/room_services\/[^/]+\/room\/[^/]+\/breakfast\/?$/,
     /^\/room_services\/[^/]+\/room\/[^/]+\/menu\/?$/,
     /^\/hotel_info\/[^/]+(\/[^/]+)?\/?$/,
   ];
-  if (!user && hiddenNavPatterns.some((re) => re.test(pathname))) {
-    return null;
-  }
+  if (!user && hiddenNavPatterns.some(re => re.test(location.pathname))) return null;
 
-  const toggleNavbar = () => setCollapsed((prev) => !prev);
+  const toggleNavbar = () => setCollapsed(prev => !prev);
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
-  // Permission checks
   const isSuperUser = user?.is_superuser;
   const accessLevel = staffProfile?.access_level;
   const isStaffAdmin = accessLevel === "staff_admin";
   const isSuperStaffAdmin = accessLevel === "super_staff_admin";
   const showFullNav = isSuperUser || isSuperStaffAdmin || isStaffAdmin;
-  const isActive = (path) => location.pathname.startsWith(path);
-
+  const isActive = path => location.pathname.startsWith(path);
   return (
     <nav
       className={`navbar navbar-expand-lg text-white shadow-sm main-bg ${
@@ -299,4 +286,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar;
+export default MobileNavbar;

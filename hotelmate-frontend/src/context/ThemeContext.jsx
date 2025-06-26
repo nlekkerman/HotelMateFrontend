@@ -1,49 +1,40 @@
-// src/context/ThemeContext.jsx
 import React, { createContext, useContext, useEffect } from "react";
-import { useQuery, useMutation, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/services/api";
+import { useAuth } from "@/context/AuthContext";
 
-// 1) Create the context
 const ThemeContext = createContext({
   mainColor: "#3498db",
   secondaryColor: "#2ecc71",
   setTheme: () => Promise.resolve(),
 });
 
-// 2) Provider that loads from API
 export function ThemeProvider({ children }) {
-  // fetch or initialize
-  const { data, isLoading } = useQuery(
-    ["theme"],
-    async () => {
-      const res = await api.get("/theme/");
-      if (res.data.length === 0) {
-        // no preference yet: create defaults
-        const createRes = await api.post("/theme/", {});
-        return createRes.data;
-      }
-      return res.data[0];
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const hotelSlug = user?.hotel_slug;
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["theme", hotelSlug],
+    queryFn: async () => {
+      const res = await api.get(`/common/${hotelSlug}/theme/`);
+      return res.data;
     },
-    { refetchOnWindowFocus: false }
-  );
+    enabled: !!hotelSlug, // only run when hotelSlug is defined
+    refetchOnWindowFocus: false,
+  });
 
-  // mutation for updates
-  const mutation = useMutation(
-    ({ main_color, secondary_color, id }) =>
+  const mutation = useMutation({
+    mutationFn: ({ main_color, secondary_color, id }) =>
       api.patch(`/theme/${id}/`, { main_color, secondary_color }),
-    {
-      onSuccess: (res) => {
-        // update CSS variables
-        const { main_color, secondary_color } = res.data;
-        document.documentElement.style.setProperty("--main-color", main_color);
-        document.documentElement.style.setProperty("--secondary-color", secondary_color);
-        // refetch query so data stays in sync
-        queryClient.invalidateQueries(["theme"]);
-      },
-    }
-  );
+    onSuccess: (res) => {
+      const { main_color, secondary_color } = res.data;
+      document.documentElement.style.setProperty("--main-color", main_color);
+      document.documentElement.style.setProperty("--secondary-color", secondary_color);
+      queryClient.invalidateQueries({ queryKey: ["theme", hotelSlug] });
+    },
+  });
 
-  // once loaded, inject into CSS
   useEffect(() => {
     if (!isLoading && data) {
       document.documentElement.style.setProperty("--main-color", data.main_color);
