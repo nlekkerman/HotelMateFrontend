@@ -45,7 +45,7 @@ function Search({ placeholder = "Search...", delay = 300, apiEndpoint = "/rooms/
     <div>
       <input
         type="search"
-        className="form-control mb-3"
+        className="mb-3 bg-transparent text-white custom-search rounded-pill p-2"
         placeholder={placeholder}
         value={query}
         onChange={(e) => setQuery(e.target.value)}

@@ -119,6 +119,7 @@ const DesktopSidebarNavbar = () => {
                     <Link
                       className={`nav-link text-white ${isActive(path) ? "active bg-opacity-25" : ""}`}
                       to={path}
+                      onClick={() => setCollapsed(true)}
                     >
                       <i className={`bi bi-${icon} me-2`} />
                       {!collapsed && label}
