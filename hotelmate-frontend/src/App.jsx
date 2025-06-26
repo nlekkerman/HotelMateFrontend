@@ -65,7 +65,7 @@ function App() {
           <BrowserRouter>
             <NetworkHandler />
             <NavbarWrapper />
-            <div className="container-fluid bg-light min-vh-100 vw-100 d-flex flex-column">
+            <div className=" bg-light min-vh-100 vw-100 d-flex flex-column">
               <Routes>
                 <Route path="/no-internet" element={<NoInternet />} />
                 <Route path="/" element={<Reception />} />
