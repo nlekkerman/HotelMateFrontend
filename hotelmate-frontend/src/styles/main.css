@@ -1,7 +1,9 @@
 /* main.css */
 
 /* Make html and body take full viewport height */
-html, body, #root {
+html,
+body,
+#root {
   min-height: 100vh;
   margin: 0;
   padding: 0;
@@ -13,48 +15,53 @@ body {
   transition: margin-left 0.3s ease;
 }
 
-body.sidebar-collapsed {
-  margin-left: 90px;
-}
 /* Container stretching full height */
-
+:root {
+  --main-color-rgb: 52, 152, 219; /* #3498db */
+}
 /* Text and background utilities: */
-.main-text   { color: var(--main-color)       !important; }
-.main-bg     { background-color: var(--main-color) !important; }
-.second-text { color: var(--secondary-color)  !important; }
-.second-bg   { background-color: var(--secondary-color) !important; }
+.main-text {
+  color: var(--main-color) !important;
+}
+.main-bg {
+  background-color: rgba(var(--main-color-rgb), 0.9) !important;
+}
+.second-text {
+  color: var(--secondary-color) !important;
+}
+.second-bg {
+  background-color: var(--secondary-color) !important;
+}
 /* Fallback background for elements missing .main-bg */
 
-.logo-container{
-
+.logo-container {
   max-width: 50px;
   max-height: 50px;
 
-  display: flex ;
+  display: flex;
   justify-content: center;
 }
 .logo-image {
   width: 50px;
   height: 50px;
   object-fit: contain;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   background-color: transparent;
   border-radius: 50%;
 }
 
-.nav-link{
+.nav-link {
   color: #f8f9fa !important;
 }
 
-.staff-list-container{
-
+.staff-list-container {
   min-height: 100vh;
 }
 .custom-search::placeholder {
   color: #e4e3e3;
-  opacity: 1; 
+  opacity: 1;
 }
-.custom-serach-input-container{
+.custom-serach-input-container {
   width: 50%;
   margin: 0px auto;
   border-radius: 15px;
