@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from "react";
 import api from "@/services/api";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 
-function Search({ placeholder = "Search...", delay = 300, apiEndpoint = "/rooms/rooms/", hotelId }) {
+function Search({
+  placeholder = "Search...",
+  delay = 300,
+  apiEndpoint = "/rooms/rooms/",
+  hotelId,
+}) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -24,8 +29,8 @@ function Search({ placeholder = "Search...", delay = 300, apiEndpoint = "/rooms/
         .get(apiEndpoint, {
           params: { search: query },
           headers: {
-            'x-hotel-id': hotelId // Add this header here!
-          }
+            "x-hotel-id": hotelId, // Add this header here!
+          },
         })
         .then((res) => {
           console.log("RESPONSE response data:", res.data);
@@ -58,7 +63,7 @@ function Search({ placeholder = "Search...", delay = 300, apiEndpoint = "/rooms/
         <p className="text-muted">No results found</p>
       )}
 
-      <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+      <div className="row row-cols-1 row-cols-md-2 row-cols-lg-1 g-4">
         {results.map((room) => (
           <div key={room.id} className="col">
             <div className="card h-100 shadow-sm">
@@ -71,50 +76,41 @@ function Search({ placeholder = "Search...", delay = 300, apiEndpoint = "/rooms/
                   <strong>Occupied:</strong> {room.is_occupied ? "Yes" : "No"}
                 </p>
 
-                <div className="mb-3 d-flex gap-3">
-                  {room.room_service_qr_code && (
-                    <div className="text-center">
-                      <h6 className="mb-1">Room Service QR Code</h6>
-                      <img
-                        src={room.room_service_qr_code}
-                        alt="Room Service QR"
-                        style={{
-                          width: 100,
-                          height: 100,
-                          objectFit: "contain",
-                        }}
-                      />
-                    </div>
-                  )}
-                  {room.in_room_breakfast_qr_code && (
-                    <div className="text-center">
-                      <h6 className="mb-1">Breakfast QR Code</h6>
-                      <img
-                        src={room.in_room_breakfast_qr_code}
-                        alt="Breakfast QR"
-                        style={{
-                          width: 100,
-                          height: 100,
-                          objectFit: "contain",
-                        }}
-                      />
-                    </div>
-                  )}
-                  {room.dinner_booking_qr_code && (
-                      <div className="text-center">
-                        <h6 className="mb-1">Dinner Booking QR</h6>
-                        <img
-                          src={room.dinner_booking_qr_code}
-                          alt="Dinner Booking QR"
-                          style={{
-                            width: 100,
-                            height: 100,
-                            objectFit: "contain",
-                          }}
-                        />
-                      </div>
-                    )}
-                </div>
+                <div className="mb-3 d-flex flex-wrap justify-content-start" style={{ gap: "1.5rem" }}>
+  {room.room_service_qr_code && (
+    <div className="text-center flex-grow-1" style={{ minWidth: 120 }}>
+      <h6 className="mb-1">Room Service QR</h6>
+      <img
+        src={room.room_service_qr_code}
+        alt="Room Service QR"
+        className="img-fluid"
+        style={{ maxWidth: "120px", height: "auto" }}
+      />
+    </div>
+  )}
+  {room.in_room_breakfast_qr_code && (
+    <div className="text-center flex-grow-1" style={{ minWidth: 120 }}>
+      <h6 className="mb-1">Breakfast QR</h6>
+      <img
+        src={room.in_room_breakfast_qr_code}
+        alt="Breakfast QR"
+        className="img-fluid"
+        style={{ maxWidth: "120px", height: "auto" }}
+      />
+    </div>
+  )}
+  {room.dinner_booking_qr_code && (
+    <div className="text-center flex-grow-1" style={{ minWidth: 120 }}>
+      <h6 className="mb-1">Dinner Booking QR</h6>
+      <img
+        src={room.dinner_booking_qr_code}
+        alt="Dinner Booking QR"
+        className="img-fluid"
+        style={{ maxWidth: "120px", height: "auto" }}
+      />
+    </div>
+  )}
+</div>
 
                 <div className="button-wraper w-100 d-flex justify-content-center mt-2">
                   <button

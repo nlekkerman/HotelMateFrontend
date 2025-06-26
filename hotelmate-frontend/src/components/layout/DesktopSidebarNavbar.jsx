@@ -103,7 +103,7 @@ const DesktopSidebarNavbar = () => {
           ) : (
             <>
               {staffProfile && (
-                <li className="nav-item">
+                <li className="nav-item mb-2">
                   <button
                     className={`btn w-100 text-start text-white btn-${isOnDuty ? "success" : "danger"}`}
                     onClick={() => setIsModalOpen(true)}
@@ -117,7 +117,7 @@ const DesktopSidebarNavbar = () => {
                 navItems.map(({ path, label, icon, badge }) => (
                   <li className="nav-item" key={path}>
                     <Link
-                      className={`nav-link text-white ${isActive(path) ? "active bg-opacity-25" : ""}`}
+                      className={`nav-link text-white ${isActive(path) ? " bg-opacity-25" : ""}`}
                       to={path}
                       onClick={() => setCollapsed(true)}
                     >
