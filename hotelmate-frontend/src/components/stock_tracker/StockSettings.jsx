@@ -146,7 +146,7 @@ const StockSettings = ({ stock, onToggleActive }) => {
 
   return (
     <div className="p-4 border rounded-md mt-4">
-      <h2 className="text-lg font-semibold mb-4">Stock Settings</h2>
+      <h2 className="text-lg font-semibold text-white mb-4">Stock Settings</h2>
 
       {!showForm ? (
         <button
@@ -250,7 +250,7 @@ const StockSettings = ({ stock, onToggleActive }) => {
       )}
 
       <div className="mt-6 p-0">
-        <h3 className="text-md font-medium mb-2">Current Stock Items</h3>
+        <h3 className="text-md font-medium text-white mb-2">Current Stock Items</h3>
 
         {itemList.length === 0 ? (
           <p className="text-gray-500">No items yet.</p>

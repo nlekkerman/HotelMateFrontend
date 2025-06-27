@@ -69,7 +69,7 @@ export default function Staff() {
   }
 
   return (
-    <div className='staff-list-container bg-warning '>
+    <div className='staff-list-container transparent-container-bg '>
       
       <div className="button-wrapper my-5 d-flex flex-column align-items-center text-center mb-4">
   <h2 className="mb-2">Staff List</h2>

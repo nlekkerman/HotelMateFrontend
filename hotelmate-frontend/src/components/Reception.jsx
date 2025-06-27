@@ -35,7 +35,7 @@ const Reception = () => {
   }, []);
 
   return (
-    <div className="container py-5 min-vw-100"
+    <div className="container reception-container py-5 min-vw-100"
     style={{
     backgroundImage: `url(${backgroundImage})`,
     backgroundSize: "cover",

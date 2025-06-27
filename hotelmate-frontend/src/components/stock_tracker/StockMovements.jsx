@@ -63,14 +63,14 @@ export default function StockMovements({ stock, hotelSlug }) {
 
   return (
     <div>
-      <h4>Stock Movements</h4>
+      <h4 className="text-white">Stock Movements</h4>
 
       {/* Filters */}
       <div className="mb-3 d-flex gap-3 flex-wrap align-items-end">
         <div className="form-group">
-          <label className="form-label">Movement Direction</label>
+          <label className="form-label text-white">Movement Direction</label>
           <select
-            className="form-select"
+            className="form-select "
             value={direction}
             onChange={(e) => {
               setDirection(e.target.value);
@@ -84,7 +84,7 @@ export default function StockMovements({ stock, hotelSlug }) {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Date</label>
+          <label className="form-label text-white">Date</label>
           <input
             type="date"
             className="form-control"
@@ -97,7 +97,7 @@ export default function StockMovements({ stock, hotelSlug }) {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Staff Username</label>
+          <label className="form-label text-white">Staff Username</label>
           <input
             type="text"
             className="form-control"
@@ -110,7 +110,7 @@ export default function StockMovements({ stock, hotelSlug }) {
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Item Name</label>
+          <label className="form-label text-white">Item Name</label>
           <input
             type="text"
             className="form-control"
@@ -179,14 +179,14 @@ export default function StockMovements({ stock, hotelSlug }) {
       {!fetchAll && totalPages > 1 && (
         <div className="d-flex justify-content-between align-items-center mt-3">
           <button
-            className="btn btn-secondary"
+            className="btn btn-secondary text-white"
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
             Previous
           </button>
 
-          <span>
+          <span className="text-white">
             Page {page} of {totalPages}
           </span>
 

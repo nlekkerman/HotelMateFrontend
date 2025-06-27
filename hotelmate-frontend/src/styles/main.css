@@ -2,17 +2,32 @@
 
 /* Make html and body take full viewport height */
 html,
-body,
+/* Ensure root takes full viewport */
 #root {
   min-height: 100vh;
+  width: 100vw; /* Use vw to avoid overflow */
   margin: 0;
   padding: 0;
-  font-family: Arial, sans-serif; /* or whatever you want */
-  background-color: #f8f9fa; /* light gray background */
+  font-family: Arial, sans-serif;
+  display: flex;
+  flex-direction: column; /* If needed */
+  overflow-x: hidden; /* Prevent horizontal scroll */
 }
+
+/* Remove hard margin from body — handle spacing with layout instead */
 body {
-  margin-left: 260px;
-  transition: margin-left 0.3s ease;
+  margin: 0;
+  padding: 0;
+  background-image: url("../assets/images/reception-image.webp");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+.reception-container{
+  padding-left: -260px !important;
+  background-color: black;
 }
 
 /* Container stretching full height */
@@ -53,6 +68,33 @@ body {
 .nav-link {
   color: #f8f9fa !important;
 }
+.layout-container {
+  transition: padding-left 0.3s ease;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  align-self: center;
+  min-width: 100vw;
+
+
+}
+.main-content-area{
+  min-width: 100%;
+ 
+}
+.layout-container.collapsed {
+  padding-left: 90px;
+  
+  
+}
+
+.layout-container.expanded {
+  padding-right: 260px;
+  padding-left: 90px;
+  
+}
+
 
 .staff-list-container {
   min-height: 100vh;
@@ -66,6 +108,20 @@ body {
   margin: 0px auto;
   border-radius: 15px;
 }
+
+.title-container{
+  background-color: rgba(5, 0, 0, 0.3);
+  padding: 3px;
+  margin-bottom: 25px;
+  color: white;
+}
+
+.custom-button{
+  background-color: rgba(5, 0, 0, 0.6);
+  border-color: aliceblue;
+  color: white;
+  border-radius: 15px;
+}
 @media (max-width: 576px) {
   .sm-border-bottom {
     border-bottom: 2px solid #0d6efd; /* Bootstrap primary blue */
@@ -74,6 +130,15 @@ body {
     width: 100%;
     text-align: center;
   }
+}
+/* .sidebar-nav-desktop{
+  margin-right: 100px;
+} */
+.transparent-container-bg{
+  background-color: rgba(5, 0, 0, 0.6);
+  margin-top: 2em ;
+ padding: 5px;
+
 }
 
 @media (max-width: 991.98px) {
