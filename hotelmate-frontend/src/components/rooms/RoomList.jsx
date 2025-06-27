@@ -84,7 +84,7 @@ function RoomList() {
     return <p className="text-center text-danger">Error: {error.message}</p>;
 
   return (
-    <div className="container my-4">
+    <div className="container d-flex justify-content-center flex-column my-4 vw-100">
       <h2 className="mb-4 text-center">
         Rooms (Page {page} of {totalPages}){" "}
         {isFetching && <small className="text-muted">(Updating...)</small>}

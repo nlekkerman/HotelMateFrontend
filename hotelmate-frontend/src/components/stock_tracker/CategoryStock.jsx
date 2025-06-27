@@ -137,13 +137,13 @@ export default function CategoryStock() {
     return <p className="text-danger">Error: {JSON.stringify(error)}</p>;
 
   return (
-    <div className="container mt-4">
+    <div className="transparent-container-bg mt-4">
       {/* ⬇️ Pass toggle callback to settings */}
       {canAccessSettings && (
         <div className="mb-4">
           <div className="d-flex gap-2 mb-2">
             <button
-              className={`btn btn-outline-secondary btn-sm ${
+              className={`custom-button ${
                 showSettings ? "active" : ""
               }`}
               onClick={() => {
@@ -154,7 +154,7 @@ export default function CategoryStock() {
               {showSettings ? "Hide" : "Show"} Stock Settings
             </button>
             <button
-              className={`btn btn-outline-secondary btn-sm ${
+              className={`custom-button  ${
                 showMovements ? "active" : ""
               }`}
               onClick={() => {
@@ -191,12 +191,12 @@ export default function CategoryStock() {
       )}
 
       <LowStock hotelSlug={hotel_slug} refresh={refreshLowStock} />
-      <h1>
+      <h1 className="title-container">
         {prettyCategory} for “{prettyHotel}”
       </h1>
 
       <div className="mb-3">
-        <label className="form-label">Select action type:</label>
+        <label className="form-label text-white">Select action type:</label>
         <div>
           <button
             className={`btn btn-sm ${
@@ -221,7 +221,7 @@ export default function CategoryStock() {
         {items.map((item) => (
           <li
             key={item.id}
-            className="list-group-item d-flex justify-content-between bg-white mb-3 shadow-sm align-items-center"
+            className="list-group-item d-flex justify-content-between mb-3 shadow-sm align-items-center"
           >
             <div className="d-flex align-items-center justify-content-between w-100 gap-3">
               <span

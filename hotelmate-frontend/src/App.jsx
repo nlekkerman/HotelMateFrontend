@@ -1,7 +1,7 @@
 // src/App.jsx
-import React from "react";
+import React, { useState } from "react";
 import "@/firebase"; // Ensure Firebase is initialized
-// Import your Firebase messaging service worker
+import { useMediaQuery } from "react-responsive";
 import "@/styles/main.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
@@ -9,7 +9,8 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { UIProvider } from "@/context/UIContext";
 import { AuthProvider } from "@/context/AuthContext";
-import NavbarWrapper from "@/components/layout/NavbarWrapper";
+import MobileNavbar from "@/components/layout/MobileNavbar";
+import DesktopSidebarNavbar from "@/components/layout/DesktopSidebarNavbar";
 import RoomList from "@/components/rooms/RoomList";
 import Reception from "@/components/Reception";
 import Login from "@/components/auth/Login";
@@ -35,7 +36,7 @@ import StockDashboard from "@/pages/stock_tracker/StockDashboard";
 import CategoryStock from "@/components/stock_tracker/CategoryStock";
 import NetworkHandler from "@/components/offline/NetworkHandler";
 import NoInternet from "@/components/offline/NoInternet";
-import {ThemeProvider} from "@/context/ThemeContext"; // Import ThemeProvider
+import { ThemeProvider } from "@/context/ThemeContext"; // Import ThemeProvider
 import HotelInfo from "@/pages/hotel_info/HotelInfo";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -46,7 +47,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 const queryClient = new QueryClient();
 
 function App() {
- 
+  const [collapsed, setCollapsed] = useState(false);
+  const isMobile = useMediaQuery({ maxWidth: 991 });
   return (
     <QueryClientProvider client={queryClient}>
       <ToastContainer
@@ -62,92 +64,104 @@ function App() {
       <UIProvider>
         <AuthProvider>
           <ThemeProvider>
-          <BrowserRouter>
-            <NetworkHandler />
-            <NavbarWrapper />
-            <div className=" bg-light min-vh-100 vw-100 d-flex flex-column">
-              <Routes>
-                <Route path="/no-internet" element={<NoInternet />} />
-                <Route path="/" element={<Reception />} />
-                <Route
-                  path="/:hotelIdentifier/room/:roomNumber/validate-pin"
-                  element={<PinAuth />}
-                />
-                <Route path="/rooms" element={<RoomList />} />
-                {/* Protected routes */}
-                <Route
-                  path="/room_services/:hotelIdentifier/room/:roomNumber/menu"
-                  element={
-                    <RequirePin>
-                      <RoomService />
-                    </RequirePin>
-                  }
-                />
-                <Route
-                  path="/room_services/:hotelIdentifier/orders"
-                  element={<RoomServiceOrders />}
-                />
+            <BrowserRouter>
+              <NetworkHandler />
+              {isMobile && <MobileNavbar />}
 
-                <Route
-                  path="/room_services/:hotelIdentifier/room/:roomNumber/breakfast/"
-                  element={
-                    <RequirePin>
-                      <Breakfast />
-                    </RequirePin>
-                  }
-                />
+<div className="d-flex min-vh-100  min-vw-100 ">
+  {!isMobile && (
+    <div
+      className={`sidebar-wrapper ${collapsed ? "collapsed" : ""}`}
+    >
+      <DesktopSidebarNavbar
+        collapsed={collapsed}
+        setCollapsed={setCollapsed}
+      />
+    </div>
+  )}
 
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/staff" element={<Staff />} />
-                <Route path="/staff/create" element={<StaffCreate />} />
-                <Route path="/staff/:id" element={<StaffDetails />} />
-                <Route path="/staff/me" element={<StaffProfile />} />
-                <Route
-                  path="/:hotelIdentifier/guests"
-                  element={<GuestList />}
-                />
-                <Route
-                  path="/rooms/:hotelIdentifier/rooms/:roomNumber"
-                  element={<RoomDetails />}
-                />
-                <Route
-                  path="/rooms/:roomNumber/add-guest"
-                  element={<AssignGuestForm />}
-                />
+  <div
+    className={`layout-container vw-100 ${collapsed ? "collapsed" : "expanded"} ${
+      isMobile ? "mt-0" : ""
+    }`}
+  >
+    <div className="main-content-area d-flex">
+      <Routes>
+        <Route path="/no-internet" element={<NoInternet />} />
+        <Route path="/" element={<Reception />} />
+        <Route
+          path="/:hotelIdentifier/room/:roomNumber/validate-pin"
+          element={<PinAuth />}
+        />
+        <Route path="/rooms" element={<RoomList />} />
+        <Route
+          path="/room_services/:hotelIdentifier/room/:roomNumber/menu"
+          element={
+            <RequirePin>
+              <RoomService />
+            </RequirePin>
+          }
+        />
+        <Route
+          path="/room_services/:hotelIdentifier/orders"
+          element={<RoomServiceOrders />}
+        />
+        <Route
+          path="/room_services/:hotelIdentifier/room/:roomNumber/breakfast/"
+          element={
+            <RequirePin>
+              <Breakfast />
+            </RequirePin>
+          }
+        />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/staff" element={<Staff />} />
+        <Route path="/staff/create" element={<StaffCreate />} />
+        <Route path="/staff/:id" element={<StaffDetails />} />
+        <Route path="/staff/me" element={<StaffProfile />} />
+        <Route path="/:hotelIdentifier/guests" element={<GuestList />} />
+        <Route
+          path="/rooms/:hotelIdentifier/rooms/:roomNumber"
+          element={<RoomDetails />}
+        />
+        <Route
+          path="/rooms/:roomNumber/add-guest"
+          element={<AssignGuestForm />}
+        />
+        <Route
+          path="/:hotelIdentifier/guests/:guestId/edit"
+          element={<GuestEdit />}
+        />
+        <Route
+          path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/"
+          element={<DinnerBookingForm />}
+        />
+        <Route
+          path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/"
+          element={<DinnerBookingList />}
+        />
+        <Route path="/bookings" element={<Bookings />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/hotel_info/:hotel_slug" element={<HotelInfo />} />
+        <Route
+          path="/hotel_info/:hotel_slug/:category"
+          element={<HotelInfo />}
+        />
+        <Route
+          path="/stock_tracker/:hotel_slug/:category_slug"
+          element={<CategoryStock />}
+        />
+        <Route
+          path="/stock_tracker/:hotel_slug"
+          element={<StockDashboard />}
+        />
+      </Routes>
+    </div>
+  </div>
+</div>
 
-                <Route
-                  path="/:hotelIdentifier/guests/:guestId/edit"
-                  element={<GuestEdit />}
-                />
-                <Route
-                  path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/"
-                  element={<DinnerBookingForm />}
-                />
-                <Route
-                  path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/"
-                  element={<DinnerBookingList />}
-                />
-                <Route path="/bookings" element={<Bookings />} />
-                <Route path="/settings" element={<Settings  />} />
-                <Route path="/hotel_info/:hotel_slug" element={<HotelInfo />} />
-
-                {/* 2) If you hit /hotel_info/:hotel_slug/:category */}
-                <Route
-                  path="/hotel_info/:hotel_slug/:category"
-                  element={<HotelInfo />}
-                />
-                <Route
-                  path="/stock_tracker/:hotel_slug/:category_slug"
-                  element={<CategoryStock />}
-                />
-                <Route
-                  path="/stock_tracker/:hotel_slug"
-                  element={<StockDashboard />}
-                />
-              </Routes>
-            </div>
-          </BrowserRouter>
+            </BrowserRouter>
           </ThemeProvider>
         </AuthProvider>
       </UIProvider>
