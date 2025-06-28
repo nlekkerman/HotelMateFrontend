@@ -36,7 +36,7 @@ export default function StockDashboard() {
 
   return (
     <div>
-      <h1 className='w-100 d-flex text-white mt-5 title-container justify-content-center'>Stock Dashboard for “{hotel_name}”</h1>
+      <h1 className='w-100 d-flex mt-5 title-container justify-content-center'>Stock Dashboard for “{hotel_name}”</h1>
       <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
         {categories.map(cat => (
           <div className="button-container d-flex  w-100 justify-content-center ">

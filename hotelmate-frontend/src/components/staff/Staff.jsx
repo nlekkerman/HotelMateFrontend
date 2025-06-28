@@ -96,7 +96,6 @@ export default function Staff() {
                 <th>Last Name</th>
                 <th>Department</th>
                 <th>Role</th>
-                <th>Position</th>
                 <th>Phone Number</th>
                 <th>Hotel</th>
                 <th>Active</th>
@@ -111,12 +110,11 @@ export default function Staff() {
                 >
                   <td>{staff.id}</td>
                   <td>{staff.user?.username || 'N/A'}</td>
-                  <td>{staff.user?.email || 'N/A'}</td>
+                  <td>{staff.email || 'N/A'}</td>
                   <td>{staff.first_name || 'N/A'}</td>
                   <td>{staff.last_name || 'N/A'}</td>
                   <td>{staff.department || 'N/A'}</td>
                   <td>{staff.role || 'N/A'}</td>
-                  <td>{staff.position || 'N/A'}</td>
                   <td>{staff.phone_number || 'N/A'}</td>
                   <td>{staff.hotel_name || '-'}</td>
                   <td>{staff.is_active ? 'Yes' : 'No'}</td>
