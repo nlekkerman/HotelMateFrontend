@@ -41,7 +41,7 @@ const Register = () => {
 
     try {
       await postData(payload);
-      navigate('/');
+      navigate('/registration-success');
     } catch (err) {
       setError(err.message || 'Registration failed');
     }

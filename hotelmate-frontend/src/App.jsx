@@ -15,6 +15,7 @@ import RoomList from "@/components/rooms/RoomList";
 import Reception from "@/components/Reception";
 import Login from "@/components/auth/Login";
 import Register from "@/components/auth/Register";
+import RegistrationSuccess from '@/components/auth/RegistrationSuccess';
 import RequirePin from "@/components/auth/RequirePin";
 import PinAuth from "@/components/auth/PinAuth";
 import Staff from "@/components/staff/Staff";
@@ -116,6 +117,7 @@ function App() {
         />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/registration-success" element={<RegistrationSuccess />} />
         <Route path="/staff" element={<Staff />} />
         <Route path="/staff/create" element={<StaffCreate />} />
         <Route path="/staff/:id" element={<StaffDetails />} />
