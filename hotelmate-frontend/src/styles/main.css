@@ -24,7 +24,7 @@ body {
 }
 .reception-container{
   border-top: 2px solid rgba(0, 0, 0, 1);
-  background-color: #0d6efd;
+  background-color: rgba(158, 2, 2, 0.3);
 }
 
 /* Container stretching full height */
