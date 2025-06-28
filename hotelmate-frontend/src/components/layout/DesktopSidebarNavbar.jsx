@@ -68,7 +68,7 @@ const DesktopSidebarNavbar = () => {
   return (
     <>
       <nav
-        className={`d-none d-lg-flex flex-column position-relative top-0 start-0 bg-danger sidebar-nav-desktop vh-100 shadow-sm text-white main-bg ${
+        className={`d-none d-lg-flex flex-column position-relative top-0 start-0 bg-main sidebar-nav-desktop vh-100 shadow-sm text-white main-bg ${
           mainColor ? "" : "bg-dark"
         }`}
         style={{

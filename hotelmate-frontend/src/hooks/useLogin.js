@@ -41,6 +41,12 @@ export default function useLogin() {
           is_staff: data.is_staff,
           is_superuser: data.is_superuser,
           access_level: data.access_level,
+    
+          hotel: {
+            id: data.hotel_id,
+            name: data.hotel_name,
+            slug: data.hotel_slug,
+          },
         })
       );
 
@@ -56,7 +62,6 @@ export default function useLogin() {
         is_superuser: data.is_superuser,
         access_level: data.access_level,
       });
-   
 
       // 3. Now register FCM token!
       const VAPID_KEY = import.meta.env.REACT_APP_FIREBASE_VAPID_KEY;

@@ -63,10 +63,7 @@ function StaffProfile() {
               <strong>Role:</strong>{" "}
               <span className="text-dark">{staff.role}</span>
             </li>
-            <li className="list-group-item">
-              <strong>Position:</strong>{" "}
-              <span className="text-dark">{staff.position}</span>
-            </li>
+            
             <li className="list-group-item">
               <strong>Status:</strong>{" "}
               <span

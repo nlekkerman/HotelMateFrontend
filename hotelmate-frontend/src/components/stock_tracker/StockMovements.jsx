@@ -68,7 +68,7 @@ export default function StockMovements({ stock, hotelSlug }) {
       {/* Filters */}
       <div className="mb-3 d-flex gap-3 flex-wrap align-items-end">
         <div className="form-group">
-          <label className="form-label text-white">Movement Direction</label>
+          <label className="form-label">Movement Direction</label>
           <select
             className="form-select "
             value={direction}
@@ -84,7 +84,7 @@ export default function StockMovements({ stock, hotelSlug }) {
         </div>
 
         <div className="form-group">
-          <label className="form-label text-white">Date</label>
+          <label className="form-label">Date</label>
           <input
             type="date"
             className="form-control"
@@ -97,7 +97,7 @@ export default function StockMovements({ stock, hotelSlug }) {
         </div>
 
         <div className="form-group">
-          <label className="form-label text-white">Staff Username</label>
+          <label className="form-label">Staff Username</label>
           <input
             type="text"
             className="form-control"
@@ -110,7 +110,7 @@ export default function StockMovements({ stock, hotelSlug }) {
           />
         </div>
         <div className="form-group">
-          <label className="form-label text-white">Item Name</label>
+          <label className="form-label">Item Name</label>
           <input
             type="text"
             className="form-control"
@@ -179,14 +179,14 @@ export default function StockMovements({ stock, hotelSlug }) {
       {!fetchAll && totalPages > 1 && (
         <div className="d-flex justify-content-between align-items-center mt-3">
           <button
-            className="btn btn-secondary text-white"
+            className="btn btn-secondary"
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
             Previous
           </button>
 
-          <span className="text-white">
+          <span className="text-muted">
             Page {page} of {totalPages}
           </span>
 

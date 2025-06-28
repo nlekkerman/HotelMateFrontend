@@ -18,16 +18,13 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background-image: url("../assets/images/reception-image.webp");
-  background-size: cover;
-  background-repeat: no-repeat;
-  background-position: center;
+
   min-height: 100vh;
   overflow-x: hidden;
 }
 .reception-container{
-  padding-left: -260px !important;
-  background-color: black;
+  border-top: 2px solid rgba(0, 0, 0, 1);
+  background-color: #0d6efd;
 }
 
 /* Container stretching full height */
@@ -52,7 +49,6 @@ body {
 .logo-container {
   max-width: 50px;
   max-height: 50px;
-
   display: flex;
   justify-content: center;
 }
@@ -79,10 +75,7 @@ body {
 
 
 }
-.main-content-area{
-  min-width: 100%;
- 
-}
+
 .layout-container.collapsed {
   padding-left: 90px;
   
@@ -90,9 +83,8 @@ body {
 }
 
 .layout-container.expanded {
-  padding-right: 260px;
-  padding-left: 90px;
   
+  padding: 1px;
 }
 
 
@@ -106,14 +98,17 @@ body {
 .custom-serach-input-container {
   width: 50%;
   margin: 0px auto;
+  text-align: center;
   border-radius: 15px;
 }
 
 .title-container{
-  background-color: rgba(5, 0, 0, 0.3);
+  border-top: 3px solid black;
+  border-bottom: 3px solid black;
   padding: 3px;
-  margin-bottom: 25px;
-  color: white;
+  margin-bottom: 1em;
+  margin-top: 1em;
+  
 }
 
 .custom-button{
@@ -135,7 +130,6 @@ body {
   margin-right: 100px;
 } */
 .transparent-container-bg{
-  background-color: rgba(5, 0, 0, 0.6);
   margin-top: 2em ;
  padding: 5px;
 
