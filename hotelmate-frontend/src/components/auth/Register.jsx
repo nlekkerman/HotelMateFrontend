@@ -11,7 +11,7 @@ const Register = () => {
 
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const { postData, loading, error: requestError } = useAxiosPost('/staff/register/');
+  const { postData, loading, error: requestError } = useAxiosPost('staff/register/');
 
   useEffect(() => {
     if (requestError) setError(requestError);
@@ -41,7 +41,7 @@ const Register = () => {
 
     try {
       await postData(payload);
-      navigate('/reception');
+      navigate('/');
     } catch (err) {
       setError(err.message || 'Registration failed');
     }
