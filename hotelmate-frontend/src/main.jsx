@@ -30,7 +30,10 @@ async function applySavedTheme() {
     if (!res.ok) throw new Error("Non-OK response");
     const { main_color, secondary_color } = await res.json();
     document.documentElement.style.setProperty("--main-color", main_color);
-    document.documentElement.style.setProperty("--secondary-color", secondary_color);
+    document.documentElement.style.setProperty(
+      "--secondary-color",
+      secondary_color
+    );
   } catch (e) {
     console.warn("Could not load theme:", e);
   }
@@ -49,7 +52,10 @@ async function bootstrap() {
       // Handle foreground FCM messages (room_service notifications only)
       listenForFirebaseMessages((payload) => {
         console.log("🔥 FG FCM payload:", payload);
-        if (payload.data?.type === "room_service" && payload.notification) {
+        if (
+          ["room_service", "stock_movement"].includes(payload.data?.type) &&
+          payload.notification
+        ) {
           new Notification(payload.notification.title, {
             body: payload.notification.body,
             icon: "/firebase-logo.png",

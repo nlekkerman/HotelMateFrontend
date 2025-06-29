@@ -24,7 +24,6 @@ body {
 }
 .reception-container{
   border-top: 2px solid rgba(0, 0, 0, 1);
-  background-color: rgba(158, 2, 2, 0.3);
 }
 
 /* Container stretching full height */
@@ -96,7 +95,6 @@ body {
   opacity: 1;
 }
 .custom-serach-input-container {
-  width: 50%;
   margin: 0px auto;
   text-align: center;
   border-radius: 15px;
@@ -126,9 +124,9 @@ body {
     text-align: center;
   }
 }
-/* .sidebar-nav-desktop{
-  margin-right: 100px;
-} */
+.sidebar-nav-desktop{
+  border-right: 4px solid white;
+} 
 .transparent-container-bg{
   margin-top: 2em ;
  padding: 5px;

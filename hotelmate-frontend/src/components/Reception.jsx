@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from "react";
 import Search from "@/components/utils/Search";
 import api from "@/services/api";
+import { useTheme } from "@/context/ThemeContext";
+
+
+
 const CLOUDINARY_BASE = "https://res.cloudinary.com/dg0ssec7u/";
 
 const Reception = () => {
   const [hotelName, setHotelName] = useState("HotelMate");
   const [hotelLogo, setHotelLogo] = useState(null);
-
+const { mainColor } = useTheme();
   useEffect(() => {
     async function fetchHotelInfo() {
       try {
@@ -34,9 +38,9 @@ const Reception = () => {
   }, []);
 
   return (
-    <div className="container reception-container py-5 min-vw-100"
-   >
-
+    <div className={`container reception-container py-5 min-vw-100 main-bg ${
+          mainColor ? "" : "bg-dark"
+        }`} >
       {hotelLogo && (
         <div className="text-center mb-4">
           <img
@@ -45,18 +49,22 @@ const Reception = () => {
             className="img-fluid rounded-pill mb-3 border shadow-sm"
             style={{
               maxHeight: "100px",
-              objectFit: "contain"
+              objectFit: "contain",
             }}
-            onError={(e) => { e.currentTarget.style.display = "none"; }}
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
           />
         </div>
       )}
-      <h1 className="mb-5 text-center fw-bold text-white">{hotelName} Reception</h1>
+      <h1 className="mb-5 text-center fw-bold text-white">
+        {hotelName} Reception
+      </h1>
       <p className="text-center text-secondary mb-5 fs-5 text-white">
         Manage rooms and guests from the reception dashboard.
       </p>
-      <div className="custom-serach-input-container p-4 shadow-sm d-flex justify-content-center ">
-        <Search  placeholder="Search rooms by number." />
+      <div className="custom-serach-input-container p-4  d-flex justify-content-center ">
+        <Search placeholder="Search rooms by number." />
       </div>
     </div>
   );
