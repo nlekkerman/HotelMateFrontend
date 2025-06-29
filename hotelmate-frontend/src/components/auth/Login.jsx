@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import useLogin from "@/hooks/useLogin";
+import { getToken, messaging } from "@/firebase";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -16,28 +17,36 @@ const Login = () => {
   }, [error]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLocalError(null);
+  e.preventDefault();
+  setLocalError(null);
 
-    if (!username || !password) {
-      setLocalError("Username and password are required.");
+  if (!username || !password) {
+    setLocalError("Username and password are required.");
+    return;
+  }
+
+  let fcmToken = null;
+  try {
+    fcmToken = await getToken(messaging, {
+      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY, // ✅ Make sure this env var is set
+    });
+  } catch (tokenError) {
+    console.warn("⚠️ Failed to get FCM token:", tokenError);
+  }
+
+  try {
+    const data = await loginUser(username, password, fcmToken); // ✅ Make sure third arg is passed
+    if (!data) {
+      setLocalError("No data received from server.");
       return;
     }
+    navigate("/");
+  } catch {
+    setLocalError("Login failed.");
+  }
+};
 
-    try {
-      const data = await loginUser(username, password);
 
-      // Defensive check
-      if (!data) {
-        setLocalError("No data received from server.");
-        return;
-      }
-
-      navigate("/");
-    } catch {
-      // error is already handled in the hook, no need to re-handle here
-    }
-  };
 
   const togglePasswordVisibility = () => {
     setShowPassword((prev) => !prev);

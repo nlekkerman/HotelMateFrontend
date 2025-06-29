@@ -16,14 +16,14 @@ export default function useLogin() {
   const [error, setError] = useState(null);
   const { login } = useAuth();
 
-  const loginUser = async (username, password) => {
+  const loginUser = async (username, password, fcmToken) => {
     setLoading(true);
     setError(null);
 
     try {
       const response = await axios.post(
         LOGIN_ENDPOINT,
-        { username, password },
+        { username, password, fcm_token: fcmToken },
         { headers: { "Content-Type": "application/json" } }
       );
 
@@ -64,7 +64,7 @@ export default function useLogin() {
       });
 
       // 3. Now register FCM token!
-      const VAPID_KEY = import.meta.env.REACT_APP_FIREBASE_VAPID_KEY;
+      const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
       try {
         await requestFirebaseNotificationPermission(VAPID_KEY);
       } catch (notifyError) {
