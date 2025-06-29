@@ -26,19 +26,27 @@ self.addEventListener('push', event => {
   let payload;
   try {
     payload = event.data.json();
+    console.log("[SW] Push payload received:", payload);
   } catch (err) {
     console.warn('[SW] Could not decode push payload', err);
     return;
   }
 
-  // Only show room_service notifications
-  if (payload.notification && payload.data?.type === 'room_service') {
+  if (
+    payload.notification &&
+    ['room_service', 'stock_movement'].includes(payload.data?.type)
+  ) {
     const { title, body } = payload.notification;
+    console.log(`[SW] Showing ${payload.data.type} notification:`, title, body);
+
     event.waitUntil(
       self.registration.showNotification(title, {
         body,
         icon: '/firebase-logo.png'
       })
     );
+  } else {
+    console.log("[SW] Ignored unknown notification type:", payload.data?.type);
   }
 });
+
