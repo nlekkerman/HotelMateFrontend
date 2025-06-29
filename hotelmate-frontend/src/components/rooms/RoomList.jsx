@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import api from "@/services/api";
+import { useQrPdfPrinter } from "@/hooks/useQrPdfPrinter";
 
 const fetchRooms = async ({ queryKey }) => {
   const [_key, page, search] = queryKey;
@@ -42,6 +43,8 @@ function RoomList() {
   const totalCount = data?.count || 0;
   const totalPages = Math.ceil(totalCount / 10);
   const qc = useQueryClient();
+  const { generateQrPdf } = useQrPdfPrinter();
+  const userData = JSON.parse(localStorage.getItem("user"));
 
   const next = data?.next;
   const previous = data?.previous;
@@ -64,9 +67,9 @@ function RoomList() {
   };
 
   const handleCheckout = async () => {
-     const userData = JSON.parse(localStorage.getItem("user"));
+    const userData = JSON.parse(localStorage.getItem("user"));
 
-  const hotelIdentifier = userData?.hotel_slug;
+    const hotelIdentifier = userData?.hotel_slug;
     try {
       await api.post(`rooms/${hotelIdentifier}/checkout/`, {
         room_ids: selectedRooms,
@@ -85,13 +88,21 @@ function RoomList() {
 
   return (
     <div className="container d-flex justify-content-center flex-column my-4 vw-100">
+      {userData?.is_superuser && (
+        <button className="custom-button" onClick={() => generateQrPdf(rooms)}>
+          Print QR PDFs
+        </button>
+      )}
       <h2 className="mb-4 text-center">
         Rooms (Page {page} of {totalPages}){" "}
         {isFetching && <small className="text-muted">(Updating...)</small>}
       </h2>
 
       {selectedRooms.length > 0 && (
-        <button className="btn btn-danger ms-auto mb-2" onClick={handleCheckout}>
+        <button
+          className="btn btn-danger ms-auto mb-2"
+          onClick={handleCheckout}
+        >
           Checkout selected ({selectedRooms.length})
         </button>
       )}
