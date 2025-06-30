@@ -42,7 +42,7 @@ self.addEventListener('push', event => {
     event.waitUntil(
       self.registration.showNotification(title, {
         body,
-        icon: '/firebase-logo.png'
+        icon: '/notifications-icon.png'
       })
     );
   } else {
