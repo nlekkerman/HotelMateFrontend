@@ -19,13 +19,17 @@ const MobileNavbar = () => {
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return setStaffProfile(null);
-    api.get("/staff/me/").then(res => {
-      setStaffProfile(res.data);
-      setIsOnDuty(res.data.is_on_duty);
-    }).catch(() => setStaffProfile(null));
+    api
+      .get("/staff/me/")
+      .then((res) => {
+        setStaffProfile(res.data);
+        setIsOnDuty(res.data.is_on_duty);
+      })
+      .catch(() => setStaffProfile(null));
   }, [user]);
 
   const hiddenNavPatterns = [
@@ -33,9 +37,10 @@ const MobileNavbar = () => {
     /^\/room_services\/[^/]+\/room\/[^/]+\/menu\/?$/,
     /^\/hotel_info\/[^/]+(\/[^/]+)?\/?$/,
   ];
-  if (!user && hiddenNavPatterns.some(re => re.test(location.pathname))) return null;
+  if (!user && hiddenNavPatterns.some((re) => re.test(location.pathname)))
+    return null;
 
-  const toggleNavbar = () => setCollapsed(prev => !prev);
+  const toggleNavbar = () => setCollapsed((prev) => !prev);
   const handleLogout = () => {
     logout();
     navigate("/login");
@@ -46,7 +51,7 @@ const MobileNavbar = () => {
   const isStaffAdmin = accessLevel === "staff_admin";
   const isSuperStaffAdmin = accessLevel === "super_staff_admin";
   const showFullNav = isSuperUser || isSuperStaffAdmin || isStaffAdmin;
-  const isActive = path => location.pathname.startsWith(path);
+  const isActive = (path) => location.pathname.startsWith(path);
   return (
     <nav
       className={`navbar navbar-expand-lg text-white shadow-sm main-bg ${
@@ -211,26 +216,79 @@ const MobileNavbar = () => {
                     Info
                   </Link>
                 </li>
-                <li className="nav-item">
-                  <Link
-                    to={`/room_services/${hotelIdentifier}/orders`}
-                    onClick={toggleNavbar}
-                    className={`
-              nav-link
-              
-              ${
-                isActive(`/room_services/${hotelIdentifier}/orders`) && "active"
-              }
-            `}
-                  >
-                    Room Service
-                    {newOrderCount > 0 && (
-                      <span className="badge bg-danger ms-1">
-                        {newOrderCount}
-                      </span>
-                    )}
-                  </Link>
+                <li className="nav-item dropdown">
+                 
+                  {showFullNav && (
+                    <li className="nav-item">
+                      <div
+  className={`nav-link text-white d-flex justify-content-between align-items-center ${
+    isActive("/services") ? "bg-opacity-25" : ""
+  }`}
+  onClick={() => setServicesDropdownOpen(!servicesDropdownOpen)}
+  style={{ cursor: "pointer" }}
+>
+  <span>
+    <i className="bi bi-cup-hot me-2" />
+    Services
+  </span>
+  <span className="d-flex align-items-center">
+    {newOrderCount > 0 && (
+      <span className="badge bg-danger me-2">{newOrderCount}</span>
+    )}
+    <i
+      className={`bi bi-chevron-${servicesDropdownOpen ? "up" : "down"}`}
+      style={{ fontSize: "0.8rem" }}
+    />
+  </span>
+</div>
+
+                      {servicesDropdownOpen && (
+                        <ul className="nav flex-column ms-3">
+                          <li className="nav-item">
+                            <Link
+                              className={`nav-link text-white ${
+                                isActive("/services/room-service")
+                                  ? "bg-opacity-25"
+                                  : ""
+                              }`}
+                              to="/services/room-service"
+                              onClick={() => {
+                                toggleNavbar();
+                                setServicesDropdownOpen(false);
+                              }}
+                            >
+                              <i className="bi bi-box me-2" />
+                              Room Service
+                              {newOrderCount > 0 && (
+                                <span className="badge bg-danger ms-2">
+                                  {newOrderCount}
+                                </span>
+                              )}
+                            </Link>
+                          </li>
+                          <li className="nav-item">
+                            <Link
+                              className={`nav-link text-white ${
+                                isActive("/services/breakfast")
+                                  ? "bg-opacity-25"
+                                  : ""
+                              }`}
+                              to="/services/breakfast"
+                              onClick={() => {
+                                toggleNavbar();
+                                setServicesDropdownOpen(false);
+                              }}
+                            >
+                              <i className="bi bi-egg-fried me-2" />
+                              Breakfast
+                            </Link>
+                          </li>
+                        </ul>
+                      )}
+                    </li>
+                  )}
                 </li>
+
                 {isSuperStaffAdmin && (
                   <li className="nav-item">
                     <Link

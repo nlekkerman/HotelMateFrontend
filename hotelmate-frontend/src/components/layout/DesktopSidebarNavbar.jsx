@@ -18,6 +18,7 @@ const DesktopSidebarNavbar = () => {
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return setStaffProfile(null);
@@ -54,15 +55,20 @@ const DesktopSidebarNavbar = () => {
     { path: "/staff", label: "Staff", icon: "person-badge" },
     { path: "/staff/me", label: "Profile", icon: "person-circle" },
     { path: "/bookings", label: "Bookings", icon: "calendar-check" },
-    { path: `/hotel_info/${hotelIdentifier}`, label: "Info", icon: "info-circle" },
     {
-      path: `/room_services/${hotelIdentifier}/orders`,
-      label: "Room Service",
-      icon: "cup-hot",
-      badge: newOrderCount > 0 ? newOrderCount : null,
+      path: `/hotel_info/${hotelIdentifier}`,
+      label: "Info",
+      icon: "info-circle",
     },
-    ...(isSuperStaffAdmin ? [{ path: "/settings", label: "Settings", icon: "gear" }] : []),
-    { path: `/stock_tracker/${hotelIdentifier}`, label: "Stock Dashboard", icon: "graph-up" },
+
+    ...(isSuperStaffAdmin
+      ? [{ path: "/settings", label: "Settings", icon: "gear" }]
+      : []),
+    {
+      path: `/stock_tracker/${hotelIdentifier}`,
+      label: "Stock Dashboard",
+      icon: "graph-up",
+    },
   ];
 
   return (
@@ -79,7 +85,10 @@ const DesktopSidebarNavbar = () => {
         }}
       >
         <div className="d-flex justify-content-end p-3">
-          <button className="btn btn-sm text-white" onClick={() => setCollapsed(!collapsed)}>
+          <button
+            className="btn btn-sm text-white"
+            onClick={() => setCollapsed(!collapsed)}
+          >
             <i className="bi bi-list" />
           </button>
         </div>
@@ -105,7 +114,9 @@ const DesktopSidebarNavbar = () => {
               {staffProfile && (
                 <li className="nav-item mb-2">
                   <button
-                    className={`btn w-100 text-start text-white btn-${isOnDuty ? "success" : "danger"}`}
+                    className={`btn w-100 text-start text-white btn-${
+                      isOnDuty ? "success" : "danger"
+                    }`}
                     onClick={() => setIsModalOpen(true)}
                   >
                     <i className="bi bi-clock me-2" />
@@ -117,18 +128,98 @@ const DesktopSidebarNavbar = () => {
                 navItems.map(({ path, label, icon, badge }) => (
                   <li className="nav-item" key={path}>
                     <Link
-                      className={`nav-link text-white ${isActive(path) ? " bg-opacity-25" : ""}`}
+                      className={`nav-link text-white ${
+                        isActive(path) ? " bg-opacity-25" : ""
+                      }`}
                       to={path}
                       onClick={() => setCollapsed(true)}
                     >
                       <i className={`bi bi-${icon} me-2`} />
                       {!collapsed && label}
-                      {badge && <span className="badge bg-danger ms-2">{badge}</span>}
+                      {badge && (
+                        <span className="badge bg-danger ms-2">{badge}</span>
+                      )}
                     </Link>
                   </li>
                 ))}
+              {/* Services Dropdown */}
+              {showFullNav && (
+                <li className="nav-item">
+                  <div
+                    className={`nav-link text-white d-flex justify-content-between align-items-center ${
+                      isActive("/services") ? "bg-opacity-25" : ""
+                    }`}
+                    onClick={() =>
+                      setServicesDropdownOpen(!servicesDropdownOpen)
+                    }
+                    style={{ cursor: "pointer" }}
+                  >
+                    <span className="d-flex align-items-center">
+                      <i className="bi bi-cup-hot me-2" />
+                      {!collapsed && "Services"}
+                    </span>
+                    {!collapsed && (
+                      <span className="d-flex align-items-center">
+                        {newOrderCount > 0 && (
+                          <span className="badge bg-danger me-2">
+                            {newOrderCount}
+                          </span>
+                        )}
+                        <i
+                          className={`bi bi-chevron-${
+                            servicesDropdownOpen ? "up" : "down"
+                          }`}
+                          style={{ fontSize: "0.8rem" }}
+                        />
+                      </span>
+                    )}
+                  </div>
+
+                  {!collapsed && servicesDropdownOpen && (
+                    <ul className="nav flex-column ms-4 mt-1">
+                      <li className="nav-item">
+                        <Link
+                          className={`nav-link text-white ${
+                            isActive(`/services/room-service`)
+                              ? "bg-opacity-25"
+                              : ""
+                          }`}
+                          to="/services/room-service"
+                          onClick={() => setCollapsed(true)}
+                        >
+                          <i className="bi bi-box me-2" />
+                          Room Service
+                          {newOrderCount > 0 && (
+                            <span className="badge bg-danger ms-2">
+                              {newOrderCount}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                      <li className="nav-item">
+                        <Link
+                          className={`nav-link text-white ${
+                            isActive(`/services/breakfast`)
+                              ? "bg-opacity-25"
+                              : ""
+                          }`}
+                          to="/services/breakfast"
+                          onClick={() => setCollapsed(true)}
+                        >
+                          <i className="bi bi-egg-fried me-2" />
+                          Breakfast
+                        </Link>
+                      </li>
+                    </ul>
+                  )}
+                </li>
+              )}
+
               <li className="nav-item mt-3">
-                <button className="btn btn-link text-white w-100 text-start" onClick={handleLogout}>
+                <button
+                  className="btn btn-link text-white w-100 text-start"
+                  onClick={handleLogout}
+                >
                   <i className="bi bi-box-arrow-right me-2" />
                   {!collapsed && "Logout"}
                 </button>
