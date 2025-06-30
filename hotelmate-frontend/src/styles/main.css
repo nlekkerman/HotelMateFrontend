@@ -108,7 +108,10 @@ body {
   margin-top: 1em;
   
 }
-
+.main-content-area{
+  min-width: 100vw;
+  margin-left: 0 !important;
+}
 .custom-button{
   background-color: rgba(5, 0, 0, 0.6);
   border-color: aliceblue;

@@ -103,6 +103,17 @@ const Login = () => {
             <i className={showPassword ? "bi bi-eye-slash" : "bi bi-eye"} />
           </button>
         </div>
+        <div className="text-end">
+  <button
+    type="button"
+    className="btn btn-link px-0 text-decoration-none"
+    onClick={() => navigate("/forgot-password")}
+    style={{ fontSize: "0.9rem" }}
+  >
+    Forgot password?
+  </button>
+</div>
+
         <div className="d-flex justify-content-center">
           <button type="submit" className="btn btn-primary" disabled={loading}>
             {loading ? "Logging in..." : "Login"}
