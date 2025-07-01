@@ -87,7 +87,7 @@ function RoomList() {
     return <p className="text-center text-danger">Error: {error.message}</p>;
 
   return (
-    <div className="container d-flex justify-content-center flex-column my-4 vw-100">
+    <div className="container d-flex justify-content-center flex-column my-4 p-0 vw-100">
       {userData?.is_superuser && (
         <button className="custom-button" onClick={() => generateQrPdf(rooms)}>
           Print QR PDFs
@@ -109,7 +109,7 @@ function RoomList() {
 
       {/* Rooms list */}
       {rooms.length > 0 ? (
-        <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-1">
           {rooms.map((room) => (
             <div
               key={room.id}

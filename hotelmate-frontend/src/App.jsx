@@ -46,7 +46,7 @@ import HotelInfo from "@/pages/hotel_info/HotelInfo";
 import RoomServiceOrders from "@/components/room_service/RoomServiceOrders";
 import BreakfastRoomService from "@/components/room_service/BreakfastRoomService";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
+import ARView from '@/pages/ar_logic/ARView';
 // ✅ Add this import:
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
@@ -95,6 +95,7 @@ function App() {
                 >
                   <div className="main-content-area d-flex">
                     <Routes>
+                      <Route path="/ar/:anchorId" element={<ARView />} />
                       <Route path="/no-internet" element={<NoInternet />} />
                       <Route path="/" element={<Reception />} />
                       <Route
