@@ -16,7 +16,7 @@ const DesktopSidebarNavbar = () => {
   const { count: newOrderCount } = useOrderCount(hotelIdentifier);
   const [staffProfile, setStaffProfile] = useState(null);
   const [isOnDuty, setIsOnDuty] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
 

@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import Search from "@/components/utils/Search";
 import api from "@/services/api";
 import { useTheme } from "@/context/ThemeContext";
@@ -10,6 +12,8 @@ const CLOUDINARY_BASE = "https://res.cloudinary.com/dg0ssec7u/";
 const Reception = () => {
   const [hotelName, setHotelName] = useState("HotelMate");
   const [hotelLogo, setHotelLogo] = useState(null);
+  const navigate = useNavigate();
+
 const { mainColor } = useTheme();
   useEffect(() => {
     async function fetchHotelInfo() {
@@ -65,6 +69,15 @@ const { mainColor } = useTheme();
       </p>
       <div className="custom-serach-input-container p-4  d-flex justify-content-center ">
         <Search placeholder="Search rooms by number." />
+      </div>
+      {/* 🧭 AR Button */}
+      <div className="text-center mt-4">
+        <button
+          className="btn btn-outline-light px-4 py-2 fs-5"
+          onClick={() => navigate("/ar/1")} // 👈 Change 1 to your anchor ID
+        >
+          🚀 Launch AR Navigation
+        </button>
       </div>
     </div>
   );

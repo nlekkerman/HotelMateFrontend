@@ -1,8 +1,8 @@
 // src/components/staff/Staff.jsx
 
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import api from '@/services/api'; // Adjust path if needed
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "@/services/api"; // Adjust path if needed
 
 export default function Staff() {
   const [staffList, setStaffList] = useState([]);
@@ -14,9 +14,9 @@ export default function Staff() {
     // Fetch staff
     const fetchStaff = async () => {
       try {
-        const response = await api.get('staff/');
-        console.log('API staff response:', response.data);
-        console.log('Making request to:', api.defaults.baseURL + 'staff/');
+        const response = await api.get("staff/");
+        console.log("API staff response:", response.data);
+        console.log("Making request to:", api.defaults.baseURL + "staff/");
         const data = response.data;
 
         if (Array.isArray(data)) {
@@ -25,13 +25,13 @@ export default function Staff() {
           setStaffList(data.results);
         } else {
           setStaffList([]);
-          console.error('Unexpected staff list format', data);
+          console.error("Unexpected staff list format", data);
         }
       } catch (err) {
         setError(
           err.response?.status === 401
-            ? 'Unauthorized: Please login'
-            : 'Failed to fetch staff data'
+            ? "Unauthorized: Please login"
+            : "Failed to fetch staff data"
         );
         console.error(err);
       }
@@ -40,25 +40,33 @@ export default function Staff() {
     // Fetch hotels into a map { [id]: hotelObj }
     const fetchHotels = async () => {
       try {
-        const res = await api.get('hotel/hotel_list/');
+        const res = await api.get("hotel/hotel_list/");
         const list = Array.isArray(res.data)
           ? res.data
           : Array.isArray(res.data.results)
           ? res.data.results
           : [];
         const map = {};
-        list.forEach(h => {
+        list.forEach((h) => {
           map[h.id] = h;
         });
         setHotels(map);
       } catch (err) {
-        console.error('Failed to fetch hotels', err);
+        console.error("Failed to fetch hotels", err);
       }
     };
 
     fetchStaff();
     fetchHotels();
   }, []);
+
+  const formatDepartment = (dept) => {
+    if (!dept) return "N/A";
+    return dept
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
 
   if (error) {
     return (
@@ -69,55 +77,49 @@ export default function Staff() {
   }
 
   return (
-    <div className='staff-list-container transparent-container-bg '>
-      
-      <div className="button-wrapper my-5 d-flex flex-column align-items-center text-center mb-4">
-  <h2 className="mb-2">Staff List</h2>
-  <button
-    className="btn btn-sm btn-primary"
-    onClick={() => navigate("/staff/create")}
-  >
-    Create New Staff
-  </button>
-</div>
-
+    <div className="staff-list-container container rounded shadow-sm bg-light">
+      <div className="text-center mb-4">
+        <h2 className="fw-bold mb-2">Staff List</h2>
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={() => navigate("/staff/create")}
+        >
+          Create New Staff
+        </button>
+      </div>
 
       {staffList.length === 0 ? (
-        <p>No staff available.</p>
+        <p className="text-center text-muted">No staff available.</p>
       ) : (
-        <div className="table-responsive ">
-          <table className="table table-striped table-hover">
-            <thead>
+        <div className="table-responsive vw-100">
+          <table className="table table-bordered table-hover table-striped align-middle">
+            <thead className="table-dark">
               <tr>
-                <th>ID</th>
-                <th>Username</th>
-                <th>Email</th>
-                <th>First Name</th>
-                <th>Last Name</th>
-                <th>Department</th>
-                <th>Role</th>
-                <th>Phone Number</th>
-                <th>Hotel</th>
-                <th>Active</th>
+                <th scope="col">First Name</th>
+                <th scope="col">Last Name</th>
+                <th scope="col">Department</th>
+                <th scope="col">Active</th>
               </tr>
             </thead>
             <tbody>
-              {staffList.map(staff => (
+              {staffList.map((staff) => (
                 <tr
                   key={staff.id}
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: "pointer" }}
                   onClick={() => navigate(`/staff/${staff.id}`)}
                 >
-                  <td>{staff.id}</td>
-                  <td>{staff.user?.username || 'N/A'}</td>
-                  <td>{staff.email || 'N/A'}</td>
-                  <td>{staff.first_name || 'N/A'}</td>
-                  <td>{staff.last_name || 'N/A'}</td>
-                  <td>{staff.department || 'N/A'}</td>
-                  <td>{staff.role || 'N/A'}</td>
-                  <td>{staff.phone_number || 'N/A'}</td>
-                  <td>{staff.hotel_name || '-'}</td>
-                  <td>{staff.is_active ? 'Yes' : 'No'}</td>
+                  <td className="fw-semibold">{staff.first_name || "N/A"}</td>
+                  <td className="fw-semibold">{staff.last_name || "N/A"}</td>
+                  <td>{formatDepartment(staff.department)}</td>
+                  <td>
+                    <span
+                      className={`badge ${
+                        staff.is_active ? "bg-success" : "bg-secondary"
+                      }`}
+                    >
+                      {staff.is_active ? "Yes" : "No"}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
