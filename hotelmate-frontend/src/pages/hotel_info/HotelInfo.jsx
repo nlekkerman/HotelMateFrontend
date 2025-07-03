@@ -190,48 +190,120 @@ export default function HotelInfo() {
     return path.startsWith("http") ? path : `${CLOUD_BASE}${path}`;
   };
 
+  const downloadAllQrsWithText = async () => {
+    try {
+      const res = await api.get("/hotel_info/category_qr/download_all/", {
+        params: { hotel_slug: hotelSlug },
+      });
+
+      for (const item of res.data) {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = item.qr_url;
+
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const size = 450;
+          canvas.width = size;
+          canvas.height = size + 40;
+
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "white";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          ctx.drawImage(img, 0, 0, size, size);
+
+          ctx.fillStyle = "black";
+          ctx.font = "16px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText(`${hotelSlug} - ${item.category}`, size / 2, size + 25);
+
+          const link = document.createElement("a");
+          link.href = canvas.toDataURL("image/png");
+          link.download = `${item.category_slug}_qr.png`;
+          link.click();
+        };
+      }
+    } catch (err) {
+      console.error("Failed to download all QR codes", err);
+    }
+  };
+
   // ── Render ─────────────────────────────────────────────────────────
   return (
-    <div className="my-4">
-      {/* Category selector */}
+    <div className="my-4 w-100">
+      {/* CATEGORY + ACTIONS */}
       {user && !showCreateForm && (
         <>
-          <div className="d-flex flex-wrap gap-2 mb-3 align-items-center">
-            {categories.map((cat) => (
-              <button
-                key={cat.slug}
-                className={`btn ${
-                  cat.slug === activeCategory
-                    ? "btn-primary"
-                    : "btn-outline-primary"
-                }`}
-                onClick={() => handleCategoryClick(cat)}
-              >
-                {cat.name}
-              </button>
-            ))}
+          {/* Category Buttons */}
+          <div className="container mb-4">
+            <div className="row g-2 justify-content-center">
+              {categories.map((cat) => (
+                <div
+                  key={cat.slug}
+                  className="col-6 col-sm-4 col-md-3 col-lg-2"
+                >
+                  <button
+                    className={`btn w-100 py-3 shadow-sm fw-semibold ${
+                      cat.slug === activeCategory
+                        ? "btn-primary"
+                        : "btn-outline-primary"
+                    }`}
+                    style={{ aspectRatio: "1 / 1", borderRadius: "10px" }}
+                    onClick={() => handleCategoryClick(cat)}
+                  >
+                    {cat.name}
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Action buttons in a separate row */}
-          <div className="d-flex gap-2 mb-4">
+          {/* Create Buttons */}
+          <div className="container mb-4">
+            <div className="row g-3 justify-content-center">
+              <div className="col-12 col-sm-6 col-md-4 col-lg-3">
+                <button
+                  className="btn btn-secondary w-100 py-3 shadow-sm"
+                  onClick={() => setShowCreateCategory(true)}
+                >
+                  Create Info Category
+                </button>
+              </div>
+              <div className="col-12 col-sm-6 col-md-4 col-lg-3">
+                <button
+                  className="btn btn-success w-100 py-3 shadow-sm"
+                  onClick={() => setShowCreateForm(true)}
+                >
+                  Create Info
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Download All QRs */}
+          <div className="container mb-4">
+            <div className="row justify-content-center">
+              <div className="col-12 col-md-6 col-lg-4">
+                <button
+                  className="btn btn-outline-dark w-100 py-3 shadow-sm"
+                  style={{ borderRadius: "10px", fontWeight: "500" }}
+                  onClick={downloadAllQrsWithText}
+                >
+                  Download QR Codes
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="col-12 col-sm-6 col-md-4 col-lg-3">
             <button
-              className="btn btn-secondary"
-              onClick={() => setShowCreateCategory(true)}
+              className="btn btn-warning w-100 py-3 shadow-sm"
+              onClick={() => {
+                // Redirect to Good To Know admin page for this hotel
+                navigate(`/good_to_know_console/${hotelSlug}`);
+              }}
             >
-              Create Info Category
-            </button>
-            {/* <button
-              className="btn btn-outline-dark"
-              disabled={!activeCategory}
-              onClick={() => setShowGenerateQr(true)}
-            >
-              Generate QR for Category
-            </button> */}
-            <button
-              className="btn btn-success"
-              onClick={() => setShowCreateForm(true)}
-            >
-              Create Info
+              Good To Know Admin
             </button>
           </div>
         </>
@@ -251,9 +323,7 @@ export default function HotelInfo() {
         </HotelInfoModal>
       )}
 
-      {/* The QR modal is now completely removed! */}
-
-      {/* Create form or listings */}
+      {/* FORM OR DISPLAY */}
       {showCreateForm ? (
         <HotelInfoCreateForm
           hotelSlug={hotelSlug}
@@ -272,8 +342,8 @@ export default function HotelInfo() {
           )}
 
           {activeCategory && (
-            <section>
-              <h3 className="mb-4">
+            <section className="container">
+              <h3 className="mb-4 text-center">
                 {categories.find((c) => c.slug === activeCategory)?.name ||
                   activeCategory}
               </h3>
@@ -296,6 +366,7 @@ export default function HotelInfo() {
                     : label === "Tomorrow"
                     ? "bg-info bg-opacity-10"
                     : "bg-secondary bg-opacity-10";
+
                 const headerBg =
                   label === "Today"
                     ? "bg-success"

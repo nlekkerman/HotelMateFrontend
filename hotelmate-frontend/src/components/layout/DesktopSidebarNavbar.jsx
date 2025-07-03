@@ -5,6 +5,7 @@ import ClockModal from "@/components/staff/ClockModal";
 import api from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useTheme } from "@/context/ThemeContext";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const DesktopSidebarNavbar = () => {
   const location = useLocation();
@@ -19,6 +20,8 @@ const DesktopSidebarNavbar = () => {
   const [collapsed, setCollapsed] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
+
+  const { canAccess } = usePermissions(staffProfile);
 
   useEffect(() => {
     if (!user) return setStaffProfile(null);
@@ -35,13 +38,7 @@ const DesktopSidebarNavbar = () => {
     document.body.classList.toggle("sidebar-collapsed", collapsed);
   }, [collapsed]);
 
-  const pathname = location.pathname;
-  const isSuperUser = user?.is_superuser;
-  const accessLevel = staffProfile?.access_level;
-  const isStaffAdmin = accessLevel === "staff_admin";
-  const isSuperStaffAdmin = accessLevel === "super_staff_admin";
-  const showFullNav = isSuperUser || isSuperStaffAdmin || isStaffAdmin;
-  const isActive = (path) => pathname.startsWith(path);
+  const isActive = (path) => location.pathname.startsWith(path);
 
   const handleLogout = () => {
     logout();
@@ -49,32 +46,68 @@ const DesktopSidebarNavbar = () => {
   };
 
   const navItems = [
-    { path: "/", label: "Reception", icon: "house" },
-    { path: "/rooms", label: "Rooms", icon: "door-closed" },
-    { path: `/${hotelIdentifier}/guests`, label: "Guests", icon: "people" },
-    { path: "/staff", label: "Staff", icon: "person-badge" },
-    { path: "/staff/me", label: "Profile", icon: "person-circle" },
-    { path: "/bookings", label: "Bookings", icon: "calendar-check" },
+    {
+      path: "/",
+      label: "Reception",
+      icon: "house",
+      feature: "reception",
+      roles: ["receptionist", "manager", "concierge"],
+    },
+    {
+      path: "/rooms",
+      label: "Rooms",
+      icon: "door-closed",
+      feature: "reception",
+      roles: ["receptionist", "manager"],
+    },
+    {
+      path: `/${hotelIdentifier}/guests`,
+      label: "Guests",
+      icon: "people",
+      feature: "reception",
+      roles: ["receptionist", "manager"],
+    },
+    {
+      path: "/staff",
+      label: "Staff",
+      icon: "person-badge",
+      feature: "profile",
+      roles: ["staff_admin", "super_staff_admin"],
+    },
+    {
+      path: "/bookings",
+      label: "Bookings",
+      icon: "calendar-check",
+      feature: "reception",
+      roles: ["receptionist", "manager"],
+    },
     {
       path: `/hotel_info/${hotelIdentifier}`,
       label: "Info",
       icon: "info-circle",
+      feature: "reception",
+      roles: ["receptionist", "manager"],
     },
-
-    ...(isSuperStaffAdmin
-      ? [{ path: "/settings", label: "Settings", icon: "gear" }]
-      : []),
     {
       path: `/stock_tracker/${hotelIdentifier}`,
       label: "Stock Dashboard",
       icon: "graph-up",
+      feature: "stock_tracker",
+      roles: ["chef", "bartender", "manager"],
+    },
+    {
+      path: "/settings",
+      label: "Settings",
+      icon: "gear",
+      feature: "settings",
+      roles: ["super_staff_admin"],
     },
   ];
 
   return (
     <>
       <nav
-        className={`d-none d-lg-flex flex-column position-relative top-0 start-0 bg-main sidebar-nav-desktop vh-100 shadow-sm text-white main-bg ${
+        className={`d-none d-lg-flex flex-column position-relative top-0 start-0 sidebar-nav-desktop vh-100 shadow-sm text-white main-bg ${
           mainColor ? "" : "bg-dark"
         }`}
         style={{
@@ -124,12 +157,38 @@ const DesktopSidebarNavbar = () => {
                   </button>
                 </li>
               )}
-              {showFullNav &&
-                navItems.map(({ path, label, icon, badge }) => (
+              {canAccess([
+                "receptionist",
+                "porter",
+                "waiter",
+                "manager",
+                "chef",
+                "staff_admin",
+                "super_staff_admin",
+                "concierge",
+                "maintenance_staff",
+                "housekeeping_attendant",
+              ]) && (
+                <li className="nav-item">
+                  <Link
+                    className={`nav-link text-white ${
+                      isActive("/staff/me") ? "bg-opacity-25" : ""
+                    }`}
+                    to="/staff/me"
+                    onClick={() => setCollapsed(true)}
+                  >
+                    <i className="bi bi-person-circle me-2" />
+                    {!collapsed && "Profile"}
+                  </Link>
+                </li>
+              )}
+              {navItems
+                .filter((item) => canAccess(item.roles))
+                .map(({ path, label, icon, badge }) => (
                   <li className="nav-item" key={path}>
                     <Link
                       className={`nav-link text-white ${
-                        isActive(path) ? " bg-opacity-25" : ""
+                        isActive(path) ? "bg-opacity-25" : ""
                       }`}
                       to={path}
                       onClick={() => setCollapsed(true)}
@@ -142,8 +201,8 @@ const DesktopSidebarNavbar = () => {
                     </Link>
                   </li>
                 ))}
-              {/* Services Dropdown */}
-              {showFullNav && (
+
+              {canAccess(["receptionist", "porter", "waiter", "manager"]) && (
                 <li className="nav-item">
                   <div
                     className={`nav-link text-white d-flex justify-content-between align-items-center ${
@@ -214,7 +273,7 @@ const DesktopSidebarNavbar = () => {
                   )}
                 </li>
               )}
-
+              
               <li className="nav-item mt-3">
                 <button
                   className="btn btn-link text-white w-100 text-start"

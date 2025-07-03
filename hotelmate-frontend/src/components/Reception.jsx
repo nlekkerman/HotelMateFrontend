@@ -70,15 +70,7 @@ const { mainColor } = useTheme();
       <div className="custom-serach-input-container p-4  d-flex justify-content-center ">
         <Search placeholder="Search rooms by number." />
       </div>
-      {/* 🧭 AR Button */}
-      <div className="text-center mt-4">
-        <button
-          className="btn btn-outline-light px-4 py-2 fs-5"
-          onClick={() => navigate("/ar/1")} // 👈 Change 1 to your anchor ID
-        >
-          🚀 Launch AR Navigation
-        </button>
-      </div>
+     
     </div>
   );
 };

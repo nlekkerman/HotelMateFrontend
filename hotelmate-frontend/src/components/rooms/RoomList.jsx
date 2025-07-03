@@ -9,7 +9,6 @@ const fetchRooms = async ({ queryKey }) => {
   const [_key, page, search] = queryKey;
   const userData = JSON.parse(localStorage.getItem("user"));
   const hotelId = userData?.hotel_id;
-  const hotelIdentifier = userData?.hotel_slug;
 
   try {
     const response = await api.get("/rooms/rooms/", {
