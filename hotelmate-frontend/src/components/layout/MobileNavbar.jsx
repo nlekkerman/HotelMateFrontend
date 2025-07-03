@@ -6,6 +6,7 @@ import api from "@/services/api";
 import logo from "@/assets/hotel-mate.png";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useTheme } from "@/context/ThemeContext";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const MobileNavbar = () => {
   const location = useLocation();
@@ -21,8 +22,13 @@ const MobileNavbar = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
 
+  const { canAccess } = usePermissions(staffProfile);
+
   useEffect(() => {
-    if (!user) return setStaffProfile(null);
+    if (!user) {
+      setStaffProfile(null);
+      return;
+    }
     api
       .get("/staff/me/")
       .then((res) => {
@@ -32,6 +38,86 @@ const MobileNavbar = () => {
       .catch(() => setStaffProfile(null));
   }, [user]);
 
+  const toggleNavbar = () => setCollapsed((prev) => !prev);
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
+  const navItems = [
+    {
+      path: "/",
+      label: "Reception",
+      icon: "house",
+      roles: ["receptionist", "manager", "concierge"],
+    },
+    {
+      path: "/rooms",
+      label: "Rooms",
+      icon: "door-closed",
+      roles: ["receptionist", "manager"],
+    },
+    {
+      path: `/${hotelIdentifier}/guests`,
+      label: "Guests",
+      icon: "people",
+      roles: ["receptionist", "manager"],
+    },
+    {
+      path: "/staff",
+      label: "Staff",
+      icon: "person-badge",
+      roles: ["staff_admin", "super_staff_admin"],
+    },
+    {
+      path: "/bookings",
+      label: "Bookings",
+      icon: "calendar-check",
+      roles: ["receptionist", "manager"],
+    },
+    {
+      path: `/hotel_info/${hotelIdentifier}`,
+      label: "Info",
+      icon: "info-circle",
+      roles: ["receptionist", "manager"],
+    },
+    {
+      path: `/good_to_know_console/${hotelIdentifier}`,
+      label: "Good To Know",
+      icon: "book",
+      roles: ["staff_admin", "super_staff_admin"],
+    },
+    {
+      path: `/stock_tracker/${hotelIdentifier}`,
+      label: "Stock Dashboard",
+      icon: "graph-up",
+      roles: ["chef", "bartender", "manager"],
+    },
+    {
+      path: "/settings",
+      label: "Settings",
+      icon: "gear",
+      roles: ["super_staff_admin"],
+    },
+  ];
+  // Services nav items — handled separately due to dropdown behavior
+  const servicesNavItems = [
+    {
+      path: "/services/room-service",
+      label: "Room Service",
+      icon: "box",
+      roles: ["receptionist", "porter", "waiter", "manager"],
+    },
+    {
+      path: "/services/breakfast",
+      label: "Breakfast",
+      icon: "egg-fried",
+      roles: ["receptionist", "porter", "waiter", "manager"],
+    },
+  ];
+  const isActive = (path) => location.pathname.startsWith(path);
+
+  // Hide navbar on some paths when not logged in
   const hiddenNavPatterns = [
     /^\/room_services\/[^/]+\/room\/[^/]+\/breakfast\/?$/,
     /^\/room_services\/[^/]+\/room\/[^/]+\/menu\/?$/,
@@ -40,18 +126,6 @@ const MobileNavbar = () => {
   if (!user && hiddenNavPatterns.some((re) => re.test(location.pathname)))
     return null;
 
-  const toggleNavbar = () => setCollapsed((prev) => !prev);
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
-  const isSuperUser = user?.is_superuser;
-  const accessLevel = staffProfile?.access_level;
-  const isStaffAdmin = accessLevel === "staff_admin";
-  const isSuperStaffAdmin = accessLevel === "super_staff_admin";
-  const showFullNav = isSuperUser || isSuperStaffAdmin || isStaffAdmin;
-  const isActive = (path) => location.pathname.startsWith(path);
   return (
     <nav
       className={`navbar navbar-expand-lg text-white shadow-sm main-bg ${
@@ -60,10 +134,6 @@ const MobileNavbar = () => {
       style={mainColor ? { backgroundColor: mainColor } : {}}
     >
       <div className="container-fluid">
-        <Link
-          to="/"
-          className="flex items-center space-x-2 logo-container"
-        ></Link>
         <Link to="/" className="flex items-center space-x-2 logo-container">
           <img
             src={logo}
@@ -71,6 +141,7 @@ const MobileNavbar = () => {
             className="h-10 w-auto drop-shadow-md logo-image"
           />
         </Link>
+
         <button
           className="navbar-toggler bg-transparent border-0 shadow-lg"
           type="button"
@@ -92,7 +163,7 @@ const MobileNavbar = () => {
                 <li className="nav-item">
                   <Link
                     className={`nav-link ${
-                      isActive("/login") && "active"
+                      isActive("/login") ? "active" : ""
                     } text-white`}
                     to="/login"
                     onClick={toggleNavbar}
@@ -103,7 +174,7 @@ const MobileNavbar = () => {
                 <li className="nav-item">
                   <Link
                     className={`nav-link ${
-                      isActive("/register") && "active"
+                      isActive("/register") ? "active" : ""
                     } text-white`}
                     to="/register"
                     onClick={toggleNavbar}
@@ -114,7 +185,7 @@ const MobileNavbar = () => {
               </>
             )}
 
-            {user && !showFullNav && (
+            {user && (
               <>
                 {staffProfile && (
                   <li className="nav-item">
@@ -126,193 +197,69 @@ const MobileNavbar = () => {
                     </button>
                   </li>
                 )}
-                <li className="nav-item">
-                  <button
-                    className="btn btn-link nav-link"
-                    onClick={handleLogout}
-                  >
-                    Logout
-                  </button>
-                </li>
-              </>
-            )}
 
-            {user && showFullNav && (
-              <>
-                {staffProfile && (
-                  <li className="nav-item">
-                    <button
-                      className={`btn btn-${isOnDuty ? "success" : "danger"}`}
-                      onClick={() => setIsModalOpen(true)}
-                    >
-                      {isOnDuty ? "Clock Out" : "Clock In"}
-                    </button>
-                  </li>
-                )}
-                <li className="nav-item">
-                  <Link
-                    className={`nav-link ${isActive("/") && "active"}`}
-                    to="/"
-                    onClick={toggleNavbar}
-                  >
-                    Reception
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link
-                    className={`nav-link ${isActive("/rooms") && "active"}`}
-                    to="/rooms"
-                    onClick={toggleNavbar}
-                  >
-                    Rooms
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link
-                    className={`nav-link ${
-                      isActive(`/${hotelIdentifier}/guests`) && "active"
-                    }`}
-                    to={`/${hotelIdentifier}/guests`}
-                    onClick={toggleNavbar}
-                  >
-                    Guests
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link
-                    className={`nav-link ${isActive("/staff") && "active"}`}
-                    to="/staff"
-                    onClick={toggleNavbar}
-                  >
-                    Staff
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link
-                    className={`nav-link ${isActive("/staff/me") && "active"}`}
-                    to="/staff/me"
-                    onClick={toggleNavbar}
-                  >
-                    Profile
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link
-                    className={`nav-link ${isActive("/bookings") && "active"}`}
-                    to="/bookings"
-                    onClick={toggleNavbar}
-                  >
-                    Bookings
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link
-                    className={`nav-link ${
-                      isActive(`/hotel_info/${hotelIdentifier}`) && "active"
-                    }`}
-                    to={`/hotel_info/${hotelIdentifier}`}
-                    onClick={toggleNavbar}
-                  >
-                    Info
-                  </Link>
-                </li>
-                <li className="nav-item dropdown">
-                 
-                  {showFullNav && (
-                    <li className="nav-item">
-                      <div
-  className={`nav-link text-white d-flex justify-content-between align-items-center ${
-    isActive("/services") ? "bg-opacity-25" : ""
-  }`}
-  onClick={() => setServicesDropdownOpen(!servicesDropdownOpen)}
-  style={{ cursor: "pointer" }}
->
-  <span>
-    <i className="bi bi-cup-hot me-2" />
-    Services
-  </span>
-  <span className="d-flex align-items-center">
-    {newOrderCount > 0 && (
-      <span className="badge bg-danger me-2">{newOrderCount}</span>
-    )}
-    <i
-      className={`bi bi-chevron-${servicesDropdownOpen ? "up" : "down"}`}
-      style={{ fontSize: "0.8rem" }}
-    />
-  </span>
-</div>
-
-                      {servicesDropdownOpen && (
-                        <ul className="nav flex-column ms-3">
-                          <li className="nav-item">
-                            <Link
-                              className={`nav-link text-white ${
-                                isActive("/services/room-service")
-                                  ? "bg-opacity-25"
-                                  : ""
-                              }`}
-                              to="/services/room-service"
-                              onClick={() => {
-                                toggleNavbar();
-                                setServicesDropdownOpen(false);
-                              }}
-                            >
-                              <i className="bi bi-box me-2" />
-                              Room Service
-                              {newOrderCount > 0 && (
-                                <span className="badge bg-danger ms-2">
-                                  {newOrderCount}
-                                </span>
-                              )}
-                            </Link>
-                          </li>
-                          <li className="nav-item">
-                            <Link
-                              className={`nav-link text-white ${
-                                isActive("/services/breakfast")
-                                  ? "bg-opacity-25"
-                                  : ""
-                              }`}
-                              to="/services/breakfast"
-                              onClick={() => {
-                                toggleNavbar();
-                                setServicesDropdownOpen(false);
-                              }}
-                            >
-                              <i className="bi bi-egg-fried me-2" />
-                              Breakfast
-                            </Link>
-                          </li>
-                        </ul>
-                      )}
+                {navItems
+                  .filter((item) => canAccess(item.roles))
+                  .map(({ path, label, icon }) => (
+                    <li className="nav-item" key={path}>
+                      <Link
+                        className={`nav-link ${
+                          isActive(path) ? "active" : ""
+                        } text-white`}
+                        to={path}
+                        onClick={toggleNavbar}
+                      >
+                        <i className={`bi bi-${icon} me-2`} />
+                        {label}
+                      </Link>
                     </li>
-                  )}
-                </li>
-
-                {isSuperStaffAdmin && (
-                  <li className="nav-item">
-                    <Link
-                      className={`nav-link ${
-                        isActive("/settings") && "active"
-                      }`}
-                      to="/settings"
-                      onClick={toggleNavbar}
+                  ))}
+                {/* Services dropdown */}
+                {servicesNavItems.some(({ roles }) => canAccess(roles)) && (
+                  <li className="nav-item dropdown">
+                    <div
+                      className="nav-link d-flex justify-content-between align-items-center text-white"
+                      style={{ cursor: "pointer" }}
+                      onClick={() =>
+                        setServicesDropdownOpen(!servicesDropdownOpen)
+                      }
                     >
-                      Settings
-                    </Link>
+                      <span>
+                        <i className="bi bi-cup-hot me-2" />
+                        Services
+                      </span>
+                      <i
+                        className={`bi bi-chevron-${
+                          servicesDropdownOpen ? "up" : "down"
+                        }`}
+                        style={{ fontSize: "0.8rem" }}
+                      />
+                    </div>
+                    {servicesDropdownOpen && (
+                      <ul className="nav flex-column ms-3">
+                        {servicesNavItems
+                          .filter(({ roles }) => canAccess(roles))
+                          .map(({ path, label, icon }) => (
+                            <li className="nav-item" key={path}>
+                              <Link
+                                className={`nav-link text-white ${
+                                  isActive(path) ? "active" : ""
+                                }`}
+                                to={path}
+                                onClick={() => {
+                                  toggleNavbar();
+                                  setServicesDropdownOpen(false);
+                                }}
+                              >
+                                <i className={`bi bi-${icon} me-2`} />
+                                {label}
+                              </Link>
+                            </li>
+                          ))}
+                      </ul>
+                    )}
                   </li>
                 )}
-                <li className="nav-item">
-                  <Link
-                    className={`nav-link ${
-                      isActive(`/stock_tracker/${hotelIdentifier}`) && "active"
-                    }`}
-                    to={`/stock_tracker/${hotelIdentifier}`}
-                    onClick={toggleNavbar}
-                  >
-                    Stock Dashboard
-                  </Link>
-                </li>
 
                 <li className="nav-item">
                   <button
