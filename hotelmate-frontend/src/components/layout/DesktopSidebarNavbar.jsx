@@ -89,6 +89,13 @@ const DesktopSidebarNavbar = () => {
       roles: ["receptionist", "manager"],
     },
     {
+      path: `/good_to_know_console/${hotelIdentifier}`,
+      label: "Good To Know",
+      icon: "book", // or any icon you prefer
+      feature: "hotel_info", // optionally categorize under 'hotel_info'
+      roles: ["staff_admin", "super_staff_admin"],
+    },
+    {
       path: `/stock_tracker/${hotelIdentifier}`,
       label: "Stock Dashboard",
       icon: "graph-up",
@@ -273,7 +280,7 @@ const DesktopSidebarNavbar = () => {
                   )}
                 </li>
               )}
-              
+
               <li className="nav-item mt-3">
                 <button
                   className="btn btn-link text-white w-100 text-start"
