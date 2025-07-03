@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "@/services/api";
 import GoodToKnowEntryModal from "@/components/modals/GoodToKnowEntryModal";
+import { useGoodToKnowPdfExporter } from "@/hooks/useGoodToKnowPdfExporter"; // import your PDF hook
+
 export default function GoodToKnowConsole() {
   const { hotel_slug } = useParams();
 
@@ -16,6 +18,9 @@ export default function GoodToKnowConsole() {
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSlug, setEditingSlug] = useState(null); // null for create
+
+  // Import the PDF exporter function
+  const { generateGoodToKnowPdf } = useGoodToKnowPdfExporter();
 
   // Fetch GoodToKnow entries
   const fetchEntries = async () => {
@@ -57,6 +62,15 @@ export default function GoodToKnowConsole() {
     fetchEntries();
   };
 
+  // New handler to export PDF
+  const handleExportPdf = () => {
+    if (entries.length === 0) {
+      alert("No entries to export.");
+      return;
+    }
+    generateGoodToKnowPdf(entries);
+  };
+
   if (loading)
     return (
       <div
@@ -78,9 +92,12 @@ export default function GoodToKnowConsole() {
   return (
     <div className="container py-4">
       <h2>Good To Know Console — {hotel_slug}</h2>
-      <div className="mb-3">
+      <div className="mb-3 d-flex gap-2">
         <button className="btn btn-success" onClick={openCreateModal}>
           + Add New Entry
+        </button>
+        <button className="btn btn-outline-primary" onClick={handleExportPdf}>
+          📥 Download All QR Codes PDF
         </button>
       </div>
 
