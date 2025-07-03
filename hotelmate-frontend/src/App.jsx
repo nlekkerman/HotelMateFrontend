@@ -43,10 +43,11 @@ import NetworkHandler from "@/components/offline/NetworkHandler";
 import NoInternet from "@/components/offline/NoInternet";
 import { ThemeProvider } from "@/context/ThemeContext"; // Import ThemeProvider
 import HotelInfo from "@/pages/hotel_info/HotelInfo";
+import GoodToKnow from "@/components/hotel_info/GoodToKnow";
+import GoodToKnowConsole from '@/components/hotel_info/GoodToKnowConsole';
 import RoomServiceOrders from "@/components/room_service/RoomServiceOrders";
 import BreakfastRoomService from "@/components/room_service/BreakfastRoomService";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import ARView from '@/pages/ar_logic/ARView';
 // ✅ Add this import:
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
@@ -95,7 +96,9 @@ function App() {
                 >
                   <div className="main-content-area d-flex">
                     <Routes>
-                      <Route path="/ar/:anchorId" element={<ARView />} />
+                      
+                      <Route path="/good_to_know_console/:hotel_slug" element={<GoodToKnowConsole />} />
+                      <Route path="/good_to_know/:hotel_slug/:slug" element={<GoodToKnow />} />
                       <Route path="/no-internet" element={<NoInternet />} />
                       <Route path="/" element={<Reception />} />
                       <Route
