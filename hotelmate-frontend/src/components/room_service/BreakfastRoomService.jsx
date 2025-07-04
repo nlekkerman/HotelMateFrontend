@@ -127,20 +127,23 @@ const { refreshAll } = useOrderCount(hotelSlug);  const [orders, setOrders] = us
                       <div className="mb-2">
                         <strong>Status:</strong>
                         <select
-                          className={`form-select mt-1 border-${
-                            order.status === "completed" ? "success" : "warning"
-                          }`}
-                          value={order.status}
-                          onChange={(e) =>
-                            handleStatusChange(order, e.target.value)
-                          }
-                        >
-                          {["pending", "completed"].map((s) => (
-                            <option key={s} value={s}>
-                              {s.charAt(0).toUpperCase() + s.slice(1)}
-                            </option>
-                          ))}
-                        </select>
+  className={`form-select mt-1 border-${
+    order.status === "completed" ? "success" : "warning"
+  }`}
+  value={order.status}
+  onChange={(e) => handleStatusChange(order, e.target.value)}
+>
+  {["pending", "accepted"].includes(order.status) && (
+    <option value="pending">Pending</option>
+  )}
+  {["pending", "accepted"].includes(order.status) && (
+    <option value="accepted">Accepted</option>
+  )}
+  {order.status === "accepted" && (
+    <option value="completed">Completed</option>
+  )}
+</select>
+
                       </div>
                       <div>
                         <strong>Ordered:</strong>{" "}

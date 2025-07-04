@@ -33,7 +33,7 @@ export function OrderCountProvider({ children }) {
   const refreshBreakfast = useCallback(async (hotelSlug) => {
     if (!hotelSlug) return;
     try {
-      const res = await api.get(`/room_services/${hotelSlug}/orders/pending-count/`);
+const res = await api.get(`/room_services/${hotelSlug}/breakfast-orders/breakfast-pending-count/`);
       setBreakfastCount(res.data.count);
     } catch (err) {
       console.error("Breakfast count fetch failed:", err);
