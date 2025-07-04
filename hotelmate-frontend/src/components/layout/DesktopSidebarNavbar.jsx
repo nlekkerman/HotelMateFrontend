@@ -14,7 +14,8 @@ const DesktopSidebarNavbar = () => {
   const hotelIdentifier = user?.hotel_slug;
   const { mainColor } = useTheme();
 
-  const { count: newOrderCount } = useOrderCount(hotelIdentifier);
+  const { roomServiceCount, breakfastCount, totalServiceCount } =
+    useOrderCount(hotelIdentifier);
   const [staffProfile, setStaffProfile] = useState(null);
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
@@ -237,50 +238,63 @@ const DesktopSidebarNavbar = () => {
 
               {/* Services parent nav item */}
               {canAccess(["receptionist", "porter", "waiter", "manager"]) && (
-                <li className="nav-item">
-                  <div
-                    className={`nav-link text-white d-flex align-items-center ${
-                      isActive("/services") ? "bg-opacity-25" : ""
-                    }`}
-                    style={{ cursor: "default" }} // no pointer as no toggle
-                  >
-                    <i className="bi bi-cup-hot me-2" />
-                    {!collapsed && "Services"}
-                  </div>
+  <li className="nav-item">
+    <div
+      className={`nav-link text-white d-flex align-items-center justify-content-between ${
+        isActive("/services") ? "bg-opacity-25" : ""
+      }`}
+      style={{ cursor: "default" }}
+    >
+      <div>
+        <i className="bi bi-cup-hot me-2" />
+        {!collapsed && "Services"}
+      </div>
+      {totalServiceCount > 0 && (
+        <span className="badge bg-danger ms-2">{totalServiceCount}</span>
+      )}
+    </div>
 
-                  {/* Always show submenu items */}
-                  <ul className="nav flex-column ms-4 mt-1">
-                    <li className="nav-item">
-                      <Link
-                        className={`nav-link text-white ${
-                          isActive("/services/room-service")
-                            ? "bg-opacity-25"
-                            : ""
-                        } d-flex align-items-center`}
-                        to="/services/room-service"
-                        onClick={() => setCollapsed(true)}
-                        style={{ whiteSpace: "nowrap" }}
-                      >
-                        <i className="bi bi-box me-2" />
-                        {!collapsed && "Room Service"}
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link
-                        className={`nav-link text-white ${
-                          isActive("/services/breakfast") ? "bg-opacity-25" : ""
-                        } d-flex align-items-center`}
-                        to="/services/breakfast"
-                        onClick={() => setCollapsed(true)}
-                        style={{ whiteSpace: "nowrap" }}
-                      >
-                        <i className="bi bi-egg-fried me-2" />
-                        {!collapsed && "Breakfast"}
-                      </Link>
-                    </li>
-                  </ul>
-                </li>
-              )}
+    <ul className="nav flex-column ms-4 mt-1">
+      <li className="nav-item">
+        <Link
+          className={`nav-link text-white ${
+            isActive("/services/room-service") ? "bg-opacity-25" : ""
+          } d-flex align-items-center justify-content-between`}
+          to="/services/room-service"
+          onClick={() => setCollapsed(true)}
+          style={{ whiteSpace: "nowrap" }}
+        >
+          <div>
+            <i className="bi bi-box me-2" />
+            {!collapsed && "Room Service"}
+          </div>
+          {roomServiceCount > 0 && (
+            <span className="badge bg-danger ms-2">{roomServiceCount}</span>
+          )}
+        </Link>
+      </li>
+
+      <li className="nav-item">
+        <Link
+          className={`nav-link text-white ${
+            isActive("/services/breakfast") ? "bg-opacity-25" : ""
+          } d-flex align-items-center justify-content-between`}
+          to="/services/breakfast"
+          onClick={() => setCollapsed(true)}
+          style={{ whiteSpace: "nowrap" }}
+        >
+          <div>
+            <i className="bi bi-egg-fried me-2" />
+            {!collapsed && "Breakfast"}
+          </div>
+          {breakfastCount > 0 && (
+            <span className="badge bg-danger ms-2">{breakfastCount}</span>
+          )}
+        </Link>
+      </li>
+    </ul>
+  </li>
+)}
 
               <li className="nav-item mt-3">
                 <button

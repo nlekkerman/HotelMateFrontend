@@ -7,8 +7,7 @@ import { useTheme } from "@/context/ThemeContext";
 export default function BreakfastRoomService() {
   const { user } = useAuth();
   const hotelSlug = user?.hotel_slug;
-  const { refresh: refreshCount } = useOrderCount(hotelSlug);
-  const [orders, setOrders] = useState([]);
+const { refreshAll } = useOrderCount(hotelSlug);  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { mainColor } = useTheme();
@@ -47,7 +46,7 @@ export default function BreakfastRoomService() {
       .patch(`/room_services/${hotelSlug}/breakfast-orders/${order.id}/`, {
         status: newStatus,
       })
-      .then(() => refreshCount())
+      .then(() => refreshAll())
       .catch((err) => {
         setOrders((all) =>
           all.map((o) => (o.id === order.id ? { ...o, status: prev } : o))
