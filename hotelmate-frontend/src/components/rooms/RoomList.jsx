@@ -119,34 +119,10 @@ function RoomList() {
               }
             >
               <div className="card h-100 shadow-sm">
-                <div
-                  className="form-check position-absolute top-0 end-0 m-2  text-black bg-light p-1 rounded"
-                  onClick={(e) => e.stopPropagation()}
-                  data-bs-toggle="tooltip"
-                  data-bs-placement="left"
-                  title="Select this room for batch checkout"
-                >
-                  <input
-                    id={`select-room-${room.id}`}
-                    className="form-check-input "
-                    type="checkbox"
-                    checked={selectedRooms.includes(room.id)}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      handleCheckboxChange(room.id);
-                    }}
-                  />
-                  <label
-                    htmlFor={`select-room-${room.id}`}
-                    className="form-check-label small"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Select room for checkout.
-                  </label>
-                </div>
-
                 <div className="card-body d-flex flex-column">
-                  <h5 className="card-title mb-3">Room {room.room_number}</h5>
+                  <h5 className="card-title mb-3 text-center text-white fw-bold py-2 bg-warning">
+                    Room {room.room_number}
+                  </h5>
                   <p className="card-text mb-3">
                     <strong>Guest PIN:</strong>{" "}
                     {room.guest_id_pin || "Not assigned"}
@@ -198,7 +174,31 @@ function RoomList() {
                         />
                       </div>
                     )}
-
+                    <div
+                      className="form-check  m-2  text-black bg-light p-1 rounded"
+                      onClick={(e) => e.stopPropagation()}
+                      data-bs-toggle="tooltip"
+                      data-bs-placement="left"
+                      title="Select this room for batch checkout"
+                    >
+                      <input
+                        id={`select-room-${room.id}`}
+                        className="form-check-input "
+                        type="checkbox"
+                        checked={selectedRooms.includes(room.id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleCheckboxChange(room.id);
+                        }}
+                      />
+                      <label
+                        htmlFor={`select-room-${room.id}`}
+                        className="form-check-label small"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Select room for checkout.
+                      </label>
+                    </div>
                     <div className="button-wraper w-100 d-flex justify-content-center mt-2">
                       {!room.is_occupied && (
                         <button
@@ -218,8 +218,6 @@ function RoomList() {
                       </div>
                     )}
                   </div>
-
-                  {/* Optional: add a spacer to push pagination to bottom if needed */}
                 </div>
               </div>
             </div>

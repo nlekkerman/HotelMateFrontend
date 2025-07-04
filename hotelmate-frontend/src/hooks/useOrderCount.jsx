@@ -1,5 +1,3 @@
-// src/hooks/useOrderCount.jsx
-
 import React, {
   createContext,
   useContext,
@@ -12,42 +10,54 @@ import { listenForFirebaseMessages } from "@/utils/firebaseNotifications";
 
 // 1) Create context
 const OrderCountContext = createContext({
-  count:   0,
-  refresh: () => Promise.resolve(),
+  roomServiceCount: 0,
+  breakfastCount: 0,
+  refreshAll: () => Promise.resolve(),
 });
 
 // 2) Provider
 export function OrderCountProvider({ children }) {
-  const [count, setCount] = useState(0);
+  const [roomServiceCount, setRoomServiceCount] = useState(0);
+  const [breakfastCount, setBreakfastCount] = useState(0);
 
-  // Fetch the initial count (scoped to the hotel slug you pass in below)
-  const refresh = useCallback(async (hotelSlug) => {
+  const refreshRoomService = useCallback(async (hotelSlug) => {
     if (!hotelSlug) return;
     try {
-      const res = await api.get(
-        `/room_services/${hotelSlug}/orders/pending-count/`
-      );
-      setCount(res.data.count);
+      const res = await api.get(`/room_services/${hotelSlug}/orders/pending-count/`);
+      setRoomServiceCount(res.data.count);
     } catch (err) {
-      console.error("useOrderCount#refresh failed:", err);
+      console.error("Room Service count fetch failed:", err);
     }
   }, []);
 
+  const refreshBreakfast = useCallback(async (hotelSlug) => {
+    if (!hotelSlug) return;
+    try {
+      const res = await api.get(`/room_services/${hotelSlug}/orders/pending-count/`);
+      setBreakfastCount(res.data.count);
+    } catch (err) {
+      console.error("Breakfast count fetch failed:", err);
+    }
+  }, []);
+
+  const refreshAll = useCallback(async (hotelSlug) => {
+    await Promise.all([
+      refreshRoomService(hotelSlug),
+      refreshBreakfast(hotelSlug),
+    ]);
+  }, [refreshRoomService, refreshBreakfast]);
+
   useEffect(() => {
-    // We don’t know the hotelSlug here; it will be passed into refresh later
-    // Listen for data-only FCM messages
     const unsubscribe = listenForFirebaseMessages((payload) => {
-      if (payload.data?.type === "order_count") {
-        setCount(Number(payload.data.count));
-      }
+      const { type, count } = payload.data || {};
+      if (type === "order_count") setRoomServiceCount(Number(count));
+      if (type === "breakfast_count") setBreakfastCount(Number(count));
     });
 
-    // Listen for background-posted messages from the SW
     const onMessage = (event) => {
-      const data = event.data;
-      if (data?.type === "order_count") {
-        setCount(Number(data.count));
-      }
+      const { type, count } = event.data || {};
+      if (type === "order_count") setRoomServiceCount(Number(count));
+      if (type === "breakfast_count") setBreakfastCount(Number(count));
     };
     navigator.serviceWorker?.addEventListener("message", onMessage);
 
@@ -58,7 +68,7 @@ export function OrderCountProvider({ children }) {
   }, []);
 
   return (
-    <OrderCountContext.Provider value={{ count, refresh }}>
+    <OrderCountContext.Provider value={{ roomServiceCount, breakfastCount, refreshAll }}>
       {children}
     </OrderCountContext.Provider>
   );
@@ -66,12 +76,16 @@ export function OrderCountProvider({ children }) {
 
 // 3) Custom hook
 export function useOrderCount(hotelSlug) {
-  const { count, refresh } = useContext(OrderCountContext);
+  const { roomServiceCount, breakfastCount, refreshAll } = useContext(OrderCountContext);
 
-  // Whenever the hotelSlug changes, re-fetch
   useEffect(() => {
-    refresh(hotelSlug);
-  }, [hotelSlug, refresh]);
+    refreshAll(hotelSlug);
+  }, [hotelSlug, refreshAll]);
 
-  return { count, refresh: () => refresh(hotelSlug) };
+  return {
+    roomServiceCount,
+    breakfastCount,
+    totalServiceCount: roomServiceCount + breakfastCount,
+    refreshAll: () => refreshAll(hotelSlug),
+  };
 }

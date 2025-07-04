@@ -91,7 +91,7 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
 
   if (bookings.length === 0) {
     return (
-      <div className="alert alert-info my-4 text-center" role="alert">
+      <div className="alert alert-info bg-dark my-4 text-center" role="alert">
         No bookings found for this restaurant.
       </div>
     );
@@ -171,7 +171,7 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
           {todaysBookings.length > 0 ? (
             renderTable(todaysBookings)
           ) : (
-            <div className="alert alert-info m-3 text-center" role="alert">
+            <div className="alert alert-info bg-dark text-white m-3 text-center" role="alert">
               No bookings for today.
             </div>
           )}
@@ -187,7 +187,7 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
           {upcomingBookings.length > 0 ? (
             renderTable(upcomingBookings)
           ) : (
-            <div className="alert alert-info m-3 text-center" role="alert">
+            <div className="alert alert-info m-3 text-center bg-dark text-white" role="alert">
               No upcoming bookings.
             </div>
           )}

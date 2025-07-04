@@ -104,47 +104,46 @@ export default function GoodToKnowConsole() {
       {entries.length === 0 ? (
         <p>No Good To Know entries found.</p>
       ) : (
-        <table className="table table-striped table-bordered">
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Slug</th>
-              <th>Active</th>
-              <th>Created</th>
-              <th>QR Code</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((entry) => (
-              <tr key={entry.id}>
-                <td>{entry.title}</td>
-                <td>{entry.slug}</td>
-                <td>{entry.active ? "✅" : "❌"}</td>
-                <td>{new Date(entry.created_at).toLocaleDateString()}</td>
-                <td>
-                  {entry.qr_url ? (
-                    <img
-                      src={entry.qr_url}
-                      alt="QR Code"
-                      style={{ height: 60 }}
-                    />
-                  ) : (
-                    "No QR"
-                  )}
-                </td>
-                <td>
-                  <button
-                    className="btn btn-sm btn-primary me-2"
-                    onClick={() => openEditModal(entry.slug)}
-                  >
-                    Edit
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+       <div className="bg-light">
+  <table className="table table-striped table-bordered w-100" style={{ tableLayout: "fixed", width: "100%" }}>
+    <thead>
+      <tr>
+        <th style={{ width: "25%", padding:0, textAlign:"center" }}>Title</th>
+        <th style={{ width: "20%", padding:0, textAlign:"center"  }}>Created</th>
+        <th style={{ width: "25%", padding:0, textAlign:"center"  }}>QR Code</th>
+        <th style={{ width: "20%",padding:0, textAlign:"center"  }}>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {entries.map((entry) => (
+        <tr key={entry.id}>
+          <td>{entry.title}</td>
+          <td>{new Date(entry.created_at).toLocaleDateString()}</td>
+          <td style={{display:"flex", justifyContent:"center"}}>
+            {entry.qr_url ? (
+              <img
+                src={entry.qr_url}
+                alt="QR Code"
+                style={{ height: 60, maxWidth: "100%"}}
+              />
+            ) : (
+              "No QR"
+            )}
+          </td>
+          <td>
+            <button
+              className="btn btn-sm btn-primary me-2"
+              onClick={() => openEditModal(entry.slug)}
+            >
+              Edit
+            </button>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
       )}
 
       {/* Pagination Controls */}
