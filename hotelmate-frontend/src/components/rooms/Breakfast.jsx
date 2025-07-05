@@ -127,7 +127,7 @@ const Breakfast = ({ isAdmin = false }) => {
           if (!showOrders) fetchOrders();
           setShowOrders(!showOrders);
         }}
-        className="mt-6 bg-green-600 text-white px-6 py-2 rounded mb-4 hover:bg-green-700 disabled:bg-gray-300"
+        className="mt-6 bg-green-600 custom-button px-6 py-2 rounded mb-4 hover:bg-green-700 disabled:bg-gray-300"
       >
         {showOrders ? "Hide Your Breakfast Orders" : "View Your Breakfast Orders"}
       </button>
@@ -192,7 +192,7 @@ const Breakfast = ({ isAdmin = false }) => {
         ))}
       </div>
 
-      <div className="mt-6">
+      <div className="mt-6 d-flex justify-content-evenly bg-dark">
         <label className="block mb-2 font-semibold">
           Select Delivery Time:
         </label>
@@ -208,16 +208,17 @@ const Breakfast = ({ isAdmin = false }) => {
             </option>
           ))}
         </select>
-      </div>
-
-      <button
+          <button
         onClick={handleSubmit}
         disabled={loading || Object.keys(selectedItems).length === 0}
-        className="mt-6 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:bg-gray-300"
+        className="mt-6 bg-blue-600 custom-button  px-6 py-2 rounded hover:bg-blue-700 disabled:bg-gray-300"
       >
         {loading ? "Submitting..." : "Submit Breakfast Order"}
       </button>
 
+      </div>
+
+    
       {submitted && (
         <div className="mt-4 text-green-600 font-semibold">
           Order submitted successfully!
