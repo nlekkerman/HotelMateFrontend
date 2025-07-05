@@ -8,13 +8,11 @@ const GuestEdit = () => {
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
-    email: "",
     room: "",
     days_booked: "",
     check_in_date: "",
     check_out_date: "",
     id_pin: "",
-    phone_number: "",
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -59,8 +57,7 @@ const GuestEdit = () => {
         {[
           ["First Name", "first_name"],
           ["Last Name", "last_name"],
-          ["Email", "email"],
-          ["Phone Number", "phone_number"],
+    
           ["Room ID", "room"],
           ["Days Booked", "days_booked"],
           ["Check-In Date", "check_in_date"],

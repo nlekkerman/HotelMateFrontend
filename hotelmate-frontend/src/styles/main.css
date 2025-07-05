@@ -115,10 +115,12 @@ body {
   padding-bottom: 10px;
 }
 .custom-button{
-  background-color: rgba(5, 0, 0, 0.6);
+  background-color: rgba(0, 79, 175, 0.8);
   border-color: aliceblue;
+  box-shadow: 2px 7px 15px rgba(0, 0, 0, 0.3);
   color: white;
-  border-radius: 15px;
+  border-radius: 5px;
+  
 }
 
 

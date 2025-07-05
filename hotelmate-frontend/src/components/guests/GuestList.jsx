@@ -141,16 +141,7 @@ const GuestList = () => {
                     </div>
                   </div>
 
-                  <div className="col-lg-2 mb-2 mb-lg-0 flex-grow-1">
-                    <div className="d-block d-lg-none">
-                      <strong>Phone:</strong> {g.phone_number || "—"}
-                    </div>
-                    <div className="d-none d-lg-block">
-                      <div className="fw-bold">Phone:</div>
-                      {g.phone_number || "—"}
-                    </div>
-                  </div>
-
+              
                   <div className="col-lg-1 mb-2 mb-lg-0 flex-grow-1">
                     <div className="d-block d-lg-none">
                       <strong>Check-In:</strong>{" "}

@@ -20,14 +20,7 @@ const DinnerBookingForm = () => {
   const [error, setError] = useState("");
 
   const timeSlots = [
-    "17:30",
-    "18:00",
-    "18:30",
-    "19:00",
-    "19:30",
-    "20:00",
-    "20:30",
-    "21:00",
+    "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00",
   ];
 
   const handleChange = (e) => {
@@ -42,42 +35,36 @@ const DinnerBookingForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      let formattedDate = "";
-      if (formData.date) {
-        const d = formData.date;
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, "0");
-        const dd = String(d.getDate()).padStart(2, "0");
-        formattedDate = `${y}-${m}-${dd}`;
-      }
+    setError("");
 
-      // Calculate total seats
+    try {
+      const d = formData.date;
+      const formattedDate = d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` : "";
+
       const totalSeats =
-        (Number(formData.adults) || 0) +
-        (Number(formData.children) || 0) +
-        (Number(formData.infants) || 0);
+        Number(formData.adults) + Number(formData.children) + Number(formData.infants);
+
+      const payload = {
+        date: formattedDate,
+        time: formData.time,
+        note: formData.note,
+        seats: {
+          adults: Number(formData.adults),
+          children: Number(formData.children),
+          infants: Number(formData.infants),
+          total: totalSeats,
+        },
+      };
 
       await api.post(
         `bookings/guest-booking/${hotelSlug}/restaurant/${restaurantSlug}/room/${roomNumber}/`,
-        {
-          date: formattedDate,
-          time: formData.time,
-          note: formData.note,
-          adults: Number(formData.adults) || 0,
-          children: Number(formData.children) || 0,
-          infants: Number(formData.infants) || 0,
-          seats: {
-            adults: Number(formData.adults) || 0,
-            children: Number(formData.children) || 0,
-            infants: Number(formData.infants) || 0,
-            total: totalSeats,
-          },
-        }
+        payload
       );
+
       setSubmitted(true);
     } catch (err) {
-      setError("Failed to submit booking. Please try again.");
+      const msg = err?.response?.data?.detail || "Failed to submit booking. Please try again.";
+      setError(msg);
     }
   };
 
@@ -91,11 +78,8 @@ const DinnerBookingForm = () => {
     );
   }
 
-  // Calculate total seats for display
   const totalSeats =
-    (Number(formData.adults) || 0) +
-    (Number(formData.children) || 0) +
-    (Number(formData.infants) || 0);
+    Number(formData.adults) + Number(formData.children) + Number(formData.infants);
 
   return (
     <div className="container mt-5">
@@ -105,9 +89,7 @@ const DinnerBookingForm = () => {
         </h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label htmlFor="date" className="form-label">
-              Date
-            </label>
+            <label className="form-label">Date</label>
             <DatePicker
               selected={formData.date}
               onChange={(date) => setFormData((prev) => ({ ...prev, date }))}
@@ -119,12 +101,9 @@ const DinnerBookingForm = () => {
           </div>
 
           <div className="mb-3">
-            <label htmlFor="time" className="form-label">
-              Time
-            </label>
+            <label className="form-label">Time</label>
             <select
               name="time"
-              id="time"
               value={formData.time}
               onChange={handleChange}
               required
@@ -132,79 +111,41 @@ const DinnerBookingForm = () => {
             >
               <option value="">Select time</option>
               {timeSlots.map((slot) => (
-                <option key={slot} value={slot}>
-                  {slot}
-                </option>
+                <option key={slot} value={slot}>{slot}</option>
               ))}
             </select>
           </div>
 
           <div className="mb-3">
-            <label htmlFor="note" className="form-label">
-              Note
-            </label>
+            <label className="form-label">Note</label>
             <textarea
               name="note"
-              id="note"
-              placeholder="Any special requests?"
               value={formData.note}
               onChange={handleChange}
               className="form-control"
               rows={2}
+              placeholder="Any special requests?"
             />
           </div>
 
           <div className="row mb-3">
+            {["adults", "children", "infants"].map((field) => (
+              <div className="col" key={field}>
+                <label className="form-label">{field.charAt(0).toUpperCase() + field.slice(1)}</label>
+                <input
+                  type="number"
+                  name={field}
+                  value={formData[field]}
+                  onChange={handleChange}
+                  className="form-control"
+                  min={0}
+                />
+              </div>
+            ))}
             <div className="col">
-              <label htmlFor="adults" className="form-label">
-                Adults
-              </label>
+              <label className="form-label">Total Seats</label>
               <input
                 type="number"
-                id="adults"
-                name="adults"
-                min={0}
-                value={formData.adults}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
-            <div className="col">
-              <label htmlFor="children" className="form-label">
-                Children
-              </label>
-              <input
-                type="number"
-                id="children"
-                name="children"
-                min={0}
-                value={formData.children}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
-            <div className="col">
-              <label htmlFor="infants" className="form-label">
-                Infants
-              </label>
-              <input
-                type="number"
-                id="infants"
-                name="infants"
-                min={0}
-                value={formData.infants}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
-            <div className="col">
-              <label htmlFor="seats" className="form-label">
-                Total Seats
-              </label>
-              <input
-                type="number"
-                id="seats"
-                name="seats"
                 value={totalSeats}
                 className="form-control"
                 readOnly

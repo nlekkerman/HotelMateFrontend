@@ -12,8 +12,6 @@ function AssignGuestForm() {
   const [hotelSlug, setHotelSlug] = useState('');
   const [formData, setFormData] = useState({
     full_name: '',
-    email: '',
-    phone_number: '',
     id_pin: '',
     check_in_date: null,
     check_out_date: null,
@@ -98,8 +96,6 @@ function AssignGuestForm() {
     const payload = {
       first_name,
       last_name,
-      email: formData.email,
-      phone_number: formData.phone_number,
       id_pin: formData.id_pin,
       check_in_date: formatDate(formData.check_in_date),
       check_out_date: formatDate(formData.check_out_date),
@@ -165,29 +161,7 @@ function AssignGuestForm() {
           {errors.full_name && <div className="invalid-feedback">{errors.full_name}</div>}
         </div>
 
-        <div className="mb-3">
-          <label className="form-label">Email</label>
-          <input
-            type="email"
-            className={`form-control ${errors.email ? 'is-invalid' : ''}`}
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-          />
-          {errors.email && <div className="invalid-feedback">{errors.email}</div>}
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Phone Number</label>
-          <input
-            type="text"
-            className={`form-control ${errors.phone_number ? 'is-invalid' : ''}`}
-            name="phone_number"
-            value={formData.phone_number}
-            onChange={handleChange}
-          />
-          {errors.phone_number && <div className="invalid-feedback">{errors.phone_number}</div>}
-        </div>
+       
 
         {/* Dates */}
         <div className="mb-3">

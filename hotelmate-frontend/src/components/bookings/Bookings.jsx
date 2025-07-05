@@ -1,17 +1,22 @@
 import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import api from "@/services/api";
-
-// ① Import the RestaurantBookings component
 import RestaurantBookings from "./RestaurantBookings";
 
 export default function Bookings() {
-  const [restaurants, setRestaurants] = useState([]);       // [{id, name}, …]
+  const { hotelSlug: qrHotelSlug, restaurantSlug: qrRestaurantSlug, roomNumber: qrRoomNumber } = useParams();
+
+  const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
 
-  // Helper to read hotel_slug and hotel_name from localStorage
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
+  const [roomNumber, setRoomNumber] = useState(qrRoomNumber || null);
+
+  // Fallback to localStorage for manual use
   const getHotelInfo = () => {
+    if (qrHotelSlug) return { slug: qrHotelSlug, name: null };
+
     const storedUser = localStorage.getItem("user");
     if (!storedUser) return { slug: null, name: null };
     try {
@@ -25,15 +30,15 @@ export default function Bookings() {
     }
   };
 
+  const { slug: hotelSlug, name: hotelName } = getHotelInfo();
+
   useEffect(() => {
-    const { slug: hotelSlug } = getHotelInfo();
     if (!hotelSlug) {
-      setError("No hotel_slug found in localStorage.");
+      setError("No hotel_slug found.");
       setLoading(false);
       return;
     }
 
-    // Fetch only this hotel’s restaurants
     api
       .get(`bookings/restaurants/?hotel_slug=${hotelSlug}`)
       .then((res) => {
@@ -44,26 +49,27 @@ export default function Bookings() {
           console.warn("Unexpected restaurants response:", data);
           data = [];
         }
+
         setRestaurants(data);
+
+        // Auto-select restaurant from QR route if available
+        if (qrRestaurantSlug) {
+          const found = data.find(r => r.slug === qrRestaurantSlug);
+          if (found) setSelectedRestaurantId(found.id);
+        }
+
         setLoading(false);
       })
       .catch((err) => {
         console.error("Failed to fetch restaurants:", err);
-        if (err.response) {
-          setError(`Error ${err.response.status}: ${err.response.statusText}`);
-        } else {
-          setError("Network error while fetching restaurants.");
-        }
+        setError("Failed to load restaurants.");
         setLoading(false);
       });
-  }, []);
+  }, [hotelSlug, qrRestaurantSlug]);
 
-  // Toggle selection: deselect if clicking same button
   const handleClick = (restId) => {
-    setSelectedRestaurantId((prev) => (prev === restId ? null : restId));
+    setSelectedRestaurantId(prev => (prev === restId ? null : restId));
   };
-
-  const { name: hotelName, slug: hotelSlug } = getHotelInfo();
 
   if (loading) return <p>Loading restaurants…</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
@@ -72,40 +78,40 @@ export default function Bookings() {
 
   return (
     <div style={{ padding: "16px" }}>
-      <h2>Bookings {hotelName}</h2>
+      <h2>Bookings {hotelName ? `@ ${hotelName}` : ""}</h2>
 
-      <div style={{ marginBottom: "16px" }}>
-        {/* One button per restaurant fetched */}
-        {restaurants.map((r) => (
-          <button
-            key={r.id}
-            onClick={() => handleClick(r.id)}
-            style={{
-              marginRight: "8px",
-              marginBottom: "8px",
-              padding: "8px 12px",
-              backgroundColor:
-                selectedRestaurantId === r.id ? "#007bff" : "#f0f0f0",
-              color: selectedRestaurantId === r.id ? "#fff" : "#000",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-          >
-            {r.name}
-          </button>
-        ))}
-      </div>
+      {/* Skip restaurant buttons if coming from QR */}
+      {!qrRestaurantSlug && (
+        <div style={{ marginBottom: "16px" }}>
+          {restaurants.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => handleClick(r.id)}
+              style={{
+                marginRight: "8px",
+                marginBottom: "8px",
+                padding: "8px 12px",
+                backgroundColor:
+                  selectedRestaurantId === r.id ? "#007bff" : "#f0f0f0",
+                color: selectedRestaurantId === r.id ? "#fff" : "#000",
+                border: "1px solid #ccc",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              {r.name}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {/* ② When a restaurant is selected, render RestaurantBookings below */}
       {selectedRestaurantId === null ? (
-        <p>
-          <em>Please select a restaurant to view its bookings.</em>
-        </p>
+        <p><em>Please select a restaurant to view or book.</em></p>
       ) : (
         <RestaurantBookings
           hotelSlug={hotelSlug}
           restaurantId={selectedRestaurantId}
+          roomNumber={roomNumber}
         />
       )}
     </div>
