@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "@/services/api";
+import DeletionModal from "@/components/modals/DeletionModal";
 
 const StockSettings = ({ stock, onToggleActive }) => {
   const [formData, setFormData] = useState({
@@ -12,6 +13,7 @@ const StockSettings = ({ stock, onToggleActive }) => {
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const [error, setError] = useState(null);
   const [itemList, setItemList] = useState([]);
   const [togglingItems, setTogglingItems] = useState(new Set());
@@ -20,6 +22,9 @@ const StockSettings = ({ stock, onToggleActive }) => {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+  // Delete modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
 
   const fetchItems = async () => {
     setSubmitting(true);
@@ -63,40 +68,69 @@ const StockSettings = ({ stock, onToggleActive }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setSubmitting(true);
+  setError(null);
+  const user = JSON.parse(localStorage.getItem("user")) || {};
+  const hotelSlug = user.hotel_slug;
+
+  const dataToSend = {
+    ...formData,
+    hotel: user.hotel_id, // ✅ always include this
+  };
+
+  try {
+    if (editingItem) {
+      await api.put(
+        `/stock_tracker/${hotelSlug}/items/${editingItem.id}/`,
+        dataToSend
+      );
+    } else {
+      await api.post(`/stock_tracker/${hotelSlug}/items/`, dataToSend);
+    }
+
+    setShowForm(false);
+    setEditingItem(null);
+    setPage(1);
+    fetchItems();
+  } catch (err) {
+    console.error(err);
+    setError("Failed to save item.");
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+  const handleEdit = (item) => {
+    setFormData({
+      name: item.name,
+      sku: item.sku,
+      quantity: item.quantity,
+      alert_quantity: item.alert_quantity,
+      volume_per_unit: item.volume_per_unit,
+      unit: item.unit,
+    });
+    setEditingItem(item);
+    setShowForm(true);
+  };
+
+  const confirmDelete = (id) => {
+    setDeleteTargetId(id);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    setShowDeleteModal(false);
+    const user = JSON.parse(localStorage.getItem("user")) || {};
+    const hotelSlug = user.hotel_slug;
 
     try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      const hotelSlug = user?.hotel_slug;
-      const hotelId = user?.hotel_id;
-
-      if (!hotelSlug || !hotelId) {
-        setError("Missing hotel information.");
-        setSubmitting(false);
-        return;
-      }
-
-      const response = await api.post(`/stock_tracker/${hotelSlug}/items/`, {
-        ...formData,
-        hotel: hotelId,
-      });
-
-      const createdItem = response.data;
-      if (!createdItem?.id) {
-        throw new Error("Item creation did not return an ID");
-      }
-
-      setFormData({ name: "", sku: "", quantity: 0, alert_quantity: 0 });
-      setPage(1); // Go back to first page to see new item
-      fetchItems(); // Refresh list
+      await api.delete(`/stock_tracker/${hotelSlug}/items/${deleteTargetId}/`);
+      setItemList((prev) => prev.filter((i) => i.id !== deleteTargetId));
     } catch (err) {
-      console.error("Add item failed:", err);
-      setError("Could not add stock item.");
-    } finally {
-      setSubmitting(false);
+      console.error(err);
+      setError("Failed to delete item.");
     }
   };
 
@@ -229,17 +263,38 @@ const StockSettings = ({ stock, onToggleActive }) => {
           </div>
 
           <div className="d-flex gap-2">
+          
+
             <button
-              type="submit"
-              className="btn btn-success"
-              disabled={submitting}
-            >
-              {submitting ? "Adding..." : "Add Stock Item"}
-            </button>
+  type="submit"
+  className="btn btn-success"
+  disabled={submitting}
+>
+  {submitting
+    ? editingItem
+      ? "Saving..."
+      : "Adding..."
+    : editingItem
+    ? "Save Changes"
+    : "Add Stock Item"}
+</button>
+
+            
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => setShowForm(false)}
+              onClick={() => {
+                setShowForm(false);
+                setEditingItem(null); // Reset edit state
+                setFormData({
+                  name: "",
+                  sku: "",
+                  quantity: 0,
+                  alert_quantity: 0,
+                  volume_per_unit: "",
+                  unit: "",
+                });
+              }}
             >
               Cancel
             </button>
@@ -250,7 +305,9 @@ const StockSettings = ({ stock, onToggleActive }) => {
       )}
 
       <div className="mt-6 p-0">
-        <h3 className="text-md font-medium text-white mb-2">Current Stock Items</h3>
+        <h3 className="text-md font-medium text-white mb-2">
+          Current Stock Items
+        </h3>
 
         {itemList.length === 0 ? (
           <p className="text-gray-500">No items yet.</p>
@@ -269,24 +326,44 @@ const StockSettings = ({ stock, onToggleActive }) => {
                     </span>{" "}
                   </span>
 
-                  <span className="text-dark  border p-1 rounded mt-2 mt-sm-0">
+                  <span className="text-dark border p-1 rounded mt-2 mt-sm-0">
                     <strong>{item.quantity}</strong> pcs
                   </span>
-                  <button
-                    disabled={togglingItems.has(item.id)}
-                    onClick={() => toggleItemActive(item)}
-                    className={`btn btn-sm ms-0 ms-sm-4 mt-2 mt-sm-0 ${
-                      item.active_stock_item
-                        ? "btn-success"
-                        : "btn-outline-secondary"
-                    }`}
-                  >
-                    {togglingItems.has(item.id)
-                      ? "Processing..."
-                      : item.active_stock_item
-                      ? "Deactivate"
-                      : "Activate"}
-                  </button>
+
+                  <div className="d-flex gap-2 mt-2 mt-sm-0">
+                   <button
+  className="btn btn-warning btn-sm"
+  onClick={() => handleEdit(item)} // ✅ Here, 'item' is defined in map()
+>
+  Edit
+</button>
+
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={() => {
+                        setDeleteTargetId(item.id);
+                        setShowDeleteModal(true);
+                      }}
+                    >
+                      Delete
+                    </button>
+
+                    <button
+                      disabled={togglingItems.has(item.id)}
+                      onClick={() => toggleItemActive(item)}
+                      className={`btn btn-sm ${
+                        item.active_stock_item
+                          ? "btn-success"
+                          : "btn-outline-secondary"
+                      }`}
+                    >
+                      {togglingItems.has(item.id)
+                        ? "Processing..."
+                        : item.active_stock_item
+                        ? "Deactivate"
+                        : "Activate"}
+                    </button>
+                  </div>
                 </li>
               ))}
             </ol>
@@ -313,6 +390,14 @@ const StockSettings = ({ stock, onToggleActive }) => {
           </>
         )}
       </div>
+      <DeletionModal
+        show={showDeleteModal}
+        title="Confirm Deletion"
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+      >
+        Are you sure you want to delete this item?
+      </DeletionModal>
     </div>
   );
 };

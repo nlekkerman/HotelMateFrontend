@@ -20,15 +20,25 @@ const DinnerBookingForm = () => {
   const [error, setError] = useState("");
 
   const timeSlots = [
-    "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00",
+    "17:30",
+    "18:00",
+    "18:30",
+    "19:00",
+    "19:30",
+    "20:00",
+    "20:30",
+    "21:00",
   ];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
     setFormData((prev) => ({
       ...prev,
       [name]: ["adults", "children", "infants"].includes(name)
-        ? Math.max(0, parseInt(value, 10) || 0)
+        ? value === ""
+          ? ""
+          : Math.max(0, parseInt(value, 10) || 0)
         : value,
     }));
   };
@@ -39,10 +49,17 @@ const DinnerBookingForm = () => {
 
     try {
       const d = formData.date;
-      const formattedDate = d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` : "";
+      const formattedDate = d
+        ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+            2,
+            "0"
+          )}-${String(d.getDate()).padStart(2, "0")}`
+        : "";
 
       const totalSeats =
-        Number(formData.adults) + Number(formData.children) + Number(formData.infants);
+        Number(formData.adults) +
+        Number(formData.children) +
+        Number(formData.infants);
 
       const payload = {
         date: formattedDate,
@@ -63,7 +80,9 @@ const DinnerBookingForm = () => {
 
       setSubmitted(true);
     } catch (err) {
-      const msg = err?.response?.data?.detail || "Failed to submit booking. Please try again.";
+      const msg =
+        err?.response?.data?.detail ||
+        "Failed to submit booking. Please try again.";
       setError(msg);
     }
   };
@@ -79,7 +98,9 @@ const DinnerBookingForm = () => {
   }
 
   const totalSeats =
-    Number(formData.adults) + Number(formData.children) + Number(formData.infants);
+    Number(formData.adults) +
+    Number(formData.children) +
+    Number(formData.infants);
 
   return (
     <div className="container mt-5">
@@ -111,7 +132,9 @@ const DinnerBookingForm = () => {
             >
               <option value="">Select time</option>
               {timeSlots.map((slot) => (
-                <option key={slot} value={slot}>{slot}</option>
+                <option key={slot} value={slot}>
+                  {slot}
+                </option>
               ))}
             </select>
           </div>
@@ -131,7 +154,9 @@ const DinnerBookingForm = () => {
           <div className="row mb-3">
             {["adults", "children", "infants"].map((field) => (
               <div className="col" key={field}>
-                <label className="form-label">{field.charAt(0).toUpperCase() + field.slice(1)}</label>
+                <label className="form-label">
+                  {field.charAt(0).toUpperCase() + field.slice(1)}
+                </label>
                 <input
                   type="number"
                   name={field}
