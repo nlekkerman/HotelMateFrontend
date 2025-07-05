@@ -21,6 +21,8 @@ import RegistrationSuccess from "@/components/auth/RegistrationSuccess";
 import ForgotPassword from "@/components/auth/ForgotPassword";
 import ResetPassword from "@/components/auth/ResetPassword";
 import RequirePin from "@/components/auth/RequirePin";
+import RequireDinnerPin from "@/components/auth/RequireDinnerPin";
+import DinnerPinAuth from "@/components/auth/DinnerPinAuth";
 import PinAuth from "@/components/auth/PinAuth";
 
 import Staff from "@/components/staff/Staff";
@@ -44,7 +46,7 @@ import NoInternet from "@/components/offline/NoInternet";
 import { ThemeProvider } from "@/context/ThemeContext"; // Import ThemeProvider
 import HotelInfo from "@/pages/hotel_info/HotelInfo";
 import GoodToKnow from "@/components/hotel_info/GoodToKnow";
-import GoodToKnowConsole from '@/components/hotel_info/GoodToKnowConsole';
+import GoodToKnowConsole from "@/components/hotel_info/GoodToKnowConsole";
 import RoomServiceOrders from "@/components/room_service/RoomServiceOrders";
 import BreakfastRoomService from "@/components/room_service/BreakfastRoomService";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -56,17 +58,26 @@ const queryClient = new QueryClient();
 function App() {
   const [collapsed, setCollapsed] = useState(false);
   const isMobile = useMediaQuery({ maxWidth: 991 });
+
+  const sidebar = !isMobile && (
+    <div className={`sidebar-wrapper ${collapsed ? "collapsed" : ""}`}>
+      <DesktopSidebarNavbar collapsed={collapsed} setCollapsed={setCollapsed} />
+    </div>
+  );
+
+  const layoutClass = `layout-container vw-100 ${collapsed ? "collapsed" : "expanded"} ${isMobile ? "mt-0" : ""}`;
+
   return (
     <QueryClientProvider client={queryClient}>
       <ToastContainer
         position="top-center"
-        autoClose={5000} // auto-dismiss after 5s
+        autoClose={5000}
         hideProgressBar={false}
         newestOnTop={true}
         closeOnClick
         pauseOnHover
         draggable
-        theme="colored" // gives you a nice colored style
+        theme="colored"
       />
       <UIProvider>
         <AuthProvider>
@@ -75,126 +86,70 @@ function App() {
               <NetworkHandler />
               {isMobile && <MobileNavbar />}
 
-              <div className="d-flex min-vh-100  min-vw-100 ">
-                {!isMobile && (
-                  <div
-                    className={`sidebar-wrapper ${
-                      collapsed ? "collapsed" : ""
-                    }`}
-                  >
-                    <DesktopSidebarNavbar
-                      collapsed={collapsed}
-                      setCollapsed={setCollapsed}
-                    />
-                  </div>
-                )}
-
-                <div
-                  className={`layout-container vw-100 ${
-                    collapsed ? "collapsed" : "expanded"
-                  } ${isMobile ? "mt-0" : ""}`}
-                >
+              <div className="d-flex min-vh-100 min-vw-100">
+                {sidebar}
+                <div className={layoutClass}>
                   <div className="main-content-area d-flex">
                     <Routes>
-                      
-                      <Route path="/good_to_know_console/:hotel_slug" element={<GoodToKnowConsole />} />
-                      <Route path="/good_to_know/:hotel_slug/:slug" element={<GoodToKnow />} />
-                      <Route path="/no-internet" element={<NoInternet />} />
+                      {/* General */}
                       <Route path="/" element={<Reception />} />
+                      <Route path="/no-internet" element={<NoInternet />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/register" element={<Register />} />
+                      <Route path="/registration-success" element={<RegistrationSuccess />} />
+                      <Route path="/forgot-password" element={<ForgotPassword />} />
+                      <Route path="/reset-password/:uid/:token/" element={<ResetPassword />} />
+
+                      {/* PIN Authentication */}
+                      <Route path="/:hotelIdentifier/room/:roomNumber/validate-pin" element={<PinAuth />} />
+                      <Route path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin" element={<DinnerPinAuth />} />
+
+                      {/* Guest Booking */}
+                      <Route path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/" element={<DinnerBookingList />} />
                       <Route
-                        path="/forgot-password"
-                        element={<ForgotPassword />}
+                        path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/"
+                        element={<RequireDinnerPin><DinnerBookingForm /></RequireDinnerPin>}
                       />
 
-                      <Route
-                        path="/reset-password/:uid/:token/"
-                        element={<ResetPassword />}
-                      />
-                      <Route
-                        path="/:hotelIdentifier/room/:roomNumber/validate-pin"
-                        element={<PinAuth />}
-                      />
+                      {/* Room Services */}
                       <Route path="/rooms" element={<RoomList />} />
+                      <Route path="/room_services/:hotelIdentifier/orders" element={<RoomServiceOrders />} />
+                      <Route path="/services/room-service" element={<RoomServiceOrders />} />
+                      <Route path="/services/breakfast" element={<BreakfastRoomService />} />
                       <Route
                         path="/room_services/:hotelIdentifier/room/:roomNumber/menu"
-                        element={
-                          <RequirePin>
-                            <RoomService />
-                          </RequirePin>
-                        }
-                      />
-                      <Route
-                        path="/room_services/:hotelIdentifier/orders"
-                        element={<RoomServiceOrders />}
-                      />
-                      <Route
-                        path="/services/room-service"
-                        element={<RoomServiceOrders />}
-                      />
-                      <Route
-                        path="/services/breakfast"
-                        element={<BreakfastRoomService />}
+                        element={<RequirePin><RoomService /></RequirePin>}
                       />
                       <Route
                         path="/room_services/:hotelIdentifier/room/:roomNumber/breakfast/"
-                        element={
-                          <RequirePin>
-                            <Breakfast />
-                          </RequirePin>
-                        }
+                        element={<RequirePin><Breakfast /></RequirePin>}
                       />
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/register" element={<Register />} />
-                      <Route
-                        path="/registration-success"
-                        element={<RegistrationSuccess />}
-                      />
+
+                      {/* Staff */}
                       <Route path="/staff" element={<Staff />} />
                       <Route path="/staff/create" element={<StaffCreate />} />
                       <Route path="/staff/:id" element={<StaffDetails />} />
                       <Route path="/staff/me" element={<StaffProfile />} />
-                      <Route
-                        path="/:hotelIdentifier/guests"
-                        element={<GuestList />}
-                      />
-                      <Route
-                        path="/rooms/:hotelIdentifier/rooms/:roomNumber"
-                        element={<RoomDetails />}
-                      />
-                      <Route
-                        path="/rooms/:roomNumber/add-guest"
-                        element={<AssignGuestForm />}
-                      />
-                      <Route
-                        path="/:hotelIdentifier/guests/:guestId/edit"
-                        element={<GuestEdit />}
-                      />
-                      <Route
-                        path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/"
-                        element={<DinnerBookingForm />}
-                      />
-                      <Route
-                        path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/"
-                        element={<DinnerBookingList />}
-                      />
+
+                      {/* Guests */}
+                      <Route path="/:hotelIdentifier/guests" element={<GuestList />} />
+                      <Route path="/:hotelIdentifier/guests/:guestId/edit" element={<GuestEdit />} />
+                      <Route path="/rooms/:hotelIdentifier/rooms/:roomNumber" element={<RoomDetails />} />
+                      <Route path="/rooms/:roomNumber/add-guest" element={<AssignGuestForm />} />
+
+                      {/* Utilities */}
                       <Route path="/bookings" element={<Bookings />} />
                       <Route path="/settings" element={<Settings />} />
-                      <Route
-                        path="/hotel_info/:hotel_slug"
-                        element={<HotelInfo />}
-                      />
-                      <Route
-                        path="/hotel_info/:hotel_slug/:category"
-                        element={<HotelInfo />}
-                      />
-                      <Route
-                        path="/stock_tracker/:hotel_slug/:category_slug"
-                        element={<CategoryStock />}
-                      />
-                      <Route
-                        path="/stock_tracker/:hotel_slug"
-                        element={<StockDashboard />}
-                      />
+
+                      {/* Hotel Info */}
+                      <Route path="/hotel_info/:hotel_slug" element={<HotelInfo />} />
+                      <Route path="/hotel_info/:hotel_slug/:category" element={<HotelInfo />} />
+                      <Route path="/good_to_know/:hotel_slug/:slug" element={<GoodToKnow />} />
+                      <Route path="/good_to_know_console/:hotel_slug" element={<GoodToKnowConsole />} />
+
+                      {/* Stock Tracker */}
+                      <Route path="/stock_tracker/:hotel_slug" element={<StockDashboard />} />
+                      <Route path="/stock_tracker/:hotel_slug/:category_slug" element={<CategoryStock />} />
                     </Routes>
                   </div>
                 </div>
@@ -206,5 +161,6 @@ function App() {
     </QueryClientProvider>
   );
 }
+
 
 export default App;

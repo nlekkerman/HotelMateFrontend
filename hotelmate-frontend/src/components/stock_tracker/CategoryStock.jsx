@@ -29,67 +29,67 @@ export default function CategoryStock() {
 
   const prettyCategory = category_slug
     .split("-")
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
   const prettyHotel = hotel_slug
     .split("-")
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 
   useEffect(() => {
     if (!user) return;
-    api.get("/staff/me/").then(res => setStaffProfile(res.data));
+    api.get("/staff/me/").then((res) => setStaffProfile(res.data));
   }, [user]);
 
-useEffect(() => {
-  const endpoint = `stock_tracker/${hotel_slug}/stocks/?category__slug=${category_slug}`;
-  console.log("➡️ Fetching stock from:", endpoint);
-  api.get(endpoint)
-    .then(res => {
-      const results = res.data.results;
-      console.log("✅ Stock API response:", results);
+  useEffect(() => {
+    const endpoint = `stock_tracker/${hotel_slug}/stocks/?category__slug=${category_slug}`;
+    console.log("➡️ Fetching stock from:", endpoint);
+    api
+      .get(endpoint)
+      .then((res) => {
+        const results = res.data.results;
+        console.log("✅ Stock API response:", results);
 
-      if (!results || results.length === 0) {
-        console.warn("⚠️ No stocks returned.");
-        return;
-      }
-
-      setStock(results[0]);
-
-      const grouped = {};
-      results.forEach(stock => {
-        if (!stock.inventory_lines || stock.inventory_lines.length === 0) {
-          console.warn(`⚠️ Stock ${stock.id} has no inventory lines.`);
+        if (!results || results.length === 0) {
+          console.warn("⚠️ No stocks returned.");
           return;
         }
 
-        stock.inventory_lines.forEach(line => {
-          const type = line.item?.type || "Uncategorized";
-          if (!grouped[type]) grouped[type] = [];
-          grouped[type].push({
-            id: line.item.id,
-            name: line.item.name,
-            qty: line.quantity,
-            active: line.item.active_stock_item,
-            volume_per_unit: line.item.volume_per_unit,
-            unit: line.item.unit,
+        setStock(results[0]);
+
+        const grouped = {};
+        results.forEach((stock) => {
+          if (!stock.inventory_lines || stock.inventory_lines.length === 0) {
+            console.warn(`⚠️ Stock ${stock.id} has no inventory lines.`);
+            return;
+          }
+
+          stock.inventory_lines.forEach((line) => {
+            const type = line.item?.type || "Uncategorized";
+            if (!grouped[type]) grouped[type] = [];
+            grouped[type].push({
+              id: line.item.id,
+              name: line.item.name,
+              qty: line.quantity,
+              active: line.item.active_stock_item,
+              volume_per_unit: line.item.volume_per_unit,
+              unit: line.item.unit,
+            });
           });
         });
-      });
 
-      console.log("📦 Grouped items by type:", grouped);
-      setGroupedItems(grouped);
-    })
-    .catch(err => {
-      console.error("❌ Error fetching stock data:", err);
-      setError(err.response?.data || err.message);
-    })
-    .finally(() => setLoading(false));
-}, [hotel_slug, category_slug]);
-
+        console.log("📦 Grouped items by type:", grouped);
+        setGroupedItems(grouped);
+      })
+      .catch((err) => {
+        console.error("❌ Error fetching stock data:", err);
+        setError(err.response?.data || err.message);
+      })
+      .finally(() => setLoading(false));
+  }, [hotel_slug, category_slug]);
 
   const toggleExpand = (type) => {
-    setExpandedTypes(prev => ({ ...prev, [type]: !prev[type] }));
+    setExpandedTypes((prev) => ({ ...prev, [type]: !prev[type] }));
   };
 
   const handleAddTransaction = (item) => {
@@ -100,10 +100,11 @@ useEffect(() => {
   };
 
   const handleCompleteStockAction = () => {
-    api.post(`/stock_tracker/${hotel_slug}/movements/bulk/`, { transactions })
+    api
+      .post(`/stock_tracker/${hotel_slug}/movements/bulk/`, { transactions })
       .then(() => {
         setTransactions([]);
-        setRefreshLowStock(v => v + 1);
+        setRefreshLowStock((v) => v + 1);
       });
   };
 
@@ -140,21 +141,23 @@ useEffect(() => {
           </button>
         </div>
       )}
-<div className="mb-4">
-  <input
-    type="text"
-    className="form-control form-control-lg"
-    placeholder="Search item by name..."
-    value={searchTerm}
-    onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
-  />
-</div>
-      {showSettings && (
-        <StockSettings
-          stock={stock}
-          hotelSlug={hotel_slug}
-          categorySlug={category_slug}
+      <div className="mb-4">
+        <input
+          type="text"
+          className="form-control form-control-lg"
+          placeholder="Search item by name..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
         />
+      </div>
+      {showSettings && (
+        <React.Suspense fallback={<div>Loading settings…</div>}>
+          <StockSettings
+            stock={stock}
+            hotelSlug={hotel_slug}
+            categorySlug={category_slug}
+          />
+        </React.Suspense>
       )}
 
       {showMovements && (
@@ -172,105 +175,107 @@ useEffect(() => {
       <div className="mb-3">
         <label className="form-label text-white">Select action type:</label>
         <div className="d-flex gap-2 justify-content-center">
-  <button
-    className={`btn btn-lg ${
-      direction === "in" ? "btn-danger" : "btn-outline-light border-danger text-danger"
-    }`}
-    onClick={() => setDirection("in")}
-  >
-    Stock In
-  </button>
-  <button
-    className={`btn btn-lg ${
-      direction === "out" ? "btn-danger" : "btn-outline-light border-danger text-danger"
-    }`}
-    onClick={() => setDirection("out")}
-  >
-    Stock Out
-  </button>
-</div>
-
+          <button
+            className={`btn btn-lg ${
+              direction === "in"
+                ? "btn-danger"
+                : "btn-outline-light border-danger text-danger"
+            }`}
+            onClick={() => setDirection("in")}
+          >
+            Stock In
+          </button>
+          <button
+            className={`btn btn-lg ${
+              direction === "out"
+                ? "btn-danger"
+                : "btn-outline-light border-danger text-danger"
+            }`}
+            onClick={() => setDirection("out")}
+          >
+            Stock Out
+          </button>
+        </div>
       </div>
 
       {Object.entries(groupedItems).map(([type, items]) => {
-  const filteredItems = items.filter(item =>
-    item.name.toLowerCase().includes(searchTerm)
-  );
+        const filteredItems = items.filter((item) =>
+          item.name.toLowerCase().includes(searchTerm)
+        );
 
-  // Show only types with matches during search
-  const shouldShow = searchTerm ? filteredItems.length > 0 : true;
-  if (!shouldShow) return null;
+        // Show only types with matches during search
+        const shouldShow = searchTerm ? filteredItems.length > 0 : true;
+        if (!shouldShow) return null;
 
-  const isExpanded = searchTerm
-    ? true // auto-expand on search
-    : !!expandedTypes[type];
+        const isExpanded = searchTerm
+          ? true // auto-expand on search
+          : !!expandedTypes[type];
 
-  return (
-    <div key={type} className="mb-3">
-      <button
-        className="btn btn-outline-light w-100 text-start mb-1"
-        onClick={() => toggleExpand(type)}
-      >
-        <strong className="text-dark">{type}</strong>
-      </button>
-      {isExpanded && (
-        <ul className="list-group">
-          {filteredItems.map((item) => (
-            <li
-              key={item.id}
-              className="list-group-item d-flex justify-content-between align-items-center"
+        return (
+          <div key={type} className="mb-3">
+            <button
+              className="btn btn-outline-light w-100 text-start mb-1"
+              onClick={() => toggleExpand(type)}
             >
-              <div className="d-flex justify-content-between w-100 gap-3">
-                <span
-                  className={`fw-bold ${
-                    item.active
-                      ? "text-primary"
-                      : "text-muted text-decoration-line-through"
-                  }`}
-                >
-                  {item.name}
-                  {item.volume_per_unit && item.unit && (
-                    <small className="text-muted ms-2">
-                      ({item.volume_per_unit} {item.unit})
-                    </small>
-                  )}
-                </span>
-                <span
-                  className={`badge rounded-pill d-flex justify-content-center align-items-center ${
-                    item.qty >= 0 ? "bg-success" : "bg-danger"
-                  }`}
-                >
-                  {item.qty} pcs
-                </span>
-              </div>
-              <div className="d-flex align-items-center gap-2">
-                <input
-                  type="number"
-                  className="form-control form-control-sm bg-white"
-                  value={quantities[item.id] || ""}
-                  onChange={(e) =>
-                    setQuantities({
-                      ...quantities,
-                      [item.id]: e.target.value,
-                    })
-                  }
-                />
-                <button
-                  className="btn btn-sm btn-primary"
-                  onClick={() => handleAddTransaction(item)}
-                  disabled={!item.active}
-                >
-                  Add
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-})}
-
+              <strong className="text-dark">{type}</strong>
+            </button>
+            {isExpanded && (
+              <ul className="list-group">
+                {filteredItems.map((item) => (
+                  <li
+                    key={item.id}
+                    className="list-group-item d-flex justify-content-between align-items-center"
+                  >
+                    <div className="d-flex justify-content-between w-100 gap-3">
+                      <span
+                        className={`fw-bold ${
+                          item.active
+                            ? "text-primary"
+                            : "text-muted text-decoration-line-through"
+                        }`}
+                      >
+                        {item.name}
+                        {item.volume_per_unit && item.unit && (
+                          <small className="text-muted ms-2">
+                            ({item.volume_per_unit} {item.unit})
+                          </small>
+                        )}
+                      </span>
+                      <span
+                        className={`badge rounded-pill d-flex justify-content-center align-items-center ${
+                          item.qty >= 0 ? "bg-success" : "bg-danger"
+                        }`}
+                      >
+                        {item.qty} pcs
+                      </span>
+                    </div>
+                    <div className="d-flex align-items-center gap-2">
+                      <input
+                        type="number"
+                        className="form-control form-control-sm bg-white"
+                        value={quantities[item.id] || ""}
+                        onChange={(e) =>
+                          setQuantities({
+                            ...quantities,
+                            [item.id]: e.target.value,
+                          })
+                        }
+                      />
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={() => handleAddTransaction(item)}
+                        disabled={!item.active}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
 
       {transactions.length > 0 && (
         <>
@@ -282,7 +287,10 @@ useEffect(() => {
               </li>
             ))}
           </ul>
-          <button className="btn btn-success" onClick={handleCompleteStockAction}>
+          <button
+            className="btn btn-success"
+            onClick={handleCompleteStockAction}
+          >
             Complete Stock Action
           </button>
         </>
