@@ -51,7 +51,7 @@ const renderRow = (booking) => {
 
   const { adults = 0, children = 0, infants = 0 } = booking.seats || {};
   const name =
-  booking.guest?.full_name ||
+  booking.guest?.full_name || 
   booking.room?.guests_in_room?.[0]?.full_name ||
   booking.restaurant?.name ||
   "—";

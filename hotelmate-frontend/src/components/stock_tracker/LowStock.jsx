@@ -14,19 +14,22 @@ export default function LowStock({ hotelSlug, refresh }) {
       .finally(() => setLoading(false));
   }, [hotelSlug, refresh]);
 
-  if (loading) return <p>Loading low stock items…</p>;
+  if (loading) return null; // Optional: or return a loader
+  if (lowStockItems.length === 0) return null; // Hides component if no low stock
 
   return (
-    <div className="mb-4 ">
+    <div className="mb-4">
       <h4 className="bg-warning">Low Stock Items</h4>
       <ul className="list-group">
-        {lowStockItems.length === 0 && (
-          <li className="list-group-item">All good, no low stock!</li>
-        )}
         {lowStockItems.map((item) => (
-          <li key={item.id} className="list-group-item d-flex justify-content-between  alpha-5 text-danger">
+          <li
+            key={item.id}
+            className="list-group-item d-flex justify-content-between alpha-5 text-danger"
+          >
             <span>{item.name}</span>
-            <span className="p-1 rounded text-bold bg-white text-dark">{item.quantity}</span>
+            <span className="p-1 rounded text-bold bg-white text-dark">
+              {item.quantity}
+            </span>
           </li>
         ))}
       </ul>
