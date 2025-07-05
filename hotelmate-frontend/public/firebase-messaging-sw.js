@@ -32,21 +32,24 @@ self.addEventListener('push', event => {
     return;
   }
 
-  if (
-    payload.notification &&
-    ['room_service', 'stock_movement'].includes(payload.data?.type)
-  ) {
-    const { title, body } = payload.notification;
-    console.log(`[SW] Showing ${payload.data.type} notification:`, title, body);
+  const data = payload.data || {};
+  const title = data.title || "HotelMate";
+  const body = data.body || "New notification";
+  const type = data.type;
+
+  if (['room_service', 'stock_movement'].includes(type)) {
+    console.log(`[SW] Showing ${type} notification:`, title, body);
 
     event.waitUntil(
       self.registration.showNotification(title, {
         body,
-        icon: '/notifications-icon.png'
+        icon: '/notifications-icon.png',
+        data: data // optional: for click handling
       })
     );
   } else {
-    console.log("[SW] Ignored unknown notification type:", payload.data?.type);
+    console.log("[SW] Ignored unknown notification type:", type);
   }
 });
+
 
