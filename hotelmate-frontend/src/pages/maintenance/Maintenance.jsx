@@ -12,11 +12,15 @@ export default function Maintenance() {
     images: [],
   });
   const [previews, setPreviews] = useState([]);
+const [commentByRequest, setCommentByRequest] = useState({});
+
 
   const fetchRequests = async () => {
     try {
       const res = await api.get("/maintenance/requests/");
       const data = Array.isArray(res.data) ? res.data : res.data.results || [];
+            console.log("Processed request array:", data);
+
       setRequests(data);
     } catch (err) {
       console.error("Fetch error:", err);
@@ -29,7 +33,18 @@ export default function Maintenance() {
   useEffect(() => {
     fetchRequests();
   }, []);
+ const handleCommentChange = (reqId, text) => {
+    setCommentByRequest(prev => ({ ...prev, [reqId]: text }));
+  };
 
+  const submitComment = async (reqId) => {
+    const text = (commentByRequest[reqId] || "").trim();
+    if (!text) return;
+
+    await api.post("/maintenance/comments/", { request: reqId, message: text });
+    setCommentByRequest(prev => ({ ...prev, [reqId]: "" }));
+    fetchRequests();
+  };
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -171,48 +186,87 @@ export default function Maintenance() {
       ) : (
         <ul className="list-group">
           {requests.map((r) => (
-            <li key={r.id} className="list-group-item">
-              <div className="d-flex justify-content-between">
-                <div>
-                  <strong>{r.title}</strong>{" "}
-                  <em className="ms-2">({r.status})</em>
-                  <p className="mb-0">{r.description}</p>
-                  {r.photos?.length > 0 && (
-                    <div className="mt-2">
-                      {r.photos.map((photo) => (
-                        <img
-                          key={photo.id}
-                          src={photo.image}
-                          alt="Maintenance"
-                          style={{
-                            maxWidth: "100px",
-                            marginRight: "10px",
-                            borderRadius: "4px",
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  <select
-                    className="form-select form-select-sm mt-2"
-                    value={r.status}
-                    onChange={(e) => handleStatusChange(r.id, e.target.value)}
-                  >
-                    <option value="open">Open</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="resolved">Resolved</option>
-                    <option value="closed">Closed</option>
-                  </select>
-                </div>
-                <button
-                  className="btn btn-sm btn-danger ms-2"
-                  onClick={() => handleDelete(r.id)}
-                >
-                  Delete
-                </button>
+  <li key={r.id} className="list-group-item">
+    <div className="d-flex justify-content-between">
+      <div>
+        <strong>{r.title}</strong>{" "}
+        <em className="ms-2">({r.status})</em>
+        {r.accepted_by && (
+          <p className="mb-0">
+            <strong>Accepted by:</strong>{" "}
+            {r.accepted_by.first_name} {r.accepted_by.last_name}
+          </p>
+        )}
+        <p className="mb-0">{r.description}</p>
+        {r.photos?.length > 0 && (
+          <div className="mt-2">
+            {r.photos.map((photo) => (
+              <img
+                key={photo.id}
+                src={photo.image}
+                alt="Maintenance"
+                style={{
+                  maxWidth: "100px",
+                  marginRight: "10px",
+                  borderRadius: "4px",
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Status dropdown */}
+        <select
+          className="form-select form-select-sm mt-2"
+          value={r.status}
+          onChange={(e) => handleStatusChange(r.id, e.target.value)}
+        >
+          <option value="open">Open</option>
+          <option value="in_progress">In Progress</option>
+          <option value="resolved">Resolved</option>
+          <option value="closed">Closed</option>
+        </select>
+
+        {/* Comments */}
+        <div className="mt-3">
+          <strong>Comments:</strong>
+          {r.comments.length > 0 ? (
+            r.comments.map((c) => (
+              <div key={c.id}>
+<em>{c.staff?.first_name} {c.staff?.last_name}:</em> {c.message}
               </div>
-            </li>
-          ))}
+            ))
+          ) : (
+            <div>No comments yet</div>
+          )}
+          <div className="input-group mt-2">
+            <input
+              type="text"
+              value={commentByRequest[r.id] || ""}
+              onChange={(e) => handleCommentChange(r.id, e.target.value)}
+              className="form-control"
+              placeholder="Add a comment..."
+            />
+            <button
+              className="btn btn-primary"
+              onClick={() => submitComment(r.id)}
+            >
+              Submit
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <button
+        className="btn btn-sm btn-danger ms-2"
+        onClick={() => handleDelete(r.id)}
+      >
+        Delete
+      </button>
+    </div>
+  </li>
+))}
+
         </ul>
       )}
     </div>
