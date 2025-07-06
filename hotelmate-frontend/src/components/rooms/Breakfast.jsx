@@ -192,10 +192,8 @@ const Breakfast = ({ isAdmin = false }) => {
         ))}
       </div>
 
-      <div className="mt-6 d-flex justify-content-evenly bg-dark">
-        <label className="block mb-2 font-semibold">
-          Select Delivery Time:
-        </label>
+      <div className="mt-6 d-flex justify-content-evenly">
+        
         <select
           value={timeSlot}
           onChange={(e) => setTimeSlot(e.target.value)}

@@ -45,25 +45,37 @@ export default function RoomService({ isAdmin }) {
 
     // Fetch previous orders (hotel-scoped)
     api
-      .get(`/room_services/${hotelIdentifier}/orders/`, {
-        params: { room_number: roomNumber },
+      .get(`/room_services/orders/room-history`, {
+        params: { hotel_slug: hotelIdentifier, room_number: roomNumber },
       })
+
       .then((res) => {
         let data = res.data;
-        // If paginated:
+
         if (data && Array.isArray(data.results)) {
           data = data.results;
         }
-        // Otherwise if it's an object keyed by "orders" or similar, adjust here
+
         if (!Array.isArray(data)) {
           console.warn("Unexpected previousOrders response:", data);
           data = [];
         }
-        setPreviousOrders(data);
+
+        const filtered = data.filter(
+          (ord) => String(ord.room_number) === String(roomNumber)
+        );
+
+        setPreviousOrders(filtered);
+
+        // Latest active (non-completed)
+        const latestForRoom = filtered.find(
+          (ord) => ord.status !== "completed"
+        );
+        setCurrentOrder(latestForRoom || null);
       })
       .catch((err) => {
         console.error(err);
-        setPreviousOrders([]); // fallback
+        setPreviousOrders([]);
       });
   }, [roomNumber, hotelIdentifier]);
 
@@ -86,42 +98,41 @@ export default function RoomService({ isAdmin }) {
   };
 
   const handlePlaceOrder = async () => {
-  setSubmitting(true);
-  setSubmitError(null);
+    setSubmitting(true);
+    setSubmitError(null);
 
-  const payload = {
-    room_number: Number(roomNumber),
-    items: Object.entries(orderItems).map(([itemId, qty]) => ({
-      item_id: Number(itemId),
-      quantity: qty,
-    })),
+    const payload = {
+      room_number: Number(roomNumber),
+      items: Object.entries(orderItems).map(([itemId, qty]) => ({
+        item_id: Number(itemId),
+        quantity: qty,
+      })),
+    };
+
+    try {
+      setHotelIdentifier(hotelIdentifier);
+
+      // POST to hotel-scoped orders endpoint
+      const orderResp = await api.post(
+        `/room_services/${hotelIdentifier}/orders/`,
+        payload
+      );
+
+      // 1) Update local state
+      setCurrentOrder(orderResp.data);
+      setOrderItems({});
+      setShowOrderPanel(false);
+      toast.success("Order submitted successfully!");
+      setPreviousOrders((prev) => [orderResp.data, ...prev]);
+
+      // 2) Refresh the navbar badge count
+      refreshCount();
+    } catch (err) {
+      setSubmitError(err.response?.data || err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
-
-  try {
-    setHotelIdentifier(hotelIdentifier);
-
-    // POST to hotel-scoped orders endpoint
-    const orderResp = await api.post(
-      `/room_services/${hotelIdentifier}/orders/`,
-      payload
-    );
-
-    // 1) Update local state
-    setCurrentOrder(orderResp.data);
-    setOrderItems({});
-    setShowOrderPanel(false);
-    toast.success("Order submitted successfully!");
-    setPreviousOrders(prev => [orderResp.data, ...prev]);
-
-    // 2) Refresh the navbar badge count
-    refreshCount();
-  } catch (err) {
-    setSubmitError(err.response?.data || err.message);
-  } finally {
-    setSubmitting(false);
-  }
-};
-
 
   if (loading) return <div className="text-center mt-4">Loading…</div>;
 
@@ -156,6 +167,28 @@ export default function RoomService({ isAdmin }) {
   return (
     <div className="container my-4">
       <h2>Room Service — Room {roomNumber}</h2>
+      {currentOrder && (
+        <div className="alert alert-warning d-flex align-items-center justify-content-between shadow-sm border border-dark">
+          <div>
+            <h5 className="mb-1">Current Order Status</h5>
+            <p className="mb-0">
+              Order <strong>#{currentOrder.id}</strong> is currently{" "}
+              <span
+                className={`badge px-3 py-2 fs-6 ${
+                  currentOrder.status === "pending"
+                    ? "bg-warning text-dark"
+                    : currentOrder.status === "accepted"
+                    ? "bg-primary"
+                    : "bg-success"
+                }`}
+              >
+                {currentOrder.status.toUpperCase()}
+              </span>
+            </p>
+          </div>
+          <i className="bi bi-info-circle fs-4 text-dark ms-3" />
+        </div>
+      )}
 
       {/* Menu grid */}
       <div className="row">
@@ -209,7 +242,7 @@ export default function RoomService({ isAdmin }) {
       {/* Floating Cart Button */}
       <button
         className={`btn position-fixed bottom-0 end-0 m-5 rounded-circle p-3 ${
-          showOrderPanel ? 'bg-warning text-dark' : 'bg-danger text-white'
+          showOrderPanel ? "bg-warning text-dark" : "bg-danger text-white"
         }`}
         onClick={() => setShowOrderPanel((p) => !p)}
       >
