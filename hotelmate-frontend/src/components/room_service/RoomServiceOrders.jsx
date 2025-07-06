@@ -7,12 +7,11 @@ import { useTheme } from "@/context/ThemeContext";
 export default function RoomServiceOrders() {
   const { user } = useAuth();
   const hotelSlug = user?.hotel_slug;
-  const { refresh: refreshCount } = useOrderCount(hotelSlug);
+const { refreshAll: refreshCount } = useOrderCount(hotelSlug);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { mainColor } = useTheme();
-
   useEffect(() => {
     if (!hotelSlug) {
       setError("No hotel identifier found.");
