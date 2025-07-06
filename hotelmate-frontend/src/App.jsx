@@ -49,9 +49,10 @@ import GoodToKnow from "@/components/hotel_info/GoodToKnow";
 import GoodToKnowConsole from "@/components/hotel_info/GoodToKnowConsole";
 import RoomServiceOrders from "@/components/room_service/RoomServiceOrders";
 import BreakfastRoomService from "@/components/room_service/BreakfastRoomService";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-// ✅ Add this import:
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Maintenance from "@/pages/maintenance/Maintenance";
 
 const queryClient = new QueryClient();
 
@@ -65,7 +66,9 @@ function App() {
     </div>
   );
 
-  const layoutClass = `layout-container vw-100 ${collapsed ? "collapsed" : "expanded"} ${isMobile ? "mt-0" : ""}`;
+  const layoutClass = `layout-container vw-100 ${
+    collapsed ? "collapsed" : "expanded"
+  } ${isMobile ? "mt-0" : ""}`;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -93,36 +96,77 @@ function App() {
                     <Routes>
                       {/* General */}
                       <Route path="/" element={<Reception />} />
+
                       <Route path="/no-internet" element={<NoInternet />} />
                       <Route path="/login" element={<Login />} />
                       <Route path="/register" element={<Register />} />
-                      <Route path="/registration-success" element={<RegistrationSuccess />} />
-                      <Route path="/forgot-password" element={<ForgotPassword />} />
-                      <Route path="/reset-password/:uid/:token/" element={<ResetPassword />} />
-
-                      {/* PIN Authentication */}
-                      <Route path="/:hotelIdentifier/room/:roomNumber/validate-pin" element={<PinAuth />} />
-                      <Route path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin" element={<DinnerPinAuth />} />
-
-                      {/* Guest Booking */}
-                      <Route path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/" element={<DinnerBookingList />} />
                       <Route
-                        path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/"
-                        element={<RequireDinnerPin><DinnerBookingForm /></RequireDinnerPin>}
+                        path="/registration-success"
+                        element={<RegistrationSuccess />}
+                      />
+                      <Route
+                        path="/forgot-password"
+                        element={<ForgotPassword />}
+                      />
+                      <Route
+                        path="/reset-password/:uid/:token/"
+                        element={<ResetPassword />}
                       />
 
+                      {/* PIN Authentication */}
+                      <Route
+                        path="/:hotelIdentifier/room/:roomNumber/validate-pin"
+                        element={<PinAuth />}
+                      />
+                      <Route
+                        path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin"
+                        element={<DinnerPinAuth />}
+                      />
+
+                      {/* Guest Booking */}
+                      <Route
+                        path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/"
+                        element={<DinnerBookingList />}
+                      />
+                      <Route
+                        path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/"
+                        element={
+                          <RequireDinnerPin>
+                            <DinnerBookingForm />
+                          </RequireDinnerPin>
+                        }
+                      />
+                      {/* Maintenance */}
+                      <Route path="/maintenance" element={<Maintenance />} />
                       {/* Room Services */}
                       <Route path="/rooms" element={<RoomList />} />
-                      <Route path="/room_services/:hotelIdentifier/orders" element={<RoomServiceOrders />} />
-                      <Route path="/services/room-service" element={<RoomServiceOrders />} />
-                      <Route path="/services/breakfast" element={<BreakfastRoomService />} />
+                      <Route
+                        path="/room_services/:hotelIdentifier/orders"
+                        element={<RoomServiceOrders />}
+                      />
+                      <Route
+                        path="/services/room-service"
+                        element={<RoomServiceOrders />}
+                      />
+                      <Route
+                        path="/services/breakfast"
+                        element={<BreakfastRoomService />}
+                      />
                       <Route
                         path="/room_services/:hotelIdentifier/room/:roomNumber/menu"
-                        element={<RequirePin><RoomService /></RequirePin>}
+                        element={
+                          <RequirePin>
+                            <RoomService />
+                          </RequirePin>
+                        }
                       />
                       <Route
                         path="/room_services/:hotelIdentifier/room/:roomNumber/breakfast/"
-                        element={<RequirePin><Breakfast /></RequirePin>}
+                        element={
+                          <RequirePin>
+                            <Breakfast />
+                          </RequirePin>
+                        }
                       />
 
                       {/* Staff */}
@@ -132,24 +176,54 @@ function App() {
                       <Route path="/staff/me" element={<StaffProfile />} />
 
                       {/* Guests */}
-                      <Route path="/:hotelIdentifier/guests" element={<GuestList />} />
-                      <Route path="/:hotelIdentifier/guests/:guestId/edit" element={<GuestEdit />} />
-                      <Route path="/rooms/:hotelIdentifier/rooms/:roomNumber" element={<RoomDetails />} />
-                      <Route path="/rooms/:roomNumber/add-guest" element={<AssignGuestForm />} />
+                      <Route
+                        path="/:hotelIdentifier/guests"
+                        element={<GuestList />}
+                      />
+                      <Route
+                        path="/:hotelIdentifier/guests/:guestId/edit"
+                        element={<GuestEdit />}
+                      />
+                      <Route
+                        path="/rooms/:hotelIdentifier/rooms/:roomNumber"
+                        element={<RoomDetails />}
+                      />
+                      <Route
+                        path="/rooms/:roomNumber/add-guest"
+                        element={<AssignGuestForm />}
+                      />
 
                       {/* Utilities */}
                       <Route path="/bookings" element={<Bookings />} />
                       <Route path="/settings" element={<Settings />} />
 
                       {/* Hotel Info */}
-                      <Route path="/hotel_info/:hotel_slug" element={<HotelInfo />} />
-                      <Route path="/hotel_info/:hotel_slug/:category" element={<HotelInfo />} />
-                      <Route path="/good_to_know/:hotel_slug/:slug" element={<GoodToKnow />} />
-                      <Route path="/good_to_know_console/:hotel_slug" element={<GoodToKnowConsole />} />
+                      <Route
+                        path="/hotel_info/:hotel_slug"
+                        element={<HotelInfo />}
+                      />
+                      <Route
+                        path="/hotel_info/:hotel_slug/:category"
+                        element={<HotelInfo />}
+                      />
+                      <Route
+                        path="/good_to_know/:hotel_slug/:slug"
+                        element={<GoodToKnow />}
+                      />
+                      <Route
+                        path="/good_to_know_console/:hotel_slug"
+                        element={<GoodToKnowConsole />}
+                      />
 
                       {/* Stock Tracker */}
-                      <Route path="/stock_tracker/:hotel_slug" element={<StockDashboard />} />
-                      <Route path="/stock_tracker/:hotel_slug/:category_slug" element={<CategoryStock />} />
+                      <Route
+                        path="/stock_tracker/:hotel_slug"
+                        element={<StockDashboard />}
+                      />
+                      <Route
+                        path="/stock_tracker/:hotel_slug/:category_slug"
+                        element={<CategoryStock />}
+                      />
                     </Routes>
                   </div>
                 </div>
@@ -161,6 +235,5 @@ function App() {
     </QueryClientProvider>
   );
 }
-
 
 export default App;

@@ -16,7 +16,7 @@ const MobileNavbar = () => {
   const { mainColor } = useTheme();
 
   const { roomServiceCount, breakfastCount, totalServiceCount } =
-      useOrderCount(hotelIdentifier);
+    useOrderCount(hotelIdentifier);
   const [staffProfile, setStaffProfile] = useState(null);
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
@@ -77,6 +77,12 @@ const MobileNavbar = () => {
       roles: ["receptionist", "manager"],
     },
     {
+      path: "/maintenance",
+      label: "Maintenance",
+      icon: "tools",
+      roles: ["maintenance_staff", "manager", "super_staff_admin"],
+    },
+    {
       path: `/hotel_info/${hotelIdentifier}`,
       label: "Info",
       icon: "info-circle",
@@ -128,192 +134,193 @@ const MobileNavbar = () => {
     return null;
 
   return (
-  <nav
-    className={`navbar navbar-expand-lg text-white shadow-sm main-bg ${
-      mainColor ? "" : "bg-dark"
-    }`}
-    style={mainColor ? { backgroundColor: mainColor } : {}}
-  >
-    <div className="container-fluid">
-      <Link to="/" className="flex items-center space-x-2 logo-container">
-        <img
-          src={logo}
-          alt="HotelMate Logo"
-          className="h-10 w-auto drop-shadow-md logo-image"
-        />
-      </Link>
+    <nav
+      className={`navbar navbar-expand-lg text-white shadow-sm main-bg ${
+        mainColor ? "" : "bg-dark"
+      }`}
+      style={mainColor ? { backgroundColor: mainColor } : {}}
+    >
+      <div className="container-fluid">
+        <Link to="/" className="flex items-center space-x-2 logo-container">
+          <img
+            src={logo}
+            alt="HotelMate Logo"
+            className="h-10 w-auto drop-shadow-md logo-image"
+          />
+        </Link>
 
-      <button
-        className="navbar-toggler bg-transparent border-0 shadow-lg"
-        type="button"
-        aria-controls="navbarSupportedContent"
-        aria-expanded={!collapsed}
-        aria-label="Toggle navigation"
-        onClick={toggleNavbar}
-      >
-        <span
-          className="navbar-toggler-icon"
-          style={{ filter: "invert(1)" }}
-        ></span>
-      </button>
+        <button
+          className="navbar-toggler bg-transparent border-0 shadow-lg"
+          type="button"
+          aria-controls="navbarSupportedContent"
+          aria-expanded={!collapsed}
+          aria-label="Toggle navigation"
+          onClick={toggleNavbar}
+        >
+          <span
+            className="navbar-toggler-icon"
+            style={{ filter: "invert(1)" }}
+          ></span>
+        </button>
 
-      <div className={`collapse navbar-collapse ${!collapsed ? "show" : ""}`}>
-        <ul className="navbar-nav ms-auto mb-2 mb-lg-0 gap-3 shadow-lg p-2 rounded m-2">
-          {!user && (
-            <>
-              <li className="nav-item">
-                <Link
-                  className={`nav-link ${
-                    isActive("/login") ? "active" : ""
-                  } text-white`}
-                  to="/login"
-                  onClick={toggleNavbar}
-                >
-                  Login
-                </Link>
-              </li>
-              <li className="nav-item">
-                <Link
-                  className={`nav-link ${
-                    isActive("/register") ? "active" : ""
-                  } text-white`}
-                  to="/register"
-                  onClick={toggleNavbar}
-                >
-                  Register
-                </Link>
-              </li>
-            </>
-          )}
+        <div className={`collapse navbar-collapse ${!collapsed ? "show" : ""}`}>
+          <ul className="navbar-nav ms-auto mb-2 mb-lg-0 gap-3 shadow-lg p-2 rounded m-2">
+            {!user && (
+              <>
+                <li className="nav-item">
+                  <Link
+                    className={`nav-link ${
+                      isActive("/login") ? "active" : ""
+                    } text-white`}
+                    to="/login"
+                    onClick={toggleNavbar}
+                  >
+                    Login
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link
+                    className={`nav-link ${
+                      isActive("/register") ? "active" : ""
+                    } text-white`}
+                    to="/register"
+                    onClick={toggleNavbar}
+                  >
+                    Register
+                  </Link>
+                </li>
+              </>
+            )}
 
-          {user && (
-            <>
-              {staffProfile && (
+            {user && (
+              <>
+                {staffProfile && (
+                  <li className="nav-item">
+                    <button
+                      className={`btn btn-${isOnDuty ? "success" : "danger"}`}
+                      onClick={() => setIsModalOpen(true)}
+                    >
+                      {isOnDuty ? "Clock Out" : "Clock In"}
+                    </button>
+                  </li>
+                )}
+
+                {navItems
+                  .filter((item) => canAccess(item.roles))
+                  .map(({ path, label, icon }) => (
+                    <li className="nav-item" key={path}>
+                      <Link
+                        className={`nav-link ${
+                          isActive(path) ? "active" : ""
+                        } text-white`}
+                        to={path}
+                        onClick={toggleNavbar}
+                      >
+                        <i className={`bi bi-${icon} me-2`} />
+                        {label}
+                      </Link>
+                    </li>
+                  ))}
+
+                {/* Services dropdown with badges */}
+                {servicesNavItems.some(({ roles }) => canAccess(roles)) && (
+                  <li className="nav-item dropdown">
+                    <div
+                      className="nav-link d-flex justify-content-between align-items-center text-white"
+                      style={{ cursor: "pointer" }}
+                      onClick={() =>
+                        setServicesDropdownOpen(!servicesDropdownOpen)
+                      }
+                    >
+                      <span>
+                        <i className="bi bi-cup-hot me-2" />
+                        Services
+                      </span>
+
+                      {roomServiceCount + breakfastCount > 0 && (
+                        <span className="badge bg-danger ms-2">
+                          {roomServiceCount + breakfastCount}
+                        </span>
+                      )}
+
+                      <i
+                        className={`bi bi-chevron-${
+                          servicesDropdownOpen ? "up" : "down"
+                        }`}
+                        style={{ fontSize: "0.8rem" }}
+                      />
+                    </div>
+
+                    {servicesDropdownOpen && (
+                      <ul className="nav flex-column ms-3">
+                        {servicesNavItems
+                          .filter(({ roles }) => canAccess(roles))
+                          .map(({ path, label, icon }) => {
+                            const badgeCount =
+                              label === "Room Service"
+                                ? roomServiceCount
+                                : label === "Breakfast"
+                                ? breakfastCount
+                                : 0;
+
+                            return (
+                              <li className="nav-item" key={path}>
+                                <Link
+                                  className={`nav-link text-white d-flex justify-content-between align-items-center ${
+                                    isActive(path) ? "active" : ""
+                                  }`}
+                                  to={path}
+                                  onClick={() => {
+                                    toggleNavbar();
+                                    setServicesDropdownOpen(false);
+                                  }}
+                                >
+                                  <div>
+                                    <i className={`bi bi-${icon} me-2`} />
+                                    {label}
+                                  </div>
+                                  {badgeCount > 0 && (
+                                    <span className="badge bg-danger ms-2">
+                                      {badgeCount}
+                                    </span>
+                                  )}
+                                </Link>
+                              </li>
+                            );
+                          })}
+                      </ul>
+                    )}
+                  </li>
+                )}
+
                 <li className="nav-item">
                   <button
-                    className={`btn btn-${isOnDuty ? "success" : "danger"}`}
-                    onClick={() => setIsModalOpen(true)}
+                    className="btn btn-link nav-link"
+                    onClick={handleLogout}
                   >
-                    {isOnDuty ? "Clock Out" : "Clock In"}
+                    Logout
                   </button>
                 </li>
-              )}
-
-              {navItems
-                .filter((item) => canAccess(item.roles))
-                .map(({ path, label, icon }) => (
-                  <li className="nav-item" key={path}>
-                    <Link
-                      className={`nav-link ${
-                        isActive(path) ? "active" : ""
-                      } text-white`}
-                      to={path}
-                      onClick={toggleNavbar}
-                    >
-                      <i className={`bi bi-${icon} me-2`} />
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-
-              {/* Services dropdown with badges */}
-              {servicesNavItems.some(({ roles }) => canAccess(roles)) && (
-                <li className="nav-item dropdown">
-                  <div
-                    className="nav-link d-flex justify-content-between align-items-center text-white"
-                    style={{ cursor: "pointer" }}
-                    onClick={() => setServicesDropdownOpen(!servicesDropdownOpen)}
-                  >
-                    <span>
-                      <i className="bi bi-cup-hot me-2" />
-                      Services
-                    </span>
-
-                    {(roomServiceCount + breakfastCount) > 0 && (
-                      <span className="badge bg-danger ms-2">
-                        {roomServiceCount + breakfastCount}
-                      </span>
-                    )}
-
-                    <i
-                      className={`bi bi-chevron-${
-                        servicesDropdownOpen ? "up" : "down"
-                      }`}
-                      style={{ fontSize: "0.8rem" }}
-                    />
-                  </div>
-
-                  {servicesDropdownOpen && (
-                    <ul className="nav flex-column ms-3">
-                      {servicesNavItems
-                        .filter(({ roles }) => canAccess(roles))
-                        .map(({ path, label, icon }) => {
-                          const badgeCount =
-                            label === "Room Service"
-                              ? roomServiceCount
-                              : label === "Breakfast"
-                              ? breakfastCount
-                              : 0;
-
-                          return (
-                            <li className="nav-item" key={path}>
-                              <Link
-                                className={`nav-link text-white d-flex justify-content-between align-items-center ${
-                                  isActive(path) ? "active" : ""
-                                }`}
-                                to={path}
-                                onClick={() => {
-                                  toggleNavbar();
-                                  setServicesDropdownOpen(false);
-                                }}
-                              >
-                                <div>
-                                  <i className={`bi bi-${icon} me-2`} />
-                                  {label}
-                                </div>
-                                {badgeCount > 0 && (
-                                  <span className="badge bg-danger ms-2">
-                                    {badgeCount}
-                                  </span>
-                                )}
-                              </Link>
-                            </li>
-                          );
-                        })}
-                    </ul>
-                  )}
-                </li>
-              )}
-
-              <li className="nav-item">
-                <button
-                  className="btn btn-link nav-link"
-                  onClick={handleLogout}
-                >
-                  Logout
-                </button>
-              </li>
-            </>
-          )}
-        </ul>
+              </>
+            )}
+          </ul>
+        </div>
       </div>
-    </div>
 
-    {staffProfile && (
-      <ClockModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        staffId={staffProfile.id}
-        initialStatus={isOnDuty}
-        onStatusChange={(newStatus) => {
-          setIsOnDuty(newStatus);
-          setIsModalOpen(false);
-        }}
-      />
-    )}
-  </nav>
-);
-
+      {staffProfile && (
+        <ClockModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          staffId={staffProfile.id}
+          initialStatus={isOnDuty}
+          onStatusChange={(newStatus) => {
+            setIsOnDuty(newStatus);
+            setIsModalOpen(false);
+          }}
+        />
+      )}
+    </nav>
+  );
 };
 
 export default MobileNavbar;
