@@ -149,19 +149,27 @@ const MobileNavbar = () => {
           />
         </Link>
 
-        <button
-          className="navbar-toggler bg-transparent border-0 shadow-lg"
-          type="button"
-          aria-controls="navbarSupportedContent"
-          aria-expanded={!collapsed}
-          aria-label="Toggle navigation"
-          onClick={toggleNavbar}
-        >
-          <span
-            className="navbar-toggler-icon"
-            style={{ filter: "invert(1)" }}
-          ></span>
-        </button>
+        <div className="position-relative d-inline-block">
+  <button
+    className="navbar-toggler bg-transparent border-0 shadow-lg"
+    type="button"
+    aria-controls="navbarSupportedContent"
+    aria-expanded={!collapsed}
+    aria-label="Toggle navigation"
+    onClick={toggleNavbar}
+  >
+    <span
+      className="navbar-toggler-icon"
+      style={{ filter: "invert(1)" }}
+    />
+  </button>
+
+  {totalServiceCount > 0 && (
+<span className="position-absolute top-0 start-0 translate-middle badge rounded-pill bg-danger">
+      {totalServiceCount}
+    </span>
+  )}
+</div>
 
         <div className={`collapse navbar-collapse ${!collapsed ? "show" : ""}`}>
           <ul className="navbar-nav ms-auto mb-2 mb-lg-0 gap-3 shadow-lg p-2 rounded m-2">
@@ -197,7 +205,7 @@ const MobileNavbar = () => {
                 {staffProfile && (
                   <li className="nav-item">
                     <button
-                      className={`btn btn-${isOnDuty ? "success" : "danger"}`}
+                      className={`btn custom-button btn-${isOnDuty ? "success" : "danger"}`}
                       onClick={() => setIsModalOpen(true)}
                     >
                       {isOnDuty ? "Clock Out" : "Clock In"}

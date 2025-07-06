@@ -186,7 +186,7 @@ const DesktopSidebarNavbar = () => {
               {staffProfile && (
                 <li className="nav-item mb-2">
                   <button
-                    className={`btn w-100 text-start text-white btn-${
+                    className={`btn  text-start text-white btn-${
                       isOnDuty ? "success" : "danger"
                     }`}
                     onClick={() => setIsModalOpen(true)}

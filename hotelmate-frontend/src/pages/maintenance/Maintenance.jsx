@@ -257,12 +257,13 @@ const [commentByRequest, setCommentByRequest] = useState({});
         </div>
       </div>
 
-      <button
+       <div className="btn"><button
         className="btn btn-sm btn-danger ms-2"
         onClick={() => handleDelete(r.id)}
       >
-        Delete
-      </button>
+        X
+      </button></div>
+      
     </div>
   </li>
 ))}
