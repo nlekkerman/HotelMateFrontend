@@ -31,25 +31,22 @@ api.interceptors.request.use(
     const hotelId = userData?.hotel_id || null;
     const hotelName = userData?.hotel_name || null;
 
-    console.log('[API] Intercepting request to:', config.url);
-    console.log('[API] Retrieved user data:', userData);
+
 
     if (token) {
       config.headers['Authorization'] = `Token ${token}`;
-      console.log('[API] Attached token:', token);
+      
     } else {
       console.warn('[API] No token found in localStorage.');
     }
 
     if (hotelId) {
       config.headers['X-Hotel-ID'] = hotelId.toString();
-      console.log('[API] Attached hotel ID:', hotelId);
     } else {
       console.warn('[API] No hotel ID found in localStorage.');
     }
 
     if (hotelName) {
-      console.log('[API] Hotel name:', hotelName);
     } else {
       console.warn('[API] No hotel name found in localStorage.');
     }
@@ -57,7 +54,6 @@ api.interceptors.request.use(
     // Add the hotelIdentifier header dynamically if set
     if (currentHotelIdentifier) {
       config.headers['X-Hotel-Identifier'] = currentHotelIdentifier;
-      console.log('[API] Attached hotelIdentifier:', currentHotelIdentifier);
     } else {
       console.warn('[API] No hotelIdentifier set.');
     }
