@@ -4,6 +4,8 @@ import api, { setHotelIdentifier } from "@/services/apiWithHotel";
 import { toast } from "react-toastify";
 import DeletionModal from "@/components/modals/DeletionModal";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
+import useOrderWebSocket from "@/hooks/useOrderWebSocket";
+
 
 export default function RoomService({ isAdmin }) {
   const { roomNumber, hotelIdentifier } = useParams();
@@ -12,6 +14,13 @@ export default function RoomService({ isAdmin }) {
   const [quantities, setQuantities] = useState({});
   const [orderItems, setOrderItems] = useState({});
   const [currentOrder, setCurrentOrder] = useState(null);
+  const currentOrderId = currentOrder?.id ?? null;
+
+useOrderWebSocket(currentOrderId, (data) => {
+  setCurrentOrder((prev) =>
+    prev && prev.id === data.id ? { ...prev, status: data.status } : prev
+  );
+});
   const [previousOrders, setPreviousOrders] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -163,6 +172,7 @@ export default function RoomService({ isAdmin }) {
     const item = items.find((i) => i.id === itemId);
     toast.info(`Updated ${item.name} to ${qty}`, { autoClose: 1500 });
   };
+
 
   return (
     <div className="container my-4">
