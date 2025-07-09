@@ -5,17 +5,33 @@ export default function useOrderWebSocket(orderId, onMessage) {
     if (!orderId) return;
 
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    // dynamically use the same host/domain your page is served from:
-    const host = window.location.host;
-    const wsUrl = `${protocol}://${host}/ws/orders/${orderId}/`;
+    const host     = window.location.host;
+    const wsUrl    = `${protocol}://${host}/ws/orders/${orderId}/`;
 
+    console.log(`[WS] connecting to ${wsUrl}`);
     const socket = new WebSocket(wsUrl);
-    socket.onmessage = (e) => {
-      const data = JSON.parse(e.data);
+
+    socket.onopen = () => {
+      console.log("[WS] connection opened");
+    };
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log("[WS] message received:", data);
       onMessage?.(data);
     };
-    socket.onclose = () => console.log("WebSocket closed");
 
-    return () => socket.close();
+    socket.onerror = (err) => {
+      console.error("[WS] error:", err);
+    };
+
+    socket.onclose = (ev) => {
+      console.log(`[WS] closed (code=${ev.code} reason=${ev.reason})`);
+    };
+
+    return () => {
+      console.log("[WS] closing socket");
+      socket.close();
+    };
   }, [orderId, onMessage]);
 }
