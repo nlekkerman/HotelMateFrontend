@@ -5,7 +5,7 @@ export default function useOrderWebSocket(orderId, onMessage) {
     if (!orderId) return;
 
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const host     = window.location.host;
+    const host     = import.meta.env.VITE_WS_HOST; 
     const wsUrl    = `${protocol}://${host}/ws/orders/${orderId}/`;
 
     console.log(`[WS] connecting to ${wsUrl}`);
