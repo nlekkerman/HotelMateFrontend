@@ -5,7 +5,7 @@ export default function useOrderWebSocket(orderId, onMessage) {
     if (!orderId) return;
 
     // **LOG THE ENV VAR**  
-    console.log("[WS] import.meta.env.VITE_WS_HOST =", import.meta.env.VITE_WS_HOST);
+    console.log("[WS] import.meta.env.VITE_WS_HOSTsasasasa =", import.meta.env.VITE_FIREBASE_VAPID_KEY);
 
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     const host     = import.meta.env.VITE_WS_HOST; 
