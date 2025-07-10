@@ -6,7 +6,7 @@ import React, {
   useEffect,
 } from "react";
 import api from "@/services/api";
-import useOrderCountWebSocket from "@/hooks/useOrderCountWebSocket";
+import { listenForFirebaseMessages } from "@/utils/firebaseNotifications";
 
 // 1) Create context
 const OrderCountContext = createContext({
@@ -16,54 +16,59 @@ const OrderCountContext = createContext({
 });
 
 // 2) Provider
-export function OrderCountProvider({ hotelSlug, children }) {
+export function OrderCountProvider({ children }) {
   const [roomServiceCount, setRoomServiceCount] = useState(0);
   const [breakfastCount, setBreakfastCount] = useState(0);
 
-  // Fallback REST fetch
-  const refreshRoomService = useCallback(async () => {
+  const refreshRoomService = useCallback(async (hotelSlug) => {
     if (!hotelSlug) return;
     try {
-      const res = await api.get(
-        `/room_services/${hotelSlug}/orders/pending-count/`
-      );
+      const res = await api.get(`/room_services/${hotelSlug}/orders/pending-count/`);
       setRoomServiceCount(res.data.count);
     } catch (err) {
       console.error("Room Service count fetch failed:", err);
     }
-  }, [hotelSlug]);
+  }, []);
 
-  const refreshBreakfast = useCallback(async () => {
+  const refreshBreakfast = useCallback(async (hotelSlug) => {
     if (!hotelSlug) return;
     try {
-      const res = await api.get(
-        `/room_services/${hotelSlug}/breakfast-orders/breakfast-pending-count/`
-      );
+const res = await api.get(`/room_services/${hotelSlug}/breakfast-orders/breakfast-pending-count/`);
       setBreakfastCount(res.data.count);
     } catch (err) {
       console.error("Breakfast count fetch failed:", err);
     }
-  }, [hotelSlug]);
+  }, []);
 
-  const refreshAll = useCallback(async () => {
-    await Promise.all([refreshRoomService(), refreshBreakfast()]);
+  const refreshAll = useCallback(async (hotelSlug) => {
+    await Promise.all([
+      refreshRoomService(hotelSlug),
+      refreshBreakfast(hotelSlug),
+    ]);
   }, [refreshRoomService, refreshBreakfast]);
 
-  // WebSocket listener for counts
-  useOrderCountWebSocket(hotelSlug, (msg) => {
-    setRoomServiceCount(msg.pending_orders);
-    setBreakfastCount(msg.pending_breakfast);
-  });
-
-  // Initial data load
   useEffect(() => {
-    if (hotelSlug) refreshAll();
-  }, [hotelSlug, refreshAll]);
+    const unsubscribe = listenForFirebaseMessages((payload) => {
+      const { type, count } = payload.data || {};
+      if (type === "order_count") setRoomServiceCount(Number(count));
+      if (type === "breakfast_count") setBreakfastCount(Number(count));
+    });
+
+    const onMessage = (event) => {
+      const { type, count } = event.data || {};
+      if (type === "order_count") setRoomServiceCount(Number(count));
+      if (type === "breakfast_count") setBreakfastCount(Number(count));
+    };
+    navigator.serviceWorker?.addEventListener("message", onMessage);
+
+    return () => {
+      unsubscribe();
+      navigator.serviceWorker?.removeEventListener("message", onMessage);
+    };
+  }, []);
 
   return (
-    <OrderCountContext.Provider
-      value={{ roomServiceCount, breakfastCount, refreshAll }}
-    >
+    <OrderCountContext.Provider value={{ roomServiceCount, breakfastCount, refreshAll }}>
       {children}
     </OrderCountContext.Provider>
   );
@@ -71,18 +76,16 @@ export function OrderCountProvider({ hotelSlug, children }) {
 
 // 3) Custom hook
 export function useOrderCount(hotelSlug) {
-  const { roomServiceCount, breakfastCount, refreshAll } = useContext(
-    OrderCountContext
-  );
+  const { roomServiceCount, breakfastCount, refreshAll } = useContext(OrderCountContext);
 
   useEffect(() => {
-    if (hotelSlug) refreshAll();
+    refreshAll(hotelSlug);
   }, [hotelSlug, refreshAll]);
 
   return {
     roomServiceCount,
     breakfastCount,
     totalServiceCount: roomServiceCount + breakfastCount,
-    refreshAll,
+    refreshAll: () => refreshAll(hotelSlug),
   };
 }
