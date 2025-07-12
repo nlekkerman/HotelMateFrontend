@@ -26,7 +26,7 @@ useOrderWebSocket(currentOrderId, (data) => {
   const [submitError, setSubmitError] = useState(null);
   const [showOrderPanel, setShowOrderPanel] = useState(false);
 
-  const { refresh: refreshCount } = useOrderCount(hotelIdentifier);
+const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
 
   const [delModal, setDelModal] = useState({ show: false, itemId: null });
 
