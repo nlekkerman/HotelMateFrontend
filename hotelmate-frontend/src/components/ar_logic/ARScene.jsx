@@ -13,10 +13,9 @@ export default function ARScene({ text = "Welcome!" }) {
           position="0 0.2 0"
           rotation="-90 0 0"
           text={`value: ${text}; align: center; width: 1.5;`}
-        />
+        ></a-entity>
       </a-marker>
-
-      <a-entity camera />
+      <a-entity camera></a-entity>
     </a-scene>
   );
 }
