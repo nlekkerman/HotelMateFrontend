@@ -1,5 +1,3 @@
-// public/firebase-messaging-sw.js
-
 // ─── Firebase v8 compat for importScripts ───
 importScripts(
   "https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js",
@@ -19,37 +17,23 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// ─── Always handle raw push events ───
-self.addEventListener('push', event => {
-  if (!event.data) return;
+// ─── Firebase background-message handler ───
+messaging.setBackgroundMessageHandler(payload => {
+  console.log("[SW] background message", payload);
 
-  let payload;
-  try {
-    payload = event.data.json();
-    console.log("[SW] Push payload received:", payload);
-  } catch (err) {
-    console.warn('[SW] Could not decode push payload', err);
-    return;
+  const data  = payload.data    || {};
+  const title = data.title      || "HotelMate";
+  const body  = data.body       || "ALEEEEE notification";
+  const type  = data.type;
+
+  // only show whitelisted types:
+  if (["room_service","stock_movement","breakfast"].includes(type)) {
+    return self.registration.showNotification(title, {
+      body,
+      icon: "/notifications-icon.png",
+      data
+    });
   }
-
-  const data = payload.data || {};
-  const title = data.title || "HotelMate";
-  const body = data.body || "New notification";
-  const type = data.type;
-
-  if (['room_service', 'stock_movement'].includes(type)) {
-    console.log(`[SW] Showing ${type} notification:`, title, body);
-
-    event.waitUntil(
-      self.registration.showNotification(title, {
-        body,
-        icon: '/notifications-icon.png',
-        data: data // optional: for click handling
-      })
-    );
-  } else {
-    console.log("[SW] Ignored unknown notification type:", type);
-  }
+  // else ignore
+  return null;
 });
-
-
