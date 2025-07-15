@@ -5,26 +5,33 @@ export default function ARScene({ text = "Welcome!" }) {
   const [markerFound, setMarkerFound] = useState(false);
 
   useEffect(() => {
-    // Wait a tick for the scene + marker to be in the DOM
-    const timeout = setTimeout(() => {
-      const markerEl = document.querySelector('a-marker[type="pattern"]');
-      if (!markerEl) return;
+  // Give A‑Frame a moment to stamp the <a-marker> into the DOM
+  const timeout = setTimeout(() => {
+    const markerEl = document.querySelector('a-marker[type="pattern"]');
+    if (!markerEl) return;
 
-      const onFound = () => setMarkerFound(true);
-      const onLost = () => setMarkerFound(false);
+    const onFound = () => setMarkerFound(true);
+    const onLost  = () => setMarkerFound(false);
 
-      markerEl.addEventListener("markerFound", onFound);
-      markerEl.addEventListener("markerLost", onLost);
+    markerEl.addEventListener('markerFound', onFound);
+    markerEl.addEventListener('markerLost',  onLost);
 
-      // Cleanup
-      return () => {
-        markerEl.removeEventListener("markerFound", onFound);
-        markerEl.removeEventListener("markerLost", onLost);
-      };
-    }, 100);
+    // Store cleanup callback in a variable the outer scope can see
+    cleanupListeners = () => {
+      markerEl.removeEventListener('markerFound', onFound);
+      markerEl.removeEventListener('markerLost',  onLost);
+    };
+  }, 100);
 
-    return () => clearTimeout(timeout);
-  }, []);
+  // This variable will be set by the timeout callback
+  let cleanupListeners = null;
+
+  return () => {
+    clearTimeout(timeout);
+    if (cleanupListeners) cleanupListeners();
+  };
+}, []);
+
 
   return (
     <div style={{ position: "relative" }}>
