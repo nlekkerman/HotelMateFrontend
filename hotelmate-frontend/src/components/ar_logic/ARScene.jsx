@@ -1,6 +1,4 @@
-// src/components/ar_logic/ARScene.jsx
 import React from "react";
-
 
 export default function ARScene({ text = "Welcome!" }) {
   return (
@@ -8,10 +6,11 @@ export default function ARScene({ text = "Welcome!" }) {
       embedded
       vr-mode-ui="enabled: false"
       arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+      style={{ width: "100vw", height: "100vh" }}
     >
       <a-marker
         type="pattern"
-        url="/markers/qr-marker.patt"  // make sure this 404s to 200 in network tab
+        url="/markers/pattern-ar_marker.patt"
       >
         <a-text
           value={text}

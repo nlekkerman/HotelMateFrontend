@@ -48,10 +48,22 @@ export default function ARMenuPage() {
 
   return (
     <div style={{ position: "relative" }}>
+      {/* ─── Marker preview ─── */}
+      <div style={{ textAlign: "center", padding: "1rem", background: "#000" }}>
+        <p style={{ color: "#fff", margin: 0 }}>
+          Point your camera at this marker:
+        </p>
+        <img
+          src="/markers/ar_marker.png"
+          alt="AR Marker Preview"
+          style={{ maxWidth: 200, border: "2px solid #fff", marginTop: 8 }}
+        />
+      </div>
+
       {/* AR Scene */}
       <ARScene text={instruction} />
 
-      {/* On-screen log panel */}
+      {/* On‑screen debug log panel */}
       <div
         style={{
           position: "absolute",
@@ -59,6 +71,7 @@ export default function ARMenuPage() {
           left: 0,
           right: 0,
           maxHeight: "25vh",
+          minWidth: "100vw",
           overflowY: "auto",
           background: "rgba(0,0,0,0.6)",
           color: "white",
