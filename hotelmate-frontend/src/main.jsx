@@ -5,6 +5,7 @@ import App from "./App";
 import { listenForFirebaseMessages } from "@/utils/firebaseNotifications";
 import { OrderCountProvider } from "@/hooks/useOrderCount.jsx";
 
+
 // Helper to pull hotel_slug out of localStorage
 function getHotelSlug() {
   const stored = localStorage.getItem("user");
