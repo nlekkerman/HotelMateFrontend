@@ -1,26 +1,29 @@
-<!-- public/index.html -->
 <!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8">
-    <title>AR Menu – Custom Marker</title>
+    <title>AR Menu – Fixed FOV</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- A‑Frame -->
+    <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <!-- AR.js -->
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    <style>
-      body, html { margin:0; padding:0; overflow:hidden; height:100%; }
-    </style>
+    <style>body, html { margin:0; padding:0; overflow:hidden; height:100%; }</style>
   </head>
   <body>
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
-      
-      <!--
-        1) Print this image (public/markers/ar_marker.png),
-           aim your phone at it.
-        2) AR.js will fetch /markers/marker_0.patt and recognize it.
-      -->
+    <a-scene
+      embedded
+      arjs="
+        sourceType: webcam;
+        // grab at 640×480 for proper FOV
+        sourceWidth: 640; 
+        sourceHeight: 480;
+        // stretch it to fill the screen
+        displayWidth: window.innerWidth; 
+        displayHeight: window.innerHeight;
+        debugUIEnabled: false;
+      "
+    >
       <a-marker type="pattern" url="/markers/marker_0.patt">
         <a-text
           value="🍕 Pizza – $10\n🍝 Pasta – $12\n🥗 Salad – $8"
@@ -30,8 +33,6 @@
           width="2"
         ></a-text>
       </a-marker>
-
-      <!-- Fallback camera -->
       <a-entity camera></a-entity>
     </a-scene>
   </body>
