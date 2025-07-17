@@ -11,33 +11,32 @@
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar-nft.js"></script>
 
     <style>
-      html, body { margin:0; padding:0; height:100%; overflow:hidden; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        background: black; /* for letterbox bars */
+      }
       video.arjs-video {
         object-fit: contain !important;
         width: 100vw !important;
         height: 100vh !important;
+        background: black;
       }
     </style>
   </head>
 
   <body>
     <a-scene
+      id="ar-scene"
       embedded
       vr-mode-ui="enabled: false"
       loading-screen="enabled: false"
       renderer="alpha: true"
-      arjs="
-        sourceType: webcam;
-        trackingMethod: best;
-        debugUIEnabled: true;
-        cameraParametersUrl: camera_para.dat;
-        sourceWidth: window.innerWidth;
-        sourceHeight: window.innerHeight;
-        displayWidth: window.innerWidth;
-        displayHeight: window.innerHeight;
-      "
+      arjs="sourceType: webcam; trackingMethod: best; debugUIEnabled: true; cameraParametersUrl: camera_para.dat;"
     >
-      <!-- (Optional) Preload your NFT files -->
+      <!-- Preload your NFT files -->
       <a-assets>
         <a-asset-item id="fset"  src="markers/ar_marker.fset"></a-asset-item>
         <a-asset-item id="fset3" src="markers/ar_marker.fset3"></a-asset-item>
@@ -47,7 +46,7 @@
       <!-- Your NFT marker entity -->
       <a-nft
         type="nft"
-        url="markers/ar_marker"  
+        url="markers/ar_marker"
         smooth="false"
         smoothCount="10"
         smoothTolerance="0.01"
@@ -69,5 +68,26 @@
         ></a-text>
       </a-nft>
     </a-scene>
+
+    <script>
+      function updateARDimensions() {
+        const sceneEl = document.getElementById('ar-scene');
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        sceneEl.setAttribute('arjs', {
+          sourceType:          'webcam',
+          trackingMethod:      'best',
+          debugUIEnabled:      true,
+          cameraParametersUrl: 'camera_para.dat',
+          sourceWidth:         w,
+          sourceHeight:        h,
+          displayWidth:        w,
+          displayHeight:       h
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', updateARDimensions);
+      window.addEventListener('resize', updateARDimensions);
+    </script>
   </body>
 </html>
