@@ -1,69 +1,60 @@
-// src/components/ar_logic/ARScene.jsx
 import React, { useEffect, useState } from "react";
 
 export default function ARScene({ text = "Welcome!" }) {
   const [markerFound, setMarkerFound] = useState(false);
 
+  // Once A-Frame has stamped the scene into the DOM, wire up the events
   useEffect(() => {
-  // Give A‑Frame a moment to stamp the <a-marker> into the DOM
-  const timeout = setTimeout(() => {
-    const markerEl = document.querySelector('a-marker[type="pattern"]');
-    if (!markerEl) return;
+    const onLoaded = () => {
+      const marker = document.querySelector("a-marker");
+      if (!marker) return;
 
-    const onFound = () => setMarkerFound(true);
-    const onLost  = () => setMarkerFound(false);
+      const onFound = () => setMarkerFound(true);
+      const onLost  = () => setMarkerFound(false);
 
-    markerEl.addEventListener('markerFound', onFound);
-    markerEl.addEventListener('markerLost',  onLost);
-
-    // Store cleanup callback in a variable the outer scope can see
-    cleanupListeners = () => {
-      markerEl.removeEventListener('markerFound', onFound);
-      markerEl.removeEventListener('markerLost',  onLost);
+      marker.addEventListener("markerFound", onFound);
+      marker.addEventListener("markerLost",  onLost);
+      return () => {
+        marker.removeEventListener("markerFound", onFound);
+        marker.removeEventListener("markerLost",  onLost);
+      };
     };
-  }, 100);
 
-  // This variable will be set by the timeout callback
-  let cleanupListeners = null;
-
-  return () => {
-    clearTimeout(timeout);
-    if (cleanupListeners) cleanupListeners();
-  };
-}, []);
-
+    // Wait for A-Frame to finish loading its components
+    if (window.AFRAME && window.AFRAME.scenes && window.AFRAME.scenes.length) {
+      onLoaded();
+    } else {
+      window.addEventListener("load", onLoaded);
+      return () => window.removeEventListener("load", onLoaded);
+    }
+  }, []);
 
   return (
-    <div style={{ position: "relative" }}>
-      {/* Always‑on overlay */}
-      <div
-        style={{
-          position: "absolute",
-          top: 10,
-          left: "50%",
-          transform: "translateX(-50%)",
-          padding: "0.5rem 1rem",
-          background: "rgba(0,0,0,0.7)",
-          color: "white",
-          borderRadius: "0.25rem",
-          zIndex: 10,
-          fontFamily: "sans-serif",
-        }}
-      >
+    <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
+      <div style={{
+        position: "absolute", top: 10, left: "50%",
+        transform: "translateX(-50%)",
+        background: "rgba(0,0,0,0.7)",
+        color: "#fff",
+        padding: "0.5rem 1rem",
+        borderRadius: 4,
+        zIndex: 10,
+      }}>
         {markerFound ? "✅ Marker Found!" : "🔍 Searching for Marker…"}
       </div>
 
-      {/* The AR scene itself */}
       <a-scene
         embedded
-        arjs="sourceType: webcam; debugUIEnabled: false;"
-        style={{ width: "100vw", height: "100vh" }}
+        arjs="sourceType: webcam; debugUIEnabled: true; cameraParametersUrl: /camera_para.dat;"
+        style={{ width: "100%", height: "100%" }}
       >
-        <a-marker type="pattern" url="/markers/pattern-ar_marker.patt">
-          {/* A simple box so you can see something pop in */}
+        <a-marker
+          type="pattern"
+          url="/markers/pattern-ar_marker.patt"
+          smooth="true"
+          smoothCount="10"
+        >
           <a-box position="0 0.5 0" material="color: yellow"></a-box>
-
-          {/* Your dynamic instruction text */}
           <a-text
             value={text}
             position="0 1.2 0"
@@ -72,8 +63,7 @@ export default function ARScene({ text = "Welcome!" }) {
             width="2"
           />
         </a-marker>
-
-        <a-entity camera />
+        <a-entity camera></a-entity>
       </a-scene>
     </div>
   );
