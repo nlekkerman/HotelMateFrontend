@@ -2,46 +2,51 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>AR.js 2.2.1 + A-Frame 0.9.2 Demo</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-    <!-- 1) A-Frame 0.9.2 (bundles Three.js r102) -->
-    <script src="https://aframe.io/releases/0.9.2/aframe.min.js"></script>
-    <!-- 2) AR.js 2.2.1 A-Frame plugin -->
-    <script src="https://rawcdn.githack.com/jeromeetienne/AR.js/2.2.1/aframe/build/aframe-ar.js"></script>
-
-    <style>
-      body, html {
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        height: 100%;
-      }
-    </style>
+    <title>WebXR Hit‑Test AR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script>
+      AFRAME.registerComponent('hit-test', {
+        init: function () {
+          this.el.sceneEl.renderer.xr.addEventListener('sessionstart', (e) => {
+            const session = e.session;
+            session.requestReferenceSpace('viewer').then((refSpace) => {
+              session.requestHitTestSource({ space: refSpace }).then((source) => {
+                this.hitTestSource = source;
+              });
+            });
+          });
+        },
+        tick: function () {
+          const xrFrame = this.el.sceneEl.renderer.xr.getFrame();
+          const referenceSpace = this.el.sceneEl.renderer.xr.getReferenceSpace();
+          if (this.hitTestSource && xrFrame) {
+            const hitTestResults = xrFrame.getHitTestResults(this.hitTestSource);
+            if (hitTestResults.length) {
+              const pose = hitTestResults[0].getPose(referenceSpace);
+              this.el.object3D.position.copy(pose.transform.position);
+              this.el.object3D.quaternion.copy(pose.transform.orientation);
+            }
+          }
+        }
+      });
+    </script>
+    <style> body, html { margin: 0; padding: 0; overflow: hidden; height: 100%; } </style>
   </head>
   <body>
-    <!-- 3) AR.js scene -->
     <a-scene
       embedded
+      webxr="optionalFeatures: hit-test; mode: ar;"
       vr-mode-ui="enabled: false"
-      arjs="sourceType: webcam;
-            debugUIEnabled: true;
-            cameraParametersUrl: /camera_para.dat;"
+      device-orientation-permission-ui="enabled: true"
       style="width: 100vw; height: 100vh; background: transparent;"
     >
-      <!-- 4) Pattern marker (only one URL!) -->
-      <a-marker
-        type="pattern"
-        url="/markers/pattern-ar_marker.patt"
-        smooth="true"
-        smoothCount="10"
-        emitevents="true"
-      >
-        <!-- 5) Box to visualize detection -->
-        <a-box position="0 0.5 0" material="color: yellow"></a-box>
-      </a-marker>
+      <!-- Hit‑test component listens for real‑world surfaces -->
+      <a-entity webxr="optionalFeatures: hit-test"></a-entity>
 
-      <!-- 6) AR camera -->
+      <!-- Box will be placed on detected surface -->
+      <a-box hit-test position="0 0 -1" material="color: yellow"></a-box>
+
       <a-entity camera></a-entity>
     </a-scene>
   </body>
