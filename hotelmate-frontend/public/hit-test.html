@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>WebXR Hit‑Test AR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script>
+      // Hit‑test component
+      AFRAME.registerComponent('hit-test', {
+        init() {
+          this.el.sceneEl.renderer.xr.addEventListener('sessionstart', (e) => {
+            const session = e.session;
+            session.requestReferenceSpace('viewer').then((ref) =>
+              session.requestHitTestSource({ space: ref }).then(src =>
+                (this.hitTestSource = src)
+              )
+            );
+          });
+        },
+        tick() {
+          const frame = this.el.sceneEl.renderer.xr.getFrame();
+          const ref = this.el.sceneEl.renderer.xr.getReferenceSpace();
+          if (this.hitTestSource && frame) {
+            const hits = frame.getHitTestResults(this.hitTestSource);
+            if (hits.length) {
+              const pose = hits[0].getPose(ref);
+              this.el.object3D.position.copy(pose.transform.position);
+              this.el.object3D.quaternion.copy(pose.transform.orientation);
+            }
+          }
+        }
+      });
+    </script>
+    <style> body, html { margin:0; padding:0; overflow:hidden; height:100%; } </style>
+  </head>
+  <body>
+    <a-scene
+      embedded
+      vr-mode-ui="enabled: true"
+      webxr="mode: immersive-ar; optionalFeatures: hit-test"
+      device-orientation-permission-ui="enabled: true"
+      style="width:100vw; height:100vh; background:transparent;"
+    >
+      <!-- Activate hit-test -->
+      <a-entity hit-test></a-entity>
+
+      <!-- Yellow box snaps to first detected surface -->
+      <a-box hit-test position="0 0 -1" material="color: yellow"></a-box>
+
+      <!-- Let WebXR supply the camera -->
+      <a-entity camera></a-entity>
+    </a-scene>
+  </body>
+</html>
