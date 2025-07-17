@@ -1,0 +1,36 @@
+<!-- save this as generate-patt.html in your public/ folder and open in desktop browser -->
+<!DOCTYPE html>
+<html><body>
+  <script>
+    // Paste your marker image URL here:
+    const imgUrl = '/markers/ar_marker.png';
+    fetch(imgUrl)
+      .then(r=>r.blob())
+      .then(blob=>createImageBitmap(blob))
+      .then(img=> {
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 16;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 16, 16);
+        const data = ctx.getImageData(0,0,16,16).data;
+        let patt = '16 16\n0.0000 0.0000\n';
+        for(let y=0;y<16;y++){
+          let row = [];
+          for(let x=0;x<16;x++){
+            let i = (y*16 + x)*4;
+            // threshold on brightness
+            let v = (data[i]+data[i+1]+data[i+2]) / 3;
+            row.push(v > 128 ? 1 : 0);
+          }
+          patt += row.join(' ') + '\n';
+        }
+        console.log(patt);
+        // Offer download
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([patt], {type:'text/plain'}));
+        a.download = 'pattern-ar_marker.patt';
+        a.textContent = 'Download .patt file';
+        document.body.appendChild(a);
+      });
+  </script>
+</body></html>
