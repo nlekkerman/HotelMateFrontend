@@ -1,96 +1,73 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <title>AR Menu – Full‑Screen Camera</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <head>
+    <meta charset="utf-8">
+    <title>AR Menu – Full-Screen Camera</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- A‑Frame Core -->
-  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <!-- AR.js with NFT support -->
-  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar-nft.js"></script>
-  
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-      background: transparent;
-    }
-    /* make the video fill the screen */
-    video.arjs-video {
-      object-fit: cover !important;
-      width: 100vw !important;
-      height: 100vh !important;
-    }
-  </style>
-</head>
-<body>
-  <!-- turn off the white loading screen -->
-  <!-- let the camera show through with a transparent canvas -->
-  <a-scene
-    embedded
-    loading-screen="enabled: false"
-    renderer="alpha: true"
-    vr-mode-ui="enabled: false"
-    id="ar-scene"
-  >
-    <a-nft
-      type="nft"
-      url="/markers/ar_marker"
-      smooth="true"
-      smoothCount="10"
-      smoothTolerance="0.01"
-      smoothThreshold="5"
+    <!-- A-Frame Core -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <!-- AR.js with NFT support -->
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar-nft.js"></script>
+
+    <style>
+      html, body { margin:0; padding:0; height:100%; overflow:hidden; }
+      video.arjs-video {
+        object-fit: cover !important;
+        width: 100vw !important;
+        height: 100vh !important;
+      }
+    </style>
+  </head>
+
+  <body>
+    <a-scene
+      embedded
+      vr-mode-ui="enabled: false"
+      loading-screen="enabled: false"
+      renderer="alpha: true"
+      arjs="
+        sourceType: webcam;
+        trackingMethod: best;
+        debugUIEnabled: true;
+        cameraParametersUrl: camera_para.dat;
+        sourceWidth: window.innerWidth;
+        sourceHeight: window.innerHeight;
+        displayWidth: window.innerWidth;
+        displayHeight: window.innerHeight;
+      "
     >
-      <a-box
-        position="0 0.5 0"
-        rotation="-90 0 0"
-        width="1"
-        height="1"
-        depth="0.1"
-        color="#EF2D5E"
-      ></a-box>
-      <a-text
-        value="🍕 Pizza – $10\n🍝 Pasta – $12\n🥗 Salad – $8"
-        align="center"
-        position="0 1.2 0"
-        rotation="-90 0 0"
-        width="2"
-        color="black"
-      ></a-text>
-    </a-nft>
-  </a-scene>
+      <!-- (Optional) Preload your NFT files -->
+      <a-assets>
+        <a-asset-item id="fset"  src="markers/ar_marker.fset"></a-asset-item>
+        <a-asset-item id="fset3" src="markers/ar_marker.fset3"></a-asset-item>
+        <a-asset-item id="iset"  src="markers/ar_marker.iset"></a-asset-item>
+      </a-assets>
 
-  <script>
-    // Once the page loads, give AR.js the exact window dimensions:
-    document.addEventListener('DOMContentLoaded', () => {
-      const scene = document.getElementById('ar-scene');
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      scene.setAttribute('arjs', {
-        sourceType:          'webcam',
-        trackingMethod:      'best',
-        debugUIEnabled:      false,
-        cameraParametersUrl: '/camera_para.dat', // must exist at this path
-        sourceWidth:         w,
-        sourceHeight:        h,
-        displayWidth:        w,
-        displayHeight:       h
-      });
-    });
-
-    // Update on resize to avoid white bars
-    window.addEventListener('resize', () => {
-      const scene = document.getElementById('ar-scene');
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      scene.setAttribute('arjs', 'sourceWidth',  w);
-      scene.setAttribute('arjs', 'sourceHeight', h);
-      scene.setAttribute('arjs', 'displayWidth', w);
-      scene.setAttribute('arjs', 'displayHeight', h);
-    });
-  </script>
-</body>
+      <!-- Your NFT marker entity -->
+      <a-nft
+        type="nft"
+        url="markers/ar_marker"  
+        smooth="false"
+        smoothCount="10"
+        smoothTolerance="0.01"
+        smoothThreshold="5"
+      >
+        <a-box
+          position="0 0.5 0"
+          rotation="-90 0 0"
+          width="1" height="1" depth="0.1"
+          color="#EF2D5E"
+        ></a-box>
+        <a-text
+          value="🍕 Pizza – $10\n🍝 Pasta – $12\n🥗 Salad – $8"
+          align="center"
+          position="0 1.2 0"
+          rotation="-90 0 0"
+          width="2"
+          color="black"
+        ></a-text>
+      </a-nft>
+    </a-scene>
+  </body>
 </html>
