@@ -1,93 +1,51 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8">
-    <title>AR Menu – Full-Screen Camera</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
+    <meta charset="utf-8" />
+    <title>Marker-less AR with WebXR Hit-Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    
     <!-- A-Frame Core -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <!-- AR.js with NFT support -->
-    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar-nft.js"></script>
-
-    <style>
-      html, body {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        overflow: hidden;
-        background: black; /* for letterbox bars */
-      }
-      video.arjs-video {
-        object-fit: contain !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        background: black;
-      }
-    </style>
+    <!-- WebXR Polyfill (jsDelivr) -->
+    <script src="https://cdn.jsdelivr.net/npm/webxr-polyfill@latest/build/webxr-polyfill.min.js"></script>
   </head>
-
-  <body>
+  <body style="margin:0;overflow:hidden;">
     <a-scene
-      id="ar-scene"
       embedded
       vr-mode-ui="enabled: false"
-      loading-screen="enabled: false"
-      renderer="alpha: true"
-      arjs="sourceType: webcam; trackingMethod: best; debugUIEnabled: true; cameraParametersUrl: camera_para.dat;"
+      renderer="colorManagement: true; physicallyCorrectLights: true"
+      webxr="optionalFeatures: hit-test"
+      xrweb="mode: immersive-ar; optionalFeatures: hit-test"
     >
-      <!-- Preload your NFT files -->
-      <a-assets>
-        <a-asset-item id="fset"  src="markers/ar_marker.fset"></a-asset-item>
-        <a-asset-item id="fset3" src="markers/ar_marker.fset3"></a-asset-item>
-        <a-asset-item id="iset"  src="markers/ar_marker.iset"></a-asset-item>
-      </a-assets>
+      <!-- Reticle that follows the first hit-test result -->
+      <a-entity
+        id="reticle"
+        geometry="primitive: ring; radiusInner: 0.05; radiusOuter: 0.06"
+        material="color: white; shader: flat"
+        visible="false"
+        xr-hit-test="target: #reticle"
+      ></a-entity>
 
-      <!-- Your NFT marker entity -->
-      <a-nft
-        type="nft"
-        url="markers/ar_marker"
-        smooth="false"
-        smoothCount="10"
-        smoothTolerance="0.01"
-        smoothThreshold="5"
-      >
+      <!-- Your model (a simple box) that will appear where you tap -->
+      <a-entity id="placed-model" visible="false">
         <a-box
-          position="0 0.5 0"
-          rotation="-90 0 0"
-          width="1" height="1" depth="0.1"
+          depth="0.2"
+          height="0.2"
+          width="0.2"
           color="#EF2D5E"
         ></a-box>
-        <a-text
-          value="🍕 Pizza – $10\n🍝 Pasta – $12\n🥗 Salad – $8"
-          align="center"
-          position="0 1.2 0"
-          rotation="-90 0 0"
-          width="2"
-          color="black"
-        ></a-text>
-      </a-nft>
+      </a-entity>
+
+      <!-- On click/tap, show the placed-model at the reticle’s position -->
+      <a-entity
+        event-set__click="
+          _event: click;
+          _target: #placed-model;
+          visible: true;
+          position: #reticle.position
+        "
+      ></a-entity>
     </a-scene>
-
-    <script>
-      function updateARDimensions() {
-        const sceneEl = document.getElementById('ar-scene');
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        sceneEl.setAttribute('arjs', {
-          sourceType:          'webcam',
-          trackingMethod:      'best',
-          debugUIEnabled:      true,
-          cameraParametersUrl: 'camera_para.dat',
-          sourceWidth:         w,
-          sourceHeight:        h,
-          displayWidth:        w,
-          displayHeight:       h
-        });
-      }
-
-      document.addEventListener('DOMContentLoaded', updateARDimensions);
-      window.addEventListener('resize', updateARDimensions);
-    </script>
   </body>
 </html>
