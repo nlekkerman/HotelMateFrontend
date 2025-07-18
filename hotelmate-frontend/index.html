@@ -6,9 +6,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     
-    <title>HotelsMate</title>
+    <title>HotelsMates</title>
+  <style>
+      /* Theme fallbacks */
+      :root {
+        --main-color: ;
+        --secondary-color: #2ecc71;
+        --main-color-rgb: 52, 152, 219;
+        --secondary-color-rgb: 46, 204, 113;
+       
+      }
+
+      /* Splash screen */
+      #splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--main-color);
+        color: white;
+        z-index: 9999;
+        font-family: sans-serif;
+        font-size: 1.25rem;
+      }
+
+      /* Spinner */
+      #splash .spinner {
+        width: 3rem;
+        height: 3rem;
+        border: 0.4rem solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 0.5rem;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
+     <div id="splash">
+      <div class="spinner" role="status"></div>
+      <div>Loading…</div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <!-- A-Frame -->

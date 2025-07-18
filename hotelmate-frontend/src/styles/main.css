@@ -26,9 +26,17 @@ body {
   border-top: 2px solid rgba(0, 0, 0, 1);
 }
 
-/* Container stretching full height */
-:root {
-  --main-color-rgb: 52, 152, 219; /* #3498db */
+#splash .spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 0.4rem solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 0.5rem;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 /* Text and background utilities: */
 .main-text {
