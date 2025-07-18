@@ -1,17 +1,19 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import path from 'path';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import path from "path";
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
+      "@": path.resolve(__dirname, "src"),
     },
   },
+  assetsInclude: ["**/*.lottie"],
   server: {
+    // 🔧 Disable HTTPS for local development
     proxy: {
-      '/api': 'http://localhost:8000', // Proxy /api requests to your backend
+      "/api": "http://localhost:8000", // Proxy /api requests to your backend
     },
   },
   build: {
@@ -19,9 +21,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          react: ['react', 'react-dom'],
-          bootstrap: ['bootstrap'],
-          datepicker: ['react-datepicker'],
+          react: ["react", "react-dom"],
+          bootstrap: ["bootstrap"],
+          datepicker: ["react-datepicker"],
         },
       },
     },

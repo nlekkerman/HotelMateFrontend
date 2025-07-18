@@ -40,11 +40,15 @@ import DinnerBookingList from "@/components/bookings/DinnerBookingList";
 import Bookings from "@/components/bookings/Bookings";
 import Settings from "@/components/utils/Settings";
 
+//HOME
+import Home from "@/pages/home/Home";
+
 import StockDashboard from "@/pages/stock_tracker/StockDashboard";
 import CategoryStock from "@/components/stock_tracker/CategoryStock";
 
 import NetworkHandler from "@/components/offline/NetworkHandler";
 import NoInternet from "@/components/offline/NoInternet";
+import NotFound from "@/components/offline/NotFound";
 import { ThemeProvider } from "@/context/ThemeContext"; // Import ThemeProvider
 import HotelInfo from "@/pages/hotel_info/HotelInfo";
 import GoodToKnow from "@/components/hotel_info/GoodToKnow";
@@ -55,8 +59,6 @@ import BreakfastRoomService from "@/components/room_service/BreakfastRoomService
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Maintenance from "@/pages/maintenance/Maintenance";
-
-import ARMenuPage from "./pages/ar_logic/ARMenuPage";
 
 const queryClient = new QueryClient();
 
@@ -99,11 +101,9 @@ function App() {
                   <div className="main-content-area d-flex">
                     <Routes>
                       {/* General */}
-                      <Route path="/" element={<Reception />} />
-                      <Route
-                        path="/:hotel_slug/restaurant/:restaurant_slug/ar/menu"
-                        element={<ARMenuPage />}
-                      />
+                      <Route path="/" element={<Home />} />
+                      <Route path="/reception" element={<Reception />} />
+
                       <Route path="/no-internet" element={<NoInternet />} />
                       <Route path="/login" element={<Login />} />
                       <Route path="/register" element={<Register />} />
@@ -231,6 +231,7 @@ function App() {
                         path="/stock_tracker/:hotel_slug/:category_slug"
                         element={<CategoryStock />}
                       />
+                      <Route path="*" element={<NotFound />} />
                     </Routes>
                   </div>
                 </div>

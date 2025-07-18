@@ -1,3 +1,4 @@
+// src/context/ThemeContext.jsx
 import React, { createContext, useContext, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/services/api";
@@ -7,6 +8,7 @@ const ThemeContext = createContext({
   mainColor: "#3498db",
   secondaryColor: "#2ecc71",
   setTheme: () => Promise.resolve(),
+  themeLoading: true,
 });
 
 export function ThemeProvider({ children }) {
@@ -14,45 +16,87 @@ export function ThemeProvider({ children }) {
   const { user } = useAuth();
   const hotelSlug = user?.hotel_slug;
 
+  // 1️⃣ Fetch the theme for this hotel
   const { data, isLoading } = useQuery({
     queryKey: ["theme", hotelSlug],
     queryFn: async () => {
       const res = await api.get(`/common/${hotelSlug}/theme/`);
       return res.data;
     },
-    enabled: !!hotelSlug, // only run when hotelSlug is defined
+    enabled: !!hotelSlug,
     refetchOnWindowFocus: false,
   });
 
+  // 2️⃣ Mutation to update the theme
   const mutation = useMutation({
     mutationFn: ({ main_color, secondary_color, id }) =>
       api.patch(`/theme/${id}/`, { main_color, secondary_color }),
     onSuccess: (res) => {
       const { main_color, secondary_color } = res.data;
+      // update CSS vars
       document.documentElement.style.setProperty("--main-color", main_color);
       document.documentElement.style.setProperty("--secondary-color", secondary_color);
+
+      // also compute & set their RGB vars
+      const hexToRgb = (hex) => {
+        const shorthand = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+        hex = hex.replace(shorthand, (_, r, g, b) => r + r + g + g + b + b);
+        const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return m
+          ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}`
+          : "";
+      };
+      document.documentElement.style.setProperty(
+        "--main-color-rgb",
+        hexToRgb(main_color)
+      );
+      document.documentElement.style.setProperty(
+        "--secondary-color-rgb",
+        hexToRgb(secondary_color)
+      );
+
       queryClient.invalidateQueries({ queryKey: ["theme", hotelSlug] });
     },
   });
 
- useEffect(() => {
-  if (!isLoading && data) {
-    const hexToRgb = (hex) => {
-      let shorthand = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-      hex = hex.replace(shorthand, (_, r, g, b) => r + r + g + g + b + b);
-      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-      return result
-        ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
-        : "52, 152, 219"; // fallback
-    };
+  // 3️⃣ When the theme data initially loads, apply it & remove the splash
+// src/context/ThemeContext.jsx
+useEffect(() => {
+  // Once the query has settled (loading -> false), remove the splash
+  if (!isLoading) {
+    // 1️⃣ If we got real theme data, apply it
+    if (data) {
+      const hexToRgb = (hex) => {
+        const shorthand = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+        hex = hex.replace(shorthand, (_, r, g, b) => r + r + g + g + b + b);
+        const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return m
+          ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}`
+          : "";
+      };
 
-    const mainRgb = hexToRgb(data.main_color);
-    document.documentElement.style.setProperty("--main-color", data.main_color);
-    document.documentElement.style.setProperty("--main-color-rgb", mainRgb);
-    document.documentElement.style.setProperty("--secondary-color", data.secondary_color);
+      document.documentElement.style.setProperty("--main-color", data.main_color);
+      document.documentElement.style.setProperty(
+        "--main-color-rgb",
+        hexToRgb(data.main_color)
+      );
+      document.documentElement.style.setProperty(
+        "--secondary-color",
+        data.secondary_color
+      );
+      document.documentElement.style.setProperty(
+        "--secondary-color-rgb",
+        hexToRgb(data.secondary_color)
+      );
+    }
+    // 2️⃣ Now that the theme query is finished, remove the splash screen
+    const splash = document.getElementById("splash");
+    if (splash) splash.remove();
   }
-}, [data, isLoading]);
+}, [isLoading, data]);
 
+
+  // 4️⃣ Expose a setter for updating theme
   const setTheme = ({ mainColor, secondaryColor }) => {
     if (!data) return Promise.resolve();
     return mutation.mutateAsync({
