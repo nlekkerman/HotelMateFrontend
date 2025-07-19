@@ -47,7 +47,7 @@ const MobileNavbar = () => {
 
   const navItems = [
     {
-      path: "/",
+      path: "/reception",
       label: "Reception",
       icon: "house",
       roles: ["receptionist", "manager", "concierge"],
