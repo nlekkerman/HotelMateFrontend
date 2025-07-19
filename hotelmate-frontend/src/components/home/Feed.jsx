@@ -1,99 +1,67 @@
-import React, { useRef, useCallback } from 'react';
-import { useInfiniteQuery }            from '@tanstack/react-query';
-import api                              from '@/services/api';
-import { useAuth }                      from '@/context/AuthContext';
-import PostCard                         from '@/components/home/PostCard';
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import api from '@/services/api';
+import Post from '@/components/home/Post';
+import PostComposer from '@/components/home/PostComposer';
 
 export default function Feed() {
-  const { user }  = useAuth();
-  const hotelSlug = user?.hotel_slug;
+  const { hotelSlug: qrHotelSlug } = useParams();
 
-  // 1️⃣ Fetch function
-  const fetchPosts = ({ pageParam = 1 }) =>
-    api
-      .get(`home/${hotelSlug}/posts/`, { params: { page: pageParam } })
-      .then(res => res.data);
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // 2️⃣ Query hooks
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery({
-    queryKey: ['posts', hotelSlug],
-    queryFn: fetchPosts,
-    enabled: !!hotelSlug,
-    getNextPageParam: last =>
-      last.next ? Number(new URL(last.next).searchParams.get('page')) : undefined,
-  });
+  const hotelSlug = qrHotelSlug || (() => {
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      return storedUser?.hotel_slug || null;
+    } catch {
+      return null;
+    }
+  })();
 
-  // 3️⃣ Scroll observer
-  const observer = useRef();
-  const loadMoreRef = useCallback(
-    node => {
-      if (isFetchingNextPage) return;
-      if (observer.current) observer.current.disconnect();
-      observer.current = new IntersectionObserver(entries => {
-        if (entries[0].isIntersecting && hasNextPage) {
-          fetchNextPage();
-        }
-      });
-      if (node) observer.current.observe(node);
-    },
-    [isFetchingNextPage, fetchNextPage, hasNextPage]
-  );
+  const fetchPosts = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get(`/home/${hotelSlug}/posts/`);
+      const data = Array.isArray(res.data) ? res.data : res.data.results || [];
+      setPosts(data);
+    } catch (err) {
+      console.error('Failed to load posts:', err);
+      setError('Failed to load posts.');
+      setPosts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // 4️⃣ Debug & flatten
-  console.log('📦 raw data:', data);
-  const allPosts = data?.pages?.flatMap(p => p.results) ?? [];
-  console.log('📦 allPosts:', allPosts);
+  useEffect(() => {
+    if (!hotelSlug) {
+      setError('Hotel not found.');
+      setLoading(false);
+    } else {
+      fetchPosts();
+    }
+  }, [hotelSlug]);
 
-  // 5️⃣ Early returns
-  if (!hotelSlug) {
-    return <p className="text-center my-4">No hotel selected.</p>;
-  }
-  if (isLoading) {
-    return (
-      <div className="d-flex justify-content-center my-5">
-        <div className="spinner-border" role="status">
-          <span className="visually-hidden">Loading feed…</span>
-        </div>
-      </div>
-    );
-  }
-  if (isError) {
-    return (
-      <div className="alert alert-danger text-center my-4">
-        Error: {error.message}
-      </div>
-    );
-  }
-  if (allPosts.length === 0) {
-    return (
-      <div className="alert alert-info text-center my-4">
-        No posts yet.
-      </div>
-    );
-  }
+  const handleNewPost = (newPost) => {
+    setPosts(prev => [newPost, ...prev]);
+  };
 
-  // 6️⃣ Render
   return (
-    <div className="container py-4">
-      <h2 className="mb-4">News Feed</h2>
-      {allPosts.map(post => (
-        <PostCard key={post.id} post={post} />
-      ))}
-      <div ref={loadMoreRef} style={{ height: 1 }} />
-      {isFetchingNextPage && (
-        <div className="d-flex justify-content-center my-3">
-          <div className="spinner-border" role="status">
-            <span className="visually-hidden">Loading more…</span>
-          </div>
-        </div>
+    <div className="feed">
+      {hotelSlug && <PostComposer hotelSlug={hotelSlug} onPostCreated={handleNewPost} />}
+      <hr />
+      {loading ? (
+        <p>Loading posts...</p>
+      ) : error ? (
+        <p style={{ color: 'red' }}>{error}</p>
+      ) : posts.length === 0 ? (
+        <p>No posts yet.</p>
+      ) : (
+        posts.map(post => (
+          <Post key={post.id} post={post} onPostUpdated={fetchPosts} />
+        ))
       )}
     </div>
   );

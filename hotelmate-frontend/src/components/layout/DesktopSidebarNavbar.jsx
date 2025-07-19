@@ -73,6 +73,28 @@ const DesktopSidebarNavbar = () => {
   const navItems = [
     {
       path: "/",
+      label: "Home",
+      icon: "house",
+      roles: [
+        "porter",
+        "receptionist",
+        "waiter",
+        "bartender",
+        "chef",
+        "supervisor",
+        "housekeeping_attendant",
+        "manager",
+        "technician",
+        "security",
+        "concierge",
+        "leisure_staff",
+        "maintenance_staff",
+        "other",
+      ],
+      // no minAccessLevel => all access levels
+    },
+    {
+      path: "/reception",
       label: "Reception",
       icon: "house",
       feature: "reception",
