@@ -145,6 +145,12 @@ body {
   border-radius: 5px;
   
 }
+.like-share-comment-button{
+  border: none;
+  font-size: 0.7rem;
+  color: rgb(45, 44, 44);
+  background-color: transparent;
+}
 /* ─── Keyframes ─── */
 @keyframes slideDownBanner {
   from {

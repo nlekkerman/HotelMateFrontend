@@ -73,7 +73,7 @@ function App() {
     </div>
   );
 
-  const layoutClass = `layout-container vw-100 ${
+  const layoutClass = ` vw-100 ${
     collapsed ? "collapsed" : "expanded"
   } ${isMobile ? "mt-0" : ""}`;
 

@@ -41,7 +41,7 @@ export default function CommentsSection({
   const hiddenCount = commentCount - previewList.length;
 
   return (
-    <div className="card-body border-top">
+    <div className="card-body">
       {listToShow.map(comment => (
         <CommentItem
           key={comment.id}

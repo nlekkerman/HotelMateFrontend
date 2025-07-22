@@ -26,6 +26,9 @@ export default function Post({ post, onPostUpdated }) {
   const [imageFile, setImageFile] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
+  const [showComments, setShowComments] = useState(false);
+  const [liked, setLiked] = useState(post.is_liked || false);
+
   // Like toggle
   const handleLike = async (e) => {
     e.preventDefault();
@@ -87,32 +90,29 @@ export default function Post({ post, onPostUpdated }) {
         onCancel={() => setShowDeleteModal(false)}
       />
 
-      <div className="card mb-3">
-        <div className="card-body">
-          <div className="d-flex justify-content-between align-items-center mb-2">
+      <div className=" shadow-sm p-2 mb-4 ">
+        <div className="card-body p-4 bg-light mb-2">
+          <div className="d-flex justify-content-between align-items-center mb-3">
             {/* LEFT: avatar + name + date */}
             <div className="d-flex align-items-center">
               {avatarUrl ? (
                 <img
                   src={avatarUrl}
                   alt="avatar"
-                  className="rounded-circle me-2"
-                  style={{ width: 32, height: 32, objectFit: "cover" }}
+                  className="rounded-circle me-3"
+                  style={{ width: 40, height: 40, objectFit: "cover" }}
                 />
               ) : (
                 <FaUserCircle
-                  className="me-2 text-secondary"
-                  style={{ fontSize: 32 }}
+                  className="me-3 text-secondary"
+                  style={{ fontSize: 40 }}
                 />
               )}
               <div>
-                <div className="fw-bold">
+                <div className="fw-bold text-capitalize">
                   {post.author_details.first_name}{" "}
                   {post.author_details.last_name}
                 </div>
-                <small className="text-muted">
-                  {new Date(post.created_at).toLocaleString()}
-                </small>
               </div>
             </div>
 
@@ -151,7 +151,7 @@ export default function Post({ post, onPostUpdated }) {
               <input
                 type="file"
                 accept="image/*"
-                className="form-control mb-2"
+                className="form-control mb-3"
                 onChange={(e) => setImageFile(e.target.files[0])}
               />
               <button
@@ -174,41 +174,71 @@ export default function Post({ post, onPostUpdated }) {
             <>
               <p className="card-text">{post.content}</p>
               {post.image && (
-                <img
-                  src={
-                    post.image.startsWith("http")
-                      ? post.image
-                      : `${cloudinaryBase}${post.image}`
-                  }
-                  alt="Post"
-                  className="img-fluid rounded mb-3"
-                  style={{ maxHeight: "400px", objectFit: "contain" }}
-                />
+                <div className="text-center mb-3">
+                  <img
+                    src={
+                      post.image.startsWith("http")
+                        ? post.image
+                        : `${cloudinaryBase}${post.image}`
+                    }
+                    alt="Post"
+                    className="img-fluid rounded mx-auto d-block"
+                    style={{ maxHeight: "400px", objectFit: "contain" }}
+                  />
+                </div>
               )}
             </>
           )}
 
-          {/* Likes & comment count */}
-          <div className="d-flex align-items-center text-muted">
+          <div className="date-time-container d-flex justify-content-end mb-2">
+            <small className="text-muted small">
+              {new Date(post.created_at).toLocaleString()}
+            </small>
+          </div>
+          <div className="d-flex justify-content-around  shadow-sm p-1 mt-4 mb13">
             <button
               type="button"
-              className="btn btn-sm btn-outline-danger me-2"
+              className={`like-share-comment-button ${
+                liked ? "btn-danger" : "btn-outline-danger"
+              }`}
               onClick={handleLike}
               disabled={isLiking}
             >
-              ❤️ Like
+              ❤️ {liked ? "Liked" : "Like"} ({likeCount})
             </button>
-            {likeCount} · 💬 {post.comment_count}
+
+            <button
+              type="button"
+              className="like-share-comment-button"
+              onClick={() => setShowComments((prev) => !prev)}
+            >
+              💬 Comment ({post.comment_count})
+            </button>
+
+            <button
+              type="button"
+              className="like-share-comment-button"
+              onClick={() =>
+                navigator.share?.({
+                  title: "Hotel Post",
+                  url: window.location.href,
+                })
+              }
+            >
+              🔗 Share
+            </button>
           </div>
         </div>
 
         {/* Comments section */}
-        <CommentsSection
-          postId={post.id}
-          hotelSlug={post.hotel_slug}
-          initialComments={post.comments || []}
-          initialCount={post.comment_count || 0}
-        />
+        {showComments && (
+          <CommentsSection
+            postId={post.id}
+            hotelSlug={post.hotel_slug}
+            initialComments={post.comments || []}
+            initialCount={post.comment_count || 0}
+          />
+        )}
       </div>
     </>
   );

@@ -1,18 +1,18 @@
 // src/components/home/CommentComposer.jsx
 
-import React, { useState, useEffect } from 'react';
-import api from '@/services/api';
+import React, { useState, useEffect } from "react";
+import api from "@/services/api";
 
 export default function CommentComposer({
   postId,
   hotelSlug,
-  parentId,          // for replies
-  comment,           // if present, we’re editing
-  onCommentAdded,    // new comment or reply
-  onCommentUpdated,  // editing existing comment
+  parentId, // for replies
+  comment, // if present, we’re editing
+  onCommentAdded, // new comment or reply
+  onCommentUpdated, // editing existing comment
 }) {
-  const [content, setContent] = useState(comment?.content || '');
-  const [image, setImage]     = useState(null);
+  const [content, setContent] = useState(comment?.content || "");
+  const [image, setImage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   // when comment prop changes (i.e. start editing), prefill content
@@ -23,41 +23,41 @@ export default function CommentComposer({
     }
   }, [comment]);
 
-  const handleSubmit = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!content.trim() && !image) return;
 
     const formData = new FormData();
-    formData.append('content', content);
-    if (image) formData.append('image', image);
-    if (parentId) formData.append('parent', parentId);
+    formData.append("content", content);
+    if (image) formData.append("image", image);
+    if (parentId) formData.append("parent", parentId);
 
     setSubmitting(true);
     try {
       let res;
       if (comment) {
-        // —— EDIT existing comment —— 
+        // —— EDIT existing comment ——
         res = await api.patch(
           `/home/${hotelSlug}/posts/${postId}/comments/${comment.id}/`,
           formData,
-          { headers: { 'Content-Type': 'multipart/form-data' } }
+          { headers: { "Content-Type": "multipart/form-data" } }
         );
         onCommentUpdated?.(res.data);
       } else {
-        // —— NEW comment or reply —— 
+        // —— NEW comment or reply ——
         res = await api.post(
           `/home/${hotelSlug}/posts/${postId}/comments/`,
           formData,
-          { headers: { 'Content-Type': 'multipart/form-data' } }
+          { headers: { "Content-Type": "multipart/form-data" } }
         );
         onCommentAdded?.(res.data);
       }
 
       // reset composer
-      setContent('');
+      setContent("");
       setImage(null);
     } catch (err) {
-      console.error('Failed to save comment', err.response?.data || err);
+      console.error("Failed to save comment", err.response?.data || err);
     } finally {
       setSubmitting(false);
     }
@@ -70,35 +70,54 @@ export default function CommentComposer({
         rows={2}
         placeholder={
           comment
-            ? 'Edit your comment…'
+            ? "Edit your comment…"
             : parentId
-              ? 'Write a reply…'
-              : 'Write a comment…'
+            ? "Write a reply…"
+            : "Write a comment…"
         }
         value={content}
-        onChange={e => setContent(e.target.value)}
+        onChange={(e) => setContent(e.target.value)}
       />
 
-      <input
-        type="file"
-        accept="image/*"
-        className="form-control mb-2"
-        onChange={e => setImage(e.target.files[0])}
-      />
+      <div className="mb-2 d-flex align-items-center">
+        <input
+          id="comment-image"
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={(e) => setImage(e.target.files[0])}
+        />
+        <label
+          htmlFor="comment-image"
+          className=" btn-outline-secondary btn-sm p-1"
+        >
+          <i className="bi bi-image" style={{ fontSize: "1.2rem" }}></i>
+        </label>
 
+        {/* Show filename if image is selected */}
+        {image && (
+          <small className="ms-2 text-muted">
+            <i className="bi bi-check-circle text-success me-1"></i>
+            {image.name}
+          </small>
+        )}
+      </div>
+
+        <div className="d-flex justify-content-center">
       <button
         type="submit"
-        className="btn btn-sm btn-outline-primary"
+        className="btn btn-sm custom-button"
         disabled={submitting}
       >
         {submitting
           ? comment
-            ? 'Updating…'
-            : 'Posting…'
+            ? "Updating…"
+            : "Posting…"
           : comment
-            ? 'Update'
-            : 'Comment'}
+          ? "Update"
+          : "Comment"}
       </button>
+      </div>
     </form>
   );
 }

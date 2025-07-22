@@ -28,23 +28,40 @@ export default function PostComposer({ hotelSlug, onPostCreated }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mb-4">
+    <form onSubmit={handleSubmit} className="card p-3 shadow-sm mb-3">
       <textarea
-        className="form-control mb-2"
-        placeholder="What's on your mind?"
+        className="form-control border-0"
+        placeholder="Share your thoughts..."
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        rows={3}
+        rows={2}
+        style={{ resize: 'none', fontSize: '0.95rem' }}
       />
-      <input
-        type="file"
-        accept="image/*"
-        className="form-control mb-2"
-        onChange={(e) => setImage(e.target.files[0])}
-      />
-      <button type="submit" className="btn btn-primary w-100" disabled={submitting}>
-        {submitting ? 'Posting...' : 'Post'}
-      </button>
+      
+      <div className="d-flex justify-content-between align-items-center mt-2">
+        <div>
+          <label htmlFor="post-image" className="btn btn-sm btn-outline-secondary">
+            <i className="bi bi-image"></i>
+          </label>
+          <input
+            id="post-image"
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => setImage(e.target.files[0])}
+          />
+        </div>
+        
+        {(content.trim() || image) && (
+          <button
+            type="submit"
+            className="btn btn-sm btn-primary"
+            disabled={submitting}
+          >
+            {submitting ? 'Posting...' : 'Post'}
+          </button>
+        )}
+      </div>
     </form>
   );
 }
