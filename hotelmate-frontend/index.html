@@ -5,16 +5,14 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    
     <title>HotelsMates</title>
-  <style>
+    <style>
       /* Theme fallbacks */
       :root {
         --main-color: ;
-        --secondary-color: #2ecc71;
+        --secondary-color: #ffffff;
         --main-color-rgb: 52, 152, 219;
         --secondary-color-rgb: 46, 204, 113;
-       
       }
 
       /* Splash screen */
@@ -32,24 +30,34 @@
         font-size: 1.25rem;
       }
 
-      /* Spinner */
+      /* Hide the old spinner entirely */
       #splash .spinner {
-        width: 3rem;
-        height: 3rem;
-        border: 0.4rem solid rgba(255,255,255,0.3);
-        border-top-color: white;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-bottom: 0.5rem;
+        display: none;
       }
-      @keyframes spin {
-        to { transform: rotate(360deg); }
+      #splash div {
+        padding: 1em;
+        border-radius: 20px;
+       background-color: var(--secondary-color);
+      }
+
+      /* New: size and center your logo */
+      #splash-img {
+        max-width: 40%;
+        max-height: 40%;
+        object-fit: contain;
+        margin-bottom: 0.75rem;
+        border-radius: 50%;
       }
     </style>
   </head>
   <body>
-     <div id="splash">
-      <div class="spinner" role="status"></div>
+    <div id="splash">
+      <!-- swapped spinner for your logo image -->
+      <img
+        id="splash-img"
+        src="/hotelsmateslogo.png"
+        alt="HotelsMates Loading Logo"
+      />
       <div>Loading…</div>
     </div>
     <div id="root"></div>

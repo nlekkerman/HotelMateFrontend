@@ -96,7 +96,7 @@ const DesktopSidebarNavbar = () => {
     {
       path: "/reception",
       label: "Reception",
-      icon: "house",
+      icon: "bell",
       feature: "reception",
       roles: ["receptionist", "manager", "concierge"],
     },
@@ -285,7 +285,7 @@ const DesktopSidebarNavbar = () => {
                     )}
                   </div>
 
-                  <ul className="nav flex-column ms-4 mt-1">
+                  <ul className="nav flex-column  mt-1">
                     <li className="nav-item">
                       <Link
                         className={`nav-link text-white ${

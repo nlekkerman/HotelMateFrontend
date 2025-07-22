@@ -28,6 +28,11 @@ export default function useLogin() {
       );
 
       const data = response.data;
+      const profileImageUrl = data.profile_image_url?.startsWith("http")
+        ? data.profile_image_url
+        : `${import.meta.env.VITE_CLOUDINARY_BASE}image/upload/v1753188341/${
+            data.profile_image_url
+          }.png`;
 
       // 1. Save user data to localStorage
       localStorage.setItem(
@@ -41,7 +46,8 @@ export default function useLogin() {
           is_staff: data.is_staff,
           is_superuser: data.is_superuser,
           access_level: data.access_level,
-    
+          profile_image_url: profileImageUrl,
+
           hotel: {
             id: data.hotel_id,
             name: data.hotel_name,
@@ -61,7 +67,10 @@ export default function useLogin() {
         is_staff: data.is_staff,
         is_superuser: data.is_superuser,
         access_level: data.access_level,
+        profile_image_url: profileImageUrl,
       });
+
+      console.log("User logged in successfully:", profileImageUrl);
 
       // 3. Now register FCM token!
       const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
