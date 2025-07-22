@@ -2,9 +2,9 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
   FaEnvelope, FaUserShield, FaPhone, FaBuilding, 
-  FaBriefcase, FaToggleOn, FaToggleOff, FaUserCircle 
+  FaBriefcase, FaToggleOn, FaToggleOff 
 } from "react-icons/fa";
-import api from "@/services/api"; // Axios instance with auth token
+import api from "@/services/api";
 
 const fetchStaffMe = async () => {
   const response = await api.get("/staff/me/");
@@ -39,16 +39,31 @@ export default function StaffProfile() {
     <div className="d-flex justify-content-center align-items-center py-5">
       <div className="card shadow border-0 w-100" style={{ maxWidth: 400 }}>
         <div className="card-header bg-primary text-white text-center">
-          <FaUserCircle size={32} className="mb-2" />
+          {/* Optional: show default icon if no image */}
+          {!staff.profile_image_url && (
+            <div className="mb-2">
+              <FaUserShield size={32} />
+            </div>
+          )}
           <h4 className="mb-0">Staff Profile</h4>
         </div>
-        <div className="card-body">
+
+        <div className="card-body text-center">
+          {staff.profile_image_url && (
+            <img
+              src={staff.profile_image_url}
+              alt={`${staff.first_name} ${staff.last_name}`}
+              className="rounded-circle mb-3"
+              style={{ width: 120, height: 120, objectFit: "cover" }}
+            />
+          )}
+
           {/* Name */}
-          <h5 className="card-title text-center text-primary mb-4">
+          <h5 className="card-title text-primary mb-4">
             {staff.first_name} {staff.last_name}
           </h5>
 
-          <ul className="list-group list-group-flush">
+          <ul className="list-group list-group-flush text-start">
             <li className="list-group-item d-flex align-items-center">
               <FaEnvelope className="me-2 text-secondary" />
               <span className="flex-grow-1">Email:</span>
@@ -114,8 +129,8 @@ export default function StaffProfile() {
             </li>
           </ul>
         </div>
+
         <div className="card-footer text-center text-muted small">
-          {/* You could replace this with real timestamp from staff.updated_at */}
           Last updated just now
         </div>
       </div>

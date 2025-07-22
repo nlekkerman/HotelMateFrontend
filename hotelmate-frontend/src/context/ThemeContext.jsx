@@ -5,7 +5,7 @@ import api from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 
 const ThemeContext = createContext({
-  mainColor: "#3498db",
+  mainColor: "#000000ff",
   secondaryColor: "#2ecc71",
   setTheme: () => Promise.resolve(),
   themeLoading: true,
@@ -33,11 +33,9 @@ export function ThemeProvider({ children }) {
       api.patch(`/theme/${id}/`, { main_color, secondary_color }),
     onSuccess: (res) => {
       const { main_color, secondary_color } = res.data;
-      // update CSS vars
       document.documentElement.style.setProperty("--main-color", main_color);
       document.documentElement.style.setProperty("--secondary-color", secondary_color);
 
-      // also compute & set their RGB vars
       const hexToRgb = (hex) => {
         const shorthand = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
         hex = hex.replace(shorthand, (_, r, g, b) => r + r + g + g + b + b);
@@ -46,6 +44,7 @@ export function ThemeProvider({ children }) {
           ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}`
           : "";
       };
+
       document.documentElement.style.setProperty(
         "--main-color-rgb",
         hexToRgb(main_color)
@@ -60,11 +59,8 @@ export function ThemeProvider({ children }) {
   });
 
   // 3️⃣ When the theme data initially loads, apply it & remove the splash
-// src/context/ThemeContext.jsx
-useEffect(() => {
-  // Once the query has settled (loading -> false), remove the splash
-  if (!isLoading) {
-    // 1️⃣ If we got real theme data, apply it
+  useEffect(() => {
+    if (isLoading) return;
     if (data) {
       const hexToRgb = (hex) => {
         const shorthand = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
@@ -77,24 +73,21 @@ useEffect(() => {
 
       document.documentElement.style.setProperty("--main-color", data.main_color);
       document.documentElement.style.setProperty(
-        "--main-color-rgb",
-        hexToRgb(data.main_color)
-      );
-      document.documentElement.style.setProperty(
         "--secondary-color",
         data.secondary_color
+      );
+      document.documentElement.style.setProperty(
+        "--main-color-rgb",
+        hexToRgb(data.main_color)
       );
       document.documentElement.style.setProperty(
         "--secondary-color-rgb",
         hexToRgb(data.secondary_color)
       );
     }
-    // 2️⃣ Now that the theme query is finished, remove the splash screen
     const splash = document.getElementById("splash");
     if (splash) splash.remove();
-  }
-}, [isLoading, data]);
-
+  }, [isLoading, data]);
 
   // 4️⃣ Expose a setter for updating theme
   const setTheme = ({ mainColor, secondaryColor }) => {
@@ -120,4 +113,6 @@ useEffect(() => {
   );
 }
 
-export const useTheme = () => useContext(ThemeContext);
+export function useTheme() {
+  return useContext(ThemeContext);
+}

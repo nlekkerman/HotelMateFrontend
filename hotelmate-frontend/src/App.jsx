@@ -49,7 +49,8 @@ import CategoryStock from "@/components/stock_tracker/CategoryStock";
 import NetworkHandler from "@/components/offline/NetworkHandler";
 import NoInternet from "@/components/offline/NoInternet";
 import NotFound from "@/components/offline/NotFound";
-import { ThemeProvider } from "@/context/ThemeContext"; // Import ThemeProvider
+import { ThemeProvider } from "@/context/ThemeContext";
+import LogoBanner from "./components/layout/LogoBanner";
 import HotelInfo from "@/pages/hotel_info/HotelInfo";
 import GoodToKnow from "@/components/hotel_info/GoodToKnow";
 import GoodToKnowConsole from "@/components/hotel_info/GoodToKnowConsole";
@@ -98,7 +99,9 @@ function App() {
               <div className="d-flex min-vh-100 min-vw-100">
                 {sidebar}
                 <div className={layoutClass}>
-                  <div className="main-content-area d-flex">
+                  <div className="main-content-area d-flex flex-column">
+                    
+                    <LogoBanner />
                     <Routes>
                       {/* General */}
                       <Route path="/" element={<Home />} />

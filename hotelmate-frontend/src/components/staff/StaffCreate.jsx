@@ -18,6 +18,7 @@ const StaffCreate = () => {
     is_active: true,
     is_on_duty: false,
   });
+  const [profileImage, setProfileImage] = useState(null);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
@@ -69,7 +70,9 @@ const StaffCreate = () => {
       [name]: type === "checkbox" ? checked : value,
     }));
   };
-
+  const handleFileChange = (e) => {
+    setProfileImage(e.target.files[0] || null);
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -166,14 +169,13 @@ const StaffCreate = () => {
             <form onSubmit={handleSubmit}>
               <div>
                 <label>Hotel</label>
-               <input
-                type="text"
-                value={hotels[0]?.name || "Loading..."}
-                readOnly
-                className="form-control"
-              />
+                <input
+                  type="text"
+                  value={hotels[0]?.name || "Loading..."}
+                  readOnly
+                  className="form-control"
+                />
               </div>
-              
 
               <div>
                 <label>First Name</label>
@@ -260,6 +262,15 @@ const StaffCreate = () => {
                   name="phone_number"
                   value={staffData.phone_number}
                   onChange={handleChange}
+                />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Profile Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="form-control"
+                  onChange={handleFileChange}
                 />
               </div>
 
