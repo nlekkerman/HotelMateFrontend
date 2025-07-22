@@ -3,6 +3,7 @@ import api from '@/services/api';
 import CommentComposer from '@/components/home/CommentComposer';
 import DeletionModal from '@/components/modals/DeletionModal';
 import { useAuth } from "@/context/AuthContext";
+import { FaUserCircle } from "react-icons/fa";
 
 const cloudinaryBase = import.meta.env.VITE_CLOUDINARY_BASE;
 
