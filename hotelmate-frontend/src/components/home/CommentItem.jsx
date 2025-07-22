@@ -57,7 +57,7 @@ export default function CommentItem({
       onCancel={() => setShowDelete(false)}
     />
 
-    <div className="card mb-3">
+    <div className="shadow-sm mb-3">
       <div className="card-body">
         {/* Header */}
         <div className="d-flex justify-content-between align-items-center mb-2">
@@ -87,7 +87,7 @@ export default function CommentItem({
             {/* Reply toggle */}
             <button
               type="button"
-              className="btn btn-outline-secondary"
+              className="btn"
               title="Reply"
               onClick={() => setShowReplyForm(v => !v)}
             >
@@ -96,7 +96,7 @@ export default function CommentItem({
             {/* Edit */}
             <button
               type="button"
-              className="btn btn-outline-secondary"
+              className="btn"
               title="Edit"
               onClick={() => setEditing(true)}
             >
@@ -105,7 +105,7 @@ export default function CommentItem({
             {/* Delete */}
             <button
               type="button"
-              className="btn btn-outline-danger"
+              className="btn text-danger"
               title="Delete"
               onClick={() => setShowDelete(true)}
             >
