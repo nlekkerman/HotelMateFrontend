@@ -1,8 +1,14 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  FaEnvelope, FaUserShield, FaPhone, FaBuilding, 
-  FaBriefcase, FaToggleOn, FaToggleOff 
+import { useNavigate } from "react-router-dom";
+import {
+  FaEnvelope,
+  FaUserShield,
+  FaPhone,
+  FaBuilding,
+  FaBriefcase,
+  FaToggleOn,
+  FaToggleOff,
 } from "react-icons/fa";
 import api from "@/services/api";
 
@@ -12,7 +18,14 @@ const fetchStaffMe = async () => {
 };
 
 export default function StaffProfile() {
-  const { data: staff, isLoading, isError, error } = useQuery({
+  const navigate = useNavigate(); // NEW
+
+  const {
+    data: staff,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ["staffMe"],
     queryFn: fetchStaffMe,
   });
@@ -34,6 +47,18 @@ export default function StaffProfile() {
       </div>
     );
   }
+
+  const handleRegisterFace = () => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    const hotelSlug = user?.hotel_slug;
+
+    if (!hotelSlug) {
+      console.warn("Hotel slug missing from localStorage!");
+      return;
+    }
+
+    navigate(`/${hotelSlug}/staff/register-face`);
+  };
 
   return (
     <div className="d-flex justify-content-center align-items-center py-5">
@@ -72,16 +97,12 @@ export default function StaffProfile() {
             <li className="list-group-item d-flex align-items-center">
               <FaUserShield className="me-2 text-secondary" />
               <span className="flex-grow-1">Access Level:</span>
-              <span className="fw-semibold">
-                {staff.access_level || "N/A"}
-              </span>
+              <span className="fw-semibold">{staff.access_level || "N/A"}</span>
             </li>
             <li className="list-group-item d-flex align-items-center">
               <FaPhone className="me-2 text-secondary" />
               <span className="flex-grow-1">Phone:</span>
-              <span className="fw-semibold">
-                {staff.phone_number || "N/A"}
-              </span>
+              <span className="fw-semibold">{staff.phone_number || "N/A"}</span>
             </li>
             <li className="list-group-item d-flex align-items-center">
               <FaBuilding className="me-2 text-secondary" />
@@ -93,9 +114,7 @@ export default function StaffProfile() {
             <li className="list-group-item d-flex align-items-center">
               <FaBriefcase className="me-2 text-secondary" />
               <span className="flex-grow-1">Role:</span>
-              <span className="fw-semibold text-capitalize">
-                {staff.role}
-              </span>
+              <span className="fw-semibold text-capitalize">{staff.role}</span>
             </li>
             <li className="list-group-item d-flex align-items-center">
               {staff.is_active ? (
@@ -128,6 +147,17 @@ export default function StaffProfile() {
               </span>
             </li>
           </ul>
+          {/* FACE REGISTER BUTTON (conditionally rendered) */}
+          {!staff.has_registered_face && ( // NEW
+            <div className="mt-4">
+              <button
+                className="btn btn-outline-primary"
+                onClick={handleRegisterFace}
+              >
+                Register Face Data
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="card-footer text-center text-muted small">

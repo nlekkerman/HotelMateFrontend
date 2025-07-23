@@ -24,6 +24,8 @@ import RequirePin from "@/components/auth/RequirePin";
 import RequireDinnerPin from "@/components/auth/RequireDinnerPin";
 import DinnerPinAuth from "@/components/auth/DinnerPinAuth";
 import PinAuth from "@/components/auth/PinAuth";
+import FaceClockInPage from "@/pages/attendance/FaceClockInPage";
+import FaceRegister from "@/components/attendance/FaceRegister";
 
 import Staff from "@/components/staff/Staff";
 import StaffCreate from "@/components/staff/StaffCreate";
@@ -132,6 +134,9 @@ function App() {
                         path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin"
                         element={<DinnerPinAuth />}
                       />
+
+                      <Route path="/clock-in/:hotel_slug" element={<FaceClockInPage />} />
+                      <Route path="/:hotel_slug/staff/register-face" element={<FaceRegister />} />
 
                       {/* Guest Booking */}
                       <Route
