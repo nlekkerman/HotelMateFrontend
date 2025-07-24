@@ -205,20 +205,7 @@ const DesktopSidebarNavbar = () => {
             </>
           ) : (
             <>
-              {staffProfile && (
-                <li className="nav-item mb-2">
-                  <button
-                    className={`btn  text-start text-white btn-${
-                      isOnDuty ? "success" : "danger"
-                    }`}
-                    onClick={() => setIsModalOpen(true)}
-                  >
-                    <i className="bi bi-clock me-2" />
-                    {!collapsed && (isOnDuty ? "Clock Out" : "Clock In")}
-                  </button>
-                </li>
-              )}
-
+            
               {canAccess([
                 "receptionist",
                 "porter",

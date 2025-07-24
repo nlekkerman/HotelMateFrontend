@@ -140,159 +140,187 @@ const MobileNavbar = () => {
       }`}
       style={mainColor ? { backgroundColor: mainColor } : {}}
     >
-     <div className="container-fluid">
+      <div className="container-fluid">
+        <div className="position-relative d-inline-block ms-auto">
+          <button
+            className="navbar-toggler bg-transparent border-0 shadow-lg"
+            type="button"
+            aria-controls="navbarSupportedContent"
+            aria-expanded={!collapsed}
+            aria-label="Toggle navigation"
+            onClick={toggleNavbar}
+          >
+            <span
+              className="navbar-toggler-icon"
+              style={{ filter: "invert(1)" }}
+            />
+          </button>
 
-
-  <div className="position-relative d-inline-block ms-auto">
-    <button
-      className="navbar-toggler bg-transparent border-0 shadow-lg"
-      type="button"
-      aria-controls="navbarSupportedContent"
-      aria-expanded={!collapsed}
-      aria-label="Toggle navigation"
-      onClick={toggleNavbar}
-    >
-      <span
-        className="navbar-toggler-icon"
-        style={{ filter: "invert(1)" }}
-      />
-    </button>
-
-    {totalServiceCount > 0 && (
-      <span className="position-absolute top-0 start-0 translate-middle badge rounded-pill bg-danger">
-        {totalServiceCount}
-      </span>
-    )}
-  </div>
-
-  <div className={`collapse navbar-collapse ${!collapsed ? "show" : ""}`}>
-    <ul className="navbar-nav ms-auto mb-2 mb-lg-0 gap-3 shadow-lg p-2 rounded m-2">
-      {!user && (
-        <>
-          <li className="nav-item">
-            <Link
-              className={`nav-link ${isActive("/login") ? "active" : ""} text-white`}
-              to="/login"
-              onClick={toggleNavbar}
-            >
-              Login
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link
-              className={`nav-link ${isActive("/register") ? "active" : ""} text-white`}
-              to="/register"
-              onClick={toggleNavbar}
-            >
-              Register
-            </Link>
-          </li>
-        </>
-      )}
-
-      {user && (
-        <>
-          {staffProfile && (
-            <li className="nav-item">
-              <button
-                className={`btn custom-button btn-${isOnDuty ? "success" : "danger"}`}
-                onClick={() => setIsModalOpen(true)}
-              >
-                {isOnDuty ? "Clock Out" : "Clock In"}
-              </button>
-            </li>
+          {totalServiceCount > 0 && (
+            <span className="position-absolute top-0 start-0 translate-middle badge rounded-pill bg-danger">
+              {totalServiceCount}
+            </span>
           )}
+        </div>
 
-          {navItems.filter(item => canAccess(item.roles)).map(({ path, label, icon }) => (
-            <li className="nav-item" key={path}>
-              <Link
-                className={`nav-link ${isActive(path) ? "active" : ""} text-white`}
-                to={path}
-                onClick={toggleNavbar}
-              >
-                <i className={`bi bi-${icon} me-2`} />
-                {label}
-              </Link>
-            </li>
-          ))}
+        <div className={`collapse navbar-collapse ${!collapsed ? "show" : ""}`}>
+          <ul className="navbar-nav ms-auto mb-2 mb-lg-0 gap-3 shadow-lg p-2 rounded m-2">
+            {!user && (
+              <>
+                <li className="nav-item">
+                  <Link
+                    className={`nav-link ${
+                      isActive("/login") ? "active" : ""
+                    } text-white`}
+                    to="/login"
+                    onClick={toggleNavbar}
+                  >
+                    Login
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link
+                    className={`nav-link ${
+                      isActive("/register") ? "active" : ""
+                    } text-white`}
+                    to="/register"
+                    onClick={toggleNavbar}
+                  >
+                    Register
+                  </Link>
+                </li>
+              </>
+            )}
 
-          {servicesNavItems.some(({ roles }) => canAccess(roles)) && (
-            <li className="nav-item dropdown">
-              <div
-                className="nav-link d-flex justify-content-between align-items-center text-white"
-                style={{ cursor: "pointer" }}
-                onClick={() => setServicesDropdownOpen(!servicesDropdownOpen)}
-              >
-                <span>
-                  <i className="bi bi-cup-hot me-2" />
-                  Services
-                </span>
+            {user && (
+              <>
+                
 
-                {roomServiceCount + breakfastCount > 0 && (
-                  <span className="badge bg-danger ms-2">
-                    {roomServiceCount + breakfastCount}
-                  </span>
+                {navItems
+                  .filter((item) => canAccess(item.roles))
+                  .map(({ path, label, icon }) => (
+                    <li className="nav-item" key={path}>
+                      <Link
+                        className={`nav-link ${
+                          isActive(path) ? "active" : ""
+                        } text-white`}
+                        to={path}
+                        onClick={toggleNavbar}
+                      >
+                        <i className={`bi bi-${icon} me-2`} />
+                        {label}
+                      </Link>
+                    </li>
+                  ))}
+
+                {servicesNavItems.some(({ roles }) => canAccess(roles)) && (
+                  <li className="nav-item dropdown">
+                    <div
+                      className="nav-link d-flex justify-content-between align-items-center text-white"
+                      style={{ cursor: "pointer" }}
+                      onClick={() =>
+                        setServicesDropdownOpen(!servicesDropdownOpen)
+                      }
+                    >
+                      <span>
+                        <i className="bi bi-cup-hot me-2" />
+                        Services
+                      </span>
+
+                      {roomServiceCount + breakfastCount > 0 && (
+                        <span className="badge bg-danger ms-2">
+                          {roomServiceCount + breakfastCount}
+                        </span>
+                      )}
+
+                      <i
+                        className={`bi bi-chevron-${
+                          servicesDropdownOpen ? "up" : "down"
+                        }`}
+                        style={{ fontSize: "0.8rem" }}
+                      />
+                    </div>
+
+                    {servicesDropdownOpen && (
+                      <ul className="nav flex-column ms-3">
+                        {servicesNavItems
+                          .filter(({ roles }) => canAccess(roles))
+                          .map(({ path, label, icon }) => {
+                            const badgeCount =
+                              label === "Room Service"
+                                ? roomServiceCount
+                                : label === "Breakfast"
+                                ? breakfastCount
+                                : 0;
+
+                            return (
+                              <li className="nav-item" key={path}>
+                                <Link
+                                  className={`nav-link text-white d-flex justify-content-between align-items-center ${
+                                    isActive(path) ? "active" : ""
+                                  }`}
+                                  to={path}
+                                  onClick={() => {
+                                    toggleNavbar();
+                                    setServicesDropdownOpen(false);
+                                  }}
+                                >
+                                  <div>
+                                    <i className={`bi bi-${icon} me-2`} />
+                                    {label}
+                                  </div>
+                                  {badgeCount > 0 && (
+                                    <span className="badge bg-danger ms-2">
+                                      {badgeCount}
+                                    </span>
+                                  )}
+                                </Link>
+                              </li>
+                            );
+                          })}
+                      </ul>
+                    )}
+                  </li>
+                )}
+                {canAccess([
+                  "receptionist",
+                  "porter",
+                  "waiter",
+                  "manager",
+                  "chef",
+                  "staff_admin",
+                  "super_staff_admin",
+                  "concierge",
+                  "maintenance_staff",
+                  "housekeeping_attendant",
+                ]) && (
+                  <li className="nav-item">
+                    <Link
+                      className={`nav-link text-white ${
+                        isActive("/staff/me") ? "active" : ""
+                      }`}
+                      to="/staff/me"
+                      onClick={toggleNavbar}
+                    >
+                      <i className="bi bi-person-circle me-2" />
+                      Profile
+                    </Link>
+                  </li>
                 )}
 
-                <i
-                  className={`bi bi-chevron-${servicesDropdownOpen ? "up" : "down"}`}
-                  style={{ fontSize: "0.8rem" }}
-                />
-              </div>
-
-              {servicesDropdownOpen && (
-                <ul className="nav flex-column ms-3">
-                  {servicesNavItems
-                    .filter(({ roles }) => canAccess(roles))
-                    .map(({ path, label, icon }) => {
-                      const badgeCount =
-                        label === "Room Service"
-                          ? roomServiceCount
-                          : label === "Breakfast"
-                          ? breakfastCount
-                          : 0;
-
-                      return (
-                        <li className="nav-item" key={path}>
-                          <Link
-                            className={`nav-link text-white d-flex justify-content-between align-items-center ${
-                              isActive(path) ? "active" : ""
-                            }`}
-                            to={path}
-                            onClick={() => {
-                              toggleNavbar();
-                              setServicesDropdownOpen(false);
-                            }}
-                          >
-                            <div>
-                              <i className={`bi bi-${icon} me-2`} />
-                              {label}
-                            </div>
-                            {badgeCount > 0 && (
-                              <span className="badge bg-danger ms-2">
-                                {badgeCount}
-                              </span>
-                            )}
-                          </Link>
-                        </li>
-                      );
-                    })}
-                </ul>
-              )}
-            </li>
-          )}
-
-          <li className="nav-item">
-            <button className="btn btn-link nav-link" onClick={handleLogout}>
-              Logout
-            </button>
-          </li>
-        </>
-      )}
-    </ul>
-  </div>
-</div>
-
+                <li className="nav-item">
+                  <button
+                    className="btn btn-link nav-link"
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </button>
+                </li>
+              </>
+            )}
+          </ul>
+        </div>
+      </div>
 
       {staffProfile && (
         <ClockModal

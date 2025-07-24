@@ -44,6 +44,8 @@ import Staff from "@/components/staff/Staff";
 import StaffCreate from "@/components/staff/StaffCreate";
 import StaffDetails from "@/components/staff/StaffDetails";
 import StaffProfile from "@/components/staff/StaffProfile";
+import RosterDashboard from "@/pages/attendance/RosterDashboard";
+import DepartmentRosterView from "@/components/attendance/DepartmentRosterView";
 
 import GuestList from "@/components/guests/GuestList";
 import GuestEdit from "@/components/guests/GuestEdit";
@@ -78,7 +80,9 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
     </div>
   );
 
-  const layoutClass = `vw-100 ${collapsed ? "collapsed" : "expanded"} ${isMobile ? "mt-0" : ""}`;
+  const layoutClass = `vw-100 ${collapsed ? "collapsed" : "expanded"} ${
+    isMobile ? "mt-0" : ""
+  }`;
 
   return (
     <>
@@ -95,20 +99,41 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/no-internet" element={<NoInternet />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/registration-success" element={<RegistrationSuccess />} />
+              <Route
+                path="/registration-success"
+                element={<RegistrationSuccess />}
+              />
               <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password/:uid/:token/" element={<ResetPassword />} />
+              <Route
+                path="/reset-password/:uid/:token/"
+                element={<ResetPassword />}
+              />
 
               {/* PIN Auth */}
-              <Route path="/:hotelIdentifier/room/:roomNumber/validate-pin" element={<PinAuth />} />
-              <Route path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin" element={<DinnerPinAuth />} />
+              <Route
+                path="/:hotelIdentifier/room/:roomNumber/validate-pin"
+                element={<PinAuth />}
+              />
+              <Route
+                path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin"
+                element={<DinnerPinAuth />}
+              />
 
               {/* Face Recognition */}
-              <Route path="/clock-in/:hotel_slug" element={<FaceClockInPage />} />
-              <Route path="/:hotel_slug/staff/register-face" element={<FaceRegister />} />
+              <Route
+                path="/clock-in/:hotel_slug"
+                element={<FaceClockInPage />}
+              />
+              <Route
+                path="/:hotel_slug/staff/register-face"
+                element={<FaceRegister />}
+              />
 
               {/* Guest Booking */}
-              <Route path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/" element={<DinnerBookingList />} />
+              <Route
+                path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/"
+                element={<DinnerBookingList />}
+              />
               <Route
                 path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/"
                 element={
@@ -123,9 +148,18 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
 
               {/* Room Services */}
               <Route path="/rooms" element={<RoomList />} />
-              <Route path="/room_services/:hotelIdentifier/orders" element={<RoomServiceOrders />} />
-              <Route path="/services/room-service" element={<RoomServiceOrders />} />
-              <Route path="/services/breakfast" element={<BreakfastRoomService />} />
+              <Route
+                path="/room_services/:hotelIdentifier/orders"
+                element={<RoomServiceOrders />}
+              />
+              <Route
+                path="/services/room-service"
+                element={<RoomServiceOrders />}
+              />
+              <Route
+                path="/services/breakfast"
+                element={<BreakfastRoomService />}
+              />
               <Route
                 path="/room_services/:hotelIdentifier/room/:roomNumber/menu"
                 element={
@@ -148,12 +182,25 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/staff/create" element={<StaffCreate />} />
               <Route path="/staff/:id" element={<StaffDetails />} />
               <Route path="/staff/me" element={<StaffProfile />} />
-
+              <Route path="/roster/:hotelSlug" element={<RosterDashboard />} />
+              <Route
+                path="/roster/:hotelSlug/department/:department"
+                element={<DepartmentRosterView />}
+              />
               {/* Guests */}
               <Route path="/:hotelIdentifier/guests" element={<GuestList />} />
-              <Route path="/:hotelIdentifier/guests/:guestId/edit" element={<GuestEdit />} />
-              <Route path="/rooms/:hotelIdentifier/rooms/:roomNumber" element={<RoomDetails />} />
-              <Route path="/rooms/:roomNumber/add-guest" element={<AssignGuestForm />} />
+              <Route
+                path="/:hotelIdentifier/guests/:guestId/edit"
+                element={<GuestEdit />}
+              />
+              <Route
+                path="/rooms/:hotelIdentifier/rooms/:roomNumber"
+                element={<RoomDetails />}
+              />
+              <Route
+                path="/rooms/:roomNumber/add-guest"
+                element={<AssignGuestForm />}
+              />
 
               {/* Utilities */}
               <Route path="/bookings" element={<Bookings />} />
@@ -161,13 +208,28 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
 
               {/* Hotel Info */}
               <Route path="/hotel_info/:hotel_slug" element={<HotelInfo />} />
-              <Route path="/hotel_info/:hotel_slug/:category" element={<HotelInfo />} />
-              <Route path="/good_to_know/:hotel_slug/:slug" element={<GoodToKnow />} />
-              <Route path="/good_to_know_console/:hotel_slug" element={<GoodToKnowConsole />} />
+              <Route
+                path="/hotel_info/:hotel_slug/:category"
+                element={<HotelInfo />}
+              />
+              <Route
+                path="/good_to_know/:hotel_slug/:slug"
+                element={<GoodToKnow />}
+              />
+              <Route
+                path="/good_to_know_console/:hotel_slug"
+                element={<GoodToKnowConsole />}
+              />
 
               {/* Stock Tracker */}
-              <Route path="/stock_tracker/:hotel_slug" element={<StockDashboard />} />
-              <Route path="/stock_tracker/:hotel_slug/:category_slug" element={<CategoryStock />} />
+              <Route
+                path="/stock_tracker/:hotel_slug"
+                element={<StockDashboard />}
+              />
+              <Route
+                path="/stock_tracker/:hotel_slug/:category_slug"
+                element={<CategoryStock />}
+              />
 
               {/* Catch All */}
               <Route path="*" element={<NotFound />} />
@@ -185,13 +247,26 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ToastContainer position="top-center" autoClose={5000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover draggable theme="colored" />
+      <ToastContainer
+        position="top-center"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        pauseOnHover
+        draggable
+        theme="colored"
+      />
       <UIProvider>
         <AuthProvider>
           <ThemeProvider>
             <BrowserRouter>
               <NetworkHandler />
-              <AppLayout collapsed={collapsed} setCollapsed={setCollapsed} isMobile={isMobile} />
+              <AppLayout
+                collapsed={collapsed}
+                setCollapsed={setCollapsed}
+                isMobile={isMobile}
+              />
             </BrowserRouter>
           </ThemeProvider>
         </AuthProvider>
