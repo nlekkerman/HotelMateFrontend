@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import Webcam from "react-webcam";
 import { useParams } from "react-router-dom";
 import api from "@/services/api";
@@ -10,28 +10,49 @@ export default function FaceRegister() {
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
 
-  const captureAndUpload = async () => {
+  // 1) Load face-api.js models once on mount
+  useEffect(() => {
+    Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri("/models"),
+      faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
+      faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
+    ])
+      .then(() => console.log("Models loaded for registration"))
+      .catch(err => {
+        console.error("Model load error:", err);
+        setError("Failed to load face models");
+      });
+  }, []);
+
+  // helper to get descriptor
+  const getDescriptor = async () => {
+    const videoEl = webcamRef.current?.video;
+    if (!videoEl) throw new Error("Webcam not ready");
+
+    const detection = await faceapi
+      .detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    if (!detection) throw new Error("No face detected");
+    return Array.from(detection.descriptor);
+  };
+
+  const captureAndRegister = async () => {
     setLoading(true);
     setError(null);
     setSuccess(null);
 
     try {
-      const screenshot = webcamRef.current.getScreenshot();
-      const blob = await (await fetch(screenshot)).blob();
-      const file = new File([blob], "face.jpg", { type: "image/jpeg" });
-
-      const formData = new FormData();
-      formData.append("image", file);
-
-      const response = await api.post(
+      const descriptor = await getDescriptor();
+      const res = await api.post(
         `/attendance/clock-logs/register-face/${hotel_slug}/`,
-        formData
+        { descriptor }
       );
-
-      setSuccess(response.data.message || "Face registered successfully.");
+      setSuccess(res.data.message || "Face registered successfully.");
     } catch (err) {
       setError(
-        err?.response?.data?.error || "Upload failed. Please try again."
+        err.response?.data?.error || err.message || "Registration failed."
       );
     } finally {
       setLoading(false);
@@ -45,17 +66,16 @@ export default function FaceRegister() {
         ref={webcamRef}
         audio={false}
         screenshotFormat="image/jpeg"
-        width={400}
-        height={300}
+        videoConstraints={{ facingMode: "user" }}
         className="rounded shadow border"
       />
       <div className="mt-3">
         <button
-          onClick={captureAndUpload}
+          onClick={captureAndRegister}
           className="btn btn-success"
           disabled={loading}
         >
-          {loading ? "Uploading..." : "Save Face"}
+          {loading ? "Registering..." : "Save Face"}
         </button>
       </div>
 
