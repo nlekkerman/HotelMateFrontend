@@ -1,3 +1,4 @@
+// src/pages/attendance/FaceClockInPage.jsx
 import React, { useRef, useState, useEffect } from "react";
 import Webcam from "react-webcam";
 import { useParams } from "react-router-dom";
@@ -7,123 +8,192 @@ export default function FaceClockInPage() {
   const webcamRef = useRef(null);
   const { hotel_slug } = useParams();
 
-  const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState("idle"); // idle | detected | confirmed
-  const [identifiedStaff, setIdentifiedStaff] = useState(null);
-  const [clockAction, setClockAction] = useState(null); // "clock_in" | "clock_out"
-  const [message, setMessage] = useState(null);
-  const [error, setError] = useState(null);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
 
-  const captureScreenshot = async () => {
-    const imageSrc = webcamRef.current.getScreenshot();
-    const blob = await (await fetch(imageSrc)).blob();
-    return new File([blob], "face.jpg", { type: "image/jpeg" });
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState("idle");
+  const [userName, setUserName] = useState("");
+  const [clockAction, setClockAction] = useState(null);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    console.log("⏳ Loading face-api models...");
+    Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri("/models"),
+      faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
+      faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
+    ])
+      .then(() => {
+        console.log("✅ Models loaded");
+        setModelsLoaded(true);
+      })
+      .catch((err) => {
+        console.error("❌ Model load error:", err);
+        setError("Failed to load face models");
+      });
+  }, []);
+
+  // inside FaceClockInPage.jsx
+  const getDescriptor = async (maxRetries = 10, delayMs = 300) => {
+    const videoEl = webcamRef.current?.video;
+    console.log("📸 Getting descriptor… video element:", videoEl);
+    if (!videoEl) throw new Error("Webcam not ready");
+
+    if (videoEl.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+      await new Promise((resolve) =>
+        videoEl.addEventListener("loadeddata", resolve, { once: true })
+      );
+    }
+
+    let attempt = 0;
+    while (attempt < maxRetries) {
+      const detection = await faceapi
+        .detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+
+      if (detection) {
+        console.log("🧠 Face detection result:", detection);
+        return Array.from(detection.descriptor);
+      }
+
+      console.warn("❌ No face detected, retrying...");
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      attempt++;
+    }
+
+    throw new Error("No face detected after multiple attempts.");
   };
 
   const detectFace = async () => {
     setLoading(true);
-    setError(null);
-    setMessage(null);
-    setIdentifiedStaff(null);
-    setClockAction(null);
+    setError("");
+    setMessage("");
     setStep("idle");
 
     try {
-      const file = await captureScreenshot();
-      const formData = new FormData();
-      formData.append("image", file);
+      const descriptor = await getDescriptor();
+      console.log("📤 Sending descriptor to backend /detect/");
+      const res = await api.post(
+        `/attendance/clock-logs/detect/${hotel_slug}/`,
+        { descriptor }
+      );
+      console.log("✅ Backend response:", res.data);
 
-      const res = await api.post(`/attendance/clock-logs/detect/${hotel_slug}/`, formData);
       const { staff_name, clocked_in } = res.data;
-
-      setIdentifiedStaff(staff_name);
+      setUserName(staff_name);
       setClockAction(clocked_in ? "clock_out" : "clock_in");
       setStep("detected");
     } catch (err) {
-      setError(err?.response?.data?.error || "Face not recognized.");
+      console.error("❌ detectFace error:", err);
+      setError(err.response?.data?.error || err.message);
     } finally {
       setLoading(false);
     }
   };
 
   const confirmClock = async () => {
+    console.log("👆 [CLICK] Confirm Clock button pressed");
     setLoading(true);
-    setError(null);
-    setMessage(null);
+    setError("");
+    setMessage("");
 
     try {
-      const file = await captureScreenshot();
-      const formData = new FormData();
-      formData.append("image", file);
-
-      const endpoint = `/attendance/clock-logs/face-clock-in/${hotel_slug}/`;
-      const res = await api.post(endpoint, formData);
-
-      setMessage(res.data.message);
+      const descriptor = await getDescriptor();
+      console.log("📤 Sending descriptor to backend /face-clock-in/");
+      const res = await api.post(
+        `/attendance/clock-logs/face-clock-in/${hotel_slug}/`,
+        { descriptor }
+      );
+      console.log("✅ Clock action result:", res.data);
+      setMessage(res.data.message || "Success");
       setStep("confirmed");
     } catch (err) {
-      setError(err?.response?.data?.error || "Clock action failed.");
+      console.error("❌ confirmClock error:", err);
+      setError(err.response?.data?.error || err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // ⏳ Auto-reset UI after 3 seconds
   useEffect(() => {
     if (step === "confirmed") {
-      const timer = setTimeout(() => {
+      const t = setTimeout(() => {
+        console.log("🔄 Resetting state after confirmation");
         setStep("idle");
-        setMessage(null);
-        setIdentifiedStaff(null);
+        setUserName("");
         setClockAction(null);
+        setMessage("");
+        setError("");
       }, 3000);
-      return () => clearTimeout(timer);
+      return () => clearTimeout(t);
     }
   }, [step]);
 
   return (
-    <div className="container py-5 text-center">
-      <h1 className="mb-4">Facial Clock Terminal</h1>
-
+    <div className="face-terminal clock-in-overlay text-light">
+      {!modelsLoaded && <h4>Loading face‑api models…</h4>}
       <Webcam
         audio={false}
         ref={webcamRef}
         screenshotFormat="image/jpeg"
-        width={400}
-        height={300}
-        className="rounded shadow-sm"
+        videoConstraints={{ facingMode: "user" }}
+        className="webcam-feed shadow-sm mb-4"
+        onUserMedia={() => {
+          console.log("📹 Camera ready");
+          setCameraReady(true);
+        }}
       />
 
-      <div className="mt-4">
+      <div className="d-flex flex-column align-items-center text-center">
         {step === "idle" && (
-          <button onClick={detectFace} className="btn btn-primary" disabled={loading}>
-            {loading ? "Detecting…" : "Scan Face"}
+          <button
+            onClick={detectFace}
+            className="btn btn-primary"
+            disabled={loading || !modelsLoaded || !cameraReady}
+          >
+            {loading
+              ? "Detecting…"
+              : !modelsLoaded
+              ? "Models loading…"
+              : !cameraReady
+              ? "Waiting for camera…"
+              : "Scan Face"}
           </button>
         )}
 
         {step === "detected" && (
           <>
-            <p className="mt-3">
-              Recognized as <strong>{identifiedStaff}</strong>.
-              <br />
-              Would you like to <strong>{clockAction.replace("_", " ").toUpperCase()}</strong>?
+            <p>
+              Welcome, <strong>{userName}</strong>.<br />
+              Would you like to proceed to{" "}
+              <strong>
+                {clockAction === "clock_in" ? "clock in" : "clock out"}
+              </strong>
+              ?
             </p>
             <button
               onClick={confirmClock}
-              className={`btn btn-${clockAction === "clock_in" ? "success" : "danger"}`}
+              className={`btn btn-${
+                clockAction === "clock_in" ? "success" : "danger"
+              }`}
               disabled={loading}
             >
-              {loading ? "Processing…" : `Confirm ${clockAction.replace("_", " ")}`}
+              {loading
+                ? "Processing…"
+                : `Confirm ${clockAction.replace("_", " ").toUpperCase()}`}
             </button>
           </>
         )}
 
         {step === "confirmed" && message && (
-          <p className="mt-3 text-success">{message}</p>
+          <p className="text-success">{message}</p>
         )}
-      </div>
 
-      {error && <p className="mt-3 text-danger">{error}</p>}
+        {error && <p className="text-danger">{error}</p>}
+      </div>
     </div>
   );
 }
