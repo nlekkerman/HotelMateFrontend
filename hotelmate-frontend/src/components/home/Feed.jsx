@@ -1,6 +1,6 @@
 // src/components/home/Feed.jsx
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import api from "@/services/api";
 import Post from "@/components/home/Post";
@@ -9,9 +9,9 @@ import PostComposer from "@/components/home/PostComposer";
 export default function Feed() {
   const { hotelSlug: qrHotelSlug } = useParams();
 
-  const [posts, setPosts]     = useState([]);
+  const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
+  const [error, setError] = useState(null);
 
   const hotelSlug =
     qrHotelSlug ||
@@ -24,10 +24,11 @@ export default function Feed() {
       }
     })();
 
-  const fetchPosts = async () => {
+  // Fetch posts with memoized function
+  const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/home/${hotelSlug}/posts/`);
+      const res = await api.get(`/home/${hotelSlug}/posts/`); // no leading slash
       const data = Array.isArray(res.data) ? res.data : res.data.results || [];
       setPosts(data);
       setError(null);
@@ -38,7 +39,7 @@ export default function Feed() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [hotelSlug]);
 
   useEffect(() => {
     if (!hotelSlug) {
@@ -47,11 +48,11 @@ export default function Feed() {
     } else {
       fetchPosts();
     }
-  }, [hotelSlug]);
+  }, [hotelSlug, fetchPosts]);
 
-  // Add a newly created post at the top
-  const handleNewPost = (newPost) => {
-    setPosts(prev => [newPost, ...prev]);
+  // After creating a new post, simply re-fetch
+  const handleNewPost = () => {
+    fetchPosts();
   };
 
   return (
@@ -67,11 +68,11 @@ export default function Feed() {
       ) : posts.length === 0 ? (
         <p>No posts yet.</p>
       ) : (
-        posts.map(post => (
+        posts.map((post) => (
           <Post
             key={post.id}
             post={post}
-            onPostUpdated={fetchPosts}  // ← pass this so Post can refresh the feed
+            onPostUpdated={fetchPosts} // refresh feed after edit/delete
           />
         ))
       )}

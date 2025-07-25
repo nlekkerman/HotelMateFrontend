@@ -1,115 +1,145 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { format, addDays, startOfWeek } from "date-fns";
 import ShiftModal from "@/components/modals/ShiftModal";
 import api from "@/services/api";
 
-
-
-export default function WeeklyRosterBoard({ hotelSlug, department, staffList, shifts, fetchShifts, period, periods, onPeriodChange }) {
-    const hotelId = JSON.parse(localStorage.getItem("user"))?.hotel_id;
-    const [weekStart, setWeekStart] = useState(
-    period?.start_date ? new Date(period.start_date) : startOfWeek(new Date(), { weekStartsOn: 0 })
-  );
+export default function WeeklyRosterBoard({
+  hotelSlug,
+  department,
+  staffList = [],
+  shifts = [],
+  fetchShifts,
+  period,
+  periods = [],
+  onPeriodChange,
+  hotelId: injectedHotelId, // ← pass from parent to avoid localStorage in render
+}) {
   const [showModal, setShowModal] = useState(false);
   const [targetStaff, setTargetStaff] = useState(null);
   const [targetDate, setTargetDate] = useState(null);
   const [editingShift, setEditingShift] = useState(null);
   const [localShifts, setLocalShifts] = useState([]);
 
-  useEffect(() => {
-    if (period?.start_date) {
-      setWeekStart(new Date(period.start_date));
+  const hotelId = injectedHotelId ?? (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user"))?.hotel_id;
+    } catch {
+      return undefined;
     }
-  }, [period]);
+  })();
 
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const weekStart = useMemo(
+    () =>
+      period?.start_date
+        ? new Date(period.start_date)
+        : startOfWeek(new Date(), { weekStartsOn: 0 }),
+    [period?.start_date]
+  );
 
-  // ✅ FIXED: robust staff ID key fallback (support staff_id OR staff)
-  const baseRoster = (Array.isArray(shifts) ? shifts : []).reduce((acc, shift) => {
-    const staffKey = shift.staff_id || shift.staff; // fallback
-    const key = `${staffKey}_${shift.shift_date}`;
-    acc[key] = acc[key] ? [...acc[key], shift] : [shift];
-    return acc;
-  }, {});
+  const days = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
+    [weekStart]
+  );
 
-  const handleOpenModal = (staff, date, shift = null) => {
+  // Build a roster index once
+  const baseRoster = useMemo(() => {
+    return (Array.isArray(shifts) ? shifts : []).reduce((acc, shift) => {
+      const staffKey = shift.staff_id ?? shift.staff; // fallback
+      const key = `${staffKey}_${shift.shift_date}`;
+      acc[key] = acc[key] ? [...acc[key], shift] : [shift];
+      return acc;
+    }, {});
+  }, [shifts]);
+
+  const handleOpenModal = useCallback((staff, date, shift = null) => {
     setTargetStaff(staff);
     setTargetDate(date);
     setEditingShift(shift);
     setShowModal(true);
-  };
+  }, []);
 
-  const handleSaveShift = ({ start, end }) => {
-    const newShift = {
-      staff_id: targetStaff.id,
-      staff: targetStaff.id,
-      department,
-      period: period.id,
-      shift_date: targetDate,
-      shift_start: start,
-      hotel: hotelId,
-      shift_end: end,
-      ...(editingShift?.id ? { id: editingShift.id } : {}),
-    };
+  const handleSaveShift = useCallback(
+    ({ start, end }) => {
+      if (!targetStaff || !targetDate) return;
 
-    setLocalShifts((prev) => {
-      const filtered = prev.filter((s) =>
-        editingShift?.id
-          ? s.id !== editingShift.id
-          : !(s.staff_id === newShift.staff_id && s.shift_date === newShift.shift_date)
-      );
-      return [...filtered, newShift];
-    });
+      const newShift = {
+        staff_id: targetStaff.id,
+        staff: targetStaff.id,
+        department,
+        period: period.id,
+        shift_date: targetDate,
+        shift_start: start,
+        shift_end: end,
+        hotel: hotelId,
+        ...(editingShift?.id ? { id: editingShift.id } : {}),
+      };
 
-    setShowModal(false);
-  };
+      setLocalShifts((prev) => {
+        // If editing an existing one => replace it
+        if (editingShift?.id) {
+          return prev.map((s) => (s.id === editingShift.id ? newShift : s));
+        }
 
-  const handleDeleteShift = () => {
+        // Creating a new one: allow multiple per day (split shifts)
+        return [...prev, newShift];
+      });
+
+      setShowModal(false);
+    },
+    [department, period?.id, hotelId, targetStaff, targetDate, editingShift]
+  );
+
+  const handleDeleteShift = useCallback(() => {
     if (editingShift?.id) {
       setLocalShifts((prev) => prev.filter((s) => s.id !== editingShift.id));
     }
     setShowModal(false);
-  };
+  }, [editingShift]);
 
-  const renderShifts = (staff, date) => {
-    const dateStr = format(date, "yyyy-MM-dd");
-    const key = `${staff.id}_${dateStr}`;
-    const serverShifts = baseRoster[key] || [];
-    const localShiftsForKey = localShifts.filter(
-      (s) => s.staff_id === staff.id && s.shift_date === dateStr
-    );
+  const renderShifts = useCallback(
+    (staff, date) => {
+      const dateStr = format(date, "yyyy-MM-dd");
+      const key = `${staff.id}_${dateStr}`;
 
-  
+      const serverShifts = baseRoster[key] || [];
+      const localShiftsForKey = localShifts.filter(
+        (s) => s.staff_id === staff.id && s.shift_date === dateStr
+      );
 
-    const combined = [
-      ...serverShifts.filter((s) => !localShiftsForKey.find((ls) => ls.id === s.id)),
-      ...localShiftsForKey,
-    ];
+      const combined = [
+        ...serverShifts.filter(
+          (s) => !localShiftsForKey.some((ls) => ls.id && ls.id === s.id)
+        ),
+        ...localShiftsForKey,
+      ];
 
-    return (
-      <div className="flex flex-col gap-1">
-        {combined.map((shift, idx) => (
+      return (
+        <div className="flex flex-col gap-1">
+          {combined.map((shift, idx) => (
+            <div
+              key={shift.id ?? `local-${idx}`}
+              className={`text-xs px-2 py-1 rounded-md shadow cursor-pointer ${
+                shift.id ? "bg-danger text-white" : "bg-success text-white italic"
+              }`}
+              onClick={() => handleOpenModal(staff, shift.shift_date, shift)}
+            >
+              {shift.shift_start} - {shift.shift_end}
+            </div>
+          ))}
+
           <div
-            key={idx}
-            className={`text-xs px-2 py-1 rounded-md shadow cursor-pointer ${
-              shift.id ? "bg-danger text-white" : "bg-success text-white italic"
-            }`}
-            onClick={() => handleOpenModal(staff, shift.shift_date, shift)}
+            className="text-gray-400 text-xs text-center italic cursor-pointer"
+            onClick={() => handleOpenModal(staff, dateStr, null)}
           >
-            {shift.shift_start} - {shift.shift_end}
+            +
           </div>
-        ))}
-        <div
-          className="text-gray-400 text-xs text-center italic cursor-pointer"
-          onClick={() => handleOpenModal(staff, dateStr, null)}
-        >
-          +
         </div>
-      </div>
-    );
-  };
+      );
+    },
+    [baseRoster, localShifts, handleOpenModal]
+  );
 
-  const handleSubmitRoster = async () => {
+  const handleSubmitRoster = useCallback(async () => {
     try {
       const res = await api.post(`/attendance/${hotelSlug}/shifts/bulk-save/`, {
         shifts: localShifts,
@@ -121,12 +151,12 @@ export default function WeeklyRosterBoard({ hotelSlug, department, staffList, sh
 
       alert(`✅ ${created} created, ${updated} updated.\n❌ ${errors} errors.`);
       setLocalShifts([]);
-      if (typeof fetchShifts === "function") fetchShifts();
+      fetchShifts?.();
     } catch (err) {
       console.error("Bulk save failed:", err);
       alert("❌ Save failed.");
     }
-  };
+  }, [hotelSlug, localShifts, fetchShifts]);
 
   return (
     <div className="mt-6 space-y-4">
@@ -134,16 +164,13 @@ export default function WeeklyRosterBoard({ hotelSlug, department, staffList, sh
         <label className="font-semibold text-sm">Select Week:</label>
         <select
           className="border border-gray-300 rounded px-3 py-2 text-sm"
-          value={period?.id || ""}
-          onChange={(e) => {
-            const id = parseInt(e.target.value);
-            onPeriodChange?.(id);
-          }}
+          value={period?.id ?? ""}
+          onChange={(e) => onPeriodChange?.(parseInt(e.target.value))}
         >
           {periods.map((p) => (
-            <option key={p.id} value={p.id}>
-              {format(new Date(p.start_date), "dd MMM")} – {format(new Date(p.end_date), "dd MMM")}
-            </option>
+          <option key={p.id} value={p.id}>
+            {format(new Date(p.start_date), "dd MMM")} – {format(new Date(p.end_date), "dd MMM")}
+          </option>
           ))}
         </select>
       </div>
@@ -156,7 +183,10 @@ export default function WeeklyRosterBoard({ hotelSlug, department, staffList, sh
                 Staff
               </th>
               {days.map((day) => (
-                <th key={day} className="border px-4 py-2 text-center whitespace-nowrap">
+                <th
+                  key={day.getTime()}
+                  className="border px-4 py-2 text-center whitespace-nowrap"
+                >
                   {format(day, "EEE dd")}
                 </th>
               ))}
@@ -176,7 +206,7 @@ export default function WeeklyRosterBoard({ hotelSlug, department, staffList, sh
                     {staff.first_name} {staff.last_name}
                   </td>
                   {days.map((day) => (
-                    <td key={day} className="border px-2 py-1 min-w-[100px] hover:bg-blue-50">
+                    <td key={`${staff.id}_${day.getTime()}`} className="border px-2 py-1 min-w-[100px] hover:bg-blue-50">
                       {renderShifts(staff, day)}
                     </td>
                   ))}
