@@ -72,13 +72,13 @@ export default function ShiftModal({
           )}
           <div className="flex gap-3">
             <button
-              className="px-4 py-2 bg-gray-300 rounded"
+              className="px-4 py-2 bg-danger text-white m-2 rounded-pill shadow hover:bg-dark"
               onClick={onClose}
             >
               Cancel
             </button>
             <button
-              className="px-4 py-2 bg-blue-600 text-white rounded"
+              className="px-4 py-2 bg-success text-white rounded-pill "
               onClick={() => onSave({ start, end })}
               disabled={!start || !end}
             >
