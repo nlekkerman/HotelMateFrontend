@@ -1,35 +1,42 @@
 // src/components/home/Post.jsx
-
 import React, { useState } from "react";
 import api from "@/services/api";
 import CommentsSection from "@/components/home/CommentsSection";
 import DeletionModal from "@/components/modals/DeletionModal";
 import { useAuth } from "@/context/AuthContext";
 import { FaUserCircle } from "react-icons/fa";
-const cloudinaryBase = import.meta.env.VITE_CLOUDINARY_BASE;
+
+const cloudinaryBase = import.meta.env.VITE_CLOUDINARY_BASE || "";
+
+function buildImageUrl(img) {
+  if (!img || typeof img !== "string") return null;
+  if (img.startsWith("data:")) return img;
+  if (/^https?:\/\//i.test(img)) return img;
+  return cloudinaryBase ? `${cloudinaryBase}${img}` : img;
+}
 
 export default function Post({ post, onPostUpdated }) {
   const { user } = useAuth();
-  // Use the server‐provided flag
-  const isAuthor = Boolean(post.is_author);
-  const avatarUrl = user?.profile_image_url;
-  // ——— Like state ———
-  const [likeCount, setLikeCount] = useState(post.like_count);
-  const [isLiking, setIsLiking] = useState(false);
 
-  // ——— Edit/Delete UI state ———
+  const author = post.author_details || {};
+  const authorAvatar =
+    buildImageUrl(author.profile_image_url || author.profile_image) ||
+    null; // final fallback is null so we show the FaUserCircle
+
+  const isAuthor = Boolean(post.is_author);
+
+  const [likeCount, setLikeCount] = useState(post.like_count ?? 0);
+  const [isLiking, setIsLiking] = useState(false);
   const [editing, setEditing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-
-  // ——— Edit form state ———
-  const [contentInput, setContentInput] = useState(post.content);
+  const [contentInput, setContentInput] = useState(post.content ?? "");
   const [imageFile, setImageFile] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
-
   const [showComments, setShowComments] = useState(false);
   const [liked, setLiked] = useState(post.is_liked || false);
 
-  // Like toggle
+  const safeImg = buildImageUrl(post.image);
+
   const handleLike = async (e) => {
     e.preventDefault();
     if (isLiking) return;
@@ -39,6 +46,7 @@ export default function Post({ post, onPostUpdated }) {
         `/home/${post.hotel_slug}/posts/${post.id}/like/`
       );
       setLikeCount(data.like_count ?? likeCount + 1);
+      setLiked((v) => !v);
     } catch (err) {
       console.error("Failed to like post", err);
     } finally {
@@ -46,7 +54,6 @@ export default function Post({ post, onPostUpdated }) {
     }
   };
 
-  // Submit edits
   const handleUpdate = async (e) => {
     e.preventDefault();
     if (!contentInput.trim() && !imageFile) return;
@@ -60,7 +67,7 @@ export default function Post({ post, onPostUpdated }) {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setEditing(false);
-      onPostUpdated();
+      onPostUpdated?.();
     } catch (err) {
       console.error("Failed to update post", err);
     } finally {
@@ -68,12 +75,11 @@ export default function Post({ post, onPostUpdated }) {
     }
   };
 
-  // Confirm and perform delete
   const handleDeleteConfirm = async () => {
     try {
       await api.delete(`/home/${post.hotel_slug}/posts/${post.id}/`);
       setShowDeleteModal(false);
-      onPostUpdated();
+      onPostUpdated?.();
     } catch (err) {
       console.error("Failed to delete post", err);
     }
@@ -81,7 +87,6 @@ export default function Post({ post, onPostUpdated }) {
 
   return (
     <>
-      {/* Delete confirmation modal */}
       <DeletionModal
         show={showDeleteModal}
         title="Delete Post"
@@ -90,14 +95,14 @@ export default function Post({ post, onPostUpdated }) {
         onCancel={() => setShowDeleteModal(false)}
       />
 
-      <div className=" shadow-sm p-2 mb-4 ">
+      <div className="shadow-sm p-2 mb-4">
         <div className="card-body p-4 bg-light mb-2">
           <div className="d-flex justify-content-between align-items-center mb-3">
-            {/* LEFT: avatar + name + date */}
+            {/* LEFT: avatar + name */}
             <div className="d-flex align-items-center">
-              {avatarUrl ? (
+              {authorAvatar ? (
                 <img
-                  src={avatarUrl}
+                  src={authorAvatar}
                   alt="avatar"
                   className="rounded-circle me-3"
                   style={{ width: 40, height: 40, objectFit: "cover" }}
@@ -110,13 +115,11 @@ export default function Post({ post, onPostUpdated }) {
               )}
               <div>
                 <div className="fw-bold text-capitalize">
-                  {post.author_details.first_name}{" "}
-                  {post.author_details.last_name}
+                  {author.first_name} {author.last_name}
                 </div>
               </div>
             </div>
 
-            {/* RIGHT: edit/delete buttons */}
             {isAuthor && (
               <div className="btn-group btn-group-sm">
                 <button
@@ -173,14 +176,10 @@ export default function Post({ post, onPostUpdated }) {
           ) : (
             <>
               <p className="card-text">{post.content}</p>
-              {post.image && (
+              {safeImg && (
                 <div className="text-center mb-3">
                   <img
-                    src={
-                      post.image.startsWith("http")
-                        ? post.image
-                        : `${cloudinaryBase}${post.image}`
-                    }
+                    src={safeImg}
                     alt="Post"
                     className="img-fluid rounded mx-auto d-block"
                     style={{ maxHeight: "400px", objectFit: "contain" }}
@@ -191,11 +190,12 @@ export default function Post({ post, onPostUpdated }) {
           )}
 
           <div className="date-time-container d-flex justify-content-end mb-2">
-            <small className="text-muted small">
+          <small className="text-muted small">
               {new Date(post.created_at).toLocaleString()}
             </small>
           </div>
-          <div className="d-flex justify-content-around  shadow-sm p-1 mt-4 mb13">
+
+          <div className="d-flex justify-content-around shadow-sm p-1 mt-4 mb13">
             <button
               type="button"
               className={`like-share-comment-button ${
@@ -212,7 +212,7 @@ export default function Post({ post, onPostUpdated }) {
               className="like-share-comment-button"
               onClick={() => setShowComments((prev) => !prev)}
             >
-              💬 Comment ({post.comment_count})
+              💬 Comment ({post.comment_count ?? 0})
             </button>
 
             <button
@@ -230,7 +230,6 @@ export default function Post({ post, onPostUpdated }) {
           </div>
         </div>
 
-        {/* Comments section */}
         {showComments && (
           <CommentsSection
             postId={post.id}
