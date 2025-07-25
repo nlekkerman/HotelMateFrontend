@@ -22,6 +22,29 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
 }
+.avatar-32 {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e5e7eb; /* gray-200 */
+  border: 1px solid #e5e7eb;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-icon {
+  font-size: 28px;           /* fits nicely inside 32px circle */
+  color: #9ca3af;            /* gray-400 */
+  line-height: 1;            /* avoid vertical nudge */
+}
 
 
 body.terminal-mode,
@@ -65,6 +88,22 @@ body.terminal-mode,
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(0);
   z-index: 3;
+}
+/* Force shift pills to stay on one line even with padding */
+.shift-chip {
+  display: block;        /* so padding won’t trigger wrapping */
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;         /* never wrap */
+  padding: 4px 8px;            /* whatever you like */
+  border-radius: 9999px;       /* pill */
+  line-height: 1;              /* keep it compact */
+  max-width: max-content;      /* don’t expand wider than needed */
+}
+
+/* Optional: make sure table cells themselves don’t wrap */
+.roster-cell {
+  white-space: nowrap;
 }
 
 .controls {

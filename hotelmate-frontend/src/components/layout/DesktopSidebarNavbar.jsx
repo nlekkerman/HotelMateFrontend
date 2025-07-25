@@ -115,6 +115,13 @@ const DesktopSidebarNavbar = () => {
       roles: ["receptionist", "manager"],
     },
     {
+      path: `/roster/${hotelIdentifier}`, // matches <Route path="/roster/:hotelSlug" …/>
+      label: "Roster",
+      icon: "calendar-week",
+      feature: "roster",
+      roles: ["manager", "staff_admin", "super_staff_admin"],
+    },
+    {
       path: "/staff",
       label: "Staff",
       icon: "person-badge",
@@ -205,7 +212,6 @@ const DesktopSidebarNavbar = () => {
             </>
           ) : (
             <>
-            
               {canAccess([
                 "receptionist",
                 "porter",
