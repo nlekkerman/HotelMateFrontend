@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import ReactDatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import DownloadRosters from "@/components/analytics/DownloadRosters";
 import { format } from "date-fns";
 import {
   getKpis,
@@ -127,8 +128,9 @@ export default function RosterAnalytics({
   }), [staffSummary, departmentSummary, dailyTotals, weeklyTotals, kpis]);
 
   return (
-    <div className="container mt-4">
+    <div className="container mt-4 ">
       {/* Filters */}
+      
       <div className="d-flex flex-wrap gap-3 align-items-center mb-4">
         {!injectedStartDate && !injectedEndDate && (
           <>
@@ -174,6 +176,11 @@ export default function RosterAnalytics({
           Refresh
         </button>
       </div>
+<DownloadRosters
+    hotelSlug={hotelSlug}
+    department={selectedDepartment}
+    defaultDate={startDate}
+  />
 
       {loading && <div className="alert alert-info">Loading analytics…</div>}
       {error && <div className="alert alert-danger">{error}</div>}

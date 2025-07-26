@@ -3,7 +3,7 @@ import React, { useMemo, useState } from "react";
 import ReactDatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { startOfWeek, endOfWeek } from "date-fns";
-import RosterAnalytics from "./RosterAnalytics";
+import RosterAnalytics from "@/components/analytics/RosterAnalytics";
 
 // TEMP: hardcode departments – replace with API if needed
 const DEPARTMENTS = [
