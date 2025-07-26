@@ -1,71 +1,28 @@
+// DepartmentRosterView.jsx
 import React, { useEffect, useState, useCallback } from "react";
 import api from "@/services/api";
 import WeeklyRosterBoard from "@/components/attendance/WeeklyRosterBoard";
-import { isAfter, parseISO } from "date-fns";
+import ShiftLocationBar from "@/components/attendance/ShiftLocationBar";
+import { isAfter, parseISO,isWithinInterval, startOfDay } from "date-fns";
 
 export default function DepartmentRosterView({ department, hotelSlug }) {
   const [periods, setPeriods] = useState([]);
-  const [selectedPeriod, setSelectedPeriod] = useState(null);
+  const [periodObj, setPeriodObj] = useState(null);     // <-- FULL object
   const [shifts, setShifts] = useState([]);
   const [staffList, setStaffList] = useState([]);
+  const [locations, setLocations] = useState([]);
 
-  // 🔁 Fetch all periods, and default to the latest
-  useEffect(() => {
-    const fetchPeriods = async () => {
-      try {
-        const res = await api.get(`/attendance/${hotelSlug}/periods/`);
-        const periodList = Array.isArray(res.data.results)
-          ? res.data.results
-          : [];
-        setPeriods(periodList);
-
-        const sorted = [...periodList].sort((a, b) =>
-          isAfter(parseISO(b.start_date), parseISO(a.start_date)) ? 1 : -1
-        );
-        if (sorted.length > 0) {
-          setSelectedPeriod(sorted[0]);
-          console.log("📆 Latest period:", sorted[0]);
-        } else {
-          console.warn("⚠️ No periods found.");
-        }
-      } catch (err) {
-        console.error("❌ Failed to fetch periods:", err);
-      }
-    };
-
-    if (hotelSlug) fetchPeriods();
-  }, [hotelSlug]);
-
-  const fetchShifts = useCallback(async () => {
-    if (!selectedPeriod || !department || !hotelSlug) return;
-
-    try {
-      const url = `/attendance/${hotelSlug}/shifts/?period=${selectedPeriod.id}&department=${department}`;
-      const res = await api.get(url);
-
-      // 🛠 FIX: Properly extract array
-      const data = res.data.results || res.data;
-      setShifts(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("❌ Failed to fetch shifts:", err);
-      setShifts([]); // fallback to empty
-    }
-  }, [hotelSlug, department, selectedPeriod]);
-
-  // 🔁 Fetch staff list
+  // --------------------------------------------------
+  // Fetch staff once
+  // --------------------------------------------------
   useEffect(() => {
     const fetchStaff = async () => {
       try {
         const url = `/staff/by_department/?department=${department}`;
-        console.log("📡 Fetching staff from:", url);
 
         const res = await api.get(url);
-        const results = res.data.results || res.data;
+        const results = res.data.results || res.data || [];
         setStaffList(results);
-        console.log(
-          "👥 Staff list:",
-          results.map((s) => s.id)
-        ); // ← Debug here
       } catch (err) {
         console.error("❌ Failed to fetch staff list:", err);
       }
@@ -74,36 +31,128 @@ export default function DepartmentRosterView({ department, hotelSlug }) {
     if (department) fetchStaff();
   }, [department]);
 
-  // ⏳ Re-fetch shifts when period changes
+  // --------------------------------------------------
+  // Fetch periods, auto select latest once
+  // --------------------------------------------------
   useEffect(() => {
-    if (selectedPeriod?.id) fetchShifts();
-  }, [fetchShifts, selectedPeriod]);
+    const fetchPeriods = async () => {
+  if (!hotelSlug) return;
+  try {
+    const res = await api.get(`/attendance/${hotelSlug}/periods/`);
+    const list = Array.isArray(res.data.results) ? res.data.results : res.data || [];
+    setPeriods(list);
 
-  const handlePeriodChange = (periodId) => {
-    const selected = periods.find((p) => p.id === periodId);
-    if (selected) {
-      setSelectedPeriod(selected);
+    if (!list.length) {
+      console.warn("⚠️ No periods found.");
+      return;
     }
-  };
 
+    const today = startOfDay(new Date());
+
+    // 1) Try to pick the period that contains today
+    const current = list.find((p) => {
+      const start = parseISO(p.start_date);
+      const end = parseISO(p.end_date);
+      return isWithinInterval(today, { start, end });
+    });
+
+    // 2) Fallback to latest by start_date
+    const latest = [...list].sort((a, b) =>
+      isAfter(parseISO(a.start_date), parseISO(b.start_date)) ? -1 : 1
+    )[0];
+
+    const picked = current || latest;
+
+    setPeriodObj(picked);
+    fetchShifts(picked.id); // initial fetch right here
+  } catch (err) {
+    console.error("❌ Failed to fetch periods:", err);
+  }
+};
+
+
+    fetchPeriods();
+  }, [hotelSlug]);
+
+  // --------------------------------------------------
+  // fetchShifts: **must accept an id** (so useRoster can call it)
+  // --------------------------------------------------
+  const fetchShifts = useCallback(
+    async (periodId) => {
+      if (!periodId || !department || !hotelSlug) return;
+      const url = `/attendance/${hotelSlug}/shifts/?period=${periodId}&department=${department}`;
+
+      try {
+        const res = await api.get(url);
+        const data = res.data.results || res.data;
+        const arr = Array.isArray(data) ? data : [];
+        setShifts(arr);
+      } catch (err) {
+        console.error("❌ Failed to fetch shifts:", err);
+        setShifts([]);
+      }
+    },
+    [hotelSlug, department]
+  );
+
+  // --------------------------------------------------
+  // Called by WeeklyRosterBoard (via useRoster) whenever period changes
+  // (it passes an **id**, we resolve to object here)
+  // --------------------------------------------------
+  const handlePeriodChange = useCallback(
+    async (periodId) => {
+      if (!periodId) return;
+
+      // Try to find it in the cached list first
+      const found = periods.find((p) => p.id === periodId);
+      if (found) {
+        setPeriodObj(found);
+        fetchShifts(found.id);
+        return;
+      }
+
+      // Fallback: fetch it
+      try {
+        const { data } = await api.get(`/attendance/${hotelSlug}/periods/${periodId}/`);
+        setPeriodObj(data);
+        fetchShifts(periodId);
+      } catch (err) {
+        console.error("❌ Failed to fetch single period:", err);
+      }
+    },
+    [periods, hotelSlug, fetchShifts]
+  );
+
+  // --------------------------------------------------
+  // Render
+  // --------------------------------------------------
   return (
     <div className="mt-6">
       <h3 className="text-xl font-semibold mb-4 text-gray-700">
         Roster for {department.replace("_", " ").toUpperCase()}
       </h3>
 
-      {selectedPeriod && (
-        <WeeklyRosterBoard
-          staffList={staffList}
-          shifts={shifts}
-          hotelSlug={hotelSlug}
-          department={department}
-          period={selectedPeriod}
-          periods={periods}
-          onPeriodChange={handlePeriodChange}
-          fetchShifts={fetchShifts}
-        />
-      )}
+
+{/* 👉 Locations (badges + create/edit) */}
+<ShiftLocationBar
+  hotelSlug={hotelSlug}
+  onChange={(locs) => {
+    const list = Array.isArray(locs) ? locs : (locs?.results ?? []);
+  setLocations(list);
+  }}
+/>
+
+      <WeeklyRosterBoard
+        staffList={staffList}
+        shifts={shifts}
+        hotelSlug={hotelSlug}
+        department={department}
+        period={periodObj}
+        periods={periods}
+        onPeriodChange={handlePeriodChange}
+        fetchShifts={fetchShifts}
+        locations={locations}
+      />
     </div>
   );
 }

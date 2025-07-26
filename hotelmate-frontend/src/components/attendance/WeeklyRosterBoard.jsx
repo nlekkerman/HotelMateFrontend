@@ -1,9 +1,10 @@
-// WeeklyRosterBoard.jsx
-import React, { useEffect, useState, useMemo, useCallback } from "react";
-import { format, addDays, startOfWeek } from "date-fns";
-import ShiftModal from "@/components/modals/ShiftModal";
+import React, { useEffect, useMemo } from "react";
+import { addDays, startOfWeek, format, differenceInMinutes } from "date-fns";
 import RosterPeriodSelector from "@/components/attendance/RosterPeriodSelector";
-import api from "@/services/api";
+import ShiftModal from "@/components/modals/ShiftModal";
+import ShiftCell from "@/components/attendance/ShiftCell";
+import useRoster from "@/hooks/useRoster";
+import RosterAnalytics from "@/components/analytics/RosterAnalytics";
 import { FaUserCircle } from "react-icons/fa";
 
 export default function WeeklyRosterBoard({
@@ -11,72 +12,59 @@ export default function WeeklyRosterBoard({
   department,
   staffList = [],
   shifts = [],
-  fetchShifts,          // <- should accept the period id, or you can wrap it
-  period,               // <- current period object coming from parent
-  periods = [],
-  onPeriodChange,       // <- parent setter for period id
+  fetchShifts,
+  period: initialPeriod,
+  onPeriodChange,
   hotelId: injectedHotelId,
+  locations = [],
 }) {
-  const [showModal, setShowModal] = useState(false);
-  const [targetStaff, setTargetStaff] = useState(null);
-  const [targetDate, setTargetDate] = useState(null);
-  const [editingShift, setEditingShift] = useState(null);
-  const [localShifts, setLocalShifts] = useState([]);
-  const [currentPeriod, setCurrentPeriod] = useState(period);   // <- keep the full object locally too
-const cloudinaryBase = import.meta.env.VITE_CLOUDINARY_BASE || "";
+  const {
+    period,
+    setPeriod,
+    localShifts,
+    editing,
+    open,
+    close,
+    save,
+    remove,
+    bulkSubmit,
+  } = useRoster({
+    hotelSlug,
+    department,
+    fetchShifts,
+    initialPeriod,
+    injectedHotelId,
+    serverShifts: shifts,
+  });
 
-function buildImageUrl(img) {
-  if (!img || typeof img !== "string") return null;
-  if (img.startsWith("data:")) return img;
-  if (/^https?:\/\//i.test(img)) return img;
-  return cloudinaryBase ? `${cloudinaryBase}${img}` : img;
-}
-  // keep local period object in sync when parent changes it
+  const cloudinaryBase = import.meta.env.VITE_CLOUDINARY_BASE || "";
+  const buildImageUrl = (img) => {
+    if (!img || typeof img !== "string") return null;
+    if (img.startsWith("data:")) return img;
+    if (/^https?:\/\//i.test(img)) return img;
+    return cloudinaryBase ? `${cloudinaryBase}${img}` : img;
+  };
+
   useEffect(() => {
-    if (period && (!currentPeriod || currentPeriod.id !== period.id)) {
-      setCurrentPeriod(period);
-    }
-  }, [period, currentPeriod]);
-
-  const loadPeriod = useCallback(
-    async (idOrObj) => {
-      // If selector passed back a full object, use it directly.
-      if (typeof idOrObj === "object") {
-        setCurrentPeriod(idOrObj);
-        onPeriodChange?.(idOrObj.id);
-        await fetchShifts?.(idOrObj.id);
-        return;
-      }
-
-      // Otherwise fetch it by id
-      const id = idOrObj;
-      if (!id) return;
-      const { data } = await api.get(`/attendance/${hotelSlug}/periods/${id}/`);
-      setCurrentPeriod(data);
-      onPeriodChange?.(id);          // tell parent
-      await fetchShifts?.(id);       // refresh grid data
-    },
-    [hotelSlug, fetchShifts, onPeriodChange]
-  );
-
-  const toHM = (t) => (typeof t === "string" ? t.slice(0, 5) : t);
-
-  const hotelId =
-    injectedHotelId ??
-    (() => {
-      try {
-        return JSON.parse(localStorage.getItem("user"))?.hotel_id;
-      } catch {
-        return undefined;
-      }
-    })();
+    onPeriodChange?.(period?.id);
+  }, [period?.id, onPeriodChange]);
 
   const weekStart = useMemo(
     () =>
-      currentPeriod?.start_date
-        ? new Date(currentPeriod.start_date)
+      period?.start_date
+        ? new Date(period.start_date)
         : startOfWeek(new Date(), { weekStartsOn: 0 }),
-    [currentPeriod?.start_date]
+    [period?.start_date]
+  );
+  const locationsMap = useMemo(
+    () =>
+      Array.isArray(locations)
+        ? locations.reduce((acc, l) => {
+            acc[l.id] = l;
+            return acc;
+          }, {})
+        : {},
+    [locations]
   );
 
   const days = useMemo(
@@ -85,149 +73,104 @@ function buildImageUrl(img) {
   );
 
   const baseRoster = useMemo(() => {
-    return (Array.isArray(shifts) ? shifts : []).reduce((acc, shift) => {
-      const staffKey = shift.staff_id ?? shift.staff;
-      const key = `${staffKey}_${shift.shift_date}`;
-      acc[key] = acc[key] ? [...acc[key], shift] : [shift];
+    const arr = Array.isArray(shifts) ? shifts : [];
+    return arr.reduce((acc, s) => {
+      const staffKey = s.staff_id || s.staff;
+      const key = `${staffKey}_${s.shift_date}`;
+      acc[key] = acc[key] ? [...acc[key], s] : [s];
       return acc;
     }, {});
   }, [shifts]);
 
-  const handleOpenModal = useCallback((staff, date, shift = null) => {
-    setTargetStaff(staff);
-    setTargetDate(date);
-    setEditingShift(shift);
-    setShowModal(true);
-  }, []);
+  // ---- NEW: per-staff weekly (period) stats ----
+  const staffWeekStats = useMemo(() => {
+    const stats = {};
+    const arr = Array.isArray(shifts) ? shifts : [];
 
-  const handleSaveShift = useCallback(
-    ({ start, end }) => {
-      if (!targetStaff || !targetDate || !currentPeriod) return;
-
-      const newShift = {
-        staff_id: targetStaff.id,
-        staff: targetStaff.id,
-        department,
-        period: currentPeriod.id,
-        shift_date: targetDate,
-        shift_start: start,
-        shift_end: end,
-        hotel: hotelId,
-        ...(editingShift?.id ? { id: editingShift.id } : {}),
-      };
-
-      setLocalShifts((prev) => {
-        if (editingShift?.id) {
-          return prev.map((s) => (s.id === editingShift.id ? newShift : s));
+    const getHours = (s) => {
+      if (s.expected_hours != null) return Number(s.expected_hours) || 0;
+      if (s.start_time && s.end_time && s.shift_date) {
+        try {
+          const start = new Date(`${s.shift_date}T${s.start_time}`);
+          const end = new Date(`${s.shift_date}T${s.end_time}`);
+          const mins = differenceInMinutes(end, start);
+          return Math.max(mins / 60, 0);
+        } catch {
+          return 0;
         }
-        return [...prev, newShift];
-      });
+      }
+      return 0;
+    };
 
-      setShowModal(false);
-    },
-    [department, currentPeriod?.id, hotelId, targetStaff, targetDate, editingShift]
+    for (const s of arr) {
+      const sid = s.staff_id || s.staff;
+      if (!sid) continue;
+      if (!stats[sid]) stats[sid] = { hours: 0, shifts: 0 };
+      stats[sid].hours += getHours(s);
+      stats[sid].shifts += 1;
+    }
+
+    return stats;
+  }, [shifts]);
+
+  const analyticsStartDate = useMemo(
+    () => (period?.start_date ? new Date(period.start_date) : null),
+    [period?.start_date]
+  );
+  const analyticsEndDate = useMemo(
+    () => (period?.end_date ? new Date(period.end_date) : null),
+    [period?.end_date]
   );
 
-  const handleDeleteShift = useCallback(() => {
-    if (editingShift?.id) {
-      setLocalShifts((prev) => prev.filter((s) => s.id !== editingShift.id));
-    }
-    setShowModal(false);
-  }, [editingShift]);
-
-  const renderShifts = useCallback(
-    (staff, date) => {
-      const dateStr = format(date, "yyyy-MM-dd");
-      const key = `${staff.id}_${dateStr}`;
-
-      const serverShifts = baseRoster[key] || [];
-      const localShiftsForKey = localShifts.filter(
-        (s) => s.staff_id === staff.id && s.shift_date === dateStr
-      );
-
-      const combined = [
-        ...serverShifts.filter(
-          (s) => !localShiftsForKey.some((ls) => ls.id && ls.id === s.id)
-        ),
-        ...localShiftsForKey,
-      ];
-
-      return (
-        <div className="flex flex-col gap-1">
-          {combined.map((shift, idx) => (
-            <div
-              key={shift.id ?? `local-${idx}`}
-              className={`shift-chip text-xs mb-1 shadow cursor-pointer ${
-                shift.id ? "bg-success text-white" : "bg-info text-white italic"
-              }`}
-              onClick={() => handleOpenModal(staff, shift.shift_date, shift)}
-            >
-              {toHM(shift.shift_start)} - {toHM(shift.shift_end)}
-            </div>
-          ))}
-
-          <div
-            className="text-gray-400 text-xs text-center italic cursor-pointer"
-            onClick={() => handleOpenModal(staff, dateStr, null)}
-          >
-            +
-          </div>
-        </div>
-      );
-    },
-    [baseRoster, localShifts, handleOpenModal]
-  );
-
-  const handleSubmitRoster = useCallback(async () => {
-    try {
-      const res = await api.post(`/attendance/${hotelSlug}/shifts/bulk-save/`, {
-        shifts: localShifts,
-        period: currentPeriod?.id,   // optional, if your bulk endpoint supports top-level defaults
-        hotel: hotelId,
-      });
-
-      const created = Array.isArray(res.data.created)
-        ? res.data.created.length
-        : 0;
-      const updated = Array.isArray(res.data.updated)
-        ? res.data.updated.length
-        : 0;
-      const errors = Array.isArray(res.data.errors)
-        ? res.data.errors.length
-        : 0;
-
-      alert(`✅ ${created} created, ${updated} updated.\n❌ ${errors} errors.`);
-      setLocalShifts([]);
-      fetchShifts?.(currentPeriod?.id);
-    } catch (err) {
-      console.error("Bulk save failed:", err);
-      alert("❌ Save failed.");
-    }
-  }, [hotelSlug, localShifts, fetchShifts, currentPeriod?.id, hotelId]);
+  if (!period?.id) {
+    return (
+      <div className="d-flex justify-content-center align-items-center p-4 text-muted">
+        Loading roster…
+      </div>
+    );
+  }
 
   return (
-    <div className="mt-6 space-y-4">
-      <div className="flex items-center gap-3 flex-wrap">
-        <RosterPeriodSelector
-          hotelSlug={hotelSlug}
-          selectedPeriod={currentPeriod?.id}
-          setSelectedPeriod={(id) => loadPeriod(id)}
-          onPeriodCreated={(p) => loadPeriod(p)} // <- load full object directly
-        />
-      </div>
+    <div className="mt-4">
+      {/* --------------------------- */}
+      {/* 🔥 Embedded Analytics Block */}
+      {/* --------------------------- */}
+      {analyticsStartDate && analyticsEndDate && (
+        <div className="mt-4">
+          <h2 className="h5 mb-3">
+            Roster Analytics ({format(analyticsStartDate, "yyyy-MM-dd")} →{" "}
+            {format(analyticsEndDate, "yyyy-MM-dd")})
+          </h2>
+        </div>
+      )}
 
-      <div className="overflow-x-auto w-full">
-        <table className="w-full border-collapse table-auto">
+      <RosterAnalytics
+        hotelSlug={hotelSlug}
+        startDate={analyticsStartDate}
+        endDate={analyticsEndDate}
+        department={department}
+      />
+
+      <RosterPeriodSelector
+        hotelSlug={hotelSlug}
+        selectedPeriod={period.id}
+        setSelectedPeriod={setPeriod}
+        onPeriodCreated={setPeriod}
+      />
+
+      {/* Roster Table */}
+      <div className="table-responsive">
+        <table className="table table-bordered table-sm align-middle">
           <thead>
-            <tr className="bg-gray-100 text-sm">
-              <th className="sticky left-0 bg-gray-100 border px-4 py-2 text-left z-10 shadow-md w-[150px]">
+            <tr className="bg-light small">
+              <th
+                className="position-sticky start-0 bg-light text-start z-3"
+                style={{ minWidth: "220px" }}
+              >
                 Staff
               </th>
               {days.map((day) => (
-                <th
-                  key={day.getTime()}
-                  className="border px-4 py-2 text-center whitespace-nowrap"
-                >
+                <th key={day.toString()} className="text-center text-nowrap">
                   {format(day, "EEE dd")}
                 </th>
               ))}
@@ -236,45 +179,78 @@ function buildImageUrl(img) {
           <tbody>
             {staffList.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center text-gray-500 py-6">
+                <td colSpan={8} className="text-center text-muted py-4">
                   No staff available.
                 </td>
               </tr>
             ) : (
-              staffList.map((staff) => (
-                <tr key={staff.id} className="even:bg-gray-50 text-sm">
-                  <td className="sticky left-0 bg-white border px-4 py-2 font-medium whitespace-nowrap shadow-md z-10">
-  <div className="flex items-center gap-2">
-    <span className="avatar-32">
-      {staff.profile_image_url ? (
-        <img
-          src={buildImageUrl(staff.profile_image_url)}
-          alt={`${staff.first_name} ${staff.last_name}`}
-          className="avatar-img"
-        />
-      ) : (
-        <FaUserCircle className="avatar-icon" />
-      )}
-    </span>
-
-    <span>
-      {staff.first_name} {staff.last_name}
-    </span>
-  </div>
-</td>
-
-
-
-                  {days.map((day) => (
-                    <td
-                      key={`${staff.id}_${day.getTime()}`}
-                      className="border px-2 py-2 w-[calc(100%/7)] hover:bg-blue-50 text-center align-top"
-                    >
-                      {renderShifts(staff, day)}
+              staffList.map((staff) => {
+                const stats = staffWeekStats[staff.id] || {
+                  hours: 0,
+                  shifts: 0,
+                };
+                return (
+                  <tr key={staff.id} className="small">
+                    <td className="position-sticky start-0 bg-white z-2">
+                      <div className="d-flex align-items-center gap-2">
+                        <span
+                          className="d-inline-flex rounded-circle overflow-hidden"
+                          style={{ width: 32, height: 32 }}
+                        >
+                          {staff.profile_image_url ? (
+                            <img
+                              src={buildImageUrl(staff.profile_image_url)}
+                              alt={`${staff.first_name} ${staff.last_name}`}
+                              style={{
+                                width: 32,
+                                height: 32,
+                                objectFit: "cover",
+                              }}
+                            />
+                          ) : (
+                            <FaUserCircle size={32} />
+                          )}
+                        </span>
+                        <div className="d-flex flex-column">
+                          <span className="fw-medium">
+                            {staff.first_name} {staff.last_name}
+                          </span>
+                          {/* Hours red, shifts green */}
+                          <span className="small">
+                            H:&nbsp;
+                            <span className="text-danger fw-semibold">
+                              {stats.hours.toFixed(2)}
+                            </span>
+                            &nbsp;• Sh:&nbsp;
+                            <span className="text-success fw-semibold">
+                              {stats.shifts}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
                     </td>
-                  ))}
-                </tr>
-              ))
+
+                    {days.map((day) => (
+                      <td
+                        key={day.toString()}
+                        className="text-center align-middle"
+                      >
+                        <div className="d-flex justify-content-center align-items-center">
+                          <ShiftCell
+                            staff={staff}
+                            date={day}
+                            baseRoster={baseRoster}
+                            localShifts={localShifts}
+                            onAdd={open}
+                            onEdit={open}
+                            locationsMap={locationsMap}
+                          />
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -282,23 +258,21 @@ function buildImageUrl(img) {
 
       {localShifts.length > 0 && (
         <div className="d-flex justify-content-center mt-4">
-          <button
-            className="px-6 py-2 bg-success text-white rounded shadow hover:bg-green-700"
-            onClick={handleSubmitRoster}
-          >
+          <button className="btn btn-success px-4" onClick={bulkSubmit}>
             Submit Roster ({localShifts.length} changes)
           </button>
         </div>
       )}
 
       <ShiftModal
-        show={showModal}
-        shift={editingShift}
-        date={targetDate}
-        staff={targetStaff}
-        onClose={() => setShowModal(false)}
-        onSave={handleSaveShift}
-        onDelete={handleDeleteShift}
+        show={!!editing.staff}
+        staff={editing.staff}
+        date={editing.date}
+        shift={editing.shift}
+        onClose={close}
+        onSave={save}
+        onDelete={remove}
+        locations={locations}
       />
     </div>
   );
