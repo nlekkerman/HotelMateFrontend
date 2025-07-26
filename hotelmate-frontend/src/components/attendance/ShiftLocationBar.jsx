@@ -7,7 +7,6 @@ import {
 } from "@/services/shiftLocations";
 
 export default function ShiftLocationBar({ hotelSlug: propHotelSlug, onChange }) {
-  // Get hotel slug directly from localStorage if not passed as prop
   const [hotelSlug, setHotelSlug] = useState(
     propHotelSlug || JSON.parse(localStorage.getItem("user") || "{}")?.hotel_slug
   );
@@ -18,6 +17,9 @@ export default function ShiftLocationBar({ hotelSlug: propHotelSlug, onChange })
   const [form, setForm] = useState({ name: "", color: "#0d6efd" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  
+  // New state: controls visibility of the full UI
+  const [expanded, setExpanded] = useState(false);
 
   const load = async () => {
     if (!hotelSlug) {
@@ -95,31 +97,45 @@ export default function ShiftLocationBar({ hotelSlug: propHotelSlug, onChange })
 
   return (
     <>
-      {/* Top bar with badges */}
-      <div className="d-flex align-items-center flex-wrap gap-2 mb-3">
-        {locations.map((loc) => (
-          <span
-            key={loc.id}
-            className="badge rounded-pill"
-            style={{
-              backgroundColor: loc.color || "#0d6efd",
-              cursor: "pointer",
-            }}
-            title="Edit this location"
-            onClick={() => openEdit(loc)}
-          >
-            {loc.name}
-          </span>
-        ))}
+      {/* Toggle Button */}
+      <button
+        type="button"
+        className="btn btn-outline-secondary mb-3"
+        onClick={() => setExpanded((prev) => !prev)}
+      >
+        {expanded ? "Hide Labels" : "Show Labels"}
+      </button>
 
-        <button
-          type="button"
-          className="btn btn-outline-primary btn-sm ms-2"
-          onClick={openCreate}
-        >
-          + Add location
-        </button>
-      </div>
+      {/* Only render labels if expanded */}
+      {expanded && (
+        <>
+          {/* Top bar with badges */}
+          <div className="d-flex align-items-center flex-wrap gap-2 mb-3">
+            {locations.map((loc) => (
+              <span
+                key={loc.id}
+                className="badge rounded-pill"
+                style={{
+                  backgroundColor: loc.color || "#0d6efd",
+                  cursor: "pointer",
+                }}
+                title="Edit this location"
+                onClick={() => openEdit(loc)}
+              >
+                {loc.name}
+              </span>
+            ))}
+
+            <button
+              type="button"
+              className="btn btn-outline-primary btn-sm ms-2"
+              onClick={openCreate}
+            >
+              + Add location
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Modal */}
       {showModal && (
