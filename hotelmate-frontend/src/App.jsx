@@ -183,6 +183,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/staff/:id" element={<StaffDetails />} />
               <Route path="/staff/me" element={<StaffProfile />} />
               <Route path="/roster/:hotelSlug" element={<RosterDashboard />} />
+
               <Route
                 path="/roster/:hotelSlug/department/:department"
                 element={<DepartmentRosterView />}
