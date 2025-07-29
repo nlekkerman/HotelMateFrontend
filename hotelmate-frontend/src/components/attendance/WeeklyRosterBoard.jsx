@@ -1,10 +1,17 @@
-import React, { useEffect, useMemo } from "react";
-import { addDays, startOfWeek, format, differenceInMinutes } from "date-fns";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  addDays,
+  startOfWeek,
+  format,
+  differenceInMinutes,
+} from "date-fns";
 import RosterPeriodSelector from "@/components/attendance/RosterPeriodSelector";
 import ShiftModal from "@/components/modals/ShiftModal";
 import ShiftCell from "@/components/attendance/ShiftCell";
 import useRoster from "@/hooks/useRoster";
 import RosterAnalytics from "@/components/analytics/RosterAnalytics";
+import ShiftLocationBar from "@/components/attendance/ShiftLocationBar";
+
 import { FaUserCircle } from "react-icons/fa";
 
 export default function WeeklyRosterBoard({
@@ -16,7 +23,8 @@ export default function WeeklyRosterBoard({
   period: initialPeriod,
   onPeriodChange,
   hotelId: injectedHotelId,
-  locations = [],
+  onSubmitSuccess,      // ✅ Added
+  refreshKey,           // ✅ Added
 }) {
   const {
     period,
@@ -35,6 +43,7 @@ export default function WeeklyRosterBoard({
     initialPeriod,
     injectedHotelId,
     serverShifts: shifts,
+    onSubmitSuccess,
   });
 
   const cloudinaryBase = import.meta.env.VITE_CLOUDINARY_BASE || "";
@@ -44,7 +53,7 @@ export default function WeeklyRosterBoard({
     if (/^https?:\/\//i.test(img)) return img;
     return cloudinaryBase ? `${cloudinaryBase}${img}` : img;
   };
-
+const [locations, setLocations] = useState([]);
   useEffect(() => {
     onPeriodChange?.(period?.id);
   }, [period?.id, onPeriodChange]);
@@ -56,6 +65,7 @@ export default function WeeklyRosterBoard({
         : startOfWeek(new Date(), { weekStartsOn: 0 }),
     [period?.start_date]
   );
+
   const locationsMap = useMemo(
     () =>
       Array.isArray(locations)
@@ -82,7 +92,6 @@ export default function WeeklyRosterBoard({
     }, {});
   }, [shifts]);
 
-  // ---- NEW: per-staff weekly (period) stats ----
   const staffWeekStats = useMemo(() => {
     const stats = {};
     const arr = Array.isArray(shifts) ? shifts : [];
@@ -148,7 +157,8 @@ export default function WeeklyRosterBoard({
         hotelSlug={hotelSlug}
         startDate={analyticsStartDate}
         endDate={analyticsEndDate}
-        department={department}
+        selectedDepartment={department}
+        refreshKey={refreshKey} // ✅ Passed down to trigger refresh
       />
 
       <RosterPeriodSelector
@@ -157,7 +167,14 @@ export default function WeeklyRosterBoard({
         setSelectedPeriod={setPeriod}
         onPeriodCreated={setPeriod}
       />
-
+{/* 👉 Locations (badges + create/edit) */}
+<ShiftLocationBar
+  hotelSlug={hotelSlug}
+  onChange={(locs) => {
+    const list = Array.isArray(locs) ? locs : (locs?.results ?? []);
+  setLocations(list);
+  }}
+/>
       {/* Roster Table */}
       <div className="table-responsive">
         <table className="table table-bordered table-sm align-middle">
@@ -215,7 +232,6 @@ export default function WeeklyRosterBoard({
                           <span className="fw-medium">
                             {staff.first_name} {staff.last_name}
                           </span>
-                          {/* Hours red, shifts green */}
                           <span className="small">
                             H:&nbsp;
                             <span className="text-danger fw-semibold">
@@ -258,7 +274,15 @@ export default function WeeklyRosterBoard({
 
       {localShifts.length > 0 && (
         <div className="d-flex justify-content-center mt-4">
-          <button className="btn btn-success px-4" onClick={bulkSubmit}>
+          <button
+            className="btn btn-success px-4"
+            onClick={async () => {
+              const result = await bulkSubmit();
+              if (result?.success && typeof onSubmitSuccess === "function") {
+                onSubmitSuccess(); // ✅ will refresh analytics via parent
+              }
+            }}
+          >
             Submit Roster ({localShifts.length} changes)
           </button>
         </div>

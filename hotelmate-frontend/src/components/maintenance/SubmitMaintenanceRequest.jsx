@@ -110,9 +110,11 @@ export default function SubmitMaintenanceRequest({ onSuccess }) {
             type="file"
             className="form-control"
             accept="image/*"
+            capture="environment"
             multiple
             onChange={handleImageChange}
           />
+          
         </div>
         <div className="col-md-4 d-grid">
           <button
