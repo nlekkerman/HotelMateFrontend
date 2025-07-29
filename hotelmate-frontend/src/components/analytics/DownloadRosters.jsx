@@ -56,7 +56,10 @@ export default function DownloadRosters({
           responseType: "blob",
         }
       );
-      blobDownload(res.data, `roster_${hotelSlug}_period_${selectedPeriod}.pdf`);
+      blobDownload(
+        res.data,
+        `roster_${hotelSlug}_period_${selectedPeriod}.pdf`
+      );
     } catch (e) {
       console.error("Weekly PDF download failed", e);
       alert("Failed to download weekly PDF");
@@ -64,20 +67,20 @@ export default function DownloadRosters({
   };
 
   return (
-    <div className="card mb-4">
-      <div className="card-body">
+    <div className="mb-4">
+      <div className="card-body p-2 ">
         <button
           type="button"
-          className="btn btn-outline-secondary"
+          className="btn custom-button text-danger"
           onClick={() => setOpen((v) => !v)}
         >
           {open ? "Hide downloads" : "Download rosters"}
         </button>
 
         {open && (
-          <div className="mt-4">
+          <div className="mt-4 ">
             {/* DAILY */}
-            <div className="border rounded p-3 mb-4">
+            <div className="border rounded p-3 mb-4 ">
               <h6 className="fw-bold mb-3">Daily PDF</h6>
               <div className="row g-2 align-items-end">
                 <div className="col-md-3">
@@ -99,23 +102,32 @@ export default function DownloadRosters({
             </div>
 
             {/* WEEKLY */}
-            <div className="border rounded p-3">
-              <h6 className="fw-bold mb-3">Weekly PDF</h6>
-
-              <RosterPeriodSelector
-                hotelSlug={hotelSlug}
-                selectedPeriod={selectedPeriod}
-                setSelectedPeriod={setSelectedPeriod}
-                onPeriodCreated={(p) => setSelectedPeriod(p.id)}
-              />
-
-              <button
-                className="btn btn-success mt-3"
-                onClick={handleWeekly}
-                disabled={!selectedPeriod}
+            <div className="border rounded  p-1 align-items-md-center gap-3">
+              <h6
+                className="fw-bold mb-3 mb-md-0"
+                style={{ minWidth: "150px" }}
               >
-                Download Weekly PDF
-              </button>
+                Weekly PDF
+              </h6>
+
+              <div className="flex-grow-1">
+                <RosterPeriodSelector
+                  hotelSlug={hotelSlug}
+                  selectedPeriod={selectedPeriod}
+                  setSelectedPeriod={setSelectedPeriod}
+                  onPeriodCreated={(p) => setSelectedPeriod(p.id)}
+                />
+              </div>
+
+              <div>
+                <button
+                  className="btn btn-success mt-3 mt-md-0"
+                  onClick={handleWeekly}
+                  disabled={!selectedPeriod}
+                >
+                  Download Weekly PDF
+                </button>
+              </div>
             </div>
           </div>
         )}

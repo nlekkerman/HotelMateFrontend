@@ -2,15 +2,16 @@
 import React, { useEffect, useState, useCallback } from "react";
 import api from "@/services/api";
 import WeeklyRosterBoard from "@/components/attendance/WeeklyRosterBoard";
-import ShiftLocationBar from "@/components/attendance/ShiftLocationBar";
 import { isAfter, parseISO,isWithinInterval, startOfDay } from "date-fns";
 
-export default function DepartmentRosterView({ department, hotelSlug }) {
+export default function DepartmentRosterView({ department, hotelSlug, onSubmit  }) {
   const [periods, setPeriods] = useState([]);
   const [periodObj, setPeriodObj] = useState(null);     // <-- FULL object
   const [shifts, setShifts] = useState([]);
   const [staffList, setStaffList] = useState([]);
-  const [locations, setLocations] = useState([]);
+
+  const [refreshKey, setRefreshKey] = useState(0);
+const handleSubmitSuccess = () => setRefreshKey(prev => prev + 1);
 
   // --------------------------------------------------
   // Fetch staff once
@@ -129,18 +130,12 @@ export default function DepartmentRosterView({ department, hotelSlug }) {
   return (
     <div className="mt-6">
       <h3 className="text-xl font-semibold mb-4 text-gray-700">
-        Roster for {department.replace("_", " ").toUpperCase()}
-      </h3>
+  Roster for {department.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+</h3>
 
 
-{/* 👉 Locations (badges + create/edit) */}
-<ShiftLocationBar
-  hotelSlug={hotelSlug}
-  onChange={(locs) => {
-    const list = Array.isArray(locs) ? locs : (locs?.results ?? []);
-  setLocations(list);
-  }}
-/>
+
+
 
       <WeeklyRosterBoard
         staffList={staffList}
@@ -151,7 +146,9 @@ export default function DepartmentRosterView({ department, hotelSlug }) {
         periods={periods}
         onPeriodChange={handlePeriodChange}
         fetchShifts={fetchShifts}
-        locations={locations}
+       
+        onSubmitSuccess={handleSubmitSuccess}
+        refreshKey={refreshKey} 
       />
     </div>
   );

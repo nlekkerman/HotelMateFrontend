@@ -72,8 +72,7 @@ export default function StaffProfile() {
   return (
     <div className="container py-4">
       <div className="d-flex flex-column g-4 justify-content-center align-items-center">
-       
-         {/* RIGHT: Weekly roster (8/12 on lg+, full width on small) */}
+        {/* RIGHT: Weekly roster (8/12 on lg+, full width on small) */}
         <div className="col-12 col-lg-8 mb-4">
           <StaffWeeklyRoster staffId={staff.id} />
         </div>
@@ -120,14 +119,16 @@ export default function StaffProfile() {
                 <li className="list-group-item d-flex align-items-center">
                   <FaPhone className="me-2 text-secondary" />
                   <span className="flex-grow-1">Phone:</span>
-                  <span className="fw-semibold">{staff.phone_number || "N/A"}</span>
+                  <span className="fw-semibold">
+                    {staff.phone_number || "N/A"}
+                  </span>
                 </li>
 
                 <li className="list-group-item d-flex align-items-center">
                   <FaBuilding className="me-2 text-secondary" />
                   <span className="flex-grow-1">Department:</span>
                   <span className="fw-semibold">
-                    {prettify(staff.department)}
+                    {staff.department_detail?.name || "N/A"}
                   </span>
                 </li>
 
@@ -135,7 +136,7 @@ export default function StaffProfile() {
                   <FaBriefcase className="me-2 text-secondary" />
                   <span className="flex-grow-1">Role:</span>
                   <span className="fw-semibold">
-                    {prettify(staff.role)}
+                    {staff.role_detail?.name || "N/A"}
                   </span>
                 </li>
 
@@ -189,8 +190,6 @@ export default function StaffProfile() {
             </div>
           </div>
         </div>
-
-       
       </div>
     </div>
   );

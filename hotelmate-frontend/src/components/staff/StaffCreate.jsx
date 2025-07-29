@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 const StaffCreate = () => {
   const [users, setUsers] = useState([]);
   const [hotels, setHotels] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedHotelId, setSelectedHotelId] = useState("");
   const [staffData, setStaffData] = useState({
@@ -23,24 +25,37 @@ const StaffCreate = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch users
-    const fetchUsers = async () => {
-      try {
-        const response = await api.get("staff/users/");
-        setUsers(response.data.results || response.data);
-      } catch (err) {
-        setError("Failed to fetch users");
-        console.error(err);
-      }
-    };
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (user?.hotel_id) {
-      setSelectedHotelId(user.hotel_id);
-      setHotels([{ id: user.hotel_id, name: user.hotel_name }]); // if you still want to show hotel name
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get("staff/users/");
+      setUsers(response.data.results || response.data);
+    } catch (err) {
+      setError("Failed to fetch users");
+      console.error(err);
     }
+  };
 
-    fetchUsers();
-  }, []);
+  const fetchMetadata = async () => {
+    try {
+      const res = await api.get("staff/metadata/");
+      setDepartments(res.data.departments || []);
+      setRoles(res.data.roles || []);
+      // You can also use res.data.access_levels if needed
+    } catch (err) {
+      console.error("Failed to fetch metadata", err);
+    }
+  };
+
+  const user = JSON.parse(localStorage.getItem("user"));
+  if (user?.hotel_id) {
+    setSelectedHotelId(user.hotel_id);
+    setHotels([{ id: user.hotel_id, name: user.hotel_name }]);
+  }
+
+  fetchUsers();
+  fetchMetadata();
+}, []);
+
 
   const openModal = (user) => {
     setSelectedUser(user);
@@ -55,6 +70,7 @@ const StaffCreate = () => {
       is_active: true,
       is_on_duty: false,
     });
+    setError(null);
   };
 
   const closeModal = () => {
@@ -70,9 +86,11 @@ const StaffCreate = () => {
       [name]: type === "checkbox" ? checked : value,
     }));
   };
+
   const handleFileChange = (e) => {
     setProfileImage(e.target.files[0] || null);
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -86,11 +104,23 @@ const StaffCreate = () => {
       return;
     }
 
+    // Validate that department and role are selected
+    if (!staffData.department) {
+      setError("Please select a department");
+      return;
+    }
+    if (!staffData.role) {
+      setError("Please select a role");
+      return;
+    }
+
     try {
       const payload = {
         user_id: selectedUser.id,
         hotel: selectedHotelId,
         ...staffData,
+        department: Number(staffData.department), // ensure ID sent as number
+        role: Number(staffData.role),
       };
 
       const response = await api.post("staff/", payload, {
@@ -101,6 +131,7 @@ const StaffCreate = () => {
 
       console.log("Staff created:", response.data);
       closeModal();
+
       const newStaffId = response.data.id;
       if (newStaffId) {
         navigate(`/staff/${newStaffId}`);
@@ -154,6 +185,7 @@ const StaffCreate = () => {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
+            zIndex: 1000,
           }}
         >
           <div
@@ -162,6 +194,8 @@ const StaffCreate = () => {
               padding: 20,
               borderRadius: 5,
               minWidth: 320,
+              maxHeight: "90vh",
+              overflowY: "auto",
             }}
           >
             <h3>Create Staff for {selectedUser.username}</h3>
@@ -208,13 +242,11 @@ const StaffCreate = () => {
                   required
                 >
                   <option value="">Select Department</option>
-                  <option value="front_office">Front Office</option>
-                  <option value="front_house">Front House</option>
-                  <option value="kitchen">Kitchen</option>
-                  <option value="maintenance">Maintenance</option>
-                  <option value="leisure">Leisure</option>
-                  <option value="housekeeping">Housekeeping</option>
-                  <option value="management">Management</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -224,24 +256,14 @@ const StaffCreate = () => {
                   name="role"
                   value={staffData.role}
                   onChange={handleChange}
+                  required
                 >
                   <option value="">Select Role</option>
-                  <option value="porter">Porter</option>
-                  <option value="bartender">Bartender</option>
-                  <option value="receptionist">Receptionist</option>
-                  <option value="waiter">Waiter</option>
-                  <option value="chef">Chef</option>
-                  <option value="supervisor">Supervisor</option>
-                  <option value="housekeeping_attendant">
-                    Housekeeping Attendant
-                  </option>
-                  <option value="manager">Manager</option>
-                  <option value="technician">Technician</option>
-                  <option value="security">Security</option>
-                  <option value="concierge">Concierge</option>
-                  <option value="leisure_staff">Leisure Staff</option>
-                  <option value="maintenance_staff">Maintenance Staff</option>
-                  <option value="other">Other</option>
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -264,6 +286,7 @@ const StaffCreate = () => {
                   onChange={handleChange}
                 />
               </div>
+
               <div className="mb-3">
                 <label className="form-label">Profile Image</label>
                 <input

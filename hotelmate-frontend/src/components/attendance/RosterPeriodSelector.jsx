@@ -96,55 +96,58 @@ export default function RosterPeriodSelector({
   if (loading) return <p>Loading roster periods…</p>;
 
   return (
-    <div className="rp-container">
-      <div className="d-flex flex-row gap-3 p-3 mb-4 rounded">
-        {/* Pick Week */}
-        <div className="rp-chip border p-2 text-muted">
-          <span className="rp-label">Pick Week:</span>
-          <DatePicker
-            selected={pickDate}
-            onChange={handleWeekPick}
-            dateFormat="dd MMM yyyy"
-            className="rp-input"
-            placeholderText="Select date"
-            showWeekNumbers
-          />
-          {creating && <span className="rp-status">Creating…</span>}
-        </div>
+  <div className="rp-container">
+    <div className="d-flex flex-column flex-md-row gap-3 p-3 mb-4 rounded">
+      {/* Pick Week */}
+<div className="rp-chip border p-2 text-muted d-flex flex-column text-center gap-2 rounded flex-grow-1" style={{ maxWidth: '280px' }}>
+  <span className="rp-label">Pick Week: </span>
+  <DatePicker
+    selected={pickDate}
+    onChange={handleWeekPick}
+    dateFormat="dd MMM yyyy"
+    className="rp-input rounded-pill p-2 w-50 bg-light"
+    placeholderText="Select date"
+    showWeekNumbers
+    style={{ width: 'auto', minWidth: '150px' }}
+  />
+  {creating && <span className="rp-status">Creating…</span>}
+</div>
 
-        {/* Existing Periods */}
-        <div className="rp-chip border p-2 text-muted">
-          <span className="rp-label">Existing</span>
-          {rosterPeriods.length === 0 ? (
-            <span className="rp-empty">No periods</span>
-          ) : (
-            <select
-              className="rp-select"
-              value={selectedPeriod || ""}
-              onChange={(e) => {
-                const id = parseInt(e.target.value, 10);
-                setSelectedPeriod(id);
-                const p = rosterPeriods.find((r) => r.id === id);
-                if (p) {
-                  onPeriodCreated?.(p);
-                  setPickDate(new Date(p.start_date));
-                }
-              }}
-            >
-              <option value="">-- Choose --</option>
-              {rosterPeriods
-                .slice()
-                .sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title} ({format(parseISO(p.start_date), "dd MMM")} –{" "}
-                    {format(parseISO(p.end_date), "dd MMM")})
-                  </option>
-                ))}
-            </select>
-          )}
-        </div>
+
+      {/* Existing Periods */}
+      <div className="rp-chip border p-2 text-muted d-flex flex-column text-center gap-2 rounded flex-grow-1">
+        <span className="rp-label">Existing</span>
+        {rosterPeriods.length === 0 ? (
+          <span className="rp-empty">No periods</span>
+        ) : (
+          <select
+            className="rp-select rounded-pill p-2 bg-light "
+            value={selectedPeriod || ""}
+            onChange={(e) => {
+              const id = parseInt(e.target.value, 10);
+              setSelectedPeriod(id);
+              const p = rosterPeriods.find((r) => r.id === id);
+              if (p) {
+                onPeriodCreated?.(p);
+                setPickDate(new Date(p.start_date));
+              }
+            }}
+          >
+            <option value="">-- Choose --</option>
+            {rosterPeriods
+              .slice()
+              .sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title} ({format(parseISO(p.start_date), "dd MMM")} –{" "}
+                  {format(parseISO(p.end_date), "dd MMM")})
+                </option>
+              ))}
+          </select>
+        )}
       </div>
     </div>
-  );
+  </div>
+);
+
 }

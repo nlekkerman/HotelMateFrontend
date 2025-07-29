@@ -22,7 +22,8 @@ export default function useRoster({
   fetchShifts,
   initialPeriod,
   injectedHotelId,
-  serverShifts = [], // 👈 pass your server shifts in
+  serverShifts = [],
+  onSubmitSuccess,
 }) {
   
 
@@ -205,6 +206,7 @@ export default function useRoster({
 
     setLocalShifts([]);
     fetchShifts(period.id);
+    onSubmitSuccess?.();
   } catch (err) {
     console.error("❌ bulkSubmit failed:", err.response?.data || err.message);
     alert(

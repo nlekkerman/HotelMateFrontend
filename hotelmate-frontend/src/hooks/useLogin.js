@@ -46,6 +46,8 @@ export default function useLogin() {
           is_staff: data.is_staff,
           is_superuser: data.is_superuser,
           access_level: data.access_level,
+          department: data.department,
+          role: data.role,
           profile_image_url: profileImageUrl,
 
           hotel: {
@@ -67,6 +69,8 @@ export default function useLogin() {
         is_staff: data.is_staff,
         is_superuser: data.is_superuser,
         access_level: data.access_level,
+        department: data.department,
+        role: data.role,
         profile_image_url: profileImageUrl,
       });
 
