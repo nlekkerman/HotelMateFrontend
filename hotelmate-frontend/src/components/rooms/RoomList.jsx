@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import api from "@/services/api";
 import { useQrPdfPrinter } from "@/hooks/useQrPdfPrinter";
-
+import CheckoutRoomsPanel from "@/components/rooms/CheckoutRoomsPanel";
 const fetchRooms = async ({ queryKey }) => {
   const [_key, page, search] = queryKey;
   const userData = JSON.parse(localStorage.getItem("user"));
@@ -92,6 +92,10 @@ function RoomList() {
           Print QR PDFs
         </button>
       )}
+      {userData?.is_superuser && (
+  <CheckoutRoomsPanel hotelSlug={userData.hotel_slug} token={userData.token} />
+)}
+
       <h2 className="mb-4 text-center">
         Rooms (Page {page} of {totalPages}){" "}
         {isFetching && <small className="text-muted">(Updating...)</small>}

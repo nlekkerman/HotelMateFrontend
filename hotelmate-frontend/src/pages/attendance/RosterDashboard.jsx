@@ -30,7 +30,7 @@ export default function RosterDashboard() {
 
   return (
     <div className="p-4 space-y-6">
-      <h1 className="text-2xl font-bold">📋 Roster Management</h1>
+      <h1 className="text-2xl font-bold text-center">📋 Roster Management</h1>
 
       {/* Department Dropdown */}
       <div className="mb-3 d-flex flex-column align-items-start">
@@ -38,7 +38,7 @@ export default function RosterDashboard() {
           htmlFor="departmentSelect"
           className="form-label text-muted small"
         >
-          Select Department
+          Select Department to edit
         </label>
         <select
           id="departmentSelect"

@@ -96,32 +96,35 @@ export default function RosterPeriodSelector({
   if (loading) return <p>Loading roster periods…</p>;
 
   return (
-  <div className="rp-container">
-    <div className="d-flex flex-column flex-md-row gap-3 p-3 mb-4 rounded">
+  <div className="rp-container bg-light rounded">
+    <div className="d-flex flex-column flex-md-row gap-3 align-items-center">
       {/* Pick Week */}
-<div className="rp-chip border p-2 text-muted d-flex flex-column text-center gap-2 rounded flex-grow-1" style={{ maxWidth: '280px' }}>
-  <span className="rp-label">Pick Week: </span>
-  <DatePicker
-    selected={pickDate}
-    onChange={handleWeekPick}
-    dateFormat="dd MMM yyyy"
-    className="rp-input rounded-pill p-2 w-50 bg-light"
-    placeholderText="Select date"
-    showWeekNumbers
-    style={{ width: 'auto', minWidth: '150px' }}
-  />
-  {creating && <span className="rp-status">Creating…</span>}
-</div>
-
+      <div className="rp-chip d-flex align-items-center flex-grow-1 max-w-280 bg-white rounded-pill px-3 py-1 shadow-sm text-muted">
+        <span className="rp-label me-2" style={{ minWidth: '50px', userSelect: 'none' }}>
+          Week:
+        </span>
+        <DatePicker
+          selected={pickDate}
+          onChange={handleWeekPick}
+          dateFormat="dd MMM yyyy"
+          className="form-control form-control-sm border-0 bg-transparent p-0"
+          placeholderText="Select date"
+          showWeekNumbers
+          popperClassName="big-datepicker"
+        />
+        {creating && <small className="ms-2 text-muted fst-italic">Creating…</small>}
+      </div>
 
       {/* Existing Periods */}
-      <div className="rp-chip border p-2 text-muted d-flex flex-column text-center gap-2 rounded flex-grow-1">
-        <span className="rp-label">Existing</span>
+      <div className="rp-chip d-flex align-items-center flex-grow-1 max-w-280 bg-white rounded-pill px-3 py-1 shadow-sm text-muted">
+        <span className="rp-label me-2" style={{ minWidth: '60px', userSelect: 'none' }}>
+          Existing:
+        </span>
         {rosterPeriods.length === 0 ? (
-          <span className="rp-empty">No periods</span>
+          <small className="text-muted">No periods</small>
         ) : (
           <select
-            className="rp-select rounded-pill p-2 bg-light "
+            className="form-select form-select-sm border-0 bg-transparent p-0"
             value={selectedPeriod || ""}
             onChange={(e) => {
               const id = parseInt(e.target.value, 10);
@@ -149,5 +152,7 @@ export default function RosterPeriodSelector({
     </div>
   </div>
 );
+
+
 
 }

@@ -1,10 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  addDays,
-  startOfWeek,
-  format,
-  differenceInMinutes,
-} from "date-fns";
+import { addDays, startOfWeek, format, differenceInMinutes } from "date-fns";
 import RosterPeriodSelector from "@/components/attendance/RosterPeriodSelector";
 import ShiftModal from "@/components/modals/ShiftModal";
 import ShiftCell from "@/components/attendance/ShiftCell";
@@ -23,8 +18,8 @@ export default function WeeklyRosterBoard({
   period: initialPeriod,
   onPeriodChange,
   hotelId: injectedHotelId,
-  onSubmitSuccess,      // ✅ Added
-  refreshKey,           // ✅ Added
+  onSubmitSuccess, // ✅ Added
+  refreshKey, // ✅ Added
 }) {
   const {
     period,
@@ -53,7 +48,8 @@ export default function WeeklyRosterBoard({
     if (/^https?:\/\//i.test(img)) return img;
     return cloudinaryBase ? `${cloudinaryBase}${img}` : img;
   };
-const [locations, setLocations] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   useEffect(() => {
     onPeriodChange?.(period?.id);
   }, [period?.id, onPeriodChange]);
@@ -139,165 +135,192 @@ const [locations, setLocations] = useState([]);
     );
   }
 
-  return (
-    <div className="mt-4">
-      {/* --------------------------- */}
-      {/* 🔥 Embedded Analytics Block */}
-      {/* --------------------------- */}
-      {analyticsStartDate && analyticsEndDate && (
-        <div className="mt-4">
-          <h2 className="h5 mb-3">
-            Roster Analytics ({format(analyticsStartDate, "yyyy-MM-dd")} →{" "}
-            {format(analyticsEndDate, "yyyy-MM-dd")})
-          </h2>
-        </div>
-      )}
+ return (
+  <div className="mt-4">
+    {/* Show/Hide Analytics Button */}
+    <button
+      className="btn btn-outline-secondary mb-3"
+      onClick={() => setShowAnalytics((prev) => !prev)}
+    >
+      {showAnalytics ? "Hide Analytics" : "Show Analytics"}
+    </button>
 
-      <RosterAnalytics
-        hotelSlug={hotelSlug}
-        startDate={analyticsStartDate}
-        endDate={analyticsEndDate}
-        selectedDepartment={department}
-        refreshKey={refreshKey} // ✅ Passed down to trigger refresh
-      />
+    {/* --------------------------- */}
+    {/* 🔥 Embedded Analytics Block */}
+    {/* --------------------------- */}
+    {showAnalytics && (
+      <div className="mt-4">
+        {analyticsStartDate && analyticsEndDate && (
+          <div className="mt-4">
+            <h2 className="h5 mb-3">
+              Roster Analytics ({format(analyticsStartDate, "dd/MM/yy")} →{" "}
+              {format(analyticsEndDate, "dd/MM/yy")})
+            </h2>
+          </div>
+        )}
 
+        <RosterAnalytics
+          hotelSlug={hotelSlug}
+          startDate={analyticsStartDate}
+          endDate={analyticsEndDate}
+          selectedDepartment={department}
+          refreshKey={refreshKey}
+        />
+      </div>
+    )}
+
+    
+
+    {/* Roster Table */}
+    <div className="table-responsive">
+      {/* ⬆️ Header inside table container (Period + Locations) */}
+  <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 p-3 border-bottom bg-white">
+    <div>
+      <h6 className="text-muted mb-2">Roster Period</h6>
       <RosterPeriodSelector
         hotelSlug={hotelSlug}
         selectedPeriod={period.id}
         setSelectedPeriod={setPeriod}
         onPeriodCreated={setPeriod}
       />
-{/* 👉 Locations (badges + create/edit) */}
-<ShiftLocationBar
-  hotelSlug={hotelSlug}
-  onChange={(locs) => {
-    const list = Array.isArray(locs) ? locs : (locs?.results ?? []);
-  setLocations(list);
-  }}
-/>
-      {/* Roster Table */}
-      <div className="table-responsive">
-        <table className="table table-bordered table-sm align-middle">
-          <thead>
-            <tr className="bg-light small">
-              <th
-                className="position-sticky start-0 bg-light text-start z-3"
-                style={{ minWidth: "220px" }}
-              >
-                Staff
-              </th>
-              {days.map((day) => (
-                <th key={day.toString()} className="text-center text-nowrap">
-                  {format(day, "EEE dd")}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {staffList.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="text-center text-muted py-4">
-                  No staff available.
-                </td>
-              </tr>
-            ) : (
-              staffList.map((staff) => {
-                const stats = staffWeekStats[staff.id] || {
-                  hours: 0,
-                  shifts: 0,
-                };
-                return (
-                  <tr key={staff.id} className="small">
-                    <td className="position-sticky start-0 bg-white z-2">
-                      <div className="d-flex align-items-center gap-2">
-                        <span
-                          className="d-inline-flex rounded-circle overflow-hidden"
-                          style={{ width: 32, height: 32 }}
-                        >
-                          {staff.profile_image_url ? (
-                            <img
-                              src={buildImageUrl(staff.profile_image_url)}
-                              alt={`${staff.first_name} ${staff.last_name}`}
-                              style={{
-                                width: 32,
-                                height: 32,
-                                objectFit: "cover",
-                              }}
-                            />
-                          ) : (
-                            <FaUserCircle size={32} />
-                          )}
-                        </span>
-                        <div className="d-flex flex-column">
-                          <span className="fw-medium">
-                            {staff.first_name} {staff.last_name}
-                          </span>
-                          <span className="small">
-                            H:&nbsp;
-                            <span className="text-danger fw-semibold">
-                              {stats.hours.toFixed(2)}
-                            </span>
-                            &nbsp;• Sh:&nbsp;
-                            <span className="text-success fw-semibold">
-                              {stats.shifts}
-                            </span>
-                          </span>
-                        </div>
-                      </div>
-                    </td>
+    </div>
 
-                    {days.map((day) => (
-                      <td
-                        key={day.toString()}
-                        className="text-center align-middle"
-                      >
-                        <div className="d-flex justify-content-center align-items-center">
-                          <ShiftCell
-                            staff={staff}
-                            date={day}
-                            baseRoster={baseRoster}
-                            localShifts={localShifts}
-                            onAdd={open}
-                            onEdit={open}
-                            locationsMap={locationsMap}
-                          />
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {localShifts.length > 0 && (
-        <div className="d-flex justify-content-center mt-4">
-          <button
-            className="btn btn-success px-4"
-            onClick={async () => {
-              const result = await bulkSubmit();
-              if (result?.success && typeof onSubmitSuccess === "function") {
-                onSubmitSuccess(); // ✅ will refresh analytics via parent
-              }
-            }}
-          >
-            Submit Roster ({localShifts.length} changes)
-          </button>
-        </div>
-      )}
-
-      <ShiftModal
-        show={!!editing.staff}
-        staff={editing.staff}
-        date={editing.date}
-        shift={editing.shift}
-        onClose={close}
-        onSave={save}
-        onDelete={remove}
-        locations={locations}
+    <div className="flex-grow-1">
+      <h6 className="text-muted mb-2">Locations</h6>
+      <ShiftLocationBar
+        hotelSlug={hotelSlug}
+        onChange={(locs) => {
+          const list = Array.isArray(locs) ? locs : locs?.results ?? [];
+          setLocations(list);
+        }}
       />
     </div>
-  );
+  </div>
+
+      <table className="table table-bordered table-sm align-middle">
+        <thead>
+          <tr className="bg-light small">
+            <th
+              className="position-sticky start-0 bg-light text-start"
+              style={{ minWidth: "220px" }}
+            >
+              Staff
+            </th>
+            {days.map((day) => (
+              <th key={day.toString()} className="text-center text-nowrap">
+                {format(day, "EEE dd")}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {staffList.length === 0 ? (
+            <tr>
+              <td colSpan={8} className="text-center text-muted py-4">
+                No staff available.
+              </td>
+            </tr>
+          ) : (
+            staffList.map((staff) => {
+              const stats = staffWeekStats[staff.id] || {
+                hours: 0,
+                shifts: 0,
+              };
+              return (
+                <tr key={staff.id} className="small">
+                  <td className="position-sticky start-0 bg-white z-2">
+                    <div className="d-flex align-items-center gap-2">
+                      <span
+                        className="d-inline-flex rounded-circle overflow-hidden"
+                        style={{ width: 32, height: 32 }}
+                      >
+                        {staff.profile_image_url ? (
+                          <img
+                            src={buildImageUrl(staff.profile_image_url)}
+                            alt={`${staff.first_name} ${staff.last_name}`}
+                            style={{
+                              width: 32,
+                              height: 32,
+                              objectFit: "cover",
+                            }}
+                          />
+                        ) : (
+                          <FaUserCircle size={32} />
+                        )}
+                      </span>
+                      <div className="d-flex flex-column">
+                        <span className="fw-medium">
+                          {staff.first_name} {staff.last_name}
+                        </span>
+                        <span className="small">
+                          H:&nbsp;
+                          <span className="text-danger fw-semibold">
+                            {stats.hours.toFixed(2)}
+                          </span>
+                          &nbsp;• Sh:&nbsp;
+                          <span className="text-success fw-semibold">
+                            {stats.shifts}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+
+                  {days.map((day) => (
+                    <td
+                      key={day.toString()}
+                      className="text-center align-middle"
+                    >
+                      <div className="d-flex justify-content-center align-items-center">
+                        <ShiftCell
+                          staff={staff}
+                          date={day}
+                          baseRoster={baseRoster}
+                          localShifts={localShifts}
+                          onAdd={open}
+                          onEdit={open}
+                          locationsMap={locationsMap}
+                        />
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+
+    {/* Submit Button */}
+    {localShifts.length > 0 && (
+      <div className="d-flex justify-content-center mt-4">
+        <button
+          className="btn btn-success px-4"
+          onClick={async () => {
+            const result = await bulkSubmit();
+            if (result?.success && typeof onSubmitSuccess === "function") {
+              onSubmitSuccess();
+            }
+          }}
+        >
+          Submit Roster ({localShifts.length} changes)
+        </button>
+      </div>
+    )}
+
+    {/* Shift Modal */}
+    <ShiftModal
+      show={!!editing.staff}
+      staff={editing.staff}
+      date={editing.date}
+      shift={editing.shift}
+      onClose={close}
+      onSave={save}
+      onDelete={remove}
+      locations={locations}
+    />
+  </div>
+);
+
 }
