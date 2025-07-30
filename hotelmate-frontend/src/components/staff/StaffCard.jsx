@@ -7,28 +7,38 @@ export default function StaffCard({ staff, onClick }) {
   const imgUrl = staff.profile_image_url;
 
   const formatDepartment = (dept) => {
+    if (!dept) return "N/A";
+
     if (typeof dept === "string") {
       return dept
-        .split("_")
+        .split(/[\s_]+/)
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
         .join(" ");
     }
 
-    if (typeof dept === "object" && dept !== null) {
+    if (typeof dept === "object") {
       const value = dept.name || dept.slug || dept.department || "";
-      if (typeof value === "string") {
+      if (typeof value === "string" && value.length > 0) {
         return value
-          .split("_")
+          .split(/[\s_]+/)
           .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
           .join(" ");
       }
     }
 
+    // if dept is a number or something else, fallback
+    if (typeof dept === "number") {
+      return `Department #${dept}`;
+    }
+
     return "N/A";
   };
-console.log("staff.department_detail raw:", staff.department_detail);
-const department = formatDepartment(staff.department_detail);
-console.log("staff.department_detail after formatting:", department);
+
+
+  const department = formatDepartment(
+    staff.department_detail ?? staff.department
+  );
+
 
   return (
     <div

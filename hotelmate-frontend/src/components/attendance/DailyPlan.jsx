@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import api from "@/services/api";
 import { useDailyPlanPdfExporter } from "./hooks/useDailyPlanPdfExporter";
+import StaffCard from "@/components/staff/StaffCard";
 
 export default function DailyPlan({ hotelSlug, departmentSlug }) {
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10)); // YYYY-MM-DD
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [dailyPlan, setDailyPlan] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -43,10 +44,9 @@ export default function DailyPlan({ hotelSlug, departmentSlug }) {
 
   const groupedByLocation = (dailyPlan?.entries || []).reduce((acc, entry) => {
     const loc = entry.location_name || entry.location?.name || "No Location";
-    const staff =
-      entry.staff_name || entry.staff?.full_name || entry.staff?.name || "Unknown Staff";
+    const staff = entry.staff;
     if (!acc[loc]) acc[loc] = [];
-    acc[loc].push(staff);
+    if (staff) acc[loc].push(staff);
     return acc;
   }, {});
 
@@ -90,15 +90,14 @@ export default function DailyPlan({ hotelSlug, departmentSlug }) {
           {Object.entries(groupedByLocation).map(([location, staffList]) => (
             <div key={location} className="mb-4">
               <h5 className="fw-bold text-secondary border-start border-3 border-primary ps-3 mb-3">
-                {location}
+               Staff for {location}
               </h5>
-              <ul className="list-group shadow-sm">
+              
+              <div className="d-flex flex-column gap-2">
                 {staffList.map((staff, idx) => (
-                  <li key={idx} className="list-group-item d-flex align-items-center">
-                    <span className="me-2">👤</span> {staff}
-                  </li>
+                  <StaffCard key={staff.id || idx} staff={staff} />
                 ))}
-              </ul>
+              </div>
             </div>
           ))}
 

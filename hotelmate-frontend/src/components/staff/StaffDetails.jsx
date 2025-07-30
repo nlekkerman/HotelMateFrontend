@@ -1,6 +1,6 @@
-// src/components/staff/StaffDetails.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { FaUserCircle } from "react-icons/fa"; // <-- added
 import api from "@/services/api";
 
 function StaffDetails() {
@@ -25,18 +25,7 @@ function StaffDetails() {
 
   const formatDepartment = (dept) => {
     if (!dept) return "N/A";
-
-    let name = "";
-
-    // If dept is an object with name or slug
-    if (typeof dept === "object") {
-      name = dept.name || dept.slug || "";
-    } else if (typeof dept === "string") {
-      name = dept;
-    } else {
-      return "N/A";
-    }
-
+    let name = typeof dept === "object" ? dept.name || dept.slug || "" : dept;
     return name
       .split("_")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -44,23 +33,43 @@ function StaffDetails() {
   };
 
   if (error) return <div className="alert alert-danger mt-3">{error}</div>;
-  if (!staff)
-    return <div className="text-muted mt-3">Loading staff details...</div>;
+  if (!staff) return <div className="text-muted mt-3">Loading staff details...</div>;
 
   return (
     <div className="container mt-4 mb-5 p-4 bg-white rounded shadow-sm">
       <h2 className="mb-4 text-primary">👤 Staff Details</h2>
 
+      <div className="mb-4  d-flex align-items-center justify-content-start" style={{ height: 180 }}>
+        <div
+          className="rounded-circle overflow-hidden bg-light d-flex justify-content-center align-items-center border"
+          style={{ width: 180, height: 180 }}
+        >
+          {staff.profile_image_url ? (
+            <img
+              src={staff.profile_image_url}
+              alt={`${staff.first_name} ${staff.last_name}`}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <FaUserCircle size={120} className="text-muted" />
+          )}
+        </div>
+      </div>
+
       <div className="row mb-3">
         <div className="col-md-6">
-          <p>
-            <strong>ID:</strong> {staff.id}
+          <p className="bg-success text-white">
+            <strong className="ps-1">Hotel:</strong>{" "}
+            <strong>{staff.user.staff_profile.hotel.name}</strong>
           </p>
           <p>
-            <strong>Username:</strong> {staff.user?.username || "—"}
+            <strong>Username:</strong>{" "}
+            <span className="text-capitalize">
+              {staff.user?.username || "—"}
+            </span>
           </p>
           <p>
-            <strong>Email:</strong> {staff.user?.email || "—"}
+            <strong>Email:</strong> {staff.user?.email || "N/A"}
           </p>
           <p>
             <strong>First Name:</strong> {staff.first_name}
@@ -78,11 +87,9 @@ function StaffDetails() {
             {formatDepartment(staff.department_detail || staff.department)}
           </p>
           <p>
-            <strong>Role:</strong> {staff.role || "—"}
+            <strong>Role:</strong> {staff.role_detail?.name || "—"}
           </p>
-          <p>
-            <strong>Position:</strong> {staff.position || "—"}
-          </p>
+
           <p>
             <strong>Active:</strong>
             <span
@@ -95,20 +102,6 @@ function StaffDetails() {
           </p>
         </div>
       </div>
-
-      {staff.user?.staff_profile?.hotel && (
-        <>
-          <h4 className="mt-4 text-secondary">🏨 Hotel Info</h4>
-          <div className="row">
-            <div className="col-md-6">
-              <p>
-                <strong>Hotel Name:</strong>{" "}
-                {staff.user.staff_profile.hotel.name}
-              </p>
-            </div>
-          </div>
-        </>
-      )}
 
       <div className="mt-4">
         <button
