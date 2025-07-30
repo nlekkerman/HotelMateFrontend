@@ -201,7 +201,7 @@ export default function WeeklyRosterBoard({
         <thead>
           <tr className="bg-light small">
             <th
-              className="position-sticky start-0 bg-light text-start"
+              className="bg-light text-start"
               style={{ minWidth: "220px" }}
             >
               Staff
