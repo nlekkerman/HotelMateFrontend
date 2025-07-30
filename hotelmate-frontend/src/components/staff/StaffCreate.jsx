@@ -91,58 +91,68 @@ const StaffCreate = () => {
     setProfileImage(e.target.files[0] || null);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+ const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!selectedUser) {
-      setError("Please select a user");
-      return;
+  if (!selectedUser) {
+    setError("Please select a user");
+    return;
+  }
+
+  if (!selectedHotelId) {
+    setError("Please select a hotel");
+    return;
+  }
+
+  if (!staffData.department) {
+    setError("Please select a department");
+    return;
+  }
+  if (!staffData.role) {
+    setError("Please select a role");
+    return;
+  }
+  console.log("Profile image file:", profileImage);
+
+  try {
+    // Create FormData instance for multipart/form-data request
+    const formData = new FormData();
+    formData.append("user_id", selectedUser.id);
+    formData.append("hotel", selectedHotelId);
+    formData.append("first_name", staffData.first_name);
+    formData.append("last_name", staffData.last_name);
+    formData.append("department", Number(staffData.department));
+    formData.append("role", Number(staffData.role));
+    formData.append("access_level", staffData.access_level);
+    formData.append("email", staffData.email);
+    formData.append("phone_number", staffData.phone_number);
+    formData.append("is_active", staffData.is_active);
+    formData.append("is_on_duty", staffData.is_on_duty);
+
+    if (profileImage) {
+      formData.append("profile_image", profileImage); // key name matches your backend field
     }
 
-    if (!selectedHotelId) {
-      setError("Please select a hotel");
-      return;
+    const response = await api.post("staff/", formData, {
+      headers: {
+        "X-Hotel-ID": selectedHotelId,
+      },
+    });
+
+    console.log("Staff created:", response.data);
+    closeModal();
+
+    const newStaffId = response.data.id;
+    if (newStaffId) {
+      navigate(`/staff/${newStaffId}`);
+    } else {
+      setError("Staff created but ID missing in response");
     }
-
-    // Validate that department and role are selected
-    if (!staffData.department) {
-      setError("Please select a department");
-      return;
-    }
-    if (!staffData.role) {
-      setError("Please select a role");
-      return;
-    }
-
-    try {
-      const payload = {
-        user_id: selectedUser.id,
-        hotel: selectedHotelId,
-        ...staffData,
-        department: Number(staffData.department), // ensure ID sent as number
-        role: Number(staffData.role),
-      };
-
-      const response = await api.post("staff/", payload, {
-        headers: {
-          "X-Hotel-ID": selectedHotelId,
-        },
-      });
-
-      console.log("Staff created:", response.data);
-      closeModal();
-
-      const newStaffId = response.data.id;
-      if (newStaffId) {
-        navigate(`/staff/${newStaffId}`);
-      } else {
-        setError("Staff created but ID missing in response");
-      }
-    } catch (err) {
-      setError(err.response?.data?.error || "Failed to create staff");
-      console.error(err);
-    }
-  };
+  } catch (err) {
+    setError(err.response?.data?.error || "Failed to create staff");
+    console.error(err);
+  }
+};
 
   return (
     <div>

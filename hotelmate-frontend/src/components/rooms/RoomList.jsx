@@ -1,76 +1,47 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useParams } from "react-router-dom";
-import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import api from "@/services/api";
 import { useQrPdfPrinter } from "@/hooks/useQrPdfPrinter";
 import CheckoutRoomsPanel from "@/components/rooms/CheckoutRoomsPanel";
+import RoomCard from "@/components/rooms/RoomCard";
+
 const fetchRooms = async ({ queryKey }) => {
   const [_key, page, search] = queryKey;
   const userData = JSON.parse(localStorage.getItem("user"));
   const hotelId = userData?.hotel_id;
 
-  try {
-    const response = await api.get("/rooms/rooms/", {
-      params: {
-        page,
-        search,
-        hotel_id: hotelId,
-      },
-    });
-
-    console.log("[fetchRooms] API Response:", response.data);
-    return response.data;
-  } catch (err) {
-    console.error("[fetchRooms] API Error:", err);
-    throw err;
-  }
+  const response = await api.get("/rooms/rooms/", {
+    params: { page, search, hotel_id: hotelId },
+  });
+  return response.data;
 };
 
 function RoomList() {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRooms, setSelectedRooms] = useState([]);
-  const navigate = useNavigate();
-  const { hotelIdentifier, roomNumber } = useParams();
   const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ["rooms", page, searchQuery],
     queryFn: fetchRooms,
     keepPreviousData: true,
   });
-  const rooms = data?.results || [];
-  const totalCount = data?.count || 0;
-  const totalPages = Math.ceil(totalCount / 10);
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const { generateQrPdf } = useQrPdfPrinter();
   const userData = JSON.parse(localStorage.getItem("user"));
+  const rooms = data?.results || [];
+  const totalPages = Math.ceil((data?.count || 0) / 10);
 
-  const next = data?.next;
-  const previous = data?.previous;
-
-  const goToPage = (pageNum) => {
-    if (pageNum < 1 || pageNum > totalPages) return;
-    setPage(pageNum);
-  };
-
-  // Reset page to 1 on new search
-  React.useEffect(() => {
-    setPage(1);
-  }, [searchQuery]);
   const handleCheckboxChange = (roomId) => {
     setSelectedRooms((prev) =>
-      prev.includes(roomId)
-        ? prev.filter((id) => id !== roomId)
-        : [...prev, roomId]
+      prev.includes(roomId) ? prev.filter((id) => id !== roomId) : [...prev, roomId]
     );
   };
 
   const handleCheckout = async () => {
-    const userData = JSON.parse(localStorage.getItem("user"));
-
-    const hotelIdentifier = userData?.hotel_slug;
     try {
-      await api.post(`rooms/${hotelIdentifier}/checkout/`, {
+      await api.post(`rooms/${userData.hotel_slug}/checkout/`, {
         room_ids: selectedRooms,
       });
       setSelectedRooms([]);
@@ -81,20 +52,23 @@ function RoomList() {
     }
   };
 
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
+
   if (isLoading) return <p className="text-center">Loading rooms...</p>;
-  if (isError)
-    return <p className="text-center text-danger">Error: {error.message}</p>;
+  if (isError) return <p className="text-center text-danger">Error: {error.message}</p>;
 
   return (
-    <div className="container d-flex justify-content-center flex-column my-4 p-0 vw-100">
+    <div className="container d-flex flex-column my-4 p-0 vw-100">
       {userData?.is_superuser && (
-        <button className="custom-button" onClick={() => generateQrPdf(rooms)}>
-          Print QR PDFs
-        </button>
+        <>
+          <button className="custom-button mb-3" onClick={() => generateQrPdf(rooms)}>
+            Print QR PDFs
+          </button>
+          <CheckoutRoomsPanel hotelSlug={userData.hotel_slug} token={userData.token} />
+        </>
       )}
-      {userData?.is_superuser && (
-  <CheckoutRoomsPanel hotelSlug={userData.hotel_slug} token={userData.token} />
-)}
 
       <h2 className="mb-4 text-center">
         Rooms (Page {page} of {totalPages}){" "}
@@ -102,201 +76,63 @@ function RoomList() {
       </h2>
 
       {selectedRooms.length > 0 && (
-        <button
-          className="btn btn-danger ms-auto mb-2"
-          onClick={handleCheckout}
-        >
+        <button className="btn btn-danger ms-auto mb-2" onClick={handleCheckout}>
           Checkout selected ({selectedRooms.length})
         </button>
       )}
 
-      {/* Rooms list */}
-      {rooms.length > 0 ? (
-        <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-1">
-          {rooms.map((room) => (
-            <div
-              key={room.id}
-              className="col"
-              style={{ cursor: "pointer" }}
-              onClick={() =>
-                navigate(`/rooms/${room.hotel_slug}/rooms/${room.room_number}`)
-              }
-            >
-              <div className="card h-100 shadow-sm">
-                <div className="card-body d-flex flex-column">
-                  <h5 className="card-title mb-3 text-center text-white fw-bold py-2 bg-warning">
-                    Room {room.room_number}
-                  </h5>
-                  <p className="card-text mb-3">
-                    <strong>Guest PIN:</strong>{" "}
-                    {room.guest_id_pin || "Not assigned"}
-                    <br />
-                    <strong>Occupied:</strong> {room.is_occupied ? "Yes" : "No"}
-                  </p>
-
-                  {/* QR codes with titles */}
-                  <div className="mb-3">
-                    {room.room_service_qr_code && (
-                      <div className="mb-2 text-center">
-                        <h6 className="mb-1">Room Service QR Code</h6>
-                        <img
-                          src={room.room_service_qr_code}
-                          alt="Room Service QR"
-                          style={{
-                            width: 120,
-                            height: 120,
-                            objectFit: "contain",
-                          }}
-                        />
-                      </div>
-                    )}
-                    {room.in_room_breakfast_qr_code && (
-                      <div className="text-center">
-                        <h6 className="mb-1">In-Room Breakfast QR Code</h6>
-                        <img
-                          src={room.in_room_breakfast_qr_code}
-                          alt="Breakfast QR"
-                          style={{
-                            width: 120,
-                            height: 120,
-                            objectFit: "contain",
-                          }}
-                        />
-                      </div>
-                    )}
-                    {room.dinner_booking_qr_code && (
-                      <div className="text-center">
-                        <h6 className="mb-1">Dinner Booking QR Code</h6>
-                        <img
-                          src={room.dinner_booking_qr_code}
-                          alt="Dinner Booking QR"
-                          style={{
-                            width: 120,
-                            height: 120,
-                            objectFit: "contain",
-                          }}
-                        />
-                      </div>
-                    )}
-                    <div
-                      className="form-check  m-2  text-black bg-light p-1 rounded"
-                      onClick={(e) => e.stopPropagation()}
-                      data-bs-toggle="tooltip"
-                      data-bs-placement="left"
-                      title="Select this room for batch checkout"
-                    >
-                      <input
-                        id={`select-room-${room.id}`}
-                        className="form-check-input "
-                        type="checkbox"
-                        checked={selectedRooms.includes(room.id)}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          handleCheckboxChange(room.id);
-                        }}
-                      />
-                      <label
-                        htmlFor={`select-room-${room.id}`}
-                        className="form-check-label small"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Select room for checkout.
-                      </label>
-                    </div>
-                    <div className="button-wraper w-100 d-flex justify-content-center mt-2">
-                      {!room.is_occupied && (
-                        <button
-                          className="btn main-text second-text btn-outline-secondary me-2"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent parent click
-                            navigate(`/rooms/${room.room_number}/add-guest`);
-                          }}
-                        >
-                          Assign Guest
-                        </button>
-                      )}
-                    </div>
-                    {room.is_occupied && (
-                      <div className="text-danger text-center mt-1">
-                        Room is already occupied
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-center text-muted">No rooms found</p>
-      )}
+      <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-2">
+        {rooms.map((room) => (
+          <RoomCard
+            key={room.id}
+            room={room}
+            
+            selectedRooms={selectedRooms}
+            onSelect={handleCheckboxChange}
+          />
+        ))}
+      </div>
 
       {/* Pagination */}
-      <nav
-        aria-label="Room list pagination"
-        className="mt-4 d-flex justify-content-center"
-      >
+      <nav className="mt-4 d-flex justify-content-center" aria-label="Pagination">
         <ul className="pagination">
-          {/* Start (First page) */}
-          {page > 2 && ( // Show only if current page is beyond 2 to avoid clutter
+          {page > 2 && (
             <li className="page-item">
-              <button className="page-link" onClick={() => goToPage(1)}>
+              <button className="page-link" onClick={() => setPage(1)}>
                 Start
               </button>
             </li>
           )}
-          {/* Previous */}
-          <li className={`page-item ${!previous ? "disabled" : ""}`}>
-            <button
-              className="page-link"
-              onClick={() => goToPage(page - 1)}
-              disabled={!previous}
-            >
+          <li className={`page-item ${!data?.previous ? "disabled" : ""}`}>
+            <button className="page-link" onClick={() => setPage(page - 1)} disabled={!data?.previous}>
               ⏮️
             </button>
           </li>
-
-          {/* One before current page */}
           {page > 1 && (
             <li className="page-item">
-              <button className="page-link" onClick={() => goToPage(page - 1)}>
+              <button className="page-link" onClick={() => setPage(page - 1)}>
                 {page - 1}
               </button>
             </li>
           )}
-
-          {/* Current page */}
           <li className="page-item active" aria-current="page">
             <span className="page-link">{page}</span>
           </li>
-
-          {/* One after current page */}
           {page < totalPages && (
             <li className="page-item">
-              <button className="page-link" onClick={() => goToPage(page + 1)}>
+              <button className="page-link" onClick={() => setPage(page + 1)}>
                 {page + 1}
               </button>
             </li>
           )}
-
-          {/* Last page */}
-
-          {/* Next */}
-          <li className={`page-item ${!next ? "disabled" : ""}`}>
-            <button
-              className="page-link"
-              onClick={() => goToPage(page + 1)}
-              disabled={!next}
-            >
+          <li className={`page-item ${!data?.next ? "disabled" : ""}`}>
+            <button className="page-link" onClick={() => setPage(page + 1)} disabled={!data?.next}>
               ⏭️
             </button>
           </li>
           {page < totalPages - 1 && (
             <li className="page-item">
-              <button
-                className="page-link"
-                onClick={() => goToPage(totalPages)}
-              >
+              <button className="page-link" onClick={() => setPage(totalPages)}>
                 End
               </button>
             </li>

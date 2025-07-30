@@ -101,7 +101,7 @@ export default function RosterPeriodSelector({
       {/* Pick Week */}
       <div className="rp-chip d-flex align-items-center flex-grow-1 max-w-280 bg-white rounded-pill px-3 py-1 shadow-sm text-muted">
         <span className="rp-label me-2" style={{ minWidth: '50px', userSelect: 'none' }}>
-          Week:
+          Create Period:
         </span>
         <DatePicker
           selected={pickDate}
