@@ -228,7 +228,7 @@ export default function WeeklyRosterBoard({
               };
               return (
                 <tr key={staff.id} className="small">
-                  <td className="position-sticky start-0 bg-white z-2">
+                  <td className="bg-white z-2">
                     <div className="d-flex align-items-center gap-2">
                       <span
                         className="d-inline-flex rounded-circle overflow-hidden"
