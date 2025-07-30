@@ -3,13 +3,13 @@ import React, { useEffect, useState, useCallback } from "react";
 import api from "@/services/api";
 import WeeklyRosterBoard from "@/components/attendance/WeeklyRosterBoard";
 import { isAfter, parseISO,isWithinInterval, startOfDay } from "date-fns";
-
+import DailyPlan from "@/components/attendance/DailyPlan";
 export default function DepartmentRosterView({ department, hotelSlug, onSubmit  }) {
   const [periods, setPeriods] = useState([]);
   const [periodObj, setPeriodObj] = useState(null);     // <-- FULL object
   const [shifts, setShifts] = useState([]);
   const [staffList, setStaffList] = useState([]);
-
+  const [showDailyPlan, setShowDailyPlan] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 const handleSubmitSuccess = () => setRefreshKey(prev => prev + 1);
 
@@ -130,10 +130,20 @@ const handleSubmitSuccess = () => setRefreshKey(prev => prev + 1);
   return (
     <div className="mt-6">
       <h3 className="text-xl font-semibold mb-4 text-gray-700">
-  Roster for {department.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+  {department.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
 </h3>
 
 
+<button
+        onClick={() => setShowDailyPlan((prev) => !prev)}
+        className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+      >
+        {showDailyPlan ? "Hide Daily Plans" : "Show Daily Plans"}
+      </button>
+
+      {showDailyPlan && (
+        <DailyPlan hotelSlug={hotelSlug} departmentSlug={department} />
+      )}
 
 
 

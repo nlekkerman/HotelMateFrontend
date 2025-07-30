@@ -167,6 +167,17 @@ body.terminal-mode,
   background-color: transparent;
   border-radius: 50%;
 }
+
+.big-datepicker {
+  min-width: 350px !important;
+  font-size: 1.1rem; /* make text bigger */
+  z-index: 20050 !important; /* ensure it's on top of bootstrap modals */
+ 
+}
+.shift-modal{
+   z-index: 20059 !important;
+   background-color: #00ff00;
+}
 /* ─── LogoBanner ─── */
 .hotel-logo-banner {
   text-align: center;

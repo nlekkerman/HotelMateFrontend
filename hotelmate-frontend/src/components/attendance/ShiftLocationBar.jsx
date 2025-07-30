@@ -97,130 +97,116 @@ export default function ShiftLocationBar({ hotelSlug: propHotelSlug, onChange })
 
   return (
     <>
-      {/* Toggle Button */}
-      <button
-        type="button"
-        className="btn btn-outline-secondary mb-3"
-        onClick={() => setExpanded((prev) => !prev)}
+  {/* Always visible: Labels (badges) + Add button */}
+  <div className="d-flex align-items-center flex-wrap gap-2 mb-3">
+    {locations.map((loc) => (
+      <span
+        key={loc.id}
+        className="badge rounded-pill"
+        style={{
+          backgroundColor: loc.color || "#0d6efd",
+          cursor: "pointer",
+        }}
+        title="Edit this location"
+        onClick={() => openEdit(loc)}
       >
-        {expanded ? "Hide Labels" : "Show Labels"}
-      </button>
+        {loc.name}
+      </span>
+    ))}
 
-      {/* Only render labels if expanded */}
-      {expanded && (
-        <>
-          {/* Top bar with badges */}
-          <div className="d-flex align-items-center flex-wrap gap-2 mb-3">
-            {locations.map((loc) => (
-              <span
-                key={loc.id}
-                className="badge rounded-pill"
-                style={{
-                  backgroundColor: loc.color || "#0d6efd",
-                  cursor: "pointer",
-                }}
-                title="Edit this location"
-                onClick={() => openEdit(loc)}
-              >
-                {loc.name}
-              </span>
-            ))}
+    <button
+      type="button"
+      className="btn btn-outline-primary btn-sm ms-2"
+      onClick={openCreate}
+    >
+      + 
+    </button>
+  </div>
 
-            <button
-              type="button"
-              className="btn btn-outline-primary btn-sm ms-2"
-              onClick={openCreate}
-            >
-              + Add location
-            </button>
-          </div>
-        </>
-      )}
-
-      {/* Modal */}
-      {showModal && (
-        <div className="modal location-modal fade show d-block" tabIndex="-1" role="dialog">
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <form onSubmit={onSubmit}>
-                <div className="modal-header">
-                  <h5 className="modal-title">
-                    {editing ? "Edit location" : "Create location"}
-                  </h5>
-                  <button
-                    type="button"
-                    className="btn-close"
-                    onClick={() => setShowModal(false)}
-                  ></button>
-                </div>
-
-                <div className="modal-body">
-                  {error && (
-                    <div className="alert alert-danger py-2">{error}</div>
-                  )}
-                  <div className="mb-3">
-                    <label className="form-label">Name</label>
-                    <input
-                      className="form-control"
-                      value={form.name}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, name: e.target.value }))
-                      }
-                      required
-                    />
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label">Color</label>
-                    <input
-                      type="color"
-                      className="form-control form-control-color"
-                      value={form.color}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, color: e.target.value }))
-                      }
-                      title="Choose badge color"
-                    />
-                  </div>
-                </div>
-
-                <div className="modal-footer d-flex justify-content-between">
-                  {editing ? (
-                    <button
-                      type="button"
-                      className="btn btn-outline-danger me-auto"
-                      onClick={onDelete}
-                      disabled={saving}
-                    >
-                      Delete
-                    </button>
-                  ) : (
-                    <span />
-                  )}
-
-                  <div>
-                    <button
-                      type="button"
-                      className="btn btn-secondary me-2"
-                      onClick={() => setShowModal(false)}
-                      disabled={saving}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="btn btn-primary"
-                      disabled={saving}
-                    >
-                      {saving ? "Saving…" : "Save"}
-                    </button>
-                  </div>
-                </div>
-              </form>
+  {/* Modal */}
+  {showModal && (
+    <div className="modal location-modal fade show d-block" tabIndex="-1" role="dialog">
+      <div className="modal-dialog">
+        <div className="modal-content">
+          <form onSubmit={onSubmit}>
+            <div className="modal-header">
+              <h5 className="modal-title">
+                {editing ? "Edit location" : "Create location"}
+              </h5>
+              <button
+                type="button"
+                className="btn-close"
+                onClick={() => setShowModal(false)}
+              ></button>
             </div>
-          </div>
+
+            <div className="modal-body">
+              {error && <div className="alert alert-danger py-2">{error}</div>}
+
+              <div className="mb-3">
+                <label className="form-label">Name</label>
+                <input
+                  className="form-control"
+                  value={form.name}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, name: e.target.value }))
+                  }
+                  required
+                />
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label">Color</label>
+                <input
+                  type="color"
+                  className="form-control form-control-color"
+                  value={form.color}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, color: e.target.value }))
+                  }
+                  title="Choose badge color"
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer d-flex justify-content-between">
+              {editing ? (
+                <button
+                  type="button"
+                  className="btn btn-outline-danger me-auto"
+                  onClick={onDelete}
+                  disabled={saving}
+                >
+                  Delete
+                </button>
+              ) : (
+                <span />
+              )}
+
+              <div>
+                <button
+                  type="button"
+                  className="btn btn-secondary me-2"
+                  onClick={() => setShowModal(false)}
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={saving}
+                >
+                  {saving ? "Saving…" : "Save"}
+                </button>
+              </div>
+            </div>
+          </form>
         </div>
-      )}
-    </>
+      </div>
+    </div>
+  )}
+</>
+
   );
 }

@@ -52,7 +52,7 @@ export default function ShiftModal({
       start,
       end,
       locationId,
-      location: locationId ? Number(locationId) : null,
+      location_id: locationId ? Number(locationId) : null,
     });
 
     onSave({
