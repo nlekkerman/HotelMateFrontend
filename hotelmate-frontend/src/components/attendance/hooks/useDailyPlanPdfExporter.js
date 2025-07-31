@@ -6,20 +6,28 @@ export const useDailyPlanPdfExporter = () => {
   const generateDailyPlanPdf = ({ hotelName, date, department, entries }) => {
     const doc = new jsPDF();
 
-    // Set up some colors and fonts
-    const titleColor = "#004080"; // dark blue
-    const headerBgColor = "#cce5ff"; // light blue
-    const locationColor = "#007bff"; // bootstrap primary blue
+    // Format "HH:mm" from "HH:mm:ss" or "HH:mm"
+    const formatTime = (timeStr) => {
+      if (!timeStr) return "";
+      const [hour, minute] = timeStr.split(":");
+      const date = new Date();
+      date.setHours(parseInt(hour), parseInt(minute), 0);
+      return format(date, "HH:mm");
+    };
+    const capitalizeWords = (str) =>
+      str.replace(/\b\w/g, (char) => char.toUpperCase());
+    // Colors and styles
+    const titleColor = "#004080";
+    const headerBgColor = "#cce5ff";
+    const locationColor = "#007bff";
     const textColor = "#333333";
-    const bullet = "\u2022";
 
     // Title
     doc.setTextColor(titleColor);
     doc.setFontSize(20);
     doc.setFont("helvetica", "bold");
-    doc.text(`Daily Plan for ${hotelName}`, 14, 20);
-
-    // Meta info - date & department
+    doc.text(`Daily Plan for ${capitalizeWords(hotelName)}`, 14, 20);
+    // Date & department
     doc.setFontSize(12);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(textColor);
@@ -28,38 +36,44 @@ export const useDailyPlanPdfExporter = () => {
       doc.text(`Department: ${department}`, 14, 36);
     }
 
-    // Add a horizontal line under header
+    // Divider line
     doc.setDrawColor(titleColor);
     doc.setLineWidth(0.5);
     doc.line(14, 40, 196, 40);
 
-    // Prepare table data grouped by location
+    // Group entries by location with time
     const grouped = entries.reduce((acc, entry) => {
       const loc = entry.location_name || entry.location?.name || "No Location";
       const staff =
-        entry.staff_name || entry.staff?.full_name || entry.staff?.name || "Unknown Staff";
+        entry.staff_name ||
+        entry.staff?.full_name ||
+        entry.staff?.name ||
+        "Unknown Staff";
+      const shiftStart = formatTime(entry.shift_start);
+      const shiftEnd = formatTime(entry.shift_end);
+      const timeStr = shiftStart && shiftEnd ? `${shiftStart}–${shiftEnd}` : "";
+      const staffLine = timeStr ? `${staff} (${timeStr})` : staff;
+
       if (!acc[loc]) acc[loc] = [];
-      acc[loc].push(staff);
+      acc[loc].push(staffLine);
       return acc;
     }, {});
 
-    // We'll create an array of tables, one per location
+    // Render tables per location
     let currentY = 46;
 
     Object.entries(grouped).forEach(([location, staffList], idx) => {
-      // Print location as a header
       doc.setTextColor(locationColor);
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
       doc.text(location, 14, currentY);
       currentY += 8;
 
-      // Use autoTable for staff list with custom styles
       autoTable(doc, {
         startY: currentY,
         theme: "grid",
         head: [["Staff Members"]],
-        body: staffList.map((staff) => [staff]),
+        body: staffList.map((s) => [s]),
         styles: {
           fontSize: 11,
           cellPadding: 4,
@@ -75,15 +89,13 @@ export const useDailyPlanPdfExporter = () => {
         margin: { left: 14, right: 14 },
         tableWidth: 182,
         didDrawPage: (data) => {
-          // Update currentY after drawing the table
           currentY = data.cursor.y + 10;
         },
       });
 
-      // Prevent content overflowing off the page
       if (currentY > 270 && idx !== Object.entries(grouped).length - 1) {
         doc.addPage();
-        currentY = 20; // Reset Y position on new page
+        currentY = 20;
       }
     });
 
@@ -101,8 +113,10 @@ export const useDailyPlanPdfExporter = () => {
       );
     }
 
-    // Save PDF
-    doc.save(`daily_plan_${hotelName.replace(/\s+/g, "_").toLowerCase()}_${date}.pdf`);
+    // Save
+    doc.save(
+      `daily_plan_${hotelName.replace(/\s+/g, "_").toLowerCase()}_${date}.pdf`
+    );
   };
 
   return { generateDailyPlanPdf };

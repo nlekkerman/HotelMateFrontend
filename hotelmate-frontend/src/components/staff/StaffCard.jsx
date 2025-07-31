@@ -1,4 +1,3 @@
-// src/components/staff/StaffCard.jsx
 import React from "react";
 import { FaUserCircle } from "react-icons/fa";
 
@@ -6,40 +5,7 @@ export default function StaffCard({ staff, onClick }) {
   const fullName = `${staff.first_name ?? ""} ${staff.last_name ?? ""}`.trim();
   const imgUrl = staff.profile_image_url;
 
-  const formatDepartment = (dept) => {
-    if (!dept) return "N/A";
-
-    if (typeof dept === "string") {
-      return dept
-        .split(/[\s_]+/)
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" ");
-    }
-
-    if (typeof dept === "object") {
-      const value = dept.name || dept.slug || dept.department || "";
-      if (typeof value === "string" && value.length > 0) {
-        return value
-          .split(/[\s_]+/)
-          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(" ");
-      }
-    }
-
-    // if dept is a number or something else, fallback
-    if (typeof dept === "number") {
-      return `Department #${dept}`;
-    }
-
-    return "N/A";
-  };
-
-
-  const department = formatDepartment(
-    staff.department_detail ?? staff.department
-  );
-
-
+  const department = staff.department_detail?.name || "N/A";
   return (
     <div
       className="card shadow-sm px-3 py-2 border-0"
