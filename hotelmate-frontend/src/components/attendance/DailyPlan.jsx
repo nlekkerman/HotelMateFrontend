@@ -23,6 +23,7 @@ export default function DailyPlan({ hotelSlug, departmentSlug }) {
         { params: { date } }
       )
       .then((res) => {
+        console.log("Daily Plan API Response:", res.data);
         setDailyPlan(res.data);
       })
       .catch((err) => {
@@ -44,9 +45,8 @@ export default function DailyPlan({ hotelSlug, departmentSlug }) {
 
   const groupedByLocation = (dailyPlan?.entries || []).reduce((acc, entry) => {
     const loc = entry.location_name || entry.location?.name || "No Location";
-    const staff = entry.staff;
     if (!acc[loc]) acc[loc] = [];
-    if (staff) acc[loc].push(staff);
+    acc[loc].push(entry); // push full entry, including shift times
     return acc;
   }, {});
 
@@ -57,8 +57,10 @@ export default function DailyPlan({ hotelSlug, departmentSlug }) {
     >
       <h2 className="mb-4 text-center">
         📋 Daily Plan for{" "}
-        <span className="text-primary">{departmentSlug.replace(/-/g, " ")}</span> at{" "}
-        <span className="text-success">{hotelSlug.replace(/-/g, " ")}</span>
+        <span className="text-primary">
+          {departmentSlug.replace(/-/g, " ")}
+        </span>{" "}
+        at <span className="text-success">{hotelSlug.replace(/-/g, " ")}</span>
       </h2>
 
       <div className="mb-4 d-flex align-items-center justify-content-center gap-3 flex-wrap">
@@ -76,10 +78,16 @@ export default function DailyPlan({ hotelSlug, departmentSlug }) {
       </div>
 
       {loading && <p className="text-muted text-center">Loading...</p>}
-      {error && <p className="text-danger text-center">Error loading daily plan.</p>}
-      {!loading && !error && (!dailyPlan?.entries || dailyPlan.entries.length === 0) && (
-        <p className="text-warning text-center">No staff assigned for this date.</p>
+      {error && (
+        <p className="text-danger text-center">Error loading daily plan.</p>
       )}
+      {!loading &&
+        !error &&
+        (!dailyPlan?.entries || dailyPlan.entries.length === 0) && (
+          <p className="text-warning text-center">
+            No staff assigned for this date.
+          </p>
+        )}
 
       {!loading && !error && dailyPlan?.entries?.length > 0 && (
         <>
@@ -87,22 +95,46 @@ export default function DailyPlan({ hotelSlug, departmentSlug }) {
             👥 Staff relocations on <span className="fw-semibold">{date}</span>
           </h4>
 
-          {Object.entries(groupedByLocation).map(([location, staffList]) => (
+          {Object.entries(groupedByLocation).map(([location, entries]) => (
             <div key={location} className="mb-4">
-              <h5 className="fw-bold text-secondary border-start border-3 border-primary ps-3 mb-3">
-               Staff for {location}
+              <h5 className="fw-bold text-white border-start bg-success border-3 border-dark ps-3 mb-3">
+                Staff for {location}
               </h5>
-              
-              <div className="d-flex flex-column gap-2">
-                {staffList.map((staff, idx) => (
-                  <StaffCard key={staff.id || idx} staff={staff} />
-                ))}
+
+              <div className="d-flex flex-column gap-3">
+                {entries.map((entry) => {
+                  const start = entry.shift_start
+                    ? entry.shift_start.slice(0, 5)
+                    : "N/A";
+                  const end = entry.shift_end
+                    ? entry.shift_end.slice(0, 5)
+                    : "N/A";
+
+                  return (
+                    <div
+                      key={entry.id}
+                      className="mb-3 p-2 border rounded d-flex "
+                    >
+                      <div className="fw-semibold">{entry.staff_name}</div>
+
+                      <div
+                        className="badge text-danger d-flex justify-content-center align-items-center ms-2"
+                        style={{ fontSize: "0.9em" }}
+                      >
+                        Shift: {start} - {end}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}
 
           <div className="d-flex justify-content-center">
-            <button className="btn btn-primary btn-lg mt-3" onClick={handleDownloadPdf}>
+            <button
+              className="btn btn-primary btn-lg mt-3"
+              onClick={handleDownloadPdf}
+            >
               📥 Download PDF
             </button>
           </div>
