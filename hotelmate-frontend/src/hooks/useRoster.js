@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import api from "@/services/api";
-
+import { format } from "date-fns";
 // ---- helpers to detect overlaps ----
 function toMinutes(t) {
   // accepts "HH:mm" or "HH:mm:ss"
@@ -22,26 +22,37 @@ export default function useRoster({
   fetchShifts,
   initialPeriod,
   injectedHotelId,
-  serverShifts = [],
+  serverShifts: injectedServerShifts = [],
   onSubmitSuccess,
 }) {
-  
+  const [period, setPeriodObj] = useState(initialPeriod);
+  const [serverShifts, setServerShifts] = useState(injectedServerShifts);
 
   // 1️⃣ Keep the current period in state
-  const [period, setPeriodObj] = useState(initialPeriod);
 
   // 2️⃣ Sync initialPeriod and fetch shifts
-  useEffect(() => {
-  
-    if (initialPeriod && (!period || period.id !== initialPeriod.id)) {
-      
-      setPeriodObj(initialPeriod);
-      if (typeof fetchShifts === "function") {
-        fetchShifts(initialPeriod.id);
-      }
+useEffect(() => {
+  async function loadShifts() {
+    if (typeof fetchShifts === "function") {
+      console.log("Calling fetchShifts with period ID:", initialPeriod.id);
+
+      // Log current date and initialPeriod for context
+      console.log("Today's date:", format(new Date(), "yyyy-MM-dd"));
+      console.log("Period received:", initialPeriod);
+
+      const data = await fetchShifts(initialPeriod.id);
+      console.log("Fetched shifts from DB:", data);
+
+      setServerShifts(data || []);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialPeriod, fetchShifts]); // <- don't include `period` to avoid loops
+  }
+
+  if (initialPeriod && (!period || period.id !== initialPeriod.id)) {
+    setPeriodObj(initialPeriod);
+    loadShifts();
+  }
+}, [initialPeriod, fetchShifts]);
+
 
   // 3️⃣ setPeriod
   const setPeriod = useCallback(
@@ -53,6 +64,7 @@ export default function useRoster({
         const { data } = await api.get(
           `/attendance/${hotelSlug}/periods/${idOrObj}/`
         );
+        console.log("Fetched period data:", data);
         p = data;
       } else return;
 
@@ -66,7 +78,6 @@ export default function useRoster({
 
   // 4️⃣ Local shifts
   const [localShifts, setLocalShifts] = useState([]);
-
   // 5️⃣ Editing state
   const [editing, setEditing] = useState({
     staff: null,
@@ -76,7 +87,8 @@ export default function useRoster({
 
   // 6️⃣ Hotel ID
   const hotelId =
-    injectedHotelId ?? JSON.parse(localStorage.getItem("user") || "{}").hotel_id;
+    injectedHotelId ??
+    JSON.parse(localStorage.getItem("user") || "{}").hotel_id;
 
   // 7️⃣ Handlers
   const open = useCallback((staff, date, shift) => {
@@ -88,62 +100,63 @@ export default function useRoster({
   }, []);
 
   const save = useCallback(
-  ({ shift_start, shift_end, location }) => {
-    const { staff, date, shift } = editing;
-    if (!staff || !date || !period) return;
+    ({ shift_start, shift_end, location }) => {
+      const { staff, date, shift } = editing;
+      if (!staff || !date || !period) return;
 
-    const staffId = staff.id;
-    const dateStr = date;
+      const staffId = staff.id;
+      const dateStr = date;
 
-    // ---- overlap check ----
-    const serverForDay = (Array.isArray(serverShifts) ? serverShifts : []).filter(
-      (s) => (s.staff_id ?? s.staff) === staffId && s.shift_date === dateStr
-    );
-    const localForDay = localShifts.filter(
-      (s) => s.staff_id === staffId && s.shift_date === dateStr
-    );
+      // ---- overlap check ----
+      const serverForDay = (
+        Array.isArray(serverShifts) ? serverShifts : []
+      ).filter(
+        (s) => (s.staff_id ?? s.staff) === staffId && s.shift_date === dateStr
+      );
+      const localForDay = localShifts.filter(
+        (s) => s.staff_id === staffId && s.shift_date === dateStr
+      );
 
-    const comparable = [
-      ...serverForDay.filter((s) => !(shift?.id && s.id === shift.id)),
-      ...localForDay.filter((s) => !(shift?.id && s.id === shift.id)),
-    ];
+      const comparable = [
+        ...serverForDay.filter((s) => !(shift?.id && s.id === shift.id)),
+        ...localForDay.filter((s) => !(shift?.id && s.id === shift.id)),
+      ];
 
-    const hasOverlap = comparable.some((s) =>
-      isOverlap(shift_start, shift_end, s.shift_start, s.shift_end)
-    );
-    if (hasOverlap) {
-      alert("❌ Overlapping shift for this staff on this date.");
-      return;
-    }
-    // -----------------------
-
-    const payload = {
-      ...(shift?.id && { id: shift.id }),
-      staff_id: staff.id,
-      staff: staff.id,
-      department,
-      period: period.id,
-      shift_date: dateStr,
-      shift_start,
-      shift_end,
-      location_id: location ?? null,
-      hotel: hotelId,
-    };
-
-    setLocalShifts((prev) => {
-      if (shift?.id) {
-        const exists = prev.some((s) => s.id === shift.id);
-        if (exists) return prev.map((s) => (s.id === shift.id ? payload : s));
-        return [...prev, payload];
+      const hasOverlap = comparable.some((s) =>
+        isOverlap(shift_start, shift_end, s.shift_start, s.shift_end)
+      );
+      if (hasOverlap) {
+        alert("❌ Overlapping shift for this staff on this date.");
+        return;
       }
-      return [...prev, payload];
-    });
+      // -----------------------
 
-    close();
-  },
-  [editing, department, period, hotelId, close, localShifts, serverShifts]
-);
+      const payload = {
+        ...(shift?.id && { id: shift.id }),
+        staff_id: staff.id,
+        staff: staff.id,
+        department,
+        period: period.id,
+        shift_date: dateStr,
+        shift_start,
+        shift_end,
+        location_id: location ?? null,
+        hotel: hotelId,
+      };
 
+      setLocalShifts((prev) => {
+        if (shift?.id) {
+          const exists = prev.some((s) => s.id === shift.id);
+          if (exists) return prev.map((s) => (s.id === shift.id ? payload : s));
+          return [...prev, payload];
+        }
+        return [...prev, payload];
+      });
+
+      close();
+    },
+    [editing, department, period, hotelId, close, localShifts, serverShifts]
+  );
 
   const remove = useCallback(async () => {
     const { shift, staff, date } = editing;
@@ -163,66 +176,69 @@ export default function useRoster({
   }, [editing, hotelSlug, fetchShifts, period, close]);
 
   const bulkSubmit = useCallback(async () => {
-  // 1) Overlap safety (unchanged)
-  for (let i = 0; i < localShifts.length; i++) {
-    for (let j = i + 1; j < localShifts.length; j++) {
-      const a = localShifts[i];
-      const b = localShifts[j];
-      if (
-        a.staff_id === b.staff_id &&
-        a.shift_date === b.shift_date &&
-        isOverlap(a.shift_start, a.shift_end, b.shift_start, b.shift_end)
-      ) {
-        alert("❌ Overlapping shifts exist in your changes. Please fix before submitting.");
-        return;
+    // 1) Overlap safety (unchanged)
+    for (let i = 0; i < localShifts.length; i++) {
+      for (let j = i + 1; j < localShifts.length; j++) {
+        const a = localShifts[i];
+        const b = localShifts[j];
+        if (
+          a.staff_id === b.staff_id &&
+          a.shift_date === b.shift_date &&
+          isOverlap(a.shift_start, a.shift_end, b.shift_start, b.shift_end)
+        ) {
+          alert(
+            "❌ Overlapping shifts exist in your changes. Please fix before submitting."
+          );
+          return;
+        }
       }
     }
-  }
 
-  // 2) NORMALISE + LOG
-  const payloadShifts = localShifts.map((s) => ({
-    ...s,
-    location:
-      s.location === "" || s.location == null ? null : Number(s.location),
-  }));
+    // 2) NORMALISE + LOG
+    const payloadShifts = localShifts.map((s) => ({
+      ...s,
+      location:
+        s.location === "" || s.location == null ? null : Number(s.location),
+    }));
 
-  console.log("🚀 bulkSubmit -> sending payload:", {
-    period: period.id,
-    hotel: hotelId,
-    shifts: payloadShifts,
-  });
+    console.log("🚀 bulkSubmit -> sending payload:", {
+      period: period.id,
+      hotel: hotelId,
+      shifts: payloadShifts,
+    });
 
-  try {
-    const { data } = await api.post(
-      `/attendance/${hotelSlug}/shifts/bulk-save/`,
-      {
-        shifts: payloadShifts,
-        period: period.id,
-        hotel: hotelId,
-      }
-    );
+    try {
+      const { data } = await api.post(
+        `/attendance/${hotelSlug}/shifts/bulk-save/`,
+        {
+          shifts: payloadShifts,
+          period: period.id,
+          hotel: hotelId,
+        }
+      );
 
-    console.log("✅ bulkSubmit -> server response:", data);
+      console.log("✅ bulkSubmit -> server response:", data);
 
-    setLocalShifts([]);
-    fetchShifts(period.id);
-    onSubmitSuccess?.();
-  } catch (err) {
-    console.error("❌ bulkSubmit failed:", err.response?.data || err.message);
-    alert(
-      `Bulk save failed:\n${
-        typeof err.response?.data === "object"
-          ? JSON.stringify(err.response.data, null, 2)
-          : err.response?.data || err.message
-      }`
-    );
-  }
-}, [localShifts, hotelSlug, period, hotelId, fetchShifts]);
+      setLocalShifts([]);
+      fetchShifts(period.id);
+      onSubmitSuccess?.();
+    } catch (err) {
+      console.error("❌ bulkSubmit failed:", err.response?.data || err.message);
+      alert(
+        `Bulk save failed:\n${
+          typeof err.response?.data === "object"
+            ? JSON.stringify(err.response.data, null, 2)
+            : err.response?.data || err.message
+        }`
+      );
+    }
+  }, [localShifts, hotelSlug, period, hotelId, fetchShifts]);
 
   return {
     period,
     setPeriod,
     localShifts,
+    setLocalShifts,
     editing,
     open,
     close,
