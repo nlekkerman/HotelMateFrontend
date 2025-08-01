@@ -79,22 +79,24 @@ const handleSubmitSuccess = () => setRefreshKey(prev => prev + 1);
   // fetchShifts: **must accept an id** (so useRoster can call it)
   // --------------------------------------------------
   const fetchShifts = useCallback(
-    async (periodId) => {
-      if (!periodId || !department || !hotelSlug) return;
-      const url = `/attendance/${hotelSlug}/shifts/?period=${periodId}&department=${department}`;
+  async (periodId) => {
+    if (!periodId || !department || !hotelSlug) return [];
+    const url = `/attendance/${hotelSlug}/shifts/?period=${periodId}&department=${department}`;
 
-      try {
-        const res = await api.get(url);
-        const data = res.data.results || res.data;
-        const arr = Array.isArray(data) ? data : [];
-        setShifts(arr);
-      } catch (err) {
-        console.error("❌ Failed to fetch shifts:", err);
-        setShifts([]);
-      }
-    },
-    [hotelSlug, department]
-  );
+    try {
+      const res = await api.get(url);
+      const data = res.data.results || res.data;
+      const arr = Array.isArray(data) ? data : [];
+      setShifts(arr);
+      return arr;  // <-- return the array here
+    } catch (err) {
+      console.error("❌ Failed to fetch shifts:", err);
+      setShifts([]);
+      return [];
+    }
+  },
+  [hotelSlug, department]
+);
 
   // --------------------------------------------------
   // Called by WeeklyRosterBoard (via useRoster) whenever period changes
