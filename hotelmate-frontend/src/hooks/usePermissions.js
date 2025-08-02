@@ -1,15 +1,24 @@
-import { useAuth } from "@/context/AuthContext";
+export function usePermissions() {
+  // Parse user object from localStorage safely
+  let storedUser = null;
+  try {
+    storedUser = JSON.parse(localStorage.getItem("user"));
+  } catch {
+    storedUser = null;
+  }
 
-export function usePermissions(staffProfile) {
-  const { user } = useAuth();
-  const isSuperUser = user?.is_superuser;
-  const role = staffProfile?.role;
+  const role = storedUser?.role?.toLowerCase(); // Normalize role string
+  const isSuperUser = storedUser?.is_superuser;
 
-  // Pass an array of allowed roles → return true/false
   const canAccess = (allowedRoles = []) => {
-    if (!user) return false;
-    if (isSuperUser) return true;
-    return allowedRoles.includes(role);
+    if (!storedUser || !role) {
+      return false;
+    }
+    if (isSuperUser) {
+      return true;
+    }
+    const normalizedAllowedRoles = allowedRoles.map(r => r.toLowerCase());
+    return normalizedAllowedRoles.includes(role);
   };
 
   return { canAccess };

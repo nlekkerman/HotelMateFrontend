@@ -23,7 +23,8 @@ const MobileNavbar = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
 
-  const { canAccess } = usePermissions(staffProfile);
+  // Use usePermissions WITHOUT argument — it reads roles from localStorage inside
+  const { canAccess } = usePermissions();
 
   useEffect(() => {
     if (!user) {
@@ -47,9 +48,30 @@ const MobileNavbar = () => {
 
   const navItems = [
     {
+      path: "/",
+      label: "Home",
+      icon: "house",
+      roles: [
+        "porter",
+        "receptionist",
+        "waiter",
+        "bartender",
+        "chef",
+        "supervisor",
+        "housekeeping_attendant",
+        "manager",
+        "technician",
+        "security",
+        "concierge",
+        "leisure_staff",
+        "maintenance_staff",
+        "other",
+      ],
+    },
+    {
       path: "/reception",
       label: "Reception",
-      icon: "house",
+      icon: "bell",
       roles: ["receptionist", "manager", "concierge"],
     },
     {
@@ -65,7 +87,7 @@ const MobileNavbar = () => {
       roles: ["receptionist", "manager"],
     },
     {
-      path: `/roster/${hotelIdentifier}`, // matches <Route path="/roster/:hotelSlug" …/>
+      path: `/roster/${hotelIdentifier}`,
       label: "Roster",
       icon: "calendar-week",
       feature: "roster",
@@ -114,7 +136,7 @@ const MobileNavbar = () => {
       roles: ["super_staff_admin"],
     },
   ];
-  // Services nav items — handled separately due to dropdown behavior
+
   const servicesNavItems = [
     {
       path: "/services/room-service",
@@ -129,9 +151,9 @@ const MobileNavbar = () => {
       roles: ["receptionist", "porter", "waiter", "manager"],
     },
   ];
+
   const isActive = (path) => location.pathname.startsWith(path);
 
-  // Hide navbar on some paths when not logged in
   const hiddenNavPatterns = [
     /^\/room_services\/[^/]+\/room\/[^/]+\/breakfast\/?$/,
     /^\/room_services\/[^/]+\/room\/[^/]+\/menu\/?$/,
@@ -201,8 +223,6 @@ const MobileNavbar = () => {
 
             {user && (
               <>
-                
-
                 {navItems
                   .filter((item) => canAccess(item.roles))
                   .map(({ path, label, icon }) => (

@@ -23,19 +23,26 @@ const DesktopSidebarNavbar = () => {
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
   const [flyoutOpen, setFlyoutOpen] = useState(false);
 
-  const { canAccess } = usePermissions(staffProfile);
+  const { canAccess } = usePermissions();
 
   const servicesRef = useRef(null);
 
   useEffect(() => {
-    if (!user) return setStaffProfile(null);
+    if (!user) {
+      setStaffProfile(null);
+      setIsOnDuty(false);
+      return;
+    }
     api
       .get("/staff/me/")
       .then((res) => {
         setStaffProfile(res.data);
         setIsOnDuty(res.data.is_on_duty);
       })
-      .catch(() => setStaffProfile(null));
+      .catch(() => {
+        setStaffProfile(null);
+        setIsOnDuty(false);
+      });
   }, [user]);
 
   useEffect(() => {
@@ -91,7 +98,6 @@ const DesktopSidebarNavbar = () => {
         "maintenance_staff",
         "other",
       ],
-      // no minAccessLevel => all access levels
     },
     {
       path: "/reception",
@@ -115,7 +121,7 @@ const DesktopSidebarNavbar = () => {
       roles: ["receptionist", "manager"],
     },
     {
-      path: `/roster/${hotelIdentifier}`, // matches <Route path="/roster/:hotelSlug" …/>
+      path: `/roster/${hotelIdentifier}`,
       label: "Roster",
       icon: "calendar-week",
       feature: "roster",
@@ -162,13 +168,6 @@ const DesktopSidebarNavbar = () => {
       icon: "graph-up",
       feature: "stock_tracker",
       roles: ["chef", "bartender", "manager"],
-    },
-    {
-      path: "/settings",
-      label: "Settings",
-      icon: "gear",
-      feature: "settings",
-      roles: ["super_staff_admin"],
     },
   ];
 
@@ -259,13 +258,20 @@ const DesktopSidebarNavbar = () => {
                 ))}
 
               {/* Services parent nav item */}
-              {canAccess(["receptionist", "porter", "waiter", "manager"]) && (
-                <li className="nav-item">
+              {canAccess([
+                "receptionist",
+                "porter",
+                "waiter",
+                "manager",
+                "chef",
+              ]) && (
+                <li className="nav-item" ref={servicesRef}>
                   <div
                     className={`nav-link text-white d-flex align-items-center justify-content-between ${
                       isActive("/services") ? "bg-opacity-25" : ""
                     }`}
                     style={{ cursor: "default" }}
+                    onClick={() => setFlyoutOpen(!flyoutOpen)}
                   >
                     <div>
                       <i className="bi bi-cup-hot me-2" />
@@ -278,51 +284,71 @@ const DesktopSidebarNavbar = () => {
                     )}
                   </div>
 
-                  <ul className="nav flex-column  mt-1">
-                    <li className="nav-item">
-                      <Link
-                        className={`nav-link text-white ${
-                          isActive("/services/room-service")
-                            ? "bg-opacity-25"
-                            : ""
-                        } d-flex align-items-center justify-content-between`}
-                        to="/services/room-service"
-                        onClick={() => setCollapsed(true)}
-                        style={{ whiteSpace: "nowrap" }}
-                      >
-                        <div>
-                          <i className="bi bi-box me-2" />
-                          {!collapsed && "Room Service"}
-                        </div>
-                        {roomServiceCount > 0 && (
-                          <span className="badge bg-danger ms-2">
-                            {roomServiceCount}
-                          </span>
-                        )}
-                      </Link>
-                    </li>
+                  {flyoutOpen && (
+                    <ul className="nav flex-column mt-1">
+                      <li className="nav-item">
+                        <Link
+                          className={`nav-link text-white ${
+                            isActive("/services/room-service")
+                              ? "bg-opacity-25"
+                              : ""
+                          } d-flex align-items-center justify-content-between`}
+                          to="/services/room-service"
+                          onClick={() => setCollapsed(true)}
+                          style={{ whiteSpace: "nowrap" }}
+                        >
+                          <div>
+                            <i className="bi bi-box me-2" />
+                            {!collapsed && "Room Service"}
+                          </div>
+                          {roomServiceCount > 0 && (
+                            <span className="badge bg-danger ms-2">
+                              {roomServiceCount}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
 
-                    <li className="nav-item">
-                      <Link
-                        className={`nav-link text-white ${
-                          isActive("/services/breakfast") ? "bg-opacity-25" : ""
-                        } d-flex align-items-center justify-content-between`}
-                        to="/services/breakfast"
-                        onClick={() => setCollapsed(true)}
-                        style={{ whiteSpace: "nowrap" }}
-                      >
-                        <div>
-                          <i className="bi bi-egg-fried me-2" />
-                          {!collapsed && "Breakfast"}
-                        </div>
-                        {breakfastCount > 0 && (
-                          <span className="badge bg-danger ms-2">
-                            {breakfastCount}
-                          </span>
-                        )}
-                      </Link>
-                    </li>
-                  </ul>
+                      <li className="nav-item">
+                        <Link
+                          className={`nav-link text-white ${
+                            isActive("/services/breakfast")
+                              ? "bg-opacity-25"
+                              : ""
+                          } d-flex align-items-center justify-content-between`}
+                          to="/services/breakfast"
+                          onClick={() => setCollapsed(true)}
+                          style={{ whiteSpace: "nowrap" }}
+                        >
+                          <div>
+                            <i className="bi bi-egg-fried me-2" />
+                            {!collapsed && "Breakfast"}
+                          </div>
+                          {breakfastCount > 0 && (
+                            <span className="badge bg-danger ms-2">
+                              {breakfastCount}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    </ul>
+                  )}
+                </li>
+              )}
+
+              {/* Show Settings only if user is Django superuser */}
+              {staffProfile?.is_superuser && (
+                <li className="nav-item">
+                  <Link
+                    className={`nav-link text-white ${
+                      isActive("/settings") ? "bg-opacity-25" : ""
+                    }`}
+                    to="/settings"
+                    onClick={() => setCollapsed(true)}
+                  >
+                    <i className="bi bi-gear me-2" />
+                    {!collapsed && "Settings"}
+                  </Link>
                 </li>
               )}
 
