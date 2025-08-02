@@ -35,7 +35,8 @@ const Login = () => {
   }
 
   try {
-    const data = await loginUser(username, password, fcmToken); // ✅ Make sure third arg is passed
+    const data = await loginUser(username, password, fcmToken);
+    console.log("Backend response access_level:", data.access_level);
     if (!data) {
       setLocalError("No data received from server.");
       return;
