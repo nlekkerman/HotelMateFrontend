@@ -5,6 +5,7 @@ import CommentComposer from "@/components/home/CommentComposer";
 import DeletionModal from "@/components/modals/DeletionModal";
 import { useAuth } from "@/context/AuthContext";
 import { FaUserCircle } from "react-icons/fa";
+import ImageModal from "@/components/modals/ImageModal";
 
 const cloudinaryBase = import.meta.env.VITE_CLOUDINARY_BASE || "";
 
@@ -30,6 +31,8 @@ export default function CommentItem({
   const [editing, setEditing] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [showReplyForm, setShowReplyForm] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [modalImageSrc, setModalImageSrc] = useState(null);
 
   const author = comment.author_details || {};
   const avatarUrl =
@@ -137,7 +140,7 @@ export default function CommentItem({
 
           {/* Content or edit form */}
           {editing ? (
-          <CommentComposer
+            <CommentComposer
               postId={postId}
               hotelSlug={hotelSlug}
               comment={comment}
@@ -151,7 +154,15 @@ export default function CommentItem({
                   src={buildImageUrl(comment.image)}
                   alt="Comment"
                   className="img-fluid rounded mb-2"
-                  style={{ maxHeight: "200px", objectFit: "contain" }}
+                  style={{
+                    maxHeight: "200px",
+                    objectFit: "contain",
+                    cursor: "zoom-in",
+                  }}
+                  onClick={() => {
+                    setModalImageSrc(buildImageUrl(comment.image));
+                    setShowImageModal(true);
+                  }}
                 />
               )}
             </>
@@ -220,7 +231,15 @@ export default function CommentItem({
                       src={buildImageUrl(reply.image)}
                       alt="Reply"
                       className="img-fluid rounded mb-2"
-                      style={{ maxHeight: "150px", objectFit: "contain" }}
+                      style={{
+                        maxHeight: "150px",
+                        objectFit: "contain",
+                        cursor: "zoom-in",
+                      }}
+                      onClick={() => {
+                        setModalImageSrc(buildImageUrl(reply.image));
+                        setShowImageModal(true);
+                      }}
                     />
                   )}
                 </div>
@@ -228,6 +247,14 @@ export default function CommentItem({
             })}
         </div>
       </div>
+
+      {showImageModal && (
+        <ImageModal
+          src={modalImageSrc}
+          alt="Comment image"
+          onClose={() => setShowImageModal(false)}
+        />
+      )}
     </>
   );
 }
