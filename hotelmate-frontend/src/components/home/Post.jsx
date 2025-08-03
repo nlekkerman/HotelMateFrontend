@@ -5,6 +5,7 @@ import CommentsSection from "@/components/home/CommentsSection";
 import DeletionModal from "@/components/modals/DeletionModal";
 import { useAuth } from "@/context/AuthContext";
 import { FaUserCircle } from "react-icons/fa";
+import ImageModal from "@/components/modals/ImageModal";
 
 const cloudinaryBase = import.meta.env.VITE_CLOUDINARY_BASE || "";
 
@@ -34,7 +35,7 @@ export default function Post({ post, onPostUpdated }) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [liked, setLiked] = useState(post.is_liked || false);
-
+  const [showImageModal, setShowImageModal] = useState(false);
   const safeImg = buildImageUrl(post.image);
 
   const handleLike = async (e) => {
@@ -177,15 +178,17 @@ export default function Post({ post, onPostUpdated }) {
             <>
               <p className="card-text">{post.content}</p>
               {safeImg && (
-                <div className="text-center mb-3">
-                  <img
-                    src={safeImg}
-                    alt="Post"
-                    className="img-fluid rounded mx-auto d-block"
-                    style={{ maxHeight: "400px", objectFit: "contain" }}
-                  />
-                </div>
-              )}
+  <div className="text-center mb-3">
+    <img
+      src={safeImg}
+      alt="Post"
+      className="img-fluid rounded mx-auto d-block"
+      style={{ maxHeight: "400px", objectFit: "contain", cursor: "zoom-in" }}
+      onClick={() => setShowImageModal(true)}
+    />
+  </div>
+)}
+
             </>
           )}
 
@@ -239,6 +242,14 @@ export default function Post({ post, onPostUpdated }) {
           />
         )}
       </div>
+      {showImageModal && (
+  <ImageModal
+    src={safeImg}
+    alt="Post Image"
+    onClose={() => setShowImageModal(false)}
+  />
+)}
+
     </>
   );
 }
