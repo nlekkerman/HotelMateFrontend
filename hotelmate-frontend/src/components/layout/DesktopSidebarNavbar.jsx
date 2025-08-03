@@ -337,7 +337,7 @@ const DesktopSidebarNavbar = () => {
               )}
 
               {/* Show Settings only if user is Django superuser */}
-              {staffProfile?.is_superuser && (
+              {user?.is_superuser && (
                 <li className="nav-item">
                   <Link
                     className={`nav-link text-white ${
