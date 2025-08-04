@@ -295,17 +295,7 @@ export default function HotelInfo() {
               </div>
             </div>
           </div>
-          <div className="col-12 col-sm-6 col-md-4 col-lg-3">
-            <button
-              className="btn btn-warning w-100 py-3 shadow-sm"
-              onClick={() => {
-                // Redirect to Good To Know admin page for this hotel
-                navigate(`/good_to_know_console/${hotelSlug}`);
-              }}
-            >
-              Good To Know Admin
-            </button>
-          </div>
+        
         </>
       )}
 

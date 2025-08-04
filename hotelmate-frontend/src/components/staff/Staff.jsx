@@ -1,9 +1,7 @@
-// src/components/staff/Staff.jsx
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "@/services/api"; // adjust path if needed
-import StaffList from "./StaffList";
+import api from "@/services/api";
+import StaffByDepartment from "./StaffByDepartment";  // <-- import here
 
 export default function Staff() {
   const [staffList, setStaffList] = useState([]);
@@ -50,7 +48,7 @@ export default function Staff() {
       ) : staffList.length === 0 ? (
         <p className="text-center text-muted">No staff available.</p>
       ) : (
-        <StaffList
+        <StaffByDepartment   // <-- use StaffByDepartment here
           staffList={staffList}
           onStaffClick={(staff) => navigate(`/staff/${staff.id}`)}
         />

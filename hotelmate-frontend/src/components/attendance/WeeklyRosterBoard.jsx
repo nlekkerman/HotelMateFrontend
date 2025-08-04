@@ -1,14 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { addDays, startOfWeek, format, differenceInMinutes } from "date-fns";
+import {  parseISO,addDays, startOfWeek, format, differenceInMinutes, differenceInCalendarDays } from "date-fns";
 import RosterPeriodSelector from "@/components/attendance/RosterPeriodSelector";
 import ShiftModal from "@/components/modals/ShiftModal";
 import ShiftCell from "@/components/attendance/ShiftCell";
 import useRoster from "@/hooks/useRoster";
+import useCopyRoster from "@/components/attendance/hooks/useCopyRoster";
 import RosterAnalytics from "@/components/analytics/RosterAnalytics";
 import ShiftLocationBar from "@/components/attendance/ShiftLocationBar";
-import useCopyRoster from "@/components/attendance/hooks/useCopyRoster";
 import { FaUserCircle } from "react-icons/fa";
-import CopyShiftModal from "@/components/attendance/modals/CopyShiftModal";
+import CopyPeriodModal from "@/components/attendance/modals/CopyPeriodModal";
+import api from "@/services/api";
 
 export default function WeeklyRosterBoard({
   hotelSlug,
@@ -44,15 +45,30 @@ export default function WeeklyRosterBoard({
     onSubmitSuccess,
   });
 
-  const [showModal, setShowModal] = useState(false);
-  const [selectedStaff, setSelectedStaff] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(initialDate);
-  const [copyAction, setCopyAction] = useState(null); // 'copyDayForAll' | 'copyWeekForAllStaff'
-  const [copySourceDate, setCopySourceDate] = useState(null);
-  const [modalProps, setModalProps] = useState({
-    defaultCopyType: null,
-    limitedOptions: false,
+   // Call the hook with needed arguments
+  const { copyRoster, loading: copyLoading, error: copyError } = useCopyRoster({
+    hotelSlug,
+    fetchShifts,
+    onCopySuccess: () => {
+      alert("Roster copied successfully");
+      setShowCopyModal(false);
+      // Optionally, refresh shifts or update local state here
+    },
+    onCopyError: (err) => {
+      alert(`Failed to copy roster: ${err.message || err}`);
+    },
   });
+const [localShiftsByPeriod, setLocalShiftsByPeriod] = useState({});
+
+  // Then, derive the current period's local shifts like this:
+  const localShiftsForCurrentPeriod = localShiftsByPeriod[period?.id] || [];
+
+useEffect(() => {
+    const shiftsForCurrentPeriod = localShiftsByPeriod[period?.id] || [];
+    setLocalShifts(shiftsForCurrentPeriod);
+  }, [period?.id, localShiftsByPeriod, setLocalShifts]);
+  
+  const [showCopyModal, setShowCopyModal] = useState(false);
 
   const cloudinaryBase = import.meta.env.VITE_CLOUDINARY_BASE || "";
   const buildImageUrl = (img) => {
@@ -61,7 +77,6 @@ export default function WeeklyRosterBoard({
     if (/^https?:\/\//i.test(img)) return img;
     return cloudinaryBase ? `${cloudinaryBase}${img}` : img;
   };
-
   const [locations, setLocations] = useState([]);
   const [showAnalytics, setShowAnalytics] = useState(false);
 
@@ -136,7 +151,9 @@ export default function WeeklyRosterBoard({
     return stats;
   }, [shifts]);
 
-  const analyticsStartDate = period?.start_date ? new Date(period.start_date) : null;
+  const analyticsStartDate = period?.start_date
+    ? new Date(period.start_date)
+    : null;
   const analyticsEndDate = period?.end_date ? new Date(period.end_date) : null;
 
   if (!period?.id) {
@@ -147,60 +164,69 @@ export default function WeeklyRosterBoard({
     );
   }
 
-  const { copyOneShift, copyDayForStaff, copyDayForAll, copyWeekForAllStaff } =
-    useCopyRoster({ baseRoster, localShifts, setLocalShifts });
+  const onCopyWeekForAllClick = () => {
+    setShowCopyModal(true);
+  };
+const onCopyContinue = async (targetPeriodId) => {
+  try {
+    // Fetch shifts for old period
+    const shiftsToCopy = await fetchShifts(period.id);
 
-  // Core copy handlers:
-  const handleCopyOneShift = (staff, targetDate) => {
-    const shiftsForStaffDate =
-      baseRoster[`${staff.id}_${format(selectedDate, "yyyy-MM-dd")}`] || [];
-    if (shiftsForStaffDate.length) {
-      copyOneShift(shiftsForStaffDate[0], targetDate);
+    if (!shiftsToCopy || !Array.isArray(shiftsToCopy)) {
+      alert("No valid shifts returned to copy");
+      return;
     }
-  };
 
-  const handleCopyDayForStaff = (staff, targetDate) => {
-    copyDayForStaff(staff, selectedDate, targetDate);
-  };
-
-  const handleCopyDayForAll = (sourceDate, targetDate) => {
-    copyDayForAll(sourceDate, targetDate, staffList);
-  };
-
-  const handleCopyWeekForAllStaff = (sourceDate, targetWeekStart) => {
-    copyWeekForAllStaff(sourceDate, targetWeekStart, staffList);
-  };
-
-  const onCopyWeekForAllClick = (sourceWeekStart) => {
-    setCopyAction("copyWeekForAllStaff");
-    setCopySourceDate(sourceWeekStart);
-    setModalProps({
-      defaultCopyType: "week_all",
-      limitedOptions: true,
-    });
-    setShowModal(true);
-  };
-
-  const onCopyDayForAllClick = (sourceDate) => {
-    setCopyAction("copyDayForAll");
-    setCopySourceDate(sourceDate);
-    setModalProps({
-      defaultCopyType: "day_all",
-      limitedOptions: true,
-    });
-    setShowModal(true);
-  };
-
-  const onConfirmCopy = (targetDate) => {
-    setShowModal(false);
-    if (copyAction === "copyDayForAll") {
-      handleCopyDayForAll(copySourceDate, targetDate);
-    } else if (copyAction === "copyWeekForAllStaff") {
-      handleCopyWeekForAllStaff(copySourceDate, targetDate);
+    // Fetch new period details using your api helper
+    let newPeriod;
+    try {
+      const response = await api.get(`/attendance/${hotelSlug}/periods/${targetPeriodId}/`);
+      newPeriod = response.data;
+    } catch (err) {
+      console.error("Failed to load target period details:", err.response?.data || err.message);
+      alert("Failed to load target period details");
+      return;
     }
-    setCopyAction(null);
-    setCopySourceDate(null);
-  };
+
+    // Calculate date offset
+    const oldStart = parseISO(period.start_date);
+    const newStart = parseISO(newPeriod.start_date);
+    const offsetDays = differenceInCalendarDays(newStart, oldStart);
+
+    // Adjust shifts for new period
+    const adjustedShifts = shiftsToCopy.map((shift) => {
+      const oldShiftDate = parseISO(shift.shift_date);
+      const newShiftDate = addDays(oldShiftDate, offsetDays);
+      return {
+        ...shift,
+        shift_date: format(newShiftDate, "yyyy-MM-dd"),
+        period: targetPeriodId,
+        id: undefined,
+      };
+    });
+
+    // Update local shifts for the new period
+    setLocalShiftsByPeriod((prev) => ({
+      ...prev,
+      [targetPeriodId]: adjustedShifts,
+    }));
+
+    // Switch to the new period
+    setPeriod(newPeriod);
+console.log("Adjusted shifts for target period:", adjustedShifts);
+console.log("Current localShiftsByPeriod before update:", localShiftsByPeriod);
+    // Also update localShifts for immediate UI update
+    setLocalShifts(adjustedShifts);
+
+    alert("Shifts copied and loaded for new period. Please review and submit.");
+  } catch (error) {
+    console.error("Error copying shifts:", error);
+    alert("Error loading shifts for copy. Please try again.");
+  }
+};
+
+
+
 
   return (
     <div className="mt-4">
@@ -240,7 +266,7 @@ export default function WeeklyRosterBoard({
             <button
               className="btn btn-primary mt-2"
               title="Copy entire roster period for all staff"
-              onClick={() => onCopyWeekForAllClick(weekStart)}
+              onClick={onCopyWeekForAllClick}
             >
               Copy Whole Roster Period
             </button>
@@ -338,7 +364,10 @@ export default function WeeklyRosterBoard({
                       </div>
                     </td>
                     {days.map((day) => (
-                      <td key={day.toString()} className="text-center align-middle">
+                      <td
+                        key={day.toString()}
+                        className="text-center align-middle"
+                      >
                         <div className="d-flex justify-content-center align-items-center">
                           <ShiftCell
                             staff={staff}
@@ -387,20 +416,14 @@ export default function WeeklyRosterBoard({
         locations={locations}
       />
 
-      {showModal && (
-        <CopyShiftModal
-          staff={selectedStaff}
-          date={selectedDate}
-          onClose={() => setShowModal(false)}
-          onCopyOneShift={handleCopyOneShift}
-          onCopyDayForStaff={handleCopyDayForStaff}
-          onCopyDayForAll={handleCopyDayForAll}
-          onCopyWeekForAllStaff={handleCopyWeekForAllStaff}
-          limitedOptions={modalProps.limitedOptions}
-          defaultCopyType={modalProps.defaultCopyType}
-          onConfirm={onConfirmCopy}
-        />
-      )}
+      <CopyPeriodModal
+        show={showCopyModal}
+        onClose={() => setShowCopyModal(false)}
+        hotelSlug={hotelSlug}
+        department={department}
+        currentPeriod={period}
+        onContinue={onCopyContinue}
+      />
     </div>
   );
 }

@@ -71,7 +71,16 @@ export default function Bookings() {
     setSelectedRestaurantId(prev => (prev === restId ? null : restId));
   };
 
-  if (loading) return <p>Loading restaurants…</p>;
+  if (loading) {
+  return (
+    <div className="loading">
+      <div className="text-center">
+        <div className="spinner-border text-dark mb-3" role="status" />
+        <p>Loading restaurants…</p>
+      </div>
+    </div>
+  );
+}
   if (error) return <p style={{ color: "red" }}>{error}</p>;
   if (restaurants.length === 0)
     return <p>No restaurants found for your hotel.</p>;

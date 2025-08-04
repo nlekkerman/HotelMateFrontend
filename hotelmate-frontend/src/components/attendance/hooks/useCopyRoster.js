@@ -1,100 +1,86 @@
-import { addDays, startOfWeek } from "date-fns";
+import { useState, useCallback } from "react";
+import api from "@/services/api";
 
-export default function useCopyRoster({ baseRoster, localShifts, setLocalShifts }) {
-  // Generate key for staff+date grouping
-  const key = (staffId, date) => `${staffId}_${date}`;
+function toMinutes(t) {
+  const [hh, mm] = t.split(":");
+  return parseInt(hh, 10) * 60 + parseInt(mm || "0", 10);
+}
+function isOverlap(aStart, aEnd, bStart, bEnd) {
+  const aS = toMinutes(aStart);
+  const aE = toMinutes(aEnd);
+  const bS = toMinutes(bStart);
+  const bE = toMinutes(bEnd);
+  return aS < bE && bS < aE;
+}
 
-  // Get combined shifts from server + local changes, deduplicated
-  const getShiftsFor = (staffId, date) => {
-    const dateKey = key(staffId, date);
-    const serverShifts = baseRoster[dateKey] || [];
-    const localForDate = localShifts.filter(
-      (s) =>
-        (s.staff_id || s.staff) === staffId &&
-        s.shift_date.slice(0, 10) === date
-    );
+export default function useCopyRoster({
+  hotelSlug,
+  fetchShifts,
+  onCopySuccess,
+  onCopyError,
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-    // Unique shift signature by start/end time + location
-    const shiftKey = (s) =>
-      `${s.shift_start?.slice(0, 5)}_${s.shift_end?.slice(0, 5)}_${s.location_id || s.location}`;
+  // Main copy function
+  const copyRoster = useCallback(
+    async (sourcePeriodId, targetPeriodId) => {
+      setLoading(true);
+      setError(null);
 
-    // Filter out server shifts that have been overridden locally
-    const filteredServer = serverShifts.filter(
-      (s) => !localForDate.some((ls) => shiftKey(ls) === shiftKey(s))
-    );
+      try {
+        // 1. Fetch shifts from source period
+        const sourceShifts = await fetchShifts(sourcePeriodId);
 
-    return [...filteredServer, ...localForDate];
-  };
+        // 2. Fetch shifts from target period (existing shifts to check overlap)
+        const targetShifts = await fetchShifts(targetPeriodId);
 
-  // Copy a single shift to targetDate (creates a new shift without ID)
-  const copyOneShift = (shift, targetDate) => {
-    const newShift = { ...shift, shift_date: targetDate, id: undefined };
-    setLocalShifts((prev) => [...prev, newShift]);
-  };
+        // 3. Prepare shifts to copy
+        // Assuming shifts have shift_date, you might need to adjust dates here
+        // For demo: keep dates as is (or transform as needed)
+        const shiftsToCopy = sourceShifts.map((shift) => ({
+          ...shift,
+          period: targetPeriodId,
+          // If needed, transform shift_date here to target period's date
+        }));
 
-  // Copy all shifts for one staff from sourceDate to targetDate
-  const copyDayForStaff = (staff, sourceDate, targetDate) => {
-    const shifts = getShiftsFor(staff.id, sourceDate);
-    const newShifts = shifts.map((s) => ({
-      ...s,
-      shift_date: targetDate,
-      staff: staff.id,
-      staff_id: staff.id,
-      id: undefined,
-    }));
-    setLocalShifts((prev) => [...prev, ...newShifts]);
-  };
+        // 4. Check overlaps between shiftsToCopy and targetShifts for each staff and date
+        for (const newShift of shiftsToCopy) {
+          for (const existingShift of targetShifts) {
+            if (
+              newShift.staff_id === existingShift.staff_id &&
+              newShift.shift_date === existingShift.shift_date &&
+              isOverlap(
+                newShift.shift_start,
+                newShift.shift_end,
+                existingShift.shift_start,
+                existingShift.shift_end
+              )
+            ) {
+              throw new Error(
+                `Overlap detected for staff ${newShift.staff_id} on ${newShift.shift_date}`
+              );
+            }
+          }
+        }
 
-  // Copy one day from sourceDate to targetDate for all staff in staffList
-  const copyDayForAll = (sourceDate, targetDate, staffList) => {
-    const allShifts = staffList.flatMap((staff) => {
-      const shifts = getShiftsFor(staff.id, sourceDate);
-      return shifts.map((s) => ({
-        ...s,
-        shift_date: targetDate,
-        staff: staff.id,
-        staff_id: staff.id,
-        id: undefined,
-      }));
-    });
-    setLocalShifts((prev) => [...prev, ...allShifts]);
-  };
-
-  // Copy entire week starting from sourceDate to targetStart for all staff
-  const copyWeekForAllStaff = (sourceDate, targetStart, staffList) => {
-    const srcStart = startOfWeek(new Date(sourceDate), { weekStartsOn: 0 });
-    const tgtStart = startOfWeek(new Date(targetStart), { weekStartsOn: 0 });
-
-    const allShifts = [];
-
-    for (let i = 0; i < 7; i++) {
-      const srcDay = addDays(srcStart, i);
-      const tgtDay = addDays(tgtStart, i);
-
-      const srcDate = srcDay.toISOString().slice(0, 10);
-      const tgtDate = tgtDay.toISOString().slice(0, 10);
-
-      for (const staff of staffList) {
-        const shifts = getShiftsFor(staff.id, srcDate);
-        shifts.forEach((s) => {
-          allShifts.push({
-            ...s,
-            shift_date: tgtDate,
-            staff: staff.id,
-            staff_id: staff.id,
-            id: undefined,
-          });
+        // 5. Submit the shifts to the server via bulk-save endpoint
+        await api.post(`/attendance/${hotelSlug}/shifts/bulk-save/`, {
+          shifts: shiftsToCopy,
+          period: targetPeriodId,
+          hotel: shiftsToCopy[0]?.hotel || null,
         });
+
+        onCopySuccess?.();
+      } catch (err) {
+        setError(err);
+        onCopyError?.(err);
+      } finally {
+        setLoading(false);
       }
-    }
+    },
+    [fetchShifts, hotelSlug, onCopySuccess, onCopyError]
+  );
 
-    setLocalShifts((prev) => [...prev, ...allShifts]);
-  };
-
-  return {
-    copyOneShift,
-    copyDayForStaff,
-    copyDayForAll,
-    copyWeekForAllStaff,
-  };
+  return { copyRoster, loading, error };
 }

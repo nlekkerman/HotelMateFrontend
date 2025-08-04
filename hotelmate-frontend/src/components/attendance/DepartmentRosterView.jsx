@@ -4,6 +4,9 @@ import api from "@/services/api";
 import WeeklyRosterBoard from "@/components/attendance/WeeklyRosterBoard";
 import { isAfter, parseISO,isWithinInterval, startOfDay } from "date-fns";
 import DailyPlan from "@/components/attendance/DailyPlan";
+import RosterPeriodSelector from "@/components/attendance/RosterPeriodSelector";
+
+
 export default function DepartmentRosterView({ department, hotelSlug, onSubmit  }) {
   const [periods, setPeriods] = useState([]);
   const [periodObj, setPeriodObj] = useState(null);     // <-- FULL object
@@ -74,6 +77,21 @@ const handleSubmitSuccess = () => setRefreshKey(prev => prev + 1);
 
     fetchPeriods();
   }, [hotelSlug]);
+const onPeriodSelectedOrCreated = (period) => {
+  // period can be full period object or just id, but your selector passes full object in onPeriodCreated
+  if (!period) return;
+
+  // If argument is an ID, convert to object
+  let periodFullObj = period;
+
+  if (typeof period === "number" || typeof period === "string") {
+    periodFullObj = periods.find((p) => p.id === Number(period));
+    if (!periodFullObj) return; // can't find it, bail out
+  }
+
+  setPeriodObj(periodFullObj);
+  fetchShifts(periodFullObj.id);
+};
 
   // --------------------------------------------------
   // fetchShifts: **must accept an id** (so useRoster can call it)
@@ -102,29 +120,54 @@ const handleSubmitSuccess = () => setRefreshKey(prev => prev + 1);
   // Called by WeeklyRosterBoard (via useRoster) whenever period changes
   // (it passes an **id**, we resolve to object here)
   // --------------------------------------------------
-  const handlePeriodChange = useCallback(
-    async (periodId) => {
-      if (!periodId) return;
+    // <-- here is your handlePeriodChange function
+const handlePeriodChange = useCallback(
+  async (periodId, copyFromPeriodId = null) => {  // add optional source period id
+    if (!periodId) return;
 
-      // Try to find it in the cached list first
-      const found = periods.find((p) => p.id === periodId);
-      if (found) {
-        setPeriodObj(found);
-        fetchShifts(found.id);
-        return;
-      }
-
-      // Fallback: fetch it
+    let found = periods.find((p) => p.id === periodId);
+    if (!found) {
       try {
         const { data } = await api.get(`/attendance/${hotelSlug}/periods/${periodId}/`);
-        setPeriodObj(data);
-        fetchShifts(periodId);
+        found = data;
+        setPeriods(prev => [...prev.filter(p => p.id !== periodId), found]);
       } catch (err) {
         console.error("❌ Failed to fetch single period:", err);
+        return;
       }
-    },
-    [periods, hotelSlug, fetchShifts]
-  );
+    }
+
+    setPeriodObj(found);
+
+    // If copying shifts from another period:
+    if (copyFromPeriodId) {
+      try {
+        // Make an API call to copy shifts from copyFromPeriodId to periodId
+        // Adjust endpoint to your backend API
+        const copyRes = await api.post(`/attendance/${hotelSlug}/shifts/copy/`, {
+          from_period: copyFromPeriodId,
+          to_period: periodId,
+          department,
+        });
+
+        // Assume copyRes.data contains new shifts
+        const copiedShifts = copyRes.data;
+        setShifts(copiedShifts); // update local shifts state with copied shifts
+
+      } catch (err) {
+        console.error("❌ Failed to copy shifts:", err);
+        // fallback: just fetch shifts normally for new period
+        fetchShifts(periodId);
+        return;
+      }
+    } else {
+      // Just fetch shifts normally if no copying
+      fetchShifts(periodId);
+    }
+  },
+  [periods, hotelSlug, department, fetchShifts]
+);
+
 
   // --------------------------------------------------
   // Render
@@ -162,6 +205,8 @@ const handleSubmitSuccess = () => setRefreshKey(prev => prev + 1);
         onSubmitSuccess={handleSubmitSuccess}
         refreshKey={refreshKey} 
       />
+
+      
     </div>
   );
 }

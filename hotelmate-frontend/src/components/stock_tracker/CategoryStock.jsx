@@ -111,7 +111,16 @@ export default function CategoryStock() {
   const canAccessSettings =
     user?.is_superuser || user?.access_level === "super_staff_admin";
 
-  if (loading) return <p>Loading “{prettyCategory}” stock…</p>;
+if (loading) {
+  return (
+    <div className="loading">
+      <div className="text-center">
+        <div className="spinner-border text-dark mb-3" role="status" />
+        <p>Loading “{prettyCategory}” stock…</p>
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className="transparent-container-bg mt-4">
