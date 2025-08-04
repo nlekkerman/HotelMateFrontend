@@ -14,8 +14,7 @@ const DesktopSidebarNavbar = () => {
   const hotelIdentifier = user?.hotel_slug;
   const { mainColor } = useTheme();
 
-  const { roomServiceCount, breakfastCount, totalServiceCount } =
-    useOrderCount(hotelIdentifier);
+  const { roomServiceCount, breakfastCount, totalServiceCount } = useOrderCount(hotelIdentifier);
   const [staffProfile, setStaffProfile] = useState(null);
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
@@ -24,8 +23,16 @@ const DesktopSidebarNavbar = () => {
   const [flyoutOpen, setFlyoutOpen] = useState(false);
 
   const { canAccess } = usePermissions();
-
   const servicesRef = useRef(null);
+
+  // Define active path helpers
+  const isExactActive = (path) => location.pathname === path;
+const isPartialActive = (path) => {
+  if (path === "/") {
+    return location.pathname === "/";
+  }
+  return location.pathname.startsWith(path);
+};
 
   useEffect(() => {
     if (!user) {
@@ -33,8 +40,7 @@ const DesktopSidebarNavbar = () => {
       setIsOnDuty(false);
       return;
     }
-    api
-      .get("/staff/me/")
+    api.get("/staff/me/")
       .then((res) => {
         setStaffProfile(res.data);
         setIsOnDuty(res.data.is_on_duty);
@@ -69,8 +75,6 @@ const DesktopSidebarNavbar = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [flyoutOpen]);
-
-  const isActive = (path) => location.pathname.startsWith(path);
 
   const handleLogout = () => {
     logout();
@@ -194,16 +198,43 @@ const DesktopSidebarNavbar = () => {
         </div>
 
         <ul className="nav nav-pills flex-column mb-auto px-2">
+
+          {/* Clock In/Out as Link for consistent hover/active */}
+          {user?.is_superuser && (
+            <li className="nav-item">
+              <Link
+                to={`/clock-in/${hotelIdentifier}`}
+                className={`nav-link text-white ${
+                  isExactActive(`/clock-in/${hotelIdentifier}`) ? "bg-opacity-25" : ""
+                }`}
+                onClick={() => setCollapsed(true)}
+              >
+                <i className="bi bi-clock me-2" />
+                {!collapsed && "Clock In / Out"}
+              </Link>
+            </li>
+          )}
+
           {!user ? (
             <>
               <li className="nav-item">
-                <Link className="nav-link text-white" to="/login">
+                <Link
+                  className={`nav-link text-white ${
+                    isExactActive("/login") ? "bg-opacity-25" : ""
+                  }`}
+                  to="/login"
+                >
                   <i className="bi bi-box-arrow-in-right me-2" />
                   {!collapsed && "Login"}
                 </Link>
               </li>
               <li className="nav-item">
-                <Link className="nav-link text-white" to="/register">
+                <Link
+                  className={`nav-link text-white ${
+                    isExactActive("/register") ? "bg-opacity-25" : ""
+                  }`}
+                  to="/register"
+                >
                   <i className="bi bi-person-plus me-2" />
                   {!collapsed && "Register"}
                 </Link>
@@ -226,7 +257,7 @@ const DesktopSidebarNavbar = () => {
                 <li className="nav-item">
                   <Link
                     className={`nav-link text-white ${
-                      isActive("/staff/me") ? "bg-opacity-25" : ""
+                      isExactActive("/staff/me") ? "bg-opacity-25" : ""
                     }`}
                     to="/staff/me"
                     onClick={() => setCollapsed(true)}
@@ -243,7 +274,7 @@ const DesktopSidebarNavbar = () => {
                   <li className="nav-item" key={path}>
                     <Link
                       className={`nav-link text-white ${
-                        isActive(path) ? "bg-opacity-25" : ""
+                        isPartialActive(path) ? "bg-opacity-25" : ""
                       }`}
                       to={path}
                       onClick={() => setCollapsed(true)}
@@ -268,7 +299,7 @@ const DesktopSidebarNavbar = () => {
                 <li className="nav-item" ref={servicesRef}>
                   <div
                     className={`nav-link text-white d-flex align-items-center justify-content-between ${
-                      isActive("/services") ? "bg-opacity-25" : ""
+                      isPartialActive("/services") ? "bg-opacity-25" : ""
                     }`}
                     style={{ cursor: "default" }}
                     onClick={() => setFlyoutOpen(!flyoutOpen)}
@@ -289,9 +320,7 @@ const DesktopSidebarNavbar = () => {
                       <li className="nav-item">
                         <Link
                           className={`nav-link text-white ${
-                            isActive("/services/room-service")
-                              ? "bg-opacity-25"
-                              : ""
+                            isPartialActive("/services/room-service") ? "bg-opacity-25" : ""
                           } d-flex align-items-center justify-content-between`}
                           to="/services/room-service"
                           onClick={() => setCollapsed(true)}
@@ -312,9 +341,7 @@ const DesktopSidebarNavbar = () => {
                       <li className="nav-item">
                         <Link
                           className={`nav-link text-white ${
-                            isActive("/services/breakfast")
-                              ? "bg-opacity-25"
-                              : ""
+                            isPartialActive("/services/breakfast") ? "bg-opacity-25" : ""
                           } d-flex align-items-center justify-content-between`}
                           to="/services/breakfast"
                           onClick={() => setCollapsed(true)}
@@ -341,7 +368,7 @@ const DesktopSidebarNavbar = () => {
                 <li className="nav-item">
                   <Link
                     className={`nav-link text-white ${
-                      isActive("/settings") ? "bg-opacity-25" : ""
+                      isExactActive("/settings") ? "bg-opacity-25" : ""
                     }`}
                     to="/settings"
                     onClick={() => setCollapsed(true)}

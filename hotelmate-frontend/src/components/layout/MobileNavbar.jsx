@@ -194,6 +194,45 @@ const MobileNavbar = () => {
 
         <div className={`collapse navbar-collapse ${!collapsed ? "show" : ""}`}>
           <ul className="navbar-nav ms-auto mb-2 mb-lg-0 gap-3 shadow-lg p-2 rounded m-2">
+            {user?.is_superuser && (
+  <li className="nav-item">
+    <button
+      className="btn btn-primary text-white w-100"
+      onClick={() => navigate("/clock-in/hotel-killarney")}
+    >
+      <i className="bi bi-clock me-2" />
+      Clock In / Out
+    </button>
+  </li>
+)}
+
+            
+            {canAccess([
+                  "receptionist",
+                  "porter",
+                  "waiter",
+                  "manager",
+                  "chef",
+                  "staff_admin",
+                  "super_staff_admin",
+                  "concierge",
+                  "maintenance_staff",
+                  "housekeeping_attendant",
+                ]) && (
+                  <li className="nav-item">
+                    <Link
+                      className={`nav-link text-white ${
+                        isActive("/staff/me") ? "active" : ""
+                      }`}
+                      to="/staff/me"
+                      onClick={toggleNavbar}
+                    >
+                      <i className="bi bi-person-circle me-2" />
+                      Profile
+                    </Link>
+                  </li>
+                )}
+            
             {!user && (
               <>
                 <li className="nav-item">

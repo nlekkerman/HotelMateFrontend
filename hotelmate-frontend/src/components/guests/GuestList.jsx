@@ -41,7 +41,16 @@ const GuestList = () => {
     fetchGuests();
   }, [hotelIdentifier]);
 
-  if (loading) return <p>Loading guests...</p>;
+   if (loading) {
+  return (
+    <div className="loading">
+      <div className="text-center">
+        <div className="spinner-border text-dark mb-3" role="status" />
+        <p>Loading guests...</p>
+      </div>
+    </div>
+  );
+}
   if (error) return <p className="text-danger">{error}</p>;
 
   // Filter by name or room #

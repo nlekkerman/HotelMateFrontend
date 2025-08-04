@@ -4,19 +4,17 @@ export default function CopyShiftModal({
   staff,
   date,
   onClose,
-  onCopyOneShift,
   onCopyDayForStaff,
   onCopyDayForAll,
   onCopyWeekForAllStaff,
   limitedOptions = false,
-  defaultCopyType = null, // 👈 New prop
+  defaultCopyType = null,
 }) {
   const [step, setStep] = useState(1);
   const [copyType, setCopyType] = useState("");
   const [targetDate, setTargetDate] = useState("");
   const [targetWeekStart, setTargetWeekStart] = useState("");
 
-  // Auto-select and skip to step 2 if defaultCopyType is passed
   useEffect(() => {
     if (defaultCopyType) {
       setCopyType(defaultCopyType);
@@ -25,15 +23,11 @@ export default function CopyShiftModal({
   }, [defaultCopyType]);
 
   const handleContinue = () => {
-    if (copyType) {
-      setStep(2);
-    }
+    if (copyType) setStep(2);
   };
 
   const handleConfirm = () => {
-    if (copyType === "shift") {
-      onCopyOneShift?.(staff, targetDate);
-    } else if (copyType === "day_self") {
+    if (copyType === "day_self") {
       onCopyDayForStaff?.(staff, targetDate);
     } else if (copyType === "day_all") {
       onCopyDayForAll?.(date, targetDate);
@@ -44,70 +38,65 @@ export default function CopyShiftModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
-      <div className="bg-white p-6 rounded shadow-md w-96">
-
-        {/* Step 1: Select copy type */}
+    <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-dark bg-opacity-50 z-3">
+      <div className="bg-white rounded shadow p-4" style={{ width: "400px", maxWidth: "90%" }}>
         {step === 1 && (
           <>
-            <h3 className="text-lg font-semibold mb-4">Copy what?</h3>
-            <div className="space-y-2">
-              <label className="block">
-                <input
-                  type="radio"
-                  value="shift"
-                  checked={copyType === "shift"}
-                  onChange={(e) => setCopyType(e.target.value)}
-                  className="mr-2"
-                />
-                One shift for this staff
-              </label>
-              <label className="block">
-                <input
-                  type="radio"
-                  value="day_self"
-                  checked={copyType === "day_self"}
-                  onChange={(e) => setCopyType(e.target.value)}
-                  className="mr-2"
-                />
+            <h5 className="mb-3">Copy what?</h5>
+            <div className="form-check mb-2">
+              <input
+                className="form-check-input"
+                type="radio"
+                name="copyType"
+                id="daySelf"
+                value="day_self"
+                checked={copyType === "day_self"}
+                onChange={(e) => setCopyType(e.target.value)}
+              />
+              <label className="form-check-label" htmlFor="daySelf">
                 Whole day for this staff
               </label>
-
-              {!limitedOptions && (
-                <>
-                  <label className="block">
-                    <input
-                      type="radio"
-                      value="day_all"
-                      checked={copyType === "day_all"}
-                      onChange={(e) => setCopyType(e.target.value)}
-                      className="mr-2"
-                    />
-                    Whole day for all staff
-                  </label>
-                  <label className="block">
-                    <input
-                      type="radio"
-                      value="week"
-                      checked={copyType === "week"}
-                      onChange={(e) => setCopyType(e.target.value)}
-                      className="mr-2"
-                    />
-                    Whole week for all staff
-                  </label>
-                </>
-              )}
             </div>
 
-            <div className="mt-4 flex justify-between">
-              <button
-                onClick={onClose}
-                className="text-sm text-gray-600 hover:text-gray-800"
-              >
+            {!limitedOptions && (
+              <>
+                <div className="form-check mb-2">
+                  <input
+                    className="form-check-input"
+                    type="radio"
+                    name="copyType"
+                    id="dayAll"
+                    value="day_all"
+                    checked={copyType === "day_all"}
+                    onChange={(e) => setCopyType(e.target.value)}
+                  />
+                  <label className="form-check-label" htmlFor="dayAll">
+                    Whole day for all staff
+                  </label>
+                </div>
+                <div className="form-check mb-2">
+                  <input
+                    className="form-check-input"
+                    type="radio"
+                    name="copyType"
+                    id="weekAll"
+                    value="week"
+                    checked={copyType === "week"}
+                    onChange={(e) => setCopyType(e.target.value)}
+                  />
+                  <label className="form-check-label" htmlFor="weekAll">
+                    Whole week for all staff
+                  </label>
+                </div>
+              </>
+            )}
+
+            <div className="mt-4 d-flex justify-content-between">
+              <button className="btn btn-outline-secondary" onClick={onClose}>
                 Cancel
               </button>
               <button
-                className="bg-blue-500 text-white px-4 py-1 rounded disabled:opacity-50"
+                className="btn btn-primary"
                 disabled={!copyType}
                 onClick={handleContinue}
               >
@@ -117,17 +106,16 @@ export default function CopyShiftModal({
           </>
         )}
 
-        {/* Step 2: Pick target date or week */}
         {step === 2 && (
           <>
-            <h3 className="text-lg font-semibold mb-4">Select target</h3>
+            <h5 className="mb-3">Select target</h5>
 
-            {(copyType === "shift" || copyType === "day_self" || copyType === "day_all") && (
-              <div className="mb-4">
-                <label className="block text-sm mb-1">Target date</label>
+            {(copyType === "day_self" || copyType === "day_all") && (
+              <div className="mb-3">
+                <label className="form-label">Target date</label>
                 <input
                   type="date"
-                  className="w-full border rounded px-2 py-1"
+                  className="form-control"
                   value={targetDate}
                   onChange={(e) => setTargetDate(e.target.value)}
                 />
@@ -135,28 +123,25 @@ export default function CopyShiftModal({
             )}
 
             {copyType === "week" && (
-              <div className="mb-4">
-                <label className="block text-sm mb-1">Target week start</label>
+              <div className="mb-3">
+                <label className="form-label">Target week start</label>
                 <input
                   type="date"
-                  className="w-full border rounded px-2 py-1"
+                  className="form-control"
                   value={targetWeekStart}
                   onChange={(e) => setTargetWeekStart(e.target.value)}
                 />
               </div>
             )}
 
-            <div className="mt-4 flex justify-between">
+            <div className="d-flex justify-content-between">
               {!defaultCopyType && (
-                <button
-                  onClick={() => setStep(1)}
-                  className="text-sm text-gray-600 hover:text-gray-800"
-                >
+                <button className="btn btn-outline-secondary" onClick={() => setStep(1)}>
                   Back
                 </button>
               )}
               <button
-                className="bg-blue-500 text-white px-4 py-1 rounded disabled:opacity-50"
+                className="btn btn-success"
                 onClick={handleConfirm}
                 disabled={
                   (copyType === "week" && !targetWeekStart) ||
@@ -172,4 +157,3 @@ export default function CopyShiftModal({
     </div>
   );
 }
-

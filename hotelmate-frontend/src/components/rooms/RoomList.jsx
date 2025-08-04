@@ -56,7 +56,14 @@ function RoomList() {
     setPage(1);
   }, [searchQuery]);
 
-  if (isLoading) return <p className="text-center">Loading rooms...</p>;
+  if (isLoading)  return (
+    <div className="loading">
+      <div className="text-center">
+        <div className="spinner-border text-dark mb-3" role="status" />
+        <p>Loading Rooms...</p>
+      </div>
+    </div>
+  );;
   if (isError) return <p className="text-center text-danger">Error: {error.message}</p>;
 
   return (

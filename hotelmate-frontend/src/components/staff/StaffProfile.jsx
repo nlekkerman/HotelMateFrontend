@@ -84,7 +84,7 @@ export default function StaffProfile() {
                   <FaUserShield size={32} />
                 </div>
               )}
-              <h4 className="mb-0">Staff Profile</h4>
+              <h4 className="mb-0">Your Profile</h4>
             </div>
 
             <div className="card-body text-center">
@@ -185,9 +185,7 @@ export default function StaffProfile() {
               )}
             </div>
 
-            <div className="card-footer text-center text-muted small">
-              Last updated just now
-            </div>
+           
           </div>
         </div>
       </div>
