@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
-import useOrdersWebSocket from "@/hooks/useOrdersWebSocket";
+import useOrdersWebSocket from "@/hooks/useOrdersWebSocket"; // <-- import your single order WS hook
 import { useTheme } from "@/context/ThemeContext";
 
 export default function RoomServiceOrders() {
@@ -13,7 +13,7 @@ export default function RoomServiceOrders() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { mainColor } = useTheme();
-  
+
   useEffect(() => {
     if (!hotelSlug) {
       setError("No hotel identifier found.");
@@ -30,27 +30,33 @@ export default function RoomServiceOrders() {
         if (data && Array.isArray(data.results)) data = data.results;
         setOrders(Array.isArray(data) ? data : []);
       })
-      .catch((err) => {
+      .catch(() => {
         setError("Error fetching room service orders.");
       })
       .finally(() => setLoading(false));
   }, [hotelSlug]);
-  
-  // Listen to WebSocket updates for this hotel
-useOrdersWebSocket(hotelSlug, null, (updatedOrder) => {
-  setOrders((prevOrders) => {
-    const exists = prevOrders.some((o) => o.id === updatedOrder.id);
-    if (exists) {
-      return prevOrders.map((o) =>
-        o.id === updatedOrder.id ? updatedOrder : o
-      );
-    } else {
-      return [updatedOrder, ...prevOrders];
-    }
-  });
-});
 
-  
+  // Use WebSocket for first order only, for example
+  const firstOrderId = orders.length > 0 ? orders[0].id : null;
+
+  // Listen to updates on the first order
+  useOrdersWebSocket(firstOrderId, (update) => {
+    setOrders((prevOrders) => {
+      const index = prevOrders.findIndex((o) => o.id === update.id);
+      if (index === -1) return prevOrders; // no such order, ignore
+
+      // If order completed, remove it
+      if (update.status === "completed") {
+        return prevOrders.filter((o) => o.id !== update.id);
+      }
+
+      // Otherwise, update order status and other fields if needed
+      const updatedOrders = [...prevOrders];
+      updatedOrders[index] = { ...updatedOrders[index], ...update };
+      return updatedOrders;
+    });
+  });
+
   const handleStatusChange = (order, newStatus) => {
     const prev = order.status;
 
@@ -65,12 +71,11 @@ useOrdersWebSocket(hotelSlug, null, (updatedOrder) => {
         status: newStatus,
       })
       .then(() => refreshCount())
-      .catch((err) => {
+      .catch(() => {
         setOrders((all) =>
           all.map((o) => (o.id === order.id ? { ...o, status: prev } : o))
         );
         setError("Error updating status.");
-        console.error("Failed to update order status:", err);
       });
   };
 
@@ -119,9 +124,7 @@ useOrdersWebSocket(hotelSlug, null, (updatedOrder) => {
           ) : error ? (
             <div className="alert alert-danger">{error}</div>
           ) : orders.length === 0 ? (
-            <div className="alert alert-info">
-              No room service orders found.
-            </div>
+            <div className="alert alert-info">No room service orders found.</div>
           ) : (
             <div className="row g-3">
               {orders.map((order) => (
@@ -132,9 +135,7 @@ useOrdersWebSocket(hotelSlug, null, (updatedOrder) => {
                         <strong>Order #{order.id}</strong>
                       </span>
                       <span
-                        className={`badge main-bg ${
-                          mainColor ? "" : "bg-dark"
-                        }`}
+                        className={`badge main-bg ${mainColor ? "" : "bg-dark"}`}
                       >
                         ROOM: {order.room_number}
                       </span>
@@ -171,9 +172,7 @@ useOrdersWebSocket(hotelSlug, null, (updatedOrder) => {
                         <span className="text-success fw-bold">
                           €{calculateTotal(order).toFixed(2)}
                         </span>
-                        <small className="ms-1 text-muted">
-                          (incl. €5 tray)
-                        </small>
+                        <small className="ms-1 text-muted">(incl. €5 tray)</small>
                       </div>
                       <div>
                         <strong>Ordered:</strong>{" "}
