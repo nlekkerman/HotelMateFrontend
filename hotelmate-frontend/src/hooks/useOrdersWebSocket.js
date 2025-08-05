@@ -1,17 +1,17 @@
 import { useEffect } from "react";
 
-export default function useOrderWebSocket(orderId, onMessage) {
+export default function useOrdersWebSocket(orderId, onMessage) {
   useEffect(() => {
     if (!orderId) return;
 
-    // **LOG THE ENV VAR**  
-    console.log("[WS] import.meta.env.VITE_WS_HOST Aaaaaaaaaaaaaaaa =", import.meta.env.VITE_WS_HOST);
+    console.log("[WS] VITE_WS_HOST =", import.meta.env.VITE_WS_HOST);
 
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const host     = import.meta.env.VITE_WS_HOST; 
-    const wsUrl    = `${protocol}://${host}/ws/orders/${orderId}/`;
+    const host = import.meta.env.VITE_WS_HOST;
+    const wsUrl = `${protocol}://${host}/ws/orders/${orderId}/`;
 
     console.log(`[WS] connecting to ${wsUrl}`);
+
     const socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
@@ -19,9 +19,13 @@ export default function useOrderWebSocket(orderId, onMessage) {
     };
 
     socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log("[WS] message received:", data);
-      onMessage?.(data);
+      try {
+        const data = JSON.parse(event.data);
+        console.log("[WS] message received:", data);
+        onMessage?.(data);
+      } catch (err) {
+        console.error("[WS] JSON parse error:", err, "raw data:", event.data);
+      }
     };
 
     socket.onerror = (err) => {

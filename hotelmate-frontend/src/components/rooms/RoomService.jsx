@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
 import api, { setHotelIdentifier } from "@/services/apiWithHotel";
 import { toast } from "react-toastify";
 import DeletionModal from "@/components/modals/DeletionModal";
@@ -9,8 +8,6 @@ import useOrdersWebSocket from "@/hooks/useOrdersWebSocket";
 
 
 export default function RoomService({ isAdmin }) {
-    const { user } = useAuth();
-    const hotelSlug = user?.hotel_slug;
   const { roomNumber, hotelIdentifier } = useParams();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,12 +16,11 @@ export default function RoomService({ isAdmin }) {
   const [currentOrder, setCurrentOrder] = useState(null);
   const currentOrderId = currentOrder?.id ?? null;
 
-useOrdersWebSocket(hotelSlug, currentOrderId, (data) => {
+useOrdersWebSocket(currentOrderId, (data) => {
   setCurrentOrder((prev) =>
     prev && prev.id === data.id ? { ...prev, status: data.status } : prev
   );
 });
-
   const [previousOrders, setPreviousOrders] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
