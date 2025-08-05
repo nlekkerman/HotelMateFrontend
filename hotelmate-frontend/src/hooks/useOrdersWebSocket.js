@@ -1,66 +1,40 @@
 import { useEffect } from "react";
 
-export default function useOrdersWebSocket(hotelSlug, orderId, onMessage) {
+export default function useOrderWebSocket(orderId, onMessage) {
   useEffect(() => {
-    console.log("[WS] useOrdersWebSocket effect triggered");
-    console.log("[WS] hotelSlug:", hotelSlug);
-    console.log("[WS] orderId:", orderId);
+    if (!orderId) return;
 
-    if (!hotelSlug || !orderId) {
-      console.warn("[WS] Missing hotelSlug or orderId, skipping WebSocket init");
-      return;
-    }
+    // **LOG THE ENV VAR**  
+    console.log("[WS] import.meta.env.VITE_WS_HOST Aaaaaaaaaaaaaaaa =", import.meta.env.VITE_WS_HOST);
 
-    const currentProtocol = window.location.protocol;
-    console.log("[WS] current page protocol:", currentProtocol);
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const host     = import.meta.env.VITE_WS_HOST; 
+    const wsUrl    = `${protocol}://${host}/ws/orders/${orderId}/`;
 
-    const protocol = currentProtocol === "https:" ? "wss" : "ws";
-    const host = import.meta.env.VITE_WS_HOST;
-
-    if (!host) {
-      console.error("[WS] VITE_WS_HOST is not defined in env variables");
-      return;
-    }
-
-    const wsUrl = `${protocol}://${host}/ws/orders/${hotelSlug}/${orderId}/`;
-
-    console.log(`[WS] constructed WebSocket URL: ${wsUrl}`);
-
-    let socket;
-
-    try {
-      socket = new WebSocket(wsUrl);
-    } catch (err) {
-      console.error("[WS] Error creating WebSocket:", err);
-      return;
-    }
+    console.log(`[WS] connecting to ${wsUrl}`);
+    const socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
-      console.log("[WS] connection opened:", socket.url);
+      console.log("[WS] connection opened");
     };
 
     socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log("[WS] message received:", data);
-        onMessage?.(data);
-      } catch (err) {
-        console.error("[WS] failed to parse message:", event.data, err);
-      }
+      const data = JSON.parse(event.data);
+      console.log("[WS] message received:", data);
+      onMessage?.(data);
     };
 
     socket.onerror = (err) => {
-      console.error("[WS] connection error:", err);
+      console.error("[WS] error:", err);
     };
 
     socket.onclose = (ev) => {
-      console.log(`[WS] connection closed (code=${ev.code}, reason="${ev.reason}")`);
+      console.log(`[WS] closed (code=${ev.code} reason=${ev.reason})`);
     };
 
     return () => {
-      console.log("[WS] cleaning up, closing socket:", socket?.url);
-      socket?.close();
+      console.log("[WS] closing socket");
+      socket.close();
     };
-  }, [hotelSlug, orderId, onMessage]);
+  }, [orderId, onMessage]);
 }
-
