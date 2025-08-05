@@ -2,17 +2,18 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
-import useOrderWebSocket from "@/hooks/useOrderWebSocket";
+import useOrdersWebSocket from "@/hooks/useOrdersWebSocket";
 import { useTheme } from "@/context/ThemeContext";
 
 export default function RoomServiceOrders() {
   const { user } = useAuth();
   const hotelSlug = user?.hotel_slug;
-const { refreshAll: refreshCount } = useOrderCount(hotelSlug);
+  const { refreshAll: refreshCount } = useOrderCount(hotelSlug);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { mainColor } = useTheme();
+  
   useEffect(() => {
     if (!hotelSlug) {
       setError("No hotel identifier found.");
@@ -34,19 +35,22 @@ const { refreshAll: refreshCount } = useOrderCount(hotelSlug);
       })
       .finally(() => setLoading(false));
   }, [hotelSlug]);
-useOrderWebSocket(hotelSlug, (updatedOrder) => {
+  
+  // Listen to WebSocket updates for this hotel
+useOrdersWebSocket(hotelSlug, null, (updatedOrder) => {
   setOrders((prevOrders) => {
-    // Check if order exists
     const exists = prevOrders.some((o) => o.id === updatedOrder.id);
     if (exists) {
-      // Update existing order
-      return prevOrders.map((o) => (o.id === updatedOrder.id ? updatedOrder : o));
+      return prevOrders.map((o) =>
+        o.id === updatedOrder.id ? updatedOrder : o
+      );
     } else {
-      // Add new order
       return [updatedOrder, ...prevOrders];
     }
   });
 });
+
+  
   const handleStatusChange = (order, newStatus) => {
     const prev = order.status;
 
@@ -115,7 +119,9 @@ useOrderWebSocket(hotelSlug, (updatedOrder) => {
           ) : error ? (
             <div className="alert alert-danger">{error}</div>
           ) : orders.length === 0 ? (
-            <div className="alert alert-info">No room service orders found.</div>
+            <div className="alert alert-info">
+              No room service orders found.
+            </div>
           ) : (
             <div className="row g-3">
               {orders.map((order) => (
@@ -165,7 +171,9 @@ useOrderWebSocket(hotelSlug, (updatedOrder) => {
                         <span className="text-success fw-bold">
                           €{calculateTotal(order).toFixed(2)}
                         </span>
-                        <small className="ms-1 text-muted">(incl. €5 tray)</small>
+                        <small className="ms-1 text-muted">
+                          (incl. €5 tray)
+                        </small>
                       </div>
                       <div>
                         <strong>Ordered:</strong>{" "}
