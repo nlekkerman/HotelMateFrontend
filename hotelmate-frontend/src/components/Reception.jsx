@@ -67,7 +67,7 @@ const { mainColor } = useTheme();
       <p className="text-center text-secondary mb-5 fs-5 text-white">
         Manage rooms and guests from the reception dashboard.
       </p>
-      <div className="custom-serach-input-container p-4  d-flex justify-content-center ">
+      <div className="custom-search-input-container p-4  d-flex justify-content-center ">
         <Search placeholder="Search rooms by number." />
       </div>
      

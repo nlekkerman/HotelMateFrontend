@@ -164,13 +164,13 @@ const MobileNavbar = () => {
 
   return (
     <nav
-      className={`navbar navbar-expand-lg text-white shadow-sm main-bg ${
+      className={`navbar navbar-expand-lg text-white main-bg shadow-lg  ${
         mainColor ? "" : "bg-dark"
       }`}
       style={mainColor ? { backgroundColor: mainColor } : {}}
     >
-      <div className="container-fluid">
-        <div className="position-relative d-inline-block ms-auto">
+      <div className="container-fluid ">
+        <div className="position-relative d-inline-block ms-auto ">
           <button
             className="navbar-toggler bg-transparent border-0 shadow-lg"
             type="button"

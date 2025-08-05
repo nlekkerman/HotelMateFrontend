@@ -19,14 +19,11 @@ export default function StockDashboard() {
   useEffect(() => {
     // 1) Define endpoint
     const endpoint = `stock_tracker/${hotel_slug}/stock-categories/`;
-    console.log(
-      `[StockDashboard] will fetch: ${api.defaults.baseURL}${endpoint}`
-    );
+    
 
     api
       .get(endpoint)
       .then((res) => {
-        console.log("[StockDashboard] Categories response:", res.data.results);
         setCategories(res.data.results || []);
       })
       .catch((err) => {
@@ -63,19 +60,22 @@ export default function StockDashboard() {
       </h1>
       <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap" }}>
         {categories.map((cat) => (
-          <div className="button-container d-flex  w-100 justify-content-center ">
-            <button
-              key={cat.id}
-              onClick={() => {
-                navigate(`/stock_tracker/${hotel_slug}/${cat.slug}`);
-              }}
-              style={{ padding: ".5rem 1rem", cursor: "pointer" }}
-              className="text-capitalize custom-button"
-            >
-              {cat.name}
-            </button>
-          </div>
-        ))}
+  <div
+    key={cat.id} // ✅ Correct placement
+    className="button-container d-flex w-100 justify-content-center"
+  >
+    <button
+      onClick={() => {
+        navigate(`/stock_tracker/${hotel_slug}/${cat.slug}`);
+      }}
+      style={{ padding: ".5rem 1rem", cursor: "pointer" }}
+      className="text-capitalize custom-button"
+    >
+      {cat.name}
+    </button>
+  </div>
+))}
+
       </div>
     </div>
   );

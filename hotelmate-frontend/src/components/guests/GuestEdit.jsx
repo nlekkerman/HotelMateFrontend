@@ -47,7 +47,12 @@ const GuestEdit = () => {
     }
   };
 
-  if (loading) return <p>Loading guest data...</p>;
+  if (loading) return <div className="loading">
+      <div className="text-center">
+        <div className="spinner-border text-dark mb-3" role="status" />
+        <p>Loading Hotel info</p>
+      </div>
+    </div>;;
   if (error) return <p className="text-danger">{error}</p>;
 
   return (
@@ -58,7 +63,6 @@ const GuestEdit = () => {
           ["First Name", "first_name"],
           ["Last Name", "last_name"],
     
-          ["Room ID", "room"],
           ["Days Booked", "days_booked"],
           ["Check-In Date", "check_in_date"],
           ["Check-Out Date", "check_out_date"],

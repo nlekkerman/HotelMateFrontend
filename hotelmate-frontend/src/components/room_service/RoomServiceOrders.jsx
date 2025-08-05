@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
+import useOrderWebSocket from "@/hooks/useOrderWebSocket";
 import { useTheme } from "@/context/ThemeContext";
 
 export default function RoomServiceOrders() {
@@ -33,7 +34,19 @@ const { refreshAll: refreshCount } = useOrderCount(hotelSlug);
       })
       .finally(() => setLoading(false));
   }, [hotelSlug]);
-
+useOrderWebSocket(hotelSlug, (updatedOrder) => {
+  setOrders((prevOrders) => {
+    // Check if order exists
+    const exists = prevOrders.some((o) => o.id === updatedOrder.id);
+    if (exists) {
+      // Update existing order
+      return prevOrders.map((o) => (o.id === updatedOrder.id ? updatedOrder : o));
+    } else {
+      // Add new order
+      return [updatedOrder, ...prevOrders];
+    }
+  });
+});
   const handleStatusChange = (order, newStatus) => {
     const prev = order.status;
 
