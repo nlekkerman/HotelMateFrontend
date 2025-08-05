@@ -43,12 +43,10 @@ export default function CategoryStock() {
 
   useEffect(() => {
     const endpoint = `stock_tracker/${hotel_slug}/stocks/?category__slug=${category_slug}`;
-    console.log("➡️ Fetching stock from:", endpoint);
     api
       .get(endpoint)
       .then((res) => {
         const results = res.data.results;
-        console.log("✅ Stock API response:", results);
 
         if (!results || results.length === 0) {
           console.warn("⚠️ No stocks returned.");
@@ -78,7 +76,6 @@ export default function CategoryStock() {
           });
         });
 
-        console.log("📦 Grouped items by type:", grouped);
         setGroupedItems(grouped);
       })
       .catch((err) => {

@@ -1,16 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "@/services/api";
-import RestaurantBookings from "./RestaurantBookings";
+import RestaurantBookings from "./RestaurantBookings"; // Can still be used, just keep name for now
 
 export default function Bookings() {
-  const { hotelSlug: qrHotelSlug, restaurantSlug: qrRestaurantSlug, roomNumber: qrRoomNumber } = useParams();
+  const {
+    hotelSlug: qrHotelSlug,
+    restaurantSlug: qrCategorySlug, // keep param name to avoid breaking routes
+    roomNumber: qrRoomNumber,
+  } = useParams();
 
-  const [restaurants, setRestaurants] = useState([]);
+  const [categories, setCategories] = useState([]); // previously "restaurants"
   const [loading, setLoading] = useState(true);
+  const [categoryLoading, setCategoryLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null); // previously "selectedRestaurantId"
   const [roomNumber, setRoomNumber] = useState(qrRoomNumber || null);
 
   // Fallback to localStorage for manual use
@@ -19,6 +24,7 @@ export default function Bookings() {
 
     const storedUser = localStorage.getItem("user");
     if (!storedUser) return { slug: null, name: null };
+
     try {
       const userData = JSON.parse(storedUser);
       return {
@@ -40,86 +46,91 @@ export default function Bookings() {
     }
 
     api
-      .get(`bookings/restaurants/?hotel_slug=${hotelSlug}`)
+      .get(`bookings/restaurants/?hotel_slug=${hotelSlug}`) // endpoint remains unchanged
       .then((res) => {
         let data = res.data;
         if (data && Array.isArray(data.results)) {
           data = data.results;
         } else if (!Array.isArray(data)) {
-          console.warn("Unexpected restaurants response:", data);
+          console.warn("Unexpected response for booking categories:", data);
           data = [];
         }
 
-        setRestaurants(data);
+        setCategories(data);
 
-        // Auto-select restaurant from QR route if available
-        if (qrRestaurantSlug) {
-          const found = data.find(r => r.slug === qrRestaurantSlug);
-          if (found) setSelectedRestaurantId(found.id);
+        // Auto-select category from QR route if available
+        if (qrCategorySlug) {
+          const found = data.find((c) => c.slug === qrCategorySlug);
+          if (found) setSelectedCategoryId(found.id);
         }
 
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Failed to fetch restaurants:", err);
-        setError("Failed to load restaurants.");
+        console.error("Failed to fetch booking categories:", err);
+        setError("Failed to load booking categories.");
         setLoading(false);
       });
-  }, [hotelSlug, qrRestaurantSlug]);
+  }, [hotelSlug, qrCategorySlug]);
 
-  const handleClick = (restId) => {
-    setSelectedRestaurantId(prev => (prev === restId ? null : restId));
+  const handleClick = (categoryId) => {
+    setSelectedCategoryId((prev) => (prev === categoryId ? null : categoryId));
   };
 
   if (loading) {
-  return (
-    <div className="loading">
-      <div className="text-center">
-        <div className="spinner-border text-dark mb-3" role="status" />
-        <p>Loading restaurants…</p>
+    return (
+      <div className="loading">
+        <div className="text-center">
+          <div className="spinner-border text-dark mb-3" role="status" />
+          <p>Loading booking categories…</p>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
+
   if (error) return <p style={{ color: "red" }}>{error}</p>;
-  if (restaurants.length === 0)
-    return <p>No restaurants found for your hotel.</p>;
+  if (categories.length === 0)
+    return <p>No booking categories found for your hotel.</p>;
 
   return (
     <div style={{ padding: "16px" }}>
-      <h2>Bookings {hotelName ? `@ ${hotelName}` : ""}</h2>
+      <h2 className="title-container">
+        Bookings {hotelName ? `@ ${hotelName}` : ""}
+      </h2>
 
-      {/* Skip restaurant buttons if coming from QR */}
-      {!qrRestaurantSlug && (
+      {/* Skip buttons if coming from QR */}
+      {!qrCategorySlug && (
         <div style={{ marginBottom: "16px" }}>
-          {restaurants.map((r) => (
+          {categories.map((c) => (
             <button
-              key={r.id}
-              onClick={() => handleClick(r.id)}
+              key={c.id}
+              onClick={() => handleClick(c.id)}
               style={{
                 marginRight: "8px",
                 marginBottom: "8px",
                 padding: "8px 12px",
                 backgroundColor:
-                  selectedRestaurantId === r.id ? "#007bff" : "#f0f0f0",
-                color: selectedRestaurantId === r.id ? "#fff" : "#000",
+                  selectedCategoryId === c.id ? "#007bff" : "#f0f0f0",
+                color: selectedCategoryId === c.id ? "#fff" : "#000",
                 border: "1px solid #ccc",
                 borderRadius: "4px",
                 cursor: "pointer",
               }}
             >
-              {r.name}
+              {c.name}
             </button>
           ))}
         </div>
       )}
 
-      {selectedRestaurantId === null ? (
-        <p><em>Please select a restaurant to view or book.</em></p>
+      {selectedCategoryId === null ? (
+        <p>
+          <em>Please select a booking category to view bookings.</em>
+        </p>
       ) : (
         <RestaurantBookings
           hotelSlug={hotelSlug}
-          restaurantId={selectedRestaurantId}
+          restaurantId={selectedCategoryId} // Keep prop name for now if used internally
           roomNumber={roomNumber}
         />
       )}

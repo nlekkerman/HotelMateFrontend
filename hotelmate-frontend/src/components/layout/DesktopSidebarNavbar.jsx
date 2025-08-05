@@ -178,11 +178,11 @@ const isPartialActive = (path) => {
   return (
     <>
       <nav
-        className={`d-none d-lg-flex flex-column position-relative top-0 start-0 sidebar-nav-desktop vh-100 shadow-sm text-white main-bg ${
+        className={`d-none d-lg-flex flex-column position-relative top-0 start-0 sidebar-nav-desktop vh-100 shadow-lg text-white main-bg ${
           mainColor ? "" : "bg-dark"
         }`}
         style={{
-          width: collapsed ? "90px" : "260px",
+          width: collapsed ? "100px" : "260px",
           backgroundColor: mainColor || undefined,
           transition: "width 0.3s ease",
           zIndex: 1050,

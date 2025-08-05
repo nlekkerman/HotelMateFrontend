@@ -182,7 +182,15 @@ export default function HotelInfo() {
   }, [categoryData]);
 
   // ── Early exits ────────────────────────────────────────────────────
-  if (loadingCategories) return <p>Loading categories…</p>;
+  if (loadingCategories)
+    return (
+      <div className="loading">
+        <div className="text-center">
+          <div className="spinner-border text-dark mb-3" role="status" />
+          <p>Loading Hotel info</p>
+        </div>
+      </div>
+    );
   if (errorCategories) return <p className="text-danger">{errorCategories}</p>;
 
   const getFullImageUrl = (path) => {
@@ -246,8 +254,8 @@ export default function HotelInfo() {
                   <button
                     className={`btn w-100 py-3 shadow-sm fw-semibold ${
                       cat.slug === activeCategory
-                        ? "btn-primary"
-                        : "btn-outline-primary"
+                        ? "main-bg text-white"
+                        : "main-bg-outline"
                     }`}
                     style={{ aspectRatio: "1 / 1", borderRadius: "10px" }}
                     onClick={() => handleCategoryClick(cat)}
@@ -295,7 +303,6 @@ export default function HotelInfo() {
               </div>
             </div>
           </div>
-        
         </>
       )}
 
@@ -326,9 +333,11 @@ export default function HotelInfo() {
         />
       ) : (
         <>
-          {loadingCategoryData && <p>Loading category data…</p>}
+          {loadingCategoryData && (
+            <p className="text-center">Loading category data…</p>
+          )}
           {errorCategoryData && (
-            <p className="text-danger">{errorCategoryData}</p>
+            <p className="text-danger text-center">{errorCategoryData}</p>
           )}
 
           {activeCategory && (

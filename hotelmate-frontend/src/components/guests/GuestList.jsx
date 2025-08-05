@@ -153,9 +153,9 @@ const GuestList = () => {
               
                   <div className="col-lg-1 mb-2 mb-lg-0 flex-grow-1">
                     <div className="d-block d-lg-none">
-                      <strong>Check-In:</strong>{" "}
-                      {g.check_in_date
-                        ? dayjs(g.check_in_date).format("DD/MM/YYYY")
+                      <strong>Check-Out:</strong>{" "}
+                      {g.check_out_date
+                        ? dayjs(g.check_out_date).format("DD/MM/YYYY")
                         : "—"}
                     </div>
                     <div className="d-none d-lg-block">

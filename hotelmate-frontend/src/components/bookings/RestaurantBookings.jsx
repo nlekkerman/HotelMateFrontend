@@ -104,20 +104,27 @@ const renderRow = (booking) => {
     </table>
   );
 
-  if (loading) return <div className="text-center my-4 text-light">Loading…</div>;
+if (loading) {
+  return (
+    <div className="text-center my-4">
+      <div className="spinner-border text-dark mb-2" role="status" />
+      <div className="text-dark">Loading bookings…</div>
+    </div>
+  );
+}
   if (error) return <div className="alert alert-danger">{error}</div>;
 
   return (
     <div className="my-4">
-      <div className="card bg-dark text-light mb-4 shadow">
+      <div className="card  text-light mb-4 shadow">
         <div className="card-header bg-secondary">Today’s Bookings ({displayDate})</div>
-        <div className="card-body p-0">
+        <div className="card-body text-dark p-0">
           {todaysBookings.length > 0 ? renderTable(todaysBookings) : <div className="text-center p-3">No bookings for today.</div>}
         </div>
       </div>
-      <div className="card bg-dark text-light shadow">
-        <div className="card-header bg-secondary">Upcoming Bookings</div>
-        <div className="card-body p-0">
+      <div className="card  text-light shadow">
+        <div className="card-header  bg-secondary">Upcoming Bookings</div>
+        <div className="card-body text-dark p-0">
           {upcomingBookings.length > 0 ? renderTable(upcomingBookings) : <div className="text-center p-3">No upcoming bookings.</div>}
         </div>
       </div>

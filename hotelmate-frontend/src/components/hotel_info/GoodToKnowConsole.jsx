@@ -115,32 +115,33 @@ export default function GoodToKnowConsole() {
       </tr>
     </thead>
     <tbody>
-      {entries.map((entry) => (
-        <tr key={entry.id}>
-          <td>{entry.title}</td>
-          <td>{new Date(entry.created_at).toLocaleDateString()}</td>
-          <td style={{display:"flex", justifyContent:"center"}}>
-            {entry.qr_url ? (
-              <img
-                src={entry.qr_url}
-                alt="QR Code"
-                style={{ height: 60, maxWidth: "100%"}}
-              />
-            ) : (
-              "No QR"
-            )}
-          </td>
-          <td>
-            <button
-              className="btn btn-sm btn-primary me-2"
-              onClick={() => openEditModal(entry.slug)}
-            >
-              Edit
-            </button>
-          </td>
-        </tr>
-      ))}
-    </tbody>
+  {entries.map((entry) => (
+    <tr key={entry.id || entry.slug || `${entry.title}-${entry.created_at}`}>
+      <td>{entry.title}</td>
+      <td>{new Date(entry.created_at).toLocaleDateString()}</td>
+      <td style={{ display: "flex", justifyContent: "center" }}>
+        {entry.qr_url ? (
+          <img
+            src={entry.qr_url}
+            alt="QR Code"
+            style={{ height: 60, maxWidth: "100%" }}
+          />
+        ) : (
+          "No QR"
+        )}
+      </td>
+      <td>
+        <button
+          className="btn btn-sm btn-primary me-2"
+          onClick={() => openEditModal(entry.slug)}
+        >
+          Edit
+        </button>
+      </td>
+    </tr>
+  ))}
+</tbody>
+
   </table>
 </div>
 
@@ -161,7 +162,7 @@ export default function GoodToKnowConsole() {
             </li>
             {[...Array(pageCount)].map((_, idx) => (
               <li
-                key={idx}
+                key={`page-${idx + 1}`}
                 className={`page-item ${page === idx + 1 ? "active" : ""}`}
               >
                 <button className="page-link" onClick={() => setPage(idx + 1)}>

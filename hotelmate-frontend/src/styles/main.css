@@ -56,6 +56,10 @@ body {
 
 .sidebar-nav-desktop .nav-link.bg-opacity-25 {
   background-color: rgba(51, 61, 3, 0.55) !important;
+  max-width: 100%!important;
+  overflow: hidden;
+  margin-right: 10px;
+
 }
 
 .location-modal{
@@ -160,6 +164,10 @@ body.terminal-mode,
 .main-bg {
   background-color: rgba(var(--main-color-rgb), 0.9) !important;
 }
+.main-bg-outline {
+  border: 2px solid rgba(var(--main-color-rgb), 0.9) !important;
+  box-shadow: rgba(var(--main-color-rgb), 0.9);
+}
 .second-text {
   color: var(--secondary-color) !important;
 }
@@ -241,7 +249,7 @@ body.terminal-mode,
   color: #e4e3e3;
   opacity: 1;
 }
-.custom-serach-input-container {
+.custom-search-input-container {
   margin: 0px auto;
   text-align: center;
   border-radius: 15px;
