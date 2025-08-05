@@ -4,12 +4,16 @@ export default function useOrdersWebSocket(orderId, onMessage) {
   useEffect(() => {
     if (!orderId) return;
 
+    const locationProtocol = window.location.protocol;
+    console.log("[WS] window.location.protocol =", locationProtocol);
     console.log("[WS] VITE_WS_HOST =", import.meta.env.VITE_WS_HOST);
 
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const host = import.meta.env.VITE_WS_HOST;
-    const wsUrl = `${protocol}://${host}/ws/orders/${orderId}/`;
+    const protocol = locationProtocol === "https:" ? "wss" : "ws";
 
+    // Fallback to window.location.host if VITE_WS_HOST is undefined or empty
+    const host = import.meta.env.VITE_WS_HOST || window.location.host;
+
+    const wsUrl = `${protocol}://${host}/ws/orders/${orderId}/`;
     console.log(`[WS] connecting to ${wsUrl}`);
 
     const socket = new WebSocket(wsUrl);
