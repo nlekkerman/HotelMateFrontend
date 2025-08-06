@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
-import useOrdersWebSocket from "@/hooks/useOrdersWebSocket"; // <-- import your single order WS hook
 import { useTheme } from "@/context/ThemeContext";
 
 export default function RoomServiceOrders() {
@@ -39,23 +38,7 @@ export default function RoomServiceOrders() {
   // Use WebSocket for first order only, for example
   const firstOrderId = orders.length > 0 ? orders[0].id : null;
 
-  // Listen to updates on the first order
-  useOrdersWebSocket(firstOrderId, (update) => {
-    setOrders((prevOrders) => {
-      const index = prevOrders.findIndex((o) => o.id === update.id);
-      if (index === -1) return prevOrders; // no such order, ignore
-
-      // If order completed, remove it
-      if (update.status === "completed") {
-        return prevOrders.filter((o) => o.id !== update.id);
-      }
-
-      // Otherwise, update order status and other fields if needed
-      const updatedOrders = [...prevOrders];
-      updatedOrders[index] = { ...updatedOrders[index], ...update };
-      return updatedOrders;
-    });
-  });
+ 
 
   const handleStatusChange = (order, newStatus) => {
     const prev = order.status;
