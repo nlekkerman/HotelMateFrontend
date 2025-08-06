@@ -15,8 +15,8 @@ export default defineConfig({
       "/api": "http://localhost:8000",
       "/ws": {
         target: "http://localhost:8000",
-        ws: true, // Enable websocket proxying
-        changeOrigin: true, // Recommended for CORS
+        ws: true,
+        changeOrigin: true,
       },
     },
   },
