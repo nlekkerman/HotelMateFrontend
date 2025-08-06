@@ -2,47 +2,37 @@ import { useEffect } from "react";
 
 export default function useOrdersWebSocket(orderId, onMessage) {
   useEffect(() => {
-    if (!orderId) return;
+  if (!orderId) return;
 
-    const locationProtocol = window.location.protocol;
-    console.log("[WS] window.location.protocol =", locationProtocol);
-    console.log("[WS] VITE_WS_HOST =", import.meta.env.VITE_WS_HOST);
+  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+  const host = window.location.host;
+  const wsUrl = `${protocol}://${host}/ws/orders/${orderId}/`;
 
-    const protocol = locationProtocol === "https:" ? "wss" : "ws";
+  console.log(`[WS] Connecting to ${wsUrl}`);
+  const socket = new WebSocket(wsUrl);
 
-    // Fallback to window.location.host if VITE_WS_HOST is undefined or empty
-    const host = import.meta.env.VITE_WS_HOST || window.location.host;
+  socket.onopen = () => {
+    console.log("[WS] connection opened");
+  };
 
-    const wsUrl = `${protocol}://${host}/ws/orders/${orderId}/`;
-    console.log(`[WS] connecting to ${wsUrl}`);
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    console.log("[WS] message received:", data);
+    onMessage?.(data);
+  };
 
-    const socket = new WebSocket(wsUrl);
+  socket.onerror = (err) => {
+    console.error("[WS] error:", err);
+  };
 
-    socket.onopen = () => {
-      console.log("[WS] connection opened");
-    };
+  socket.onclose = (ev) => {
+    console.log(`[WS] closed (code=${ev.code} reason=${ev.reason})`);
+  };
 
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log("[WS] message received:", data);
-        onMessage?.(data);
-      } catch (err) {
-        console.error("[WS] JSON parse error:", err, "raw data:", event.data);
-      }
-    };
+  return () => {
+    console.log("[WS] closing socket");
+    socket.close();
+  };
+}, [orderId, onMessage]);
 
-    socket.onerror = (err) => {
-      console.error("[WS] error:", err);
-    };
-
-    socket.onclose = (ev) => {
-      console.log(`[WS] closed (code=${ev.code} reason=${ev.reason})`);
-    };
-
-    return () => {
-      console.log("[WS] closing socket");
-      socket.close();
-    };
-  }, [orderId, onMessage]);
 }

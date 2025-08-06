@@ -13,11 +13,8 @@ export default defineConfig({
   server: {
     // 🔧 Disable HTTPS for local development
     proxy: {
-      "/api": "http://localhost:8000", // Proxy /api requests to your backend
-      "/ws": {
-        target: "ws://localhost:8000",
-        ws: true, // <-- this enables WebSocket proxying
-      },
+      "/api": "http://localhost:8000",
+      
     },
   },
   build: {
