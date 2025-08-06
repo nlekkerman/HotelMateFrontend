@@ -11,12 +11,16 @@ export default defineConfig({
   },
   assetsInclude: ["**/*.lottie"],
   server: {
-    // 🔧 Disable HTTPS for local development
     proxy: {
       "/api": "http://localhost:8000",
-      
+      "/ws": {
+        target: "http://localhost:8000",
+        ws: true, // Enable websocket proxying
+        changeOrigin: true, // Recommended for CORS
+      },
     },
   },
+
   build: {
     chunkSizeWarningLimit: 1000, // 🔧 Increase chunk warning threshold from 500kB to 1000kB
     rollupOptions: {
