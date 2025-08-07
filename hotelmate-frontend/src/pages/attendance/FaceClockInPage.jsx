@@ -1,7 +1,7 @@
 // src/pages/attendance/FaceClockInPage.jsx
 import React, { useRef, useState, useEffect } from "react";
 import Webcam from "react-webcam";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import api from "@/services/api";
 
 export default function FaceClockInPage() {
@@ -10,6 +10,7 @@ export default function FaceClockInPage() {
 
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
+const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState("idle");
@@ -134,7 +135,17 @@ export default function FaceClockInPage() {
 
   return (
     <div className="face-terminal clock-in-overlay text-light">
+      <div className="text-end bg-white mb-3">
+        <button
+          className="btn text-dark"
+          onClick={() => navigate("/")}
+        >
+          
+          Close
+        </button>
+      </div>
       {!modelsLoaded && <h4>Loading face‑api models…</h4>}
+      
       <Webcam
         audio={false}
         ref={webcamRef}

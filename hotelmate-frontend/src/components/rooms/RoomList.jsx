@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import api from "@/services/api";
-import { useQrPdfPrinter } from "@/hooks/useQrPdfPrinter";
+import { useQrPdfPrinter } from "@/components/rooms/hooks/useQrPdfPrinter";
 import CheckoutRoomsPanel from "@/components/rooms/CheckoutRoomsPanel";
 import RoomCard from "@/components/rooms/RoomCard";
 

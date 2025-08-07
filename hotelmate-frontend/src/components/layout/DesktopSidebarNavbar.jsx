@@ -297,70 +297,81 @@ const isPartialActive = (path) => {
                 "chef",
               ]) && (
                 <li className="nav-item" ref={servicesRef}>
-                  <div
-                    className={`nav-link text-white d-flex align-items-center justify-content-between ${
-                      isPartialActive("/services") ? "bg-opacity-25" : ""
-                    }`}
-                    style={{ cursor: "default" }}
-                    onClick={() => setFlyoutOpen(!flyoutOpen)}
-                  >
-                    <div>
-                      <i className="bi bi-cup-hot me-2" />
-                      {!collapsed && "Services"}
-                    </div>
-                    {totalServiceCount > 0 && (
-                      <span className="badge bg-danger ms-2">
-                        {totalServiceCount}
-                      </span>
-                    )}
-                  </div>
+  <div
+    className={`nav-link text-white d-flex align-items-center justify-content-between ${
+      isPartialActive("/services") ? "bg-opacity-25" : ""
+    }`}
+    style={{ cursor: "pointer" }}
+    onClick={() => setFlyoutOpen(!flyoutOpen)}
+  >
+    <div className="d-flex align-items-center">
+      <i className="bi bi-cup-hot me-2" />
+      {!collapsed && "Services"}
+    </div>
+    
+    <div className="d-flex align-items-center">
+      {totalServiceCount > 0 && (
+        <span className="badge bg-danger me-2">
+          {totalServiceCount}
+        </span>
+      )}
+      {!collapsed && (
+        <i
+          className={`bi ${
+            flyoutOpen ? "bi-chevron-up" : "bi-chevron-down"
+          } transition-transform`}
+        />
+      )}
+    </div>
+  </div>
 
-                  {flyoutOpen && (
-                    <ul className="nav flex-column mt-1">
-                      <li className="nav-item">
-                        <Link
-                          className={`nav-link text-white ${
-                            isPartialActive("/services/room-service") ? "bg-opacity-25" : ""
-                          } d-flex align-items-center justify-content-between`}
-                          to="/services/room-service"
-                          onClick={() => setCollapsed(true)}
-                          style={{ whiteSpace: "nowrap" }}
-                        >
-                          <div>
-                            <i className="bi bi-box me-2" />
-                            {!collapsed && "Room Service"}
-                          </div>
-                          {roomServiceCount > 0 && (
-                            <span className="badge bg-danger ms-2">
-                              {roomServiceCount}
-                            </span>
-                          )}
-                        </Link>
-                      </li>
+  {flyoutOpen && (
+    <ul className="nav flex-column mt-1">
+      <li className="nav-item">
+        <Link
+          className={`nav-link text-white ${
+            isPartialActive("/services/room-service") ? "bg-opacity-25" : ""
+          } d-flex align-items-center justify-content-between`}
+          to="/services/room-service"
+          onClick={() => setCollapsed(true)}
+          style={{ whiteSpace: "nowrap" }}
+        >
+          <div>
+            <i className="bi bi-box me-2 ms-2" />
+            {!collapsed && "Room Service"}
+          </div>
+          {roomServiceCount > 0 && (
+            <span className="badge bg-danger ms-2">
+              {roomServiceCount}
+            </span>
+          )}
+        </Link>
+      </li>
 
-                      <li className="nav-item">
-                        <Link
-                          className={`nav-link text-white ${
-                            isPartialActive("/services/breakfast") ? "bg-opacity-25" : ""
-                          } d-flex align-items-center justify-content-between`}
-                          to="/services/breakfast"
-                          onClick={() => setCollapsed(true)}
-                          style={{ whiteSpace: "nowrap" }}
-                        >
-                          <div>
-                            <i className="bi bi-egg-fried me-2" />
-                            {!collapsed && "Breakfast"}
-                          </div>
-                          {breakfastCount > 0 && (
-                            <span className="badge bg-danger ms-2">
-                              {breakfastCount}
-                            </span>
-                          )}
-                        </Link>
-                      </li>
-                    </ul>
-                  )}
-                </li>
+      <li className="nav-item">
+        <Link
+          className={`nav-link text-white ${
+            isPartialActive("/services/breakfast") ? "bg-opacity-25" : ""
+          } d-flex align-items-center justify-content-between`}
+          to="/services/breakfast"
+          onClick={() => setCollapsed(true)}
+          style={{ whiteSpace: "nowrap" }}
+        >
+          <div>
+            <i className="bi bi-egg-fried me-2 ms-2" />
+            {!collapsed && "Breakfast"}
+          </div>
+          {breakfastCount > 0 && (
+            <span className="badge bg-danger ms-2">
+              {breakfastCount}
+            </span>
+          )}
+        </Link>
+      </li>
+    </ul>
+  )}
+</li>
+
               )}
 
               {/* Show Settings only if user is Django superuser */}

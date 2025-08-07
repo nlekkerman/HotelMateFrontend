@@ -66,8 +66,8 @@ function Search({
         {results.map((room) => (
           <div key={room.id} className="col">
             <div className="card h-100 border-0 shadow-sm hover-shadow">
-              <div className="card-body">
-                <h5 className="card-title text-primary">
+              <div className="card-body p-0">
+                <h5 className="card-title text-primary main-bg m-1 rounded p-1 text-white text-center">
                   Room {room.room_number}
                 </h5>
                 <p className="card-text mb-3">
@@ -78,9 +78,9 @@ function Search({
                   {room.is_occupied ? "Yes" : "No"}
                 </p>
 
-                <div className="d-grid">
+                <div className="d-flex justify-content-center">
                   <button
-                    className="btn btn-outline-primary"
+                    className="btn custom-button m-5 main-bg text-white"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate(`/rooms/${room.room_number}/add-guest`);
