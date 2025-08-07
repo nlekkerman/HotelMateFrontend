@@ -13,6 +13,7 @@ export default function RestaurantReservationDetails({ booking, onClose }) {
     restaurant,
     room,
     guest,
+    voucher_code, // ✅ Add voucher_code here
   } = booking;
 
   const {
@@ -23,11 +24,11 @@ export default function RestaurantReservationDetails({ booking, onClose }) {
   } = seats || {};
 
   return (
-    <Card className="bg-white text-dark shadow-sm mb-4 border-0">
-      <Card.Header className="bg-dark text-white d-flex justify-content-between align-items-center">
+    <Card className="bg-white text-dark shadow-sm mb-4 border-0 d-flex flex-column w-100">
+      <Card.Header className="main-bg text-white d-flex justify-content-between align-items-center">
         <h5 className="mb-0">🍽️ Reservation Details</h5>
         {onClose && (
-          <Button variant="outline-light" size="sm" onClick={onClose}>
+          <Button variant="outline-light" size="sm" onClick={onClose} className="ms-2">
             ✕
           </Button>
         )}
@@ -62,6 +63,16 @@ export default function RestaurantReservationDetails({ booking, onClose }) {
           </Col>
         </Row>
 
+        {/* ✅ Voucher code row */}
+        {voucher_code && (
+          <Row className="mb-3">
+            <Col>
+              <strong>Voucher Code:</strong>{" "}
+              <Badge bg="primary">{voucher_code}</Badge>
+            </Col>
+          </Row>
+        )}
+
         <Row className="mb-3">
           <Col>
             <strong>Note:</strong> {note || "None"}
@@ -72,16 +83,16 @@ export default function RestaurantReservationDetails({ booking, onClose }) {
 
         <Row className="text-center">
           <Col>
-            <Badge bg="secondary" pill>🧮 Total: {total}</Badge>
+            <Badge bg="secondary" className="p-2" pill>🧮 Total: {total}</Badge>
           </Col>
           <Col>
-            <Badge bg="success" pill>👨 Adults: {adults}</Badge>
+            <Badge bg="success" className="p-2" pill>👨 Adults: {adults}</Badge>
           </Col>
           <Col>
-            <Badge bg="info" pill>🧒 Children: {children}</Badge>
+            <Badge bg="primary" className="p-2" pill>🧒 Children: {children}</Badge>
           </Col>
           <Col>
-            <Badge bg="warning" pill>👶 Infants: {infants}</Badge>
+            <Badge bg="danger" className="p-2" pill>👶 Infants: {infants}</Badge>
           </Col>
         </Row>
       </Card.Body>
