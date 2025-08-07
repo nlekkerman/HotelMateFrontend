@@ -8,6 +8,7 @@ export default function HotelInfoCreateForm({ hotelSlug, onSuccess, onClose }) {
   const [description, setDescription] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [eventTime, setEventTime] = useState("");
+   const [endTime, setEndTime] = useState("");
   const [image, setImage] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -43,6 +44,7 @@ export default function HotelInfoCreateForm({ hotelSlug, onSuccess, onClose }) {
       formData.append("description", description);
       formData.append("event_date", eventDate);
       formData.append("event_time", eventTime);
+      formData.append("end_time", endTime); 
       if (image) formData.append("image", image);
 
       const res = await api.post("/hotel_info/hotelinfo/", formData, {
@@ -60,7 +62,7 @@ export default function HotelInfoCreateForm({ hotelSlug, onSuccess, onClose }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mb-3">
+    <form onSubmit={handleSubmit} className="mb-3 m-5">
       <div className="mb-2">
         <label className="form-label">Category</label>
         <select
@@ -115,6 +117,15 @@ export default function HotelInfoCreateForm({ hotelSlug, onSuccess, onClose }) {
           onChange={(e) => setEventTime(e.target.value)}
         />
       </div>
+      <div className="mb-2">                         {/* <-- New input for end_time */}
+        <label className="form-label">End Time</label>
+        <input
+          type="time"
+          className="form-control"
+          value={endTime}
+          onChange={e => setEndTime(e.target.value)}
+        />
+      </div>
       <div className="mb-2">
         <label className="form-label">Image</label>
         <input
@@ -125,8 +136,8 @@ export default function HotelInfoCreateForm({ hotelSlug, onSuccess, onClose }) {
         />
       </div>
       {error && <div className="text-danger mb-2">{error}</div>}
-      <div className="d-flex gap-2">
-        <button className="btn btn-primary" type="submit" disabled={saving}>
+      <div className="d-flex justify-content-center  gap-2">
+        <button className="btn btn-primary mt-3" type="submit" disabled={saving}>
           {saving ? "Creating..." : "Create Info"}
         </button>
         {onClose && (

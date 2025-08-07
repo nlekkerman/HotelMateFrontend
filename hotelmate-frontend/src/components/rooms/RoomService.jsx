@@ -15,12 +15,12 @@ export default function RoomService({ isAdmin }) {
   const [orderItems, setOrderItems] = useState({});
   const [currentOrder, setCurrentOrder] = useState(null);
   const currentOrderId = currentOrder?.id ?? null;
-
+/*
 useOrdersWebSocket(currentOrderId, (data) => {
   setCurrentOrder((prev) =>
     prev && prev.id === data.id ? { ...prev, status: data.status } : prev
   );
-});
+});*/
   const [previousOrders, setPreviousOrders] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);

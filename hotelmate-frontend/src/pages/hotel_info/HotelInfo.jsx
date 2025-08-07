@@ -5,7 +5,7 @@ import api from "@/services/api";
 import HotelInfoCreateForm from "@/components/hotel_info/HotelInfoCreateForm";
 import HotelInfoModal from "@/components/modals/HotelInfoModal.jsx";
 import CreateCategoryForm from "@/components/hotel_info/CreateCategoryForm";
-// import GenerateQrForm from "@/components/hotel_info/GenerateQrForm"; // <-- REMOVE THIS
+import HotelInfoEditModal from "@/components/hotel_info/modals/HotelInfoEditModal";
 
 export default function HotelInfo() {
   const { hotel_slug, category } = useParams();
@@ -28,7 +28,9 @@ export default function HotelInfo() {
   const [categoryQr, setCategoryQr] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  const CLOUD_BASE = "https://res.cloudinary.com/dg0ssec7u/";
+  const CLOUD_BASE = import.meta.env.VITE_CLOUDINARY_BASE;
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
 
   // ── 1) Fetch categories ────────────────────────────────────────────
   const fetchCategories = useCallback(async () => {
@@ -236,7 +238,11 @@ export default function HotelInfo() {
       console.error("Failed to download all QR codes", err);
     }
   };
-
+  const openEditModal = (item) => {
+    console.log("Opening edit modal for item:", item);
+    setEditingItem(item);
+    setShowEditModal(true);
+  };
   // ── Render ─────────────────────────────────────────────────────────
   return (
     <div className="my-4 w-100">
@@ -304,6 +310,24 @@ export default function HotelInfo() {
             </div>
           </div>
         </>
+      )}
+
+      {showEditModal && editingItem && categories.length > 0 && (
+        <HotelInfoEditModal
+          initialData={{
+            ...editingItem,
+            category:
+              editingItem.category_slug || // if you already have slug
+              categories.find((cat) => cat.id === editingItem.category)?.slug ||
+              editingItem.category, // fallback
+          }}
+          hotelSlug={hotelSlug}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={() => {
+            setShowEditModal(false);
+            fetchCategoryData();
+          }}
+        />
       )}
 
       {/* MODALS */}
@@ -391,9 +415,62 @@ export default function HotelInfo() {
                             const img =
                               getFullImageUrl(item.image) ||
                               "https://via.placeholder.com/400x250?text=No+Image";
+
+                            // Helper function to format date dd/mm/yy
+                            const formatDate = (dateStr) => {
+                              if (!dateStr) return "";
+                              const d = new Date(dateStr);
+                              const day = String(d.getDate()).padStart(2, "0");
+                              const month = String(d.getMonth() + 1).padStart(
+                                2,
+                                "0"
+                              );
+                              const year = String(d.getFullYear()).slice(-2);
+                              return `${day}/${month}/${year}`;
+                            };
+
+                            // Helper function to format time hh:mm (24-hour)
+                            const formatTime = (timeStr) => {
+                              if (!timeStr) return "";
+                              const t = new Date(`1970-01-01T${timeStr}`);
+                              const hours = String(t.getHours()).padStart(
+                                2,
+                                "0"
+                              );
+                              const minutes = String(t.getMinutes()).padStart(
+                                2,
+                                "0"
+                              );
+                              return `${hours}:${minutes}`;
+                            };
+
+                            const eventDateFormatted = formatDate(
+                              item.event_date
+                            );
+                            const eventTimeFormatted = formatTime(
+                              item.event_time
+                            );
+                            const endTimeFormatted = formatTime(item.end_time);
+
                             return (
                               <div key={item.id} className="col">
                                 <div className="card h-100 shadow-sm">
+                                  <button
+                                    className="btn btn-sm btn-outline-primary mt-2"
+                                    onClick={() => openEditModal(item)}
+                                  >
+                                    Edit
+                                  </button>
+                                  <div className="card-header text-center bold main-bg text-white">
+                                    {eventDateFormatted} @{" "}
+                                    {eventTimeFormatted
+                                      ? `${eventTimeFormatted}${
+                                          endTimeFormatted
+                                            ? ` - ${endTimeFormatted}`
+                                            : ""
+                                        }`
+                                      : "TBA"}
+                                  </div>
                                   <img
                                     src={img}
                                     className="card-img-top"
@@ -408,10 +485,6 @@ export default function HotelInfo() {
                                     <p className="card-text flex-grow-1">
                                       {item.description}
                                     </p>
-                                  </div>
-                                  <div className="card-footer text-muted small">
-                                    {item.event_date} @{" "}
-                                    {item.event_time || "TBA"}
                                   </div>
                                 </div>
                               </div>

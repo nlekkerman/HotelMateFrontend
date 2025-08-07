@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import RoomQr from "./RoomQr";
+import { useSingleRoomQrPdfPrinter } from "@/components/rooms/hooks/useSingleRoomQrPdfPrinter";
 
 const RoomCard = ({ room, selectedRooms, onSelect }) => {
   const navigate = useNavigate();
   const [qrType, setQrType] = useState("");
+const { generateSingleRoomQrPdf } = useSingleRoomQrPdfPrinter();
 
   const handleQrChange = (e) => {
     setQrType(e.target.value);
@@ -38,7 +40,7 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
     >
       <div className="card h-100 shadow-sm">
         <div className="card-body d-flex flex-column">
-          <h5 className="card-title mb-3 text-center text-white fw-bold py-2 bg-warning">
+          <h5 className="card-title mb-3 text-center text-white fw-bold py-2 main-bg">
             Room {room.room_number}
           </h5>
           <p className="card-text mb-3">
@@ -68,7 +70,17 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
 
   {qrType && <RoomQr type={qrType} url={qrMap[qrType]} />}
 </div>
-
+{/* Download button for all QR codes for this room */}
+  <button
+    className="btn btn-sm btn-outline-primary mt-2"
+    onClick={(e) => {
+      e.stopPropagation();
+      generateSingleRoomQrPdf(room);
+    }}
+  >
+    <i className="bi bi-download me-1" />
+    Download QR PDF
+  </button>
           {/* Checkbox */}
           <div
             className="form-check m-2 text-black bg-light p-1 rounded"

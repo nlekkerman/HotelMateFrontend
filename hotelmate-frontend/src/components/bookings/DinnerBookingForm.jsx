@@ -14,6 +14,7 @@ const DinnerBookingForm = () => {
     adults: 1,
     children: 0,
     infants: 0,
+    voucher_code: "",
   });
 
   const [submitted, setSubmitted] = useState(false);
@@ -65,6 +66,7 @@ const DinnerBookingForm = () => {
         date: formattedDate,
         time: formData.time,
         note: formData.note,
+        voucher_code: formData.voucher_code || null,
         seats: {
           adults: Number(formData.adults),
           children: Number(formData.children),
@@ -150,6 +152,17 @@ const DinnerBookingForm = () => {
               placeholder="Any special requests?"
             />
           </div>
+<div className="mb-3">
+  <label className="form-label">Voucher Code</label>
+  <input
+    type="text"
+    name="voucher_code"
+    value={formData.voucher_code}
+    onChange={handleChange}
+    className="form-control"
+    placeholder="Enter voucher code (if any)"
+  />
+</div>
 
           <div className="row mb-3">
             {["adults", "children", "infants"].map((field) => (

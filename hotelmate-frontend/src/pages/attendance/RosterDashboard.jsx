@@ -33,7 +33,7 @@ export default function RosterDashboard() {
       <h1 className="text-2xl font-bold text-center">📋 Roster Management</h1>
 
       {/* Department Dropdown */}
-      <div className="mb-3 d-flex flex-column align-items-start">
+      <div className="mb-3 d-flex flex-column align-items-center mt-5">
         <label
           htmlFor="departmentSelect"
           className="form-label text-muted small"
