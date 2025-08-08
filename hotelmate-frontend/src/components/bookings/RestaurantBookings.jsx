@@ -23,8 +23,9 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
         if (Array.isArray(data.results)) {
           allResults.push(...data.results);
           if (data.next) {
-            await fetchAllPages(data.next);
-
+            await fetchAllPages(
+              data.next.replace(api.defaults.baseURL + "/", "")
+            );
           }
         }
       } catch (err) {
