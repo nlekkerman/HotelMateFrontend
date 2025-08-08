@@ -9,7 +9,7 @@ export default function LogoBanner() {
   return (
     <div className="hotel-logo-banner ">
       <img
-        className="hotel-logo-image rounded-pill"
+        className="hotel-logo-image rounded-pill p-2"
         src={hotelLogo}
         alt={`${hotelName || "Hotel"} logo`}
         onError={(e) => {

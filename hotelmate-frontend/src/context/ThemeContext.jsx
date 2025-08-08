@@ -5,8 +5,11 @@ import api from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 
 const ThemeContext = createContext({
-  mainColor: "#000000ff",
+  mainColor: "#3498db",
   secondaryColor: "#2ecc71",
+  buttonColor: "#004faf",
+  buttonTextColor: "#ffffff",
+  buttonHoverColor: "#0066cc",
   setTheme: () => Promise.resolve(),
   themeLoading: true,
 });
@@ -16,7 +19,7 @@ export function ThemeProvider({ children }) {
   const { user } = useAuth();
   const hotelSlug = user?.hotel_slug;
 
-  // 1️⃣ Fetch the theme for this hotel
+  // 1️⃣ Fetch theme
   const { data, isLoading } = useQuery({
     queryKey: ["theme", hotelSlug],
     queryFn: async () => {
@@ -27,75 +30,62 @@ export function ThemeProvider({ children }) {
     refetchOnWindowFocus: false,
   });
 
-  // 2️⃣ Mutation to update the theme
+  // 2️⃣ Apply CSS variables
+  const applyTheme = (theme) => {
+    if (!theme) return;
+    const hexToRgb = (hex) => {
+      const shorthand = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+      hex = hex.replace(shorthand, (_, r, g, b) => r + r + g + g + b + b);
+      const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return m
+        ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}`
+        : "";
+    };
+
+    document.documentElement.style.setProperty("--main-color", theme.main_color);
+    document.documentElement.style.setProperty("--secondary-color", theme.secondary_color);
+    document.documentElement.style.setProperty("--button-color", theme.button_color);
+    document.documentElement.style.setProperty("--button-text-color", theme.button_text_color);
+    document.documentElement.style.setProperty("--button-hover-color", theme.button_hover_color);
+
+    document.documentElement.style.setProperty("--main-color-rgb", hexToRgb(theme.main_color));
+    document.documentElement.style.setProperty("--secondary-color-rgb", hexToRgb(theme.secondary_color));
+  };
+
+  // 3️⃣ Apply on load
+  useEffect(() => {
+    if (!isLoading && data) {
+      applyTheme(data);
+      const splash = document.getElementById("splash");
+      if (splash) splash.remove();
+    }
+  }, [isLoading, data]);
+
+  // 4️⃣ Save
   const mutation = useMutation({
-    mutationFn: ({ main_color, secondary_color, id }) =>
-      api.patch(`/theme/${id}/`, { main_color, secondary_color }),
+    mutationFn: (updatedTheme) =>
+      api.patch(`/theme/${data.id}/`, updatedTheme),
     onSuccess: (res) => {
-      const { main_color, secondary_color } = res.data;
-      document.documentElement.style.setProperty("--main-color", main_color);
-      document.documentElement.style.setProperty("--secondary-color", secondary_color);
-
-      const hexToRgb = (hex) => {
-        const shorthand = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-        hex = hex.replace(shorthand, (_, r, g, b) => r + r + g + g + b + b);
-        const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return m
-          ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}`
-          : "";
-      };
-
-      document.documentElement.style.setProperty(
-        "--main-color-rgb",
-        hexToRgb(main_color)
-      );
-      document.documentElement.style.setProperty(
-        "--secondary-color-rgb",
-        hexToRgb(secondary_color)
-      );
-
+      applyTheme(res.data);
       queryClient.invalidateQueries({ queryKey: ["theme", hotelSlug] });
     },
   });
 
-  // 3️⃣ When the theme data initially loads, apply it & remove the splash
-  useEffect(() => {
-    if (isLoading) return;
-    if (data) {
-      const hexToRgb = (hex) => {
-        const shorthand = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-        hex = hex.replace(shorthand, (_, r, g, b) => r + r + g + g + b + b);
-        const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return m
-          ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}`
-          : "";
-      };
-
-      document.documentElement.style.setProperty("--main-color", data.main_color);
-      document.documentElement.style.setProperty(
-        "--secondary-color",
-        data.secondary_color
-      );
-      document.documentElement.style.setProperty(
-        "--main-color-rgb",
-        hexToRgb(data.main_color)
-      );
-      document.documentElement.style.setProperty(
-        "--secondary-color-rgb",
-        hexToRgb(data.secondary_color)
-      );
-    }
-    const splash = document.getElementById("splash");
-    if (splash) splash.remove();
-  }, [isLoading, data]);
-
-  // 4️⃣ Expose a setter for updating theme
-  const setTheme = ({ mainColor, secondaryColor }) => {
+  const setTheme = ({
+    mainColor,
+    secondaryColor,
+    buttonColor,
+    buttonTextColor,
+    buttonHoverColor,
+  }) => {
     if (!data) return Promise.resolve();
     return mutation.mutateAsync({
       id: data.id,
       main_color: mainColor,
       secondary_color: secondaryColor,
+      button_color: buttonColor,
+      button_text_color: buttonTextColor,
+      button_hover_color: buttonHoverColor,
     });
   };
 
@@ -104,6 +94,9 @@ export function ThemeProvider({ children }) {
       value={{
         mainColor: data?.main_color || "#3498db",
         secondaryColor: data?.secondary_color || "#2ecc71",
+        buttonColor: data?.button_color || "#004faf",
+        buttonTextColor: data?.button_text_color || "#ffffff",
+        buttonHoverColor: data?.button_hover_color || "#0066cc",
         setTheme,
         themeLoading: isLoading || mutation.isLoading,
       }}

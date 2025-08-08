@@ -7,10 +7,10 @@ export default function CopyPeriodModal({
   hotelSlug,
   department,
   currentPeriod,
-  onContinue, // callback with selectedPeriodId
+  onContinue,
 }) {
   const [selectedPeriodId, setSelectedPeriodId] = useState(null);
-
+const [loading, setLoading] = useState(false);
   useEffect(() => {
     if (show) {
       console.log("🟢 MODAL OPENED");
@@ -71,21 +71,34 @@ export default function CopyPeriodModal({
           >
             Cancel
           </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={!selectedPeriodId}
-            onClick={() => {
-              if (selectedPeriodId) {
-                onContinue?.(selectedPeriodId);
-                onClose();
-              } else {
-                alert("Please select a period.");
-              }
-            }}
-          >
-            Continue
-          </button>
+          const [loading, setLoading] = useState(false);
+
+...
+
+<button
+  type="button"
+  className="btn btn-primary"
+  disabled={!selectedPeriodId || loading}
+  onClick={async () => {
+    if (!selectedPeriodId) {
+      alert("Please select a period.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await onContinue?.(selectedPeriodId); // wait for copy to finish
+      onClose(); // ✅ only close if success
+    } catch (err) {
+      alert("Copy failed. Please try again.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }}
+>
+  {loading ? "Copying..." : "Continue"}
+</button>
+
         </div>
       </div>
     </div>

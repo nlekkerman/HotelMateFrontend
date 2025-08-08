@@ -47,12 +47,15 @@ const GuestEdit = () => {
     }
   };
 
-  if (loading) return <div className="loading">
-      <div className="text-center">
-        <div className="spinner-border text-dark mb-3" role="status" />
-        <p>Loading Hotel info</p>
+  if (loading)
+    return (
+      <div className="loading">
+        <div className="text-center">
+          <div className="spinner-border text-dark mb-3" role="status" />
+          <p>Loading Hotel info</p>
+        </div>
       </div>
-    </div>;;
+    );
   if (error) return <p className="text-danger">{error}</p>;
 
   return (
@@ -62,7 +65,7 @@ const GuestEdit = () => {
         {[
           ["First Name", "first_name"],
           ["Last Name", "last_name"],
-    
+
           ["Days Booked", "days_booked"],
           ["Check-In Date", "check_in_date"],
           ["Check-Out Date", "check_out_date"],
@@ -85,10 +88,11 @@ const GuestEdit = () => {
             />
           </div>
         ))}
-
-        <button type="submit" className="btn btn-primary">
-          Save Changes
-        </button>
+        <div className="buttons-container">
+          <button type="submit" className="btn custom-button">
+            Save Changes
+          </button>
+        </div>
       </form>
     </div>
   );

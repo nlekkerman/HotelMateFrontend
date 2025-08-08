@@ -33,7 +33,7 @@ const CheckoutRoomsPanel = ({ hotelSlug, token }) => {
     <div className="container my-4">
       <div className="d-flex justify-content-start align-items-center mb-3">
         <button
-          className={`btn ${dueCount > 0 ? "btn-danger" : "btn-outline-secondary"}`}
+          className={`btn ${dueCount > 0 ? "btn-danger" : "custom-button"}`}
           onClick={() => setShowList(!showList)}
           disabled={dueCount === 0}
         >

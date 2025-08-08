@@ -21,11 +21,14 @@ export default function ShiftCell({
   const key = `${staff.id}_${dateStr}`;
 
   const server = baseRoster[key] || [];
-  const localForKey = localShifts.filter(
-    (s) =>
-      (s.staff_id || s.staff) === staff.id &&
-      s.shift_date.slice(0, 10) === dateStr
-  );
+  const safeLocalShifts = Array.isArray(localShifts) ? localShifts : [];
+
+const localForKey = safeLocalShifts.filter(
+  (s) =>
+    (s.staff_id || s.staff) === staff.id &&
+    s.shift_date?.slice(0, 10) === dateStr
+);
+
 
   const shiftKey = (s) =>
     `${s.shift_start?.slice(0, 5)}_${s.shift_end?.slice(0, 5)}_${
