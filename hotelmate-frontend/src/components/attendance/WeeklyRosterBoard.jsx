@@ -1,14 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
-import {  parseISO,addDays, startOfWeek, format, differenceInMinutes, differenceInCalendarDays } from "date-fns";
+import { addDays, startOfWeek, format, differenceInMinutes } from "date-fns";
+
 import RosterPeriodSelector from "@/components/attendance/RosterPeriodSelector";
 import ShiftModal from "@/components/modals/ShiftModal";
 import ShiftCell from "@/components/attendance/ShiftCell";
 import useRoster from "@/hooks/useRoster";
 import useCopyRoster from "@/components/attendance/hooks/useCopyRoster";
+import useCopyDayForAll from "@/components/attendance/hooks/useCopyDayForAll";
 import RosterAnalytics from "@/components/analytics/RosterAnalytics";
 import ShiftLocationBar from "@/components/attendance/ShiftLocationBar";
 import { FaUserCircle } from "react-icons/fa";
 import CopyPeriodModal from "@/components/attendance/modals/CopyPeriodModal";
+import CopyDayModal from "@/components/attendance/modals/CopyDayModal";
+import SuccessModal from "@/components/modals/SuccessModal";
 import api from "@/services/api";
 
 export default function WeeklyRosterBoard({
@@ -45,40 +49,44 @@ export default function WeeklyRosterBoard({
     onSubmitSuccess,
   });
 
-   // Call the hook with needed arguments
-  const { copyRoster, loading: copyLoading, error: copyError } = useCopyRoster({
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const {
+    copyAndSaveRoster,
+    loading: copyLoading,
+    error: copyError,
+  } = useCopyRoster({
     hotelSlug,
-    fetchShifts,
     onCopySuccess: () => {
-      alert("Roster copied successfully");
       setShowCopyModal(false);
-      // Optionally, refresh shifts or update local state here
+      setShowSuccessModal(true);
     },
-    onCopyError: (err) => {
-      alert(`Failed to copy roster: ${err.message || err}`);
-    },
+    onCopyError: (err) => alert(`Failed to copy roster: ${err.message || err}`),
   });
-const [localShiftsByPeriod, setLocalShiftsByPeriod] = useState({});
+  const { copyDayForAll, loading, error } = useCopyDayForAll(hotelSlug);
+  // Manage local shifts per period to persist changes locally by period ID
+  const [localShiftsByPeriod, setLocalShiftsByPeriod] = useState({});
 
-  // Then, derive the current period's local shifts like this:
-  const localShiftsForCurrentPeriod = localShiftsByPeriod[period?.id] || [];
-
-useEffect(() => {
-    const shiftsForCurrentPeriod = localShiftsByPeriod[period?.id] || [];
+  useEffect(() => {
+    const shiftsForCurrentPeriod = localShiftsByPeriod[period?.id] ?? [];
     setLocalShifts(shiftsForCurrentPeriod);
   }, [period?.id, localShiftsByPeriod, setLocalShifts]);
-  
-  const [showCopyModal, setShowCopyModal] = useState(false);
 
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  const [copyDayModal, setCopyDayModal] = useState({
+    show: false,
+    sourceDate: null,
+  });
+  const [locations, setLocations] = useState([]);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+
+  // Cloudinary image url builder
   const cloudinaryBase = import.meta.env.VITE_CLOUDINARY_BASE || "";
   const buildImageUrl = (img) => {
     if (!img || typeof img !== "string") return null;
-    if (img.startsWith("data:")) return img;
-    if (/^https?:\/\//i.test(img)) return img;
+    if (img.startsWith("data:") || /^https?:\/\//i.test(img)) return img;
     return cloudinaryBase ? `${cloudinaryBase}${img}` : img;
   };
-  const [locations, setLocations] = useState([]);
-  const [showAnalytics, setShowAnalytics] = useState(false);
 
   useEffect(() => {
     onPeriodChange?.(period?.id);
@@ -92,46 +100,48 @@ useEffect(() => {
     [period?.start_date]
   );
 
-  const locationsMap = useMemo(
-    () =>
-      Array.isArray(locations)
-        ? locations.reduce((acc, l) => {
-            acc[l.id] = l;
-            return acc;
-          }, {})
-        : {},
-    [locations]
-  );
-
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
     [weekStart]
   );
 
+  const locationsMap = useMemo(() => {
+    if (!Array.isArray(locations)) return {};
+    return locations.reduce((acc, loc) => {
+      acc[loc.id] = loc;
+      return acc;
+    }, {});
+  }, [locations]);
+
+  // Group shifts by staff+date key
   const baseRoster = useMemo(() => {
-    const deduped = Object.values(
-      (Array.isArray(shifts) ? shifts : []).reduce((map, shift) => {
+    const dedupedShifts = Array.isArray(shifts) ? shifts : [];
+    const uniqueShifts = Object.values(
+      dedupedShifts.reduce((map, shift) => {
         map[shift.id] = shift;
         return map;
       }, {})
     );
 
-    return deduped.reduce((acc, s) => {
-      const staffKey = s.staff_id || s.staff;
-      const key = `${staffKey}_${s.shift_date}`;
-      acc[key] = acc[key] ? [...acc[key], s] : [s];
+    return uniqueShifts.reduce((acc, shift) => {
+      const staffKey = shift.staff_id ?? shift.staff;
+      const key = `${staffKey}_${shift.shift_date}`;
+      acc[key] = acc[key] ? [...acc[key], shift] : [shift];
       return acc;
     }, {});
   }, [shifts]);
 
+  // Calculate staff stats for the week
   const staffWeekStats = useMemo(() => {
     const stats = {};
-    const getHours = (s) => {
-      if (s.expected_hours != null) return Number(s.expected_hours) || 0;
-      if (s.start_time && s.end_time && s.shift_date) {
+
+    const getHours = (shift) => {
+      if (shift.expected_hours != null)
+        return Number(shift.expected_hours) || 0;
+      if (shift.start_time && shift.end_time && shift.shift_date) {
         try {
-          const start = new Date(`${s.shift_date}T${s.start_time}`);
-          const end = new Date(`${s.shift_date}T${s.end_time}`);
+          const start = new Date(`${shift.shift_date}T${shift.start_time}`);
+          const end = new Date(`${shift.shift_date}T${shift.end_time}`);
           return Math.max(differenceInMinutes(end, start) / 60, 0);
         } catch {
           return 0;
@@ -140,11 +150,11 @@ useEffect(() => {
       return 0;
     };
 
-    for (const s of shifts) {
-      const sid = s.staff_id || s.staff;
+    for (const shift of shifts) {
+      const sid = shift.staff_id ?? shift.staff;
       if (!sid) continue;
       if (!stats[sid]) stats[sid] = { hours: 0, shifts: 0 };
-      stats[sid].hours += getHours(s);
+      stats[sid].hours += getHours(shift);
       stats[sid].shifts += 1;
     }
 
@@ -167,66 +177,45 @@ useEffect(() => {
   const onCopyWeekForAllClick = () => {
     setShowCopyModal(true);
   };
-const onCopyContinue = async (targetPeriodId) => {
-  try {
-    // Fetch shifts for old period
-    const shiftsToCopy = await fetchShifts(period.id);
 
-    if (!shiftsToCopy || !Array.isArray(shiftsToCopy)) {
-      alert("No valid shifts returned to copy");
-      return;
-    }
+  const handleCopyIconClick = (day) => {
+    setCopyDayModal({ show: true, sourceDate: day });
+  };
 
-    // Fetch new period details using your api helper
-    let newPeriod;
+  const handleCopyDayConfirm = async (sourceDate, targetDate) => {
     try {
-      const response = await api.get(`/attendance/${hotelSlug}/periods/${targetPeriodId}/`);
-      newPeriod = response.data;
+      await copyDayForAll(format(sourceDate, "yyyy-MM-dd"), targetDate);
+      setSuccessMessage("Copied day successfully!");
+      setShowSuccessModal(true);
     } catch (err) {
-      console.error("Failed to load target period details:", err.response?.data || err.message);
-      alert("Failed to load target period details");
-      return;
+      alert(`Error: ${err.message || err}`);
+    } finally {
+      setCopyDayModal({ show: false, sourceDate: null });
     }
+  };
 
-    // Calculate date offset
-    const oldStart = parseISO(period.start_date);
-    const newStart = parseISO(newPeriod.start_date);
-    const offsetDays = differenceInCalendarDays(newStart, oldStart);
+  const onCopyContinue = async (targetPeriodId) => {
+    try {
+      const newPeriod = await api
+        .get(`/attendance/${hotelSlug}/periods/${targetPeriodId}/`)
+        .then((res) => res.data);
 
-    // Adjust shifts for new period
-    const adjustedShifts = shiftsToCopy.map((shift) => {
-      const oldShiftDate = parseISO(shift.shift_date);
-      const newShiftDate = addDays(oldShiftDate, offsetDays);
-      return {
-        ...shift,
-        shift_date: format(newShiftDate, "yyyy-MM-dd"),
-        period: targetPeriodId,
-        id: undefined,
-      };
-    });
+      // Assuming copyRoster returns saved shifts, otherwise update logic here
+      const savedShifts = await copyAndSaveRoster(period.id, newPeriod);
 
-    // Update local shifts for the new period
-    setLocalShiftsByPeriod((prev) => ({
-      ...prev,
-      [targetPeriodId]: adjustedShifts,
-    }));
-
-    // Switch to the new period
-    setPeriod(newPeriod);
-console.log("Adjusted shifts for target period:", adjustedShifts);
-console.log("Current localShiftsByPeriod before update:", localShiftsByPeriod);
-    // Also update localShifts for immediate UI update
-    setLocalShifts(adjustedShifts);
-
-    alert("Shifts copied and loaded for new period. Please review and submit.");
-  } catch (error) {
-    console.error("Error copying shifts:", error);
-    alert("Error loading shifts for copy. Please try again.");
-  }
-};
-
-
-
+      setLocalShiftsByPeriod((prev) => ({
+        ...prev,
+        [targetPeriodId]: savedShifts,
+      }));
+      setPeriod(newPeriod);
+      setSuccessMessage("Roster copied successfully for the selected period!");
+      setShowSuccessModal(true);
+      setShowCopyModal(false);
+    } catch (err) {
+      console.error("Copy and save failed:", err);
+      alert(`Copy and save failed: ${err.message || err}`);
+    }
+  };
 
   return (
     <div className="mt-4">
@@ -254,7 +243,7 @@ console.log("Current localShiftsByPeriod before update:", localShiftsByPeriod);
       )}
 
       <div className="table-responsive">
-        <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 p-3 border-bottom bg-white">
+        <div className="d-flex flex-column flex-lg-row justify-content-evenly align-items-start gap-3 p-3 border-bottom bg-white">
           <div>
             <h6 className="text-muted mb-2">Roster Period</h6>
             <RosterPeriodSelector
@@ -287,7 +276,7 @@ console.log("Current localShiftsByPeriod before update:", localShiftsByPeriod);
         <table className="table table-bordered table-sm align-middle">
           <thead>
             <tr className="bg-light small">
-              <th className="bg-light text-start" style={{ minWidth: "220px" }}>
+              <th className="bg-light text-start" style={{ minWidth: 220 }}>
                 Staff
               </th>
               {days.map((day) => (
@@ -302,7 +291,7 @@ console.log("Current localShiftsByPeriod before update:", localShiftsByPeriod);
                       day,
                       "dd/MM/yyyy"
                     )}`}
-                    onClick={() => onCopyDayForAllClick(day)}
+                    onClick={() => handleCopyIconClick(day)}
                   >
                     📋
                   </button>
@@ -320,7 +309,7 @@ console.log("Current localShiftsByPeriod before update:", localShiftsByPeriod);
               </tr>
             ) : (
               staffList.map((staff) => {
-                const stats = staffWeekStats[staff.id] || {
+                const stats = staffWeekStats[staff.id] ?? {
                   hours: 0,
                   shifts: 0,
                 };
@@ -424,6 +413,17 @@ console.log("Current localShiftsByPeriod before update:", localShiftsByPeriod);
         currentPeriod={period}
         onContinue={onCopyContinue}
       />
+      <SuccessModal
+        show={showSuccessModal}
+        message={successMessage}
+        onClose={() => setShowSuccessModal(false)}
+      />
+      <CopyDayModal
+  show={copyDayModal.show}
+  sourceDate={copyDayModal.sourceDate}
+  onClose={() => setCopyDayModal({ show: false, sourceDate: null })}
+  onConfirm={handleCopyDayConfirm}
+/>
     </div>
   );
 }

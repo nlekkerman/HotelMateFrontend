@@ -173,15 +173,15 @@ const handlePeriodChange = useCallback(
   // Render
   // --------------------------------------------------
   return (
-    <div className="mt-6">
-      <h3 className="text-xl font-semibold mb-4 text-gray-700">
+    <div className="mt-6 ">
+      <h3 className="text-xl font-semibold mb-4 custom-main-text d-flex justify-content-center">
   {department.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
 </h3>
 
 
 <button
         onClick={() => setShowDailyPlan((prev) => !prev)}
-        className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+        className="mb-4 px-4 py-2 bg-blue-600 custom-button transition"
       >
         {showDailyPlan ? "Hide Daily Plans" : "Show Daily Plans"}
       </button>

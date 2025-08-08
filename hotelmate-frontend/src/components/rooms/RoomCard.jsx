@@ -72,18 +72,18 @@ const { generateSingleRoomQrPdf } = useSingleRoomQrPdfPrinter();
 </div>
 {/* Download button for all QR codes for this room */}
   <button
-    className="btn btn-sm btn-outline-primary mt-2"
+    className="btn btn-sm main-bg-outline mt-2"
     onClick={(e) => {
       e.stopPropagation();
       generateSingleRoomQrPdf(room);
     }}
   >
-    <i className="bi bi-download me-1" />
+    <i className="bi bi-download  me-1" />
     Download QR PDF
   </button>
           {/* Checkbox */}
           <div
-            className="form-check m-2 text-black bg-light p-1 rounded"
+            className="form-check m-2 text-black bg-light  p-1 rounded"
             onClick={(e) => e.stopPropagation()}
           >
             <input
@@ -105,7 +105,7 @@ const { generateSingleRoomQrPdf } = useSingleRoomQrPdfPrinter();
           <div className="button-wraper w-100 d-flex justify-content-center mt-2">
             {!room.is_occupied && (
               <button
-                className="btn main-text second-text btn-outline-secondary me-2"
+                className="btn main-text second-text custom-button me-2"
                 onClick={(e) => {
                   e.stopPropagation();
                   navigate(`/rooms/${room.room_number}/add-guest`);

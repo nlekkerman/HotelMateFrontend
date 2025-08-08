@@ -1,4 +1,16 @@
 /* main.css */
+:root {
+  --main-color: #3498db;
+  --secondary-color: #2ecc71;
+  --button-color: #004faf;
+  --button-text-color: #ffffff;
+  --button-hover-color: #0066cc;
+  --text-color: #333;
+  --background-color: #ffffff;
+  --border-color: #e5e7eb;
+  --link-color: #007bff;
+  --link-hover-color: #0056b3;
+}
 
 /* Make html and body take full viewport height */
 html,
@@ -134,7 +146,11 @@ body.terminal-mode,
   z-index: 4;
   color: white;
 }
-
+.buttons-container {
+  display: flex;
+  justify-content: center;
+  
+}
 .staf-list-container{
   padding: 0.7rem;
 }
@@ -162,7 +178,7 @@ body.terminal-mode,
   color: var(--main-color) !important;
 }
 .main-bg {
-  background-color: rgba(var(--main-color-rgb), 0.9) !important;
+  background-color: rgba(var(--main-color-rgb), 0.81) !important;
 }
 .main-bg-outline {
   border: 2px solid rgba(var(--main-color-rgb), 0.9) !important;
@@ -173,6 +189,66 @@ body.terminal-mode,
 }
 .second-bg {
   background-color: var(--secondary-color) !important;
+}
+.custom-main-text {
+  color: var(--text-color) !important;
+}
+
+.custom-main-bg {
+  background-color: var(--main-color) !important;
+}
+
+.custom-main-bg-outline {
+  border: 2px solid var(--main-color) !important;
+  box-shadow: 0 0 5px var(--main-color);
+}
+
+.custom-secondary-text {
+  color: var(--secondary-color) !important;
+}
+
+.custom-secondary-bg {
+  background-color: var(--secondary-color) !important;
+}
+
+.custom-button {
+  background-color: var(--button-color) !important;
+  color: var(--button-text-color) !important;
+  border: none;
+  border-radius: 5px;
+}
+
+.custom-button:hover {
+  background-color: var(--button-hover-color) !important;
+}
+
+.custom-text {
+  color: var(--text-color) !important;
+}
+
+.custom-bg {
+  background-color: var(--background-color) !important;
+}
+
+.custom-border {
+  border-color: var(--border-color) !important;
+  border: 2px solid var(--border-color) !important;
+}
+
+.custom-link {
+  color: var(--link-color) !important;
+  text-decoration: none;
+}
+
+.custom-link:hover {
+  color: var(--link-hover-color) !important;
+  text-decoration: underline;
+}
+.sketch-picker-wrapper .sketch-picker {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  padding: 0 !important;
 }
 /* Fallback background for elements missing .main-bg */
 
@@ -206,7 +282,7 @@ body.terminal-mode,
   text-align: center;
   padding: 1rem 0;
  
-  background-color: rgba(var(--main-color-rgb), 0.4);
+  background-color: rgba(var(--main-color-rgb), 0.71);
    animation: slideDownBanner 0.6s ease-out both;
 }
 
@@ -280,14 +356,7 @@ body.terminal-mode,
   justify-content: center;
   padding-bottom: 10px;
 }
-.custom-button{
-  background-color: rgba(0, 79, 175, 0.8);
-  border-color: aliceblue;
-  box-shadow: 2px 7px 15px rgba(0, 0, 0, 0.3);
-  color: white;
-  border-radius: 5px;
-  
-}
+
 .like-share-comment-button{
   border: none;
   font-size: 0.7rem;
