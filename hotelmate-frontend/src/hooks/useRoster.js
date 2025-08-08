@@ -174,6 +174,12 @@ useEffect(() => {
     }
     close();
   }, [editing, hotelSlug, fetchShifts, period, close]);
+const reloadShifts = useCallback(async () => {
+  if (!period?.id || typeof fetchShifts !== "function") return;
+  const freshShifts = await fetchShifts(period.id);
+  setServerShifts(freshShifts || []);
+  return freshShifts;
+}, [period, fetchShifts]);
 
   const bulkSubmit = useCallback(async () => {
     // 1) Overlap safety (unchanged)
@@ -245,5 +251,6 @@ useEffect(() => {
     save,
     remove,
     bulkSubmit,
+    reloadShifts,
   };
 }

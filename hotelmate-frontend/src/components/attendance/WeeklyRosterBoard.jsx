@@ -39,6 +39,7 @@ export default function WeeklyRosterBoard({
     save,
     remove,
     bulkSubmit,
+    reloadShifts,
   } = useRoster({
     hotelSlug,
     department,
@@ -185,6 +186,9 @@ export default function WeeklyRosterBoard({
   const handleCopyDayConfirm = async (sourceDate, targetDate) => {
     try {
       await copyDayForAll(format(sourceDate, "yyyy-MM-dd"), targetDate);
+          // ✅ Fetch updated shifts
+    await reloadShifts();
+
       setSuccessMessage("Copied day successfully!");
       setShowSuccessModal(true);
     } catch (err) {

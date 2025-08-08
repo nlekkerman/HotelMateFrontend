@@ -11,7 +11,7 @@ export default function useCopyDayForAll(hotelSlug) {
 
     try {
       const response = await api.post(
-        `/attendance/${hotelSlug}/shift-copy/copy_roster_day_all/`,
+        `/attendance/${hotelSlug}/shift-copy/copy-roster-day-all/`,
         {
           source_date: sourceDate,
           target_date: targetDate,
