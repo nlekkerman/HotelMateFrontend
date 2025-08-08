@@ -45,22 +45,7 @@ const { mainColor } = useTheme();
     <div className={`container reception-container py-5 min-vw-100 main-bg ${
           mainColor ? "" : "bg-dark"
         }`} >
-      {hotelLogo && (
-        <div className="text-center mb-4">
-          <img
-            src={hotelLogo}
-            alt={`${hotelName} logo`}
-            className="img-fluid rounded-pill mb-3 border shadow-sm"
-            style={{
-              maxHeight: "100px",
-              objectFit: "contain",
-            }}
-            onError={(e) => {
-              e.currentTarget.style.display = "none";
-            }}
-          />
-        </div>
-      )}
+     
       <h1 className="mb-5 text-center fw-bold text-white">
         {hotelName} Reception
       </h1>
