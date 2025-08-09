@@ -7,6 +7,8 @@ import ShiftCell from "@/components/attendance/ShiftCell";
 import useRoster from "@/hooks/useRoster";
 import useCopyRoster from "@/components/attendance/hooks/useCopyRoster";
 import useCopyDayForAll from "@/components/attendance/hooks/useCopyDayForAll";
+import useCopyStaffWeek from "@/components/attendance/hooks/useCopyStaffWeek";
+import CopyWeekForStaffModal from "@/components/attendance/modals/CopyWeekForStaffModal";
 import RosterAnalytics from "@/components/analytics/RosterAnalytics";
 import ShiftLocationBar from "@/components/attendance/ShiftLocationBar";
 import { FaUserCircle } from "react-icons/fa";
@@ -14,6 +16,7 @@ import CopyPeriodModal from "@/components/attendance/modals/CopyPeriodModal";
 import CopyDayModal from "@/components/attendance/modals/CopyDayModal";
 import SuccessModal from "@/components/modals/SuccessModal";
 import api from "@/services/api";
+import { FiCopy } from "react-icons/fi";
 
 export default function WeeklyRosterBoard({
   hotelSlug,
@@ -50,8 +53,17 @@ export default function WeeklyRosterBoard({
     onSubmitSuccess,
   });
 
+  const { copyAndSaveStaffWeek, loading: loadingCopyStaffWeek } =
+    useCopyStaffWeek({
+      hotelSlug,
+      onCopySuccess: () => fetchShifts(),
+      onCopyError: (err) => alert(err.message || "Copy failed."),
+    });
+
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [modalState, setModalState] = useState({ show: false, staff: null });
+
   const {
     copyAndSaveRoster,
     loading: copyLoading,
@@ -64,8 +76,11 @@ export default function WeeklyRosterBoard({
     },
     onCopyError: (err) => alert(`Failed to copy roster: ${err.message || err}`),
   });
-  const { copyDayForAll, loading, error } = useCopyDayForAll(hotelSlug);
-  // Manage local shifts per period to persist changes locally by period ID
+  const {
+    copyDayForAll,
+    loading: loadingCopyDayForAll,
+    error: errorCopyDayForAll,
+  } = useCopyDayForAll(hotelSlug);
   const [localShiftsByPeriod, setLocalShiftsByPeriod] = useState({});
 
   useEffect(() => {
@@ -186,8 +201,8 @@ export default function WeeklyRosterBoard({
   const handleCopyDayConfirm = async (sourceDate, targetDate) => {
     try {
       await copyDayForAll(format(sourceDate, "yyyy-MM-dd"), targetDate);
-          // ✅ Fetch updated shifts
-    await reloadShifts();
+      // ✅ Fetch updated shifts
+      await reloadShifts();
 
       setSuccessMessage("Copied day successfully!");
       setShowSuccessModal(true);
@@ -218,6 +233,27 @@ export default function WeeklyRosterBoard({
     } catch (err) {
       console.error("Copy and save failed:", err);
       alert(`Copy and save failed: ${err.message || err}`);
+    }
+  };
+const handleConfirmCopyStaffWeek = async ({ staffId, sourcePeriodId, targetPeriodId }) => {
+ 
+
+    
+    if (!modalState.staff) return;
+    try {
+      await copyAndSaveStaffWeek(
+        modalState.staff.id,
+        period.id,
+        targetPeriodId
+      );
+      setSuccessMessage(
+        `Week copied successfully for ${modalState.staff.first_name}!`
+      );
+      setShowSuccessModal(true);
+      setModalState({ show: false, staff: null });
+      await fetchShifts();
+    } catch (err) {
+      alert(`Copy failed: ${err.message || err}`);
     }
   };
 
@@ -297,7 +333,7 @@ export default function WeeklyRosterBoard({
                     )}`}
                     onClick={() => handleCopyIconClick(day)}
                   >
-                    📋
+                    <FiCopy size={16} className="text-muted" />
                   </button>
                 </th>
               ))}
@@ -320,7 +356,7 @@ export default function WeeklyRosterBoard({
                 return (
                   <tr key={staff.id} className="small">
                     <td className="bg-white z-2">
-                      <div className="d-flex align-items-center gap-2">
+                      <div className="d-flex align-items-center gap-2 p-1">
                         <span
                           className="d-inline-flex rounded-circle overflow-hidden"
                           style={{ width: 32, height: 32 }}
@@ -354,6 +390,16 @@ export default function WeeklyRosterBoard({
                             </span>
                           </span>
                         </div>
+                        <button
+                          title="Copy shifts for this staff"
+                          onClick={() =>
+                            setModalState({ show: true, staff: staff })
+                          }
+                          className="btn btn-link p-0 ms-3"
+                          style={{ color: "#1e1e1eff" }}
+                        >
+                          <FiCopy size={18} />
+                        </button>
                       </div>
                     </td>
                     {days.map((day) => (
@@ -423,10 +469,19 @@ export default function WeeklyRosterBoard({
         onClose={() => setShowSuccessModal(false)}
       />
       <CopyDayModal
-  show={copyDayModal.show}
-  sourceDate={copyDayModal.sourceDate}
-  onClose={() => setCopyDayModal({ show: false, sourceDate: null })}
-  onConfirm={handleCopyDayConfirm}
+        show={copyDayModal.show}
+        sourceDate={copyDayModal.sourceDate}
+        onClose={() => setCopyDayModal({ show: false, sourceDate: null })}
+        onConfirm={handleCopyDayConfirm}
+        loading={loadingCopyDayForAll}
+      />
+      <CopyWeekForStaffModal
+  show={modalState.show}
+  onClose={() => setModalState({ show: false, staff: null })}
+  staff={modalState.staff}
+  currentPeriod={period}
+  onContinue={handleConfirmCopyStaffWeek}
+  loading={loadingCopyStaffWeek}
 />
     </div>
   );

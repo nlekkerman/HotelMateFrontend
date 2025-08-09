@@ -12,7 +12,6 @@ export default function ShiftCell({
   onEdit,
   onCopyOneShift,
   onCopyDayForStaff,
-  // You can still pass these but they won't be used here:
   onCopyDayForAll,
   onCopyWeekForAllStaff,
   locationsMap = {},
