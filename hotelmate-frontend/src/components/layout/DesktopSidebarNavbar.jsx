@@ -132,7 +132,7 @@ const isPartialActive = (path) => {
       roles: ["manager", "staff_admin", "super_staff_admin"],
     },
     {
-      path: "/staff",
+      path: `/${hotelIdentifier}/staff`,
       label: "Staff",
       icon: "person-badge",
       feature: "profile",

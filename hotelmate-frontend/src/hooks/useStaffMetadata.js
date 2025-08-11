@@ -1,36 +1,41 @@
 import { useQuery } from "@tanstack/react-query";
 import api from "@/services/api";
 
-// Fetcher function
-const fetchStaffMetadata = async () => {
-  const response = await api.get("/staff/metadata/");
+const fetchStaffMetadata = async (hotelSlug) => {
+  const response = await api.get("/staff/metadata/", {
+    params: { hotel_slug: hotelSlug },
+  });
   return response.data;
 };
 
-// Hook
-export default function useStaffMetadata() {
+export default function useStaffMetadata(hotelSlug) {
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["staffMetadata"],
-    queryFn: fetchStaffMetadata,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    queryKey: ["staffMetadata", hotelSlug],
+    queryFn: () => fetchStaffMetadata(hotelSlug),
+    enabled: Boolean(hotelSlug),
+    staleTime: 1000 * 60 * 5,
   });
 
-  // Transform departments from objects to [value, label] pairs
-  const departments =
-    data?.departments?.map((dept) => [
-      dept.slug || dept.id || dept.value, // value to use, fallback in priority order
-      dept.name || dept.label || String(dept), // label to display
-    ]) || [];
-
-  // Similarly, roles and accessLevels can be transformed if needed,
-  // but usually they are fine as is unless you want to display labels.
+  // Extract unique departments from the results array
+  const departments = data?.results
+    ? Array.from(
+        data.results.reduce((map, item) => {
+          const dept = item.department_detail;
+          if (dept && !map.has(dept.id)) {
+            map.set(dept.id, [dept.slug || dept.id, dept.name]);
+          }
+          return map;
+        }, new Map())
+      ).map(([, value]) => value)
+    : [];
 
   return {
     departments,
-    roles: data?.roles || [],
-    accessLevels: data?.access_levels || [],
+    roles: [],         // You may need to extract roles similarly
+    accessLevels: [],  // Same for access levels
     isLoading,
     isError,
     error,
   };
 }
+

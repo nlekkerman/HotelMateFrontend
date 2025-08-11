@@ -1,25 +1,40 @@
 import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import DepartmentRosterView from "@/components/attendance/DepartmentRosterView";
 import { useParams } from "react-router-dom";
 import useStaffMetadata from "@/hooks/useStaffMetadata";
 
 export default function RosterDashboard() {
   const { hotelSlug } = useParams();
+  console.log("hotelSlug:", hotelSlug);
   const [selectedDepartment, setSelectedDepartment] = useState("");
-  const { departments, isLoading, isError } = useStaffMetadata();
+
+  const {
+    departments,
+    roles,
+    accessLevels,
+    isLoading,
+    isError,
+    error,
+  } = useStaffMetadata(hotelSlug);
+
+  // Add this log to inspect the departments data
+  console.log("departments:", departments);
+
+  if (isError) {
+    console.error("Error loading staff metadata:", error);
+    return (
+      <div className="p-4 text-center text-red-600">
+        Error loading departments: {error?.message || "Unknown error"}
+      </div>
+    );
+  }
+
   const [refreshKey, setRefreshKey] = useState(0);
 
   if (isLoading) {
     return (
       <div className="p-4 text-center text-gray-600">Loading departments…</div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="p-4 text-center text-red-600">
-        Error loading departments.
-      </div>
     );
   }
 
