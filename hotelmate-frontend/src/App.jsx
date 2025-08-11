@@ -177,11 +177,13 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 }
               />
 
-              {/* Staff */}
-              <Route path="/staff" element={<Staff />} />
-              <Route path="/staff/create" element={<StaffCreate />} />
-              <Route path="/staff/:id" element={<StaffDetails />} />
-              <Route path="/staff/me" element={<StaffProfile />} />
+              <Route path="/:hotelSlug/staff" element={<Staff />} />
+              <Route
+                path="/:hotelSlug/staff/create"
+                element={<StaffCreate />}
+              />
+              <Route path="/:hotelSlug/staff/:id" element={<StaffDetails />} />
+              <Route path="/:hotelSlug/staff/me" element={<StaffProfile />} />
               <Route path="/roster/:hotelSlug" element={<RosterDashboard />} />
 
               <Route

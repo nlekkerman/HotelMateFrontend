@@ -363,6 +363,26 @@ body.terminal-mode,
   color: rgb(45, 44, 44);
   background-color: transparent;
 }
+.progress-bar-fill {
+  background-color: #28a745;
+  border-right: 5px solid rgba(255, 0, 0, 0.6);
+  height: 100%;
+  transition: width 0.5s linear;
+  /* width will be set dynamically via inline style or JS */
+}
+
+.progress-bar-label {
+  position: absolute;
+  width: 100%;
+  text-align: center;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  font-weight: bold;
+  /* color will be set dynamically */
+}
+
+
 /* ─── Keyframes ─── */
 @keyframes slideDownBanner {
   from {
