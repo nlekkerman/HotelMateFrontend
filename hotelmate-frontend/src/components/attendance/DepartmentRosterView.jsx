@@ -22,7 +22,7 @@ const handleSubmitSuccess = () => setRefreshKey(prev => prev + 1);
   useEffect(() => {
     const fetchStaff = async () => {
       try {
-        const url = `/staff/by_department/?department=${department}`;
+const url = `/staff/${hotelSlug}/by_department/?department=${department}`;
 
         const res = await api.get(url);
         const results = res.data.results || res.data || [];

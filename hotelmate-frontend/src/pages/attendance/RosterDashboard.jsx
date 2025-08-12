@@ -1,12 +1,10 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import DepartmentRosterView from "@/components/attendance/DepartmentRosterView";
 import { useParams } from "react-router-dom";
 import useStaffMetadata from "@/hooks/useStaffMetadata";
 
 export default function RosterDashboard() {
   const { hotelSlug } = useParams();
-  console.log("hotelSlug:", hotelSlug);
   const [selectedDepartment, setSelectedDepartment] = useState("");
 
   const {
@@ -18,7 +16,8 @@ export default function RosterDashboard() {
     error,
   } = useStaffMetadata(hotelSlug);
 
-  // Add this log to inspect the departments data
+  // For debugging
+  console.log("hotelSlug:", hotelSlug);
   console.log("departments:", departments);
 
   if (isError) {
@@ -30,19 +29,14 @@ export default function RosterDashboard() {
     );
   }
 
-  const [refreshKey, setRefreshKey] = useState(0);
-
   if (isLoading) {
     return (
       <div className="p-4 text-center text-gray-600">Loading departments…</div>
     );
   }
 
-  // Normalize departments to array format
-  const departmentEntries = Array.isArray(departments)
-    ? departments
-    : Object.entries(departments || {});
-
+  // departments is an array of objects: [{id, name, slug}, ...]
+  // Use slug if available, else fallback to id for the option value
   return (
     <div className="p-4 space-y-6">
       <h1 className="text-2xl font-bold text-center">📋 Roster Management</h1>
@@ -63,9 +57,9 @@ export default function RosterDashboard() {
           onChange={(e) => setSelectedDepartment(e.target.value)}
         >
           <option value="">-- Choose a department --</option>
-          {departmentEntries.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
+          {departments.map(({ id, name, slug }) => (
+            <option key={id} value={slug || id}>
+              {name}
             </option>
           ))}
         </select>
@@ -74,10 +68,12 @@ export default function RosterDashboard() {
       {/* Department View */}
       {selectedDepartment && (
         <DepartmentRosterView
-          key={refreshKey}
           department={selectedDepartment}
           hotelSlug={hotelSlug}
-          onSubmit={() => setRefreshKey((prev) => prev + 1)}
+          onSubmit={() => {
+            // Optionally refresh or reset things on submit
+            // For example, reset selection or trigger refresh key
+          }}
         />
       )}
     </div>

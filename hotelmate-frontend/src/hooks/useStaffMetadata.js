@@ -2,9 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import api from "@/services/api";
 
 const fetchStaffMetadata = async (hotelSlug) => {
-  const response = await api.get("/staff/metadata/", {
-    params: { hotel_slug: hotelSlug },
-  });
+  // Build URL with hotelSlug as part of the path
+  const url = `/staff/${hotelSlug}/metadata/`;
+  const response = await api.get(url);
+  console.log("API response for staff metadata:", response.data);
   return response.data;
 };
 
@@ -13,29 +14,15 @@ export default function useStaffMetadata(hotelSlug) {
     queryKey: ["staffMetadata", hotelSlug],
     queryFn: () => fetchStaffMetadata(hotelSlug),
     enabled: Boolean(hotelSlug),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  // Extract unique departments from the results array
-  const departments = data?.results
-    ? Array.from(
-        data.results.reduce((map, item) => {
-          const dept = item.department_detail;
-          if (dept && !map.has(dept.id)) {
-            map.set(dept.id, [dept.slug || dept.id, dept.name]);
-          }
-          return map;
-        }, new Map())
-      ).map(([, value]) => value)
-    : [];
-
   return {
-    departments,
-    roles: [],         // You may need to extract roles similarly
-    accessLevels: [],  // Same for access levels
+    departments: data?.departments || [],
+    roles: data?.roles || [],
+    accessLevels: data?.access_levels || [],
     isLoading,
     isError,
     error,
   };
 }
-
