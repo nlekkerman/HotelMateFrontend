@@ -76,23 +76,16 @@ export default function WeeklyRosterBoard({
     },
     onCopyError: (err) => alert(`Failed to copy roster: ${err.message || err}`),
   });
+
   const {
     copyDayForAll,
     loading: loadingCopyDayForAll,
     error: errorCopyDayForAll,
   } = useCopyDayForAll(hotelSlug);
+
   const [localShiftsByPeriod, setLocalShiftsByPeriod] = useState({});
-
-  useEffect(() => {
-    const shiftsForCurrentPeriod = localShiftsByPeriod[period?.id] ?? [];
-    setLocalShifts(shiftsForCurrentPeriod);
-  }, [period?.id, localShiftsByPeriod, setLocalShifts]);
-
   const [showCopyModal, setShowCopyModal] = useState(false);
-  const [copyDayModal, setCopyDayModal] = useState({
-    show: false,
-    sourceDate: null,
-  });
+  const [copyDayModal, setCopyDayModal] = useState({ show: false, sourceDate: null });
   const [locations, setLocations] = useState([]);
   const [showAnalytics, setShowAnalytics] = useState(false);
 
@@ -108,6 +101,15 @@ export default function WeeklyRosterBoard({
     onPeriodChange?.(period?.id);
   }, [period?.id, onPeriodChange]);
 
+  useEffect(() => {
+    const shiftsForCurrentPeriod = localShiftsByPeriod[period?.id] ?? [];
+    setLocalShifts(shiftsForCurrentPeriod);
+  }, [period?.id, localShiftsByPeriod, setLocalShifts]);
+
+  useEffect(() => {
+    console.log("Staff list for department", department, staffList);
+  }, [department, staffList]);
+
   const weekStart = useMemo(
     () =>
       period?.start_date
@@ -116,10 +118,9 @@ export default function WeeklyRosterBoard({
     [period?.start_date]
   );
 
-  const days = useMemo(
-    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
-    [weekStart]
-  );
+
+
+  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
 
   const locationsMap = useMemo(() => {
     if (!Array.isArray(locations)) return {};
@@ -152,8 +153,7 @@ export default function WeeklyRosterBoard({
     const stats = {};
 
     const getHours = (shift) => {
-      if (shift.expected_hours != null)
-        return Number(shift.expected_hours) || 0;
+      if (shift.expected_hours != null) return Number(shift.expected_hours) || 0;
       if (shift.start_time && shift.end_time && shift.shift_date) {
         try {
           const start = new Date(`${shift.shift_date}T${shift.start_time}`);
@@ -177,9 +177,7 @@ export default function WeeklyRosterBoard({
     return stats;
   }, [shifts]);
 
-  const analyticsStartDate = period?.start_date
-    ? new Date(period.start_date)
-    : null;
+  const analyticsStartDate = period?.start_date ? new Date(period.start_date) : null;
   const analyticsEndDate = period?.end_date ? new Date(period.end_date) : null;
 
   if (!period?.id) {
@@ -201,7 +199,6 @@ export default function WeeklyRosterBoard({
   const handleCopyDayConfirm = async (sourceDate, targetDate) => {
     try {
       await copyDayForAll(format(sourceDate, "yyyy-MM-dd"), targetDate);
-      // ✅ Fetch updated shifts
       await reloadShifts();
 
       setSuccessMessage("Copied day successfully!");
@@ -219,7 +216,6 @@ export default function WeeklyRosterBoard({
         .get(`/attendance/${hotelSlug}/periods/${targetPeriodId}/`)
         .then((res) => res.data);
 
-      // Assuming copyRoster returns saved shifts, otherwise update logic here
       const savedShifts = await copyAndSaveRoster(period.id, newPeriod);
 
       setLocalShiftsByPeriod((prev) => ({
@@ -235,20 +231,12 @@ export default function WeeklyRosterBoard({
       alert(`Copy and save failed: ${err.message || err}`);
     }
   };
-const handleConfirmCopyStaffWeek = async ({ staffId, sourcePeriodId, targetPeriodId }) => {
- 
 
-    
+  const handleConfirmCopyStaffWeek = async ({ staffId, sourcePeriodId, targetPeriodId }) => {
     if (!modalState.staff) return;
     try {
-      await copyAndSaveStaffWeek(
-        modalState.staff.id,
-        period.id,
-        targetPeriodId
-      );
-      setSuccessMessage(
-        `Week copied successfully for ${modalState.staff.first_name}!`
-      );
+      await copyAndSaveStaffWeek(modalState.staff.id, period.id, targetPeriodId);
+      setSuccessMessage(`Week copied successfully for ${modalState.staff.first_name}!`);
       setShowSuccessModal(true);
       setModalState({ show: false, staff: null });
       await fetchShifts();
@@ -269,8 +257,7 @@ const handleConfirmCopyStaffWeek = async ({ staffId, sourcePeriodId, targetPerio
       {showAnalytics && analyticsStartDate && analyticsEndDate && (
         <div className="mt-4">
           <h2 className="h5 mb-3">
-            Roster Analytics ({format(analyticsStartDate, "dd/MM/yy")} →{" "}
-            {format(analyticsEndDate, "dd/MM/yy")})
+            Roster Analytics ({format(analyticsStartDate, "dd/MM/yy")} → {format(analyticsEndDate, "dd/MM/yy")})
           </h2>
           <RosterAnalytics
             hotelSlug={hotelSlug}
@@ -327,10 +314,7 @@ const handleConfirmCopyStaffWeek = async ({ staffId, sourcePeriodId, targetPerio
                   {format(day, "EEE dd")}
                   <button
                     className="btn btn-sm position-absolute top-0 end-0"
-                    title={`Copy complete day for all staff: ${format(
-                      day,
-                      "dd/MM/yyyy"
-                    )}`}
+                    title={`Copy complete day for all staff: ${format(day, "dd/MM/yyyy")}`}
                     onClick={() => handleCopyIconClick(day)}
                   >
                     <FiCopy size={16} className="text-muted" />
@@ -349,10 +333,7 @@ const handleConfirmCopyStaffWeek = async ({ staffId, sourcePeriodId, targetPerio
               </tr>
             ) : (
               staffList.map((staff) => {
-                const stats = staffWeekStats[staff.id] ?? {
-                  hours: 0,
-                  shifts: 0,
-                };
+                const stats = staffWeekStats[staff.id] ?? { hours: 0, shifts: 0 };
                 return (
                   <tr key={staff.id} className="small">
                     <td className="bg-white z-2">
@@ -365,11 +346,7 @@ const handleConfirmCopyStaffWeek = async ({ staffId, sourcePeriodId, targetPerio
                             <img
                               src={buildImageUrl(staff.profile_image_url)}
                               alt={`${staff.first_name} ${staff.last_name}`}
-                              style={{
-                                width: 32,
-                                height: 32,
-                                objectFit: "cover",
-                              }}
+                              style={{ width: 32, height: 32, objectFit: "cover" }}
                             />
                           ) : (
                             <FaUserCircle size={32} />
@@ -385,16 +362,12 @@ const handleConfirmCopyStaffWeek = async ({ staffId, sourcePeriodId, targetPerio
                               {stats.hours.toFixed(2)}
                             </span>
                             &nbsp;• Sh:&nbsp;
-                            <span className="text-success fw-semibold">
-                              {stats.shifts}
-                            </span>
+                            <span className="text-success fw-semibold">{stats.shifts}</span>
                           </span>
                         </div>
                         <button
                           title="Copy shifts for this staff"
-                          onClick={() =>
-                            setModalState({ show: true, staff: staff })
-                          }
+                          onClick={() => setModalState({ show: true, staff: staff })}
                           className="btn btn-link p-0 ms-3"
                           style={{ color: "#1e1e1eff" }}
                         >
@@ -403,10 +376,7 @@ const handleConfirmCopyStaffWeek = async ({ staffId, sourcePeriodId, targetPerio
                       </div>
                     </td>
                     {days.map((day) => (
-                      <td
-                        key={day.toString()}
-                        className="text-center align-middle"
-                      >
+                      <td key={day.toString()} className="text-center align-middle">
                         <div className="d-flex justify-content-center align-items-center">
                           <ShiftCell
                             staff={staff}
@@ -457,32 +427,36 @@ const handleConfirmCopyStaffWeek = async ({ staffId, sourcePeriodId, targetPerio
 
       <CopyPeriodModal
         show={showCopyModal}
+        currentPeriodId={period.id}
         onClose={() => setShowCopyModal(false)}
-        hotelSlug={hotelSlug}
-        department={department}
-        currentPeriod={period}
         onContinue={onCopyContinue}
+        loading={copyLoading}
+        error={copyError}
       />
-      <SuccessModal
-        show={showSuccessModal}
-        message={successMessage}
-        onClose={() => setShowSuccessModal(false)}
-      />
+
       <CopyDayModal
         show={copyDayModal.show}
         sourceDate={copyDayModal.sourceDate}
         onClose={() => setCopyDayModal({ show: false, sourceDate: null })}
         onConfirm={handleCopyDayConfirm}
         loading={loadingCopyDayForAll}
+        error={errorCopyDayForAll}
       />
+
       <CopyWeekForStaffModal
-  show={modalState.show}
-  onClose={() => setModalState({ show: false, staff: null })}
-  staff={modalState.staff}
-  currentPeriod={period}
-  onContinue={handleConfirmCopyStaffWeek}
-  loading={loadingCopyStaffWeek}
-/>
+        show={modalState.show}
+        staff={modalState.staff}
+        currentPeriodId={period.id}
+        onClose={() => setModalState({ show: false, staff: null })}
+        onConfirm={handleConfirmCopyStaffWeek}
+        loading={loadingCopyStaffWeek}
+      />
+
+      <SuccessModal
+        show={showSuccessModal}
+        message={successMessage}
+        onClose={() => setShowSuccessModal(false)}
+      />
     </div>
   );
 }

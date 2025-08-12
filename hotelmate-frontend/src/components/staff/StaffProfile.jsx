@@ -1,7 +1,6 @@
-// src/pages/StaffProfile.jsx
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom"; // <-- added useParams
 import StaffWeeklyRoster from "@/components/staff/StaffWeeklyRoster";
 import {
   FaEnvelope,
@@ -14,11 +13,6 @@ import {
 } from "react-icons/fa";
 import api from "@/services/api";
 
-const fetchStaffMe = async () => {
-  const { data } = await api.get("/staff/me/");
-  return data;
-};
-
 const prettify = (v) =>
   (v || "N/A")
     .toString()
@@ -28,6 +22,15 @@ const prettify = (v) =>
 
 export default function StaffProfile() {
   const navigate = useNavigate();
+  const { hotelSlug } = useParams(); // 👈 get slug from route
+
+  const fetchStaffMe = async () => {
+    if (!hotelSlug) {
+      throw new Error("Hotel slug is missing from URL");
+    }
+    const { data } = await api.get(`/staff/${hotelSlug}/me/`);
+    return data;
+  };
 
   const {
     data: staff,
@@ -35,8 +38,9 @@ export default function StaffProfile() {
     isError,
     error,
   } = useQuery({
-    queryKey: ["staffMe"],
+    queryKey: ["staffMe", hotelSlug],
     queryFn: fetchStaffMe,
+    enabled: !!hotelSlug, // run only when slug is available
   });
 
   if (isLoading) {
@@ -58,14 +62,6 @@ export default function StaffProfile() {
   }
 
   const handleRegisterFace = () => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    const hotelSlug = user?.hotel_slug || user?.hotel?.slug;
-
-    if (!hotelSlug) {
-      console.warn("Hotel slug missing from localStorage!");
-      return;
-    }
-
     navigate(`/${hotelSlug}/staff/register-face`);
   };
 
