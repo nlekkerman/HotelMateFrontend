@@ -19,6 +19,7 @@ export function ThemeProvider({ children }) {
   const { user } = useAuth();
   const hotelSlug = user?.hotel_slug;
 
+  console.log("🔹 ThemeProvider render - user:", user, "hotelSlug:", hotelSlug);
   // 1️⃣ Fetch theme
   const { data, isLoading } = useQuery({
     queryKey: ["theme", hotelSlug],
@@ -53,13 +54,14 @@ export function ThemeProvider({ children }) {
   };
 
   // 3️⃣ Apply on load
-  useEffect(() => {
-    if (!isLoading && data) {
-      applyTheme(data);
-      const splash = document.getElementById("splash");
-      if (splash) splash.remove();
-    }
-  }, [isLoading, data]);
+useEffect(() => {
+  if (!user || (!isLoading && data)) {
+    if (data) applyTheme(data);
+    const splash = document.getElementById("splash");
+    if (splash) splash.remove();
+  }
+}, [isLoading, data, user]);
+
 
   // 4️⃣ Save
   const mutation = useMutation({

@@ -15,33 +15,33 @@ export default function Staff() {
   const [showClockedIn, setShowClockedIn] = useState(false);
 
   useEffect(() => {
-    const fetchStaff = async () => {
-      setLoadingStaff(true);
-      try {
-        const response = await api.get("staff/", {
-          params: { hotel_slug: hotelSlug },
-        });
-        const data = response.data;
-        const list = Array.isArray(data)
-          ? data
-          : Array.isArray(data.results)
-          ? data.results
-          : [];
-        setStaffList(list);
-        setError(null);
-      } catch (err) {
-        setError(
-          err.response?.status === 401
-            ? "Unauthorized: Please login"
-            : "Failed to fetch staff data"
-        );
-        console.error(err);
-      } finally {
-        setLoadingStaff(false);
-      }
-    };
-    fetchStaff();
-  }, [hotelSlug]);
+  const fetchStaff = async () => {
+    if (!hotelSlug) return; // safety check
+    setLoadingStaff(true);
+    try {
+      // Update URL to include hotelSlug in the path
+      const response = await api.get(`staff/${hotelSlug}/`);
+      const data = response.data;
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray(data.results)
+        ? data.results
+        : [];
+      setStaffList(list);
+      setError(null);
+    } catch (err) {
+      setError(
+        err.response?.status === 401
+          ? "Unauthorized: Please login"
+          : "Failed to fetch staff data"
+      );
+      console.error(err);
+    } finally {
+      setLoadingStaff(false);
+    }
+  };
+  fetchStaff();
+}, [hotelSlug]);
 
   useEffect(() => {
     if (!showClockedIn) {

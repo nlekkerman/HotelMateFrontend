@@ -18,6 +18,7 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
   e.preventDefault();
+    console.log("🔹 handleSubmit called");
   setLocalError(null);
 
   if (!username || !password) {
@@ -28,7 +29,7 @@ const Login = () => {
   let fcmToken = null;
   try {
     fcmToken = await getToken(messaging, {
-      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY, // ✅ Make sure this env var is set
+      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
     });
   } catch (tokenError) {
     console.warn("⚠️ Failed to get FCM token:", tokenError);
