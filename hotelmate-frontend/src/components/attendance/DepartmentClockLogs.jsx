@@ -9,28 +9,30 @@ const DepartmentClockLogs = ({ hotelSlug, departmentSlug }) => {
   const [showLogs, setShowLogs] = useState(false); // Toggle visibility
 
   useEffect(() => {
-    if (!hotelSlug || !showLogs) return; // Only fetch when visible
+  if (!hotelSlug || !showLogs) return; // Only fetch when visible
 
-    const fetchLogs = async () => {
-      setLoading(true);
-      setError("");
+  const fetchLogs = async () => {
+    setLoading(true);
+    setError("");
 
-      const params = { hotel_slug: hotelSlug };
-      if (departmentSlug) params.department_slug = departmentSlug;
+    const params = { hotel_slug: hotelSlug };
+    if (departmentSlug) params.department_slug = departmentSlug;
 
-      try {
-        const res = await api.get(`/attendance/clock-logs/department-logs/`, { params });
-        const data = res.data;
-        setLogs(Array.isArray(data) ? data : []); // Ensure logs is always an array
-      } catch (err) {
-        setError(err.response?.data?.error || "Error fetching logs");
-      } finally {
-        setLoading(false);
-      }
-    };
+    try {
+      const res = await api.get(`/attendance/clock-logs/department-logs/`, { params });
+      const data = res.data;
+      console.log("📡 Fetched clock logs:", data);
+      setLogs(Array.isArray(data.results) ? data.results : []); // ✅ Use results
+    } catch (err) {
+      setError(err.response?.data?.error || "Error fetching logs");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchLogs();
-  }, [hotelSlug, departmentSlug, showLogs]);
+  fetchLogs();
+}, [hotelSlug, departmentSlug, showLogs]);
+
 
   return (
     <div>
