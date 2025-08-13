@@ -48,45 +48,51 @@ function StaffTimelineRow({ log, now }) {
         <StaffCard staff={staffData} />
       </div>
       {/* Worked duration clock */}
-      <div
-        className="ms-2 text-muted me-2 badge bg-info text-white"
-        style={{ minWidth: "50px", textAlign: "right" }}
-      >
-        {workedDuration}
-      </div>
+<div
+  className="d-flex flex-column flex-md-row align-items-center justify-content-center 
+             bg-info text-white rounded shadow-sm p-3 gap-2"
+  style={{ minWidth: "80px" }}
+>
+  <span className="fw-semibold">Time on</span>
+  <span className="bg-light text-success rounded-pill px-3 py-1 fw-bold">
+    {workedDuration}
+  </span>
+</div>
+
       {/* Right: Single line indicator */}
-      <div className="flex-grow-1 d-flex align-items-center">
-        {isClockedIn ? (
-          <>
-            {/* Progress bar */}
-            <div
-              className="position-relative bg-light rounded flex-grow-1"
-              style={{ height: "48px", overflow: "hidden" }}
-            >
-              <div
-                className="progress-bar-fill"
-                style={{ width: `${workedPercent}%` }}
-              />
-              <span
-                className="progress-bar-label"
-                style={{ color: workedPercent > 20 ? "white" : "black" }}
-              >
-                {formatTime(log.time_in)}
-              </span>
-            </div>
-          </>
-        ) : (
-          // Scratched line when clocked out
-          <div
-            className="bg-light rounded flex-grow-1"
-            style={{
-              height: "28px",
-              background:
-                "repeating-linear-gradient(45deg, #999, #999 4px, transparent 4px, transparent 8px)",
-            }}
-          />
-        )}
+<div className="flex-grow-1 d-none d-md-flex align-items-center">
+  {isClockedIn ? (
+    <>
+      {/* Progress bar */}
+      <div
+        className="position-relative bg-light rounded flex-grow-1"
+        style={{ height: "48px", overflow: "hidden" }}
+      >
+        <div
+          className="progress-bar-fill"
+          style={{ width: `${workedPercent}%` }}
+        />
+        <span
+          className="progress-bar-label"
+          style={{ color: workedPercent > 20 ? "white" : "black" }}
+        >
+          {formatTime(log.time_in)}
+        </span>
       </div>
+    </>
+  ) : (
+    // Scratched line when clocked out
+    <div
+      className="bg-light rounded flex-grow-1"
+      style={{
+        height: "28px",
+        background:
+          "repeating-linear-gradient(45deg, #999, #999 4px, transparent 4px, transparent 8px)",
+      }}
+    />
+  )}
+</div>
+
     </div>
   );
 }

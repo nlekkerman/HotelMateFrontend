@@ -1,9 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
-import {
-  requestFirebaseNotificationPermission,
-} from "@/utils/firebaseNotifications";
+import { requestFirebaseNotificationPermission } from "@/utils/firebaseNotifications";
 
 const LOGIN_ENDPOINT = `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/staff/login/`;
 
@@ -16,21 +14,23 @@ export default function useLogin() {
     setLoading(true);
     setError(null);
 
+    console.log("📡 Sending login request...");
+    console.log("🔗 Endpoint:", LOGIN_ENDPOINT);
+    console.log("📝 Payload:", { username, password, fcm_token: fcmToken });
+
     try {
-      const response = await axios.post(
+      const { data } = await axios.post(
         LOGIN_ENDPOINT,
         { username, password, fcm_token: fcmToken },
         { headers: { "Content-Type": "application/json" } }
       );
 
-      const data = response.data;
+      console.log("✅ Backend response:", data);
+
       const profileImageUrl = data.profile_image_url?.startsWith("http")
         ? data.profile_image_url
         : `${import.meta.env.VITE_CLOUDINARY_BASE}image/upload/v1753188341/${data.profile_image_url}.png`;
 
-      console.log("✅ Backend responseasasadasdasdasdasdasdasd:", response.data);
-
-      // Prepare user object to save
       const userToSave = {
         token: data.token,
         username: data.username,
@@ -53,14 +53,14 @@ export default function useLogin() {
       console.log("💾 Saving user to localStorage:", userToSave);
       localStorage.setItem("user", JSON.stringify(userToSave));
 
-      // Prepare user object for AuthContext login
       const userForContext = {
         username: data.username,
         token: data.token,
         hotel_id: data.hotel_id,
         hotel_name: data.hotel_name,
         hotel_slug: data.hotel_slug,
-        isAdmin: data.is_superuser || ['staff_admin', 'super_staff_admin'].includes(data.access_level),
+        isAdmin:
+          data.is_superuser || ["staff_admin", "super_staff_admin"].includes(data.access_level),
         is_staff: data.is_staff,
         is_superuser: data.is_superuser,
         access_level: data.access_level,
@@ -72,10 +72,9 @@ export default function useLogin() {
 
       console.log("🔑 Logging in user (AuthContext):", userForContext);
       login(userForContext);
-
       console.log("✔️ User logged in successfully");
 
-      // Register FCM token
+      // Request FCM token
       const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
       try {
         await requestFirebaseNotificationPermission(VAPID_KEY);
@@ -88,18 +87,20 @@ export default function useLogin() {
       return data;
     } catch (err) {
       setLoading(false);
+      console.error("❌ Login error:", err);
 
       if (err.response) {
-        console.error("❌ Login error response:", err.response);
-        if (err.response.data?.non_field_errors) {
-          setError(err.response.data.non_field_errors.join(" "));
-        } else if (err.response.data) {
-          setError(JSON.stringify(err.response.data));
-        } else {
-          setError("Login failed due to unknown error.");
-        }
+        console.error("❌ Response data:", err.response.data);
+        setError(
+          err.response.data?.non_field_errors
+            ? err.response.data.non_field_errors.join(" ")
+            : JSON.stringify(err.response.data)
+        );
+      } else if (err.request) {
+        console.error("❌ No response received. Request:", err.request);
+        setError("No response from server. Check your network or API URL.");
       } else {
-        console.error("❌ Login error:", err.message);
+        console.error("❌ Error message:", err.message);
         setError(err.message || "Login failed. Please try again.");
       }
 
