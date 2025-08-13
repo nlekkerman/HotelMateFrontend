@@ -34,42 +34,55 @@ const DepartmentClockLogs = ({ hotelSlug, departmentSlug }) => {
 }, [hotelSlug, departmentSlug, showLogs]);
 
 
-  return (
-    <div>
+   return (
+    <div className="container mt-3">
       {/* Toggle Button */}
-      <button
-        onClick={() => setShowLogs((prev) => !prev)}
-        className="mb-4 px-4 py-2 custom-button transition"
-      >
-        {showLogs ? "Hide Logs" : "Show Logs"}
-      </button>
+      <div className="d-flex justify-content-end mb-3">
+        <button
+          className={`btn ${showLogs ? "btn-secondary" : "btn-primary"}`}
+          onClick={() => setShowLogs((prev) => !prev)}
+        >
+          {showLogs ? "Hide Logs" : "Show Logs"}
+        </button>
+      </div>
 
       {showLogs && (
         <>
-          {loading && <p>Loading logs...</p>}
-          {error && <p style={{ color: "red" }}>{error}</p>}
-          {!loading && !error && !logs.length && <p>No clock logs found.</p>}
+          {loading && <div className="alert alert-info">Loading logs...</div>}
+          {error && <div className="alert alert-danger">{error}</div>}
+          {!loading && !error && logs.length === 0 && (
+            <div className="alert alert-warning">No clock logs found.</div>
+          )}
+
           {!loading && !error && logs.length > 0 && (
-            <table border="1" cellPadding="8" style={{ borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th>Staff</th>
-                  <th>Time In</th>
-                  <th>Time Out</th>
-                  <th>Verified By Face</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map((log) => (
-                  <tr key={log.id}>
-                    <td>{log.staff_name}</td>
-                    <td>{new Date(log.time_in).toLocaleString()}</td>
-                    <td>{log.time_out ? new Date(log.time_out).toLocaleString() : "-"}</td>
-                    <td>{log.verified_by_face ? "Yes" : "No"}</td>
+            <div className="table-responsive">
+              <table className="table table-striped table-hover align-middle">
+                <thead className="table-dark">
+                  <tr>
+                    <th>Staff</th>
+                    <th>Time In</th>
+                    <th>Time Out</th>
+                    <th>Verified By Face</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {logs.map((log) => (
+                    <tr key={log.id}>
+                      <td>{log.staff_name}</td>
+                      <td>{new Date(log.time_in).toLocaleString()}</td>
+                      <td>{log.time_out ? new Date(log.time_out).toLocaleString() : "-"}</td>
+                      <td>
+                        {log.verified_by_face ? (
+                          <span className="badge bg-success">Yes</span>
+                        ) : (
+                          <span className="badge bg-danger">No</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </>
       )}
