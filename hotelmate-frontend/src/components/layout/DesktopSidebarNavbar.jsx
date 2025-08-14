@@ -257,9 +257,9 @@ const isPartialActive = (path) => {
                 <li className="nav-item">
                   <Link
                     className={`nav-link text-white ${
-                      isExactActive("/staff/me") ? "bg-opacity-25" : ""
+                      isExactActive(`/${hotelIdentifier}/staff/me`) ? "bg-opacity-25" : ""
                     }`}
-                    to="/staff/me"
+                    to={`/${hotelIdentifier}/staff/me`}
                     onClick={() => setCollapsed(true)}
                   >
                     <i className="bi bi-person-circle me-2" />

@@ -32,7 +32,7 @@ const MobileNavbar = () => {
       return;
     }
     api
-      .get("/staff/me/")
+      .get(`/${hotelIdentifier}/staff/me/`)
       .then((res) => {
         setStaffProfile(res.data);
         setIsOnDuty(res.data.is_on_duty);
@@ -94,7 +94,7 @@ const MobileNavbar = () => {
       roles: ["manager", "staff_admin", "super_staff_admin"],
     },
     {
-      path: "/staff",
+      path: `/${hotelIdentifier}/staff`,
       label: "Staff",
       icon: "person-badge",
       roles: ["staff_admin", "super_staff_admin"],
@@ -222,9 +222,9 @@ const MobileNavbar = () => {
                   <li className="nav-item">
                     <Link
                       className={`nav-link text-white ${
-                        isActive("/staff/me") ? "active" : ""
+                        isActive(`/${hotelIdentifier}/staff/me`) ? "active" : ""
                       }`}
-                      to="/staff/me"
+                      to={`/${hotelIdentifier}/staff/me`}
                       onClick={toggleNavbar}
                     >
                       <i className="bi bi-person-circle me-2" />
@@ -363,9 +363,9 @@ const MobileNavbar = () => {
                   <li className="nav-item">
                     <Link
                       className={`nav-link text-white ${
-                        isActive("/staff/me") ? "active" : ""
+                        isActive(`/${hotelIdentifier}/staff/me`) ? "active" : ""
                       }`}
-                      to="/staff/me"
+                      to={`/${hotelIdentifier}/staff/me`}
                       onClick={toggleNavbar}
                     >
                       <i className="bi bi-person-circle me-2" />
