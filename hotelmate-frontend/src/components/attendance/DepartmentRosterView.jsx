@@ -185,44 +185,56 @@ export default function DepartmentRosterView({
   // --------------------------------------------------
   // Render
   // --------------------------------------------------
-  return (
-    <div className="mt-6 ">
-      <h3 className="text-xl font-semibold mb-4 custom-main-text d-flex justify-content-center">
-        {department.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-      </h3>
+ return (
+  <div className="mt-6">
+    <h3 className="text-xl font-semibold mb-4 custom-main-text d-flex justify-content-center">
+      {department.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+    </h3>
 
+    {/* Buttons aligned horizontally */}
+    <div className="d-flex gap-2 mb-4 justify-center">
       <button
         onClick={() => setShowDailyPlan((prev) => !prev)}
-        className="mb-4 px-4 py-2 custom-button transition"
+        className="px-4 py-2 custom-button transition"
       >
         {showDailyPlan ? "Hide Daily Plans" : "Show Daily Plans"}
       </button>
 
-      {showDailyPlan && (
-        <DailyPlan hotelSlug={hotelSlug} departmentSlug={department} />
-      )}
-
-     
-        <div className="mt-4">
-          <DepartmentClockLogs
-            hotelSlug={hotelSlug}
-            departmentSlug={department}
-          />
-        </div>
-    
-
-      <WeeklyRosterBoard
-        staffList={staffList}
-        shifts={shifts}
-        hotelSlug={hotelSlug}
-        department={department}
-        period={periodObj}
-        periods={periods}
-        onPeriodChange={handlePeriodChange}
-        fetchShifts={fetchShifts}
-        onSubmitSuccess={handleSubmitSuccess}
-        refreshKey={refreshKey}
-      />
+      <button
+        onClick={() => setShowClockLogs((prev) => !prev)}
+        className="px-4 py-2 custom-button transition"
+      >
+        {showClockLogs ? "Hide Clock Logs" : "Show Clock Logs"}
+      </button>
     </div>
-  );
+
+    {/* Conditional rendering */}
+    {showDailyPlan && (
+      <DailyPlan hotelSlug={hotelSlug} departmentSlug={department} />
+    )}
+
+    {showClockLogs && (
+      <div className="mt-4">
+        <DepartmentClockLogs
+          hotelSlug={hotelSlug}
+          departmentSlug={department}
+        />
+      </div>
+    )}
+
+    <WeeklyRosterBoard
+      staffList={staffList}
+      shifts={shifts}
+      hotelSlug={hotelSlug}
+      department={department}
+      period={periodObj}
+      periods={periods}
+      onPeriodChange={handlePeriodChange}
+      fetchShifts={fetchShifts}
+      onSubmitSuccess={handleSubmitSuccess}
+      refreshKey={refreshKey}
+    />
+  </div>
+);
+
 }

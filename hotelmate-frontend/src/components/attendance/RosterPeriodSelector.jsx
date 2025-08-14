@@ -1,11 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import api from "@/services/api";
-import {
-  format,
-  parseISO,
-  startOfDay,
-  isWithinInterval,   // 👈 import this
-} from "date-fns";
+import { format, parseISO, startOfDay, isWithinInterval } from "date-fns";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -19,6 +14,7 @@ export default function RosterPeriodSelector({
   const [loading, setLoading] = useState(true);
   const [pickDate, setPickDate] = useState(new Date());
   const [creating, setCreating] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [didAutoSelect, setDidAutoSelect] = useState(false);
 
   const fetchRosterPeriods = useCallback(async () => {
@@ -39,12 +35,11 @@ export default function RosterPeriodSelector({
     fetchRosterPeriods();
   }, [fetchRosterPeriods]);
 
-  // Auto-select the period that contains "today", else latest
+  // Auto-select current period or fallback
   useEffect(() => {
     if (loading || didAutoSelect || selectedPeriod || rosterPeriods.length === 0) return;
 
     const today = startOfDay(new Date());
-
     const current = rosterPeriods.find((p) => {
       const start = parseISO(p.start_date);
       const end = parseISO(p.end_date);
@@ -90,69 +85,71 @@ export default function RosterPeriodSelector({
       console.error("Failed to create/get period for week:", err);
     } finally {
       setCreating(false);
+      setShowDatePicker(false);
     }
   };
 
   if (loading) return <p>Loading roster periods…</p>;
 
-  return (
-  <div className="rp-container bg-light rounded">
-    <div className="d-flex flex-column flex-md-row gap-3 align-items-center">
-      {/* Pick Week */}
-      <div className="rp-chip d-flex align-items-center flex-grow-1 max-w-280 bg-white rounded-pill px-3 py-1 shadow-sm text-muted">
-        <span className="rp-label me-2" style={{ minWidth: '50px', userSelect: 'none' }}>
-          Create Period:
-        </span>
-        <DatePicker
-          selected={pickDate}
-          onChange={handleWeekPick}
-          dateFormat="dd MMM yyyy"
-          className="form-control form-control-sm border-0 bg-transparent p-0"
-          placeholderText="Select date"
-          showWeekNumbers
-          popperClassName="big-datepicker"
-        />
-        {creating && <small className="ms-2 text-muted fst-italic">Creating…</small>}
-      </div>
+  // Add "Create Period" as first option
+  const dropdownOptions = [
+    { id: "create", label: creating ? "Creating…" : "➕ Create New Period" },
+    ...rosterPeriods
+      .slice()
+      .sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
+      .map((p) => ({
+        id: p.id,
+        label: `${p.title} (${format(parseISO(p.start_date), "dd MMM")} – ${format(parseISO(p.end_date), "dd MMM")})`,
+      })),
+  ];
 
-      {/* Existing Periods */}
-      <div className="rp-chip d-flex align-items-center flex-grow-1 max-w-280 bg-white rounded-pill px-3 py-1 shadow-sm text-muted">
-        <span className="rp-label me-2" style={{ minWidth: '60px', userSelect: 'none' }}>
-          Existing:
-        </span>
-        {rosterPeriods.length === 0 ? (
-          <small className="text-muted">No periods</small>
-        ) : (
+  return (
+    <div className="rp-container">
+      <div className="d-flex flex-column flex-md-row gap-3 align-items-center">
+        {/* Existing Periods Dropdown */}
+        <div className="rp-chip d-flex align-items-center flex-grow-1 max-w-280 bg-white rounded-pill px-3 py-1 shadow-sm text-muted">
+        
+
           <select
-            className="form-select form-select-sm border-0 bg-transparent p-0"
+            className="form-select  border-0 bg-transparent px-4"
             value={selectedPeriod || ""}
             onChange={(e) => {
-              const id = parseInt(e.target.value, 10);
-              setSelectedPeriod(id);
-              const p = rosterPeriods.find((r) => r.id === id);
-              if (p) {
-                onPeriodCreated?.(p);
-                setPickDate(new Date(p.start_date));
+              const id = e.target.value;
+              if (id === "create") {
+                setShowDatePicker((prev) => !prev);
+              } else {
+                const numericId = parseInt(id, 10);
+                setSelectedPeriod(numericId);
+                const p = rosterPeriods.find((r) => r.id === numericId);
+                if (p) {
+                  onPeriodCreated?.(p);
+                  setPickDate(new Date(p.start_date));
+                }
+                setShowDatePicker(false);
               }
             }}
           >
-            <option value="">-- Choose --</option>
-            {rosterPeriods
-              .slice()
-              .sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title} ({format(parseISO(p.start_date), "dd MMM")} –{" "}
-                  {format(parseISO(p.end_date), "dd MMM")})
-                </option>
-              ))}
+            {dropdownOptions.map((opt) => (
+              <option key={opt.id} value={opt.id}>
+                {opt.label}
+              </option>
+            ))}
           </select>
-        )}
+
+          {showDatePicker && (
+            <div style={{ position: "absolute", zIndex: 999 }}>
+              <DatePicker
+                selected={pickDate}
+                onChange={handleWeekPick}
+                inline
+                showWeekNumbers
+                dateFormat="dd MMM yyyy"
+                className="border rounded p-2 mt-1 bg-white shadow"
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
-
-
-
+  );
 }
