@@ -74,7 +74,7 @@ export default function Staff() {
       <div className="text-center mb-4">
         <h2 className="fw-bold mb-3">Staff Directory</h2>
         <button
-          className="btn btn-primary"
+          className="btn custom-button"
           onClick={() => navigate(`/${hotelSlug}/staff/create`)}
           disabled={loadingStaff}
         >

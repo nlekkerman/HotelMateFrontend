@@ -48,51 +48,50 @@ function StaffTimelineRow({ log, now }) {
         <StaffCard staff={staffData} />
       </div>
       {/* Worked duration clock */}
-<div
-  className="d-flex flex-column flex-md-row align-items-center justify-content-center 
-             bg-info text-white rounded shadow-sm p-3 gap-2"
-  style={{ minWidth: "80px" }}
->
-  <span className="fw-semibold">Time on</span>
-  <span className="bg-light text-success rounded-pill px-3 py-1 fw-bold">
-    {workedDuration}
-  </span>
-</div>
-
-      {/* Right: Single line indicator */}
-<div className="flex-grow-1 d-none d-md-flex align-items-center">
-  {isClockedIn ? (
-    <>
-      {/* Progress bar */}
       <div
-        className="position-relative bg-light rounded flex-grow-1"
-        style={{ height: "48px", overflow: "hidden" }}
+        className="d-flex flex-column flex-md-row align-items-center justify-content-center 
+             bg-info text-white rounded shadow-sm p-3 gap-2"
+        style={{ minWidth: "80px" }}
       >
-        <div
-          className="progress-bar-fill"
-          style={{ width: `${workedPercent}%` }}
-        />
-        <span
-          className="progress-bar-label"
-          style={{ color: workedPercent > 20 ? "white" : "black" }}
-        >
-          {formatTime(log.time_in)}
+        <span className="fw-semibold">Time on</span>
+        <span className="bg-light text-success rounded-pill px-3 py-1 fw-bold">
+          {workedDuration}
         </span>
       </div>
-    </>
-  ) : (
-    // Scratched line when clocked out
-    <div
-      className="bg-light rounded flex-grow-1"
-      style={{
-        height: "28px",
-        background:
-          "repeating-linear-gradient(45deg, #999, #999 4px, transparent 4px, transparent 8px)",
-      }}
-    />
-  )}
-</div>
 
+      {/* Right: Single line indicator */}
+      <div className="flex-grow-1 d-none d-md-flex align-items-center">
+        {isClockedIn ? (
+          <>
+            {/* Progress bar */}
+            <div
+              className="position-relative bg-light rounded flex-grow-1"
+              style={{ height: "48px", overflow: "hidden" }}
+            >
+              <div
+                className="progress-bar-fill"
+                style={{ width: `${workedPercent}%` }}
+              />
+              <span
+                className="progress-bar-label"
+                style={{ color: workedPercent > 20 ? "white" : "black" }}
+              >
+                {formatTime(log.time_in)}
+              </span>
+            </div>
+          </>
+        ) : (
+          // Scratched line when clocked out
+          <div
+            className="bg-light rounded flex-grow-1"
+            style={{
+              height: "28px",
+              background:
+                "repeating-linear-gradient(45deg, #999, #999 4px, transparent 4px, transparent 8px)",
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -110,12 +109,16 @@ export default function ClockedInTimeline({ staffList }) {
   useEffect(() => {
     console.log("Raw staffList data:", staffList);
   }, [staffList]);
-
+  const clockedInStaff = staffList.filter((log) => !log.time_out);
   return (
     <div>
-      {staffList.map((log) => (
-        <StaffTimelineRow key={log.id} log={log} now={now} />
-      ))}
+      {clockedInStaff.length === 0 ? (
+        <div className="text-center text-muted py-4">No staff clocked in</div>
+      ) : (
+        clockedInStaff.map((log) => (
+          <StaffTimelineRow key={log.id} log={log} now={now} />
+        ))
+      )}
     </div>
   );
 }

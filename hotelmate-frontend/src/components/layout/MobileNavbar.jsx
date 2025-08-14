@@ -32,7 +32,7 @@ const MobileNavbar = () => {
       return;
     }
     api
-      .get(`/${hotelIdentifier}/staff/me/`)
+      .get(`/staff/me/`)
       .then((res) => {
         setStaffProfile(res.data);
         setIsOnDuty(res.data.is_on_duty);
@@ -348,31 +348,7 @@ const MobileNavbar = () => {
                     )}
                   </li>
                 )}
-                {canAccess([
-                  "receptionist",
-                  "porter",
-                  "waiter",
-                  "manager",
-                  "chef",
-                  "staff_admin",
-                  "super_staff_admin",
-                  "concierge",
-                  "maintenance_staff",
-                  "housekeeping_attendant",
-                ]) && (
-                  <li className="nav-item">
-                    <Link
-                      className={`nav-link text-white ${
-                        isActive(`/${hotelIdentifier}/staff/me`) ? "active" : ""
-                      }`}
-                      to={`/${hotelIdentifier}/staff/me`}
-                      onClick={toggleNavbar}
-                    >
-                      <i className="bi bi-person-circle me-2" />
-                      Profile
-                    </Link>
-                  </li>
-                )}
+               
 
                 <li className="nav-item">
                   <button

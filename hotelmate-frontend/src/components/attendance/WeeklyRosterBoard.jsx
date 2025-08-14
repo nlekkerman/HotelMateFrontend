@@ -59,7 +59,7 @@ export default function WeeklyRosterBoard({
       onCopySuccess: () => fetchShifts(),
       onCopyError: (err) => alert(err.message || "Copy failed."),
     });
-
+const [showRosterContainer, setShowRosterContainer] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [modalState, setModalState] = useState({ show: false, staff: null });
@@ -85,7 +85,11 @@ export default function WeeklyRosterBoard({
 
   const [localShiftsByPeriod, setLocalShiftsByPeriod] = useState({});
   const [showCopyModal, setShowCopyModal] = useState(false);
-  const [copyDayModal, setCopyDayModal] = useState({ show: false, sourceDate: null });
+  const [modalProps, setModalProps] = useState({});
+  const [copyDayModal, setCopyDayModal] = useState({
+    show: false,
+    sourceDate: null,
+  });
   const [locations, setLocations] = useState([]);
   const [showAnalytics, setShowAnalytics] = useState(false);
 
@@ -118,9 +122,10 @@ export default function WeeklyRosterBoard({
     [period?.start_date]
   );
 
-
-
-  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
+  const days = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
+    [weekStart]
+  );
 
   const locationsMap = useMemo(() => {
     if (!Array.isArray(locations)) return {};
@@ -153,7 +158,8 @@ export default function WeeklyRosterBoard({
     const stats = {};
 
     const getHours = (shift) => {
-      if (shift.expected_hours != null) return Number(shift.expected_hours) || 0;
+      if (shift.expected_hours != null)
+        return Number(shift.expected_hours) || 0;
       if (shift.start_time && shift.end_time && shift.shift_date) {
         try {
           const start = new Date(`${shift.shift_date}T${shift.start_time}`);
@@ -177,7 +183,9 @@ export default function WeeklyRosterBoard({
     return stats;
   }, [shifts]);
 
-  const analyticsStartDate = period?.start_date ? new Date(period.start_date) : null;
+  const analyticsStartDate = period?.start_date
+    ? new Date(period.start_date)
+    : null;
   const analyticsEndDate = period?.end_date ? new Date(period.end_date) : null;
 
   if (!period?.id) {
@@ -188,9 +196,15 @@ export default function WeeklyRosterBoard({
     );
   }
 
-  const onCopyWeekForAllClick = () => {
+  const onCopyWeekForAllClick = (period) => {
+    setModalProps({
+        hotelSlug: hotelSlug,
+        departmentName: department,
+        period: period,
+    });
     setShowCopyModal(true);
-  };
+};
+
 
   const handleCopyIconClick = (day) => {
     setCopyDayModal({ show: true, sourceDate: day });
@@ -232,11 +246,21 @@ export default function WeeklyRosterBoard({
     }
   };
 
-  const handleConfirmCopyStaffWeek = async ({ staffId, sourcePeriodId, targetPeriodId }) => {
+  const handleConfirmCopyStaffWeek = async ({
+    staffId,
+    sourcePeriodId,
+    targetPeriodId,
+  }) => {
     if (!modalState.staff) return;
     try {
-      await copyAndSaveStaffWeek(modalState.staff.id, period.id, targetPeriodId);
-      setSuccessMessage(`Week copied successfully for ${modalState.staff.first_name}!`);
+      await copyAndSaveStaffWeek(
+        modalState.staff.id,
+        period.id,
+        targetPeriodId
+      );
+      setSuccessMessage(
+        `Week copied successfully for ${modalState.staff.first_name}!`
+      );
       setShowSuccessModal(true);
       setModalState({ show: false, staff: null });
       await fetchShifts();
@@ -245,218 +269,213 @@ export default function WeeklyRosterBoard({
     }
   };
 
-  return (
-    <div className="mt-4">
-      <button
-        className="btn btn-outline-secondary mb-3"
-        onClick={() => setShowAnalytics((prev) => !prev)}
-      >
-        {showAnalytics ? "Hide Analytics" : "Show Analytics"}
-      </button>
+return (
+  <div className="container-fluid p-3">
+<div className="roster-buttons-container">
 
-      {showAnalytics && analyticsStartDate && analyticsEndDate && (
-        <div className="mt-4">
-          <h2 className="h5 mb-3">
-            Roster Analytics ({format(analyticsStartDate, "dd/MM/yy")} → {format(analyticsEndDate, "dd/MM/yy")})
-          </h2>
-          <RosterAnalytics
-            hotelSlug={hotelSlug}
-            startDate={analyticsStartDate}
-            endDate={analyticsEndDate}
-            selectedDepartment={department}
-            refreshKey={refreshKey}
-          />
-        </div>
-      )}
+     
 
-      <div className="table-responsive">
-        <div className="d-flex flex-column flex-lg-row justify-content-evenly align-items-start gap-3 p-3 border-bottom bg-white">
-          <div>
-            <h6 className="text-muted mb-2">Roster Period</h6>
-            <RosterPeriodSelector
-              hotelSlug={hotelSlug}
-              selectedPeriod={period.id}
-              setSelectedPeriod={setPeriod}
-              onPeriodCreated={setPeriod}
-            />
-            <button
-              className="btn btn-primary mt-2"
-              title="Copy entire roster period for all staff"
-              onClick={onCopyWeekForAllClick}
-            >
-              Copy Whole Roster Period
-            </button>
-          </div>
-
-          <div className="flex-grow-1">
-            <h6 className="text-muted mb-2">Locations</h6>
-            <ShiftLocationBar
-              hotelSlug={hotelSlug}
-              onChange={(locs) => {
-                const list = Array.isArray(locs) ? locs : locs?.results ?? [];
-                setLocations(list);
-              }}
-            />
-          </div>
-        </div>
-
-        <table className="table table-bordered table-sm align-middle">
-          <thead>
-            <tr className="bg-light small">
-              <th className="bg-light text-start" style={{ minWidth: 220 }}>
-                Staff
-              </th>
-              {days.map((day) => (
-                <th
-                  key={day.toString()}
-                  className="text-center text-nowrap position-relative"
-                >
-                  {format(day, "EEE dd")}
-                  <button
-                    className="btn btn-sm position-absolute top-0 end-0"
-                    title={`Copy complete day for all staff: ${format(day, "dd/MM/yyyy")}`}
-                    onClick={() => handleCopyIconClick(day)}
-                  >
-                    <FiCopy size={16} className="text-muted" />
-                  </button>
-                </th>
-              ))}
-            </tr>
-          </thead>
-
-          <tbody>
-            {staffList.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="text-center text-muted py-4">
-                  No staff available.
-                </td>
-              </tr>
-            ) : (
-              staffList.map((staff) => {
-                const stats = staffWeekStats[staff.id] ?? { hours: 0, shifts: 0 };
-                return (
-                  <tr key={staff.id} className="small">
-                    <td className="bg-white z-2">
-                      <div className="d-flex align-items-center gap-2 p-1">
-                        <span
-                          className="d-inline-flex rounded-circle overflow-hidden"
-                          style={{ width: 32, height: 32 }}
-                        >
-                          {staff.profile_image_url ? (
-                            <img
-                              src={buildImageUrl(staff.profile_image_url)}
-                              alt={`${staff.first_name} ${staff.last_name}`}
-                              style={{ width: 32, height: 32, objectFit: "cover" }}
-                            />
-                          ) : (
-                            <FaUserCircle size={32} />
-                          )}
-                        </span>
-                        <div className="d-flex flex-column">
-                          <span className="fw-medium">
-                            {staff.first_name} {staff.last_name}
-                          </span>
-                          <span className="small">
-                            H:&nbsp;
-                            <span className="text-danger fw-semibold">
-                              {stats.hours.toFixed(2)}
-                            </span>
-                            &nbsp;• Sh:&nbsp;
-                            <span className="text-success fw-semibold">{stats.shifts}</span>
-                          </span>
-                        </div>
-                        <button
-                          title="Copy shifts for this staff"
-                          onClick={() => setModalState({ show: true, staff: staff })}
-                          className="btn btn-link p-0 ms-3"
-                          style={{ color: "#1e1e1eff" }}
-                        >
-                          <FiCopy size={18} />
-                        </button>
-                      </div>
-                    </td>
-                    {days.map((day) => (
-                      <td key={day.toString()} className="text-center align-middle">
-                        <div className="d-flex justify-content-center align-items-center">
-                          <ShiftCell
-                            staff={staff}
-                            date={day}
-                            baseRoster={baseRoster}
-                            localShifts={localShifts}
-                            onAdd={open}
-                            onEdit={open}
-                            locationsMap={locationsMap}
-                          />
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+</div>
+    {/* Sticky Toolbar */}
+    <div className="d-flex flex-wrap align-items-center gap-2 mb-3 sticky-top bg-white shadow-sm p-2 rounded">
+      <div className="d-flex align-items-center gap-2">
+        <label className="mb-0 fw-semibold">Roster Period:</label>
+        <RosterPeriodSelector
+          hotelSlug={hotelSlug}
+          selectedPeriod={period.id}
+          setSelectedPeriod={setPeriod}
+          onPeriodCreated={setPeriod}
+        />
+      
       </div>
 
-      {localShifts.length > 0 && (
-        <div className="d-flex justify-content-center mt-4">
-          <button
-            className="btn btn-success px-4"
-            onClick={async () => {
-              const result = await bulkSubmit();
-              if (result?.success && typeof onSubmitSuccess === "function") {
-                onSubmitSuccess();
-              }
-            }}
-          >
-            Submit Roster ({localShifts.length} changes)
-          </button>
-        </div>
-      )}
-
-      <ShiftModal
-        show={!!editing.staff}
-        staff={editing.staff}
-        date={editing.date}
-        shift={editing.shift}
-        onClose={close}
-        onSave={save}
-        onDelete={remove}
-        locations={locations}
-      />
-
-      <CopyPeriodModal
-        show={showCopyModal}
-        currentPeriodId={period.id}
-        onClose={() => setShowCopyModal(false)}
-        onContinue={onCopyContinue}
-        loading={copyLoading}
-        error={copyError}
-      />
-
-      <CopyDayModal
-        show={copyDayModal.show}
-        sourceDate={copyDayModal.sourceDate}
-        onClose={() => setCopyDayModal({ show: false, sourceDate: null })}
-        onConfirm={handleCopyDayConfirm}
-        loading={loadingCopyDayForAll}
-        error={errorCopyDayForAll}
-      />
-
-      <CopyWeekForStaffModal
-        show={modalState.show}
-        staff={modalState.staff}
-        currentPeriodId={period.id}
-        onClose={() => setModalState({ show: false, staff: null })}
-        onConfirm={handleConfirmCopyStaffWeek}
-        loading={loadingCopyStaffWeek}
-      />
-
-      <SuccessModal
-        show={showSuccessModal}
-        message={successMessage}
-        onClose={() => setShowSuccessModal(false)}
-      />
+    <div className="ms-auto">
+        <button
+          className={`btn custom-button btn-sm`}
+          onClick={() => setShowAnalytics((prev) => !prev)}
+        >
+          {showAnalytics ? "Hide Analytics" : "Show Analytics"}
+        </button>
+      </div>
     </div>
-  );
+
+    {/* Analytics Section */}
+    {showAnalytics && analyticsStartDate && analyticsEndDate && (
+      <div className="mb-3 p-3 bg-light rounded border">
+        <h6 className="mb-2 text-center">
+          Roster Analytics ({format(analyticsStartDate, "dd/MM/yy")} → {format(analyticsEndDate, "dd/MM/yy")})
+        </h6>
+        <RosterAnalytics
+          hotelSlug={hotelSlug}
+          startDate={analyticsStartDate}
+          endDate={analyticsEndDate}
+          selectedDepartment={department}
+          refreshKey={refreshKey}
+        />
+      </div>
+    )}
+
+    {/* Roster Grid */}
+    <div className="table-responsive">
+      <table className="table table-bordered table-hover align-middle text-center">
+        <thead className="table-light">
+  <tr>
+    <th className="text-start">
+      <div className="d-flex justify-content-between align-items-center">
+        <span>Staff</span>
+        <button
+          className="btn btn-sm btn-outline-secondary"
+          key={period.id}
+          onClick={() => onCopyWeekForAllClick(period)}
+          title="Copy whole period"
+        >
+          <FiCopy size={16} />
+        </button>
+      </div>
+    </th>
+    {days.map((day) => (
+      <th key={day.toString()} className="position-relative">
+        {format(day, "EEE dd")}
+        <button
+          className="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-1"
+          onClick={() => handleCopyIconClick(day)}
+          title={`Copy day for all staff`}
+        >
+          <FiCopy size={16} />
+        </button>
+      </th>
+    ))}
+  </tr>
+</thead>
+
+
+        <tbody>
+          {staffList.length === 0 ? (
+            <tr>
+              <td colSpan={days.length + 1} className="text-center text-muted py-4">
+                No staff available.
+              </td>
+            </tr>
+          ) : (
+            staffList.map((staff) => {
+              const stats = staffWeekStats[staff.id] ?? { hours: 0, shifts: 0 };
+              return (
+                <tr key={staff.id}>
+                  <td className="text-start">
+                    <div className="d-flex align-items-center gap-2">
+                      <span className="rounded-circle overflow-hidden" style={{ width: 36, height: 36 }}>
+                        {staff.profile_image_url ? (
+                          <img
+                            src={buildImageUrl(staff.profile_image_url)}
+                            alt={`${staff.first_name} ${staff.last_name}`}
+                            style={{ width: 36, height: 36, objectFit: "cover" }}
+                          />
+                        ) : (
+                          <FaUserCircle size={36} />
+                        )}
+                      </span>
+                      <div className="flex-grow-1">
+                        <div className="fw-semibold">{staff.first_name} {staff.last_name}</div>
+                        <div className="small text-muted">
+                          H: {stats.hours.toFixed(2)} • Sh: {stats.shifts}
+                        </div>
+                      </div>
+                      <button
+                        className="btn btn-outline-primary btn-sm"
+                        onClick={() => setModalState({ show: true, staff })}
+                        title="Copy staff week"
+                      >
+                        <FiCopy size={16} />
+                      </button>
+                    </div>
+                  </td>
+
+                  {days.map((day) => (
+                    <td key={day.toString()}>
+                      <ShiftCell
+                        staff={staff}
+                        date={day}
+                        baseRoster={baseRoster}
+                        localShifts={localShifts}
+                        onAdd={open}
+                        onEdit={open}
+                        locationsMap={locationsMap}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+
+    {/* Floating Submit Button */}
+    {localShifts.length > 0 && (
+      <div className="position-sticky bottom-0 start-50 translate-middle-x py-2 bg-white shadow-sm rounded mt-3 d-flex justify-content-center">
+        <button
+          className="btn btn-success btn-lg px-5"
+          onClick={async () => {
+            const result = await bulkSubmit();
+            if (result?.success && typeof onSubmitSuccess === "function") onSubmitSuccess();
+          }}
+        >
+          Submit Roster ({localShifts.length} changes)
+        </button>
+      </div>
+    )}
+
+    {/* Modals */}
+    <ShiftModal
+      show={!!editing.staff}
+      staff={editing.staff}
+      date={editing.date}
+      shift={editing.shift}
+      onClose={close}
+      onSave={save}
+      onDelete={remove}
+      locations={locations}
+    />
+
+    <CopyPeriodModal
+  show={showCopyModal}
+  currentPeriodId={modalProps?.period?.id}
+  {...modalProps}
+  onClose={() => setShowCopyModal(false)}
+  department={department} // must be defined here
+  currentPeriod={period}
+  onContinue={onCopyContinue}
+  loading={copyLoading}
+  error={copyError}
+/>
+
+
+    <CopyDayModal
+      show={copyDayModal.show}
+      sourceDate={copyDayModal.sourceDate}
+      onClose={() => setCopyDayModal({ show: false, sourceDate: null })}
+      onConfirm={handleCopyDayConfirm}
+      loading={loadingCopyDayForAll}
+      error={errorCopyDayForAll}
+    />
+
+    <CopyWeekForStaffModal
+      show={modalState.show}
+      staff={modalState.staff}
+      currentPeriodId={period.id}
+      onClose={() => setModalState({ show: false, staff: null })}
+      onContinue={handleConfirmCopyStaffWeek}
+      loading={loadingCopyStaffWeek}
+    />
+
+    <SuccessModal
+      show={showSuccessModal}
+      message={successMessage}
+      onClose={() => setShowSuccessModal(false)}
+    />
+  </div>
+);
+
+
 }
