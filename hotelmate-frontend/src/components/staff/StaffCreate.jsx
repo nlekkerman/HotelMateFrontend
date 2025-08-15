@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "@/services/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate,useParams  } from "react-router-dom";
 
 const StaffCreate = () => {
   const [users, setUsers] = useState([]);
@@ -28,6 +28,7 @@ const StaffCreate = () => {
   const fetchUsers = async () => {
     try {
       const response = await api.get("staff/users/");
+      console.log("USER Response data:", response.data);
       setUsers(response.data.results || response.data);
     } catch (err) {
       setError("Failed to fetch users");
