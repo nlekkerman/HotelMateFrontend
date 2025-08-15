@@ -7,6 +7,7 @@ const Register = () => {
     username: '',
     password: '',
     confirmPassword: '',
+    registrationCode: '', // <-- added field
   });
 
   const [error, setError] = useState(null);
@@ -37,6 +38,7 @@ const Register = () => {
     const payload = {
       username: formData.username,
       password: formData.password,
+      registration_code: formData.registrationCode, // <-- include pin in payload
     };
 
     try {
@@ -65,6 +67,11 @@ const Register = () => {
         <div className="mb-3">
           <label>Confirm Password</label>
           <input name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleChange} required className="form-control" />
+        </div>
+
+        <div className="mb-3">
+          <label>Registration Code / Pin</label>
+          <input name="registrationCode" type="text" value={formData.registrationCode} onChange={handleChange} required className="form-control" />
         </div>
 
         <button type="submit" className="btn btn-primary" disabled={loading}>

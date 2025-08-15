@@ -27,7 +27,7 @@ const StaffCreate = () => {
   useEffect(() => {
   const fetchUsers = async () => {
     try {
-      const response = await api.get("staff/users/");
+      const response = await api.get("staff/users/by-hotel-codes/");
       console.log("USER Response data:", response.data);
       setUsers(response.data.results || response.data);
     } catch (err) {
