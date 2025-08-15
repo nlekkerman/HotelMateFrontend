@@ -1,18 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaUserCircle } from "react-icons/fa"; // <-- added
+import { FaUserCircle } from "react-icons/fa";
 import api from "@/services/api";
 
 function StaffDetails() {
-  const { id } = useParams();
   const navigate = useNavigate();
   const [staff, setStaff] = useState(null);
   const [error, setError] = useState(null);
-
+  const { hotelSlug, id } = useParams();
   useEffect(() => {
     const fetchStaff = async () => {
+      console.log("[StaffDetails] Fetching staff details for:", {
+        hotelSlug,
+        id,
+      });
       try {
-        const response = await api.get(`staff/${id}/`);
+        const response = await api.get(`staff/${hotelSlug}/${id}/`);
+        console.log("[StaffDetails] API response data:", response.data);
         setStaff(response.data);
       } catch (err) {
         setError("Failed to fetch staff details");
@@ -21,9 +25,10 @@ function StaffDetails() {
     };
 
     fetchStaff();
-  }, [id]);
+  }, [hotelSlug, id]);
 
   const formatDepartment = (dept) => {
+    console.log("[StaffDetails] Formatting department:", dept);
     if (!dept) return "N/A";
     let name = typeof dept === "object" ? dept.name || dept.slug || "" : dept;
     return name
@@ -33,13 +38,21 @@ function StaffDetails() {
   };
 
   if (error) return <div className="alert alert-danger mt-3">{error}</div>;
-  if (!staff) return <div className="text-muted mt-3">Loading staff details...</div>;
+  if (!staff) {
+    console.log("[StaffDetails] No staff data yet — showing loading message.");
+    return <div className="text-muted mt-3">Loading staff details...</div>;
+  }
+
+  console.log("[StaffDetails] Rendering staff details:", staff);
 
   return (
     <div className="container mt-4 mb-5 p-4 bg-white rounded shadow-sm">
       <h2 className="mb-4 text-primary">👤 Staff Details</h2>
 
-      <div className="mb-4  d-flex align-items-center justify-content-start" style={{ height: 180 }}>
+      <div
+        className="mb-4  d-flex align-items-center justify-content-start"
+        style={{ height: 180 }}
+      >
         <div
           className="rounded-circle overflow-hidden bg-light d-flex justify-content-center align-items-center border"
           style={{ width: 180, height: 180 }}
@@ -58,9 +71,10 @@ function StaffDetails() {
 
       <div className="row mb-3">
         <div className="col-md-6">
+          {console.log("[StaffDetails] Hotel path check:", staff.user)}
           <p className="bg-success text-white">
             <strong className="ps-1">Hotel:</strong>{" "}
-            <strong>{staff.user.staff_profile.hotel.name}</strong>
+            <strong>{staff.user?.staff_profile?.hotel?.name || "N/A"}</strong>
           </p>
           <p>
             <strong>Username:</strong>{" "}
@@ -89,7 +103,6 @@ function StaffDetails() {
           <p>
             <strong>Role:</strong> {staff.role_detail?.name || "—"}
           </p>
-
           <p>
             <strong>Active:</strong>
             <span
@@ -105,7 +118,7 @@ function StaffDetails() {
 
       <div className="mt-4">
         <button
-          onClick={() => navigate("/staff")}
+          onClick={() => navigate(`/${hotelSlug}/staff`)}
           className="btn btn-outline-secondary"
         >
           ← Back to Staff List
