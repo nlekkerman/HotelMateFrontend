@@ -54,7 +54,8 @@ import AssignGuestForm from "@/components/guests/AssignGuestForm";
 import DinnerBookingForm from "@/components/bookings/DinnerBookingForm";
 import DinnerBookingList from "@/components/bookings/DinnerBookingList";
 import Bookings from "@/components/bookings/Bookings";
-
+import RestaurantManagementDashboard from "@/pages/bookings/RestaurantManagementDashboard";
+import Restaurant from "@/components/restaurants/Restaurant";
 import HotelInfo from "@/pages/hotel_info/HotelInfo";
 import GoodToKnow from "@/components/hotel_info/GoodToKnow";
 import GoodToKnowConsole from "@/components/hotel_info/GoodToKnowConsole";
@@ -118,6 +119,14 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin"
                 element={<DinnerPinAuth />}
               />
+              <Route
+                path="/:hotelSlug/:restaurantSlug"
+                element={<RestaurantManagementDashboard />}
+              ></Route>
+              <Route
+  path="/hotels/:hotelSlug/restaurants/:restaurantSlug"
+  element={<Restaurant />}
+/>
 
               {/* Face Recognition */}
               <Route
