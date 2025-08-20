@@ -7,8 +7,15 @@ import CreateBlueprintObjectModal from "@/components/restaurants/modals/CreateBl
 import EditTableModal from "@/components/restaurants/modals/EditTableModal";
 import EditBlueprintObjectModal from "@/components/restaurants/modals/EditBlueprintObjectModal";
 
-
-function DraggableTable({ table, pos, scaleX, scaleY, onDrag, onStop, onEdit }) {
+function DraggableTable({
+  table,
+  pos,
+  scaleX,
+  scaleY,
+  onDrag,
+  onStop,
+  onEdit,
+}) {
   const ref = useRef(null);
   const [hovered, setHovered] = useState(false);
 
@@ -81,7 +88,6 @@ function DraggableTable({ table, pos, scaleX, scaleY, onDrag, onStop, onEdit }) 
   );
 }
 
-
 function DraggableObject({ obj, pos, scaleX, scaleY, onDrag, onStop, onEdit }) {
   const ref = useRef(null);
   const [hovered, setHovered] = useState(false);
@@ -119,7 +125,17 @@ function DraggableObject({ obj, pos, scaleX, scaleY, onDrag, onStop, onEdit }) {
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        {obj.name || obj.type?.name}
+        {obj.rotation % 180 === 90 ? (
+  <span style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+    {(obj.name || obj.type?.name).split("").map((letter, i) => (
+      <span key={i}>{letter}</span>
+    ))}
+  </span>
+) : (
+  obj.name || obj.type?.name
+)}
+
+
 
         {/* Hover edit icon */}
         {onEdit && (
@@ -143,7 +159,9 @@ function DraggableObject({ obj, pos, scaleX, scaleY, onDrag, onStop, onEdit }) {
               fontSize: 14,
               cursor: "pointer",
               opacity: hovered ? 1 : 0,
-              transform: hovered ? "scale(1) translate(0,0)" : "scale(0.5) translate(5px,-5px)",
+              transform: hovered
+                ? "scale(1) translate(0,0)"
+                : "scale(0.5) translate(5px,-5px)",
               transition: "opacity 0.2s, transform 0.2s",
             }}
           >
@@ -164,14 +182,16 @@ export default function BlueprintFloorEditor({
   if (!blueprint) return <p>No blueprint available.</p>;
 
   // --- Dining Tables ---
-  const { tables = [], createTable, updateTable, deleteTable } = useDiningTable(
-    hotelSlug,
-    restaurantSlug
-  );
+  const {
+    tables = [],
+    createTable,
+    updateTable,
+    deleteTable,
+  } = useDiningTable(hotelSlug, restaurantSlug);
   const [showTableModal, setShowTableModal] = useState(false);
-const [editingTable, setEditingTable] = useState(null);
-const [editingObject, setEditingObject] = useState(null);
-const [showEditObjectModal, setShowEditObjectModal] = useState(false);
+  const [editingTable, setEditingTable] = useState(null);
+  const [editingObject, setEditingObject] = useState(null);
+  const [showEditObjectModal, setShowEditObjectModal] = useState(false);
 
   // --- Blueprint Objects ---
   const {
@@ -231,25 +251,23 @@ const [showEditObjectModal, setShowEditObjectModal] = useState(false);
     setTablePositions((prev) => ({
       ...prev,
       [id]: pos,
-      
     }));
     console.log("Dragging table", id, "to", pos);
   };
 
   const handleTableDragStop = (id, pos) => {
-  // Optimistic update: update local tablePositions right away
-  setTablePositions((prev) => ({
-    ...prev,
-    [id]: { x: Math.round(pos.x), y: Math.round(pos.y) },
-  }));
+    // Optimistic update: update local tablePositions right away
+    setTablePositions((prev) => ({
+      ...prev,
+      [id]: { x: Math.round(pos.x), y: Math.round(pos.y) },
+    }));
 
-  // Send to backend
-  updateTable(id, {
-    x: Math.round(pos.x),
-    y: Math.round(pos.y),
-  });
-};
-
+    // Send to backend
+    updateTable(id, {
+      x: Math.round(pos.x),
+      y: Math.round(pos.y),
+    });
+  };
 
   // --- Object Handlers ---
   const handleObjectDrag = (id, pos) => {
@@ -265,23 +283,23 @@ const [showEditObjectModal, setShowEditObjectModal] = useState(false);
       y: Math.round(pos.y),
     });
   };
-// Close modal and reset
-const handleCloseTableModal = () => {
-  setEditingTable(null);
-  setShowTableModal(false);
-};
+  // Close modal and reset
+  const handleCloseTableModal = () => {
+    setEditingTable(null);
+    setShowTableModal(false);
+  };
 
-// Handle delete
-const handleDeleteTable = async (tableId) => {
-  if (window.confirm("Are you sure you want to delete this table?")) {
-    await deleteTable(tableId);
-    setTablePositions((prev) => {
-      const newPositions = { ...prev };
-      delete newPositions[tableId];
-      return newPositions;
-    });
-  }
-};
+  // Handle delete
+  const handleDeleteTable = async (tableId) => {
+    if (window.confirm("Are you sure you want to delete this table?")) {
+      await deleteTable(tableId);
+      setTablePositions((prev) => {
+        const newPositions = { ...prev };
+        delete newPositions[tableId];
+        return newPositions;
+      });
+    }
+  };
   return (
     <>
       {/* Controls */}
@@ -349,11 +367,10 @@ const handleDeleteTable = async (tableId) => {
             onDrag={handleTableDrag}
             onStop={handleTableDragStop}
             onEdit={(table) => {
-    setEditingTable(table);
-    setShowTableModal(true);
-  }}
+              setEditingTable(table);
+              setShowTableModal(true);
+            }}
           />
-          
         ))}
 
         {/* Render Objects */}
@@ -367,47 +384,48 @@ const handleDeleteTable = async (tableId) => {
             onDrag={handleObjectDrag}
             onStop={handleObjectDragStop}
             onEdit={(obj) => {
-      setEditingObject(obj);
-      setShowEditObjectModal(true);
-    }}
+              setEditingObject(obj);
+              setShowEditObjectModal(true);
+            }}
           />
         ))}
         <EditTableModal
-  show={showTableModal}
-  table={editingTable}
-  onClose={handleCloseTableModal}
-  onUpdate={(updatedTable) => {
-    updateTable(editingTable.id, updatedTable);
-    setShowTableModal(false);
-  }}
-  onDelete={handleDeleteTable}
-/>
+          show={showTableModal}
+          table={editingTable}
+          onClose={handleCloseTableModal}
+          onUpdate={(updatedTable) => {
+            updateTable(editingTable.id, updatedTable);
+            setShowTableModal(false);
+          }}
+          onDelete={handleDeleteTable}
+        />
 
-{/* Edit Object Modal */}
-<EditBlueprintObjectModal
-  show={showEditObjectModal}
-  object={editingObject}
-  onClose={() => {
-    setEditingObject(null);
-    setShowEditObjectModal(false);
-  }}
-  onUpdate={(updatedObj) => {
-    if (!editingObject) return;
-    updateObject(editingObject.id, updatedObj);
-    setShowEditObjectModal(false);
-  }}
-  onDelete={async (objId) => {
-    if (!window.confirm("Are you sure you want to delete this object?")) return;
-    // Assuming you have a deleteObject method similar to tables
-    await deleteObject(objId);
-    setObjectPositions((prev) => {
-      const newPositions = { ...prev };
-      delete newPositions[objId];
-      return newPositions;
-    });
-    setShowEditObjectModal(false);
-  }}
-/>
+        {/* Edit Object Modal */}
+        <EditBlueprintObjectModal
+          show={showEditObjectModal}
+          object={editingObject}
+          onClose={() => {
+            setEditingObject(null);
+            setShowEditObjectModal(false);
+          }}
+          onUpdate={(updatedObj) => {
+            if (!editingObject) return;
+            updateObject(editingObject.id, updatedObj);
+            setShowEditObjectModal(false);
+          }}
+          onDelete={async (objId) => {
+            if (!window.confirm("Are you sure you want to delete this object?"))
+              return;
+            // Assuming you have a deleteObject method similar to tables
+            await deleteObject(objId);
+            setObjectPositions((prev) => {
+              const newPositions = { ...prev };
+              delete newPositions[objId];
+              return newPositions;
+            });
+            setShowEditObjectModal(false);
+          }}
+        />
       </div>
     </>
   );
