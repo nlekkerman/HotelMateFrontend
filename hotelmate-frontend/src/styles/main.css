@@ -462,8 +462,16 @@ body.terminal-mode,
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: darkgreen;
+  /* subtle wooden floor pattern */
+  background: repeating-linear-gradient(
+    45deg,
+    #2f4f2f,   /* dark green */
+    #2f4f2f 20px,
+    #3e5c3e 20px, /* slightly lighter green */
+    #3e5c3e 40px
+  );
 }
+
 /* DiningTables.css */
 .blueprint-container {
   margin-top: 1rem;
@@ -514,29 +522,44 @@ body.terminal-mode,
 
 .dining-table {
   position: absolute;
-  background-color: rgb(91, 41, 0) !important;
+  background-color: rgba(69, 3, 3, 0.6) !important;
   color: white !important;
   border: 1px solid #d4c4b9 !important;
   box-shadow: 0 7px 4px rgba(0, 0, 0, 0.1);
   text-align: center;
   font-size: 0.7rem;
-  cursor: move;
+  cursor: pointer; /* change from move to pointer for clicks */
   line-height: 1;
-  text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.3s, box-shadow 0.3s, background-color 0.3s;
+}
+
+/* Hover effect to make it pop */
+.dining-table:hover {
+  transform: scale(1.05);
+  box-shadow: 0 10px 10px rgba(0, 0, 0, 0.2);
+  background-color: rgba(177, 52, 2, 0.5) !important;
 }
 .blueprint-object {
   text-align: center;
-  border: 2px solid rgba(0, 0, 0, 0.5) !important;
+  border: 2px solid rgba(255, 255, 255, 0.5) !important;
   color: white !important;
-  background-color: brown !important;
+  background-color: rgba(0, 0, 0, 0.4) !important;
   display: flex;
   align-items: center;
   justify-content: center;
   
 }
+@keyframes pulse {
+          0% { box-shadow: 0 0 0 0 rgba(250, 252, 255, 0.5); }
+          70% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+        }
+        .pulse {
+          animation: pulse 1.5s infinite;
+        }
 /* ─── Keyframes ─── */
 @keyframes slideDownBanner {
   from {

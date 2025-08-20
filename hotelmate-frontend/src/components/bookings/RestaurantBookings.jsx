@@ -1,9 +1,7 @@
-// src/components/bookings/RestaurantBookings.jsx
-
 import React, { useEffect, useState } from "react";
 import api from "@/services/api";
 import RestaurantReservationDetails from "@/components/bookings/RestaurantReservationDetails";
-import { Modal, Button } from "react-bootstrap";
+import { Modal } from "react-bootstrap";
 
 export default function RestaurantBookings({ hotelSlug, restaurantId }) {
   const [bookings, setBookings] = useState([]);
@@ -20,6 +18,7 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
       try {
         const res = await api.get(url);
         const data = res.data;
+        console.log("Page results:", data.results);
         if (Array.isArray(data.results)) {
           allResults.push(...data.results);
           if (data.next) {
@@ -56,9 +55,12 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
       booking.room?.guests_in_room?.[0]?.full_name ||
       booking.restaurant?.name ||
       "—";
-
     const room = booking.room?.room_number || "—";
     const voucher = booking.voucher_code || "—";
+    const tables =
+      booking.assigned_tables
+        ?.map((t) => t.table.code) // ← use `table.code` instead of `name`
+        .join(", ") || "—";
 
     return (
       <tr
@@ -68,9 +70,10 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
       >
         <td>{name}</td>
         <td>{room}</td>
-        <td>{adults}</td>
-        <td>{children}</td>
-        <td>{infants}</td>
+        <td>{booking.start_time || "—"}</td>
+        <td>{booking.end_time || "—"}</td>
+        <td>{tables}</td>
+        <td>{adults + children + infants}</td>
         <td>
           {voucher !== "—" ? (
             <span className="badge bg-primary">{voucher}</span>
@@ -88,9 +91,10 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
         <tr>
           <th>Name</th>
           <th>Room</th>
-          <th>a</th>
-          <th>k</th>
-          <th>i</th>
+          <th>Start</th>
+          <th>End</th>
+          <th>Tables</th>
+          <th>Seats</th>
           <th>Voucher</th>
         </tr>
       </thead>
@@ -111,7 +115,7 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
   return (
     <>
       <div className="my-4">
-        <div className="card  text-light mb-4 shadow">
+        <div className="card text-light mb-4 shadow">
           <div className="card-header main-bg">
             Today’s Bookings ({displayDate})
           </div>
@@ -123,8 +127,8 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
             )}
           </div>
         </div>
-        <div className="card  text-light shadow">
-          <div className="card-header  main-bg">Upcoming Bookings</div>
+        <div className="card text-light shadow">
+          <div className="card-header main-bg">Upcoming Bookings</div>
           <div className="card-body text-dark p-0">
             {upcomingBookings.length > 0 ? (
               renderTable(upcomingBookings)
@@ -142,7 +146,6 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
         centered
         size="lg"
       >
-      
         <Modal.Body>
           {selectedBooking && (
             <RestaurantReservationDetails
@@ -151,7 +154,6 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
             />
           )}
         </Modal.Body>
-       
       </Modal>
     </>
   );

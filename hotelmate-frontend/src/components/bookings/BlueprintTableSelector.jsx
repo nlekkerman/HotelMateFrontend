@@ -2,13 +2,13 @@ import React, { useState, useEffect } from "react";
 
 export default function BlueprintTableSelector({
   tables,
-  objects: objectsWrapper, // rename to make clear it's the API object
+  availableTableIds = [],
+  objects: objectsWrapper,
   selectedTableId,
   selectedObjectId,
   onSelectTable,
   onSelectObject,
 }) {
-  // --- unwrap objects if wrapped in { results, count, ... } ---
   const objects = Array.isArray(objectsWrapper?.results)
     ? objectsWrapper.results
     : objectsWrapper || [];
@@ -30,7 +30,7 @@ export default function BlueprintTableSelector({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const scaleX = bpSize.width / originalBpSize.width * 0.8;
+  const scaleX = (bpSize.width / originalBpSize.width) * 0.8;
   const scaleY = bpSize.height / originalBpSize.height;
 
   return (
@@ -44,6 +44,7 @@ export default function BlueprintTableSelector({
         marginTop: 10,
       }}
     >
+
       {/* Tables */}
       {tables.map((t) => {
         const pos = { x: t.x || 0, y: t.y || 0 };
@@ -52,11 +53,14 @@ export default function BlueprintTableSelector({
         const left = Math.min(pos.x * scaleX, bpSize.width - width);
         const top = Math.min(pos.y * scaleY, bpSize.height - height);
 
+        const isAvailable = availableTableIds.length === 0 || availableTableIds.includes(t.id);
+        const shouldPulse = isAvailable && !selectedTableId;
+
         return (
           <div
             key={`table-${t.id}`}
-            onClick={() => onSelectTable?.(t)}
-            className="dining-table"
+            onClick={() => isAvailable && onSelectTable?.(t)}
+            className={`dining-table ${shouldPulse ? "pulse" : ""}`}
             style={{
               position: "absolute",
               left,
@@ -64,14 +68,15 @@ export default function BlueprintTableSelector({
               width,
               height,
               borderRadius: t.shape === "CIRCLE" ? "50%" : "0",
-              backgroundColor: selectedTableId === t.id ? "#333" : "#eee",
-              color: selectedTableId === t.id ? "#fff" : "#000",
+              backgroundColor: selectedTableId === t.id ? "#333" : isAvailable ? "#eee" : "#ccc",
+              color: selectedTableId === t.id ? "#fff" : isAvailable ? "#000" : "#666",
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              cursor: "pointer",
+              cursor: isAvailable ? "pointer" : "not-allowed",
               border: "1px solid #999",
               transform: `rotate(${t.rotation || 0}deg)`,
+              opacity: isAvailable ? 1 : 0.5,
             }}
           >
             {t.code}
@@ -86,7 +91,7 @@ export default function BlueprintTableSelector({
         const height = (o.height || 50) * scaleY;
         const left = Math.min(pos.x * scaleX, bpSize.width - width);
         const top = Math.min(pos.y * scaleY, bpSize.height - height);
-        const rotation = parseFloat(o.rotation) || 90;
+
         return (
           <div
             key={`obj-${o.id}`}
@@ -111,7 +116,21 @@ export default function BlueprintTableSelector({
               alignItems: "center",
             }}
           >
-            {o.name || o.type?.name}
+            {o.rotation % 180 === 90 ? (
+              <span
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                }}
+              >
+                {(o.name || o.type?.name).split("").map((letter, i) => (
+                  <span key={i}>{letter}</span>
+                ))}
+              </span>
+            ) : (
+              o.name || o.type?.name
+            )}
           </div>
         );
       })}
