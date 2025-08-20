@@ -94,6 +94,12 @@ const MobileNavbar = () => {
       roles: ["manager", "staff_admin", "super_staff_admin"],
     },
     {
+      path: `/${hotelIdentifier}/restaurants`,
+      label: "Restaurants",
+      icon: "shop-window", // Bootstrap Icon for restaurants/buildings
+      roles: ["manager", "staff_admin", "super_staff_admin"], // adjust as needed
+    },
+    {
       path: `/${hotelIdentifier}/staff`,
       label: "Staff",
       icon: "person-badge",

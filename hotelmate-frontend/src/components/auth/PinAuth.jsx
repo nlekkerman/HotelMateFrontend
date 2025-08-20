@@ -13,13 +13,16 @@ export default function PinAuth() {
     e.preventDefault();
 
     try {
-      const response = await api.post(`/room_services/${hotelIdentifier}/room/${roomNumber}/validate-pin/`, {
-        pin,
-      });
+      const response = await api.post(
+        `/room_services/${hotelIdentifier}/room/${roomNumber}/validate-pin/`,
+        { pin }
+      );
 
       if (response.data.valid) {
         sessionStorage.setItem(`pin_ok_${roomNumber}`, "true");
-        navigate(location.state?.next || `/${hotelIdentifier}/room/${roomNumber}/menu`);
+        navigate(
+          location.state?.next || `/${hotelIdentifier}/room/${roomNumber}/menu`
+        );
       } else {
         setError("Invalid PIN. Please try again.");
       }
@@ -28,31 +31,35 @@ export default function PinAuth() {
       if (err.response && err.response.status === 401) {
         setError("Invalid PIN. Please try again.");
       } else {
-        setError("There was an error validating the PIN. Please try again later.");
+        setError(
+          "There was an error validating the PIN. Please try again later."
+        );
       }
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto p-4 border rounded vh-100 m-3 d-flex justify-content-center flex-column" style={{ maxWidth: '400px' }}>
-      <h2 className="mb-4">Enter PIN for Room {roomNumber}</h2>
+    <div className="pin-auth-container">
+      <form onSubmit={handleSubmit} className="pin-auth-form">
+        <h2 className="pin-auth-title">Enter PIN for Room {roomNumber}</h2>
 
-      <div className="mb-3">
-        <input
-          type="password"
-          value={pin}
-          onChange={(e) => setPin(e.target.value)}
-          placeholder="Enter PIN"
-          className={`form-control ${error ? 'is-invalid' : ''}`}
-          required
-          autoFocus
-        />
-        {error && <div className="invalid-feedback">{error}</div>}
-      </div>
+        <div className="pin-auth-input-group">
+          <input
+            type="password"
+            value={pin}
+            onChange={(e) => setPin(e.target.value)}
+            placeholder="Enter PIN"
+            className={`pin-auth-input ${error ? "pin-auth-input-error" : ""}`}
+            required
+            autoFocus
+          />
+          {error && <div className="pin-auth-error-message">{error}</div>}
+        </div>
 
-      <button type="submit" className="btn btn-primary w-100">
-        Submit
-      </button>
-    </form>
+        <button type="submit" className="pin-auth-submit-btn">
+          Submit
+        </button>
+      </form>
+    </div>
   );
 }

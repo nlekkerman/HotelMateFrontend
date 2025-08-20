@@ -68,17 +68,17 @@ body {
 
 .sidebar-nav-desktop .nav-link.bg-opacity-25 {
   background-color: rgba(51, 61, 3, 0.55) !important;
-  max-width: 100%!important;
+  max-width: 100% !important;
   overflow: hidden;
   margin-right: 10px;
-
 }
 
-.location-modal{
+.location-modal {
   z-index: 1050 !important;
-
 }
-.modal-backdrop { z-index: 1050 !important; }
+.modal-backdrop {
+  z-index: 1050 !important;
+}
 
 body.terminal-mode,
 .face-terminal {
@@ -89,7 +89,7 @@ body.terminal-mode,
   width: 100vw;
   overflow: hidden;
   position: relative;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: "Courier New", Courier, monospace;
   color: #00ff00;
 }
 
@@ -112,7 +112,6 @@ body.terminal-mode,
   background-color: black;
 }
 
-
 .cutout {
   width: 320px;
   height: 480px;
@@ -124,14 +123,14 @@ body.terminal-mode,
 }
 /* Force shift pills to stay on one line even with padding */
 .shift-chip {
-  display: block;        /* so padding won’t trigger wrapping */
+  display: block; /* so padding won’t trigger wrapping */
   align-items: center;
   justify-content: center;
-  white-space: nowrap;         /* never wrap */
-  padding: 4px 8px;            /* whatever you like */
-  border-radius: 9999px;       /* pill */
-  line-height: 1;              /* keep it compact */
-  max-width: max-content;      /* don’t expand wider than needed */
+  white-space: nowrap; /* never wrap */
+  padding: 4px 8px; /* whatever you like */
+  border-radius: 9999px; /* pill */
+  line-height: 1; /* keep it compact */
+  max-width: max-content; /* don’t expand wider than needed */
 }
 
 /* Optional: make sure table cells themselves don’t wrap */
@@ -140,8 +139,8 @@ body.terminal-mode,
 }
 
 .controls {
-  position: absolute;
-  bottom: 40px;
+  position: relative;
+  bottom: 10px;
   width: 100%;
   z-index: 4;
   color: white;
@@ -149,12 +148,11 @@ body.terminal-mode,
 .buttons-container {
   display: flex;
   justify-content: center;
-  
 }
-.staf-list-container{
+.staf-list-container {
   padding: 0.7rem;
 }
-.reception-container{
+.reception-container {
   border-top: 0.5em solid rgb(255, 255, 255);
 }
 .accordion-button::after {
@@ -164,14 +162,16 @@ body.terminal-mode,
 #splash .spinner {
   width: 3rem;
   height: 3rem;
-  border: 0.4rem solid rgba(255,255,255,0.3);
+  border: 0.4rem solid rgba(255, 255, 255, 0.3);
   border-top-color: white;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 0.5rem;
 }
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 /* Text and background utilities: */
 .main-text {
@@ -271,19 +271,18 @@ body.terminal-mode,
   min-width: 350px !important;
   font-size: 1.1rem; /* make text bigger */
   z-index: 20050 !important; /* ensure it's on top of bootstrap modals */
- 
 }
-.shift-modal{
-   z-index: 20059 !important;
-   background-color: #00ff00;
+.shift-modal {
+  z-index: 20059 !important;
+  background-color: #00ff00;
 }
 /* ─── LogoBanner ─── */
 .hotel-logo-banner {
   text-align: center;
   padding: 1rem 0;
- 
+
   background-color: rgba(var(--main-color-rgb), 0.71);
-   animation: slideDownBanner 0.6s ease-out both;
+  animation: slideDownBanner 0.6s ease-out both;
 }
 
 .hotel-logo-banner .hotel-logo-image {
@@ -307,15 +306,11 @@ body.terminal-mode,
 
 .layout-container.collapsed {
   padding-left: 90px;
-  
-  
 }
 
 .layout-container.expanded {
-  
   padding: 1px;
 }
-
 
 .staff-list-container {
   min-height: 100vh;
@@ -331,33 +326,31 @@ body.terminal-mode,
   border-radius: 15px;
 }
 
-.title-container{
+.title-container {
   border-top: 3px solid black;
   border-bottom: 3px solid black;
   padding: 3px;
   margin-bottom: 1em;
   margin-top: 1em;
   text-align: center;
-  
 }
 .loading {
   display: flex;
-  justify-content: center;  /* horizontal centering */
-  align-items: center;      /* vertical centering */
-  min-height: 100vh;        /* full screen height */
-  text-align: center;       /* optional: center text inside */
+  justify-content: center; /* horizontal centering */
+  align-items: center; /* vertical centering */
+  min-height: 100vh; /* full screen height */
+  text-align: center; /* optional: center text inside */
 }
 
-.main-content-area{
- 
+.main-content-area {
   margin-left: 0 !important;
   width: 100%;
- 
+
   justify-content: center;
   padding-bottom: 10px;
 }
 
-.like-share-comment-button{
+.like-share-comment-button {
   border: none;
   font-size: 0.7rem;
   color: rgb(45, 44, 44);
@@ -381,8 +374,169 @@ body.terminal-mode,
   font-weight: bold;
   /* color will be set dynamically */
 }
+/* Container centers everything */
+.pin-auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 1rem;
+}
 
+/* Card-style form */
+.pin-auth-form {
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+}
 
+/* Heading */
+.pin-auth-title {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Input wrapper */
+.pin-auth-input-group {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Input field */
+.pin-auth-input {
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+}
+
+.pin-auth-input:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+/* Error state */
+.pin-auth-input-error {
+  border-color: #dc3545;
+}
+
+.pin-auth-error-message {
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+/* Submit button */
+.pin-auth-submit-btn {
+  background-color: #007bff;
+  color: #fff;
+  font-size: 1rem;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background 0.2s ease-in-out;
+}
+
+.pin-auth-submit-btn:hover {
+  background-color: #0056b3;
+}
+
+.blueprint-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.blueprint-tab {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: darkgreen;
+}
+/* DiningTables.css */
+.blueprint-container {
+  margin-top: 1rem;
+}
+
+.blueprint-wrapper {
+  position: relative;
+  margin: 0 auto;
+  border: 1px solid #ccc;
+}
+
+/* Small screens */
+@media (max-width: 576px) {
+  .blueprint-wrapper {
+    width: 300px;
+    height: 200px;
+  }
+  .dining-table {
+    width: 30px;
+    height: 30px;
+    font-size: 0.4rem !important;
+  }
+  .blueprint-object{
+    font-size:  0.4em; ;
+  }
+}
+
+/* Medium screens */
+@media (min-width: 577px) and (max-width: 992px) {
+  .blueprint-wrapper {
+    width: 600px;
+    height: 400px;
+  }
+  .dining-table {
+    width: 60px; /* medium table width */
+    height: 60px; /* medium table height */
+    font-size: 0.5rem !important;
+  }
+}
+
+/* Large screens */
+@media (min-width: 993px) {
+  .blueprint-wrapper {
+    width: 1000px;
+    height: 600px;
+  }
+}
+
+.dining-table {
+  position: absolute;
+  background-color: rgb(91, 41, 0) !important;
+  color: white !important;
+  border: 1px solid #d4c4b9 !important;
+  box-shadow: 0 7px 4px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  font-size: 0.7rem;
+  cursor: move;
+  line-height: 1;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.blueprint-object {
+  text-align: center;
+  border: 2px solid rgba(0, 0, 0, 0.5) !important;
+  color: white !important;
+  background-color: brown !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+}
 /* ─── Keyframes ─── */
 @keyframes slideDownBanner {
   from {
@@ -396,8 +550,12 @@ body.terminal-mode,
 }
 
 @keyframes fadeInLogo {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 @media (min-width: 992px) {
   /* Expanded sidebar: assume 250px wide */
@@ -420,10 +578,9 @@ body.terminal-mode,
   }
 }
 
-.transparent-container-bg{
-  margin-top: 2em ;
- padding: 5px;
-
+.transparent-container-bg {
+  margin-top: 2em;
+  padding: 5px;
 }
 
 @media (max-width: 991.98px) {

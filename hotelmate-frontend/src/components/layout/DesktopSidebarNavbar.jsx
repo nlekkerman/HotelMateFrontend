@@ -14,7 +14,8 @@ const DesktopSidebarNavbar = () => {
   const hotelIdentifier = user?.hotel_slug;
   const { mainColor } = useTheme();
 
-  const { roomServiceCount, breakfastCount, totalServiceCount } = useOrderCount(hotelIdentifier);
+  const { roomServiceCount, breakfastCount, totalServiceCount } =
+    useOrderCount(hotelIdentifier);
   const [staffProfile, setStaffProfile] = useState(null);
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
@@ -27,12 +28,12 @@ const DesktopSidebarNavbar = () => {
 
   // Define active path helpers
   const isExactActive = (path) => location.pathname === path;
-const isPartialActive = (path) => {
-  if (path === "/") {
-    return location.pathname === "/";
-  }
-  return location.pathname.startsWith(path);
-};
+  const isPartialActive = (path) => {
+    if (path === "/") {
+      return location.pathname === "/";
+    }
+    return location.pathname.startsWith(path);
+  };
 
   useEffect(() => {
     if (!user) {
@@ -40,7 +41,8 @@ const isPartialActive = (path) => {
       setIsOnDuty(false);
       return;
     }
-    api.get("/staff/me/")
+    api
+      .get("/staff/me/")
       .then((res) => {
         setStaffProfile(res.data);
         setIsOnDuty(res.data.is_on_duty);
@@ -139,6 +141,13 @@ const isPartialActive = (path) => {
       roles: ["staff_admin", "super_staff_admin"],
     },
     {
+      path: `/${hotelIdentifier}/restaurants`,
+      label: "Restaurants",
+      icon: "shop-window", // Bootstrap Icon for restaurants/buildings
+      roles: ["manager", "staff_admin", "super_staff_admin"], // adjust as needed
+    },
+
+    {
       path: "/bookings",
       label: "Bookings",
       icon: "calendar-check",
@@ -198,14 +207,15 @@ const isPartialActive = (path) => {
         </div>
 
         <ul className="nav nav-pills flex-column mb-auto px-2">
-
           {/* Clock In/Out as Link for consistent hover/active */}
           {user?.is_superuser && (
             <li className="nav-item">
               <Link
                 to={`/clock-in/${hotelIdentifier}`}
                 className={`nav-link text-white ${
-                  isExactActive(`/clock-in/${hotelIdentifier}`) ? "bg-opacity-25" : ""
+                  isExactActive(`/clock-in/${hotelIdentifier}`)
+                    ? "bg-opacity-25"
+                    : ""
                 }`}
                 onClick={() => setCollapsed(true)}
               >
@@ -257,7 +267,9 @@ const isPartialActive = (path) => {
                 <li className="nav-item">
                   <Link
                     className={`nav-link text-white ${
-                      isExactActive(`/${hotelIdentifier}/staff/me`) ? "bg-opacity-25" : ""
+                      isExactActive(`/${hotelIdentifier}/staff/me`)
+                        ? "bg-opacity-25"
+                        : ""
                     }`}
                     to={`/${hotelIdentifier}/staff/me`}
                     onClick={() => setCollapsed(true)}
@@ -297,81 +309,84 @@ const isPartialActive = (path) => {
                 "chef",
               ]) && (
                 <li className="nav-item" ref={servicesRef}>
-  <div
-    className={`nav-link text-white d-flex align-items-center justify-content-between ${
-      isPartialActive("/services") ? "bg-opacity-25" : ""
-    }`}
-    style={{ cursor: "pointer" }}
-    onClick={() => setFlyoutOpen(!flyoutOpen)}
-  >
-    <div className="d-flex align-items-center">
-      <i className="bi bi-cup-hot me-2" />
-      {!collapsed && "Services"}
-    </div>
-    
-    <div className="d-flex align-items-center">
-      {totalServiceCount > 0 && (
-        <span className="badge bg-danger me-2">
-          {totalServiceCount}
-        </span>
-      )}
-      {!collapsed && (
-        <i
-          className={`bi ${
-            flyoutOpen ? "bi-chevron-up" : "bi-chevron-down"
-          } transition-transform`}
-        />
-      )}
-    </div>
-  </div>
+                  <div
+                    className={`nav-link text-white d-flex align-items-center justify-content-between ${
+                      isPartialActive("/services") ? "bg-opacity-25" : ""
+                    }`}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => setFlyoutOpen(!flyoutOpen)}
+                  >
+                    <div className="d-flex align-items-center">
+                      <i className="bi bi-cup-hot me-2" />
+                      {!collapsed && "Services"}
+                    </div>
 
-  {flyoutOpen && (
-    <ul className="nav flex-column mt-1">
-      <li className="nav-item">
-        <Link
-          className={`nav-link text-white ${
-            isPartialActive("/services/room-service") ? "bg-opacity-25" : ""
-          } d-flex align-items-center justify-content-between`}
-          to="/services/room-service"
-          onClick={() => setCollapsed(true)}
-          style={{ whiteSpace: "nowrap" }}
-        >
-          <div>
-            <i className="bi bi-box me-2 ms-2" />
-            {!collapsed && "Room Service"}
-          </div>
-          {roomServiceCount > 0 && (
-            <span className="badge bg-danger ms-2">
-              {roomServiceCount}
-            </span>
-          )}
-        </Link>
-      </li>
+                    <div className="d-flex align-items-center">
+                      {totalServiceCount > 0 && (
+                        <span className="badge bg-danger me-2">
+                          {totalServiceCount}
+                        </span>
+                      )}
+                      {!collapsed && (
+                        <i
+                          className={`bi ${
+                            flyoutOpen ? "bi-chevron-up" : "bi-chevron-down"
+                          } transition-transform`}
+                        />
+                      )}
+                    </div>
+                  </div>
 
-      <li className="nav-item">
-        <Link
-          className={`nav-link text-white ${
-            isPartialActive("/services/breakfast") ? "bg-opacity-25" : ""
-          } d-flex align-items-center justify-content-between`}
-          to="/services/breakfast"
-          onClick={() => setCollapsed(true)}
-          style={{ whiteSpace: "nowrap" }}
-        >
-          <div>
-            <i className="bi bi-egg-fried me-2 ms-2" />
-            {!collapsed && "Breakfast"}
-          </div>
-          {breakfastCount > 0 && (
-            <span className="badge bg-danger ms-2">
-              {breakfastCount}
-            </span>
-          )}
-        </Link>
-      </li>
-    </ul>
-  )}
-</li>
+                  {flyoutOpen && (
+                    <ul className="nav flex-column mt-1">
+                      <li className="nav-item">
+                        <Link
+                          className={`nav-link text-white ${
+                            isPartialActive("/services/room-service")
+                              ? "bg-opacity-25"
+                              : ""
+                          } d-flex align-items-center justify-content-between`}
+                          to="/services/room-service"
+                          onClick={() => setCollapsed(true)}
+                          style={{ whiteSpace: "nowrap" }}
+                        >
+                          <div>
+                            <i className="bi bi-box me-2 ms-2" />
+                            {!collapsed && "Room Service"}
+                          </div>
+                          {roomServiceCount > 0 && (
+                            <span className="badge bg-danger ms-2">
+                              {roomServiceCount}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
 
+                      <li className="nav-item">
+                        <Link
+                          className={`nav-link text-white ${
+                            isPartialActive("/services/breakfast")
+                              ? "bg-opacity-25"
+                              : ""
+                          } d-flex align-items-center justify-content-between`}
+                          to="/services/breakfast"
+                          onClick={() => setCollapsed(true)}
+                          style={{ whiteSpace: "nowrap" }}
+                        >
+                          <div>
+                            <i className="bi bi-egg-fried me-2 ms-2" />
+                            {!collapsed && "Breakfast"}
+                          </div>
+                          {breakfastCount > 0 && (
+                            <span className="badge bg-danger ms-2">
+                              {breakfastCount}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    </ul>
+                  )}
+                </li>
               )}
 
               {/* Show Settings only if user is Django superuser */}
