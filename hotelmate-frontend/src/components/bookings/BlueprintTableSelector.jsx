@@ -8,6 +8,7 @@ export default function BlueprintTableSelector({
   selectedObjectId,
   onSelectTable,
   onSelectObject,
+  totalGuests,
 }) {
   const objects = Array.isArray(objectsWrapper?.results)
     ? objectsWrapper.results
@@ -53,7 +54,40 @@ export default function BlueprintTableSelector({
         const left = Math.min(pos.x * scaleX, bpSize.width - width);
         const top = Math.min(pos.y * scaleY, bpSize.height - height);
 
-        const isAvailable = availableTableIds.length === 0 || availableTableIds.includes(t.id);
+// 1) Check if table is free
+// 1) Base availability (from backend)
+let isAvailable = availableTableIds.length === 0 || availableTableIds.includes(t.id);
+
+if (isAvailable && totalGuests > 0) {
+  const capacity = t.capacity || t.seats || 0;
+
+  // find the smallest available table that can actually fit this party
+  const minValidCapacity = Math.min(
+    ...tables
+      .filter(
+        (other) =>
+          availableTableIds.includes(other.id) &&
+          (other.capacity || other.seats || 0) >= totalGuests
+      )
+      .map((other) => other.capacity || other.seats || Infinity)
+  );
+
+  // If such a table exists, only keep this one if it matches the smallest capacity
+  if (minValidCapacity !== Infinity) {
+    isAvailable = capacity === minValidCapacity;
+  } else {
+    // fallback: no table can actually fit → allow the largest available (better than nothing)
+    const maxAvailableCapacity = Math.max(
+      ...tables
+        .filter((other) => availableTableIds.includes(other.id))
+        .map((other) => other.capacity || other.seats || 0),
+      0
+    );
+    isAvailable = capacity === maxAvailableCapacity;
+  }
+}
+
+
         const shouldPulse = isAvailable && !selectedTableId;
 
         return (

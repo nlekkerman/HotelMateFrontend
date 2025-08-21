@@ -1,4 +1,3 @@
-// src/hooks/useHotel.js
 import { useEffect, useState } from "react";
 import api from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
@@ -9,37 +8,28 @@ export default function useHotel() {
   const { user } = useAuth();
   const [hotelId, setHotelId] = useState(null);
   const [hotel, setHotel] = useState(null);
-
-  // new states for name + logo
   const [hotelName, setHotelName] = useState(null);
   const [hotelLogo, setHotelLogo] = useState(null);
 
   useEffect(() => {
     const fetchHotel = async () => {
-      if (!user) return;
+      if (!user?.hotel_slug) return;
 
       try {
-        // 1️⃣ get staff/me → hotel id
-        const res = await api.get("/staff/me/");
-        const _hotelId = res.data.user?.staff_profile?.hotel?.id;
-        setHotelId(_hotelId);
+        // ✅ use the hotel slug from the logged-in user
+        const res = await api.get(`/staff/${user.hotel_slug}/me/`);
+        const hotelData = res.data.user?.staff_profile?.hotel;
 
-        if (_hotelId) {
-          // 2️⃣ get full hotel details
-          const hotelRes = await api.get(`/hotel/hotels/${_hotelId}/`);
-          const h = hotelRes.data;
-          setHotel(h);
+        if (hotelData) {
+          setHotelId(hotelData.id);
+          setHotel(hotelData);
 
-          // 3️⃣ pull out name
-          if (h.name) {
-            setHotelName(h.name);
-          }
+          if (hotelData.name) setHotelName(hotelData.name);
 
-          // 4️⃣ normalize logo URL (prefix if needed)
-          if (h.logo) {
-            const url = h.logo.startsWith("http")
-              ? h.logo
-              : CLOUDINARY_BASE + h.logo;
+          if (hotelData.logo) {
+            const url = hotelData.logo.startsWith("http")
+              ? hotelData.logo
+              : CLOUDINARY_BASE + hotelData.logo;
             setHotelLogo(url);
           }
         }
@@ -51,10 +41,5 @@ export default function useHotel() {
     fetchHotel();
   }, [user]);
 
-  return {
-    hotelId,
-    hotel,
-    hotelName,
-    hotelLogo,
-  };
+  return { hotelId, hotel, hotelName, hotelLogo };
 }

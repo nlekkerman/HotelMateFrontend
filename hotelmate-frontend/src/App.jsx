@@ -27,8 +27,10 @@ import RegistrationSuccess from "@/components/auth/RegistrationSuccess";
 import ForgotPassword from "@/components/auth/ForgotPassword";
 import ResetPassword from "@/components/auth/ResetPassword";
 import RequirePin from "@/components/auth/RequirePin";
+import RequireChatPin from "@/components/auth/RequireChatPin";
 import RequireDinnerPin from "@/components/auth/RequireDinnerPin";
 import DinnerPinAuth from "@/components/auth/DinnerPinAuth";
+import ChatPinAuth from "@/components/auth/ChatPinAuth";
 import PinAuth from "@/components/auth/PinAuth";
 import FaceClockInPage from "@/pages/attendance/FaceClockInPage";
 import FaceRegister from "@/components/attendance/FaceRegister";
@@ -68,6 +70,8 @@ import Maintenance from "@/pages/maintenance/Maintenance";
 import NoInternet from "@/components/offline/NoInternet";
 import NotFound from "@/components/offline/NotFound";
 
+import ChatHomePage from "@/pages/chat/ChatHomePage";
+import ChatWindow from "@/components/chat/ChatWindow";
 const queryClient = new QueryClient();
 
 // 🔁 Inner layout that uses `useLocation()` safely
@@ -124,9 +128,9 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 element={<RestaurantManagementDashboard />}
               ></Route>
               <Route
-  path="/hotels/:hotelSlug/restaurants/:restaurantSlug"
-  element={<Restaurant />}
-/>
+                path="/hotels/:hotelSlug/restaurants/:restaurantSlug"
+                element={<Restaurant />}
+              />
 
               {/* Face Recognition */}
               <Route
@@ -242,7 +246,24 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 path="/stock_tracker/:hotel_slug/:category_slug"
                 element={<CategoryStock />}
               />
+<Route
+  path="/chat/:hotelSlug/messages/room/:room_number/validate-chat-pin"
+  element={<ChatPinAuth />}
+/>
 
+              {/* Staff: Authenticated users go to ChatHomePage */}
+
+              <Route path="/hotel/:hotelSlug/chat" element={<ChatHomePage />} />
+
+              {/* Guests: Unauthenticated go directly to their room */}
+              <Route
+                path="/chat/:hotelSlug/messages/room/:room_number/send"
+                element={
+                  <RequireChatPin>
+                    <ChatWindow />
+                  </RequireChatPin>
+                }
+              />
               {/* Catch All */}
               <Route path="*" element={<NotFound />} />
             </Routes>
