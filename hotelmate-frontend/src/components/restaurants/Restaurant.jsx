@@ -47,7 +47,6 @@ const Restaurant = () => {
 
       {blueprint ? (
         <div className="blueprint-container">
-          <h4>Blueprint: {blueprint.width} x {blueprint.height}</h4>
           <BlueprintFloorEditor
             hotelSlug={hotelSlug}
             restaurantSlug={restaurantSlug}

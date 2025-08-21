@@ -7,7 +7,7 @@ export default function EditTableModal({ show, table, onClose, onUpdate, onDelet
     width: 30,
     height: 30,
     shape: "RECTANGLE",
-    capacity: 4, // <-- new field
+    capacity: "4", // <-- new field
   });
 
   // Sync form data with the selected table
@@ -18,7 +18,8 @@ export default function EditTableModal({ show, table, onClose, onUpdate, onDelet
         width: table.width || 30,
         height: table.height || 30,
         shape: table.shape || "RECTANGLE",
-        capacity: table.capacity || 1, // <-- sync capacity
+        capacity: table.capacity?.toString() ?? "0",
+         // <-- sync capacity
       });
     }
   }, [table]);
@@ -26,19 +27,23 @@ export default function EditTableModal({ show, table, onClose, onUpdate, onDelet
   if (!table) return null;
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]:
-        name === "width" || name === "height" || name === "capacity"
-          ? Number(value)
-          : value,
-    }));
-  };
+  const { name, value } = e.target;
+  setFormData((prev) => ({
+    ...prev,
+    [name]: value, // keep as string to allow clearing input
+  }));
+};
+
 
   const handleUpdate = () => {
-    onUpdate(formData);
-  };
+  onUpdate({
+    ...formData,
+    width: Number(formData.width),
+    height: Number(formData.height),
+    capacity: Number(formData.capacity),
+  });
+};
+
 
   const handleDelete = () => {
     onDelete(table.id);

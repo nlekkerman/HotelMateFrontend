@@ -19,7 +19,6 @@ export function ThemeProvider({ children }) {
   const { user } = useAuth();
   const hotelSlug = user?.hotel_slug;
 
-  console.log("🔹 ThemeProvider render - user:", user, "hotelSlug:", hotelSlug);
   // 1️⃣ Fetch theme
   const { data, isLoading } = useQuery({
     queryKey: ["theme", hotelSlug],

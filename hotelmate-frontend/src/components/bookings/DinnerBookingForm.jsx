@@ -6,6 +6,8 @@ import { useDiningTable } from "@/components/restaurants/hooks/useDiningTable";
 import { useBlueprintObjects } from "@/components/restaurants/hooks/useBlueprintObjects";
 import BlueprintTableSelector from "./BlueprintTableSelector";
 import api from "@/services/api";
+import HotelLogo from "@/components/layout/HotelLogo";
+import SuccessModal from "@/components/modals/SuccessModal";
 
 export default function DinnerBookingForm() {
   const { hotelSlug, restaurantSlug, roomNumber } = useParams();
@@ -96,27 +98,58 @@ useEffect(() => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === "start_time") {
+    setFormData((prev) => ({
+      ...prev,
+      start_time: value,
+      end_time: addMinutes(value, 90), // auto-set 1.5h later
+    }));
+  } else {
     setFormData((prev) => ({ ...prev, [name]: value }));
+  }
   };
 
   const handleDateChange = (date) => {
     setFormData((prev) => ({ ...prev, date }));
   };
-
+const addMinutes = (timeStr, minutesToAdd) => {
+  // timeStr in format "HH:mm"
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  const date = new Date();
+  date.setHours(hours);
+  date.setMinutes(minutes + minutesToAdd);
+  
+  const h = String(date.getHours()).padStart(2, "0");
+  const m = String(date.getMinutes()).padStart(2, "0");
+  return `${h}:${m}`;
+};
  const handleSubmit = async (e) => {
   e.preventDefault();
   setError(""); // reset error
+const { date, start_time, adults, children, infants, note, voucher_code } = formData;
 
+  // Check required fields
+  if (!date) {
+    setError("Please select a date.");
+    return;
+  }
+
+  if (!start_time) {
+    setError("Please select a start time.");
+    return;
+  }
   const totalGuests =
-    Number(formData.adults) +
-    Number(formData.children) +
-    Number(formData.infants);
+    Number(adults) +
+    Number(children) +
+    Number(infants);
 
   // Only require table selection if totalGuests <= 6
   if (totalGuests <= 6 && (!selectedTable || !selectedTable.id)) {
     setError("Please select a table");
     return;
   }
+  
+
 // Utility function to get YYYY-MM-DD in local time
 const formatDateLocal = (date) => {
   const adjustedDate = new Date(date);
@@ -159,13 +192,31 @@ const formatDateLocal = (date) => {
   }
 };
 
+const resetForm = () => {
+  setFormData({
+    date: null,
+    start_time: "",
+    end_time: "",
+    note: "",
+    adults: 1,
+    children: 0,
+    infants: 0,
+    voucher_code: "",
+  });
+  setSelectedTable(null);          // reset table selection
+  setAvailableTableIds([]);        // optionally reset available table IDs
+};
 
-  if (submitted)
-    return <div className="alert alert-success">Booking submitted!</div>;
+ 
 
   return (
     <div className="container mt-5">
-      <h2>Dinner Booking</h2>
+      <div className="text-center mb-4">
+        <HotelLogo style={{ maxHeight: 80 }} />
+      </div>
+      <div className="title-container">
+        <h2>Dinner Booking</h2>
+      </div>
       {error && <div className="alert alert-danger">{error}</div>}
 
       <form onSubmit={handleSubmit}>
@@ -200,21 +251,19 @@ const formatDateLocal = (date) => {
 
         {/* End Time (optional) */}
         <div className="mb-3">
-          <label>End Time (optional)</label>
-          <select
-            name="end_time"
-            value={formData.end_time}
-            onChange={handleChange}
-            className="form-control"
-          >
-            <option value="">Auto (90 mins)</option>
-            {timeSlots.map((slot) => (
-              <option key={slot} value={slot}>
-                {slot}
-              </option>
-            ))}
-          </select>
-        </div>
+  <label>End Time</label>
+  <input
+    type="text"
+    name="end_time"
+    value={formData.end_time || ""}
+    readOnly
+    className="form-control"
+  />
+  <small className="form-text text-muted">
+    Auto-calculated as 90 minutes after start time
+  </small>
+</div>
+
 
         {/* Guests */}
         <div className="mb-3">
@@ -279,12 +328,24 @@ const formatDateLocal = (date) => {
     objects={Array.isArray(objects?.results) ? objects.results : objects}
     selectedTableId={selectedTable?.id}
     onSelectTable={setSelectedTable}
+    totalGuests={totalGuests}
   />
 ) : (
   <div className="alert alert-info">
     Total guests exceed 6. Management will combine tables and allocate seating.
   </div>
+
+  
 )}
+
+<SuccessModal
+  show={submitted}
+  message="Booking submitted successfully!"
+  onClose={() => {
+    setSubmitted(false);
+    resetForm();
+  }}
+/>
 
 
 {totalGuests <= 6 && selectedTable && (
