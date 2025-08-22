@@ -1,32 +1,50 @@
-import React, { useState } from "react";
-import ChatSidebar from "@/components/chat/ChatSidebar";
+import { useState } from "react";
 import ChatWindow from "@/components/chat/ChatWindow";
 
 const ChatHomePage = ({ hotelSlug, user }) => {
   const [selectedRoom, setSelectedRoom] = useState(null);
 
-  useEffect(() => {
-    // If user is a guest, go straight to their room
-    if (!user.isAuthenticated && user.roomId) {
-      setSelectedRoom(user.roomId);
-    }
-  }, [user]);
-
-  // Staff sees sidebar, guest goes directly to chat
-  if (!user.isAuthenticated && selectedRoom) {
-    return <ChatWindow hotelSlug={hotelSlug} roomId={selectedRoom} userId={user.id} />;
-  }
+  // Prevent crash if user or rooms is undefined
+  const rooms = user?.rooms || [];
 
   return (
-    <div className="d-flex h-100">
-      <ChatSidebar hotelSlug={hotelSlug} onSelectRoom={setSelectedRoom} />
-      {selectedRoom ? (
-        <ChatWindow hotelSlug={hotelSlug} roomId={selectedRoom} userId={user.id} />
-      ) : (
-        <div className="flex-grow-1 d-flex align-items-center justify-content-center text-muted">
-          Select a room to view messages
-        </div>
-      )}
+    <div style={{ display: "flex", height: "100vh" }}>
+      {/* Sidebar with rooms */}
+      <div style={{ width: "250px", borderRight: "1px solid #ccc", overflowY: "auto" }}>
+        {rooms.length > 0 ? (
+          rooms.map((room) => (
+            <div
+              key={room.id}
+              style={{
+                padding: "10px",
+                cursor: "pointer",
+                backgroundColor: selectedRoom === room.id ? "#f0f0f0" : "white",
+              }}
+              onClick={() => setSelectedRoom(room.id)}
+            >
+              {room.name}
+            </div>
+          ))
+        ) : (
+          <div>No rooms available</div>
+        )}
+      </div>
+
+      {/* Main area */}
+      <div style={{ flex: 1, padding: "20px" }}>
+        {selectedRoom ? (
+          <ChatWindow
+            hotelSlug={hotelSlug}
+            roomId={selectedRoom}
+            userId={user?.id}
+          />
+        ) : (
+          <div>
+            <h2>Chat Rooms</h2>
+            <p>Please select a room from the sidebar to start chatting.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

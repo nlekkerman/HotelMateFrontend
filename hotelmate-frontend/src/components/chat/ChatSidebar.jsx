@@ -1,31 +1,55 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import api from "@/services/api";
 
-const ChatSidebar = ({ hotelSlug, onSelectRoom }) => {
+const ChatSidebar = ({ hotelSlug, onSelectRoom, selectedRoom }) => {
   const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch rooms for the hotel
-    axios.get(`/api/${hotelSlug}/rooms/`)  // your backend endpoint
-      .then((res) => setRooms(res.data))
-      .catch((err) => console.error(err));
+    if (!hotelSlug) return;
+
+    const fetchRooms = async () => {
+      try {
+        const res = await api.get(`/chat/${hotelSlug}/active-rooms/`);
+        setRooms(res.data);
+      } catch (err) {
+        console.error("Failed to fetch rooms:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRooms();
   }, [hotelSlug]);
 
+  if (loading) return <div className="p-3">Loading rooms...</div>;
+
+  if (rooms.length === 0)
+    return <div className="p-3">No active chats available.</div>;
+
   return (
-    <div className="list-group list-group-flush overflow-auto vh-100">
-      {rooms.length === 0 && (
-        <div className="text-center text-muted mt-3">No rooms available</div>
-      )}
-      {rooms.map((room) => (
-        <button
-          key={room.id}
-          className="list-group-item list-group-item-action d-flex flex-column align-items-start"
-          onClick={() => onSelectRoom(room.id)}
-        >
-          <div className="fw-bold">Room {room.number}</div>
-          <small className="text-muted text-truncate">{room.last_message || "No messages yet"}</small>
-        </button>
-      ))}
+    <div className="d-flex flex-column border-end" style={{ width: "250px" }}>
+      <h5 className="p-3 border-bottom">Active Rooms</h5>
+      <div className="flex-grow-1 overflow-auto">
+        {rooms.map((room) => {
+          const isSelected = selectedRoom === room.room_number;
+          return (
+            <div
+              key={room.room_number}
+              className={`p-3 border-bottom d-flex flex-column ${
+                isSelected ? "bg-primary text-white" : "bg-light"
+              }`}
+              style={{ cursor: "pointer" }}
+              onClick={() => onSelectRoom(room.room_number)}
+            >
+              <strong>Room {room.room_number}</strong>
+              <small className="text-truncate">
+                {room.last_message || "No messages yet"}
+              </small>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

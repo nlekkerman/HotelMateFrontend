@@ -3,7 +3,7 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import api from "@/services/api";
 
 export default function ChatPinAuth() {
-  const { hotelSlug, room_number } = useParams(); // ✅ use room_number
+  const { hotelSlug, conversationId } = useParams(); // ✅ updated
   const navigate = useNavigate();
   const location = useLocation();
   const [pin, setPin] = useState("");
@@ -12,19 +12,18 @@ export default function ChatPinAuth() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-
     try {
       const response = await api.post(
-        `/chat/${hotelSlug}/messages/room/${room_number}/validate-chat-pin/`,
+        `/chat/${hotelSlug}/conversations/${conversationId}/validate-chat-pin/`, // ✅ updated
         { pin }
       );
 
       console.log("API response:", response);
 
       if (response.data.valid) {
-        sessionStorage.setItem(`chat_pin_ok_${room_number}`, "true");
+        sessionStorage.setItem(`chat_pin_ok_${conversationId}`, "true"); // ✅ updated
         navigate(
-          location.state?.next || `/chat/${hotelSlug}/messages/room/${room_number}/send`
+          location.state?.next || `/chat/${hotelSlug}/conversations/${conversationId}/messages/send` // ✅ updated
         );
       } else {
         setError("Invalid PIN. Please try again.");
@@ -38,7 +37,7 @@ export default function ChatPinAuth() {
   return (
     <div className="pin-auth-container">
       <form onSubmit={handleSubmit}>
-        <h2>Enter Chat PIN for Room {room_number}</h2>
+        <h2>Enter Chat PIN for Conversation {conversationId}</h2>
         <input
           type="password"
           value={pin}

@@ -246,24 +246,31 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 path="/stock_tracker/:hotel_slug/:category_slug"
                 element={<CategoryStock />}
               />
-<Route
-  path="/chat/:hotelSlug/messages/room/:room_number/validate-chat-pin"
-  element={<ChatPinAuth />}
-/>
+              {/* Guest: Validate chat PIN for a room */}
+              <Route
+                path="/chat/:hotelSlug/messages/room/:room_number/validate-chat-pin"
+                element={<ChatPinAuth />}
+              />
 
-              {/* Staff: Authenticated users go to ChatHomePage */}
-
+              {/* Staff: Authenticated users go to ChatHomePage (all active conversations for the hotel) */}
               <Route path="/hotel/:hotelSlug/chat" element={<ChatHomePage />} />
 
-              {/* Guests: Unauthenticated go directly to their room */}
+              {/* Guests: Access a specific conversation (previously room-based) */}
               <Route
-                path="/chat/:hotelSlug/messages/room/:room_number/send"
+                path="/chat/:hotelSlug/conversations/:conversationId/messages/send"
                 element={
                   <RequireChatPin>
                     <ChatWindow />
                   </RequireChatPin>
                 }
               />
+
+              {/* Fetch all messages in a conversation */}
+              <Route
+                path="/chat/:hotelSlug/conversations/:conversationId/messages"
+                element={<ChatWindow />}
+              />
+
               {/* Catch All */}
               <Route path="*" element={<NotFound />} />
             </Routes>
