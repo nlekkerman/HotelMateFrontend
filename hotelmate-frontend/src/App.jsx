@@ -8,7 +8,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import { UIProvider } from "@/context/UIContext";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
@@ -73,7 +73,11 @@ import NotFound from "@/components/offline/NotFound";
 import ChatHomePage from "@/pages/chat/ChatHomePage";
 import ChatWindow from "@/components/chat/ChatWindow";
 const queryClient = new QueryClient();
-
+// Small wrapper to inject userId into ChatWindow
+const ChatWindowWrapper = () => {
+  const { user } = useAuth(); // logged-in user
+  return <ChatWindow userId={user?.id} />;
+};
 // 🔁 Inner layout that uses `useLocation()` safely
 function AppLayout({ collapsed, setCollapsed, isMobile }) {
   const location = useLocation();
