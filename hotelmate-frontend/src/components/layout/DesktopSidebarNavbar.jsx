@@ -106,6 +106,12 @@ const DesktopSidebarNavbar = () => {
       ],
     },
     {
+    path: `/hotel/${hotelIdentifier}/chat`,
+    label: "Chat",
+    icon: "chat-dots", // Bootstrap icon
+    roles: ["receptionist", "porter", "manager", "concierge", "staff_admin"], // adjust roles
+  },
+    {
       path: "/reception",
       label: "Reception",
       icon: "bell",
