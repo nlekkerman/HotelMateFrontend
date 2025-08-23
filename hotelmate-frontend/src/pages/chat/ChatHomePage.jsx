@@ -5,12 +5,11 @@ import ChatWindow from "@/components/chat/ChatWindow";
 import { useAuth } from "@/context/AuthContext";
 import { FaBars } from "react-icons/fa";
 
-const ChatHomePage = () => {
+const ChatHomePage = ({ selectedRoom, onSelectRoom, onUnreadChange }) => {
   const { hotelSlug } = useParams();
   const { user } = useAuth();
   const userId = user?.id;
 
-  const [selectedRoom, setSelectedRoom] = useState(null);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [showSidebar, setShowSidebar] = useState(window.innerWidth >= 768);
 
@@ -25,8 +24,8 @@ const ChatHomePage = () => {
   }, []);
 
   const handleSelectRoom = (roomNumber, conversationId) => {
-    setSelectedRoom(roomNumber);
     setSelectedConversation(conversationId);
+    onSelectRoom(roomNumber, conversationId);
 
     if (window.innerWidth < 768) setShowSidebar(false); // auto hide on small screens
   };
@@ -41,9 +40,11 @@ const ChatHomePage = () => {
           hotelSlug={hotelSlug}
           selectedRoom={selectedRoom}
           onSelectRoom={handleSelectRoom}
+          onUnreadChange={onUnreadChange} // now defined
           isMobile={window.innerWidth < 768}
           toggleSidebar={toggleSidebar}
         />
+
       )}
 
       {/* Hamburger icon only on small screens */}

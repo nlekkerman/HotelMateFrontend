@@ -2,9 +2,14 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import Pusher from "pusher-js";
 import api from "@/services/api";
-import { FaPaperPlane } from "react-icons/fa"; // Paper plane icon
+import { FaPaperPlane } from "react-icons/fa";
 
-const ChatWindow = ({ userId: propUserId, conversationId: propConversationId, hotelSlug: propHotelSlug }) => {
+const ChatWindow = ({
+  userId: propUserId,
+  conversationId: propConversationId,
+  hotelSlug: propHotelSlug,
+  onNewMessage, // callback to update sidebar
+}) => {
   const { hotelSlug: paramHotelSlug, conversationId: paramConversationIdFromURL } = useParams();
   const hotelSlug = propHotelSlug || paramHotelSlug;
   const conversationId = propConversationId || paramConversationIdFromURL;
@@ -19,31 +24,47 @@ const ChatWindow = ({ userId: propUserId, conversationId: propConversationId, ho
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   useEffect(scrollToBottom, [messages]);
 
+  // Fetch messages and subscribe to Pusher
   useEffect(() => {
     if (!conversationId) return;
 
-    api
-      .get(`/chat/${hotelSlug}/conversations/${conversationId}/messages/`)
-      .then(res => setMessages(res.data))
-      .catch(err => console.error("Error fetching messages:", err));
+    const fetchMessages = async () => {
+      try {
+        const res = await api.get(`/chat/${hotelSlug}/conversations/${conversationId}/messages/`);
+        setMessages(res.data);
+      } catch (err) {
+        console.error("Error fetching messages:", err);
+      }
+    };
+    fetchMessages();
 
     const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
       cluster: import.meta.env.VITE_PUSHER_CLUSTER,
     });
     const channel = pusher.subscribe(`${hotelSlug}-conversation-${conversationId}-chat`);
-    channel.bind("new-message", message => setMessages(prev => [...prev, message]));
+    channel.bind("new-message", (message) => {
+      setMessages((prev) => [...prev, message]);
+
+      // Notify sidebar immediately
+      if (onNewMessage) {
+        onNewMessage({
+          conversation_id: conversationId,
+          message: message.message,
+        });
+      }
+    });
 
     return () => {
       channel.unbind_all();
       channel.unsubscribe();
     };
-  }, [hotelSlug, conversationId]);
+  }, [hotelSlug, conversationId, onNewMessage]);
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !conversationId) return;
 
     try {
-      await api.post(
+      const res = await api.post(
         `/chat/${hotelSlug}/conversations/${conversationId}/messages/send/`,
         {
           message: newMessage,
@@ -51,7 +72,18 @@ const ChatWindow = ({ userId: propUserId, conversationId: propConversationId, ho
           staff_id: userId || undefined,
         }
       );
+
+      const sentMessage = res.data.message;
+      setMessages((prev) => [...prev, sentMessage]);
       setNewMessage("");
+
+      // Update sidebar instantly
+      if (onNewMessage) {
+        onNewMessage({
+          conversation_id: conversationId,
+          message: sentMessage.message,
+        });
+      }
     } catch (err) {
       console.error("Failed to send message:", err);
     }
@@ -61,7 +93,7 @@ const ChatWindow = ({ userId: propUserId, conversationId: propConversationId, ho
     <div className="chat-window d-flex flex-column">
       {/* Messages area */}
       <div className="chat-messages flex-grow-1 overflow-auto">
-        {messages.map(msg => {
+        {messages.map((msg) => {
           const isMine =
             (msg.sender_type === "staff" && msg.staff === userId) ||
             (msg.sender_type === "guest" && !userId);
@@ -77,16 +109,18 @@ const ChatWindow = ({ userId: propUserId, conversationId: propConversationId, ho
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input + Icon send button next to input */}
+      {/* Input + Send button */}
       <div className="chat-input-vertical d-flex p-2 border-start">
         <input
           type="text"
           className="message-form-control me-2"
           placeholder="Type a message..."
           value={newMessage}
-          onChange={e => setNewMessage(e.target.value)}
+          onChange={(e) => setNewMessage(e.target.value)}
           disabled={!conversationId}
-          onKeyDown={e => { if (e.key === "Enter") handleSendMessage(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSendMessage();
+          }}
         />
         <button
           className="btn custom-button d-flex align-items-center justify-content-center"

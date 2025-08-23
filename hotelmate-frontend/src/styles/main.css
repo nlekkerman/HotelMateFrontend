@@ -461,6 +461,8 @@ body.terminal-mode,
 } 
 .sidebar-wrapper {
   position: fixed;
+  z-index: 1001
+  ;
   
 }
 .chat-sidebar.mobile {
@@ -539,6 +541,8 @@ body.terminal-mode,
   flex: 1;
   overflow-y: auto;
   padding: 1rem;
+
+  padding-bottom: 100px;
 }
 
 /* Sticky right-side input container */
