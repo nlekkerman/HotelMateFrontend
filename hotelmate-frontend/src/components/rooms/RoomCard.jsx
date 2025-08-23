@@ -6,25 +6,21 @@ import { useSingleRoomQrPdfPrinter } from "@/components/rooms/hooks/useSingleRoo
 const RoomCard = ({ room, selectedRooms, onSelect }) => {
   const navigate = useNavigate();
   const [qrType, setQrType] = useState("");
-const { generateSingleRoomQrPdf } = useSingleRoomQrPdfPrinter();
+  const { generateSingleRoomQrPdf } = useSingleRoomQrPdfPrinter();
 
-  const handleQrChange = (e) => {
-    setQrType(e.target.value);
-  };
+  const handleQrChange = (e) => setQrType(e.target.value);
 
-  // Dynamically get all keys ending with "_qr_code" that have a value
   const qrEntries = Object.entries(room).filter(
     ([key, value]) => key.endsWith("_qr_code") && value
   );
 
-  // Helper to format key names for dropdown display
   const formatQrName = (key) =>
     key
-      .replace(/_qr_code$/, "") // remove suffix
-      .replace(/_/g, " ") // replace underscores with spaces
-      .replace(/\b\w/g, (c) => c.toUpperCase()); // capitalize words
+      .replace(/_qr_code$/, "")
+      .replace(/_pin$/, "")
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
 
-  // Build map from formatted name to URL for easy lookup on selection
   const qrMap = qrEntries.reduce((acc, [key, value]) => {
     acc[formatQrName(key)] = value;
     return acc;
@@ -49,43 +45,34 @@ const { generateSingleRoomQrPdf } = useSingleRoomQrPdfPrinter();
             <strong>Occupied:</strong> {room.is_occupied ? "Yes" : "No"}
           </p>
 
-          {/* QR dropdown */}
-        
-<div
-  className="mb-3 text-center"
-  onClick={(e) => e.stopPropagation()} 
->
-  <select
-    className="form-select form-select-sm mb-2"
-    value={qrType}
-    onChange={handleQrChange}
-  >
-    <option value="">Select QR type</option>
-    {qrEntries.map(([key]) => (
-      <option key={key} value={formatQrName(key)}>
-        {formatQrName(key)}
-      </option>
-    ))}
-  </select>
+          <div className="mb-3 text-center" onClick={(e) => e.stopPropagation()}>
+            <select
+              className="form-select form-select-sm mb-2"
+              value={qrType}
+              onChange={handleQrChange}
+            >
+              <option value="">Select QR type</option>
+              {qrEntries.map(([key]) => (
+                <option key={key} value={formatQrName(key)}>
+                  {formatQrName(key)}
+                </option>
+              ))}
+            </select>
+            {qrType && <RoomQr type={qrType} url={qrMap[qrType]} />}
+          </div>
 
-  {qrType && <RoomQr type={qrType} url={qrMap[qrType]} />}
-</div>
-{/* Download button for all QR codes for this room */}
-  <button
-    className="btn btn-sm main-bg-outline mt-2"
-    onClick={(e) => {
-      e.stopPropagation();
-      generateSingleRoomQrPdf(room);
-    }}
-  >
-    <i className="bi bi-download  me-1" />
-    Download QR PDF
-  </button>
-          {/* Checkbox */}
-          <div
-            className="form-check m-2 text-black bg-light  p-1 rounded"
-            onClick={(e) => e.stopPropagation()}
+          <button
+            className="btn btn-sm main-bg-outline mt-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              generateSingleRoomQrPdf(room);
+            }}
           >
+            <i className="bi bi-download me-1" />
+            Download QR PDF
+          </button>
+
+          <div className="form-check m-2 text-black bg-light p-1 rounded" onClick={(e) => e.stopPropagation()}>
             <input
               id={`select-room-${room.id}`}
               className="form-check-input"
@@ -93,15 +80,11 @@ const { generateSingleRoomQrPdf } = useSingleRoomQrPdfPrinter();
               checked={selectedRooms.includes(room.id)}
               onChange={() => onSelect(room.id)}
             />
-            <label
-              htmlFor={`select-room-${room.id}`}
-              className="form-check-label small"
-            >
+            <label htmlFor={`select-room-${room.id}`} className="form-check-label small">
               Select room for checkout.
             </label>
           </div>
 
-          {/* Assign button */}
           <div className="button-wraper w-100 d-flex justify-content-center mt-2">
             {!room.is_occupied && (
               <button

@@ -21,17 +21,26 @@ function RoomList() {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRooms, setSelectedRooms] = useState([]);
+  const [localRooms, setLocalRooms] = useState([]);
+
   const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ["rooms", page, searchQuery],
     queryFn: fetchRooms,
     keepPreviousData: true,
   });
+
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { generateQrPdf } = useQrPdfPrinter();
   const userData = JSON.parse(localStorage.getItem("user"));
+
   const rooms = data?.results || [];
   const totalPages = Math.ceil((data?.count || 0) / 10);
+
+  // Keep local reactive state
+  useEffect(() => {
+    if (rooms.length) setLocalRooms(rooms);
+  }, [rooms]);
 
   const handleCheckboxChange = (roomId) => {
     setSelectedRooms((prev) =>
@@ -40,10 +49,20 @@ function RoomList() {
   };
 
   const handleCheckout = async () => {
+    if (selectedRooms.length === 0) return;
+
     try {
       await api.post(`rooms/${userData.hotel_slug}/checkout/`, {
         room_ids: selectedRooms,
       });
+
+      // Update localRooms for checked-out rooms
+      setLocalRooms((prev) =>
+        prev.map((room) =>
+          selectedRooms.includes(room.id) ? { ...room, is_occupied: false } : room
+        )
+      );
+
       setSelectedRooms([]);
       qc.invalidateQueries(["rooms", page, searchQuery]);
     } catch (err) {
@@ -52,28 +71,41 @@ function RoomList() {
     }
   };
 
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery]);
+  useEffect(() => setPage(1), [searchQuery]);
 
-  if (isLoading)  return (
-    <div className="loading">
-      <div className="text-center">
-        <div className="spinner-border text-dark mb-3" role="status" />
-        <p>Loading Rooms...</p>
+  if (isLoading)
+    return (
+      <div className="loading">
+        <div className="text-center">
+          <div className="spinner-border text-dark mb-3" role="status" />
+          <p>Loading Rooms...</p>
+        </div>
       </div>
-    </div>
-  );;
+    );
+
   if (isError) return <p className="text-center text-danger">Error: {error.message}</p>;
 
   return (
     <div className="container d-flex flex-column my-4 p-0 vw-100">
       {userData?.is_superuser && (
         <>
-          <button className="custom-button mb-3" onClick={() => generateQrPdf(rooms)}>
+          <button className="custom-button mb-3" onClick={() => generateQrPdf(localRooms)}>
             Print QR PDFs
           </button>
-          <CheckoutRoomsPanel hotelSlug={userData.hotel_slug} token={userData.token} />
+          <CheckoutRoomsPanel
+            hotelSlug={userData.hotel_slug}
+            token={userData.token}
+            onRoomsCheckout={(checkedOutRoomIds) => {
+              // Update localRooms when rooms are checked out via panel
+              setLocalRooms((prev) =>
+                prev.map((room) =>
+                  checkedOutRoomIds.includes(room.id)
+                    ? { ...room, is_occupied: false }
+                    : room
+                )
+              );
+            }}
+          />
         </>
       )}
 
@@ -89,11 +121,10 @@ function RoomList() {
       )}
 
       <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-2">
-        {rooms.map((room) => (
+        {localRooms.map((room) => (
           <RoomCard
             key={room.id}
-            room={room}
-            
+            room={{ ...room }} // spread to force re-render
             selectedRooms={selectedRooms}
             onSelect={handleCheckboxChange}
           />
@@ -111,7 +142,11 @@ function RoomList() {
             </li>
           )}
           <li className={`page-item ${!data?.previous ? "disabled" : ""}`}>
-            <button className="page-link" onClick={() => setPage(page - 1)} disabled={!data?.previous}>
+            <button
+              className="page-link"
+              onClick={() => setPage(page - 1)}
+              disabled={!data?.previous}
+            >
               ⏮️
             </button>
           </li>
@@ -133,7 +168,11 @@ function RoomList() {
             </li>
           )}
           <li className={`page-item ${!data?.next ? "disabled" : ""}`}>
-            <button className="page-link" onClick={() => setPage(page + 1)} disabled={!data?.next}>
+            <button
+              className="page-link"
+              onClick={() => setPage(page + 1)}
+              disabled={!data?.next}
+            >
               ⏭️
             </button>
           </li>
