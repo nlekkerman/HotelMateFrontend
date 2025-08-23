@@ -1,8 +1,15 @@
 import React, { useEffect, useState } from "react";
 import api from "@/services/api";
 import { FaTimes } from "react-icons/fa";
+import Pusher from "pusher-js";
 
-const ChatSidebar = ({ hotelSlug, onSelectRoom, selectedRoom, isMobile, toggleSidebar }) => {
+const ChatSidebar = ({
+  hotelSlug,
+  onSelectRoom,
+  selectedRoom,
+  isMobile,
+  toggleSidebar,
+}) => {
   const [rooms, setRooms] = useState([]);
 
   useEffect(() => {
@@ -17,6 +24,27 @@ const ChatSidebar = ({ hotelSlug, onSelectRoom, selectedRoom, isMobile, toggleSi
     fetchRooms();
   }, [hotelSlug]);
 
+  // Subscribe to Pusher
+  useEffect(() => {
+  const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
+    cluster: import.meta.env.VITE_PUSHER_CLUSTER,
+  });
+
+  const channel = pusher.subscribe(`${hotelSlug}-new-conversation`);
+
+  channel.bind("new-conversation", (data) => {
+    setRooms((prevRooms) => [
+      ...prevRooms,
+      { room_number: data.room_number, conversation_id: data.conversation_id },
+    ]);
+  });
+
+  return () => {
+    channel.unbind_all();
+    channel.unsubscribe();
+  };
+}, [hotelSlug]);
+
   return (
     <aside className={`chat-sidebar ${isMobile ? "mobile" : "desktop"}`}>
       {isMobile && (
@@ -28,7 +56,9 @@ const ChatSidebar = ({ hotelSlug, onSelectRoom, selectedRoom, isMobile, toggleSi
       {rooms.map((room) => (
         <div
           key={room.room_number}
-          className={`chat-room ${selectedRoom === room.room_number ? "selected" : ""}`}
+          className={`chat-room ${
+            selectedRoom === room.room_number ? "selected" : ""
+          }`}
           onClick={() => onSelectRoom(room.room_number, room.conversation_id)}
         >
           Room {room.room_number}
