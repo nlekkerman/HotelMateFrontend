@@ -1,39 +1,37 @@
 import { useEffect, useState } from "react";
 import api from "@/services/api";
-import CheckoutRooms from "@/components/rooms/CheckoutRooms"; // adjust path if needed
+import CheckoutRooms from "@/components/rooms/CheckoutRooms";
 
-const CheckoutRoomsPanel = ({ hotelSlug, token }) => {
+const CheckoutRoomsPanel = ({ hotelSlug, token, onRoomsCheckout }) => {
   const [dueCount, setDueCount] = useState(0);
   const [showList, setShowList] = useState(false);
 
-  useEffect(() => {
-    fetchCheckoutCount();
-  }, [hotelSlug, token]); // re-fetch if hotelSlug or token changes
-
   const fetchCheckoutCount = async () => {
     try {
-      console.log("Token used for request:", token);
-
-      // Use the URL with hotelSlug in the path (no query param)
       const response = await api.get(`/rooms/${hotelSlug}/checkout-needed/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      // Response is a list of rooms needing checkout
       const roomsNeedingCheckout = response.data || [];
-
       setDueCount(roomsNeedingCheckout.length);
     } catch (error) {
-      console.error("Failed to check checkout count:", error);
+      console.error("Failed to fetch checkout count:", error);
       setDueCount(0);
     }
   };
+
+  useEffect(() => {
+    fetchCheckoutCount();
+  }, [hotelSlug, token]);
+
+  useEffect(() => {
+    if (dueCount === 0) setShowList(false);
+  }, [dueCount]);
 
   return (
     <div className="container my-4">
       <div className="d-flex justify-content-start align-items-center mb-3">
         <button
-          className={`btn ${dueCount > 0 ? "btn-danger" : "custom-button"}`}
+          className={`btn ${dueCount > 0 ? "btn-danger" : "btn-secondary"}`}
           onClick={() => setShowList(!showList)}
           disabled={dueCount === 0}
         >
@@ -43,9 +41,19 @@ const CheckoutRoomsPanel = ({ hotelSlug, token }) => {
         </button>
       </div>
 
-      {showList && <CheckoutRooms hotelSlug={hotelSlug} token={token} />}
+      {showList && (
+        <CheckoutRooms
+          hotelSlug={hotelSlug}
+          token={token}
+          onCheckoutComplete={(checkedOutIds) => {
+            fetchCheckoutCount(); // refresh count
+            if (onRoomsCheckout) onRoomsCheckout(checkedOutIds); // notify RoomList
+          }}
+        />
+      )}
     </div>
   );
 };
+
 
 export default CheckoutRoomsPanel;

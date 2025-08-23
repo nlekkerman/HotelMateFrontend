@@ -24,21 +24,23 @@ export default function ChatPinAuth() {
         return;
       }
 
-      // 2️⃣ PIN is valid, now get or create conversation for this room
+      // 2️⃣ PIN is valid, create/get conversation
       const convRes = await api.post(
         `/chat/${hotelSlug}/conversations/from-room/${room_number}/`
       );
 
       const conversationId = convRes.data.conversation_id;
 
-      // 3️⃣ Store session flag for PIN validation
-      sessionStorage.setItem(`chat_pin_ok_${conversationId}`, "true");
+      // 3️⃣ Store session flag (per room, not conversation)
+      sessionStorage.setItem(`chat_pin_ok_${room_number}`, "true");
 
       // 4️⃣ Navigate to conversation messages/send page
       navigate(
-        location.state?.next ||
-          `/chat/${hotelSlug}/conversations/${conversationId}/messages/send`
-      );
+  location.state?.next ||
+    `/chat/${hotelSlug}/conversations/${conversationId}/messages/send`,
+  { state: { room_number } }
+);
+
     } catch (err) {
       console.error("Error during PIN validation or conversation creation:", err);
       setError("Error validating PIN or creating conversation. Try again later.");

@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
-import api from '@/services/api';
-
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import api from "@/services/api";
+import { addDays } from 'date-fns';
 function AssignGuestForm() {
   const { roomNumber } = useParams();
   const navigate = useNavigate();
 
   const [room, setRoom] = useState(null);
-  const [hotelSlug, setHotelSlug] = useState('');
+  const [hotelSlug, setHotelSlug] = useState("");
   const [formData, setFormData] = useState({
-    full_name: '',
-    id_pin: '',
+    full_name: "",
+    id_pin: "",
     check_in_date: null,
     check_out_date: null,
     days_booked: 1,
-    hotel_name: '',
-    room_number: '',
+    hotel_name: "",
+    room_number: "",
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
@@ -32,13 +32,13 @@ function AssignGuestForm() {
 
         setFormData((prev) => ({
           ...prev,
-          id_pin: roomData.guest_id_pin || '',
+          id_pin: roomData.guest_id_pin || "",
           hotel_name: roomData.hotel_name || roomData.hotel_slug,
           room_number: roomData.room_number,
         }));
       } catch (err) {
-        console.error('Failed to fetch room details:', err);
-        setErrors({ fetch: 'Failed to load room data.' });
+        console.error("Failed to fetch room details:", err);
+        setErrors({ fetch: "Failed to load room data." });
       } finally {
         setLoading(false);
       }
@@ -58,13 +58,13 @@ function AssignGuestForm() {
   const handleDateChange = (field, date) => {
     const updatedForm = { ...formData, [field]: date };
 
-    if (field === 'check_in_date' && updatedForm.days_booked) {
+    if (field === "check_in_date" && updatedForm.days_booked) {
       const checkOut = new Date(date);
       checkOut.setDate(checkOut.getDate() + parseInt(updatedForm.days_booked));
       updatedForm.check_out_date = checkOut;
     }
 
-    if (field === 'check_out_date' && updatedForm.check_in_date) {
+    if (field === "check_out_date" && updatedForm.check_in_date) {
       const diffTime = date.getTime() - updatedForm.check_in_date.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       updatedForm.days_booked = diffDays > 0 ? diffDays : 1;
@@ -74,22 +74,22 @@ function AssignGuestForm() {
   };
 
   const formatDate = (date) => {
-    if (!date) return '';
+    if (!date) return "";
     const d = new Date(date);
-    if (isNaN(d.getTime())) return '';
-    return d.toISOString().split('T')[0];
+    if (isNaN(d.getTime())) return "";
+    return d.toISOString().split("T")[0];
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
 
-    const names = formData.full_name.trim().split(' ');
-    const first_name = names.shift() || '';
-    const last_name = names.join(' ') || '';
+    const names = formData.full_name.trim().split(" ");
+    const first_name = names.shift() || "";
+    const last_name = names.join(" ") || "";
 
     if (!first_name || !last_name) {
-      setErrors({ full_name: 'Please enter both first and last name' });
+      setErrors({ full_name: "Please enter both first and last name" });
       return;
     }
 
@@ -105,20 +105,23 @@ function AssignGuestForm() {
     };
 
     try {
-      await api.post(`/rooms/${hotelSlug}/rooms/${roomNumber}/add-guest/`, payload);
-      navigate('/rooms/');
+      await api.post(
+        `/rooms/${hotelSlug}/rooms/${roomNumber}/add-guest/`,
+        payload
+      );
+      navigate("/rooms/");
     } catch (error) {
       if (error.response?.data) {
         setErrors(error.response.data);
       } else {
-        console.error('Submission error:', error);
-        setErrors({ submit: 'Failed to assign guest.' });
+        console.error("Submission error:", error);
+        setErrors({ submit: "Failed to assign guest." });
       }
     }
   };
 
   if (loading) return <p>Loading room data...</p>;
-  if (!room) return <p>{errors.fetch || 'Room not found.'}</p>;
+  if (!room) return <p>{errors.fetch || "Room not found."}</p>;
 
   return (
     <div className="container py-5">
@@ -153,25 +156,26 @@ function AssignGuestForm() {
           <label className="form-label">Full Name</label>
           <input
             type="text"
-            className={`form-control ${errors.full_name ? 'is-invalid' : ''}`}
+            className={`form-control ${errors.full_name ? "is-invalid" : ""}`}
             name="full_name"
             value={formData.full_name}
             onChange={handleChange}
           />
-          {errors.full_name && <div className="invalid-feedback">{errors.full_name}</div>}
+          {errors.full_name && (
+            <div className="invalid-feedback">{errors.full_name}</div>
+          )}
         </div>
-
-       
 
         {/* Dates */}
         <div className="mb-3">
           <label className="form-label">Check-in Date</label>
           <DatePicker
             selected={formData.check_in_date}
-            onChange={(date) => handleDateChange('check_in_date', date)}
+            onChange={(date) => handleDateChange("check_in_date", date)}
             className="form-control"
             dateFormat="yyyy-MM-dd"
             placeholderText="Select check-in date"
+            minDate={new Date()} // disable past dates
           />
         </div>
 
@@ -179,10 +183,15 @@ function AssignGuestForm() {
           <label className="form-label">Check-out Date</label>
           <DatePicker
             selected={formData.check_out_date}
-            onChange={(date) => handleDateChange('check_out_date', date)}
+            onChange={(date) => handleDateChange("check_out_date", date)}
             className="form-control"
             dateFormat="yyyy-MM-dd"
             placeholderText="Select check-out date"
+            minDate={
+              formData.check_in_date
+                ? addDays(formData.check_in_date, 1) // check-out must be after check-in
+                : new Date()
+            }
           />
         </div>
         <div className="mb-3">
@@ -197,7 +206,6 @@ function AssignGuestForm() {
           />
         </div>
 
-
         {/* ID PIN */}
         <div className="mb-3">
           <label className="form-label">Guest ID PIN</label>
@@ -210,16 +218,22 @@ function AssignGuestForm() {
           />
         </div>
 
-        {errors.submit && <div className="text-danger mb-3">{errors.submit}</div>}
+        {errors.submit && (
+          <div className="text-danger mb-3">{errors.submit}</div>
+        )}
 
-        <button type="submit" className="btn btn-primary">Assign Guest</button>
-        <button
-          type="button"
-          className="btn btn-secondary ms-2"
-          onClick={() => navigate('/rooms/rooms')}
-        >
-          Cancel
-        </button>
+        <div className="d-flex justify-content-center">
+          <button type="submit" className="btn custom-button">
+            Assign Guest
+          </button>
+          <button
+            type="button"
+            className="btn btn-danger ms-2"
+            onClick={() => navigate("/rooms/rooms")}
+          >
+            Cancel
+          </button>
+        </div>
       </form>
     </div>
   );

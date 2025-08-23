@@ -4,7 +4,7 @@ import Feed from '@/components/home/Feed';
 
 export default function Home() {
   return (
-    <div className="container my-4">
+    <div className="container my-4 feed-container">
       
      
 

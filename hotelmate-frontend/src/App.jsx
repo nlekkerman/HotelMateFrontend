@@ -96,7 +96,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
   return (
     <>
       {isMobile && !isClockInPage && <MobileNavbar />}
-      <div className="d-flex min-vh-100 min-vw-100">
+      <div className="d-flex min-vh-100 min-vw-100 app-container">
         {sidebar}
         <div className={layoutClass}>
           <div className="main-content-area d-flex flex-column">

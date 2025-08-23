@@ -1,7 +1,9 @@
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate, useLocation, useParams } from "react-router-dom";
 
 export default function RequireChatPin({ children }) {
-  const { hotelSlug, room_number } = useParams(); // ✅ use room_number
+  const location = useLocation();
+  const { hotelSlug } = useParams();
+  const room_number = location.state?.room_number; // get from navigate state
   const pinOk = sessionStorage.getItem(`chat_pin_ok_${room_number}`);
 
   if (pinOk !== "true") {
