@@ -3,7 +3,7 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import api from "@/services/api";
 
 export default function ChatPinAuth() {
-  const { hotelSlug, room_number } = useParams();
+  const { hotelSlug, room_number } = useParams(); // get from URL
   const navigate = useNavigate();
   const location = useLocation();
   const [pin, setPin] = useState("");
@@ -31,14 +31,13 @@ export default function ChatPinAuth() {
 
       const conversationId = convRes.data.conversation_id;
 
-      // 3️⃣ Store session flag (per room, not conversation)
+      // 3️⃣ Store session flag
       sessionStorage.setItem(`chat_pin_ok_${room_number}`, "true");
 
       // 4️⃣ Navigate to conversation messages/send page
       navigate(
-  location.state?.next ||
-    `/chat/${hotelSlug}/conversations/${conversationId}/messages/send`,
-  { state: { room_number } }
+  `/chat/${hotelSlug}/conversations/${conversationId}/messages/send`,
+  { state: { room_number } } // optional backup
 );
 
     } catch (err) {
@@ -49,18 +48,25 @@ export default function ChatPinAuth() {
 
   return (
     <div className="pin-auth-container">
-      <form onSubmit={handleSubmit}>
-        <h2>Enter Chat PIN for Room {room_number}</h2>
-        <input
-          type="password"
-          value={pin}
-          onChange={(e) => setPin(e.target.value)}
-          placeholder="Enter PIN"
-          required
-          autoFocus
-        />
-        {error && <p style={{ color: "red" }}>{error}</p>}
-        <button type="submit">Submit</button>
+      <form onSubmit={handleSubmit} className="pin-auth-form">
+        <h2 className="pin-auth-title">Enter Chat PIN for Room {room_number}</h2>
+
+        <div className="pin-auth-input-group">
+          <input
+            type="password"
+            value={pin}
+            onChange={(e) => setPin(e.target.value)}
+            placeholder="Enter PIN"
+            className={`pin-auth-input ${error ? "pin-auth-input-error" : ""}`}
+            required
+            autoFocus
+          />
+          {error && <div className="pin-auth-error-message">{error}</div>}
+        </div>
+
+        <button type="submit" className="pin-auth-submit-btn">
+          Submit
+        </button>
       </form>
     </div>
   );
