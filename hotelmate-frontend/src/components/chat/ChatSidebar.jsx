@@ -23,7 +23,7 @@ const ChatSidebar = ({
     };
     fetchRooms();
   }, [hotelSlug]);
-
+ 
   // Subscribe to Pusher
   useEffect(() => {
   const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
@@ -53,17 +53,23 @@ const ChatSidebar = ({
         </button>
       )}
 
-      {rooms.map((room) => (
-        <div
-          key={room.room_number}
-          className={`chat-room ${
-            selectedRoom === room.room_number ? "selected" : ""
-          }`}
-          onClick={() => onSelectRoom(room.room_number, room.conversation_id)}
-        >
-          Room {room.room_number}
-        </div>
-      ))}
+   {rooms.map((room) => (
+  <div
+    key={room.room_number}
+    className={`chat-room ${
+      selectedRoom === room.room_number ? "selected" : ""
+    }`}
+    onClick={() => onSelectRoom(room.room_number, room.conversation_id)}
+  >
+    <div className="room-header ">
+      <strong>Room {room.room_number}</strong>
+    </div>
+    <div className="last-message">
+      {room.last_message || <em>No messages yet</em>}
+    </div>
+  </div>
+))}
+
     </aside>
   );
 };
