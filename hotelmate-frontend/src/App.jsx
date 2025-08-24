@@ -14,7 +14,7 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-
+import { useUnreadConversations } from "@/components/chat/hooks/useUnreadConversations";
 import MobileNavbar from "@/components/layout/MobileNavbar";
 import DesktopSidebarNavbar from "@/components/layout/DesktopSidebarNavbar";
 import NetworkHandler from "@/components/offline/NetworkHandler";
@@ -80,52 +80,15 @@ const queryClient = new QueryClient();
 function AppLayout({ collapsed, setCollapsed, isMobile }) {
   const location = useLocation();
   const isClockInPage = location.pathname.startsWith("/clock-in");
-const { user } = useAuth();
-  const [chatUnreadCount, setChatUnreadCount] = useState(0);
+  const { user } = useAuth();
+  const { unreadCount: chatUnreadCount, markConversationRead } =
+    useUnreadConversations();
+
   const [selectedRoom, setSelectedRoom] = useState(null);
-
-  const fetchUnreadCount = async () => {
-    try {
-      const res = await api.get(
-        `/chat/${user?.hotel_slug}/conversations/unread-count/`
-      );
-      setChatUnreadCount(res.data.unread_count || 0);
-    } catch (err) {
-      console.error("Failed to fetch unread conversations:", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchUnreadCount();
-  }, [user?.hotel_slug]);
-useEffect(() => {
-  if (!user?.hotel_slug) return;
-
-  const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
-    cluster: import.meta.env.VITE_PUSHER_CLUSTER,
-  });
-
-  const channel = pusher.subscribe(`${user.hotel_slug}-new-conversation`);
-  channel.bind("new-conversation", () => {
-    fetchUnreadCount(); // refresh badge
-  });
-
-  return () => {
-    channel.unbind_all();
-    pusher.unsubscribe(`${user.hotel_slug}-new-conversation`);
-    pusher.disconnect();
-  };
-}, [user?.hotel_slug]);
 
   const handleSelectRoom = async (roomNumber, conversationId) => {
     setSelectedRoom(roomNumber);
-
-    try {
-      await api.post(`/chat/conversations/${conversationId}/mark-read/`);
-      fetchUnreadCount(); // refresh global unread badge
-    } catch (err) {
-      console.error("Failed to mark conversation read:", err);
-    }
+    await markConversationRead(conversationId);
   };
 
   const sidebar = !isMobile && !isClockInPage && (
@@ -312,7 +275,6 @@ useEffect(() => {
                   <ChatHomePage
                     selectedRoom={selectedRoom}
                     onSelectRoom={handleSelectRoom}
-                    onUnreadChange={setChatUnreadCount} // pass setter to ChatSidebar
                   />
                 }
               />
