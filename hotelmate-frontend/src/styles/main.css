@@ -534,6 +534,7 @@ body.terminal-mode,
 .chat-window {
   display: flex;
   background-color: #f8f9fa;
+  min-height: 100%;
 }
 
 /* Messages area scrollable */
@@ -546,19 +547,22 @@ body.terminal-mode,
 }
 
 /* Sticky right-side input container */
+/* Sticky right-side input container */
 .chat-input-vertical {
+  position: fixed; /* stick to viewport */
+  bottom: 20px;    /* distance from bottom */
+align-self: center;
+  max-width: 100%; /* never exceed screen width */
+  padding: 0 3rem; /* horizontal padding */
+  z-index: 1200;   /* stay on top */
+  border-radius: 25px;
   display: flex;
-  justify-content: flex-end;
-  padding: 0.5rem;
-  position: fixed;
-  bottom: 0;
-  left: 0px;
-  right: 0; /* ensures full width */
-  width: 100%;
-  z-index: 1200; /* ensure it stays on top */
+  background-color: rgba(var(--main-color-rgb), 0.9);
+  box-sizing: border-box; /* include padding in width */
 }
+
 .message-form-control{
-  width: 100%;
+  flex: 1;
   border: 1px solid #ccc;
   border-radius: 0.5rem;
   padding: 0.75rem;
@@ -624,6 +628,7 @@ body.terminal-mode,
 @media (max-width: 576px) {
   .chat-input-vertical {
     width: 100% !important;
+    border-radius: 0 !important;
     left: 0 !important;
   }
   .chat-main {
@@ -647,6 +652,7 @@ body.terminal-mode,
 @media (min-width: 577px) and (max-width: 992px) {
   .message-form-control{
   width: 100% !important;
+  
 }
   .blueprint-wrapper {
     width: 600px;
@@ -669,6 +675,7 @@ body.terminal-mode,
 }
 .message-form-control{
   width: 60%;
+  
 }
 .dining-table {
   position: absolute;

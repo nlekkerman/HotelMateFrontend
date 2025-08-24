@@ -43,16 +43,21 @@ const ChatWindow = ({
     });
     const channel = pusher.subscribe(`${hotelSlug}-conversation-${conversationId}-chat`);
     channel.bind("new-message", (message) => {
-      setMessages((prev) => [...prev, message]);
+  setMessages((prev) => {
+    // prevent duplicates by checking ID
+    if (prev.some((m) => m.id === message.id)) {
+      return prev;
+    }
+    return [...prev, message];
+  });
 
-      // Notify sidebar immediately
-      if (onNewMessage) {
-        onNewMessage({
-          conversation_id: conversationId,
-          message: message.message,
-        });
-      }
+  if (onNewMessage) {
+    onNewMessage({
+      conversation_id: conversationId,
+      message: message.message,
     });
+  }
+});
 
     return () => {
       channel.unbind_all();
@@ -60,34 +65,23 @@ const ChatWindow = ({
     };
   }, [hotelSlug, conversationId, onNewMessage]);
 
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !conversationId) return;
+ const handleSendMessage = async () => {
+  if (!newMessage.trim() || !conversationId) return;
 
-    try {
-      const res = await api.post(
-        `/chat/${hotelSlug}/conversations/${conversationId}/messages/send/`,
-        {
-          message: newMessage,
-          sender_type: userId ? "staff" : "guest",
-          staff_id: userId || undefined,
-        }
-      );
+  try {
+    await api.post(`/chat/${hotelSlug}/conversations/${conversationId}/messages/send/`, {
+      message: newMessage,
+      sender_type: userId ? "staff" : "guest",
+      staff_id: userId || undefined,
+    });
 
-      const sentMessage = res.data.message;
-      setMessages((prev) => [...prev, sentMessage]);
-      setNewMessage("");
+    setNewMessage("");
+    // don’t call setMessages here ❌
+  } catch (err) {
+    console.error("Failed to send message:", err);
+  }
+};
 
-      // Update sidebar instantly
-      if (onNewMessage) {
-        onNewMessage({
-          conversation_id: conversationId,
-          message: sentMessage.message,
-        });
-      }
-    } catch (err) {
-      console.error("Failed to send message:", err);
-    }
-  };
 
   return (
     <div className="chat-window d-flex flex-column">
@@ -123,7 +117,7 @@ const ChatWindow = ({
           }}
         />
         <button
-          className="btn custom-button d-flex align-items-center justify-content-center"
+          className="btn text-white d-flex align-items-center justify-content-center"
           onClick={handleSendMessage}
           disabled={!conversationId}
         >

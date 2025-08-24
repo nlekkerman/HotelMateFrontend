@@ -37,27 +37,26 @@ const ChatSidebar = ({
   // Fetch conversations on mount, including unread counts
   useEffect(() => {
     const fetchConversations = async () => {
-      try {
-        const res = await api.get(`/chat/${hotelSlug}/conversations/`);
-        const convs = await Promise.all(
-          res.data.map(async (c) => {
-            const countRes = await api.get(
-              `/chat/conversations/${c.conversation_id}/unread-count/`
-            );
-            return { ...c, unread_count: countRes.data.unread_count };
-          })
-        );
+  try {
+    const res = await api.get(`/chat/${hotelSlug}/conversations/`);
+    const countsRes = await api.get(`/chat/${hotelSlug}/conversations/unread-count/`);
 
-        setConversations(convs);
+    const convs = res.data.map((c) => ({
+      ...c,
+      unread_count: countsRes.data.unread_counts[c.conversation_id] || 0,
+    }));
 
-        if (onUnreadChange) {
-          const totalUnread = convs.reduce((acc, c) => acc + c.unread_count, 0);
-          onUnreadChange(totalUnread);
-        }
-      } catch (err) {
-        console.error("Failed to fetch conversations:", err);
-      }
-    };
+    setConversations(convs);
+
+    if (onUnreadChange) {
+      const totalUnread = convs.reduce((acc, c) => acc + c.unread_count, 0);
+      onUnreadChange(totalUnread);
+    }
+  } catch (err) {
+    console.error("Failed to fetch conversations:", err);
+  }
+};
+
 
     fetchConversations();
   }, [hotelSlug, onUnreadChange]);
