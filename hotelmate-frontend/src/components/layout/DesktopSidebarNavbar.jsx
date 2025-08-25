@@ -7,6 +7,7 @@ import api from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useTheme } from "@/context/ThemeContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useChat } from "@/context/ChatContext";
 
 const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const location = useLocation();
@@ -14,6 +15,8 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const { user, logout } = useAuth();
   const hotelIdentifier = user?.hotel_slug;
   const { mainColor } = useTheme();
+  const { totalUnread, markConversationRead } = useChat();
+  const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
 
   const { roomServiceCount, breakfastCount, totalServiceCount } =
     useOrderCount(hotelIdentifier);
@@ -21,7 +24,6 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
   const [flyoutOpen, setFlyoutOpen] = useState(false);
 
   const { canAccess } = usePermissions();
@@ -30,9 +32,6 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   // Define active path helpers
   const isExactActive = (path) => location.pathname === path;
   const isPartialActive = (path) => location.pathname.startsWith(path);
-
- 
-
 
   // Fetch staff profile
   useEffect(() => {
@@ -111,7 +110,7 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
       label: "Chat",
       icon: "chat-dots", // Bootstrap icon
       roles: ["receptionist", "porter", "manager", "concierge", "staff_admin"],
-      badge: chatUnreadCount > 0 ? chatUnreadCount : null,
+      badge: totalUnread > 0 ? totalUnread : null,
     },
     {
       path: "/reception",
@@ -195,7 +194,9 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   return (
     <>
       <nav
-        className={`d-none d-lg-flex flex-column position-relative top-0 start-0 sidebar-nav-desktop vh-100 shadow-lg text-white  ${mainColor ? "" : "bg-dark"}`}
+        className={`d-none d-lg-flex flex-column position-relative top-0 start-0 sidebar-nav-desktop vh-100 shadow-lg text-white  ${
+          mainColor ? "" : "bg-dark"
+        }`}
         style={{
           width: collapsed ? "100px" : "260px",
           backgroundColor: mainColor || undefined,
@@ -204,21 +205,34 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
         }}
       >
         <div className="d-flex justify-content-end p-3">
-          <button className="btn btn-sm text-white" onClick={() => setCollapsed(!collapsed)}>
+          <button
+            className="btn btn-sm text-white"
+            onClick={() => setCollapsed(!collapsed)}
+          >
             <i className="bi bi-list" />
           </button>
         </div>
 
         <ul className="nav nav-pills flex-column mb-auto px-2">
-          {navItems.filter((item) => canAccess(item.roles)).map(({ path, label, icon, badge }) => (
-            <li className="nav-item" key={path}>
-              <Link className={`nav-link text-white ${isPartialActive(path) ? "bg-opacity-25" : ""}`} to={path} onClick={() => setCollapsed(true)}>
-                <i className={`bi bi-${icon} me-2`} />
-                {!collapsed && label}
-                {badge && <span className="badge bg-danger ms-2">{badge}</span>}
-              </Link>
-            </li>
-          ))}
+          {navItems
+            .filter((item) => canAccess(item.roles))
+            .map(({ path, label, icon, badge }) => (
+              <li className="nav-item" key={path}>
+                <Link
+                  className={`nav-link text-white ${
+                    isPartialActive(path) ? "bg-opacity-25" : ""
+                  }`}
+                  to={path}
+                  onClick={() => setCollapsed(true)}
+                >
+                  <i className={`bi bi-${icon} me-2`} />
+                  {!collapsed && label}
+                  {badge && (
+                    <span className="badge bg-danger ms-2">{badge}</span>
+                  )}
+                </Link>
+              </li>
+            ))}
         </ul>
       </nav>
 
