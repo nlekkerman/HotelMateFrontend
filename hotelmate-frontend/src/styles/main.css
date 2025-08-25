@@ -677,6 +677,15 @@ align-self: center;
   width: 60%;
   
 }
+.last-message {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .dining-table {
   position: absolute;
   background-color: rgba(69, 3, 3, 0.6) !important;

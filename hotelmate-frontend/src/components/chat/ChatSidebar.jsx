@@ -48,7 +48,7 @@ const ChatSidebar = ({
               <span className="badge bg-danger">{conv.unread_count}</span>
             )}
           </div>
-          <div className="last-message">
+          <div className="last-message" style={{ wordBreak: "break-word", overflowWrap: "break-word", maxWidth: "100%" }}>
             {conv.last_message || <em>No messages yet</em>}
           </div>
         </div>
