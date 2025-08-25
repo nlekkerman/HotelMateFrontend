@@ -32,12 +32,12 @@ function AssignGuestForm() {
         setRoom(roomData);
         setHotelSlug(roomData.hotel_slug);
 
-        setFormData({
-          ...formData,
+        setFormData((prev) => ({
+          ...prev,
           id_pin: roomData.guest_id_pin || "",
           hotel_name: roomData.hotel_name || roomData.hotel_slug,
           room_number: roomData.room_number,
-        });
+        }));
       } catch (err) {
         console.error("Failed to fetch room details:", err);
         setErrors({ fetch: "Failed to load room data." });
@@ -47,7 +47,6 @@ function AssignGuestForm() {
     }
 
     fetchRoom();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomNumber]);
 
   const handleChange = (e) => {
@@ -110,7 +109,10 @@ function AssignGuestForm() {
     };
 
     try {
-      await api.post(`/rooms/${hotelSlug}/rooms/${roomNumber}/add-guest/`, payload);
+      await api.post(
+        `/rooms/${hotelSlug}/rooms/${roomNumber}/add-guest/`,
+        payload
+      );
       navigate("/rooms/");
     } catch (error) {
       if (error.response?.data) {
@@ -156,11 +158,15 @@ function AssignGuestForm() {
           <label className="form-label">Full Name</label>
           <input
             type="text"
+            name="full_name"
             className={`form-control ${errors.full_name ? "is-invalid" : ""}`}
             value={formData.full_name}
             onChange={handleChange}
           />
-          {errors.full_name && <div className="invalid-feedback">{errors.full_name}</div>}
+
+          {errors.full_name && (
+            <div className="invalid-feedback">{errors.full_name}</div>
+          )}
         </div>
 
         {/* Check-in / Check-out Dates */}
@@ -183,7 +189,11 @@ function AssignGuestForm() {
             onChange={(date) => handleDateChange("check_out_date", date)}
             className="form-control"
             dateFormat="yyyy-MM-dd"
-            minDate={formData.check_in_date ? addDays(formData.check_in_date, 1) : new Date()}
+            minDate={
+              formData.check_in_date
+                ? addDays(formData.check_in_date, 1)
+                : new Date()
+            }
             placeholderText="Select check-out date"
           />
         </div>
@@ -212,13 +222,19 @@ function AssignGuestForm() {
           />
         </div>
 
-        {errors.submit && <div className="text-danger mb-3">{errors.submit}</div>}
+        {errors.submit && (
+          <div className="text-danger mb-3">{errors.submit}</div>
+        )}
 
         <div className="d-flex justify-content-center">
           <button type="submit" className="btn custom-button">
             Assign Guest
           </button>
-          <button type="button" className="btn btn-danger ms-2" onClick={() => navigate("/rooms/rooms")}>
+          <button
+            type="button"
+            className="btn btn-danger ms-2"
+            onClick={() => navigate("/rooms/rooms")}
+          >
             Cancel
           </button>
         </div>
