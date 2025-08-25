@@ -10,6 +10,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import { UIProvider } from "@/context/UIContext";
+import { ChatProvider  } from "@/context/ChatContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -324,6 +325,7 @@ export default function App() {
       <UIProvider>
         <AuthProvider>
           <ThemeProvider>
+            <ChatProvider>
             <BrowserRouter>
               <NetworkHandler />
               <AppLayout
@@ -332,6 +334,7 @@ export default function App() {
                 isMobile={isMobile}
               />
             </BrowserRouter>
+            </ChatProvider>
           </ThemeProvider>
         </AuthProvider>
       </UIProvider>

@@ -94,7 +94,9 @@ const ChatWindow = ({
 
           return (
             <div key={msg.id} className={`mb-2 ${isMine ? "text-end" : "text-start"}`}>
-              <div className={`d-inline-block p-2 rounded ${isMine ? "bg-primary text-white" : "bg-light"}`}>
+              <div className={`d-inline-block p-2 rounded ${isMine ? "bg-primary text-white" : "bg-light"}`}
+              style={{ wordBreak: "break-word", overflowWrap: "break-word", maxWidth: "100%" }}
+>
                 {msg.message}
               </div>
             </div>

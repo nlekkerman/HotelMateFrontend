@@ -1,15 +1,18 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+// src/context/ChatContext.jsx
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import Pusher from "pusher-js";
 import api from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 
-export function useUnreadConversations() {
+const ChatContext = createContext();
+
+export const ChatProvider = ({ children }) => {
   const { user } = useAuth();
   const [conversations, setConversations] = useState([]);
   const pusherRef = useRef(null);
   const channelsRef = useRef(new Map());
 
-  // Fetch conversations + unread counts from backend
+  // Fetch conversations + unread counts
   const fetchConversations = useCallback(async () => {
     if (!user?.hotel_slug) return;
 
@@ -18,9 +21,7 @@ export function useUnreadConversations() {
       const countsRes = await api.get(
         `/chat/hotels/${user.hotel_slug}/conversations/unread-count/`
       );
-      console.log("Unread counts response:", countsRes.data);
 
-      // Convert rooms array to a map: { conversation_id: unread_count }
       const countsMap = {};
       (countsRes.data.rooms || []).forEach((room) => {
         countsMap[room.conversation_id] = room.unread_count;
@@ -38,12 +39,11 @@ export function useUnreadConversations() {
     }
   }, [user?.hotel_slug]);
 
-  // Fetch conversations on mount
   useEffect(() => {
     fetchConversations();
   }, [fetchConversations]);
 
-  // Initialize Pusher once per hotel
+  // Initialize Pusher
   useEffect(() => {
     if (!user?.hotel_slug) return;
 
@@ -52,11 +52,9 @@ export function useUnreadConversations() {
     });
     pusherRef.current = pusher;
 
-    // Subscribe to global new conversation events
     const globalChannel = pusher.subscribe(`${user.hotel_slug}-new-conversation`);
     globalChannel.bind("new-conversation", fetchConversations);
 
-    // Cleanup on unmount
     return () => {
       globalChannel.unbind_all();
       pusher.unsubscribe(`${user.hotel_slug}-new-conversation`);
@@ -80,7 +78,7 @@ export function useUnreadConversations() {
       const channelName = `${user.hotel_slug}-conversation-${conv.conversation_id}-chat`;
       const channel = pusherRef.current.subscribe(channelName);
 
-      const handleNewMessage = (msg) => {
+      channel.bind("new-message", (msg) => {
         setConversations((prev) =>
           prev.map((c) =>
             c.conversation_id === msg.conversation
@@ -92,14 +90,12 @@ export function useUnreadConversations() {
               : c
           )
         );
-      };
+      });
 
-      channel.bind("new-message", handleNewMessage);
       channelsRef.current.set(conv.conversation_id, channel);
     });
   }, [conversations, user?.hotel_slug]);
 
-  // Mark a conversation as read
   const markConversationRead = async (conversationId) => {
     try {
       await api.post(`/chat/conversations/${conversationId}/mark-read/`);
@@ -115,14 +111,18 @@ export function useUnreadConversations() {
     }
   };
 
-  // Instead of sum of unread messages:
-const totalUnread = conversations.filter(c => c.unread_count > 0).length;
+  const totalUnread = conversations.filter(c => c.unread_count > 0).length;
 
+  return (
+    <ChatContext.Provider value={{
+      conversations,
+      fetchConversations,
+      markConversationRead,
+      totalUnread
+    }}>
+      {children}
+    </ChatContext.Provider>
+  );
+};
 
-  return {
-    conversations,
-    fetchConversations,
-    markConversationRead,
-    totalUnread,
-  };
-}
+export const useChat = () => useContext(ChatContext);
