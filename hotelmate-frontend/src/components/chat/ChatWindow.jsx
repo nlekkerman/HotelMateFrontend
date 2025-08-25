@@ -97,31 +97,43 @@ const ChatWindow = ({
     <div className="chat-window d-flex flex-column">
       {/* Messages area */}
       <div className="chat-messages flex-grow-1 overflow-auto">
-        {messages.map((msg) => {
-          const isMine =
-            (msg.sender_type === "staff" && msg.staff === userId) ||
-            (msg.sender_type === "guest" && !userId);
+       {messages.map((msg) => {
+  const isMine =
+    (msg.sender_type === "staff" && msg.staff === userId) ||
+    (msg.sender_type === "guest" && !userId);
 
-          return (
-            <div
-              key={msg.id}
-              className={`mb-2 ${isMine ? "text-end" : "text-start"}`}
-            >
-              <div
-                className={`d-inline-block p-2 rounded ${
-                  isMine ? "bg-primary text-white" : "bg-light"
-                }`}
-                style={{
-                  wordBreak: "break-word",
-                  overflowWrap: "break-word",
-                  maxWidth: "100%",
-                }}
-              >
-                {msg.message}
-              </div>
-            </div>
-          );
-        })}
+  // Determine the name to display
+const senderName = msg.sender_type === "guest"
+  ? msg.guest_name  // now comes from serializer
+  : "Reception";
+
+
+  return (
+    <div
+      key={msg.id}
+      className={`mb-2 ${isMine ? "text-end" : "text-start"}`}
+    >
+      {/* Display the sender name in bold using Bootstrap */}
+      <div className="small text-muted mb-1">
+        <strong>{senderName}</strong>
+      </div>
+
+      <div
+        className={`d-inline-block p-2 rounded ${
+          isMine ? "bg-primary text-white" : "bg-light"
+        }`}
+        style={{
+          wordBreak: "break-word",
+          overflowWrap: "break-word",
+          maxWidth: "100%",
+        }}
+      >
+        {msg.message}
+      </div>
+    </div>
+  );
+})}
+
         <div ref={messagesEndRef} />
       </div>
 
