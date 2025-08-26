@@ -10,41 +10,38 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
   const [selectedBooking, setSelectedBooking] = useState(null);
 
   useEffect(() => {
-    if (!hotelSlug || !restaurantId) return;
+  if (!hotelSlug || !restaurantId) return;
 
-    const allResults = [];
+  const allResults = [];
 
-    const fetchAllPages = async (url) => {
-  try {
-    const res = await api.get(url.startsWith("http") ? url.replace(api.defaults.baseURL, "") : url);
-    const data = res.data;
+  const fetchAllPages = async (params) => {
+    try {
+      const res = await api.get(`/bookings/bookings/`, { params });
+      const data = res.data;
 
-    if (Array.isArray(data.results)) {
-      allResults.push(...data.results);
+      if (Array.isArray(data.results)) allResults.push(...data.results);
 
       if (data.next) {
-        await fetchAllPages(
-          data.next.startsWith("http") ? data.next.replace(api.defaults.baseURL, "") : data.next
-        );
+        // extract query params from `data.next` for the next page
+        const nextUrl = new URL(data.next);
+        const nextParams = Object.fromEntries(nextUrl.searchParams.entries());
+        await fetchAllPages(nextParams);
       }
+    } catch (err) {
+      console.error("Error fetching bookings:", err);
+      throw err;
     }
-  } catch (err) {
-    throw err;
-  }
-};
+  };
 
+  setLoading(true);
+  setError(null);
 
-    const initialUrl = `bookings/bookings/?hotel_slug=${hotelSlug}&restaurant=${restaurantId}`;
-    setLoading(true);
-    setError(null);
-    fetchAllPages(initialUrl)
-      .then(() => setBookings(allResults))
-      .catch((err) => {
-        console.error("Error fetching bookings:", err);
-        setError("Failed to fetch bookings.");
-      })
-      .finally(() => setLoading(false));
-  }, [hotelSlug, restaurantId]);
+  fetchAllPages({ hotel_slug: hotelSlug, restaurant: restaurantId })
+    .then(() => setBookings(allResults))
+    .catch(() => setError("Failed to fetch bookings."))
+    .finally(() => setLoading(false));
+}, [hotelSlug, restaurantId]);
+
 
   const displayDate = new Date().toISOString().slice(0, 10);
   const todaysBookings = bookings.filter((b) => b.date === displayDate);
