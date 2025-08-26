@@ -93,6 +93,57 @@ export function useUnreadConversations(currentConversationId = null) {
       channelsRef.current.set(conv.conversation_id, channel);
     });
   }, [conversations, user?.hotel_slug, currentConversationId]);
+useEffect(() => {
+  if (!pusherRef.current || !user?.id) return;
+
+  const staffChannelName = `${user.hotel_slug}-staff-${user.id}-chat`;
+  if (!channelsRef.current.has(staffChannelName)) {
+    const staffChannel = pusherRef.current.subscribe(staffChannelName);
+
+    staffChannel.bind("new-guest-message", (msg) => {
+      console.log("New guest message for me:", msg);
+
+      // Update unread count / sidebar if you want
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.conversation_id === msg.conversation
+            ? { ...c, last_message: msg.message, unread_count: (c.unread_count || 0) + 1 }
+            : c
+        )
+      );
+
+      // Desktop notification
+      if ("Notification" in window) {
+        if (Notification.permission === "granted") {
+          new Notification(`New message from ${msg.guest_name}`, {
+            body: msg.message,
+            icon: "/favicon-32x32.png", // optional icon
+          });
+        } else if (Notification.permission !== "denied") {
+          Notification.requestPermission().then((permission) => {
+            if (permission === "granted") {
+              new Notification(`New message from ${msg.guest_name}`, {
+                body: msg.message,
+                icon: "/favicon-32x32.png",
+              });
+            }
+          });
+        }
+      }
+    });
+
+    channelsRef.current.set(staffChannelName, staffChannel);
+  }
+
+  return () => {
+    if (channelsRef.current.has(staffChannelName)) {
+      const ch = channelsRef.current.get(staffChannelName);
+      ch.unbind_all();
+      pusherRef.current.unsubscribe(staffChannelName);
+      channelsRef.current.delete(staffChannelName);
+    }
+  };
+}, [user?.id, user?.hotel_slug]);
 
   const markConversationRead = async (conversationId) => {
     try {

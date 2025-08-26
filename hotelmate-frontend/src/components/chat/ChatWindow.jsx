@@ -97,40 +97,39 @@ const ChatWindow = ({
     <div className="chat-window d-flex flex-column">
       {/* Messages area */}
       <div className="chat-messages flex-grow-1 overflow-auto">
-     {messages.map((msg) => {
-  const isMine =
-    (msg.sender_type === "staff" && msg.staff === userId) ||
-    (msg.sender_type === "guest" && !userId);
+        {messages.map((msg) => {
+          const isMine =
+            (msg.sender_type === "staff" && msg.staff === userId) ||
+            (msg.sender_type === "guest" && !userId);
 
-  const senderName =
-    msg.sender_type === "guest" ? msg.guest_name : "Reception";
+          const senderName =
+            msg.sender_type === "guest" ? msg.guest_name : "Reception";
 
-  return (
-    <div
-      key={msg.id}
-      className={`mb-2 ${isMine ? "text-end" : "text-start"}`}
-    >
-      {/* Display sender name */}
-      <div className="small text-muted mb-1">
-        <strong>{senderName}</strong>
-      </div>
+          return (
+            <div
+              key={msg.id}
+              className={`mb-2 ${isMine ? "text-end" : "text-start"}`}
+            >
+              {/* Display sender name */}
+              <div className="small text-muted mb-1">
+                <strong>{senderName}</strong>
+              </div>
 
-      <div
-        className={`d-inline-block p-2 rounded ${
-          isMine ? "my-message" : "receiver-message"
-        }`}
-        style={{
-          wordBreak: "break-word",
-          overflowWrap: "break-word",
-          maxWidth: "100%",
-        }}
-      >
-        {msg.message}
-      </div>
-    </div>
-  );
-})}
-
+              <div
+                className={`d-inline-block p-2 rounded ${
+                  isMine ? "my-message" : "receiver-message"
+                }`}
+                style={{
+                  wordBreak: "break-word",
+                  overflowWrap: "break-word",
+                  maxWidth: "100%",
+                }}
+              >
+                {msg.message}
+              </div>
+            </div>
+          );
+        })}
 
         <div ref={messagesEndRef} />
       </div>
@@ -142,18 +141,16 @@ const ChatWindow = ({
           className="message-form-control me-2"
           placeholder="Type a message..."
           value={newMessage}
-          onChange={(e) => {
-            setNewMessage(e.target.value);
-            if (conversationId) markConversationRead(conversationId); // ✅ mark as read while typing
-          }}
+          onChange={(e) => setNewMessage(e.target.value)} // only update state
           onFocus={() => {
-            if (conversationId) markConversationRead(conversationId); // also mark as read on focus
+            if (conversationId) markConversationRead(conversationId); // mark as read once on focus
           }}
           disabled={!conversationId}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSendMessage();
           }}
         />
+
         <button
           className="btn text-white d-flex align-items-center justify-content-center"
           onClick={handleSendMessage}
