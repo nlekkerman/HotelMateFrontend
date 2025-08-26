@@ -62,28 +62,54 @@ function RoomDetails() {
         )}
       </p>
 
-      <div className="mb-4">
-        {room.room_service_qr_code && (
-          <div className="mb-3 text-center">
-            <h5>Room Service QR Code</h5>
-            <img
-              src={room.room_service_qr_code}
-              alt="Room Service QR Code"
-              style={{ width: 150, height: 150, objectFit: "contain" }}
-            />
-          </div>
-        )}
-        {room.in_room_breakfast_qr_code && (
-          <div className="mb-3 text-center">
-            <h5>In-Room Breakfast QR Code</h5>
-            <img
-              src={room.in_room_breakfast_qr_code}
-              alt="In-Room Breakfast QR Code"
-              style={{ width: 150, height: 150, objectFit: "contain" }}
-            />
-          </div>
-        )}
+     <div className="mb-4">
+  <div className="row">
+    {room.room_service_qr_code && (
+      <div className="col-12 col-sm-6 col-lg-3 text-center mb-3">
+        <h5>Room Service QR Code</h5>
+        <img
+          src={room.room_service_qr_code}
+          alt="Room Service QR Code"
+          style={{ width: 150, height: 150, objectFit: "contain" }}
+        />
       </div>
+    )}
+
+    {room.in_room_breakfast_qr_code && (
+      <div className="col-12 col-sm-6 col-lg-3 text-center mb-3">
+        <h5>In-Room Breakfast QR Code</h5>
+        <img
+          src={room.in_room_breakfast_qr_code}
+          alt="In-Room Breakfast QR Code"
+          style={{ width: 150, height: 150, objectFit: "contain" }}
+        />
+      </div>
+    )}
+
+    {room.dinner_booking_qr_code && (
+      <div className="col-12 col-sm-6 col-lg-3 text-center mb-3">
+        <h5>Restaurant / Dinner Booking QR Code</h5>
+        <img
+          src={room.dinner_booking_qr_code}
+          alt="Dinner Booking QR Code"
+          style={{ width: 150, height: 150, objectFit: "contain" }}
+        />
+      </div>
+    )}
+
+    {room.chat_pin_qr_code && (
+      <div className="col-12 col-sm-6 col-lg-3 text-center mb-3">
+        <h5>Chat QR Code</h5>
+        <img
+          src={room.chat_pin_qr_code}
+          alt="Chat QR Code"
+          style={{ width: 150, height: 150, objectFit: "contain" }}
+        />
+      </div>
+    )}
+  </div>
+</div>
+
       <div className="d-flex justify-content-center">
       <button className="btn btn-secondary" onClick={() => navigate("/rooms")}>
         Back to Rooms List
