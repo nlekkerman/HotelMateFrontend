@@ -42,6 +42,7 @@ export function useUnreadConversations(currentConversationId = null) {
     fetchConversations();
   }, [fetchConversations]);
 
+  // Initialize Pusher and global channel
   useEffect(() => {
     if (!user?.hotel_slug) return;
 
@@ -51,6 +52,13 @@ export function useUnreadConversations(currentConversationId = null) {
       forceTLS: true,
     });
     pusherRef.current = pusher;
+
+    pusher.connection.bind("connected", () =>
+      console.log("Pusher connected!")
+    );
+    pusher.connection.bind("error", (err) =>
+      console.error("Pusher connection error:", err)
+    );
 
     const globalChannelName = `${user.hotel_slug}-new-conversation`;
     console.log("Subscribing to global channel:", globalChannelName);
@@ -74,6 +82,7 @@ export function useUnreadConversations(currentConversationId = null) {
     };
   }, [user?.hotel_slug, fetchConversations]);
 
+  // Subscribe to conversation channels
   useEffect(() => {
     if (!pusherRef.current) return;
 
@@ -86,6 +95,7 @@ export function useUnreadConversations(currentConversationId = null) {
 
       const handleNewMessage = (msg) => {
         console.log("Received new-message event:", msg);
+
         setConversations((prev) =>
           prev.map((c) =>
             c.conversation_id === msg.conversation
@@ -100,6 +110,18 @@ export function useUnreadConversations(currentConversationId = null) {
               : c
           )
         );
+
+        // Show desktop notifications for guest messages
+        if (
+          msg.sender_type === "guest" &&
+          "Notification" in window &&
+          Notification.permission === "granted"
+        ) {
+          new Notification(`New message from ${msg.guest_name}`, {
+            body: msg.message,
+            icon: "/favicon-32x32.png",
+          });
+        }
       };
 
       channel.bind("new-message", handleNewMessage);
@@ -107,6 +129,7 @@ export function useUnreadConversations(currentConversationId = null) {
     });
   }, [conversations, user?.hotel_slug, currentConversationId]);
 
+  // Subscribe to staff channel for direct guest messages
   useEffect(() => {
     if (!pusherRef.current || !user?.id) return;
 
@@ -126,22 +149,12 @@ export function useUnreadConversations(currentConversationId = null) {
           )
         );
 
-        if ("Notification" in window) {
-          if (Notification.permission === "granted") {
-            new Notification(`New message from ${msg.guest_name}`, {
-              body: msg.message,
-              icon: "/favicon-32x32.png",
-            });
-          } else if (Notification.permission !== "denied") {
-            Notification.requestPermission().then((permission) => {
-              if (permission === "granted") {
-                new Notification(`New message from ${msg.guest_name}`, {
-                  body: msg.message,
-                  icon: "/favicon-32x32.png",
-                });
-              }
-            });
-          }
+        // Desktop notification
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification(`New message from ${msg.guest_name}`, {
+            body: msg.message,
+            icon: "/favicon-32x32.png",
+          });
         }
       });
 
