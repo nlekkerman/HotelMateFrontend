@@ -214,6 +214,35 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
         </div>
 
         <ul className="nav nav-pills flex-column mb-auto px-2">
+          {staffProfile?.is_superuser && !collapsed && (
+            <li className="nav-item mb-2">
+              <button
+                className="btn btn-primary text-white w-100"
+                onClick={() => navigate(`/clock-in/${hotelIdentifier}`)}
+              >
+                <i className="bi bi-clock me-2" />
+                Clock In / Out
+              </button>
+            </li>
+          )}
+
+          {staffProfile && !collapsed && (
+            <li className="nav-item mb-2">
+              <Link
+                className={`nav-link text-white ${
+                  isPartialActive(`/${hotelIdentifier}/staff/me`)
+                    ? "bg-opacity-25"
+                    : ""
+                }`}
+                to={`/${hotelIdentifier}/staff/me`}
+                onClick={() => setCollapsed(true)}
+              >
+                <i className="bi bi-person-circle me-2" />
+                Profile
+              </Link>
+            </li>
+          )}
+
           {navItems
             .filter((item) => canAccess(item.roles))
             .map(({ path, label, icon, badge }) => (
@@ -233,6 +262,138 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
                 </Link>
               </li>
             ))}
+          {servicesDropdownOpen !== null && (
+  <li className="nav-item" ref={servicesRef}>
+    <div
+      className={`nav-link d-flex align-items-center  text-white ${
+        collapsed ? "justify-content-start" : "justify-content-start"
+      }`}
+      style={{ cursor: "pointer" }}
+      onClick={() => setServicesDropdownOpen(!servicesDropdownOpen)}
+      title={collapsed ? "Services" : ""} // Tooltip when collapsed
+    >
+      {/* Icon always visible */}
+      <i className="bi bi-cup-hot me-2" />
+
+      {/* Show text + badge + chevron only if expanded */}
+      {!collapsed && (
+        <>
+          <span>Services</span>
+          {roomServiceCount + breakfastCount > 0 && (
+            <span className="badge bg-danger ms-2">
+              {roomServiceCount + breakfastCount}
+            </span>
+          )}
+          <i
+            className={`bi bi-chevron-${servicesDropdownOpen ? "up" : "down"}`}
+            style={{ fontSize: "0.8rem" }}
+          />
+        </>
+      )}
+    </div>
+
+    {/* Submenu only when expanded */}
+    {!collapsed && servicesDropdownOpen && (
+      <ul className="nav flex-column ms-3">
+        {[
+          { label: "Room Service", icon: "box", count: roomServiceCount },
+          { label: "Breakfast", icon: "egg-fried", count: breakfastCount },
+        ].map(({ label, icon, count }) => (
+          <li className="nav-item" key={label}>
+            <Link
+              className="nav-link text-white d-flex 
+              "
+              to={`/services/${label.toLowerCase().replace(" ", "-")}`}
+              onClick={() => setCollapsed(true)}
+            >
+              <div>
+                <i className={`bi bi-${icon} me-2`} />
+                {label}
+              </div>
+              {count > 0 && (
+                <span className="badge bg-danger ms-2">{count}</span>
+              )}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    )}
+  </li>
+)}
+
+
+          {canAccess(["super_staff_admin"]) && !collapsed && (
+            <li className="nav-item mt-2">
+              <Link
+                className={`nav-link text-white ${
+                  isPartialActive("/settings") ? "bg-opacity-25" : ""
+                }`}
+                to="/settings"
+                onClick={() => setCollapsed(true)}
+              >
+                <i className="bi bi-gear me-2" />
+                Settings
+              </Link>
+            </li>
+          )}
+
+          {/* LOGIN / REGISTER if not logged in */}
+          {!user && !collapsed && (
+            <>
+              <li className="nav-item mt-2">
+                <Link
+                  className={`nav-link text-white ${
+                    isPartialActive("/login") ? "bg-opacity-25" : ""
+                  }`}
+                  to="/login"
+                  onClick={() => setCollapsed(true)}
+                >
+                  <i className="bi bi-box-arrow-in-right me-2" />
+                  Login
+                </Link>
+              </li>
+              <li className="nav-item mt-2">
+                <Link
+                  className={`nav-link text-white ${
+                    isPartialActive("/register") ? "bg-opacity-25" : ""
+                  }`}
+                  to="/register"
+                  onClick={() => setCollapsed(true)}
+                >
+                  <i className="bi bi-person-plus me-2" />
+                  Register
+                </Link>
+              </li>
+            </>
+          )}
+
+          {/* LOGOUT if logged in */}
+          {user && (
+            <li className="nav-item mt-2">
+              {collapsed ? (
+                // Icon-only button when collapsed
+                <button
+                  className="btn btn-link nav-link text-white d-flex justify-content-center"
+                  onClick={handleLogout}
+                  title="Logout"
+                >
+                  <i className="bi bi-box-arrow-right" />
+                </button>
+              ) : (
+                // Full button when expanded
+                <button
+                  className="btn btn-link nav-link text-white"
+                  onClick={() => {
+                    handleLogout();
+                    setCollapsed(true);
+                  }}
+                >
+                  <i className="bi bi-box-arrow-right me-2" />
+                  Logout
+                </button>
+              )}
+            </li>
+          )}
         </ul>
       </nav>
 
