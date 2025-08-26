@@ -285,7 +285,7 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
             </span>
           )}
           <i
-            className={`bi bi-chevron-${servicesDropdownOpen ? "up" : "down"}`}
+            className={`ms-3 bi bi-chevron-${servicesDropdownOpen ? "up" : "down"}`}
             style={{ fontSize: "0.8rem" }}
           />
         </>
