@@ -690,14 +690,13 @@ align-self: center;
   background-color: rgba(var(--main-color-rgb), 0.9); /* blue */
   color: white;
   text-align: start;
-  width: 80%;
+ 
 }
 
 .receiver-message {
   background-color: #f1f1f1; /* light gray */
   color: black;
   text-align: left;
-  width: 80%;
 }
 
 .dining-table {
