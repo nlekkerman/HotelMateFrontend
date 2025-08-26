@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import api from "@/services/api";
 
 /**
- * Hook for managing dining tables for a specific restaurant blueprint.
+ * Hook for managing dining tables for a specific restaurant.
  * @param {string} hotelSlug
  * @param {string} restaurantSlug
  */
@@ -14,34 +14,24 @@ export function useDiningTable(hotelSlug, restaurantSlug) {
   const baseUrl = `/bookings/${hotelSlug}/${restaurantSlug}/tables/`;
 
   // Fetch tables from backend
-const fetchAllTables = async (url = baseUrl, collected = []) => {
-  const res = await api.get(url);
-  const data = Array.isArray(res.data) ? res.data : res.data.results || [];
-  const allTables = [...collected, ...data];
-  if (res.data.next) {
-    return fetchAllTables(res.data.next, allTables);
-  }
-  return allTables;
-};
+  const fetchTables = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get(baseUrl);
+      // If the API returns an array directly (no pagination)
+      setTables(Array.isArray(res.data) ? res.data : res.data.results || []);
+    } catch (err) {
+      console.error(err);
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-const fetchTables = async () => {
-  setLoading(true);
-  try {
-    const allTables = await fetchAllTables();
-    console.log("Fetched all tables:", allTables);
-    setTables(allTables);
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  // Create a new table and append to state
+  // Create a new table
   const createTable = async (tableData) => {
     setLoading(true);
     try {
-      // Ensure shape + geometry are provided
       const defaultData = {
         shape: "RECT",
         width: 100,
@@ -55,8 +45,7 @@ const fetchTables = async () => {
         join_group: "",
         is_active: true,
       };
-      const payload = { ...defaultData, ...tableData };
-      const res = await api.post(baseUrl, payload);
+      const res = await api.post(baseUrl, { ...defaultData, ...tableData });
       setTables((prev) => [...prev, res.data]);
       setError(null);
       return res.data;
@@ -68,7 +57,7 @@ const fetchTables = async () => {
     }
   };
 
-  // Update table position/geometry
+  // Update table
   const updateTable = async (tableId, updatedData) => {
     try {
       const res = await api.patch(`${baseUrl}${tableId}/`, updatedData);
@@ -93,7 +82,7 @@ const fetchTables = async () => {
     }
   };
 
-  // Initialize
+  // Load tables on mount or when hotel/restaurant changes
   useEffect(() => {
     fetchTables();
   }, [hotelSlug, restaurantSlug]);
