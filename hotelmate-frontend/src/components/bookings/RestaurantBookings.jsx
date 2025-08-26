@@ -15,22 +15,24 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
     const allResults = [];
 
     const fetchAllPages = async (url) => {
-      try {
-        const res = await api.get(url);
-        const data = res.data;
-        console.log("Page results:", data.results);
-        if (Array.isArray(data.results)) {
-          allResults.push(...data.results);
-          if (data.next) {
-            await fetchAllPages(
-              data.next.replace(api.defaults.baseURL + "/", "")
-            );
-          }
-        }
-      } catch (err) {
-        throw err;
+  try {
+    const res = await api.get(url.startsWith("http") ? url.replace(api.defaults.baseURL, "") : url);
+    const data = res.data;
+
+    if (Array.isArray(data.results)) {
+      allResults.push(...data.results);
+
+      if (data.next) {
+        await fetchAllPages(
+          data.next.startsWith("http") ? data.next.replace(api.defaults.baseURL, "") : data.next
+        );
       }
-    };
+    }
+  } catch (err) {
+    throw err;
+  }
+};
+
 
     const initialUrl = `bookings/bookings/?hotel_slug=${hotelSlug}&restaurant=${restaurantId}`;
     setLoading(true);
