@@ -65,7 +65,7 @@ const ChatHomePage = ({ selectedRoom, onSelectRoom, onUnreadChange }) => {
         ) : (
           <div className="chat-placeholder">
             <h2>Chat Rooms</h2>
-            <p>Select a room from the sidebar to start chatting.</p>
+            <p>Select a room from to start chatting.</p>
           </div>
         )}
       </main>

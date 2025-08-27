@@ -37,22 +37,36 @@ const ChatSidebar = ({
       )}
 
       {conversations.map((conv) => (
-        <div
-          key={conv.conversation_id}
-          className={`chat-room ${selectedRoom === conv.room_number ? "selected" : ""}`}
-          onClick={() => handleConversationClick(conv)}
-        >
-          <div className="room-header d-flex justify-content-between">
-            <strong>Room {conv.room_number}</strong>
-            {conv.unread_count > 0 && (
-              <span className="badge bg-danger">{conv.unread_count}</span>
-            )}
-          </div>
-          <div className="last-message" style={{ wordBreak: "break-word", overflowWrap: "break-word", maxWidth: "100%" }}>
-            {conv.last_message || <em>No messages yet</em>}
-          </div>
-        </div>
-      ))}
+  <div
+    key={conv.conversation_id}
+    className={`shadow chat-room ${selectedRoom === conv.room_number ? "selected" : ""}`}
+    onClick={() => handleConversationClick(conv)}
+  >
+    <div className="room-header d-flex justify-content-between">
+      <strong>Room {conv.room_number}</strong>
+      {conv.unread_count > 0 && (
+        <span className="badge bg-danger">{conv.unread_count}</span>
+      )}
+    </div>
+    
+    <div className="d-flex justify-content-between align-items-center">
+      <div className="last-message" style={{ wordBreak: "break-word", overflowWrap: "break-word", maxWidth: "80%" }}>
+        {conv.last_message || <em>No messages yet</em>}
+      </div>
+      {conv.last_message_time && (
+  <div
+    className="last-message-time small"
+    style={{
+      color: selectedRoom === conv.room_number ? "#fff" : "#6c757d" // white if selected, muted otherwise
+    }}
+  >
+    {new Date(conv.last_message_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+  </div>
+)}
+    </div>
+  </div>
+))}
+
     </aside>
   );
 };

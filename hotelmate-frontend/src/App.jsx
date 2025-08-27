@@ -11,6 +11,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 import { UIProvider } from "@/context/UIContext";
 import { ChatProvider  } from "@/context/ChatContext";
+import { BookingNotificationProvider  } from "@/context/BookingNotificationContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -326,6 +327,7 @@ export default function App() {
         <AuthProvider>
           <ThemeProvider>
             <ChatProvider>
+              <BookingNotificationProvider>
             <BrowserRouter>
               <NetworkHandler />
               <AppLayout
@@ -334,6 +336,7 @@ export default function App() {
                 isMobile={isMobile}
               />
             </BrowserRouter>
+            </BookingNotificationProvider>
             </ChatProvider>
           </ThemeProvider>
         </AuthProvider>
