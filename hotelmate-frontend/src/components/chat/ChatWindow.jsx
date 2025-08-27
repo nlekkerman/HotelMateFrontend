@@ -26,7 +26,7 @@ const ChatWindow = ({
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);
   const { markConversationRead } = useChat();
-
+  const [loading, setLoading] = useState(true);
   const scrollToBottom = () =>
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   useEffect(scrollToBottom, [messages]);
@@ -37,12 +37,15 @@ const ChatWindow = ({
 
     const fetchMessages = async () => {
       try {
+        setLoading(true);
         const res = await api.get(
           `/chat/${hotelSlug}/conversations/${conversationId}/messages/`
         );
         setMessages(res.data);
+        setLoading(false);
       } catch (err) {
         console.error("Error fetching messages:", err);
+        setLoading(false);
       }
     };
     fetchMessages();
@@ -93,49 +96,60 @@ const ChatWindow = ({
 
   return (
     <div className="chat-window d-flex flex-column">
-      {/* Hotel logo container */}
-      <div className="chat-logo-container rounded-pill shadow-lg">
-  <div className={`chat-logo-inner ${newMessage.trim() ? "shake" : ""}`}>
-    <HotelLogo />
+      {/* Hotel logo container — only show for guests */}
+{!userId && (
+  <div className="chat-logo-container rounded-pill shadow-lg">
+    <div className={`chat-logo-inner ${newMessage.trim() ? "shake" : ""}`}>
+      <HotelLogo />
+    </div>
   </div>
-</div>
+)}
 
 
       {/* Messages area */}
       <div className="chat-messages flex-grow-1 overflow-auto">
-        {messages.map((msg) => {
-          const isMine =
-            (msg.sender_type === "staff" && msg.staff === userId) ||
-            (msg.sender_type === "guest" && !userId);
+        {loading && (
+          <div className="loading">
+            <div className="spinner"></div>
+            <span>Loading messages...</span>
+          </div>
+        )}
 
-          const senderName =
-            msg.sender_type === "guest" ? msg.guest_name : "Reception";
+        {!loading &&
+          messages.map((msg) => {
+            const isMine =
+              (msg.sender_type === "staff" && msg.staff === userId) ||
+              (msg.sender_type === "guest" && !userId);
 
-          return (
-            <div
-              key={msg.id}
-              className={`mb-2 ${isMine ? "text-end" : "text-start"}`}
-            >
-              <div className="small text-muted mb-1">
-                <strong>{senderName}</strong>
-              </div>
+            const senderName =
+              msg.sender_type === "guest" ? msg.guest_name : "Reception";
 
+            return (
               <div
-                className={`d-inline-block p-2 rounded ${
-                  isMine ? "my-message" : "receiver-message"
-                }`}
-                style={{
-                  wordBreak: "break-word",
-                  overflowWrap: "break-word",
-                  maxWidth: "100%",
-                }}
+                key={msg.id}
+                className={`mb-2 ${
+                  isMine ? "text-end" : "text-start"
+                } new-message-animation`}
               >
-                {msg.message}
-              </div>
-            </div>
-          );
-        })}
+                <div className="small text-muted mb-1">
+                  <strong>{senderName}</strong>
+                </div>
 
+                <div
+                  className={`d-inline-block p-2 rounded ${
+                    isMine ? "my-message" : "receiver-message"
+                  }`}
+                  style={{
+                    wordBreak: "break-word",
+                    overflowWrap: "break-word",
+                    maxWidth: "100%",
+                  }}
+                >
+                  {msg.message}
+                </div>
+              </div>
+            );
+          })}
         <div ref={messagesEndRef} />
       </div>
 
