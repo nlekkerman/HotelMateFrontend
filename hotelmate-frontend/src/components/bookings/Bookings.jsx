@@ -2,14 +2,14 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "@/services/api";
 import RestaurantBookings from "./RestaurantBookings";
-
+import { useBookingNotifications } from "@/context/BookingNotificationContext";
 export default function Bookings() {
   const {
     hotelSlug: qrHotelSlug,
     restaurantSlug: qrCategorySlug,
     roomNumber: qrRoomNumber,
   } = useParams();
-
+ const { markAllBookingRead } = useBookingNotifications();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -72,6 +72,7 @@ export default function Bookings() {
 
   const handleClick = (categoryId) => {
     setSelectedCategoryId((prev) => (prev === categoryId ? null : categoryId));
+    markAllBookingRead();
   };
 
   if (loading) {

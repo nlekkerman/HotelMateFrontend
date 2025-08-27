@@ -15,7 +15,7 @@ const MobileNavbar = () => {
   const { user, logout } = useAuth();
   const hotelIdentifier = user?.hotel_slug;
   const { mainColor } = useTheme();
-const { totalUnread } = useChat();
+  const { totalUnread } = useChat();
   const { roomServiceCount, breakfastCount, totalServiceCount } =
     useOrderCount(hotelIdentifier);
   const [staffProfile, setStaffProfile] = useState(null);
@@ -70,11 +70,11 @@ const { totalUnread } = useChat();
       ],
     },
     {
-    path: `/hotel/${hotelIdentifier}/chat`,
-    label: "Chat",
-    icon: "chat-dots", // Bootstrap icon
-    roles: ["receptionist", "porter", "manager", "concierge", "staff_admin"], // adjust roles
-  },
+      path: `/hotel/${hotelIdentifier}/chat`,
+      label: "Chat",
+      icon: "chat-dots", // Bootstrap icon
+      roles: ["receptionist", "porter", "manager", "concierge", "staff_admin"], // adjust roles
+    },
     {
       path: "/reception",
       label: "Reception",
@@ -184,72 +184,70 @@ const { totalUnread } = useChat();
     >
       <div className="container-fluid ">
         <div className="position-relative d-inline-block ms-auto ">
-  <button
-    className="navbar-toggler bg-transparent border-0 shadow-lg position-relative"
-    type="button"
-    aria-controls="navbarSupportedContent"
-    aria-expanded={!collapsed}
-    aria-label="Toggle navigation"
-    onClick={toggleNavbar}
-  >
-    <span
-      className="navbar-toggler-icon"
-      style={{ filter: "invert(1)" }}
-    />
-    {/* "NEW" badge on burger */}
-    {totalUnread > 0 && (
-      <span
-        className="position-absolute start-0 top-50 translate-middle badge rounded-pill bg-danger"
-        style={{ fontSize: "0.6rem", padding: "0.2em 0.4em" }}
-      >
-        NEW
-      </span>
-    )}
-  </button>
-</div>
-
+          <button
+            className="navbar-toggler bg-transparent border-0 shadow-lg position-relative"
+            type="button"
+            aria-controls="navbarSupportedContent"
+            aria-expanded={!collapsed}
+            aria-label="Toggle navigation"
+            onClick={toggleNavbar}
+          >
+            <span
+              className="navbar-toggler-icon"
+              style={{ filter: "invert(1)" }}
+            />
+            {/* "NEW" badge on burger */}
+            {totalUnread > 0 && (
+              <span
+                className="position-absolute start-0 top-50 translate-middle badge rounded-pill bg-danger"
+                style={{ fontSize: "0.6rem", padding: "0.2em 0.4em" }}
+              >
+                NEW
+              </span>
+            )}
+          </button>
+        </div>
 
         <div className={`collapse navbar-collapse ${!collapsed ? "show" : ""}`}>
           <ul className="navbar-nav ms-auto mb-2 mb-lg-0 gap-3 shadow-lg p-2 rounded m-2">
             {user?.is_superuser && (
-  <li className="nav-item">
-    <button
-      className="btn btn-primary text-white w-100"
-      onClick={() => navigate("/clock-in/hotel-killarney")}
-    >
-      <i className="bi bi-clock me-2" />
-      Clock In / Out
-    </button>
-  </li>
-)}
+              <li className="nav-item">
+                <button
+                  className="btn btn-primary text-white w-100"
+                  onClick={() => navigate("/clock-in/hotel-killarney")}
+                >
+                  <i className="bi bi-clock me-2" />
+                  Clock In / Out
+                </button>
+              </li>
+            )}
 
-            
             {canAccess([
-                  "receptionist",
-                  "porter",
-                  "waiter",
-                  "manager",
-                  "chef",
-                  "staff_admin",
-                  "super_staff_admin",
-                  "concierge",
-                  "maintenance_staff",
-                  "housekeeping_attendant",
-                ]) && (
-                  <li className="nav-item">
-                    <Link
-                      className={`nav-link text-white ${
-                        isActive(`/${hotelIdentifier}/staff/me`) ? "active" : ""
-                      }`}
-                      to={`/${hotelIdentifier}/staff/me`}
-                      onClick={toggleNavbar}
-                    >
-                      <i className="bi bi-person-circle me-2" />
-                      Profile
-                    </Link>
-                  </li>
-                )}
-            
+              "receptionist",
+              "porter",
+              "waiter",
+              "manager",
+              "chef",
+              "staff_admin",
+              "super_staff_admin",
+              "concierge",
+              "maintenance_staff",
+              "housekeeping_attendant",
+            ]) && (
+              <li className="nav-item">
+                <Link
+                  className={`nav-link text-white ${
+                    isActive(`/${hotelIdentifier}/staff/me`) ? "active" : ""
+                  }`}
+                  to={`/${hotelIdentifier}/staff/me`}
+                  onClick={toggleNavbar}
+                >
+                  <i className="bi bi-person-circle me-2" />
+                  Profile
+                </Link>
+              </li>
+            )}
+
             {!user && (
               <>
                 <li className="nav-item">
@@ -280,28 +278,30 @@ const { totalUnread } = useChat();
             {user && (
               <>
                 {navItems
-        .filter((item) => canAccess(item.roles))
-        .map(({ path, label, icon }) => (
-          <li className="nav-item" key={path}>
-            <Link
-              className={`nav-link ${
-                isActive(path) ? "active" : ""
-              } text-white d-flex justify-content-between align-items-center`}
-              to={path}
-              onClick={toggleNavbar}
-            >
-              <div>
-                <i className={`bi bi-${icon} me-2`} />
-                {label}
-              </div>
+                  .filter((item) => canAccess(item.roles))
+                  .map(({ path, label, icon }) => (
+                    <li className="nav-item" key={path}>
+                      <Link
+                        className={`nav-link ${
+                          isActive(path) ? "active" : ""
+                        } text-white d-flex justify-content-between align-items-center`}
+                        to={path}
+                        onClick={toggleNavbar}
+                      >
+                        <div>
+                          <i className={`bi bi-${icon} me-2`} />
+                          {label}
+                        </div>
 
-              {/* Add badge only for chat */}
-              {label === "Chat" && totalUnread > 0 && (
-                <span className="badge bg-danger ms-2">{totalUnread}</span>
-              )}
-            </Link>
-          </li>
-        ))}
+                        {/* Add badge only for chat */}
+                        {label === "Chat" && totalUnread > 0 && (
+                          <span className="badge bg-danger ms-2">
+                            {totalUnread}
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  ))}
                 {servicesNavItems.some(({ roles }) => canAccess(roles)) && (
                   <li className="nav-item dropdown">
                     <div
@@ -371,7 +371,6 @@ const { totalUnread } = useChat();
                     )}
                   </li>
                 )}
-               
 
                 <li className="nav-item">
                   <button
