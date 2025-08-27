@@ -1,55 +1,79 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+// src/context/BookingNotificationContext.jsx
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import Pusher from "pusher-js";
 import { useAuth } from "@/context/AuthContext";
 
-const BookingNotificationContext = createContext(null);
+const BookingNotificationContext = createContext();
 
 export const BookingNotificationProvider = ({ children }) => {
   const { user } = useAuth();
   const [bookingNotifications, setBookingNotifications] = useState([]);
-  const [bookingUnreadCount, setBookingUnreadCount] = useState(0);
+  const [hasNewBooking, setHasNewBooking] = useState(false);
   const pusherRef = useRef(null);
+  const channelRef = useRef(null);
 
   useEffect(() => {
-    if (!user?.hotel_slug) return;
+    if (!user?.hotel_slug || !user?.id) return;
 
+    // Initialize Pusher
     const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
       cluster: import.meta.env.VITE_PUSHER_CLUSTER,
     });
     pusherRef.current = pusher;
 
-    const channel = pusher.subscribe(`${user.hotel_slug}-bookings`);
-    channel.bind("new-booking", (booking) => {
+    const channelName = `${user.hotel_slug}-staff-${user.id}-bookings`;
+    const channel = pusher.subscribe(channelName);
+    channelRef.current = channel;
+
+    channel.bind("new-dinner-booking", (booking) => {
+      console.log("🍽️ Booking received:", booking);
       setBookingNotifications((prev) => [booking, ...prev]);
-      setBookingUnreadCount((prev) => prev + 1);
+      setHasNewBooking(true);
+
+      // Optional browser notification
+      if (Notification.permission === "granted") {
+        new Notification("New Booking!", {
+          body: `Room ${booking.room_number} at ${booking.restaurant}`,
+        });
+      }
     });
 
     return () => {
-      channel.unbind_all();
-      pusher.unsubscribe(`${user.hotel_slug}-bookings`);
+      if (channelRef.current) {
+        channelRef.current.unbind_all();
+        pusher.unsubscribe(channelName);
+      }
       pusher.disconnect();
+      pusherRef.current = null;
     };
-  }, [user?.hotel_slug]);
+  }, [user?.hotel_slug, user?.id]);
 
-  const markAllBookingRead = () => setBookingUnreadCount(0);
+  const markAllBookingRead = async () => {
+    if (!user?.hotel_slug) return;
 
-  const contextValue = {
-    bookingNotifications,
-    bookingUnreadCount,
-    markAllBookingRead,
+    try {
+      await fetch(`/api/bookings/mark-seen/${user.hotel_slug}/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      setHasNewBooking(false); // update local state after successful server call
+    } catch (err) {
+      console.error("Failed to mark bookings as seen:", err);
+    }
   };
 
   return (
-    <BookingNotificationContext.Provider value={contextValue}>
+    <BookingNotificationContext.Provider
+      value={{
+        bookingNotifications,
+        hasNewBooking,
+        markAllBookingRead,
+      }}
+    >
       {children}
     </BookingNotificationContext.Provider>
   );
 };
 
-// Separate hook function declaration (avoid inline export)
-function useBookingNotificationsHook() {
-  return useContext(BookingNotificationContext);
-}
-
-// Export separately to make HMR happy
-export { useBookingNotificationsHook as useBookingNotifications };
+export const useBookingNotifications = () =>
+  useContext(BookingNotificationContext);

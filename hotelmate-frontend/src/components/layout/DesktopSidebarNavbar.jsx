@@ -18,7 +18,7 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const { mainColor } = useTheme();
   const { totalUnread, markConversationRead } = useChat();
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
-  const { bookingUnreadCount } = useBookingNotifications(); 
+  const { hasNewBooking } = useBookingNotifications();
   const { roomServiceCount, breakfastCount, totalServiceCount } =
     useOrderCount(hotelIdentifier);
   const [staffProfile, setStaffProfile] = useState(null);
@@ -31,11 +31,10 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const servicesRef = useRef(null);
 
   // Define active path helpers
-const isPartialActive = (path) => {
-  if (path === "/") return location.pathname === "/";
-  return location.pathname.startsWith(path);
-};
-
+  const isPartialActive = (path) => {
+    if (path === "/") return location.pathname === "/";
+    return location.pathname.startsWith(path);
+  };
 
   // Fetch staff profile
   useEffect(() => {
@@ -163,8 +162,7 @@ const isPartialActive = (path) => {
       label: "Bookings",
       icon: "calendar-check",
       feature: "reception",
-      roles: ["receptionist", "manager","waiter"],
-      badge: bookingUnreadCount > 0 ? bookingUnreadCount : null,
+      roles: ["receptionist", "manager", "waiter"],
     },
     {
       path: "/maintenance",
@@ -220,18 +218,16 @@ const isPartialActive = (path) => {
 
         <ul className="nav nav-pills flex-column mb-auto px-2">
           {staffProfile && (
-  <li className="nav-item mb-2">
-    <button
-      className={`btn  text-white w-100 d-flex bg-success`}
-      onClick={() => setIsModalOpen(true)}
-      title="Clock In / Out"
-    >
-      <i className="bi bi-clock" />
-      {!collapsed && <span className="ms-2">Clock In / Out</span>}
-    </button>
-  </li>
-)}
-
+             <li className="nav-item">
+                <button
+                  className="btn btn-success text-white"
+                  onClick={() => navigate("/clock-in/hotel-killarney")}
+                >
+                  <i className="bi bi-clock" />
+                {!collapsed && <span className="ms-2">Clock In / Out</span>}
+                </button>
+              </li>
+          )}
 
           {staffProfile && (
             <li className="nav-item mb-2">
@@ -247,24 +243,31 @@ const isPartialActive = (path) => {
           )}
 
           {navItems
-            .filter((item) => canAccess(item.roles))
-            .map(({ path, label, icon, badge }) => (
-              <li className="nav-item" key={path}>
-                <Link
-                  className={`nav-link text-white ${
-                    isPartialActive(path) ? "active-icon-bg" : ""
-                  }`}
-                  to={path}
-                  onClick={() => setCollapsed(true)}
-                >
-                  <i className={`bi bi-${icon} me-2`} />
-                  {!collapsed && label}
-                  {badge && (
-                    <span className="badge bg-danger ms-2">{badge}</span>
-                  )}
-                </Link>
-              </li>
-            ))}
+  .filter((item) => canAccess(item.roles))
+  .map((item) => {
+    const showNewBadge =
+      item.path === "/bookings" ? hasNewBooking : item.path === `/hotel/${hotelIdentifier}/chat` ? totalUnread > 0 : false;
+
+    return (
+      <li className="nav-item" key={item.path}>
+        <Link
+          className={`nav-link text-white ${
+            isPartialActive(item.path) ? "active-icon-bg" : ""
+          }`}
+          to={item.path}
+          onClick={() => setCollapsed(true)}
+        >
+          <i className={`bi bi-${item.icon} me-2`} />
+          {!collapsed && item.label}
+          {showNewBadge && (
+            <span className="badge bg-danger ms-2">NEW</span>
+          )}
+        </Link>
+      </li>
+    );
+  })}
+
+
           {servicesDropdownOpen !== null && (
             <li className="nav-item" ref={servicesRef}>
               <div
