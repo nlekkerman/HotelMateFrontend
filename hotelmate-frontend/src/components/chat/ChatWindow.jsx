@@ -48,20 +48,21 @@ const fetchMessages = async (beforeId = null) => {
     const container = messagesContainerRef.current;
 
     if (beforeId && container) {
-      // Save current scroll position relative to the bottom
+      // Infinite scroll: prepend older messages
       const scrollOffsetFromBottom = container.scrollHeight - container.scrollTop;
 
       setMessages(prev => [...newMessages, ...prev]);
-      setLoadingMore(false);
 
-      // Wait for DOM to update, then restore scroll
+      // Wait for DOM to render before restoring scroll
       requestAnimationFrame(() => {
         container.scrollTop = container.scrollHeight - scrollOffsetFromBottom;
+        setLoadingMore(false);
       });
     } else {
+      // Initial load or switching conversation: replace messages
       setMessages(newMessages);
       setLoading(false);
-      scrollToBottom(); // only scroll on initial load
+      scrollToBottom();
     }
 
     if (newMessages.length < MESSAGE_LIMIT) setHasMore(false);
@@ -73,11 +74,19 @@ const fetchMessages = async (beforeId = null) => {
 };
 
 
-  // Initial fetch
-  useEffect(() => {
-    if (!conversationId) return;
-    fetchMessages();
-  }, [conversationId]);
+
+ useEffect(() => {
+  if (!conversationId) return;
+
+  // Reset state for new conversation
+  setMessages([]);
+  setLoading(true);
+  setHasMore(true);
+  setLoadingMore(false);
+
+  fetchMessages();
+}, [conversationId]);
+
 
   // Pusher real-time updates
   useEffect(() => {
@@ -148,27 +157,38 @@ const fetchMessages = async (beforeId = null) => {
         {loading && (
           <div className="loading text-center">
             <div className="spinner"></div>
+           
           </div>
         )}
 
         {loadingMore && (
           <div className="loading-more text-center">
-            <div className="spinner-in-chat small"></div>
+            <div className="spinner small"></div>
           </div>
         )}
 
         {messages.map(msg => {
-          const isMine = (msg.sender_type === "staff" && msg.staff === userId) || (msg.sender_type === "guest" && !userId);
-          const senderName = msg.sender_type === "guest" ? msg.guest_name : "Reception";
-          return (
-            <div key={msg.id} className={`mb-2 ${isMine ? "text-end" : "text-start"}`}>
-              <div className="small text-muted mb-1"><strong>{senderName}</strong></div>
-              <div className={`d-inline-block p-2 rounded ${isMine ? "my-message" : "receiver-message"}`}>
-                {msg.message}
-              </div>
-            </div>
-          );
-        })}
+  const isMine = (msg.sender_type === "staff" && msg.staff === userId) || (msg.sender_type === "guest" && !userId);
+  const senderName = msg.sender_type === "guest" ? msg.guest_name : "Reception";
+
+  const messageTime = msg.timestamp
+    ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : '';
+
+  return (
+    <div key={msg.id} className={`mb-4 ${isMine ? "text-end" : "text-start"}`}>
+      <div className="small text-muted mb-1"><strong>{senderName}</strong></div>
+      <div className={`d-inline-block p-2 rounded  ${isMine ? "my-message" : "receiver-message"}`}>
+        {msg.message}
+      </div>
+      {messageTime && (
+        <div className="small text-muted mt-1">
+          {messageTime}
+        </div>
+      )}
+    </div>
+  );
+})}
 
         <div ref={messagesEndRef} />
       </div>

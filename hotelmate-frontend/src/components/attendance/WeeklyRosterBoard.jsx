@@ -277,7 +277,7 @@ return (
 
 </div>
     {/* Sticky Toolbar */}
-    <div className="d-flex flex-wrap align-items-center gap-2 mb-3 sticky-top bg-white shadow-sm p-2 rounded">
+    <div className="d-flex flex-wrap align-items-center gap-2 mb-3  bg-white shadow-sm p-2 rounded">
       <div className="d-flex align-items-center gap-2">
         <label className="mb-0 fw-semibold">Roster Period:</label>
         <RosterPeriodSelector

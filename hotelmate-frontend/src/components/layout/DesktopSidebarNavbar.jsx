@@ -8,6 +8,7 @@ import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useTheme } from "@/context/ThemeContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useChat } from "@/context/ChatContext";
+import { useBookingNotifications } from "@/context/BookingNotificationContext";
 
 const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const location = useLocation();
@@ -17,7 +18,7 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const { mainColor } = useTheme();
   const { totalUnread, markConversationRead } = useChat();
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
-
+  const { bookingUnreadCount } = useBookingNotifications(); 
   const { roomServiceCount, breakfastCount, totalServiceCount } =
     useOrderCount(hotelIdentifier);
   const [staffProfile, setStaffProfile] = useState(null);
@@ -30,8 +31,11 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const servicesRef = useRef(null);
 
   // Define active path helpers
-  const isExactActive = (path) => location.pathname === path;
-  const isPartialActive = (path) => location.pathname.startsWith(path);
+const isPartialActive = (path) => {
+  if (path === "/") return location.pathname === "/";
+  return location.pathname.startsWith(path);
+};
+
 
   // Fetch staff profile
   useEffect(() => {
@@ -159,7 +163,8 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
       label: "Bookings",
       icon: "calendar-check",
       feature: "reception",
-      roles: ["receptionist", "manager"],
+      roles: ["receptionist", "manager","waiter"],
+      badge: bookingUnreadCount > 0 ? bookingUnreadCount : null,
     },
     {
       path: "/maintenance",
@@ -195,7 +200,7 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
     <>
       <nav
         className={`d-none d-lg-flex flex-column position-relative top-0 start-0 sidebar-nav-desktop vh-100 shadow-lg text-white  ${
-          mainColor ? "" : "bg-dark"
+          mainColor ? "" : "bg-info"
         }`}
         style={{
           width: collapsed ? "100px" : "260px",
@@ -214,31 +219,29 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
         </div>
 
         <ul className="nav nav-pills flex-column mb-auto px-2">
-          {staffProfile?.is_superuser && !collapsed && (
-            <li className="nav-item mb-2">
-              <button
-                className="btn btn-primary text-white w-100"
-                onClick={() => navigate(`/clock-in/${hotelIdentifier}`)}
-              >
-                <i className="bi bi-clock me-2" />
-                Clock In / Out
-              </button>
-            </li>
-          )}
+          {staffProfile && (
+  <li className="nav-item mb-2">
+    <button
+      className={`btn  text-white w-100 d-flex bg-success`}
+      onClick={() => setIsModalOpen(true)}
+      title="Clock In / Out"
+    >
+      <i className="bi bi-clock" />
+      {!collapsed && <span className="ms-2">Clock In / Out</span>}
+    </button>
+  </li>
+)}
 
-          {staffProfile && !collapsed && (
+
+          {staffProfile && (
             <li className="nav-item mb-2">
               <Link
-                className={`nav-link text-white ${
-                  isPartialActive(`/${hotelIdentifier}/staff/me`)
-                    ? "bg-opacity-25"
-                    : ""
-                }`}
+                className="nav-link text-white d-flex "
                 to={`/${hotelIdentifier}/staff/me`}
-                onClick={() => setCollapsed(true)}
+                title="Profile"
               >
-                <i className="bi bi-person-circle me-2" />
-                Profile
+                <i className="bi bi-person-circle" />
+                {!collapsed && <span className="ms-2">Profile</span>}
               </Link>
             </li>
           )}
@@ -249,7 +252,7 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
               <li className="nav-item" key={path}>
                 <Link
                   className={`nav-link text-white ${
-                    isPartialActive(path) ? "bg-opacity-25" : ""
+                    isPartialActive(path) ? "active-icon-bg" : ""
                   }`}
                   to={path}
                   onClick={() => setCollapsed(true)}
@@ -263,105 +266,114 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
               </li>
             ))}
           {servicesDropdownOpen !== null && (
-  <li className="nav-item" ref={servicesRef}>
-    <div
-      className={`nav-link d-flex align-items-center  text-white ${
-        collapsed ? "justify-content-start" : "justify-content-start"
-      }`}
-      style={{ cursor: "pointer" }}
-      onClick={() => setServicesDropdownOpen(!servicesDropdownOpen)}
-      title={collapsed ? "Services" : ""} // Tooltip when collapsed
-    >
-      {/* Icon always visible */}
-      <i className="bi bi-cup-hot me-2" />
+            <li className="nav-item" ref={servicesRef}>
+              <div
+                className={`nav-link d-flex align-items-center  text-white ${
+                  collapsed ? "justify-content-start" : "justify-content-start"
+                }`}
+                style={{ cursor: "pointer" }}
+                onClick={() => setServicesDropdownOpen(!servicesDropdownOpen)}
+                title={collapsed ? "Services" : ""} // Tooltip when collapsed
+              >
+                {/* Icon always visible */}
+                <i className="bi bi-cup-hot me-2" />
 
-      {/* Show text + badge + chevron only if expanded */}
-      {!collapsed && (
-        <>
-          <span>Services</span>
-          {roomServiceCount + breakfastCount > 0 && (
-            <span className="badge bg-danger ms-2">
-              {roomServiceCount + breakfastCount}
-            </span>
-          )}
-          <i
-            className={`ms-3 bi bi-chevron-${servicesDropdownOpen ? "up" : "down"}`}
-            style={{ fontSize: "0.8rem" }}
-          />
-        </>
-      )}
-    </div>
-
-    {/* Submenu only when expanded */}
-    {!collapsed && servicesDropdownOpen && (
-      <ul className="nav flex-column ms-3">
-        {[
-          { label: "Room Service", icon: "box", count: roomServiceCount },
-          { label: "Breakfast", icon: "egg-fried", count: breakfastCount },
-        ].map(({ label, icon, count }) => (
-          <li className="nav-item" key={label}>
-            <Link
-              className="nav-link text-white d-flex 
-              "
-              to={`/services/${label.toLowerCase().replace(" ", "-")}`}
-              onClick={() => setCollapsed(true)}
-            >
-              <div>
-                <i className={`bi bi-${icon} me-2`} />
-                {label}
+                {/* Show text + badge + chevron only if expanded */}
+                {!collapsed && (
+                  <>
+                    <span>Services</span>
+                    {roomServiceCount + breakfastCount > 0 && (
+                      <span className="badge bg-danger ms-2">
+                        {roomServiceCount + breakfastCount}
+                      </span>
+                    )}
+                    <i
+                      className={`ms-3 bi bi-chevron-${
+                        servicesDropdownOpen ? "up" : "down"
+                      }`}
+                      style={{ fontSize: "0.8rem" }}
+                    />
+                  </>
+                )}
               </div>
-              {count > 0 && (
-                <span className="badge bg-danger ms-2">{count}</span>
+
+              {/* Submenu only when expanded */}
+              {!collapsed && servicesDropdownOpen && (
+                <ul className="nav flex-column ms-3">
+                  {[
+                    {
+                      label: "Room Service",
+                      icon: "box",
+                      count: roomServiceCount,
+                    },
+                    {
+                      label: "Breakfast",
+                      icon: "egg-fried",
+                      count: breakfastCount,
+                    },
+                  ].map(({ label, icon, count }) => (
+                    <li className="nav-item" key={label}>
+                      <Link
+                        className="nav-link text-white d-flex 
+              "
+                        to={`/services/${label
+                          .toLowerCase()
+                          .replace(" ", "-")}`}
+                        onClick={() => setCollapsed(true)}
+                      >
+                        <div>
+                          <i className={`bi bi-${icon} me-2`} />
+                          {label}
+                        </div>
+                        {count > 0 && (
+                          <span className="badge bg-danger ms-2">{count}</span>
+                        )}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               )}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    )}
-  </li>
-)}
+            </li>
+          )}
 
-
-          {canAccess(["super_staff_admin"]) && !collapsed && (
+          {/* SETTINGS if super admin */}
+          {canAccess(["super_staff_admin"]) && (
             <li className="nav-item mt-2">
               <Link
-                className={`nav-link text-white ${
-                  isPartialActive("/settings") ? "bg-opacity-25" : ""
-                }`}
+                className="nav-link text-white d-flex "
                 to="/settings"
+                title="Settings"
                 onClick={() => setCollapsed(true)}
               >
-                <i className="bi bi-gear me-2" />
-                Settings
+                <i className="bi bi-gear" />
+                {!collapsed && <span className="ms-2">Settings</span>}
               </Link>
             </li>
           )}
 
           {/* LOGIN / REGISTER if not logged in */}
-          {!user && !collapsed && (
+          {!user && (
             <>
               <li className="nav-item mt-2">
                 <Link
-                  className={`nav-link text-white ${
-                    isPartialActive("/login") ? "bg-opacity-25" : ""
-                  }`}
+                  className="nav-link text-white d-flex align-items-center justify-content-center"
                   to="/login"
+                  title="Login"
                   onClick={() => setCollapsed(true)}
                 >
-                  <i className="bi bi-box-arrow-in-right me-2" />
-                  Login
+                  <i className="bi bi-box-arrow-in-right" />
+                  {!collapsed && <span className="ms-2">Login</span>}
                 </Link>
               </li>
               <li className="nav-item mt-2">
                 <Link
-                  className={`nav-link text-white ${
-                    isPartialActive("/register") ? "bg-opacity-25" : ""
-                  }`}
+                  className="nav-link text-white d-flex align-items-center justify-content-center"
                   to="/register"
+                  title="Register"
                   onClick={() => setCollapsed(true)}
                 >
-                  <i className="bi bi-person-plus me-2" />
-                  Register
+                  <i className="bi bi-person-plus" />
+                  {!collapsed && <span className="ms-2">Register</span>}
                 </Link>
               </li>
             </>
@@ -370,28 +382,15 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
           {/* LOGOUT if logged in */}
           {user && (
             <li className="nav-item mt-2">
-              {collapsed ? (
-                // Icon-only button when collapsed
-                <button
-                  className="btn btn-link nav-link text-white d-flex justify-content-center"
-                  onClick={handleLogout}
-                  title="Logout"
-                >
-                  <i className="bi bi-box-arrow-right" />
-                </button>
-              ) : (
-                // Full button when expanded
-                <button
-                  className="btn btn-link nav-link text-white"
-                  onClick={() => {
-                    handleLogout();
-                    setCollapsed(true);
-                  }}
-                >
-                  <i className="bi bi-box-arrow-right me-2" />
-                  Logout
-                </button>
-              )}
+              <button
+                className="btn btn-link nav-link text-white d-flex "
+                onClick={handleLogout}
+                title="Logout"
+                style={{ width: "100%", textAlign: "center" }}
+              >
+                <i className="bi bi-box-arrow-right" />
+                {!collapsed && <span className="ms-2">Logout</span>}
+              </button>
             </li>
           )}
         </ul>
