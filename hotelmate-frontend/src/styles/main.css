@@ -698,6 +698,30 @@ align-self: center;
   color: black;
   text-align: left;
 }
+.chat-logo-container {
+  position: fixed;
+  top: 54px;
+  left: 50%;
+  padding: 3px;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 2px solid #e8b5b5;
+  text-align: center;
+  z-index: 1000;
+}
+.chat-logo-inner {
+  display: inline-block;
+}
+
+/* gentle shake animation */
+@keyframes gentle-shake {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.02); }
+}
+
+.chat-logo-inner.shake {
+  animation: gentle-shake 0.8s ease-in-out infinite;
+}
 
 .dining-table {
   position: absolute;
