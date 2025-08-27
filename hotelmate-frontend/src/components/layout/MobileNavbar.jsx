@@ -5,6 +5,7 @@ import ClockModal from "@/components/staff/ClockModal";
 import api from "@/services/api";
 import logo from "@/assets/hotel-mate.png";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
+import { useChat } from "@/context/ChatContext";
 import { useTheme } from "@/context/ThemeContext";
 import { usePermissions } from "@/hooks/usePermissions";
 
@@ -14,7 +15,7 @@ const MobileNavbar = () => {
   const { user, logout } = useAuth();
   const hotelIdentifier = user?.hotel_slug;
   const { mainColor } = useTheme();
-
+const { totalUnread } = useChat();
   const { roomServiceCount, breakfastCount, totalServiceCount } =
     useOrderCount(hotelIdentifier);
   const [staffProfile, setStaffProfile] = useState(null);
@@ -183,26 +184,30 @@ const MobileNavbar = () => {
     >
       <div className="container-fluid ">
         <div className="position-relative d-inline-block ms-auto ">
-          <button
-            className="navbar-toggler bg-transparent border-0 shadow-lg"
-            type="button"
-            aria-controls="navbarSupportedContent"
-            aria-expanded={!collapsed}
-            aria-label="Toggle navigation"
-            onClick={toggleNavbar}
-          >
-            <span
-              className="navbar-toggler-icon"
-              style={{ filter: "invert(1)" }}
-            />
-          </button>
+  <button
+    className="navbar-toggler bg-transparent border-0 shadow-lg position-relative"
+    type="button"
+    aria-controls="navbarSupportedContent"
+    aria-expanded={!collapsed}
+    aria-label="Toggle navigation"
+    onClick={toggleNavbar}
+  >
+    <span
+      className="navbar-toggler-icon"
+      style={{ filter: "invert(1)" }}
+    />
+    {/* "NEW" badge on burger */}
+    {totalUnread > 0 && (
+      <span
+        className="position-absolute start-0 top-50 translate-middle badge rounded-pill bg-danger"
+        style={{ fontSize: "0.6rem", padding: "0.2em 0.4em" }}
+      >
+        NEW
+      </span>
+    )}
+  </button>
+</div>
 
-          {totalServiceCount > 0 && (
-            <span className="position-absolute top-0 start-0 translate-middle badge rounded-pill bg-danger">
-              {totalServiceCount}
-            </span>
-          )}
-        </div>
 
         <div className={`collapse navbar-collapse ${!collapsed ? "show" : ""}`}>
           <ul className="navbar-nav ms-auto mb-2 mb-lg-0 gap-3 shadow-lg p-2 rounded m-2">
@@ -275,22 +280,28 @@ const MobileNavbar = () => {
             {user && (
               <>
                 {navItems
-                  .filter((item) => canAccess(item.roles))
-                  .map(({ path, label, icon }) => (
-                    <li className="nav-item" key={path}>
-                      <Link
-                        className={`nav-link ${
-                          isActive(path) ? "active" : ""
-                        } text-white`}
-                        to={path}
-                        onClick={toggleNavbar}
-                      >
-                        <i className={`bi bi-${icon} me-2`} />
-                        {label}
-                      </Link>
-                    </li>
-                  ))}
+        .filter((item) => canAccess(item.roles))
+        .map(({ path, label, icon }) => (
+          <li className="nav-item" key={path}>
+            <Link
+              className={`nav-link ${
+                isActive(path) ? "active" : ""
+              } text-white d-flex justify-content-between align-items-center`}
+              to={path}
+              onClick={toggleNavbar}
+            >
+              <div>
+                <i className={`bi bi-${icon} me-2`} />
+                {label}
+              </div>
 
+              {/* Add badge only for chat */}
+              {label === "Chat" && totalUnread > 0 && (
+                <span className="badge bg-danger ms-2">{totalUnread}</span>
+              )}
+            </Link>
+          </li>
+        ))}
                 {servicesNavItems.some(({ roles }) => canAccess(roles)) && (
                   <li className="nav-item dropdown">
                     <div
