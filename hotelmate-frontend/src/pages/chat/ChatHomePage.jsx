@@ -49,8 +49,8 @@ const ChatHomePage = ({ selectedRoom, onSelectRoom, onUnreadChange }) => {
 
       {/* Hamburger icon only on small screens */}
       {!showSidebar && window.innerWidth < 768 && (
-        <button className="hamburger-btn main-bg" onClick={toggleSidebar}>
-         CHATS
+        <button className="hamburger-btn" onClick={toggleSidebar}>
+          <FaBars />
         </button>
       )}
 
