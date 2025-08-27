@@ -18,6 +18,7 @@ export const BookingNotificationProvider = ({ children }) => {
     // Initialize Pusher
     const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
       cluster: import.meta.env.VITE_PUSHER_CLUSTER,
+      forceTLS: true,
     });
     pusherRef.current = pusher;
 
