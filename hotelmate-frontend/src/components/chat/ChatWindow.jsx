@@ -4,8 +4,7 @@ import Pusher from "pusher-js";
 import api from "@/services/api";
 import { FaPaperPlane } from "react-icons/fa";
 import { useChat } from "@/context/ChatContext";
-import HotelLogo from "@/components/layout/HotelLogo";
-
+import useHotel from "@/hooks/useHotel"; 
 const MESSAGE_LIMIT = 10;
 
 const ChatWindow = ({ userId: propUserId, conversationId: propConversationId, hotelSlug: propHotelSlug, onNewMessage }) => {
@@ -15,7 +14,7 @@ const ChatWindow = ({ userId: propUserId, conversationId: propConversationId, ho
 
   const storedUser = localStorage.getItem("user");
   const userId = propUserId || (storedUser ? JSON.parse(storedUser).id : undefined);
-
+const { hotelLogo } = useHotel(); 
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -144,7 +143,11 @@ const fetchMessages = async (beforeId = null) => {
       {!userId && (
         <div className="chat-logo-container rounded-pill shadow-lg">
           <div className={`chat-logo-inner ${newMessage.trim() ? "shake" : ""}`}>
-            <HotelLogo />
+            <img
+              src={hotelLogo}
+              alt="Hotel Logo"
+              style={{ maxHeight: 80, objectFit: "contain" }}
+            />
           </div>
         </div>
       )}

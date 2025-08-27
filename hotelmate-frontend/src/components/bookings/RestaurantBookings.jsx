@@ -42,10 +42,22 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
     .finally(() => setLoading(false));
 }, [hotelSlug, restaurantId]);
 
+const displayDate = new Date().toISOString().slice(0, 10);
 
-  const displayDate = new Date().toISOString().slice(0, 10);
-  const todaysBookings = bookings.filter((b) => b.date === displayDate);
-  const upcomingBookings = bookings.filter((b) => b.date > displayDate);
+// Sort bookings by date + start_time (earliest first)
+const sortBookings = (a, b) => {
+  const dateA = new Date(`${a.date}T${a.start_time || "00:00"}`);
+  const dateB = new Date(`${b.date}T${b.start_time || "00:00"}`);
+  return dateA - dateB;
+};
+
+  const todaysBookings = bookings
+  .filter((b) => b.date === displayDate)
+  .sort(sortBookings);
+
+const upcomingBookings = bookings
+  .filter((b) => b.date > displayDate)
+  .sort(sortBookings);
 
   const renderRow = (booking) => {
     const { adults = 0, children = 0, infants = 0 } = booking.seats || {};
@@ -71,7 +83,6 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
         <td>{room}</td>
         <td>{booking.start_time || "—"}</td>
         <td>{booking.end_time || "—"}</td>
-        <td>{tables}</td>
         <td>{adults + children + infants}</td>
         <td>
           {voucher !== "—" ? (
@@ -92,7 +103,6 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
           <th>Room</th>
           <th>Start</th>
           <th>End</th>
-          <th>Tables</th>
           <th>Seats</th>
           <th>Voucher</th>
         </tr>
