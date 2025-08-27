@@ -4,6 +4,8 @@ import Pusher from "pusher-js";
 import api from "@/services/api";
 import { FaPaperPlane } from "react-icons/fa";
 import { useChat } from "@/context/ChatContext";
+import HotelLogo from "@/components/layout/HotelLogo"; // ⬅️ import logo
+
 const ChatWindow = ({
   userId: propUserId,
   conversationId: propConversationId,
@@ -24,11 +26,12 @@ const ChatWindow = ({
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);
   const { markConversationRead } = useChat();
+
   const scrollToBottom = () =>
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   useEffect(scrollToBottom, [messages]);
 
-  // Fetch messages and subscribe to Pusher
+  // Fetch messages + subscribe to Pusher
   useEffect(() => {
     if (!conversationId) return;
 
@@ -52,10 +55,7 @@ const ChatWindow = ({
     );
     channel.bind("new-message", (message) => {
       setMessages((prev) => {
-        // prevent duplicates by checking ID
-        if (prev.some((m) => m.id === message.id)) {
-          return prev;
-        }
+        if (prev.some((m) => m.id === message.id)) return prev;
         return [...prev, message];
       });
 
@@ -85,9 +85,7 @@ const ChatWindow = ({
           staff_id: userId || undefined,
         }
       );
-
       setNewMessage("");
-      // don’t call setMessages here ❌
     } catch (err) {
       console.error("Failed to send message:", err);
     }
@@ -95,6 +93,14 @@ const ChatWindow = ({
 
   return (
     <div className="chat-window d-flex flex-column">
+      {/* Hotel logo container */}
+      <div className="chat-logo-container rounded-pill shadow-lg">
+  <div className={`chat-logo-inner ${newMessage.trim() ? "shake" : ""}`}>
+    <HotelLogo />
+  </div>
+</div>
+
+
       {/* Messages area */}
       <div className="chat-messages flex-grow-1 overflow-auto">
         {messages.map((msg) => {
@@ -110,7 +116,6 @@ const ChatWindow = ({
               key={msg.id}
               className={`mb-2 ${isMine ? "text-end" : "text-start"}`}
             >
-              {/* Display sender name */}
               <div className="small text-muted mb-1">
                 <strong>{senderName}</strong>
               </div>
@@ -141,9 +146,9 @@ const ChatWindow = ({
           className="message-form-control me-2"
           placeholder="Type a message..."
           value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)} // only update state
+          onChange={(e) => setNewMessage(e.target.value)}
           onFocus={() => {
-            if (conversationId) markConversationRead(conversationId); // mark as read once on focus
+            if (conversationId) markConversationRead(conversationId);
           }}
           disabled={!conversationId}
           onKeyDown={(e) => {
