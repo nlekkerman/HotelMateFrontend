@@ -18,7 +18,7 @@ export default function useHotelLogo(slug) {
 
       try {
         // Call the new public slug endpoint
-        const res = await api.get(`/hotels/${slug}/`);
+        const res = await api.get(`/hotel/${slug}/`);
         const hotel = res.data;
         console.log("[useHotelLogo] Response data:", hotel);
 
