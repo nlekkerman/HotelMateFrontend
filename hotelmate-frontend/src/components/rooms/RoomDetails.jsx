@@ -3,8 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "@/services/api";
 
 function RoomDetails() {
-  
-  const { hotelIdentifier, roomNumber,id } = useParams();
+  const { hotelIdentifier, roomNumber, id } = useParams();
 
   console.log("Hotel Identifier:", hotelIdentifier);
   const navigate = useNavigate();
@@ -15,8 +14,9 @@ function RoomDetails() {
   useEffect(() => {
     const fetchRoomDetails = async () => {
       try {
-        const response = await api.get(`/rooms/${hotelIdentifier}/rooms/${roomNumber}/`);
-
+        const response = await api.get(
+          `/rooms/${hotelIdentifier}/rooms/${roomNumber}/`
+        );
 
         setRoom(response.data);
       } catch (err) {
@@ -39,81 +39,113 @@ function RoomDetails() {
     <div className="container my-4">
       <h2 className="mb-4">Room Details - Room {room.room_number}</h2>
 
-      <p>
-        <strong>Room Number:</strong> {room.room_number}
-      </p>
-      <p>
-        <strong>Guest PIN:</strong> {room.guest_id_pin || "Not assigned"}
-      </p>
-      <p>
-        <strong>Occupied:</strong> {room.is_occupied ? "Yes" : "No"}
-      </p>
+      <div className="container my-3">
+        <div className="row justify-content-center">
+          <div className="col-12 col-md-8">
+            <div className="card p-3 shadow-sm rounded">
+              {/* Guests */}
+              <p>
+                <strong>Guests:</strong>{" "}
+                {room.guests_in_room && room.guests_in_room.length > 0 ? (
+                  room.guests_in_room.map((guest) => (
+                    <span key={guest.id} className="btn text-dark border  bold me-1 mb-1 fs-5 fw-bold">
+                      {guest.first_name} {guest.last_name}
+                    </span>
+                  ))
+                ) : (
+                  <span className="badge bg-secondary">None</span>
+                )}
+              </p>
 
-      <p>
-        <strong>Guests:</strong>{" "}
-        {room.guests_in_room && room.guests_in_room.length > 0 ? (
-          room.guests_in_room.map((guest) => (
-            <span key={guest.id}>
-              {guest.first_name} {guest.last_name}
-            </span>
-          ))
-        ) : (
-          <span className="text-muted">None</span>
-        )}
-      </p>
+              {/* Room Number */}
+              <p>
+                <strong>Room Number:</strong>{" "}
+                <span className="badge bg-info text-dark">
+                  {room.room_number}
+                </span>
+              </p>
 
-     <div className="mb-4">
-  <div className="row">
-    {room.room_service_qr_code && (
-      <div className="col-12 col-sm-6 col-lg-3 text-center mb-3">
-        <h5>Room Service QR Code</h5>
-        <img
-          src={room.room_service_qr_code}
-          alt="Room Service QR Code"
-          style={{ width: 150, height: 150, objectFit: "contain" }}
-        />
+              {/* Guest PIN */}
+              <p>
+                <strong>Guest PIN:</strong>{" "}
+                {room.guest_id_pin ? (
+                  <span className="badge bg-warning text-dark">
+                    {room.guest_id_pin}
+                  </span>
+                ) : (
+                  <span className="badge bg-secondary">Not assigned</span>
+                )}
+              </p>
+
+              {/* Occupied */}
+              <p>
+                <strong>Occupied:</strong>{" "}
+                {room.is_occupied ? (
+                  <span className="badge bg-danger">Yes</span>
+                ) : (
+                  <span className="badge bg-success">No</span>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
-    )}
 
-    {room.in_room_breakfast_qr_code && (
-      <div className="col-12 col-sm-6 col-lg-3 text-center mb-3">
-        <h5>In-Room Breakfast QR Code</h5>
-        <img
-          src={room.in_room_breakfast_qr_code}
-          alt="In-Room Breakfast QR Code"
-          style={{ width: 150, height: 150, objectFit: "contain" }}
-        />
-      </div>
-    )}
+      <div className="mb-4">
+        <div className="row">
+          {room.room_service_qr_code && (
+            <div className="col-12 col-sm-6 col-lg-3 text-center mb-3">
+              <h5>Room Service QR Code</h5>
+              <img
+                src={room.room_service_qr_code}
+                alt="Room Service QR Code"
+                style={{ width: 150, height: 150, objectFit: "contain" }}
+              />
+            </div>
+          )}
 
-    {room.dinner_booking_qr_code && (
-      <div className="col-12 col-sm-6 col-lg-3 text-center mb-3">
-        <h5>Restaurant / Dinner Booking QR Code</h5>
-        <img
-          src={room.dinner_booking_qr_code}
-          alt="Dinner Booking QR Code"
-          style={{ width: 150, height: 150, objectFit: "contain" }}
-        />
-      </div>
-    )}
+          {room.in_room_breakfast_qr_code && (
+            <div className="col-12 col-sm-6 col-lg-3 text-center mb-3">
+              <h5>In-Room Breakfast QR Code</h5>
+              <img
+                src={room.in_room_breakfast_qr_code}
+                alt="In-Room Breakfast QR Code"
+                style={{ width: 150, height: 150, objectFit: "contain" }}
+              />
+            </div>
+          )}
 
-    {room.chat_pin_qr_code && (
-      <div className="col-12 col-sm-6 col-lg-3 text-center mb-3">
-        <h5>Chat QR Code</h5>
-        <img
-          src={room.chat_pin_qr_code}
-          alt="Chat QR Code"
-          style={{ width: 150, height: 150, objectFit: "contain" }}
-        />
+          {room.dinner_booking_qr_code && (
+            <div className="col-12 col-sm-6 col-lg-3 text-center mb-3">
+              <h5>Restaurant / Dinner Booking QR Code</h5>
+              <img
+                src={room.dinner_booking_qr_code}
+                alt="Dinner Booking QR Code"
+                style={{ width: 150, height: 150, objectFit: "contain" }}
+              />
+            </div>
+          )}
+
+          {room.chat_pin_qr_code && (
+            <div className="col-12 col-sm-6 col-lg-3 text-center mb-3">
+              <h5>Chat QR Code</h5>
+              <img
+                src={room.chat_pin_qr_code}
+                alt="Chat QR Code"
+                style={{ width: 150, height: 150, objectFit: "contain" }}
+              />
+            </div>
+          )}
+        </div>
       </div>
-    )}
-  </div>
-</div>
 
       <div className="d-flex justify-content-center">
-      <button className="btn btn-secondary" onClick={() => navigate("/rooms")}>
-        Back to Rooms List
-      </button>
+        <button
+          className="btn btn-secondary"
+          onClick={() => navigate("/rooms")}
+        >
+          Back to Rooms List
+        </button>
       </div>
     </div>
   );
