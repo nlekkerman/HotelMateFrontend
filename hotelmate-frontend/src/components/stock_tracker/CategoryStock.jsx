@@ -5,6 +5,8 @@ import LowStock from "@/components/stock_tracker/LowStock";
 import { useAuth } from "@/context/AuthContext";
 import StockSettings from "@/components/stock_tracker/StockSettings";
 import StockActions from "@/components/stock_tracker/StockActions";
+import SuccessModal from "@/components/modals/SuccessModal";
+
 import {
   StockSearch,
   StockList,
@@ -28,14 +30,17 @@ export default function CategoryStock() {
   const [direction, setDirection] = useState("out");
   const [refreshLowStock, setRefreshLowStock] = useState(0);
   const [stock, setStock] = useState(null);
-
-  const [showSettings, setShowSettings] = useState(false);
-  const [showMovements, setShowMovements] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState(null);
   const { user } = useAuth();
+  const [showSettings, setShowSettings] = useState(false);
+  const [showMovements, setShowMovements] = useState(false);
   const [showCocktailCalculator, setShowCocktailCalculator] = useState(false);
   const [showStockAnalytics, setShowStockAnalytics] = useState(false);
+const [searchTerm, setSearchTerm] = useState("");
+
+const [showSuccessModal, setShowSuccessModal] = useState(false);
+const [successMessage, setSuccessMessage] = useState("Stock updated successfully!");
+
   const prettyCategory = category_slug
     .split("-")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -45,7 +50,9 @@ export default function CategoryStock() {
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 
-  useEffect(() => {
+  // Fetch stock and group items by type
+  const fetchStock = () => {
+    setLoading(true);
     const endpoint = `stock_tracker/${hotel_slug}/stocks/?category__slug=${category_slug}`;
     api
       .get(endpoint)
@@ -74,26 +81,86 @@ export default function CategoryStock() {
       })
       .catch((err) => setError(err.response?.data || err.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchStock();
   }, [hotel_slug, category_slug]);
 
   const toggleExpand = (type) =>
     setExpandedTypes((prev) => ({ ...prev, [type]: !prev[type] }));
 
+  // Add transaction and update UI optimistically
   const handleAddTransaction = (item) => {
     const qty = parseFloat(quantities[item.id]);
     if (!qty) return;
-    setTransactions([...transactions, { ...item, qty, direction }]);
+
+    const newTransaction = { ...item, qty, direction };
+    setTransactions([...transactions, newTransaction]);
     setQuantities({ ...quantities, [item.id]: "" });
+
+    // Optimistically update groupedItems
+    setGroupedItems((prev) => {
+      const newGrouped = { ...prev };
+      for (const type in newGrouped) {
+        newGrouped[type] = newGrouped[type].map((i) => {
+          if (i.id === item.id) {
+            const change = direction === "in" ? qty : -qty;
+            return { ...i, qty: i.qty + change };
+          }
+          return i;
+        });
+      }
+      return newGrouped;
+    });
   };
 
-  const handleCompleteStockAction = () => {
-    api
-      .post(`/stock_tracker/${hotel_slug}/movements/bulk/`, { transactions })
-      .then(() => {
-        setTransactions([]);
-        setRefreshLowStock((v) => v + 1);
-      });
-  };
+const handleCompleteStockAction = (e) => {
+  if (e) e.preventDefault();
+
+  // Optimistic UI already done
+  api
+    .post(`/stock_tracker/${hotel_slug}/movements/bulk/`, { transactions })
+    .then(() => {
+      setTransactions([]);                 // clear transactions
+      setRefreshLowStock((v) => v + 1);    // refresh low stock
+      setSuccessMessage("Stock movements completed successfully!");
+      setShowSuccessModal(true);           // show modal immediately
+
+      // Refresh stock without toggling the main loading spinner
+      const endpoint = `stock_tracker/${hotel_slug}/stocks/?category__slug=${category_slug}`;
+      api.get(endpoint)
+        .then((res) => {
+          const results = res.data.results || [];
+          if (!results.length) return;
+
+          setStock(results[0]);
+          const grouped = {};
+          results.forEach((stock) => {
+            stock.inventory_lines?.forEach((line) => {
+              const type = line.item?.type || "Uncategorized";
+              if (!grouped[type]) grouped[type] = [];
+              grouped[type].push({
+                id: line.item.id,
+                name: line.item.name,
+                qty: line.quantity,
+                active: line.item.active_stock_item,
+                volume_per_unit: line.item.volume_per_unit,
+                unit: line.item.unit,
+              });
+            });
+          });
+          setGroupedItems(grouped);
+        })
+        .catch((err) => setError(err.response?.data || err.message));
+    })
+    .catch((err) => {
+      console.error("Stock action failed:", err);
+      setError(err.response?.data || err.message);
+      // Optionally, rollback optimistic UI
+    });
+};
+
 
   const canAccessSettings =
     user?.is_superuser || user?.access_level === "super_staff_admin";
@@ -125,6 +192,7 @@ export default function CategoryStock() {
           setShowStockAnalytics={setShowStockAnalytics}
         />
       )}
+
       {showCocktailCalculator && (
         <CocktailCalculator onClose={() => setShowCocktailCalculator(false)} />
       )}
@@ -140,6 +208,7 @@ export default function CategoryStock() {
           />
         </React.Suspense>
       )}
+
       {showStockAnalytics && (
         <React.Suspense fallback={<div>Loading analytics…</div>}>
           <StockAnalytics hotelSlug={hotel_slug} />
@@ -155,6 +224,11 @@ export default function CategoryStock() {
           />
         </React.Suspense>
       )}
+<SuccessModal
+  show={showSuccessModal}
+  message={successMessage}
+  onClose={() => setShowSuccessModal(false)}
+/>
 
       <LowStock hotelSlug={hotel_slug} refresh={refreshLowStock} />
 
@@ -175,5 +249,6 @@ export default function CategoryStock() {
         handleCompleteStockAction={handleCompleteStockAction}
       />
     </div>
+    
   );
 }

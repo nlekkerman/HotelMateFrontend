@@ -17,16 +17,11 @@ export default function StockAnalytics({ hotelSlug }) {
     if (!hotelSlug) return;
     setLoading(true);
     setError(null);
-
     const useChangedOnly = overrideChangedOnly !== null ? overrideChangedOnly : changedOnly;
 
     try {
       const res = await api.get(`/stock_tracker/${hotelSlug}/analytics/stock/`, {
-        params: {
-          start_date: startDate,
-          end_date: endDate,
-          changed_only: useChangedOnly,
-        },
+        params: { start_date: startDate, end_date: endDate, changed_only: useChangedOnly },
       });
       setData(res.data);
     } catch (err) {
@@ -38,68 +33,55 @@ export default function StockAnalytics({ hotelSlug }) {
   };
 
   return (
-    <div className="stock-analytics container mt-4 p-4 bg-light rounded shadow-sm">
-      <h2 className="mb-3 text-center">Stock Analytics 📊</h2>
+    <div className="container-fluid mt-4 p-4 bg-light rounded shadow-sm">
+      <h2 className="text-center mb-4">Stock Analytics</h2>
 
-      {/* Date range picker */}
-      <div className="d-flex gap-2 justify-content-center mb-3 flex-wrap">
-        <div>
-          <label>Start Date:</label>
-          <input
-            type="date"
-            className="form-control"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
+      {/* Filters */}
+      <div className="row g-2 mb-3 align-items-end justify-content-center">
+        <div className="col-12 col-sm-6 col-md-3">
+          <label className="form-label">Start Date</label>
+          <input type="date" className="form-control" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         </div>
-        <div>
-          <label>End Date:</label>
-          <input
-            type="date"
-            className="form-control"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
+        <div className="col-12 col-sm-6 col-md-3">
+          <label className="form-label">End Date</label>
+          <input type="date" className="form-control" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
         </div>
-        <div className="d-flex gap-2 flex-column flex-md-row align-items-center">
-          <button className="btn btn-primary" onClick={() => fetchAnalytics()} disabled={loading}>
+
+        <div className="col-12 col-md-4 d-flex flex-wrap gap-2 mt-2 mt-md-0">
+          <button className="btn btn-primary flex-grow-1" onClick={() => fetchAnalytics()} disabled={loading}>
             Load Analytics
           </button>
-          <button
-            className="btn btn-secondary"
-            onClick={() => fetchAnalytics(false)}
-            disabled={loading}
-          >
+          <button className="btn btn-secondary flex-grow-1" onClick={() => fetchAnalytics(false)} disabled={loading}>
             Load All Items
           </button>
-          <button
-  className="btn btn-success"
-  onClick={() => generateAnalyticsPdf(data, startDate, endDate, hotelSlug)}
-  disabled={data.length === 0}
->
-  Download PDF
-</button>
-
+          <button className="btn btn-success flex-grow-1" onClick={() => generateAnalyticsPdf(data, startDate, endDate, hotelSlug)} disabled={data.length === 0}>
+            Download PDF
+          </button>
         </div>
       </div>
 
-      {loading && <p className="text-center">Loading analytics...</p>}
-      {error && <p className="text-danger text-center">{error}</p>}
+{loading && (
+  <div className="text-center my-3">
+    <div className="spinner-border text-primary" role="status">
+      <span className="visually-hidden">Loading...</span>
+    </div>
+    <p className="text-muted mt-2">Loading analytics...</p>
+  </div>
+)}
+      {error && <p className="text-center text-danger">{error}</p>}
+      {!loading && !error && data.length === 0 && <p className="text-center text-muted">No stock movements found for this period.</p>}
 
-      {!loading && !error && data.length === 0 && (
-        <p className="text-center">No stock movements found for this period.</p>
-      )}
-
-      {!loading && data.length > 0 && (
+      {/* Analytics Table */}
+      {data.length > 0 && (
         <div className="table-responsive">
-          <table className="table table-bordered table-hover">
+          <table className="table table-striped table-hover table-bordered">
             <thead className="table-light">
               <tr>
                 <th>Item</th>
-                <th>Opening Stock</th>
+                <th>Opening</th>
                 <th>Added</th>
                 <th>Removed</th>
-                <th>Closing Stock</th>
+                <th>Closing</th>
               </tr>
             </thead>
             <tbody>
