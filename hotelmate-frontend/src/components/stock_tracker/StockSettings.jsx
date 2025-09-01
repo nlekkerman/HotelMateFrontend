@@ -10,6 +10,7 @@ const StockSettings = ({ stock, onToggleActive }) => {
     alert_quantity: 0,
     volume_per_unit: "",
     unit: "",
+    type: "",
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -25,6 +26,7 @@ const StockSettings = ({ stock, onToggleActive }) => {
   // Delete modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [types, setTypes] = useState([]);
 
   const fetchItems = async () => {
     setSubmitting(true);
@@ -58,6 +60,23 @@ const StockSettings = ({ stock, onToggleActive }) => {
       setSubmitting(false);
     }
   };
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+      const hotelSlug = user?.hotel_slug;
+    const fetchTypes = async () => {
+      try {
+        const response = await api.get(
+          `/stock_tracker/${hotelSlug}/item-types/`
+        );
+console.log("Fetched types:", response.data);
+        setTypes(response.data); // assuming data is a list of {id, name, slug}
+      } catch (err) {
+        console.error("Failed to fetch item types:", err);
+      }
+    };
+
+    fetchTypes();
+  }, []);
 
   useEffect(() => {
     fetchItems();
@@ -68,39 +87,40 @@ const StockSettings = ({ stock, onToggleActive }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setSubmitting(true);
-  setError(null);
-  const user = JSON.parse(localStorage.getItem("user")) || {};
-  const hotelSlug = user.hotel_slug;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    const user = JSON.parse(localStorage.getItem("user")) || {};
+    const hotelSlug = user.hotel_slug;
 
-  const dataToSend = {
-    ...formData,
-    hotel: user.hotel_id, // ✅ always include this
-  };
+    const dataToSend = {
+      ...formData,
+      hotel: user.hotel_id,
+      type: formData.type || null,
+    };
 
-  try {
-    if (editingItem) {
-      await api.put(
-        `/stock_tracker/${hotelSlug}/items/${editingItem.id}/`,
-        dataToSend
-      );
-    } else {
-      await api.post(`/stock_tracker/${hotelSlug}/items/`, dataToSend);
+    try {
+      if (editingItem) {
+        await api.put(
+          `/stock_tracker/${hotelSlug}/items/${editingItem.id}/`,
+          dataToSend
+        );
+      } else {
+        await api.post(`/stock_tracker/${hotelSlug}/items/`, dataToSend);
+      }
+
+      setShowForm(false);
+      setEditingItem(null);
+      setPage(1);
+      fetchItems();
+    } catch (err) {
+      console.error(err);
+      setError("Failed to save item.");
+    } finally {
+      setSubmitting(false);
     }
-
-    setShowForm(false);
-    setEditingItem(null);
-    setPage(1);
-    fetchItems();
-  } catch (err) {
-    console.error(err);
-    setError("Failed to save item.");
-  } finally {
-    setSubmitting(false);
-  }
-};
+  };
 
   const handleEdit = (item) => {
     setFormData({
@@ -110,6 +130,7 @@ const handleSubmit = async (e) => {
       alert_quantity: item.alert_quantity,
       volume_per_unit: item.volume_per_unit,
       unit: item.unit,
+      type: item.type?.id || "",
     });
     setEditingItem(item);
     setShowForm(true);
@@ -249,6 +270,21 @@ const handleSubmit = async (e) => {
               <option value="l">l</option>
             </select>
           </div>
+          <div className="mb-3">
+            <select
+              name="type"
+              value={formData.type}
+              onChange={handleChange}
+              className="form-select"
+            >
+              <option value="">Select Item Type</option>
+              {types.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div className="mb-3">
             <input
@@ -263,23 +299,20 @@ const handleSubmit = async (e) => {
           </div>
 
           <div className="d-flex gap-2">
-          
-
             <button
-  type="submit"
-  className="btn btn-success"
-  disabled={submitting}
->
-  {submitting
-    ? editingItem
-      ? "Saving..."
-      : "Adding..."
-    : editingItem
-    ? "Save Changes"
-    : "Add Stock Item"}
-</button>
+              type="submit"
+              className="btn btn-success"
+              disabled={submitting}
+            >
+              {submitting
+                ? editingItem
+                  ? "Saving..."
+                  : "Adding..."
+                : editingItem
+                ? "Save Changes"
+                : "Add Stock Item"}
+            </button>
 
-            
             <button
               type="button"
               className="btn btn-secondary"
@@ -331,12 +364,12 @@ const handleSubmit = async (e) => {
                   </span>
 
                   <div className="d-flex gap-2 mt-2 mt-sm-0">
-                   <button
-  className="btn btn-warning btn-sm"
-  onClick={() => handleEdit(item)} // ✅ Here, 'item' is defined in map()
->
-  Edit
-</button>
+                    <button
+                      className="btn btn-warning btn-sm"
+                      onClick={() => handleEdit(item)} // ✅ Here, 'item' is defined in map()
+                    >
+                      Edit
+                    </button>
 
                     <button
                       className="btn btn-danger btn-sm"

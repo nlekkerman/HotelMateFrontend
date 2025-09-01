@@ -12,6 +12,7 @@ import {
 } from "@/components/stock_tracker/StockUI";
 import SettingsActionsAdministrator from "@/components/stock_tracker/SettingsActionsAdministrator";
 import { CocktailCalculator } from "@/components/stock_tracker/CocktailCalculator";
+import StockAnalytics from "@/components/stock_tracker/StockAnalytics";
 
 const StockMovements = React.lazy(() =>
   import("@/components/stock_tracker/StockMovements")
@@ -34,7 +35,7 @@ export default function CategoryStock() {
   const [error, setError] = useState(null);
   const { user } = useAuth();
   const [showCocktailCalculator, setShowCocktailCalculator] = useState(false);
-
+  const [showStockAnalytics, setShowStockAnalytics] = useState(false);
   const prettyCategory = category_slug
     .split("-")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -118,7 +119,10 @@ export default function CategoryStock() {
           setShowSettings={setShowSettings}
           showMovements={showMovements}
           setShowMovements={setShowMovements}
+          showCocktailCalculator={showCocktailCalculator}
           setShowCocktailCalculator={setShowCocktailCalculator}
+          showStockAnalytics={showStockAnalytics}
+          setShowStockAnalytics={setShowStockAnalytics}
         />
       )}
       {showCocktailCalculator && (
@@ -134,6 +138,11 @@ export default function CategoryStock() {
             hotelSlug={hotel_slug}
             categorySlug={category_slug}
           />
+        </React.Suspense>
+      )}
+      {showStockAnalytics && (
+        <React.Suspense fallback={<div>Loading analytics…</div>}>
+          <StockAnalytics hotelSlug={hotel_slug} />
         </React.Suspense>
       )}
 
