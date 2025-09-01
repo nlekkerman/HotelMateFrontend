@@ -64,8 +64,8 @@ export const StockList = ({
                       )}
                     </span>
                     <span
-                      className={`badge rounded-pill d-flex justify-content-center align-items-center ${
-                        item.qty >= 0 ? "bg-success" : "bg-danger"
+                      className={`badge p-0 text-dark me-2  d-flex justify-content-center align-items-center ${
+                        item.qty >= 0 ? "" : "bg-danger"
                       }`}
                     >
                       {item.qty} pcs
@@ -84,7 +84,7 @@ export const StockList = ({
                       }
                     />
                     <button
-                      className="btn btn-sm btn-primary"
+                      className="btn custom-button btn-sm text-white"
                       onClick={() => handleAddTransaction(item)}
                       disabled={!item.active}
                     >
@@ -116,7 +116,7 @@ export const TransactionsList = ({
           </li>
         ))}
       </ul>
-      <button className="btn btn-success" onClick={handleCompleteStockAction}>
+      <button className="btn btn-success" type="button" onClick={handleCompleteStockAction}>
         Complete Stock Action
       </button>
     </>

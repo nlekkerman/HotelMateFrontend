@@ -68,7 +68,6 @@ const StockSettings = ({ stock, onToggleActive }) => {
         const response = await api.get(
           `/stock_tracker/${hotelSlug}/item-types/`
         );
-console.log("Fetched types:", response.data);
         setTypes(response.data); // assuming data is a list of {id, name, slug}
       } catch (err) {
         console.error("Failed to fetch item types:", err);
@@ -199,239 +198,237 @@ console.log("Fetched types:", response.data);
     }
   };
 
-  return (
-    <div className="p-4 border rounded-md mt-4">
-      <h2 className="text-lg font-semibold text-white mb-4">Stock Settings</h2>
+   return (
+    <div className="container-fluid p-4 bg-dark text-white rounded shadow-sm mt-4">
+  <h2 className="mb-3">Stock Settings</h2>
 
-      {!showForm ? (
-        <button
-          className="btn btn-primary mb-4"
-          onClick={() => setShowForm(true)}
-        >
-          Add New Item
+  {/* Add/Edit Form */}
+  {showForm && (
+    <form onSubmit={handleSubmit} className="mb-4 bg-secondary p-3 rounded">
+      <div className="row g-3">
+        <div className="col-sm-6 col-md-4">
+          <input
+            type="text"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            className="form-control"
+            placeholder="Item Name"
+            required
+          />
+        </div>
+        <div className="col-sm-6 col-md-4">
+          <input
+            type="text"
+            name="sku"
+            value={formData.sku}
+            onChange={handleChange}
+            className="form-control"
+            placeholder="SKU (optional)"
+          />
+        </div>
+        <div className="col-sm-6 col-md-2">
+          <input
+            type="number"
+            name="quantity"
+            value={formData.quantity}
+            onChange={handleChange}
+            className="form-control"
+            placeholder="Quantity"
+            min={0}
+            required
+          />
+        </div>
+        <div className="col-sm-6 col-md-2">
+          <input
+            type="number"
+            name="alert_quantity"
+            value={formData.alert_quantity}
+            onChange={handleChange}
+            className="form-control"
+            placeholder="Alert Quantity"
+            min={0}
+          />
+        </div>
+        <div className="col-sm-6 col-md-4">
+          <input
+            type="number"
+            name="volume_per_unit"
+            value={formData.volume_per_unit}
+            onChange={handleChange}
+            className="form-control"
+            placeholder="Volume per Unit"
+            min={0}
+            step="any"
+          />
+        </div>
+        <div className="col-sm-6 col-md-4">
+          <select
+            name="unit"
+            value={formData.unit}
+            onChange={handleChange}
+            className="form-select"
+          >
+            <option value="">Select Unit</option>
+            <option value="ml">ml</option>
+            <option value="l">l</option>
+          </select>
+        </div>
+        <div className="col-sm-6 col-md-4">
+          <select
+            name="type"
+            value={formData.type}
+            onChange={handleChange}
+            className="form-select"
+          >
+            <option value="">Select Type</option>
+            {types.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="mt-3 d-flex gap-2 flex-wrap">
+        <button className="btn btn-success" disabled={submitting}>
+          {submitting ? (editingItem ? "Saving..." : "Adding...") : editingItem ? "Save Changes" : "Add Item"}
         </button>
-      ) : (
-        <form onSubmit={handleSubmit} className="mb-4">
-          <div className="mb-3">
-            <input
-              type="text"
-              name="name"
-              placeholder="Item Name"
-              value={formData.name}
-              onChange={handleChange}
-              className="form-control"
-              required
-            />
-          </div>
-          <div className="mb-3">
-            <input
-              type="text"
-              name="sku"
-              placeholder="SKU (optional)"
-              value={formData.sku}
-              onChange={handleChange}
-              className="form-control"
-            />
-          </div>
-          <div className="mb-3">
-            <input
-              type="number"
-              name="quantity"
-              placeholder="Quantity"
-              value={formData.quantity}
-              onChange={handleChange}
-              className="form-control"
-              required
-              min={0}
-            />
-          </div>
-          <div className="mb-3">
-            <input
-              type="number"
-              name="volume_per_unit"
-              placeholder="Volume per unit"
-              value={formData.volume_per_unit}
-              onChange={handleChange}
-              className="form-control"
-              min={0}
-              step="any"
-            />
-          </div>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => {
+            setShowForm(false);
+            setEditingItem(null);
+            setFormData({ name: "", sku: "", quantity: 0, alert_quantity: 0, volume_per_unit: "", unit: "", type: "" });
+          }}
+        >
+          Cancel
+        </button>
+      </div>
+      {error && <p className="text-danger mt-2">{error}</p>}
+    </form>
+  )}
 
-          <div className="mb-3">
-            <select
-              name="unit"
-              value={formData.unit}
-              onChange={handleChange}
-              className="form-select"
-            >
-              <option value="">Select Unit</option>
-              <option value="ml">ml</option>
-              <option value="l">l</option>
-            </select>
-          </div>
-          <div className="mb-3">
-            <select
-              name="type"
-              value={formData.type}
-              onChange={handleChange}
-              className="form-select"
-            >
-              <option value="">Select Item Type</option>
-              {types.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </div>
+  {!showForm && (
+    <button className="btn btn-primary mb-4" onClick={() => setShowForm(true)}>
+      Add New Item
+    </button>
+  )}
 
-          <div className="mb-3">
-            <input
-              type="number"
-              name="alert_quantity"
-              placeholder="Alert Quantity"
-              value={formData.alert_quantity}
-              onChange={handleChange}
-              className="form-control"
-              min={0}
-            />
-          </div>
+  {/* Table for large screens */}
+  <div className="d-none d-lg-block">
+    {itemList.length === 0 ? (
+      <p className="text-muted">No items yet.</p>
+    ) : (
+      <table className="table table-dark table-striped table-hover">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Qty</th>
+            <th>Volume</th>
+            <th className="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {itemList.map((item) => (
+            <tr key={item.id}>
+              <td>{item.name}</td>
+              <td>{item.quantity}</td>
+              <td>{item.volume_per_unit} {item.unit}</td>
+              <td className="d-flex gap-1 justify-content-end align-items-center">
+  {/* Edit */}
+  <button
+    className="btn btn-outline-warning btn-sm p-1"
+    onClick={() => handleEdit(item)}
+    title="Edit"
+  >
+    <i className="bi bi-pencil-fill"></i>
+  </button>
 
-          <div className="d-flex gap-2">
-            <button
-              type="submit"
-              className="btn btn-success"
-              disabled={submitting}
-            >
-              {submitting
-                ? editingItem
-                  ? "Saving..."
-                  : "Adding..."
-                : editingItem
-                ? "Save Changes"
-                : "Add Stock Item"}
-            </button>
+  {/* Delete */}
+  <button
+    className="btn btn-outline-danger btn-sm p-1"
+    onClick={() => { setDeleteTargetId(item.id); setShowDeleteModal(true); }}
+    title="Delete"
+  >
+    <i className="bi bi-trash-fill"></i>
+  </button>
 
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                setShowForm(false);
-                setEditingItem(null); // Reset edit state
-                setFormData({
-                  name: "",
-                  sku: "",
-                  quantity: 0,
-                  alert_quantity: 0,
-                  volume_per_unit: "",
-                  unit: "",
-                });
-              }}
-            >
-              Cancel
-            </button>
-          </div>
+  {/* Toggle Active */}
+  <button
+    className={`btn btn-sm p-1 ${item.active_stock_item ? "btn-outline-success" : "btn-outline-secondary"}`}
+    disabled={togglingItems.has(item.id)}
+    onClick={() => toggleItemActive(item)}
+    title={item.active_stock_item ? "Deactivate" : "Activate"}
+  >
+    {togglingItems.has(item.id) ? (
+      <i className="bi bi-hourglass-split"></i>
+    ) : item.active_stock_item ? (
+      <i className="bi bi-check-lg"></i>
+    ) : (
+      <i className="bi bi-x-lg"></i>
+    )}
+  </button>
+</td>
 
-          {error && <p className="text-danger mt-2">{error}</p>}
-        </form>
-      )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </div>
 
-      <div className="mt-6 p-0">
-        <h3 className="text-md font-medium text-white mb-2">
-          Current Stock Items
-        </h3>
-
-        {itemList.length === 0 ? (
-          <p className="text-gray-500">No items yet.</p>
-        ) : (
-          <>
-            <ol className="space-y-2 p-0 d-flex flex-column">
-              {itemList.map((item) => (
-                <li
-                  key={item.id}
-                  className="border rounded p-2 d-flex flex-column flex-sm-row justify-content-between align-items-center mb-2 bg-white shadow-sm"
-                >
-                  <span className="sm-border-bottom w-100 ">
-                    {item.name}{" "}
-                    <span className="text-sm  text-dark ml-2">
-                      {item.volume_per_unit} {item.unit}
-                    </span>{" "}
-                  </span>
-
-                  <span className="text-dark border p-1 rounded mt-2 mt-sm-0">
-                    <strong>{item.quantity}</strong> pcs
-                  </span>
-
-                  <div className="d-flex gap-2 mt-2 mt-sm-0">
-                    <button
-                      className="btn btn-warning btn-sm"
-                      onClick={() => handleEdit(item)} // ✅ Here, 'item' is defined in map()
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      className="btn btn-danger btn-sm"
-                      onClick={() => {
-                        setDeleteTargetId(item.id);
-                        setShowDeleteModal(true);
-                      }}
-                    >
-                      Delete
-                    </button>
-
-                    <button
-                      disabled={togglingItems.has(item.id)}
-                      onClick={() => toggleItemActive(item)}
-                      className={`btn btn-sm ${
-                        item.active_stock_item
-                          ? "btn-success"
-                          : "btn-outline-secondary"
-                      }`}
-                    >
-                      {togglingItems.has(item.id)
-                        ? "Processing..."
-                        : item.active_stock_item
-                        ? "Deactivate"
-                        : "Activate"}
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ol>
-
-            <div className="mt-4 d-flex justify-content-center align-items-center">
+  {/* Card layout for small screens */}
+  <div className="d-lg-none row g-3">
+    {itemList.map((item) => (
+      <div key={item.id} className="col-12">
+        <div className="card bg-secondary text-white shadow-sm h-100">
+          <div className="card-body d-flex flex-column justify-content-between">
+            <div>
+              <h5 className="card-title">{item.name}</h5>
+              <p className="mb-1">Qty: {item.quantity} pcs</p>
+              <p className="mb-1">
+                Vol: {item.volume_per_unit} {item.unit}
+              </p>
+            </div>
+            <div className="d-flex gap-1 flex-wrap mt-2">
+              <button className="btn btn-warning btn-sm" onClick={() => handleEdit(item)}>Edit</button>
+              <button className="btn btn-danger btn-sm" onClick={() => { setDeleteTargetId(item.id); setShowDeleteModal(true); }}>Delete</button>
               <button
-                className="btn btn-sm me-2"
-                disabled={page <= 1}
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                className={`btn btn-sm ${item.active_stock_item ? "btn-success" : "btn-outline-light"}`}
+                disabled={togglingItems.has(item.id)}
+                onClick={() => toggleItemActive(item)}
               >
-                Previous
-              </button>
-              <span className="text-sm">
-                Page {page} of {Math.ceil(totalItems / pageSize)}
-              </span>
-              <button
-                className="btn btn-sm ms-2"
-                disabled={page >= Math.ceil(totalItems / pageSize)}
-                onClick={() => setPage((prev) => prev + 1)}
-              >
-                Next
+                {togglingItems.has(item.id) ? "Processing..." : item.active_stock_item ? "Deactivate" : "Activate"}
               </button>
             </div>
-          </>
-        )}
+          </div>
+        </div>
       </div>
-      <DeletionModal
-        show={showDeleteModal}
-        title="Confirm Deletion"
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={handleDelete}
-      >
-        Are you sure you want to delete this item?
-      </DeletionModal>
+    ))}
+  </div>
+
+  {/* Pagination */}
+  {totalItems > pageSize && (
+    <div className="mt-4 d-flex justify-content-center align-items-center gap-2">
+      <button className="btn btn-sm btn-secondary" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Previous</button>
+      <span>Page {page} of {Math.ceil(totalItems / pageSize)}</span>
+      <button className="btn btn-sm btn-secondary" disabled={page >= Math.ceil(totalItems / pageSize)} onClick={() => setPage(p => p + 1)}>Next</button>
     </div>
+  )}
+
+  <DeletionModal
+    show={showDeleteModal}
+    title="Confirm Deletion"
+    onClose={() => setShowDeleteModal(false)}
+    onConfirm={handleDelete}
+  >
+    Are you sure you want to delete this item?
+  </DeletionModal>
+</div>
+
   );
 };
 
