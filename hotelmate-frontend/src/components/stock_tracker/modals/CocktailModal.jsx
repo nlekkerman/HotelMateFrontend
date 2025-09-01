@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import api from "@/services/api"; // Axios instance
-
+import { useAuth } from "@/context/AuthContext";
 export const CocktailModal = ({ isOpen, onClose, onSubmit }) => {
+  const { user } = useAuth();
   const [cocktailName, setCocktailName] = useState("");
   const [ingredients, setIngredients] = useState([]);
   const [currentIngredient, setCurrentIngredient] = useState({
@@ -38,13 +39,14 @@ export const CocktailModal = ({ isOpen, onClose, onSubmit }) => {
     setIngredients(ingredients.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async () => {
+const handleSubmit = async () => {
   if (!cocktailName || ingredients.length === 0) {
     alert("Please enter a name and at least one ingredient.");
     return;
   }
   const payload = {
     name: cocktailName,
+    hotel_id: user.hotel_id,
     ingredients: ingredients.map((ing) => ({
       ingredient_id: ing.id,
       quantity_per_cocktail: ing.quantity,
@@ -52,14 +54,18 @@ export const CocktailModal = ({ isOpen, onClose, onSubmit }) => {
   };
 
   try {
-    await onSubmit(payload); // await API call
+    console.log("Submitting cocktail:", payload);
+    const result = await onSubmit(payload);
+    console.log("API returned:", result);
     setCocktailName("");
     setIngredients([]);
     onClose();
   } catch (err) {
-    console.error("Failed to save cocktail:", err);
+    console.error("Error in handleSubmit:", err);
+    alert("Failed to create cocktail. Check console logs.");
   }
 };
+
 
 
   return (
@@ -149,7 +155,7 @@ export const CocktailModal = ({ isOpen, onClose, onSubmit }) => {
                 />
               </div>
               <div className="col-auto">
-                <button className="btn btn-success w-100" onClick={addIngredient}>
+                <button className="btn btn-success w-100" type="button" onClick={addIngredient}>
                   Add
                 </button>
               </div>
