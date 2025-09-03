@@ -97,7 +97,7 @@ export default function StockAnalytics({ hotelSlug }) {
           <div className="spinner-border text-primary" role="status">
             <span className="visually-hidden">Loading...</span>
           </div>
-          <p className="text-muted mt-2">Loading analytics...</p>
+          <p className="text-white mt-2">Loading analytics...</p>
         </div>
       )}
       {error && <p className="text-center text-danger">{error}</p>}
@@ -110,7 +110,7 @@ export default function StockAnalytics({ hotelSlug }) {
       {/* Analytics Table */}
       {data.length > 0 && (
         <div className="table-responsive mt-4">
-          <table className="table table-striped table-hover table-bordered">
+          <table className="table table-hover table-bordered">
             <thead className="table-white">
               <tr>
                 <th>Item</th>
@@ -120,41 +120,69 @@ export default function StockAnalytics({ hotelSlug }) {
                 <th>Closing</th>
               </tr>
             </thead>
-            <tbody>
-              {data.map((item) => (
-                <tr key={item.item_id} className="table-dark">
-                  <td>{item.item_name}</td>
-                  <td>
-                    {Number(item.opening_stock) % 1 === 0
-                      ? Number(item.opening_stock)
-                      : Number(item.opening_stock)
-                          .toFixed(2)
-                          .replace(/\.?0+$/, "")}
-                  </td>
-                  <td>
-                    {Number(item.added) % 1 === 0
-                      ? Number(item.added)
-                      : Number(item.added)
-                          .toFixed(2)
-                          .replace(/\.?0+$/, "")}
-                  </td>
-                  <td>
-                    {Number(item.removed) % 1 === 0
-                      ? Number(item.removed)
-                      : Number(item.removed)
-                          .toFixed(2)
-                          .replace(/\.?0+$/, "")}
-                  </td>
-                  <td>
-                    {Number(item.closing_stock) % 1 === 0
-                      ? Number(item.closing_stock)
-                      : Number(item.closing_stock)
-                          .toFixed(2)
-                          .replace(/\.?0+$/, "")}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+         <tbody>
+  {data.map((item) => {
+    const formatNumber = (num) =>
+  num !== null && num !== undefined
+    ? Number(num) % 1 === 0
+      ? Number(num)
+      : Number(num).toFixed(2).replace(/\.?0+$/, "")
+    : "";
+
+    const opening = Number(item.opening_stock);
+    const added = item.added != null ? Number(item.added) : 0;
+const removed = item.removed != null ? Number(item.removed) : 0;
+
+    const closing = Number(item.closing_stock);
+
+    const getTextColor = (value, column) => {
+      // Closing negative → red
+      if (column === "closing" && value < 0) return "red";
+      // Negative added/removed → red
+      if ((column === "added" || column === "removed") && value < 0) return "red";
+      return "inherit";
+    };
+
+    const getBgColor = (value, column) => {
+  if (value == 0) return "#333"; // skip null/undefined
+  if (column === "added" && value !== 0) return "#207a07ff";
+  if (column === "removed" && value !== 0) return "#ae0a0a8a";
+  return "transparent";
+};
+
+
+    const getColorForBg = (value, column) =>
+      getBgColor(value, column) !== "transparent" ? "white" : getTextColor(value, column);
+
+    return (
+      <tr key={item.item_id} className="table-dark">
+        <td>{item.item_name}</td>
+        <td style={{ color: getTextColor(opening, "opening") }}>{formatNumber(opening)}</td>
+        <td
+          style={{
+            backgroundColor: getBgColor(added, "added"),
+            color: getColorForBg(added, "added"),
+          }}
+        >
+          {formatNumber(added)}
+        </td>
+        <td
+          style={{
+            backgroundColor: getBgColor(removed, "removed"),
+            color: getColorForBg(removed, "removed"),
+          }}
+        >
+          {formatNumber(removed)}
+        </td>
+        <td style={{ color: getTextColor(closing, "closing") }}>
+          {formatNumber(closing)}
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
+
+
           </table>
         </div>
       )}

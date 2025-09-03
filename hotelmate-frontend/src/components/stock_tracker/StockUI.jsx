@@ -5,7 +5,7 @@ export const StockSearch = ({ searchTerm, setSearchTerm }) => (
   <div className="mb-4">
     <input
       type="text"
-      className="form-control form-control-lg"
+      className="form-control search-stock-form-control form-control-lg"
       placeholder="Search item by name..."
       value={searchTerm}
       onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
@@ -33,70 +33,80 @@ export const StockList = ({
 
       const isExpanded = searchTerm ? true : !!expandedTypes[type];
 
-      return (
-        <div key={type} className="mb-3">
-          <button
-            className="btn btn-outline-light w-100 text-start mb-1"
-            onClick={() => toggleExpand(type)}
+     return (
+  <div key={type} className="mb-2 pe-2">
+    {/* Category Button */}
+    <button
+      className="btn btn-outline-secondary w-100 text-start shadow-sm "
+      onClick={() => toggleExpand(type)}
+    >
+      <strong>{type}</strong>
+    </button>
+
+    {/* Items List */}
+    {isExpanded && (
+      <ul className="list-group shadow-sm">
+        {filteredItems.map((item) => (
+          <li
+            key={item.id}
+            className="list-group-item d-flex justify-content-between align-items-center bg-light"
           >
-            <strong className="text-dark">{type}</strong>
-          </button>
-          {isExpanded && (
-            <ul className="list-group">
-              {filteredItems.map((item) => (
-                <li
-                  key={item.id}
-                  className="list-group-item d-flex justify-content-between align-items-center"
-                >
-                  <div className="d-flex justify-content-between w-100 gap-3">
-                    <span
-                      className={`fw-bold ${
-                        item.active
-                          ? "text-primary"
-                          : "text-muted text-decoration-line-through"
-                      }`}
-                    >
-                      {item.name}
-                      {item.volume_per_unit && item.unit && (
-                        <small className="text-muted ms-2">
-                          ({item.volume_per_unit} {item.unit})
-                        </small>
-                      )}
-                    </span>
-                    <span
-                      className={`badge p-0 text-dark me-2  d-flex justify-content-center align-items-center ${
-                        item.qty >= 0 ? "" : "bg-danger"
-                      }`}
-                    >
-                      {item.qty} pcs
-                    </span>
-                  </div>
-                  <div className="d-flex align-items-center gap-2">
-                    <input
-                      type="number"
-                      className="form-control form-control-sm bg-white"
-                      value={quantities[item.id] || ""}
-                      onChange={(e) =>
-                        setQuantities({
-                          ...quantities,
-                          [item.id]: e.target.value,
-                        })
-                      }
-                    />
-                    <button
-                      className="btn custom-button btn-sm text-white"
-                      onClick={() => handleAddTransaction(item)}
-                      disabled={!item.active}
-                    >
-                      Add
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      );
+            <div className="d-flex flex-column flex-md-row justify-content-between w-100 gap-2">
+              {/* Item Name */}
+              <span
+                className={`fw-semibold ${
+                  item.active
+                    ? "text-primary"
+                    : "text-muted text-decoration-line-through"
+                }`}
+              >
+                {item.name}
+                {item.volume_per_unit && item.unit && (
+                  <small className="text-muted ms-1">
+                    ({item.volume_per_unit} {item.unit})
+                  </small>
+                )}
+              </span>
+
+              {/* Quantity Badge */}
+              <span
+                className={`badge rounded-pill px-2 me-2 py-1 d-flex justify-content-center align-items-center ${
+                  item.qty >= 0 ? "bg-secondary text-white" : "bg-danger text-white"
+                }`}
+              >
+                {item.qty} pcs
+              </span>
+            </div>
+
+            {/* Action Controls */}
+            <div className="d-flex align-items-center gap-2 mt-2 mt-md-0">
+              <input
+                type="number"
+                className="form-control form-control-sm"
+                style={{ maxWidth: "80px" }}
+                value={quantities[item.id] || ""}
+                onChange={(e) =>
+                  setQuantities({
+                    ...quantities,
+                    [item.id]: e.target.value,
+                  })
+                }
+              />
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => handleAddTransaction(item)}
+                disabled={!item.active}
+              >
+                Add
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+);
+
     })}
   </>
 );

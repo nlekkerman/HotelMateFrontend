@@ -8,8 +8,8 @@ export default function StockActions({ direction, setDirection }) {
         <button
           className={`btn btn-lg ${
             direction === "in"
-              ? "btn-danger"
-              : "btn-outline-light border-danger text-danger"
+              ? "btn-success"
+              : "btn-outline-light border-dark text-danger"
           }`}
           onClick={() => setDirection("in")}
         >
@@ -18,8 +18,8 @@ export default function StockActions({ direction, setDirection }) {
         <button
           className={`btn btn-lg ${
             direction === "out"
-              ? "btn-danger"
-              : "btn-outline-light border-danger text-danger"
+              ? "btn-success"
+              : "btn-outline-light border-dark text-danger"
           }`}
           onClick={() => setDirection("out")}
         >

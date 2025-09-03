@@ -32,10 +32,7 @@ export default function CategoryStock() {
   const [stock, setStock] = useState(null);
   const [error, setError] = useState(null);
   const { user } = useAuth();
-  const [showSettings, setShowSettings] = useState(false);
-  const [showMovements, setShowMovements] = useState(false);
-  const [showCocktailCalculator, setShowCocktailCalculator] = useState(false);
-  const [showStockAnalytics, setShowStockAnalytics] = useState(false);
+  const [activePanel, setActivePanel] = useState(null);
 const [searchTerm, setSearchTerm] = useState("");
 
 const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -174,81 +171,81 @@ const handleCompleteStockAction = (e) => {
     );
   }
 
-  return (
-    <div className="transparent-container-bg mt-4">
-      <h1 className="title-container">
-        {prettyCategory} for “{prettyHotel}”
-      </h1>
+ return (
+  <div className="transparent-container-bg mt-4">
+    <h1 className="text-center title-container">
+      {prettyHotel}'s <br className="d-block d-md-none" /> {prettyCategory}
+    </h1>
 
-      {canAccessSettings && (
-        <SettingsActionsAdministrator
-          showSettings={showSettings}
-          setShowSettings={setShowSettings}
-          showMovements={showMovements}
-          setShowMovements={setShowMovements}
-          showCocktailCalculator={showCocktailCalculator}
-          setShowCocktailCalculator={setShowCocktailCalculator}
-          showStockAnalytics={showStockAnalytics}
-          setShowStockAnalytics={setShowStockAnalytics}
+    {canAccessSettings && (
+      <SettingsActionsAdministrator
+        activePanel={activePanel}
+        setActivePanel={setActivePanel}
+      />
+    )}
+
+    {/* Conditionally render each panel */}
+    {activePanel === "cocktail" && (
+      <CocktailCalculator onClose={() => setActivePanel(null)} />
+    )}
+
+    <StockSearch searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+
+    {activePanel === "settings" && (
+      <React.Suspense fallback={<div>Loading settings…</div>}>
+        <StockSettings
+          stock={stock}
+          hotelSlug={hotel_slug}
+          categorySlug={category_slug}
         />
-      )}
+      </React.Suspense>
+    )}
 
-      {showCocktailCalculator && (
-        <CocktailCalculator onClose={() => setShowCocktailCalculator(false)} />
-      )}
+    {activePanel === "analytics" && (
+      <React.Suspense fallback={<div>Loading analytics…</div>}>
+        <StockAnalytics hotelSlug={hotel_slug} />
+      </React.Suspense>
+    )}
 
-      <StockSearch searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+    {activePanel === "movements" && (
+      <React.Suspense fallback={<div>Loading movements…</div>}>
+        <StockMovements
+          stock={stock}
+          hotelSlug={hotel_slug}
+          categorySlug={category_slug}
+        />
+      </React.Suspense>
+    )}
 
-      {showSettings && (
-        <React.Suspense fallback={<div>Loading settings…</div>}>
-          <StockSettings
-            stock={stock}
-            hotelSlug={hotel_slug}
-            categorySlug={category_slug}
-          />
-        </React.Suspense>
-      )}
+    <SuccessModal
+      show={showSuccessModal}
+      message={successMessage}
+      onClose={() => setShowSuccessModal(false)}
+    />
 
-      {showStockAnalytics && (
-        <React.Suspense fallback={<div>Loading analytics…</div>}>
-          <StockAnalytics hotelSlug={hotel_slug} />
-        </React.Suspense>
-      )}
+    {/* Only show stock list + actions if NO admin panel is active */}
+    {activePanel === null && (
+      <>
+        <LowStock hotelSlug={hotel_slug} refresh={refreshLowStock} />
+        <StockActions direction={direction} setDirection={setDirection} />
 
-      {showMovements && (
-        <React.Suspense fallback={<div>Loading movements…</div>}>
-          <StockMovements
-            stock={stock}
-            hotelSlug={hotel_slug}
-            categorySlug={category_slug}
-          />
-        </React.Suspense>
-      )}
-<SuccessModal
-  show={showSuccessModal}
-  message={successMessage}
-  onClose={() => setShowSuccessModal(false)}
-/>
+        <StockList
+          groupedItems={groupedItems}
+          expandedTypes={expandedTypes}
+          toggleExpand={toggleExpand}
+          searchTerm={searchTerm}
+          quantities={quantities}
+          setQuantities={setQuantities}
+          handleAddTransaction={handleAddTransaction}
+        />
 
-      <LowStock hotelSlug={hotel_slug} refresh={refreshLowStock} />
+        <TransactionsList
+          transactions={transactions}
+          handleCompleteStockAction={handleCompleteStockAction}
+        />
+      </>
+    )}
+  </div>
+);
 
-      <StockActions direction={direction} setDirection={setDirection} />
-
-      <StockList
-        groupedItems={groupedItems}
-        expandedTypes={expandedTypes}
-        toggleExpand={toggleExpand}
-        searchTerm={searchTerm}
-        quantities={quantities}
-        setQuantities={setQuantities}
-        handleAddTransaction={handleAddTransaction}
-      />
-
-      <TransactionsList
-        transactions={transactions}
-        handleCompleteStockAction={handleCompleteStockAction}
-      />
-    </div>
-    
-  );
 }

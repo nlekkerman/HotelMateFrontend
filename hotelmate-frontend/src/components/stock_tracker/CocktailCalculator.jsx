@@ -124,9 +124,9 @@ export const CocktailCalculator = () => {
       </ul>
 
       {/* Log All Button */}
-      <div className="d-flex justify-content-end mt-2">
-        <button className="btn btn-success" onClick={handleLogAllConsumption}>
-          Log All
+      <div className="d-flex justify-content-center mt-2">
+        <button className="btn custom-button" onClick={handleLogAllConsumption}>
+          Calculate
         </button>
       </div>
 
