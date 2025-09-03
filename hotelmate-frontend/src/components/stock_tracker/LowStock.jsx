@@ -18,16 +18,18 @@ export default function LowStock({ hotelSlug, refresh }) {
   if (lowStockItems.length === 0) return null; // Hides component if no low stock
 
   return (
-    <div className="mb-4">
-      <h4 className="bg-warning">Low Stock Items</h4>
-      <ul className="list-group">
+    <div className="mb-4 bg-danger p-1">
+      <h4 className="bg-warning p-2">
+        Attention: The following items are running low in stock
+      </h4>{" "}
+      <ul className="list-group gap-1">
         {lowStockItems.map((item) => (
           <li
             key={item.id}
             className="list-group-item d-flex justify-content-between alpha-5 text-danger"
           >
             <span>{item.name}</span>
-            <span className="p-1 rounded text-bold bg-white text-dark">
+            <span className="p-1 text-bold bg-white text-dark">
               {item.quantity}
             </span>
           </li>

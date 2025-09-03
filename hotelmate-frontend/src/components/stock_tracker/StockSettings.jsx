@@ -199,7 +199,7 @@ const StockSettings = ({ stock, onToggleActive }) => {
   };
 
    return (
-    <div className="container-fluid p-4 bg-dark text-white rounded shadow-sm mt-4">
+    <div className="container-fluid p-4 main-bg text-white rounded shadow-sm mt-4">
   <h2 className="mb-3">Stock Settings</h2>
 
   {/* Add/Edit Form */}

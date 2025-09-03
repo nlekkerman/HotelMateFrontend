@@ -6,23 +6,29 @@ export const useAnalyticsPdfExporter = () => {
     text
       .toString()
       .toLowerCase()
-      .replace(/\s+/g, "-")        // Replace spaces with -
-      .replace(/[^\w-]+/g, "")     // Remove all non-word chars
-      .replace(/--+/g, "-")        // Replace multiple - with single -
-      .replace(/^-+/, "")          // Trim - from start
-      .replace(/-+$/, "");         // Trim - from end
+      .replace(/\s+/g, "-")
+      .replace(/[^\w-]+/g, "") 
+      .replace(/--+/g, "-")
+      .replace(/^-+/, "")
+      .replace(/-+$/, "");
 
   const generateAnalyticsPdf = (data, startDate, endDate, hotelName = "Unknown Hotel") => {
     if (!data || data.length === 0) return;
 
     const doc = new jsPDF();
     const columns = ["Item", "Opening Stock", "Added", "Removed", "Closing Stock"];
+   
+   const formatNumber = (num) =>
+  Number(num) % 1 === 0
+    ? Number(num)
+    : Number(num).toFixed(2).replace(/\.?0+$/, '');
+
     const rows = data.map((item) => [
       item.item_name,
-      item.opening_stock,
-      item.added,
-      item.removed,
-      item.closing_stock,
+      formatNumber(item.opening_stock),
+      formatNumber(item.added),
+      formatNumber(item.removed),
+      formatNumber(item.closing_stock),
     ]);
 
     doc.setFontSize(16);

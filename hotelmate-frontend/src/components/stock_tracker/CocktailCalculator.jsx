@@ -77,15 +77,15 @@ export const CocktailCalculator = () => {
   const totals = calculateTotals();
 
   return (
-    <div className="cocktail-calculator container mt-4 p-4 bg-light rounded shadow-sm">
+    <div className="cocktail-calculator container mt-4 p-4 main-bg text-white rounded shadow-sm">
       <h1 className="mb-4 text-center">Cocktail Calculator 🍹</h1>
 
       {/* Buttons */}
       <div className="mb-3 text-center d-flex justify-content-center gap-2">
-        <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
+        <button className="btn custom-button" onClick={() => setModalOpen(true)}>
           + Create New Cocktail
         </button>
-        <button className="btn btn-secondary" onClick={() => setIngredientModalOpen(true)}>
+        <button className="btn custom-button" onClick={() => setIngredientModalOpen(true)}>
           + Create Ingredient
         </button>
       </div>
@@ -108,7 +108,7 @@ export const CocktailCalculator = () => {
       {!loading && (!Array.isArray(cocktails) || cocktails.length === 0) && <p>No cocktails available.</p>}
       <ul className="list-group">
         {cocktails.map((c) => (
-          <li key={c.id} className="list-group-item d-flex justify-content-between align-items-center">
+          <li key={c.id} className="list-group-item d-flex justify-content-between bg-dark text-white align-items-center">
             <span>{c.name}</span>
             <input
               type="number"

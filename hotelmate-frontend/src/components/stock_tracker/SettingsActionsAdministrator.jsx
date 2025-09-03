@@ -43,21 +43,35 @@ export default function SettingsActionsAdministrator({
 
   return (
     <div className="mb-3 d-flex gap-2 flex-column flex-lg-row justify-content-center">
-      <button className="custom-button" onClick={() => handleToggle("settings")}>
-        {showSettings ? "Hide Stock Settings" : "Stock Settings"}
-      </button>
+      <button
+  className={`custom-button${showSettings ? " bg-danger text-white" : ""}`}
+  onClick={() => handleToggle("settings")}
+>
+  {showSettings ? "Hide Stock Settings" : "Stock Settings"}
+</button>
 
-      <button className="custom-button" onClick={() => handleToggle("movements")}>
-        {showMovements ? "Hide Stock Movements" : "Stock Movements"}
-      </button>
+<button
+  className={`custom-button${showMovements ? " bg-danger text-white" : ""}`}
+  onClick={() => handleToggle("movements")}
+>
+  {showMovements ? "Hide Stock Movements" : "Stock Movements"}
+</button>
 
-      <button className="custom-button" onClick={() => handleToggle("cocktail")}>
-        {showCocktailCalculator ? "Hide Cocktail Calculator" : "Cocktail Calculator"}
-      </button>
+<button
+  className={`custom-button${showCocktailCalculator ? " bg-danger text-white" : ""}`}
+  onClick={() => handleToggle("cocktail")}
+>
+  {showCocktailCalculator
+    ? "Hide Cocktail Calculator"
+    : "Cocktail Calculator"}
+</button>
 
-      <button className="custom-button" onClick={() => handleToggle("analytics")}>
-        {showStockAnalytics ? "Hide Stock Analytics" : "Stock Analytics"}
-      </button>
+<button
+  className={`custom-button${showStockAnalytics ? " bg-danger text-white" : ""}`}
+  onClick={() => handleToggle("analytics")}
+>
+  {showStockAnalytics ? "Hide Stock Analytics" : "Stock Analytics"}
+</button>
     </div>
   );
 }
