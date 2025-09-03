@@ -200,7 +200,9 @@ const StockSettings = ({ stock, onToggleActive }) => {
 
    return (
     <div className="container-fluid p-4 main-bg text-white rounded shadow-sm mt-4">
-  <h2 className="mb-3">Stock Settings</h2>
+<h2 className="fw-bold text-center text-white mb-4">
+  Stock Settings
+</h2>
 
   {/* Add/Edit Form */}
   {showForm && (
@@ -312,7 +314,7 @@ const StockSettings = ({ stock, onToggleActive }) => {
   )}
 
   {!showForm && (
-    <button className="btn btn-primary mb-4" onClick={() => setShowForm(true)}>
+    <button className="btn custom-button mb-4" onClick={() => setShowForm(true)}>
       Add New Item
     </button>
   )}
@@ -320,7 +322,7 @@ const StockSettings = ({ stock, onToggleActive }) => {
   {/* Table for large screens */}
   <div className="d-none d-lg-block">
     {itemList.length === 0 ? (
-      <p className="text-muted">No items yet.</p>
+      <p className="text-white">No items yet.</p>
     ) : (
       <table className="table table-dark table-striped table-hover">
         <thead>
