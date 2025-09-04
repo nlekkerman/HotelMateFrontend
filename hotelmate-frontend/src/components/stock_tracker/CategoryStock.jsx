@@ -27,7 +27,7 @@ export default function CategoryStock() {
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
   const [quantities, setQuantities] = useState({});
-  const [direction, setDirection] = useState("out");
+  const [direction, setDirection] = useState("move_to_bar");
   const [refreshLowStock, setRefreshLowStock] = useState(0);
   const [stock, setStock] = useState(null);
   const [error, setError] = useState(null);
@@ -48,37 +48,47 @@ const [successMessage, setSuccessMessage] = useState("Stock updated successfully
     .join(" ");
 
   // Fetch stock and group items by type
-  const fetchStock = () => {
-    setLoading(true);
-    const endpoint = `stock_tracker/${hotel_slug}/stocks/?category__slug=${category_slug}`;
-    api
-      .get(endpoint)
-      .then((res) => {
-        const results = res.data.results || [];
-        if (!results.length) return;
+ const fetchStock = () => {
+  setLoading(true);
+  const endpoint = `stock_tracker/${hotel_slug}/stocks/?category__slug=${category_slug}`;
+  api
+    .get(endpoint)
+    .then((res) => {
+      const results = res.data.results || [];
 
-        setStock(results[0]);
+      console.log("Raw stock API response:", results); // 🔍 Log the API response
 
-        const grouped = {};
-        results.forEach((stock) => {
-          stock.inventory_lines?.forEach((line) => {
-            const type = line.item?.type || "Uncategorized";
-            if (!grouped[type]) grouped[type] = [];
-            grouped[type].push({
-              id: line.item.id,
-              name: line.item.name,
-              qty: line.quantity,
-              active: line.item.active_stock_item,
-              volume_per_unit: line.item.volume_per_unit,
-              unit: line.item.unit,
-            });
+      if (!results.length) return;
+
+      setStock(results[0]);
+
+      const grouped = {};
+      results.forEach((stock) => {
+        stock.inventory_lines?.forEach((line) => {
+          const type = line.item?.type || "Uncategorized";
+          if (!grouped[type]) grouped[type] = [];
+          grouped[type].push({
+            id: line.item.id,
+            name: line.item.name,
+            qty: line.item.quantity,
+            active: line.item.active_stock_item,
+            volume_per_unit: line.item.volume_per_unit,
+            unit: line.item.unit,
           });
         });
-        setGroupedItems(grouped);
-      })
-      .catch((err) => setError(err.response?.data || err.message))
-      .finally(() => setLoading(false));
-  };
+      });
+
+      console.log("Grouped items:", grouped); // 🔍 Log grouped data
+
+      setGroupedItems(grouped);
+    })
+    .catch((err) => {
+      console.error("Error fetching stock:", err); // 🔍 Log any errors
+      setError(err.response?.data || err.message);
+    })
+    .finally(() => setLoading(false));
+};
+
 
   useEffect(() => {
     fetchStock();
@@ -88,29 +98,37 @@ const [successMessage, setSuccessMessage] = useState("Stock updated successfully
     setExpandedTypes((prev) => ({ ...prev, [type]: !prev[type] }));
 
   // Add transaction and update UI optimistically
-  const handleAddTransaction = (item) => {
-    const qty = parseFloat(quantities[item.id]);
-    if (!qty) return;
+const handleAddTransaction = (item) => {
+  const qty = parseFloat(quantities[item.id]);
+  if (!qty) return;
 
-    const newTransaction = { ...item, qty, direction };
-    setTransactions([...transactions, newTransaction]);
-    setQuantities({ ...quantities, [item.id]: "" });
+  // Use currently selected direction
+  const newTransaction = { ...item, qty, direction };
+  setTransactions([...transactions, newTransaction]);
+  setQuantities({ ...quantities, [item.id]: "" });
 
-    // Optimistically update groupedItems
-    setGroupedItems((prev) => {
-      const newGrouped = { ...prev };
-      for (const type in newGrouped) {
-        newGrouped[type] = newGrouped[type].map((i) => {
-          if (i.id === item.id) {
-            const change = direction === "in" ? qty : -qty;
-            return { ...i, qty: i.qty + change };
+  // Optimistic UI updates based on direction
+  setGroupedItems((prev) => {
+    const newGrouped = { ...prev };
+    for (const type in newGrouped) {
+      newGrouped[type] = newGrouped[type].map((i) => {
+        if (i.id === item.id) {
+          let change = 0;
+          if (direction === "move_to_bar") {
+            change = -qty; // moving to bar decreases storage
+          } else if (direction === "in") {
+            change = qty;  // stock in increases storage
           }
-          return i;
-        });
-      }
-      return newGrouped;
-    });
-  };
+          return { ...i, qty: i.qty + change };
+        }
+        return i;
+      });
+    }
+    return newGrouped;
+  });
+};
+
+
 
 const handleCompleteStockAction = (e) => {
   if (e) e.preventDefault();
@@ -124,32 +142,7 @@ const handleCompleteStockAction = (e) => {
       setSuccessMessage("Stock movements completed successfully!");
       setShowSuccessModal(true);           // show modal immediately
 
-      // Refresh stock without toggling the main loading spinner
-      const endpoint = `stock_tracker/${hotel_slug}/stocks/?category__slug=${category_slug}`;
-      api.get(endpoint)
-        .then((res) => {
-          const results = res.data.results || [];
-          if (!results.length) return;
-
-          setStock(results[0]);
-          const grouped = {};
-          results.forEach((stock) => {
-            stock.inventory_lines?.forEach((line) => {
-              const type = line.item?.type || "Uncategorized";
-              if (!grouped[type]) grouped[type] = [];
-              grouped[type].push({
-                id: line.item.id,
-                name: line.item.name,
-                qty: line.quantity,
-                active: line.item.active_stock_item,
-                volume_per_unit: line.item.volume_per_unit,
-                unit: line.item.unit,
-              });
-            });
-          });
-          setGroupedItems(grouped);
-        })
-        .catch((err) => setError(err.response?.data || err.message));
+      
     })
     .catch((err) => {
       console.error("Stock action failed:", err);
