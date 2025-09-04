@@ -29,7 +29,7 @@ export default function StockMovements({ stock, hotelSlug }) {
       setLoading(true);
       try {
         const params = new URLSearchParams();
-        params.append("stock", stock.id);
+       
 
         if (fetchAll) {
           params.append("page_size", "33");

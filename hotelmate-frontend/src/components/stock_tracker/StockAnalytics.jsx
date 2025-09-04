@@ -13,32 +13,60 @@ export default function StockAnalytics({ hotelSlug }) {
 
   const { generateAnalyticsPdf } = useAnalyticsPdfExporter();
 
-  const fetchAnalytics = async (overrideChangedOnly = null) => {
-    if (!hotelSlug) return;
-    setLoading(true);
-    setError(null);
-    const useChangedOnly =
-      overrideChangedOnly !== null ? overrideChangedOnly : changedOnly;
+ const fetchAnalytics = async (overrideChangedOnly = null) => {
+  if (!hotelSlug) return;
 
-    try {
-      const res = await api.get(
-        `/stock_tracker/${hotelSlug}/analytics/stock/`,
-        {
-          params: {
-            start_date: startDate,
-            end_date: endDate,
-            changed_only: useChangedOnly,
-          },
-        }
-      );
-      setData(res.data);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to fetch stock analytics.");
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  setError(null);
+  const useChangedOnly =
+    overrideChangedOnly !== null ? overrideChangedOnly : changedOnly;
+
+  console.log("Fetching analytics for:", {
+    hotelSlug,
+    startDate,
+    endDate,
+    useChangedOnly,
+  });
+
+  try {
+    const res = await api.get(
+      `/stock_tracker/${hotelSlug}/analytics/stock/`,
+      {
+        params: {
+          start_date: startDate,
+          end_date: endDate,
+          changed_only: useChangedOnly,
+        },
+        timeout: 60000, // increase timeout temporarily
+      }
+    );
+
+    console.log("Raw analytics response:", res.data); // 🔍 log full response
+
+    if (!res.data || res.data.length === 0) {
+      console.warn("Analytics returned empty array");
     }
-  };
+
+    // ✅ normalize response
+    const mappedData = res.data.map((item) => ({
+      item_id: item.item_id,
+      item_name: item.item_name,
+      opening_stock: item.opening_stock,
+      added: item.added,
+      moved_to_bar: item.moved_to_bar, // replace removed
+      closing_stock: item.closing_stock,
+    }));
+
+    console.log("Mapped table data:", mappedData);
+
+    setData(mappedData); // ✅ use mappedData, not raw res.data
+  } catch (err) {
+    console.error("Error fetching analytics:", err);
+    setError("Failed to fetch stock analytics.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="container-fluid my-4 p-4 main-bg text-white rounded shadow-sm">
@@ -116,73 +144,82 @@ export default function StockAnalytics({ hotelSlug }) {
                 <th>Item</th>
                 <th>Opening</th>
                 <th>Added</th>
-                <th>Removed</th>
+                <th>Moved to Bar</th> {/* ✅ renamed */}
                 <th>Closing</th>
               </tr>
             </thead>
-         <tbody>
-  {data.map((item) => {
-    const formatNumber = (num) =>
-  num !== null && num !== undefined
-    ? Number(num) % 1 === 0
-      ? Number(num)
-      : Number(num).toFixed(2).replace(/\.?0+$/, "")
-    : "";
+            <tbody>
+              {data.map((item) => {
+                const formatNumber = (num) =>
+                  num !== null && num !== undefined
+                    ? Number(num) % 1 === 0
+                      ? Number(num)
+                      : Number(num)
+                          .toFixed(2)
+                          .replace(/\.?0+$/, "")
+                    : "";
 
-    const opening = Number(item.opening_stock);
-    const added = item.added != null ? Number(item.added) : 0;
-const removed = item.removed != null ? Number(item.removed) : 0;
+                const opening = Number(item.opening_stock);
+                const added = item.added != null ? Number(item.added) : 0;
+                const moved_to_bar =
+                  item.moved_to_bar != null ? Number(item.moved_to_bar) : 0; // ✅
+                const closing = Number(item.closing_stock);
 
-    const closing = Number(item.closing_stock);
+                const getTextColor = (value, column) => {
+                  if (column === "closing" && value < 0) return "red";
+                  if (
+                    (column === "added" || column === "moved_to_bar") &&
+                    value < 0
+                  )
+                    return "red";
+                  return "inherit";
+                };
 
-    const getTextColor = (value, column) => {
-      // Closing negative → red
-      if (column === "closing" && value < 0) return "red";
-      // Negative added/removed → red
-      if ((column === "added" || column === "removed") && value < 0) return "red";
-      return "inherit";
-    };
+                const getBgColor = (value, column) => {
+                  if (value == 0) return "#333";
+                  if (column === "added" && value !== 0) return "#207a07ff";
+                  if (column === "moved_to_bar" && value !== 0)
+                    return "#ae0a0a8a"; // ✅
+                  return "transparent";
+                };
 
-    const getBgColor = (value, column) => {
-  if (value == 0) return "#333"; // skip null/undefined
-  if (column === "added" && value !== 0) return "#207a07ff";
-  if (column === "removed" && value !== 0) return "#ae0a0a8a";
-  return "transparent";
-};
+                const getColorForBg = (value, column) =>
+                  getBgColor(value, column) !== "transparent"
+                    ? "white"
+                    : getTextColor(value, column);
 
-
-    const getColorForBg = (value, column) =>
-      getBgColor(value, column) !== "transparent" ? "white" : getTextColor(value, column);
-
-    return (
-      <tr key={item.item_id} className="table-dark">
-        <td>{item.item_name}</td>
-        <td style={{ color: getTextColor(opening, "opening") }}>{formatNumber(opening)}</td>
-        <td
-          style={{
-            backgroundColor: getBgColor(added, "added"),
-            color: getColorForBg(added, "added"),
-          }}
-        >
-          {formatNumber(added)}
-        </td>
-        <td
-          style={{
-            backgroundColor: getBgColor(removed, "removed"),
-            color: getColorForBg(removed, "removed"),
-          }}
-        >
-          {formatNumber(removed)}
-        </td>
-        <td style={{ color: getTextColor(closing, "closing") }}>
-          {formatNumber(closing)}
-        </td>
-      </tr>
-    );
-  })}
-</tbody>
-
-
+                return (
+                  <tr key={item.item_id} className="table-dark">
+                    <td>{item.item_name}</td>
+                    <td style={{ color: getTextColor(opening, "opening") }}>
+                      {formatNumber(opening)}
+                    </td>
+                    <td
+                      style={{
+                        backgroundColor: getBgColor(added, "added"),
+                        color: getColorForBg(added, "added"),
+                      }}
+                    >
+                      {formatNumber(added)}
+                    </td>
+                    <td
+                      style={{
+                        backgroundColor: getBgColor(
+                          moved_to_bar,
+                          "moved_to_bar"
+                        ),
+                        color: getColorForBg(moved_to_bar, "moved_to_bar"),
+                      }}
+                    >
+                      {formatNumber(moved_to_bar)}
+                    </td>
+                    <td style={{ color: getTextColor(closing, "closing") }}>
+                      {formatNumber(closing)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
           </table>
         </div>
       )}
