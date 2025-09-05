@@ -16,38 +16,48 @@ export const useAnalyticsPdfExporter = () => {
     if (!data || data.length === 0) return;
 
     const doc = new jsPDF();
-    const columns = ["Item", "Opening Stock", "Added", "Removed", "Closing Stock"];
+
+    const columns = [
+      "Item",
+      "Opening",
+      "Added",
+      "Moved to Bar",
+      "Closing"
+    ];
 
     const formatNumber = (num) =>
-      Number(num) % 1 === 0
-        ? Number(num)
-        : Number(num).toFixed(2).replace(/\.?0+$/, "");
+      num !== null && num !== undefined && !isNaN(num)
+        ? Number(num) % 1 === 0
+          ? Number(num)
+          : Number(num).toFixed(2).replace(/\.?0+$/, "")
+        : 0;
 
     const rows = data.map((item) => [
       item.item_name,
-      formatNumber(item.opening_stock),
+      formatNumber(item.opening_storage),
       formatNumber(item.added),
-      formatNumber(item.removed),
-      formatNumber(item.closing_stock),
+      formatNumber(item.moved_to_bar),
+      formatNumber(item.closing_storage),
     ]);
-const formatDate = (dateStr) => {
-  const date = new Date(dateStr);
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0"); // months are 0-indexed
-  const year = String(date.getFullYear()).slice(-2); // last 2 digits
-  return `${day}/${month}/${year}`;
-};
+
+    const formatDate = (dateStr) => {
+      const date = new Date(dateStr);
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = String(date.getFullYear()).slice(-2);
+      return `${day}/${month}/${year}`;
+    };
 
     doc.setFontSize(16);
     doc.text(`Stock Analytics Report`, 14, 15);
     doc.setFontSize(12);
     doc.text(`Hotel: ${hotelName}`, 14, 20);
     doc.setFontSize(11);
-   doc.text(
-  `For Period that is Open on: ${formatDate(startDate)} and Closed on: ${formatDate(endDate)}`,
-  14,
-  27
-);
+    doc.text(
+      `For Period that is Open on: ${formatDate(startDate)} and Closed on: ${formatDate(endDate)}`,
+      14,
+      27
+    );
 
     autoTable(doc, {
       startY: 34,
@@ -68,22 +78,11 @@ const formatDate = (dateStr) => {
         4: { halign: "center" },
       },
       theme: "grid",
-      didParseCell: (data) => {
-        const value = parseFloat(data.cell.text);
-        // All negative numbers
-        if (!isNaN(value) && value < 0) {
-          data.cell.styles.textColor = [255, 102, 102]; // light red
-        }
-
-        // "Added" column positive → green
-        if (data.column.index === 2 && !isNaN(value) && value > 0) {
-          data.cell.styles.fillColor = [102, 255, 102]; // light green
-        }
-
-        // "Removed" column positive → red
-        if (data.column.index === 3 && !isNaN(value) && value > 0) {
-          data.cell.styles.fillColor = [255, 102, 102]; // light red
-        }
+      didParseCell: (dataCell) => {
+        const value = parseFloat(dataCell.cell.text);
+        if (!isNaN(value) && value < 0) dataCell.cell.styles.textColor = [255, 102, 102]; // red for negative
+        if ((dataCell.column.index === 2 || dataCell.column.index === 3) && value > 0)
+          dataCell.cell.styles.fillColor = [102, 255, 102]; // green for added/moved
       },
     });
 
