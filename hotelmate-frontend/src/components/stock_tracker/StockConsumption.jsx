@@ -1,41 +1,76 @@
 import React, { useState } from "react";
+import api from "@/services/api";
 import { useBarStockPdfExporter } from "@/components/stock_tracker/hooks/useBarStockPdfExporter";
+import ConfirmationModal from "@/components/modals/ConfirmationModal";
 
-export default function StockConsumption({ data, onClose }) {
+export default function StockConsumption({
+  data,
+  hotelSlug,
+  onClose,
+  startDate,
+  endDate,
+}) {
   const { generateBarStockPdf } = useBarStockPdfExporter();
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [finalizing, setFinalizing] = useState(false);
 
   const [rows, setRows] = useState(
     data.map((item) => ({
       ...item,
       sales: 0,
       waste: 0,
-      final_bar_stock: item.moved_to_bar ?? 0,
-      total_closing_stock: (item.closing_storage ?? 0) + (item.moved_to_bar ?? 0),
+      final_bar_stock: item.opening_bar ?? 0,
+      total_closing_stock:
+        (item.closing_storage ?? 0) + (item.opening_bar ?? 0),
     }))
   );
 
   const handleChange = (id, field, value) => {
     setRows((prev) =>
-      prev.map((row) =>
-        row.item_id === id
-          ? { ...row, [field]: Number(value) }
-          : row
-      )
+      prev.map((row) => (row.item_id === id ? { ...row, [field]: value } : row))
     );
   };
 
   const calculateStocks = () => {
     setRows((prev) =>
       prev.map((row) => {
-        const finalBarStock = row.moved_to_bar - (row.sales + row.waste);
+        const sales = Number(row.sales) || 0;
+        const waste = Number(row.waste) || 0;
+
+        // ✅ include opening_bar so bar stock isn’t under/over counted
+        const finalBarStock =
+          (row.opening_bar ?? 0) + (row.moved_to_bar ?? 0) - (sales + waste);
+
         const totalStock = (row.closing_storage ?? 0) + finalBarStock;
+
         return {
           ...row,
+          sales,
+          waste,
           final_bar_stock: finalBarStock,
           total_closing_stock: totalStock,
         };
       })
     );
+  };
+
+  const finalizeStockPeriod = async () => {
+    setFinalizing(true);
+    try {
+      // Simplified payload: only send period dates
+      await api.post(`/stock_tracker/${hotelSlug}/stock-periods/`, {
+        start_date: startDate,
+        end_date: endDate,
+      });
+
+      setShowConfirm(false);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert("Error finalizing period: " + err.message);
+    } finally {
+      setFinalizing(false);
+    }
   };
 
   return (
@@ -73,7 +108,7 @@ export default function StockConsumption({ data, onClose }) {
                       <td>
                         <input
                           type="number"
-                          value={row.sales}
+                          value={row.sales ?? ""}
                           onChange={(e) =>
                             handleChange(row.item_id, "sales", e.target.value)
                           }
@@ -110,7 +145,7 @@ export default function StockConsumption({ data, onClose }) {
                 className="btn btn-success"
                 onClick={() =>
                   generateBarStockPdf(
-                    rows.map(r => ({
+                    rows.map((r) => ({
                       item_name: r.item_name,
                       closing_storage: r.closing_storage,
                       moved_to_bar: r.moved_to_bar,
@@ -125,6 +160,12 @@ export default function StockConsumption({ data, onClose }) {
               >
                 Download PDF
               </button>
+              <button
+                className="btn btn-warning mx-2"
+                onClick={() => setShowConfirm(true)}
+              >
+                Finalize Period
+              </button>
             </div>
             <button className="btn btn-secondary" onClick={onClose}>
               Close
@@ -132,6 +173,16 @@ export default function StockConsumption({ data, onClose }) {
           </div>
         </div>
       </div>
+
+      {showConfirm && (
+        <ConfirmationModal
+          title="Finalize Stock Period"
+          message="Are you sure you want to close this stock period? This will save current stocks as the closing values and set them as opening for next period."
+          onCancel={() => setShowConfirm(false)}
+          onConfirm={finalizeStockPeriod}
+          disabled={finalizing}
+        />
+      )}
     </div>
   );
 }

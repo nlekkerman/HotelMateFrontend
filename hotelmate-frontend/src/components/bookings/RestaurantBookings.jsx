@@ -1,63 +1,79 @@
 import React, { useEffect, useState } from "react";
 import api from "@/services/api";
 import RestaurantReservationDetails from "@/components/bookings/RestaurantReservationDetails";
+import BookingsGrid from "@/components/bookings/BookingsGrid";
 import { Modal } from "react-bootstrap";
 
 export default function RestaurantBookings({ hotelSlug, restaurantId }) {
   const [bookings, setBookings] = useState([]);
+  const [restaurantSlug, setRestaurantSlug] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [showGrid, setShowGrid] = useState(false);
 
+  const displayDate = new Date().toISOString().slice(0, 10);
+
+  // Fetch restaurant slug
   useEffect(() => {
-  if (!hotelSlug || !restaurantId) return;
+    if (!hotelSlug || !restaurantId) return;
 
-  const allResults = [];
-
-  const fetchAllPages = async (params) => {
-    try {
-      const res = await api.get(`/bookings/bookings/`, { params });
-      const data = res.data;
-
-      if (Array.isArray(data.results)) allResults.push(...data.results);
-
-      if (data.next) {
-        // extract query params from `data.next` for the next page
-        const nextUrl = new URL(data.next);
-        const nextParams = Object.fromEntries(nextUrl.searchParams.entries());
-        await fetchAllPages(nextParams);
+    async function fetchRestaurantSlug() {
+      try {
+        const res = await api.get(`/bookings/restaurants/?hotel_slug=${hotelSlug}`);
+        const restaurant = res.data.results.find((r) => r.id === Number(restaurantId));
+        if (!restaurant) throw new Error("Restaurant not found");
+        setRestaurantSlug(restaurant.slug);
+      } catch (err) {
+        console.error("Failed to fetch restaurant slug:", err);
+        setError("Failed to fetch restaurant slug.");
       }
-    } catch (err) {
-      console.error("Error fetching bookings:", err);
-      throw err;
     }
+
+    fetchRestaurantSlug();
+  }, [hotelSlug, restaurantId]);
+
+  // Fetch bookings
+  useEffect(() => {
+    if (!hotelSlug || !restaurantSlug) return;
+
+    const allResults = [];
+
+    const fetchAllPages = async (params) => {
+      try {
+        const res = await api.get(`/bookings/bookings/`, { params });
+        const data = res.data;
+
+        if (Array.isArray(data.results)) allResults.push(...data.results);
+
+        if (data.next) {
+          const nextUrl = new URL(data.next);
+          const nextParams = Object.fromEntries(nextUrl.searchParams.entries());
+          await fetchAllPages(nextParams);
+        }
+      } catch (err) {
+        console.error("Error fetching bookings:", err);
+        throw err;
+      }
+    };
+
+    setLoading(true);
+    setError(null);
+
+    fetchAllPages({ hotel_slug: hotelSlug, restaurant: restaurantSlug })
+      .then(() => setBookings(allResults))
+      .catch(() => setError("Failed to fetch bookings."))
+      .finally(() => setLoading(false));
+  }, [hotelSlug, restaurantSlug]);
+
+  const sortBookings = (a, b) => {
+    const dateA = new Date(`${a.date}T${a.start_time || "00:00"}`);
+    const dateB = new Date(`${b.date}T${b.start_time || "00:00"}`);
+    return dateA - dateB;
   };
 
-  setLoading(true);
-  setError(null);
-
-  fetchAllPages({ hotel_slug: hotelSlug, restaurant: restaurantId })
-    .then(() => setBookings(allResults))
-    .catch(() => setError("Failed to fetch bookings."))
-    .finally(() => setLoading(false));
-}, [hotelSlug, restaurantId]);
-
-const displayDate = new Date().toISOString().slice(0, 10);
-
-// Sort bookings by date + start_time (earliest first)
-const sortBookings = (a, b) => {
-  const dateA = new Date(`${a.date}T${a.start_time || "00:00"}`);
-  const dateB = new Date(`${b.date}T${b.start_time || "00:00"}`);
-  return dateA - dateB;
-};
-
-  const todaysBookings = bookings
-  .filter((b) => b.date === displayDate)
-  .sort(sortBookings);
-
-const upcomingBookings = bookings
-  .filter((b) => b.date > displayDate)
-  .sort(sortBookings);
+  const todaysBookings = bookings.filter((b) => b.date === displayDate).sort(sortBookings);
+  const upcomingBookings = bookings.filter((b) => b.date > displayDate).sort(sortBookings);
 
   const renderRow = (booking) => {
     const { adults = 0, children = 0, infants = 0 } = booking.seats || {};
@@ -68,29 +84,15 @@ const upcomingBookings = bookings
       "—";
     const room = booking.room?.room_number || "—";
     const voucher = booking.voucher_code || "—";
-    const tables =
-      booking.assigned_tables
-        ?.map((t) => t.table.code) // ← use `table.code` instead of `name`
-        .join(", ") || "—";
 
     return (
-      <tr
-        key={booking.id}
-        onClick={() => setSelectedBooking(booking)}
-        style={{ cursor: "pointer" }}
-      >
+      <tr key={booking.id} onClick={() => setSelectedBooking(booking)} style={{ cursor: "pointer" }}>
         <td>{name}</td>
         <td>{room}</td>
         <td>{booking.start_time || "—"}</td>
         <td>{booking.end_time || "—"}</td>
         <td>{adults + children + infants}</td>
-        <td>
-          {voucher !== "—" ? (
-            <span className="badge bg-primary">{voucher}</span>
-          ) : (
-            "—"
-          )}
-        </td>
+        <td>{voucher !== "—" ? <span className="badge bg-primary">{voucher}</span> : "—"}</td>
       </tr>
     );
   };
@@ -119,49 +121,48 @@ const upcomingBookings = bookings
       </div>
     );
   }
+
   if (error) return <div className="alert alert-danger">{error}</div>;
 
   return (
     <>
       <div className="my-4">
         <div className="card text-light mb-4 shadow">
-          <div className="card-header main-bg">
-            Today’s Bookings ({displayDate})
+          <div className="text-end mb-2">
+            <button className="btn btn-sm btn-secondary" onClick={() => setShowGrid(!showGrid)}>
+              {showGrid ? "Hide Grid View" : "Show Grid View"}
+            </button>
           </div>
-          <div className="card-body text-dark p-0">
-            {todaysBookings.length > 0 ? (
-              renderTable(todaysBookings)
-            ) : (
-              <div className="text-center p-3">No bookings for today.</div>
-            )}
-          </div>
-        </div>
-        <div className="card text-light shadow">
-          <div className="card-header main-bg">Upcoming Bookings</div>
-          <div className="card-body text-dark p-0">
-            {upcomingBookings.length > 0 ? (
-              renderTable(upcomingBookings)
-            ) : (
-              <div className="text-center p-3">No upcoming bookings.</div>
-            )}
-          </div>
+
+          {showGrid && restaurantSlug && (
+            <BookingsGrid
+              hotelSlug={hotelSlug}
+              restaurantSlug={restaurantSlug}
+              date={displayDate}
+            />
+          )}
+
+          {!showGrid && (
+            <>
+              <div className="card-header main-bg">Today’s Bookings ({displayDate})</div>
+              <div className="card-body text-dark p-0">
+                {todaysBookings.length ? renderTable(todaysBookings) : <div className="text-center p-3">No bookings for today.</div>}
+              </div>
+
+              <div className="card mt-3 text-light shadow">
+                <div className="card-header main-bg">Upcoming Bookings</div>
+                <div className="card-body text-dark p-0">
+                  {upcomingBookings.length ? renderTable(upcomingBookings) : <div className="text-center p-3">No upcoming bookings.</div>}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Modal for Booking Details */}
-      <Modal
-        show={!!selectedBooking}
-        onHide={() => setSelectedBooking(null)}
-        centered
-        size="lg"
-      >
+      <Modal show={!!selectedBooking} onHide={() => setSelectedBooking(null)} centered size="lg">
         <Modal.Body>
-          {selectedBooking && (
-            <RestaurantReservationDetails
-              booking={selectedBooking}
-              onClose={() => setSelectedBooking(null)}
-            />
-          )}
+          {selectedBooking && <RestaurantReservationDetails booking={selectedBooking} onClose={() => setSelectedBooking(null)} />}
         </Modal.Body>
       </Modal>
     </>
