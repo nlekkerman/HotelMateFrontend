@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import api from "@/services/api";
 import RestaurantReservationDetails from "@/components/bookings/RestaurantReservationDetails";
 import BookingsGrid from "@/components/bookings/BookingsGrid";
+import BookingsHistory from "@/components/bookings/BookingsHistory";
 import { Modal } from "react-bootstrap";
 
 export default function RestaurantBookings({ hotelSlug, restaurantId }) {
@@ -11,7 +12,7 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
   const [error, setError] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showGrid, setShowGrid] = useState(false);
-
+  const [showHistory, setShowHistory] = useState(false);
   const displayDate = new Date().toISOString().slice(0, 10);
 
   // Fetch restaurant slug
@@ -20,8 +21,12 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
 
     async function fetchRestaurantSlug() {
       try {
-        const res = await api.get(`/bookings/restaurants/?hotel_slug=${hotelSlug}`);
-        const restaurant = res.data.results.find((r) => r.id === Number(restaurantId));
+        const res = await api.get(
+          `/bookings/restaurants/?hotel_slug=${hotelSlug}`
+        );
+        const restaurant = res.data.results.find(
+          (r) => r.id === Number(restaurantId)
+        );
         if (!restaurant) throw new Error("Restaurant not found");
         setRestaurantSlug(restaurant.slug);
       } catch (err) {
@@ -72,8 +77,12 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
     return dateA - dateB;
   };
 
-  const todaysBookings = bookings.filter((b) => b.date === displayDate).sort(sortBookings);
-  const upcomingBookings = bookings.filter((b) => b.date > displayDate).sort(sortBookings);
+  const todaysBookings = bookings
+    .filter((b) => b.date === displayDate)
+    .sort(sortBookings);
+  const upcomingBookings = bookings
+    .filter((b) => b.date > displayDate)
+    .sort(sortBookings);
 
   const renderRow = (booking) => {
     const { adults = 0, children = 0, infants = 0 } = booking.seats || {};
@@ -86,13 +95,23 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
     const voucher = booking.voucher_code || "—";
 
     return (
-      <tr key={booking.id} onClick={() => setSelectedBooking(booking)} style={{ cursor: "pointer" }}>
+      <tr
+        key={booking.id}
+        onClick={() => setSelectedBooking(booking)}
+        style={{ cursor: "pointer" }}
+      >
         <td>{name}</td>
         <td>{room}</td>
         <td>{booking.start_time || "—"}</td>
         <td>{booking.end_time || "—"}</td>
         <td>{adults + children + infants}</td>
-        <td>{voucher !== "—" ? <span className="badge bg-primary">{voucher}</span> : "—"}</td>
+        <td>
+          {voucher !== "—" ? (
+            <span className="badge bg-primary">{voucher}</span>
+          ) : (
+            "—"
+          )}
+        </td>
       </tr>
     );
   };
@@ -128,41 +147,91 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
     <>
       <div className="my-4">
         <div className="card text-light mb-4 shadow">
-          <div className="text-end mb-2">
-            <button className="btn btn-sm btn-secondary" onClick={() => setShowGrid(!showGrid)}>
-              {showGrid ? "Hide Grid View" : "Show Grid View"}
+          {/* ✅ Toggle buttons */}
+          <div className="d-flex justify-content-end gap-2 m-2 px-2">
+            {!showHistory && (
+              <button
+                className="btn btn-sm custom-button"
+                onClick={() => setShowGrid(!showGrid)}
+              >
+                {showGrid ? "Hide Grid View" : "Show Grid View"}
+              </button>
+            )}
+            <button
+              className={`btn btn-sm ${
+                showHistory ? "btn-primary" : "custom-button"
+              }`}
+              onClick={() => {
+                setShowHistory(!showHistory);
+                setShowGrid(false); // hide grid when showing history
+              }}
+            >
+              {showHistory ? "Back to Current" : "Show History"}
             </button>
           </div>
 
-          {showGrid && restaurantSlug && (
-            <BookingsGrid
+          {/* ✅ Render history OR normal views */}
+          {showHistory ? (
+            <BookingsHistory
               hotelSlug={hotelSlug}
               restaurantSlug={restaurantSlug}
-              date={displayDate}
             />
-          )}
-
-          {!showGrid && (
+          ) : (
             <>
-              <div className="card-header main-bg">Today’s Bookings ({displayDate})</div>
-              <div className="card-body text-dark p-0">
-                {todaysBookings.length ? renderTable(todaysBookings) : <div className="text-center p-3">No bookings for today.</div>}
-              </div>
+              {showGrid && restaurantSlug && (
+                <BookingsGrid
+                  hotelSlug={hotelSlug}
+                  restaurantSlug={restaurantSlug}
+                  date={displayDate}
+                />
+              )}
+              {!showGrid && (
+                <>
+                  <div className="card-header main-bg">
+                    Today’s Bookings ({displayDate})
+                  </div>
+                  <div className="card-body text-dark p-0">
+                    {todaysBookings.length ? (
+                      renderTable(todaysBookings)
+                    ) : (
+                      <div className="text-center p-3">
+                        No bookings for today.
+                      </div>
+                    )}
+                  </div>
 
-              <div className="card mt-3 text-light shadow">
-                <div className="card-header main-bg">Upcoming Bookings</div>
-                <div className="card-body text-dark p-0">
-                  {upcomingBookings.length ? renderTable(upcomingBookings) : <div className="text-center p-3">No upcoming bookings.</div>}
-                </div>
-              </div>
+                  <div className="card mt-3 text-light shadow">
+                    <div className="card-header main-bg">Upcoming Bookings</div>
+                    <div className="card-body text-dark p-0">
+                      {upcomingBookings.length ? (
+                        renderTable(upcomingBookings)
+                      ) : (
+                        <div className="text-center p-3">
+                          No upcoming bookings.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
       </div>
 
-      <Modal show={!!selectedBooking} onHide={() => setSelectedBooking(null)} centered size="lg">
+      <Modal
+        show={!!selectedBooking}
+        onHide={() => setSelectedBooking(null)}
+        centered
+        size="lg"
+      >
         <Modal.Body>
-          {selectedBooking && <RestaurantReservationDetails booking={selectedBooking} onClose={() => setSelectedBooking(null)} />}
+          {selectedBooking && (
+            <RestaurantReservationDetails
+              booking={selectedBooking}
+              onClose={() => setSelectedBooking(null)}
+            />
+          )}
         </Modal.Body>
       </Modal>
     </>
