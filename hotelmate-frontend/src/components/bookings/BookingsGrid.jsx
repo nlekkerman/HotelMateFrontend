@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import api from "@/services/api";
-
+import ConfirmationModal from "@/components/modals/ConfirmationModal";
 export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
   const [bookings, setBookings] = useState([]);
   const [tables, setTables] = useState([]);
   const [filter, setFilter] = useState("today");
   const timelineRef = useRef(null);
-  const [menuBookingId, setMenuBookingId] = useState(null);
+  const [bookingToDelete, setBookingToDelete] = useState(null);
   const [loading, setLoading] = useState(true);
   const timelineStart = { hour: 17, minute: 30 };
   const timelineEnd = { hour: 22, minute: 30 };
@@ -84,6 +84,19 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
 
     return { left, width };
   };
+  const normalizeBooking = (b) => {
+    if (!b) return null;
+    const [y, m, d] = b.date.split("-").map(Number);
+    const [sh, sm] = b.start_time.split(":").map(Number);
+    const [eh, em] = b.end_time.split(":").map(Number);
+    return {
+      ...b,
+      startDate: new Date(y, m - 1, d, sh, sm),
+      endDate: new Date(y, m - 1, d, eh, em),
+      assigned: b.booking_tables?.length > 0,
+      tableId: b.booking_tables?.[0]?.table.id || null,
+    };
+  };
 
   // Drag & drop handler
   const handleDrop = async (e, tableId) => {
@@ -110,6 +123,47 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
       console.error("Failed to assign booking to backend:", err);
     }
   };
+
+  // Delete booking completely
+  const handleDelete = async (bookingId) => {
+    try {
+      const res = await api.delete(
+        `/bookings/delete/${hotelSlug}/${restaurantSlug}/${bookingId}/`
+      );
+
+      if (res.data.success) {
+        setBookings((prev) => prev.filter((b) => b.id !== res.data.booking_id));
+        console.log("Booking deleted:", res.data.booking_id);
+      }
+    } catch (err) {
+      console.error("Failed to delete booking:", err);
+    }
+    finally {
+      setBookingToDelete(null); // close modal
+    }
+  };
+
+  // Unseat booking (remove from table -> guest list)
+  const handleUnseat = async (bookingId) => {
+    try {
+      const res = await api.post(
+        `/bookings/unseat/${hotelSlug}/${restaurantSlug}/`,
+        {
+          booking_id: bookingId,
+        }
+      );
+
+      if (res.data.success) {
+        const updatedBooking = normalizeBooking(res.data.booking);
+        setBookings((prev) =>
+          prev.map((b) => (b.id === updatedBooking.id ? updatedBooking : b))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to unseat booking:", err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center my-5">
@@ -120,7 +174,15 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
   }
   return (
     <div className="p-2">
-      {/* Filters */}
+      {/* Confirmation Modal */}
+      {bookingToDelete && (
+        <ConfirmationModal
+          title="Confirm Deletion"
+          message={`Are you sure you want to delete booking for ${bookingToDelete.guest?.full_name}?`}
+          onConfirm={() => handleDelete(bookingToDelete.id)}
+          onCancel={() => setBookingToDelete(null)}
+        />
+      )}
       <div className="mb-3 d-flex gap-2">
         <button
           className={`btn ${
@@ -152,13 +214,22 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
                 e.dataTransfer.setData("bookingId", b.id);
                 console.log("Drag start from guest list:", b.id);
               }}
-              className="p-2 border rounded"
-              style={{ minWidth: "150px", fontSize: "0.9rem", cursor: "grab" }}
+              className="p-2 border rounded d-flex justify-content-between align-items-center"
+              style={{ minWidth: "200px", fontSize: "0.9rem", cursor: "grab" }}
             >
-              {b.guest?.full_name} – Room {b.room?.room_number} <br />
-              {b.date} ({b.start_time} - {b.end_time})
+              <div>
+                {b.guest?.full_name} – Room {b.room?.room_number} <br />
+                {b.date} ({b.start_time} - {b.end_time})
+              </div>
+              <button
+                className="btn btn-sm btn-danger ms-2"
+                onClick={() => setBookingToDelete(b)}
+              >
+                🗑
+              </button>
             </div>
           ))}
+          
       </div>
 
       {/* Timeline grid */}
@@ -251,16 +322,48 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
                         height: "90%",
                         border: "1px solid #999",
                         borderRadius: "4px",
-                        textAlign: "center",
                         fontSize: "0.75rem",
                         cursor: "grab",
                         color: "black",
                         overflow: "hidden",
                         whiteSpace: "nowrap",
-                        lineHeight: "15px",
+                        padding: "2px",
                       }}
                     >
-                      {b.guest?.full_name}
+                      {/* Top-right overlay buttons */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "2px",
+                          right: "2px",
+                          display: "flex",
+                          gap: "4px",
+                        }}
+                      >
+                        <button
+                          className="btn btn-sm btn-warning p-1"
+                          style={{ lineHeight: 1, fontSize: "0.65rem" }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUnseat(b.id);
+                          }}
+                        >
+                          ⤴
+                        </button>
+                        <button
+                          className="btn btn-sm btn-danger p-1"
+                          style={{ lineHeight: 1, fontSize: "0.65rem" }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setBookingToDelete(b);
+                          }}
+                        >
+                          🗑
+                        </button>
+                      </div>
+
+                      {/* Booking content (unaffected by buttons) */}
+                      <div>{b.guest?.full_name}</div>
                       <div style={{ fontSize: "0.65rem" }}>
                         Room: {b.room?.room_number || "-"} | Seats:{" "}
                         {b.seats?.total || 1} | {b.start_time} - {b.end_time}
