@@ -95,19 +95,69 @@ export default function Bookings() {
       </h2>
 
       {!qrCategorySlug && (
-        <div className="d-flex flex-wrap justify-content-center gap-2 mb-4">
-          {categories.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => handleClick(c.id)}
-              className={`btn btn-sm ${
-                selectedCategoryId === c.id ? "btn-primary" : "btn-outline-secondary"
-              } rounded-1 px-3`}
-            >
-              {c.name}
-            </button>
-          ))}
-        </div>
+       <div className="d-flex flex-wrap justify-content-center gap-2 mb-4">
+  {categories.map((c) => {
+    console.log("Restaurant data:", c); // Log whole object
+    console.log("Restaurant image URL:", c.image); // Log image
+
+    const isSelected = selectedCategoryId === c.id;
+
+    // Construct image URL from environment variable
+    const imageUrl = c.image 
+      ? `${import.meta.env.VITE_CLOUDINARY_BASE}image/upload/${c.image.split('/image/upload/')[1]}`
+      : '/placeholder.jpg';
+
+    return (
+      <button
+        key={c.id}
+        onClick={() => handleClick(c.id)}
+        className={`btn rounded-1 px-3 position-relative text-white`}
+        title="Click to select bookings"
+        style={{
+          backgroundImage: `url(${imageUrl})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          border: isSelected ? '2px solid #0d6efd' : '1px solid #ccc',
+          minWidth: '180px',
+          minHeight: '110px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: 'bold',
+        }}
+      >
+        <span
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            width: '100%',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            color: 'white',
+            borderTop:'1px solid white',
+            textAlign: 'center',
+            fontSize: '0.9em',
+            zIndex: 2,
+          }}
+        >
+          {c.name}
+        </span>
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.3)',
+            borderRadius: '4px',
+          }}
+        />
+      </button>
+    );
+  })}
+</div>
+
       )}
 
       {selectedCategoryId === null ? (

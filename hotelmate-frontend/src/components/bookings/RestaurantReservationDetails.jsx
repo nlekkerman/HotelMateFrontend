@@ -6,14 +6,15 @@ export default function RestaurantReservationDetails({ booking, onClose }) {
 
   const {
     date,
-    time,
+    start_time,
+    end_time,
     note,
     created_at,
     seats,
     restaurant,
     room,
     guest,
-    voucher_code, // ✅ Add voucher_code here
+    voucher_code,
   } = booking;
 
   const {
@@ -28,7 +29,12 @@ export default function RestaurantReservationDetails({ booking, onClose }) {
       <Card.Header className="main-bg text-white d-flex justify-content-between align-items-center">
         <h5 className="mb-0">🍽️ Reservation Details</h5>
         {onClose && (
-          <Button variant="outline-light" size="sm" onClick={onClose} className="ms-2">
+          <Button
+            variant="outline-light"
+            size="sm"
+            onClick={onClose}
+            className="ms-2"
+          >
             ✕
           </Button>
         )}
@@ -49,7 +55,10 @@ export default function RestaurantReservationDetails({ booking, onClose }) {
             <strong>Date:</strong> {date || "—"}
           </Col>
           <Col md={6}>
-            <strong>Time:</strong> {time || "—"}
+            <strong>Time:</strong>{" "}
+            {start_time && end_time
+              ? `${start_time.slice(0, 5)} - ${end_time.slice(0, 5)}`
+              : "—"}
           </Col>
         </Row>
 
@@ -63,15 +72,21 @@ export default function RestaurantReservationDetails({ booking, onClose }) {
           </Col>
         </Row>
 
-        {/* ✅ Voucher code row */}
-        {voucher_code && (
-          <Row className="mb-3">
-            <Col>
-              <strong>Voucher Code:</strong>{" "}
-              <Badge bg="primary">{voucher_code}</Badge>
-            </Col>
-          </Row>
-        )}
+   
+        <Row className="mb-3">
+  <Col>
+    <strong>Voucher:</strong>{" "}
+    {voucher_code ? (
+      <Badge bg="warning" text="dark" className="p-2">
+        🎟️ {voucher_code}
+      </Badge>
+    ) : (
+      <span className="text-danger">No voucher</span>
+    )}
+  </Col>
+</Row>
+
+       
 
         <Row className="mb-3">
           <Col>
@@ -83,16 +98,24 @@ export default function RestaurantReservationDetails({ booking, onClose }) {
 
         <Row className="text-center">
           <Col>
-            <Badge bg="secondary" className="p-2" pill>🧮 Total: {total}</Badge>
+            <Badge bg="secondary" className="p-2" pill>
+              🧮 Total: {total}
+            </Badge>
           </Col>
           <Col>
-            <Badge bg="success" className="p-2" pill>👨 Adults: {adults}</Badge>
+            <Badge bg="success" className="p-2" pill>
+              👨 Adults: {adults}
+            </Badge>
           </Col>
           <Col>
-            <Badge bg="primary" className="p-2" pill>🧒 Children: {children}</Badge>
+            <Badge bg="primary" className="p-2" pill>
+              🧒 Children: {children}
+            </Badge>
           </Col>
           <Col>
-            <Badge bg="danger" className="p-2" pill>👶 Infants: {infants}</Badge>
+            <Badge bg="danger" className="p-2" pill>
+              👶 Infants: {infants}
+            </Badge>
           </Col>
         </Row>
       </Card.Body>

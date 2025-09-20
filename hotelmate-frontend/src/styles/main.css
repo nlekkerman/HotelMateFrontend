@@ -800,6 +800,10 @@ body.terminal-mode,
   max-width: 150px;
   display: block;
 }
+.on-hoover-button:hover {
+  background-color: transparent !important;
+  color: rgb(255, 0, 0) !important;
+}
 
 
 @keyframes pulse {
