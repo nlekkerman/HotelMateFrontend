@@ -137,8 +137,7 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
       }
     } catch (err) {
       console.error("Failed to delete booking:", err);
-    }
-    finally {
+    } finally {
       setBookingToDelete(null); // close modal
     }
   };
@@ -219,17 +218,31 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
             >
               <div>
                 {b.guest?.full_name} – Room {b.room?.room_number} <br />
-                {b.date} ({b.start_time} - {b.end_time})
+                {b.date} ({b.start_time.slice(0, 5)} - {b.end_time.slice(0, 5)}){" "}
+                <br />
+                Adults:{" "}
+                <span className="text-primary fw-bold">
+                  {b.seats?.adults || 0}
+                </span>
+                , Children:{" "}
+                <span className="text-success fw-bold">
+                  {b.seats?.children || 0}
+                </span>
+                , Infants:{" "}
+                <span className="text-danger fw-bold">
+                  {b.seats?.infants || 0}
+                </span>
               </div>
+
               <button
-                className="btn btn-sm btn-danger ms-2"
+                className="btn btn-sm btn-danger ms-2 on-hoover-button"
+                title="Delete this booking"
                 onClick={() => setBookingToDelete(b)}
               >
                 🗑
               </button>
             </div>
           ))}
-          
       </div>
 
       {/* Timeline grid */}
@@ -341,8 +354,9 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
                         }}
                       >
                         <button
-                          className="btn btn-sm btn-warning p-1"
+                          className="btn btn-sm btn-warning p-1 on-hoover-button"
                           style={{ lineHeight: 1, fontSize: "0.65rem" }}
+                          title="Unseat this booking"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleUnseat(b.id);
@@ -351,8 +365,9 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
                           ⤴
                         </button>
                         <button
-                          className="btn btn-sm btn-danger p-1"
+                          className="btn btn-sm btn-danger p-1 on-hoover-button"
                           style={{ lineHeight: 1, fontSize: "0.65rem" }}
+                          title="Delete this booking"
                           onClick={(e) => {
                             e.stopPropagation();
                             setBookingToDelete(b);
@@ -366,7 +381,8 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
                       <div>{b.guest?.full_name}</div>
                       <div style={{ fontSize: "0.65rem" }}>
                         Room: {b.room?.room_number || "-"} | Seats:{" "}
-                        {b.seats?.total || 1} | {b.start_time} - {b.end_time}
+                        {b.seats?.total || 1} | {b.start_time.slice(0, 5)} -{" "}
+                        {b.end_time.slice(0, 5)}
                       </div>
                     </div>
                   );
