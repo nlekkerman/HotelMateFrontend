@@ -35,19 +35,36 @@ export default function StockAnalytics({ hotelSlug }) {
         timeout: 60000,
       });
 
-      const mappedData = res.data.map((item) => ({
-        item_id: item.item_id,
-        item_name: item.item_name,
-        opening_storage: item.opening_storage,
-        opening_bar: item.opening_bar,
-        added: item.added,
-        moved_to_bar: item.moved_to_bar,
-        sales: item.sales,
-        waste: item.waste,
-        closing_storage: item.closing_storage,
-        closing_bar: item.closing_bar,
-        total_closing_stock: item.total_closing_stock,
-      }));
+      const mappedData = Array.isArray(res.data)
+  ? res.data.map((line) => ({
+      item_id: line.item_id,
+      item_name: line.item_name,
+      opening_storage: line.opening_storage,
+      opening_bar: line.opening_bar,
+      added: line.added,
+      moved_to_bar: line.moved_to_bar,
+      sales: line.sales,
+      waste: line.waste,
+      closing_storage: line.closing_storage,
+      closing_bar: line.closing_bar,
+      total_closing_stock: line.total_closing_stock,
+    }))
+  : res.data.flatMap((group) =>
+      group.inventory_lines.map((line) => ({
+        item_id: line.item_id,
+        item_name: line.item_name,
+        opening_storage: line.opening_storage,
+        opening_bar: line.opening_bar,
+        added: line.added,
+        moved_to_bar: line.moved_to_bar,
+        sales: line.sales,
+        waste: line.waste,
+        closing_storage: line.closing_storage,
+        closing_bar: line.closing_bar,
+        total_closing_stock: line.total_closing_stock,
+      }))
+    );
+
 
       setData(mappedData);
     } catch (err) {

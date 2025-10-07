@@ -3,15 +3,17 @@ import "@/firebase";
 import Pusher from "pusher-js";
 import api from "@/services/api";
 import { useMediaQuery } from "react-responsive";
+import "@/games/whack-a-mole/styles/InterfaceStyles.css";
 import "@/styles/main.css";
+
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import { UIProvider } from "@/context/UIContext";
-import { ChatProvider  } from "@/context/ChatContext";
-import { BookingNotificationProvider  } from "@/context/BookingNotificationContext";
+import { ChatProvider } from "@/context/ChatContext";
+import { BookingNotificationProvider } from "@/context/BookingNotificationContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -76,10 +78,20 @@ import NotFound from "@/components/offline/NotFound";
 
 import ChatHomePage from "@/pages/chat/ChatHomePage";
 import ChatWindow from "@/components/chat/ChatWindow";
-const queryClient = new QueryClient();
 
+//Games
+import GamesDashboard from "@/games/GamesDashboard";
+import WhackAMolePage from "@/games/whack-a-mole/pages/GamePage";
+
+const queryClient = new QueryClient();
+// Default settings for all games
+const defaultAudioSettings = {
+  bgMusic: true,
+  effects: true,
+};
 // 🔁 Inner layout that uses `useLocation()` safely
 function AppLayout({ collapsed, setCollapsed, isMobile }) {
+  const [audioSettings, setAudioSettings] = useState(defaultAudioSettings);
   const location = useLocation();
   const isClockInPage = location.pathname.startsWith("/clock-in");
   const { user } = useAuth();
@@ -297,6 +309,20 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 element={<ChatWindow />}
               />
 
+              {/*Games */}
+              <Route path="/games" element={<GamesDashboard />} />
+              <Route
+                path="/games/whack-a-mole"
+                element={<WhackAMolePage audioSettings={audioSettings} />}
+              />
+              <Route
+                path="/games/memory-match"
+                element={<div>Memory Match Coming Soon!</div>}
+              />
+              <Route
+                path="/games/settings"
+                element={<div>Game Settings Coming Soon!</div>}
+              />
               {/* Catch All */}
               <Route path="*" element={<NotFound />} />
             </Routes>
@@ -328,15 +354,15 @@ export default function App() {
           <ThemeProvider>
             <ChatProvider>
               <BookingNotificationProvider>
-            <BrowserRouter>
-              <NetworkHandler />
-              <AppLayout
-                collapsed={collapsed}
-                setCollapsed={setCollapsed}
-                isMobile={isMobile}
-              />
-            </BrowserRouter>
-            </BookingNotificationProvider>
+                <BrowserRouter>
+                  <NetworkHandler />
+                  <AppLayout
+                    collapsed={collapsed}
+                    setCollapsed={setCollapsed}
+                    isMobile={isMobile}
+                  />
+                </BrowserRouter>
+              </BookingNotificationProvider>
             </ChatProvider>
           </ThemeProvider>
         </AuthProvider>

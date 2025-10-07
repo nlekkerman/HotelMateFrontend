@@ -1,0 +1,143 @@
+
+
+/* Dashboard container */
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 40px;
+  width: 100%;
+  max-width: 600px;
+  margin: auto;
+  padding: 30px;
+  border-radius: 25px;
+  background-color: rgba(0, 61, 9, 0.85);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* GamePage container */
+.gamepage-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 650px;
+  margin: auto;
+  padding: 25px;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Titles */
+.game-title, .dashboard-title {
+  font-size: 48px;
+  color: #ffffff;
+  text-shadow: 2px 2px 4px #000;
+  margin: 0;
+}
+
+
+.btn:hover {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}
+
+/* Score text */
+.score-text {
+  font-size: 28px;  /* slightly smaller */
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* GameBoard */
+.gameboard {
+  display: grid;
+  grid-template-columns: repeat(3, 130px); /* smaller holes */
+  grid-gap: 70px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+/* Holes */
+.hole {
+  position: relative;
+  width: 150px;
+  height: 100px;
+  margin: 10px;
+  border: 3px solid #897a7a;
+  border-radius: 50%;
+  overflow: visible;
+  display: inline-block;
+  background: radial-gradient(circle at 50% 10%, #d8cccc 0%, #1c0f0f 90%);
+  box-shadow: inset 0 60px 10px rgba(0, 0, 0, 0.5),
+              0 4px 6px rgba(0, 0, 0, 0.2);
+
+  z-index: 1 !important;
+}
+
+
+.hole-correct {
+  background-color: #28a745; /* green for correct */
+}
+
+.hole-wrong {
+  background-color: #dc3545; /* red for wrong */
+}
+/* Mole images */
+.mole {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+  position: relative;
+  overflow: visible !important;
+  z-index: 3 !important; /* above fireworks */
+}
+
+
+/* Green hole pulse animation */
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Dashboard Buttons container */
+.dashboard-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  align-items: center;
+}
+
+.modal-backdrop{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 61, 9, 0.85) !important;
+}
+.game-over-modal-body {
+  background-color: rgba(13, 0, 0, 0.668);
+  color: white;
+  padding: 30px;
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
+  width: 90%;
+}
+.game-over-modal-body input {
+  background-color: darkblue;
+}
+.game-over-modal-body input::placeholder {
+  color: white; /* sets placeholder text color */
+  opacity: 1;   /* ensures full visibility */
+}
+/* Focus effect */
+.game-over-modal-body input:focus {
+  border-color: #ffc107; /* bright border on focus */
+  box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.5); /* glow effect */
+  color: black !important;
+}
