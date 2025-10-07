@@ -17,50 +17,25 @@ export default function StockConsumption({
   const [rows, setRows] = useState(
     data.map((item) => ({
       ...item,
-      sales: 0,
       waste: 0,
-      final_bar_stock: item.opening_bar ?? 0,
-      total_closing_stock:
-        (item.closing_storage ?? 0) + (item.opening_bar ?? 0),
+      final_bar_stock: "",
     }))
   );
 
   const handleChange = (id, field, value) => {
     setRows((prev) =>
-      prev.map((row) => (row.item_id === id ? { ...row, [field]: value } : row))
-    );
-  };
-
-  const calculateStocks = () => {
-    setRows((prev) =>
-      prev.map((row) => {
-        const sales = Number(row.sales) || 0;
-        const waste = Number(row.waste) || 0;
-
-        // ✅ include opening_bar so bar stock isn’t under/over counted
-        const finalBarStock =
-          (row.opening_bar ?? 0) + (row.moved_to_bar ?? 0) - (sales + waste);
-
-        const totalStock = (row.closing_storage ?? 0) + finalBarStock;
-
-        return {
-          ...row,
-          sales,
-          waste,
-          final_bar_stock: finalBarStock,
-          total_closing_stock: totalStock,
-        };
-      })
+      prev.map((row) =>
+        row.item_id === id ? { ...row, [field]: value } : row
+      )
     );
   };
 
   const finalizeStockPeriod = async () => {
     setFinalizing(true);
     try {
-      // Simplified payload: only send period dates
       await api.post(`/stock_tracker/${hotelSlug}/stock-periods/`, {
-        start_date: startDate,
-        end_date: endDate,
+        period_type: "week", // or dynamically set
+        reference_date: startDate,
       });
 
       setShowConfirm(false);
@@ -92,43 +67,64 @@ export default function StockConsumption({
                   <tr>
                     <th>Item</th>
                     <th>Closing (Storage) Stock</th>
-                    <th>Active Bar Stock</th>
-                    <th>Sales</th>
-                    <th>Waste</th>
+                    <th>Moved to Bar Stock</th>
                     <th>Final Bar Stock</th>
+                    <th>Waste</th>
+                    <th>Sales (Derived)</th>
                     <th>Final Total Stock</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.item_id}>
-                      <td>{row.item_name}</td>
-                      <td>{row.closing_storage}</td>
-                      <td>{row.moved_to_bar}</td>
-                      <td>
-                        <input
-                          type="number"
-                          value={row.sales ?? ""}
-                          onChange={(e) =>
-                            handleChange(row.item_id, "sales", e.target.value)
-                          }
-                          className="form-control"
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          value={row.waste}
-                          onChange={(e) =>
-                            handleChange(row.item_id, "waste", e.target.value)
-                          }
-                          className="form-control"
-                        />
-                      </td>
-                      <td>{row.final_bar_stock}</td>
-                      <td>{row.total_closing_stock}</td>
-                    </tr>
-                  ))}
+                 {rows.map((row) => {
+  const finalBarStock =
+    row.final_bar_stock === "" || row.final_bar_stock === null
+      ? null
+      : Number(row.final_bar_stock);
+
+  const waste = Number(row.waste) || 0;
+
+  // Sales only calculated after final_bar_stock is entered
+  const derivedSales =
+    finalBarStock !== null
+      ? (row.opening_bar ?? 0) + (row.moved_to_bar ?? 0) - finalBarStock
+      : 0;
+
+  const totalClosingStock =
+    (row.closing_storage ?? 0) + (finalBarStock ?? 0) - waste;
+
+  return (
+    <tr key={row.item_id}>
+      <td>{row.item_name}</td>
+      <td>{row.closing_storage}</td>
+      <td>{row.moved_to_bar}</td>
+      <td>
+        <input
+          type="number"
+          value={row.final_bar_stock}
+          onFocus={(e) => e.target.select()}
+          onChange={(e) =>
+            handleChange(row.item_id, "final_bar_stock", e.target.value)
+          }
+          className="form-control"
+        />
+      </td>
+      <td>
+        <input
+          type="number"
+          value={row.waste}
+          onFocus={(e) => e.target.select()}
+          onChange={(e) =>
+            handleChange(row.item_id, "waste", e.target.value)
+          }
+          className="form-control"
+        />
+      </td>
+      <td>{derivedSales}</td>
+      <td>{totalClosingStock}</td>
+    </tr>
+  );
+})}
+
                 </tbody>
               </table>
             </div>
@@ -136,24 +132,29 @@ export default function StockConsumption({
           <div className="modal-footer d-flex justify-content-between">
             <div>
               <button
-                className="btn btn-primary me-2"
-                onClick={calculateStocks}
-              >
-                Calculate
-              </button>
-              <button
                 className="btn btn-success"
                 onClick={() =>
                   generateBarStockPdf(
-                    rows.map((r) => ({
-                      item_name: r.item_name,
-                      closing_storage: r.closing_storage,
-                      moved_to_bar: r.moved_to_bar,
-                      sales: r.sales,
-                      waste: r.waste,
-                      final_bar_stock: r.final_bar_stock,
-                      total_closing_stock: r.total_closing_stock,
-                    })),
+                    rows.map((r) => {
+                      const finalBarStock = Number(r.final_bar_stock) || 0;
+                      const waste = Number(r.waste) || 0;
+
+                      return {
+                        item_name: r.item_name,
+                        closing_storage: r.closing_storage,
+                        moved_to_bar: r.moved_to_bar,
+                        sales:
+                          (r.opening_bar ?? 0) +
+                          (r.moved_to_bar ?? 0) -
+                          finalBarStock,
+                        waste,
+                        final_bar_stock: finalBarStock,
+                        total_closing_stock:
+                          (r.closing_storage ?? 0) +
+                          finalBarStock -
+                          waste,
+                      };
+                    }),
                     "Hotel Stock Consumption"
                   )
                 }

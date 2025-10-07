@@ -96,7 +96,12 @@ export const StockList = ({
                     />
                     <button
                       className="custom-button"
-                      onClick={() => handleAddTransaction(item)}
+                      onClick={() =>
+                        handleAddTransaction({
+                          ...item,
+                          stock_id: item.stock_id,
+                        })
+                      }
                       disabled={!item.active}
                     >
                       Move
@@ -113,10 +118,7 @@ export const StockList = ({
 );
 
 // ✅ TransactionsList
-export const TransactionsList = ({
-  transactions,
-  handleCompleteStockAction,
-}) =>
+export const TransactionsList = ({ transactions, handleCompleteStockAction }) =>
   transactions.length > 0 && (
     <>
       <h5>Pending Transactions</h5>
