@@ -6,7 +6,6 @@ import React, {
   useEffect,
 } from "react";
 import api from "@/services/api";
-import { listenForFirebaseMessages } from "@/utils/firebaseNotifications";
 
 // 1) Create context
 const OrderCountContext = createContext({
@@ -48,12 +47,8 @@ const res = await api.get(`/room_services/${hotelSlug}/breakfast-orders/breakfas
   }, [refreshRoomService, refreshBreakfast]);
 
   useEffect(() => {
-    const unsubscribe = listenForFirebaseMessages((payload) => {
-      const { type, count } = payload.data || {};
-      if (type === "order_count") setRoomServiceCount(Number(count));
-      if (type === "breakfast_count") setBreakfastCount(Number(count));
-    });
-
+    // Alternative: Use WebSocket or Pusher for real-time count updates
+    // For now, we'll rely on periodic refreshes or manual updates
     const onMessage = (event) => {
       const { type, count } = event.data || {};
       if (type === "order_count") setRoomServiceCount(Number(count));
@@ -62,7 +57,6 @@ const res = await api.get(`/room_services/${hotelSlug}/breakfast-orders/breakfas
     navigator.serviceWorker?.addEventListener("message", onMessage);
 
     return () => {
-      unsubscribe();
       navigator.serviceWorker?.removeEventListener("message", onMessage);
     };
   }, []);

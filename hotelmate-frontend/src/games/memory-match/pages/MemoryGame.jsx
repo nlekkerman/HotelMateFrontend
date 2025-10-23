@@ -78,13 +78,13 @@ function useMemoryGame(images) {
     }
   };
 
-  return { cards, flipped, matched, handleFlip, resetGame, lastAction };
+  return { cards, flipped, matched, handleFlip, resetGame, lastAction, setLastAction };
 }
 
 export default function MemoryGame({ tournamentId = null }) {
   const [difficulty, setDifficulty] = useState("easy");
   const [images, setImages] = useState(getImagesForDifficulty("easy"));
-  const { cards, flipped, matched, handleFlip, resetGame, lastAction } = useMemoryGame(images);
+  const { cards, flipped, matched, handleFlip, resetGame, lastAction, setLastAction } = useMemoryGame(images);
 
   // Game state
   const [time, setTime] = useState(0);
@@ -114,9 +114,33 @@ export default function MemoryGame({ tournamentId = null }) {
   const wrongSound = useRef(new Audio(wrongSoundFile));
   const winSound = useRef(new Audio(winSoundFile));
 
+  // Initialize audio settings
   useEffect(() => {
-    if (lastAction === "match") correctSound.current.play();
-    if (lastAction === "mismatch") wrongSound.current.play();
+    const setupAudio = (audio) => {
+      audio.preload = 'auto';
+      audio.volume = 0.7;
+    };
+    
+    setupAudio(correctSound.current);
+    setupAudio(wrongSound.current);
+    setupAudio(winSound.current);
+  }, []);
+
+  useEffect(() => {
+    if (lastAction === "match") {
+      correctSound.current.currentTime = 0; // Reset audio to beginning
+      correctSound.current.play().catch(e => console.log('Audio play failed:', e));
+    }
+    if (lastAction === "mismatch") {
+      wrongSound.current.currentTime = 0; // Reset audio to beginning
+      wrongSound.current.play().catch(e => console.log('Audio play failed:', e));
+    }
+    
+    // Reset lastAction after a short delay to allow for consecutive sounds
+    if (lastAction) {
+      const timer = setTimeout(() => setLastAction(null), 100);
+      return () => clearTimeout(timer);
+    }
   }, [lastAction]);
 
   // Handle game completion

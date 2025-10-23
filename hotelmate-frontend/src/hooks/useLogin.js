@@ -1,7 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
-import { requestFirebaseNotificationPermission } from "@/utils/firebaseNotifications";
 
 const LOGIN_ENDPOINT = `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/staff/login/`;
 
@@ -10,18 +9,18 @@ export default function useLogin() {
   const [error, setError] = useState(null);
   const { login } = useAuth();
 
-  const loginUser = async (username, password, fcmToken) => {
+  const loginUser = async (username, password) => {
     setLoading(true);
     setError(null);
 
     console.log("📡 Sending login request...");
     console.log("🔗 Endpoint:", LOGIN_ENDPOINT);
-    console.log("📝 Payload:", { username, password, fcm_token: fcmToken });
+    console.log("📝 Payload:", { username, password });
 
     try {
       const { data } = await axios.post(
         LOGIN_ENDPOINT,
-        { username, password, fcm_token: fcmToken },
+        { username, password },
         { headers: { "Content-Type": "application/json" } }
       );
 
@@ -76,14 +75,8 @@ export default function useLogin() {
       login(userForContext);
       console.log("✔️ User logged in successfully");
 
-      // Request FCM token
-      const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
-      try {
-        await requestFirebaseNotificationPermission(VAPID_KEY);
-        console.log("🔔 FCM token permission granted");
-      } catch (notifyError) {
-        console.warn("⚠️ Could not register FCM token:", notifyError);
-      }
+      // Note: Firebase FCM token functionality has been removed
+      // Alternative push notification systems can be implemented here if needed
 
       setLoading(false);
       return data;

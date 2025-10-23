@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import useLogin from "@/hooks/useLogin";
-import { getToken, messaging } from "@/firebase";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -26,17 +25,8 @@ const Login = () => {
     return;
   }
 
-  let fcmToken = null;
   try {
-    fcmToken = await getToken(messaging, {
-      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-    });
-  } catch (tokenError) {
-    console.warn("⚠️ Failed to get FCM token:", tokenError);
-  }
-
-  try {
-    const data = await loginUser(username, password, fcmToken);
+    const data = await loginUser(username, password);
     console.log("Backend response access_level:", data.access_level);
     if (!data) {
       setLocalError("No data received from server.");
