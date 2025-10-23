@@ -82,6 +82,7 @@ import ChatWindow from "@/components/chat/ChatWindow";
 //Games
 import GamesDashboard from "@/games/GamesDashboard";
 import WhackAMolePage from "@/games/whack-a-mole/pages/GamePage";
+import MemoryGame from "@/games/memory-match/pages/MemoryGame";
 
 const queryClient = new QueryClient();
 // Default settings for all games
@@ -315,10 +316,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 path="/games/whack-a-mole"
                 element={<WhackAMolePage audioSettings={audioSettings} />}
               />
-              <Route
-                path="/games/memory-match"
-                element={<div>Memory Match Coming Soon!</div>}
-              />
+              <Route path="/games/memory-match" element={<MemoryGame />} />
               <Route
                 path="/games/settings"
                 element={<div>Game Settings Coming Soon!</div>}
