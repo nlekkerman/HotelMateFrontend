@@ -2,7 +2,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import { listenForFirebaseMessages } from "@/utils/firebaseNotifications";
 import { OrderCountProvider } from "@/hooks/useOrderCount.jsx";
 
 
@@ -41,41 +40,6 @@ async function applySavedTheme() {
 
 async function bootstrap() {
   await applySavedTheme();
-
-  if ("serviceWorker" in navigator) {
-    try {
-      const registration = await navigator.serviceWorker.register(
-        "/firebase-messaging-sw.js"
-      );
-      console.log("🚀 SW registered:", registration);
-
-      // Handle foreground FCM messages (room_service notifications only)
-      listenForFirebaseMessages((payload) => {
-        console.log("🔥 [FG FCM] Payload received:", payload);
-
-        if (
-          ["room_service", "stock_movement"].includes(payload?.data?.type) &&
-          payload?.notification
-        ) {
-          console.log(
-            "🔔 [FG FCM] Displaying notification for type:",
-            payload.data.type
-          );
-          new Notification(payload.notification.title, {
-            body: payload.notification.body,
-            icon: "/firebase-logo.png",
-          });
-        } else {
-          console.log(
-            "ℹ️ [FG FCM] Ignored notification with unknown type:",
-            payload?.data?.type
-          );
-        }
-      });
-    } catch (err) {
-      console.error("❌ SW registration failed:", err);
-    }
-  }
 
   ReactDOM.createRoot(document.getElementById("root")).render(
     <React.StrictMode>

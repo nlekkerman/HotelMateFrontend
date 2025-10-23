@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import "@/firebase";
 import Pusher from "pusher-js";
 import api from "@/services/api";
 import { useMediaQuery } from "react-responsive";
