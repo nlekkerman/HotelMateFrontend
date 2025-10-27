@@ -517,13 +517,25 @@ class MemoryGameAPI {
     }
   }
 
-  // QR Code Generation
+  // QR Code Generation - using existing games/qrcodes endpoint
   async generateTournamentQR(qrData) {
     try {
-      const response = await api.post(`${this.baseURL}/tournaments/generate-qr/`, qrData);
+      // Try the games/qrcodes endpoint first
+      const response = await api.post(`${this.baseURL}/games/qrcodes/`, qrData);
       return response.data;
     } catch (error) {
       console.error('Failed to generate QR code:', error);
+      throw error;
+    }
+  }
+
+  // Get existing QR codes
+  async getQRCodes(params = {}) {
+    try {
+      const response = await api.get(`${this.baseURL}/games/qrcodes/`, { params });
+      return response.data.results || response.data || [];
+    } catch (error) {
+      console.error('Failed to fetch QR codes:', error);
       throw error;
     }
   }

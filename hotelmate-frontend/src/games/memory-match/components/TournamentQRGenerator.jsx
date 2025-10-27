@@ -6,28 +6,80 @@ export default function TournamentQRGenerator({ tournament, onClose }) {
   const [loading, setLoading] = useState(false);
   const canvasRef = useRef();
 
-  // Generate QR code using backend API
+  // Get QR code from tournament data or generate via API
   const generateQRCode = async (url, title) => {
     setLoading(true);
     try {
-      const response = await memoryGameAPI.generateTournamentQR({
-        tournament_id: tournament.id,
-        url: url,
-        title: title,
-        type: url.includes('/leaderboard') ? 'leaderboard' : 'play'
-      });
+      // Check if tournament already has QR codes (from backend pre-generation)
+      if (tournament.qr_code_play && url.includes('/play/')) {
+        setQRCodeDataURL(tournament.qr_code_play);
+        setLoading(false);
+        return;
+      }
       
-      // Backend should return either a direct image URL or base64 data
-      if (response.qr_code_url) {
-        setQRCodeDataURL(response.qr_code_url);
-      } else if (response.qr_code_data) {
-        setQRCodeDataURL(response.qr_code_data);
-      } else {
-        throw new Error('No QR code data received from server');
+      if (tournament.qr_code_leaderboard && url.includes('/leaderboard/')) {
+        setQRCodeDataURL(tournament.qr_code_leaderboard);
+        setLoading(false);
+        return;
+      }
+
+      // If no pre-generated QR codes, try to fetch from tournament detail
+      try {
+        const tournamentDetail = await memoryGameAPI.getTournament(tournament.id);
+        if (tournamentDetail.qr_code_play && url.includes('/play/')) {
+          setQRCodeDataURL(tournamentDetail.qr_code_play);
+          return;
+        }
+        if (tournamentDetail.qr_code_leaderboard && url.includes('/leaderboard/')) {
+          setQRCodeDataURL(tournamentDetail.qr_code_leaderboard);
+          return;
+        }
+      } catch (detailError) {
+        console.warn('Could not fetch tournament detail:', detailError);
+      }
+
+      // Try to fetch existing QR codes first
+      try {
+        const qrCodes = await memoryGameAPI.getQRCodes({
+          tournament_id: tournament.id,
+          type: url.includes('/leaderboard') ? 'leaderboard' : 'play'
+        });
+        
+        if (qrCodes.length > 0) {
+          const qrCode = qrCodes[0];
+          if (qrCode.qr_code_url) {
+            setQRCodeDataURL(qrCode.qr_code_url);
+            return;
+          }
+        }
+      } catch (fetchError) {
+        console.warn('Could not fetch existing QR codes:', fetchError);
+      }
+
+      // Fallback: Try to generate via API (if backend supports it)
+      try {
+        const response = await memoryGameAPI.generateTournamentQR({
+          tournament_id: tournament.id,
+          url: url,
+          title: title,
+          type: url.includes('/leaderboard') ? 'leaderboard' : 'play'
+        });
+        
+        if (response.qr_code_url) {
+          setQRCodeDataURL(response.qr_code_url);
+        } else if (response.qr_code_data) {
+          setQRCodeDataURL(response.qr_code_data);
+        } else {
+          throw new Error('No QR code data received from server');
+        }
+      } catch (apiError) {
+        console.error('QR generation API error:', apiError);
+        // If API fails, show a message that QR codes are not available yet
+        throw new Error(`QR codes not available. API Error: ${apiError.response?.status || 'Unknown'}`);
       }
     } catch (error) {
-      console.error('Error generating QR code:', error);
-      alert('Failed to generate QR code: ' + error.message);
+      console.error('Error getting QR code:', error);
+      alert('QR Code not available: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -179,9 +231,18 @@ export default function TournamentQRGenerator({ tournament, onClose }) {
                 )}
 
                 {!qrCodeDataURL && !loading && (
-                  <div className="text-center text-muted p-5">
+                  <div className="text-center text-muted p-4">
                     <i className="bi bi-qr-code" style={{fontSize: '3rem'}}></i>
-                    <p className="mt-2">Select a QR code type above to generate</p>
+                    <p className="mt-2 mb-3">Select a QR code type above to get the code</p>
+                    
+                    <div className="alert alert-info small">
+                      <strong>💡 Alternative Options:</strong>
+                      <ul className="mb-0 mt-2 text-start">
+                        <li>Copy the URL and use any QR code generator</li>
+                        <li>Share the direct link via WhatsApp/SMS</li>
+                        <li>Print the URL for manual entry</li>
+                      </ul>
+                    </div>
                   </div>
                 )}
               </div>
