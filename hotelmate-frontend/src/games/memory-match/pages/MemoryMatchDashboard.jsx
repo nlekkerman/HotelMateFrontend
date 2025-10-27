@@ -23,12 +23,80 @@ const MemoryMatchDashboard = () => {
   const fetchActiveTournaments = async () => {
     try {
       setError(null);
+      console.log(`🎮 Fetching tournaments for hotel: ${hotelSlug}`);
+      
+      // Use the updated memoryGameAPI method
       const data = await memoryGameAPI.getActiveTournamentsForHotel(hotelSlug);
-      setTournaments(data.tournaments || []);
+      
+      if (data.tournaments && data.tournaments.length > 0) {
+        console.log(`🎯 Found ${data.tournaments.length} tournaments from API!`);
+        setTournaments(data.tournaments);
+      } else {
+        console.log('🔄 No API tournaments found, using mock data...');
+        
+        // Mock data for testing when no real tournaments available
+        const mockTournaments = [
+          {
+            id: 16,
+            name: "Memory Match Daily - Monday",
+            description: "Daily Memory Match for October 27, 2025. 3×4 grid (6 pairs) - Test tournament!",
+            start_date: "2025-10-27T12:00:00Z",
+            end_date: "2025-10-27T19:00:00Z", 
+            status: "active",
+            participant_count: 0,
+            first_prize: "Hotel Game Room Pass",
+            second_prize: "Pool Day Pass",
+            third_prize: "Ice Cream Voucher"
+          },
+          {
+            id: 17,
+            name: "Memory Match Daily - Tuesday",
+            description: "Tomorrow's tournament - 3×4 grid challenge!",
+            start_date: "2025-10-28T12:00:00Z",
+            end_date: "2025-10-28T19:00:00Z",
+            status: "upcoming",
+            participant_count: 5,
+            first_prize: "Spa Day Voucher",
+            second_prize: "Restaurant Credit",
+            third_prize: "Gift Shop Voucher"
+          },
+          {
+            id: 18,
+            name: "Memory Match Weekend Special",
+            description: "Weekend tournament with special prizes!",
+            start_date: "2025-10-26T09:00:00Z",
+            end_date: "2025-10-26T18:00:00Z",
+            status: "completed",
+            participant_count: 15,
+            first_prize: "Weekend Getaway",
+            second_prize: "Dinner for Two", 
+            third_prize: "Cocktail Voucher"
+          }
+        ];
+        
+        setTournaments(mockTournaments);
+        setError('Using demo tournaments - connect to backend for real tournaments');
+      }
+      
     } catch (error) {
-      console.error('Error fetching tournaments:', error);
-      setError('Failed to load tournaments');
-      setTournaments([]);
+      console.error('❌ Error fetching tournaments:', error);
+      setError(`Tournament API unavailable: ${error.message}`);
+      
+      // Fallback mock data
+      setTournaments([
+        {
+          id: 999,
+          name: "Demo Tournament - Offline Mode", 
+          description: "Test tournament for offline demonstration",
+          start_date: "2025-10-27T10:00:00Z",
+          end_date: "2025-10-27T22:00:00Z",
+          status: "active",
+          participant_count: 0,
+          first_prize: "Demo Prize",
+          second_prize: "Second Prize",
+          third_prize: "Third Prize"
+        }
+      ]);
     } finally {
       setLoading(false);
     }
@@ -157,7 +225,30 @@ const MemoryMatchDashboard = () => {
                   
                   {error && (
                     <div className="alert alert-warning mb-3">
-                      <small>{error}</small>
+                      <div className="d-flex align-items-start">
+                        <span className="me-2">⚠️</span>
+                        <div>
+                          <div className="fw-bold">API Status</div>
+                          <small>{error}</small>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Debug Info */}
+                  {hotelSlug && (
+                    <div className="alert alert-info mb-3">
+                      <div className="d-flex align-items-start">
+                        <span className="me-2">🔧</span>
+                        <div>
+                          <div className="fw-bold">Debug Info</div>
+                          <small>
+                            Hotel: {hotelSlug}<br/>
+                            Tournaments loaded: {tournaments.length}<br/>
+                            API Base: {window.location.hostname === 'localhost' ? 'localhost:8000' : 'production'}
+                          </small>
+                        </div>
+                      </div>
                     </div>
                   )}
                   

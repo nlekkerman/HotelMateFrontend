@@ -192,6 +192,13 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
       feature: "stock_tracker",
       roles: ["chef", "bartender", "manager"],
     },
+    {
+      path: "/games",
+      label: "Games",
+      icon: "controller",
+      feature: "games",
+      roles: ["manager", "staff_admin", "super_staff_admin"],
+    },
   ];
 
   return (
