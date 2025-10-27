@@ -64,6 +64,24 @@ export default function GamesDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Tournament Management Card */}
+        <div className="col-md-3">
+          <div
+            className="card h-100 text-center border-warning"
+            onClick={() => handleNavigate("/games/memory-match/tournaments")}
+            style={{ cursor: "pointer" }}
+          >
+            <div className="card-body d-flex flex-column justify-content-center align-items-center">
+              <i
+                className="bi bi-trophy-fill text-warning"
+                style={{ fontSize: "3rem" }}
+              ></i>
+              <h5 className="card-title mt-3">Kids Tournaments</h5>
+              <p className="card-text">Create and manage fun tournaments with QR codes!</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

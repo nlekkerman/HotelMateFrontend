@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { memoryGameAPI } from '@/services/memoryGameAPI';
+import TournamentCreator from './TournamentCreator';
 
 export default function TournamentList({ onTournamentSelect }) {
   const [tournaments, setTournaments] = useState([]);
@@ -7,6 +8,7 @@ export default function TournamentList({ onTournamentSelect }) {
   const [error, setError] = useState(null);
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [showRegistration, setShowRegistration] = useState(false);
+  const [showTournamentCreator, setShowTournamentCreator] = useState(false);
 
   useEffect(() => {
     const loadTournaments = async () => {
@@ -81,6 +83,12 @@ export default function TournamentList({ onTournamentSelect }) {
     }
   };
 
+  const handleTournamentCreated = async (tournament) => {
+    // Refresh tournaments to include the new one
+    const updatedTournaments = await memoryGameAPI.getTournaments('active');
+    setTournaments(updatedTournaments || []);
+  };
+
   if (loading) {
     return (
       <div className="container-fluid">
@@ -96,7 +104,16 @@ export default function TournamentList({ onTournamentSelect }) {
 
   return (
     <div className="container-fluid">
-      <h2 className="text-center mb-4">🏆 Memory Match Tournaments</h2>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="mb-0">🏆 Memory Match Tournaments</h2>
+        <button
+          className="btn btn-success"
+          onClick={() => setShowTournamentCreator(true)}
+        >
+          <i className="bi bi-plus-circle me-2"></i>
+          Create Tournament
+        </button>
+      </div>
 
       {error && (
         <div className="alert alert-warning text-center" role="alert">
@@ -137,6 +154,14 @@ export default function TournamentList({ onTournamentSelect }) {
             setShowRegistration(false);
             setSelectedTournament(null);
           }}
+        />
+      )}
+
+      {/* Tournament Creator Modal */}
+      {showTournamentCreator && (
+        <TournamentCreator
+          onTournamentCreated={handleTournamentCreated}
+          onClose={() => setShowTournamentCreator(false)}
         />
       )}
     </div>

@@ -1,15 +1,23 @@
 import api from "./api";
+import publicApi from "./publicApi";
 
 class MemoryGameAPI {
   constructor() {
     this.baseURL = '/entertainment';
     this.pendingSessions = this.loadPendingSessions();
+    this.cloudinaryBase = import.meta.env.VITE_CLOUDINARY_BASE || '';
+  }
+
+  // Helper function to get full image URL
+  getFullImageUrl(path) {
+    if (!path) return null;
+    return path.startsWith("http") ? path : `${this.cloudinaryBase}${path}`;
   }
 
   // Score calculation function (matches backend logic)
   calculateScore(difficulty, timeSeconds, movesCount) {
     const multipliers = { easy: 1.0, intermediate: 1.5, hard: 2.0 };
-    const optimalMoves = { easy: 32, intermediate: 72, hard: 128 };
+    const optimalMoves = { easy: 16, intermediate: 24, hard: 32 }; // easy=8 pairs, intermediate=12 pairs, hard=16 pairs
     
     const baseScore = multipliers[difficulty] * 1000;
     const timePenalty = timeSeconds * 2;
@@ -18,10 +26,97 @@ class MemoryGameAPI {
     return Math.max(0, Math.floor(baseScore - timePenalty - movesPenalty));
   }
 
+  // Card Management - Load cards from database
+  async getGameCards(difficulty = 'easy', pairs = 8) {
+    try {
+      // Try public API first for guest access, fallback to authenticated API
+      let response;
+      try {
+        console.log('🎮 Trying to load cards via public API...');
+        response = await publicApi.get(`entertainment/memory-cards/`, {
+          params: { difficulty, pairs, for_game: true }
+        });
+        console.log('✅ Public API response:', response.data);
+      } catch (publicError) {
+        console.log('❌ Public API failed:', publicError);
+        console.log('🔄 Falling back to authenticated API...');
+        // Fallback to authenticated API
+        response = await api.get(`${this.baseURL}/memory-cards/`, {
+          params: { difficulty, pairs, for_game: true }
+        });
+        console.log('✅ Authenticated API response:', response.data);
+      }
+      
+      // Handle paginated response
+      const data = response.data;
+      if (data && data.results) {
+        // Fix image URLs by adding Cloudinary base URL if needed
+        const cardsWithFullUrls = data.results.map(card => ({
+          ...card,
+          image_url: this.getFullImageUrl(card.image_url)
+        }));
+        
+        const result = {
+          difficulty,
+          pairs_needed: pairs,
+          cards_count: cardsWithFullUrls.length,
+          cards: cardsWithFullUrls
+        };
+        console.log('🎯 Final card data structure:', result);
+        console.log('🖼️ Original URLs:', data.results.slice(0, 2).map(card => card.image_url));
+        console.log('🌐 Full URLs:', cardsWithFullUrls.slice(0, 2).map(card => card.image_url));
+        return result;
+      }
+      
+      // Legacy format support
+      console.log('📦 Using legacy format:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Failed to load game cards:', error);
+      console.log('🔄 Using fallback cards...');
+      // Return fallback for offline mode
+      return this.getFallbackCards(difficulty, pairs);
+    }
+  }
+
+  // Fallback cards for offline mode (using existing static images as backup)
+  getFallbackCards(difficulty, pairs) {
+    // Import the images dynamically for Vite
+    const fallbackCards = [
+      { id: 'fallback-1', name: 'Alien', slug: 'alien', image_url: new URL('../games/memory-match/assets/images/smileys/alien.png', import.meta.url).href },
+      { id: 'fallback-2', name: 'Fox', slug: 'fox', image_url: new URL('../games/memory-match/assets/images/smileys/fox.png', import.meta.url).href },
+      { id: 'fallback-3', name: 'Cute', slug: 'cute', image_url: new URL('../games/memory-match/assets/images/smileys/cute.png', import.meta.url).href },
+      { id: 'fallback-4', name: 'Face', slug: 'face', image_url: new URL('../games/memory-match/assets/images/smileys/face.png', import.meta.url).href },
+      { id: 'fallback-5', name: 'Smiley', slug: 'smiley', image_url: new URL('../games/memory-match/assets/images/smileys/smiley.png', import.meta.url).href },
+      { id: 'fallback-6', name: 'Hit', slug: 'hit', image_url: new URL('../games/memory-match/assets/images/smileys/hit.png', import.meta.url).href },
+      { id: 'fallback-7', name: 'Miss', slug: 'miss', image_url: new URL('../games/memory-match/assets/images/smileys/miss.png', import.meta.url).href },
+      { id: 'fallback-8', name: 'Iceman', slug: 'iceman', image_url: new URL('../games/memory-match/assets/images/smileys/iceman.png', import.meta.url).href }
+    ];
+    
+    const result = {
+      difficulty,
+      pairs_needed: pairs,
+      cards_count: Math.min(pairs, fallbackCards.length),
+      cards: fallbackCards.slice(0, pairs)
+    };
+    
+    console.log('🔄 Using fallback cards:', result);
+    console.log('🖼️ Fallback image URLs:', result.cards.slice(0, 2).map(card => card.image_url));
+    
+    return result;
+  }
+
   // Game Session Management
   async saveGameSession(gameData) {
     try {
-      const response = await api.post(`${this.baseURL}/memory-sessions/`, gameData);
+      // Try public API first for guest tournament play, fallback to authenticated API
+      let response;
+      try {
+        response = await publicApi.post(`entertainment/memory-sessions/`, gameData);
+      } catch (publicError) {
+        // Fallback to authenticated API
+        response = await api.post(`${this.baseURL}/memory-sessions/`, gameData);
+      }
       
       // If successful, try to sync any pending sessions
       this.syncPendingSessions();
@@ -52,7 +147,7 @@ class MemoryGameAPI {
       if (difficulty) params.difficulty = difficulty;
       
       const response = await api.get(`${this.baseURL}/memory-sessions/`, { params });
-      return response.data;
+      return response.data.results || response.data || [];
     } catch (error) {
       console.error('Failed to load game history:', error);
       return [];
@@ -64,7 +159,7 @@ class MemoryGameAPI {
       const response = await api.get(`${this.baseURL}/memory-sessions/leaderboard/`, {
         params: { difficulty, limit }
       });
-      return response.data;
+      return response.data.results || response.data || [];
     } catch (error) {
       console.error('Failed to load leaderboard:', error);
       return [];
@@ -77,10 +172,21 @@ class MemoryGameAPI {
       const response = await api.get(`${this.baseURL}/tournaments/`, {
         params: { status }
       });
-      return response.data;
+      // Handle paginated response
+      return response.data.results || response.data || [];
     } catch (error) {
       console.error('Failed to load tournaments:', error);
       return [];
+    }
+  }
+
+  async createTournament(tournamentData) {
+    try {
+      const response = await api.post(`${this.baseURL}/tournaments/`, tournamentData);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to create tournament:', error);
+      throw error;
     }
   }
 
@@ -99,15 +205,23 @@ class MemoryGameAPI {
     return response.data;
   }
 
-  async getTournamentLeaderboard(tournamentId, limit = 20) {
-    const response = await api.get(`${this.baseURL}/tournaments/${tournamentId}/leaderboard/`, {
-      params: { limit }
-    });
-    return response.data;
+  async getTournamentLeaderboard(tournamentId) {
+    const response = await api.get(`${this.baseURL}/tournaments/${tournamentId}/leaderboard/`);
+    return response.data.results || response.data || [];
   }
 
   async getTournamentParticipants(tournamentId) {
     const response = await api.get(`${this.baseURL}/tournaments/${tournamentId}/participants/`);
+    return response.data.results || response.data || [];
+  }
+
+  async startTournament(tournamentId) {
+    const response = await api.post(`${this.baseURL}/tournaments/${tournamentId}/start/`);
+    return response.data;
+  }
+
+  async endTournament(tournamentId) {
+    const response = await api.post(`${this.baseURL}/tournaments/${tournamentId}/end/`);
     return response.data;
   }
 
@@ -115,7 +229,7 @@ class MemoryGameAPI {
   async getAchievements() {
     try {
       const response = await api.get(`${this.baseURL}/achievements/`);
-      return response.data;
+      return response.data.results || response.data || [];
     } catch (error) {
       console.error('Failed to load achievements:', error);
       return [];
@@ -125,10 +239,21 @@ class MemoryGameAPI {
   async getUserAchievements() {
     try {
       const response = await api.get(`${this.baseURL}/achievements/my-achievements/`);
-      return response.data;
+      return response.data.results || response.data || [];
     } catch (error) {
       console.error('Failed to load user achievements:', error);
       return [];
+    }
+  }
+
+  // Dashboard stats
+  async getDashboardStats() {
+    try {
+      const response = await api.get(`${this.baseURL}/dashboard/stats/`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to load dashboard stats:', error);
+      return {};
     }
   }
 
@@ -321,17 +446,88 @@ class MemoryGameAPI {
 
   getDifficultyDisplay(difficulty) {
     const displays = {
-      easy: 'Easy (4x4)',
-      intermediate: 'Intermediate (6x6)', 
-      hard: 'Hard (8x8)'
+      easy: 'Easy (2x4)',
+      intermediate: 'Intermediate (3x4)', 
+      hard: 'Hard (4x4)'
     };
     return displays[difficulty] || difficulty;
   }
 
   getOptimalMoves(difficulty) {
-    const optimalMoves = { easy: 32, intermediate: 72, hard: 128 };
-    return optimalMoves[difficulty] || 32;
+    const optimalMoves = { easy: 16, intermediate: 24, hard: 32 }; // Updated for new grid sizes
+    return optimalMoves[difficulty] || 16;
   }
+  // Tournament Management Functions
+  
+  async getTournaments() {
+    try {
+      const response = await api.get(`${this.baseURL}/tournaments/`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch tournaments:', error);
+      // If 404 or 500, backend probably doesn't have tournament endpoints yet
+      if (error.response?.status === 404 || error.response?.status === 500) {
+        throw new Error('Tournament API endpoints not implemented on backend yet');
+      }
+      throw error;
+    }
+  }
+
+  async createTournament(tournamentData) {
+    try {
+      const response = await api.post(`${this.baseURL}/tournaments/`, tournamentData);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to create tournament:', error);
+      // If 404 or 500, backend probably doesn't have tournament endpoints yet
+      if (error.response?.status === 404 || error.response?.status === 500) {
+        throw new Error('Tournament API endpoints not implemented on backend yet');
+      }
+      throw error;
+    }
+  }
+
+  async getTournament(tournamentId) {
+    try {
+      const response = await api.get(`${this.baseURL}/tournaments/${tournamentId}/`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch tournament:', error);
+      throw error;
+    }
+  }
+
+  async getTournamentLeaderboard(tournamentId) {
+    try {
+      const response = await api.get(`${this.baseURL}/tournaments/${tournamentId}/leaderboard/`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch tournament leaderboard:', error);
+      throw error;
+    }
+  }
+
+  async updateTournament(tournamentId, updateData) {
+    try {
+      const response = await api.patch(`${this.baseURL}/tournaments/${tournamentId}/`, updateData);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to update tournament:', error);
+      throw error;
+    }
+  }
+
+  // QR Code Generation
+  async generateTournamentQR(qrData) {
+    try {
+      const response = await api.post(`${this.baseURL}/tournaments/generate-qr/`, qrData);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to generate QR code:', error);
+      throw error;
+    }
+  }
+
 }
 
 // Create and export singleton instance
