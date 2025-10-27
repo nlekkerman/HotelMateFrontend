@@ -1,102 +1,51 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { memoryGameAPI } from '@/services/memoryGameAPI';
+import { useAuth } from '@/context/AuthContext';
 
 const MemoryMatchDashboard = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   const hotelSlug = searchParams.get('hotel');
 
   useEffect(() => {
+    // If no hotel parameter but user is logged in, redirect with their hotel
+    if (!hotelSlug && user?.hotel_slug) {
+      setSearchParams({ hotel: user.hotel_slug });
+      return;
+    }
+
     if (hotelSlug) {
       fetchActiveTournaments();
     } else {
       // No hotel specified - show general options
       setLoading(false);
     }
-  }, [hotelSlug]);
+  }, [hotelSlug, user?.hotel_slug, setSearchParams]);
 
   const fetchActiveTournaments = async () => {
     try {
       setError(null);
-      console.log(`🎮 Fetching tournaments for hotel: ${hotelSlug}`);
       
       // Use the updated memoryGameAPI method
       const data = await memoryGameAPI.getActiveTournamentsForHotel(hotelSlug);
       
       if (data.tournaments && data.tournaments.length > 0) {
-        console.log(`🎯 Found ${data.tournaments.length} tournaments from API!`);
         setTournaments(data.tournaments);
       } else {
-        console.log('🔄 No API tournaments found, using mock data...');
-        
-        // Mock data for testing when no real tournaments available
-        const mockTournaments = [
-          {
-            id: 16,
-            name: "Memory Match Daily - Monday",
-            description: "Daily Memory Match for October 27, 2025. 3×4 grid (6 pairs) - Test tournament!",
-            start_date: "2025-10-27T12:00:00Z",
-            end_date: "2025-10-27T19:00:00Z", 
-            status: "active",
-            participant_count: 0,
-            first_prize: "Hotel Game Room Pass",
-            second_prize: "Pool Day Pass",
-            third_prize: "Ice Cream Voucher"
-          },
-          {
-            id: 17,
-            name: "Memory Match Daily - Tuesday",
-            description: "Tomorrow's tournament - 3×4 grid challenge!",
-            start_date: "2025-10-28T12:00:00Z",
-            end_date: "2025-10-28T19:00:00Z",
-            status: "upcoming",
-            participant_count: 5,
-            first_prize: "Spa Day Voucher",
-            second_prize: "Restaurant Credit",
-            third_prize: "Gift Shop Voucher"
-          },
-          {
-            id: 18,
-            name: "Memory Match Weekend Special",
-            description: "Weekend tournament with special prizes!",
-            start_date: "2025-10-26T09:00:00Z",
-            end_date: "2025-10-26T18:00:00Z",
-            status: "completed",
-            participant_count: 15,
-            first_prize: "Weekend Getaway",
-            second_prize: "Dinner for Two", 
-            third_prize: "Cocktail Voucher"
-          }
-        ];
-        
-        setTournaments(mockTournaments);
-        setError('Using demo tournaments - connect to backend for real tournaments');
+        // No tournaments available from API
+        setTournaments([]);
+        setError('No active tournaments found for this hotel');
       }
       
     } catch (error) {
-      console.error('❌ Error fetching tournaments:', error);
       setError(`Tournament API unavailable: ${error.message}`);
-      
-      // Fallback mock data
-      setTournaments([
-        {
-          id: 999,
-          name: "Demo Tournament - Offline Mode", 
-          description: "Test tournament for offline demonstration",
-          start_date: "2025-10-27T10:00:00Z",
-          end_date: "2025-10-27T22:00:00Z",
-          status: "active",
-          participant_count: 0,
-          first_prize: "Demo Prize",
-          second_prize: "Second Prize",
-          third_prize: "Third Prize"
-        }
-      ]);
+      setTournaments([]);
     } finally {
       setLoading(false);
     }
@@ -123,7 +72,6 @@ const MemoryMatchDashboard = () => {
       });
       
       // Show alert notification
-      alert(`🕒 Tournament Not Started Yet!\n\n${tournament.name}\nStarts: ${startDateTime}`);
       
       return;
     }
@@ -140,7 +88,6 @@ const MemoryMatchDashboard = () => {
       });
       
       // Show alert notification
-      alert(`🏁 Tournament Has Ended!\n\n${tournament.name}\nEnded: ${endDateTime}\n\nCheck the leaderboard to see results!`);
       
       return;
     }
@@ -179,6 +126,9 @@ const MemoryMatchDashboard = () => {
               🎮 Memory Match
             </h1>
             <p className="lead mb-2">3×4 Grid • Match 6 Pairs • Test Your Memory!</p>
+            <div className="badge bg-light text-dark fs-6 px-3 py-2 mb-2">
+              🎯 Simplified Game: No Difficulty Selection • Fixed 3×4 Grid for Fair Play
+            </div>
             {hotelSlug && (
               <div className="badge bg-light text-dark fs-6 px-3 py-2">
                 🏨 Welcome to {hotelSlug.replace('-', ' ').toUpperCase()}
@@ -195,20 +145,28 @@ const MemoryMatchDashboard = () => {
                   <div className="display-1 mb-3">🏃‍♀️</div>
                   <h2 className="card-title h3 text-primary mb-3">Practice Mode</h2>
                   <p className="card-text text-muted mb-4">
-                    Play without limits • Scores saved locally
+                    Play without limits • Fixed 3×4 grid • Scores saved locally
                   </p>
                   <ul className="list-unstyled mb-4 text-start">
                     <li className="mb-2">✅ No registration needed</li>
                     <li className="mb-2">✅ Unlimited attempts</li>
-                    <li className="mb-2">✅ Track your best scores</li>
-                    <li className="mb-2">✅ Perfect for learning</li>
+                    <li className="mb-2">✅ Simple 3×4 grid (6 pairs)</li>
+                    <li className="mb-2">✅ Perfect for all skill levels</li>
                   </ul>
-                  <button 
-                    className="btn btn-primary btn-lg w-100"
-                    onClick={startPractice}
-                  >
-                    Start Practice
-                  </button>
+                  <div className="d-grid gap-2">
+                    <button 
+                      className="btn btn-primary btn-lg"
+                      onClick={startPractice}
+                    >
+                      Start Practice
+                    </button>
+                    <button 
+                      className="btn btn-outline-primary"
+                      onClick={() => navigate('/games/memory-match/stats')}
+                    >
+                      📊 View My Scores
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -220,7 +178,7 @@ const MemoryMatchDashboard = () => {
                   <div className="display-1 mb-3">🏆</div>
                   <h2 className="card-title h3 text-success mb-3">Tournament Mode</h2>
                   <p className="card-text text-muted mb-4">
-                    Compete with other guests • Win prizes!
+                    Compete with other guests • Fixed 3×4 grid for fair play • Win prizes!
                   </p>
                   
                   {error && (
@@ -235,22 +193,7 @@ const MemoryMatchDashboard = () => {
                     </div>
                   )}
                   
-                  {/* Debug Info */}
-                  {hotelSlug && (
-                    <div className="alert alert-info mb-3">
-                      <div className="d-flex align-items-start">
-                        <span className="me-2">🔧</span>
-                        <div>
-                          <div className="fw-bold">Debug Info</div>
-                          <small>
-                            Hotel: {hotelSlug}<br/>
-                            Tournaments loaded: {tournaments.length}<br/>
-                            API Base: {window.location.hostname === 'localhost' ? 'localhost:8000' : 'production'}
-                          </small>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                 
                   
                   {tournaments.length > 0 ? (
                     <div className="tournaments-list mb-4">
@@ -301,7 +244,13 @@ const MemoryMatchDashboard = () => {
                                   <div>📅 {startTime.toLocaleDateString()} • {startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - {endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
                                   <div>👥 {tournament.participant_count} players • 🎯 6 pairs (12 cards)</div>
                                 </div>
-                                <div className="d-flex justify-content-end">
+                                <div className="d-flex justify-content-end gap-2">
+                                  <button 
+                                    className="btn btn-sm btn-outline-info"
+                                    onClick={() => navigate(`/games/memory-match/leaderboard?tournament=${tournament.id}`)}
+                                  >
+                                    🏆 Rankings
+                                  </button>
                                   <button 
                                     className={`btn btn-sm ${buttonClass}`}
                                     onClick={() => startTournament(tournament)}
@@ -346,19 +295,27 @@ const MemoryMatchDashboard = () => {
             <div className="card-body p-4">
               <div className="row align-items-center">
                 <div className="col-12 col-md-8">
-                  <h5 className="card-title mb-2">💡 How to Play</h5>
+                  <h5 className="card-title mb-2">💡 How to Play (Simplified)</h5>
                   <p className="card-text mb-0">
-                    Flip cards to find matching pairs. Complete all 6 pairs in the fewest moves and fastest time! 
+                    <strong>3×4 Grid Only:</strong> Flip cards to find all 6 matching pairs. Everyone plays the same layout for fair competition! 
                     Perfect game is 12 moves in under 30 seconds.
                   </p>
                 </div>
                 <div className="col-12 col-md-4 text-md-end mt-3 mt-md-0">
-                  <button 
-                    className="btn btn-outline-secondary"
-                    onClick={goToTournamentManagement}
-                  >
-                    📊 Tournament Management
-                  </button>
+                  <div className="d-grid d-md-block gap-2">
+                    <button 
+                      className="btn btn-outline-primary me-md-2 mb-2 mb-md-0"
+                      onClick={() => navigate('/games/memory-match/leaderboard')}
+                    >
+                      🏆 Leaderboard
+                    </button>
+                    <button 
+                      className="btn btn-outline-secondary"
+                      onClick={goToTournamentManagement}
+                    >
+                      📊 Tournament Management
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

@@ -2,22 +2,29 @@
 import api from "@/services/api";
 
 function logRequest(name, hotelSlug, params, url) {
-  console.groupCollapsed(
-    `%c[API] ${name}`,
-    "color:#09f;font-weight:bold;",
-    { hotelSlug, params, url }
-  );
+  // Log request details in development mode only
+  if (process.env.NODE_ENV === 'development') {
+    console.log(
+      `%c[API] ${name}`,
+      "color:#09f;font-weight:bold;",
+      { hotelSlug, params, url }
+    );
+  }
 }
 
 function logSuccess(name, res) {
-  console.log(`[API] ${name} -> status:`, res.status);
-  console.log(`[API] ${name} -> payload:`, res.data);
-  console.groupEnd();
+  // Log success details in development mode only
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[API] ${name} -> status:`, res.status);
+    console.log(`[API] ${name} -> payload:`, res.data);
+  }
 }
 
 function logError(name, err) {
-  console.error(`[API] ${name} error:`, err);
-  console.groupEnd();
+  // Log errors in development mode only
+  if (process.env.NODE_ENV === 'development') {
+    console.error(`[API] ${name} error:`, err);
+  }
 }
 
 export const getKpis = async (hotelSlug, params) => {

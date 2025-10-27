@@ -143,6 +143,12 @@ const MobileNavbar = () => {
       roles: ["chef", "bartender", "manager"],
     },
     {
+      path: `/games/?hotel=${hotelIdentifier}`,
+      label: "Games",
+      icon: "controller",
+      roles: ["manager", "staff_admin", "super_staff_admin"],
+    },
+    {
       path: "/settings",
       label: "Settings",
       icon: "gear",
@@ -165,7 +171,14 @@ const MobileNavbar = () => {
     },
   ];
 
-  const isActive = (path) => location.pathname.startsWith(path);
+  const isActive = (path) => {
+    // Handle paths with query parameters (like Games)
+    if (path.includes('?')) {
+      const pathWithoutQuery = path.split('?')[0];
+      return location.pathname.startsWith(pathWithoutQuery);
+    }
+    return location.pathname.startsWith(path);
+  };
 
   const hiddenNavPatterns = [
     /^\/room_services\/[^/]+\/room\/[^/]+\/breakfast\/?$/,

@@ -35,7 +35,6 @@ export const ChatProvider = ({ children }) => {
 
       setConversations(convs);
     } catch (err) {
-      console.error("Failed to fetch conversations:", err);
     }
   }, [user?.hotel_slug]);
 
@@ -107,7 +106,6 @@ export const ChatProvider = ({ children }) => {
         )
       );
     } catch (err) {
-      console.error("Failed to mark conversation as read:", err);
     }
   };
 

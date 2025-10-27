@@ -34,7 +34,6 @@ export default function useHotel() {
           }
         }
       } catch (error) {
-        console.error("useHotel: failed to load hotel data", error);
       }
     };
 

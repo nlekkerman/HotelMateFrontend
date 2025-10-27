@@ -5,7 +5,6 @@ const fetchStaffMetadata = async (hotelSlug) => {
   // Build URL with hotelSlug as part of the path
   const url = `/staff/${hotelSlug}/metadata/`;
   const response = await api.get(url);
-  console.log("API response for staff metadata:", response.data);
   return response.data;
 };
 

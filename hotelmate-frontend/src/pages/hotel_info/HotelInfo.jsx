@@ -235,11 +235,9 @@ export default function HotelInfo() {
         };
       }
     } catch (err) {
-      console.error("Failed to download all QR codes", err);
     }
   };
   const openEditModal = (item) => {
-    console.log("Opening edit modal for item:", item);
     setEditingItem(item);
     setShowEditModal(true);
   };

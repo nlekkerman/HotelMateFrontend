@@ -34,7 +34,6 @@ async function applySavedTheme() {
       secondary_color
     );
   } catch (e) {
-    console.warn("Could not load theme:", e);
   }
 }
 

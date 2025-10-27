@@ -33,12 +33,10 @@ function useAxiosPost(endpoint) {
           is_superuser,
         };
         localStorage.setItem("user", JSON.stringify(userToStore));
-        console.log("[useAxiosPost] Stored user info in localStorage:", userToStore);
       }
 
       return response.data;
     } catch (err) {
-  console.error("[Login] Login failed with error:", err);
   if (err.response?.data?.non_field_errors) {
     setError(err.response.data.non_field_errors.join(' '));
   } else if (err.response?.data) {

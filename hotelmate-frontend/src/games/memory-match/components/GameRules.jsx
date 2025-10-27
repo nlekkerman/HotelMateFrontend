@@ -28,7 +28,8 @@ export default function GameRules({ isVisible, onClose, isQRTournament = false }
         
         <div className="card-body p-4">
           <div className="text-center mb-4">
-            <h5 className="text-success">🎯 How to Play</h5>
+            <h5 className="text-success">🎯 How to Play (Simplified Memory Match)</h5>
+            <p className="text-muted small mb-0">Fixed 3×4 Grid • 6 Pairs • 12 Total Cards • No Difficulty Selection</p>
           </div>
           
           <div className="row g-4">
@@ -75,7 +76,7 @@ export default function GameRules({ isVisible, onClose, isQRTournament = false }
                     <i className="bi bi-4-circle-fill text-warning" style={{fontSize: '2rem'}}></i>
                   </div>
                   <h6>🔄 Keep Going</h6>
-                  <p className="small mb-0">Find all 12 pairs as fast as you can!</p>
+                  <p className="small mb-0">Find all 6 pairs as fast as you can!</p>
                 </div>
               </div>
             </div>
@@ -83,12 +84,13 @@ export default function GameRules({ isVisible, onClose, isQRTournament = false }
           
           {isQRTournament && (
             <div className="alert alert-success mt-4">
-              <h6>🏆 Tournament Mode</h6>
+              <h6>🏆 Tournament Mode - Simplified!</h6>
               <ul className="mb-0 small">
-                <li>🎯 <strong>Goal:</strong> Find all 12 matching pairs</li>
+                <li>🎯 <strong>Goal:</strong> Find all 6 matching pairs (12 cards total)</li>
+                <li>📐 <strong>Layout:</strong> Fixed 3×4 grid • No difficulty selection</li>
                 <li>⏱️ <strong>Speed:</strong> Faster times = higher scores</li>
-                <li>🎯 <strong>Accuracy:</strong> Fewer moves = better score</li>
-                <li>🎁 <strong>Rewards:</strong> Symbolic prizes for playing!</li>
+                <li>🎯 <strong>Accuracy:</strong> Fewer moves = better score (perfect: 12 moves)</li>
+                <li>🎁 <strong>Fair Play:</strong> Everyone gets the same challenge!</li>
               </ul>
             </div>
           )}

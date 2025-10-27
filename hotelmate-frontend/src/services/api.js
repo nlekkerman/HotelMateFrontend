@@ -8,13 +8,11 @@ const baseURL = (() => {
   if (isLocal && isDev) {
     // For development, try local backend first
     // If local backend is not available, the interceptor will handle fallback
-    console.log("🔧 Development mode: Attempting to use local backend at localhost:8000");
     return "http://localhost:8000/api/";
   }
   
   // Production or when VITE_API_URL is explicitly set
   const prodUrl = import.meta.env.VITE_API_URL || "https://hotel-porter-d25ad83b12cf.herokuapp.com/api";
-  console.log("🌐 Production mode: Using backend at", prodUrl);
   return prodUrl;
 })();
 
@@ -29,11 +27,6 @@ api.interceptors.response.use(
   (error) => {
     // Handle CORS and connection errors
     if (error.code === 'ERR_NETWORK' || error.message.includes('CORS')) {
-      console.warn('🌐 Network/CORS error detected. Backend may not be available or CORS not configured.');
-      console.log('💡 Solutions:');
-      console.log('  1. Start local backend server on localhost:8000');
-      console.log('  2. Configure CORS on production backend');
-      console.log('  3. Use a CORS proxy for development');
     }
     
     return Promise.reject(error);
@@ -66,7 +59,6 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error("[API] Request error:", error);
     return Promise.reject(error);
   }
 );
