@@ -83,12 +83,7 @@ import GamesDashboard from "@/games/GamesDashboard";
 import WhackAMolePage from "@/games/whack-a-mole/pages/GamePage";
 import MemoryGame from "@/games/memory-match/pages/MemoryGame";
 import MemoryMatchDashboard from "@/games/memory-match/pages/MemoryMatchDashboard";
-import PracticeStats from "@/games/memory-match/components/PracticeStats";
 import TournamentDashboard from "@/games/memory-match/pages/TournamentDashboard";
-// Tournament QR landing / play / leaderboard
-import TournamentRegistration from "@/components/tournaments/TournamentRegistration";
-import TournamentGamePage from "@/components/tournaments/TournamentGame";
-import TournamentLeaderboard from "@/components/tournaments/TournamentLeaderboard";
 
 const queryClient = new QueryClient();
 // Default settings for all games
@@ -160,19 +155,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin"
                 element={<DinnerPinAuth />}
               />
-              {/* Tournament QR Code landing/play/leaderboard - place before generic restaurant route to avoid conflicts */}
-              <Route
-                path="/tournaments/:hotelSlug/:tournamentSlug/register"
-                element={<TournamentRegistration />}
-              />
-              <Route
-                path="/tournaments/:hotelSlug/:tournamentSlug/play"
-                element={<TournamentGamePage />}
-              />
-              <Route
-                path="/tournaments/:hotelSlug/:tournamentSlug/leaderboard"
-                element={<TournamentLeaderboard />}
-              />
+              {/* Tournament routes removed - using new dashboard approach */}
               <Route
                 path="/:hotelSlug/:restaurantSlug"
                 element={<RestaurantManagementDashboard />}
@@ -329,42 +312,22 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 element={<ChatWindow />}
               />
 
-              {/*Games */}
+              {/* Games - Clean Routes Only */}
               <Route path="/games" element={<GamesDashboard />} />
               <Route
                 path="/games/whack-a-mole"
                 element={<WhackAMolePage audioSettings={audioSettings} />}
               />
-              {/* New Refactored Routes */}
+              
+              {/* Memory Match - Refactored Dashboard Approach */}
               <Route path="/games/memory-match" element={<MemoryMatchDashboard />} />
               <Route path="/games/memory-match/practice" element={<MemoryGame practiceMode={true} />} />
               <Route path="/games/memory-match/tournament/:tournamentId" element={<MemoryGame />} />
-              <Route path="/games/memory-match/stats" element={<PracticeStats />} />
               <Route path="/games/memory-match/tournaments" element={<TournamentDashboard />} />
+              
               <Route
                 path="/games/settings"
                 element={<div>Game Settings Coming Soon!</div>}
-              />
-              
-              {/* Tournament Routes - QR Code Entry Points */}
-              {/* Backend Integration Routes - QR codes point to these */}
-              <Route 
-                path="/tournaments/:hotelSlug/:tournamentSlug/play" 
-                element={<MemoryGame />} 
-              />
-              <Route 
-                path="/tournaments/:hotelSlug/:tournamentSlug/leaderboard" 
-                element={<MemoryGame currentView="leaderboard" />} 
-              />
-              
-              {/* Legacy tournament routes for backward compatibility */}
-              <Route 
-                path="/tournament/:tournamentId" 
-                element={<MemoryGame />} 
-              />
-              <Route 
-                path="/games/memory-match/tournament/:tournamentId" 
-                element={<MemoryGame />} 
               />
               
               {/* Catch All */}

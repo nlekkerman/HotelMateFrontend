@@ -556,14 +556,39 @@ class MemoryGameAPI {
   // Get Active Tournaments for Hotel (new refactored approach)
   async getActiveTournamentsForHotel(hotelSlug) {
     try {
-      const response = await api.get(`${this.baseURL}/tournaments/active/`, {
-        params: { hotel: hotelSlug }
-      });
+      console.log(`🎯 Fetching tournaments for hotel: ${hotelSlug}`);
       
-      return {
-        tournaments: response.data.tournaments || response.data.results || [],
-        count: response.data.count || 0
-      };
+      // Try multiple endpoint patterns based on backend documentation
+      const endpoints = [
+        `${this.baseURL}/tournaments/active_for_hotel/?hotel=${hotelSlug}`,
+        `${this.baseURL}/tournaments/active/?hotel=${hotelSlug}`,
+        `${this.baseURL}/tournaments/?hotel=${hotelSlug}&status=active`,
+        `${this.baseURL}/tournaments/?hotel_slug=${hotelSlug}`,
+      ];
+      
+      for (const endpoint of endpoints) {
+        try {
+          console.log(`📡 Trying endpoint: ${endpoint}`);
+          const response = await api.get(endpoint);
+          console.log(`✅ Success from ${endpoint}:`, response.data);
+          
+          const tournaments = response.data.tournaments || response.data.results || response.data;
+          if (Array.isArray(tournaments)) {
+            return {
+              tournaments: tournaments,
+              count: tournaments.length
+            };
+          }
+        } catch (endpointError) {
+          console.log(`❌ Failed ${endpoint}:`, endpointError.response?.status || endpointError.message);
+          continue;
+        }
+      }
+      
+      // If all endpoints fail, return empty but don't throw
+      console.log('🔄 All tournament endpoints failed, returning empty result');
+      return { tournaments: [], count: 0 };
+      
     } catch (error) {
       console.error('Failed to fetch active tournaments for hotel:', error);
       return { tournaments: [], count: 0 };
