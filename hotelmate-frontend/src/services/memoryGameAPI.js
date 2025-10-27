@@ -507,6 +507,17 @@ class MemoryGameAPI {
     }
   }
 
+  // NEW: Anonymous Tournament Play Session (Key endpoint!)
+  async createTournamentPlaySession(tournamentId, gameData) {
+    try {
+      const response = await api.post(`${this.baseURL}/tournaments/${tournamentId}/play_session/`, gameData);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to create tournament play session:', error);
+      throw error;
+    }
+  }
+
   async updateTournament(tournamentId, updateData) {
     try {
       const response = await api.patch(`${this.baseURL}/tournaments/${tournamentId}/`, updateData);
@@ -517,27 +528,19 @@ class MemoryGameAPI {
     }
   }
 
-  // QR Code Generation - using existing games/qrcodes endpoint
-  async generateTournamentQR(qrData) {
-    try {
-      // Try the games/qrcodes endpoint first
-      const response = await api.post(`${this.baseURL}/games/qrcodes/`, qrData);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to generate QR code:', error);
-      throw error;
+  // QR Code access - tournaments have qr_code_url field directly
+  getTournamentQRCode(tournament, type = 'play') {
+    // Your API shows tournaments have qr_code_url field with the Cloudinary URL
+    if (tournament.qr_code_url) {
+      return tournament.qr_code_url;
     }
-  }
-
-  // Get existing QR codes
-  async getQRCodes(params = {}) {
-    try {
-      const response = await api.get(`${this.baseURL}/games/qrcodes/`, { params });
-      return response.data.results || response.data || [];
-    } catch (error) {
-      console.error('Failed to fetch QR codes:', error);
-      throw error;
+    
+    // Fallback: construct expected Cloudinary URL based on your pattern
+    if (tournament.hotel?.slug && tournament.slug) {
+      return `https://res.cloudinary.com/dg0ssec7u/image/upload/tournament_qr/${tournament.hotel.slug}_${tournament.slug}.png`;
     }
+    
+    return null;
   }
 
 }
