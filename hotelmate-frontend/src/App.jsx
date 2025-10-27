@@ -82,6 +82,7 @@ import ChatWindow from "@/components/chat/ChatWindow";
 import GamesDashboard from "@/games/GamesDashboard";
 import WhackAMolePage from "@/games/whack-a-mole/pages/GamePage";
 import MemoryGame from "@/games/memory-match/pages/MemoryGame";
+import MemoryMatchDashboard from "@/games/memory-match/pages/MemoryMatchDashboard";
 import PracticeStats from "@/games/memory-match/components/PracticeStats";
 import TournamentDashboard from "@/games/memory-match/pages/TournamentDashboard";
 // Tournament QR landing / play / leaderboard
@@ -334,7 +335,10 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 path="/games/whack-a-mole"
                 element={<WhackAMolePage audioSettings={audioSettings} />}
               />
-              <Route path="/games/memory-match" element={<MemoryGame />} />
+              {/* New Refactored Routes */}
+              <Route path="/games/memory-match" element={<MemoryMatchDashboard />} />
+              <Route path="/games/memory-match/practice" element={<MemoryGame practiceMode={true} />} />
+              <Route path="/games/memory-match/tournament/:tournamentId" element={<MemoryGame />} />
               <Route path="/games/memory-match/stats" element={<PracticeStats />} />
               <Route path="/games/memory-match/tournaments" element={<TournamentDashboard />} />
               <Route
@@ -343,17 +347,20 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               />
               
               {/* Tournament Routes - QR Code Entry Points */}
+              {/* Backend Integration Routes - QR codes point to these */}
+              <Route 
+                path="/tournaments/:hotelSlug/:tournamentSlug/play" 
+                element={<MemoryGame />} 
+              />
+              <Route 
+                path="/tournaments/:hotelSlug/:tournamentSlug/leaderboard" 
+                element={<MemoryGame currentView="leaderboard" />} 
+              />
+              
+              {/* Legacy tournament routes for backward compatibility */}
               <Route 
                 path="/tournament/:tournamentId" 
                 element={<MemoryGame />} 
-              />
-              <Route 
-                path="/tournament/:tournamentId/register" 
-                element={<MemoryGame />} 
-              />
-              <Route 
-                path="/tournament/:tournamentId/leaderboard" 
-                element={<MemoryGame currentView="leaderboard" />} 
               />
               <Route 
                 path="/games/memory-match/tournament/:tournamentId" 

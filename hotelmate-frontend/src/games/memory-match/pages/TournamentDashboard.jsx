@@ -44,15 +44,112 @@ export default function TournamentDashboard() {
       setTournaments(tournamentData);
     } catch (error) {
       console.warn('Tournament API not available yet, using mock data:', error.message);
-      // Use mock data until backend is ready
+      // Use mock data until backend is ready - Updated for 6-pair tournaments
       const mockTournaments = [
         {
-          id: 'demo-1',
-          name: 'Kids Memory Challenge 2025',
-          description: 'Fun memory game tournament for kids!',
-          start_date: new Date().toISOString(),
-          end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          is_active: true
+          id: 'kids-memory-2025-10-27',
+          name: 'Kids Memory Challenge - Monday',
+          slug: 'kids-memory-2025-10-27',
+          description: 'Daily kids memory tournament for October 27, 2025. Play anonymously - just enter your name and room number!',
+          difficulty: 'intermediate',
+          start_date: '2025-10-27T12:00:00Z',
+          end_date: '2025-10-27T19:00:00Z',
+          is_active: true,
+          status: 'active',
+          max_participants: 999,
+          participant_count: 0,
+          hotel: { id: 2, name: 'Hotel Killarney', slug: 'hotel-killarney' },
+          qr_code_url: 'https://res.cloudinary.com/dg0ssec7u/image/upload/tournament_qr/hotel-killarney_kids-memory-2025-10-27.png'
+        },
+        {
+          id: 'kids-memory-2025-10-28',
+          name: 'Kids Memory Challenge - Tuesday',
+          slug: 'kids-memory-2025-10-28',
+          description: 'Daily kids memory tournament for October 28, 2025. Play anonymously - just enter your name and room number!',
+          difficulty: 'intermediate',
+          start_date: '2025-10-28T12:00:00Z',
+          end_date: '2025-10-28T19:00:00Z',
+          is_active: false,
+          status: 'upcoming',
+          max_participants: 999,
+          participant_count: 0,
+          hotel: { id: 2, name: 'Hotel Killarney', slug: 'hotel-killarney' },
+          qr_code_url: 'https://res.cloudinary.com/dg0ssec7u/image/upload/tournament_qr/hotel-killarney_kids-memory-2025-10-28.png'
+        },
+        {
+          id: 'kids-memory-2025-10-29',
+          name: 'Kids Memory Challenge - Wednesday',
+          slug: 'kids-memory-2025-10-29',
+          description: 'Daily kids memory tournament for October 29, 2025. Play anonymously - just enter your name and room number!',
+          difficulty: 'intermediate',
+          start_date: '2025-10-29T12:00:00Z',
+          end_date: '2025-10-29T19:00:00Z',
+          is_active: false,
+          status: 'upcoming',
+          max_participants: 999,
+          participant_count: 0,
+          hotel: { id: 2, name: 'Hotel Killarney', slug: 'hotel-killarney' },
+          qr_code_url: 'https://res.cloudinary.com/dg0ssec7u/image/upload/tournament_qr/hotel-killarney_kids-memory-2025-10-29.png'
+        },
+        {
+          id: 'kids-memory-2025-10-30',
+          name: 'Kids Memory Challenge - Thursday',
+          slug: 'kids-memory-2025-10-30',
+          description: 'Daily kids memory tournament for October 30, 2025. Play anonymously - just enter your name and room number!',
+          difficulty: 'intermediate',
+          start_date: '2025-10-30T12:00:00Z',
+          end_date: '2025-10-30T19:00:00Z',
+          is_active: false,
+          status: 'upcoming',
+          max_participants: 999,
+          participant_count: 0,
+          hotel: { id: 2, name: 'Hotel Killarney', slug: 'hotel-killarney' },
+          qr_code_url: 'https://res.cloudinary.com/dg0ssec7u/image/upload/tournament_qr/hotel-killarney_kids-memory-2025-10-30.png'
+        },
+        {
+          id: 'kids-memory-2025-10-31',
+          name: 'Kids Memory Challenge - Friday',
+          slug: 'kids-memory-2025-10-31',
+          description: 'Daily kids memory tournament for October 31, 2025. Play anonymously - just enter your name and room number!',
+          difficulty: 'intermediate',
+          start_date: '2025-10-31T12:00:00Z',
+          end_date: '2025-10-31T19:00:00Z',
+          is_active: false,
+          status: 'upcoming',
+          max_participants: 999,
+          participant_count: 0,
+          hotel: { id: 2, name: 'Hotel Killarney', slug: 'hotel-killarney' },
+          qr_code_url: 'https://res.cloudinary.com/dg0ssec7u/image/upload/tournament_qr/hotel-killarney_kids-memory-2025-10-31.png'
+        },
+        {
+          id: 'kids-memory-2025-11-01',
+          name: 'Kids Memory Challenge - Saturday',
+          slug: 'kids-memory-2025-11-01',
+          description: 'Daily kids memory tournament for November 01, 2025. Play anonymously - just enter your name and room number!',
+          difficulty: 'intermediate',
+          start_date: '2025-11-01T12:00:00Z',
+          end_date: '2025-11-01T19:00:00Z',
+          is_active: false,
+          status: 'upcoming',
+          max_participants: 999,
+          participant_count: 0,
+          hotel: { id: 2, name: 'Hotel Killarney', slug: 'hotel-killarney' },
+          qr_code_url: 'https://res.cloudinary.com/dg0ssec7u/image/upload/tournament_qr/hotel-killarney_kids-memory-2025-11-01.png'
+        },
+        {
+          id: 'kids-memory-2025-11-02',
+          name: 'Kids Memory Challenge - Sunday',
+          slug: 'kids-memory-2025-11-02',
+          description: 'Daily kids memory tournament for November 02, 2025. Play anonymously - just enter your name and room number!',
+          difficulty: 'intermediate',
+          start_date: '2025-11-02T12:00:00Z',
+          end_date: '2025-11-02T19:00:00Z',
+          is_active: false,
+          status: 'upcoming',
+          max_participants: 999,
+          participant_count: 0,
+          hotel: { id: 2, name: 'Hotel Killarney', slug: 'hotel-killarney' },
+          qr_code_url: 'https://res.cloudinary.com/dg0ssec7u/image/upload/tournament_qr/hotel-killarney_kids-memory-2025-11-02.png'
         }
       ];
       setTournaments(mockTournaments);
@@ -131,10 +228,10 @@ export default function TournamentDashboard() {
           <p className="text-muted">Create and manage fun tournaments for kids</p>
           
           {/* Backend Status Alert */}
-          <div className="alert alert-warning alert-sm mt-2">
+          <div className="alert alert-info alert-sm mt-2">
             <small>
-              <strong>⚠️ Development Mode:</strong> Tournament management requires backend API endpoints. 
-              Currently using mock data for demonstration. See BACKEND_INSTRUCTIONS.md for implementation details.
+              <strong>🎯 Updated for 6-Pair Games:</strong> All tournaments now use 4x3 grid (6 pairs, 12 cards). 
+              Players scan QR → Play immediately → Enter name/room after completion. Perfect for kids!
             </small>
           </div>
         </div>

@@ -1,93 +1,45 @@
 import { useState, useRef } from 'react';
 import { memoryGameAPI } from '@/services/memoryGameAPI';
+import QRCode from 'qrcode';
 
 export default function TournamentQRGenerator({ tournament, onClose }) {
   const [qrCodeDataURL, setQRCodeDataURL] = useState('');
   const [loading, setLoading] = useState(false);
   const canvasRef = useRef();
 
-  // Get QR code from tournament data or generate via API
+  // Generate QR code client-side using the qrcode library
   const generateQRCode = async (url, title) => {
     setLoading(true);
     try {
-      // Check if tournament already has QR codes (from backend pre-generation)
-      if (tournament.qr_code_play && url.includes('/play/')) {
-        setQRCodeDataURL(tournament.qr_code_play);
-        setLoading(false);
-        return;
-      }
+      console.log('🎯 Generating QR code for URL:', url);
       
-      if (tournament.qr_code_leaderboard && url.includes('/leaderboard/')) {
-        setQRCodeDataURL(tournament.qr_code_leaderboard);
-        setLoading(false);
-        return;
-      }
-
-      // If no pre-generated QR codes, try to fetch from tournament detail
-      try {
-        const tournamentDetail = await memoryGameAPI.getTournament(tournament.id);
-        if (tournamentDetail.qr_code_play && url.includes('/play/')) {
-          setQRCodeDataURL(tournamentDetail.qr_code_play);
-          return;
-        }
-        if (tournamentDetail.qr_code_leaderboard && url.includes('/leaderboard/')) {
-          setQRCodeDataURL(tournamentDetail.qr_code_leaderboard);
-          return;
-        }
-      } catch (detailError) {
-        console.warn('Could not fetch tournament detail:', detailError);
-      }
-
-      // Try to fetch existing QR codes first
-      try {
-        const qrCodes = await memoryGameAPI.getQRCodes({
-          tournament_id: tournament.id,
-          type: url.includes('/leaderboard') ? 'leaderboard' : 'play'
-        });
-        
-        if (qrCodes.length > 0) {
-          const qrCode = qrCodes[0];
-          if (qrCode.qr_code_url) {
-            setQRCodeDataURL(qrCode.qr_code_url);
-            return;
-          }
-        }
-      } catch (fetchError) {
-        console.warn('Could not fetch existing QR codes:', fetchError);
-      }
-
-      // Fallback: Try to generate via API (if backend supports it)
-      try {
-        const response = await memoryGameAPI.generateTournamentQR({
-          tournament_id: tournament.id,
-          url: url,
-          title: title,
-          type: url.includes('/leaderboard') ? 'leaderboard' : 'play'
-        });
-        
-        if (response.qr_code_url) {
-          setQRCodeDataURL(response.qr_code_url);
-        } else if (response.qr_code_data) {
-          setQRCodeDataURL(response.qr_code_data);
-        } else {
-          throw new Error('No QR code data received from server');
-        }
-      } catch (apiError) {
-        console.error('QR generation API error:', apiError);
-        // If API fails, show a message that QR codes are not available yet
-        throw new Error(`QR codes not available. API Error: ${apiError.response?.status || 'Unknown'}`);
-      }
+      // Generate QR code as data URL
+      const qrDataURL = await QRCode.toDataURL(url, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        },
+        errorCorrectionLevel: 'M'
+      });
+      
+      setQRCodeDataURL(qrDataURL);
+      console.log('✅ QR code generated successfully');
+      
     } catch (error) {
-      console.error('Error getting QR code:', error);
-      alert('QR Code not available: ' + error.message);
+      console.error('Error generating QR code:', error);
+      alert('Failed to generate QR code: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
 
+  // Refactored URLs - QR codes point to dashboard
   const tournamentUrls = {
-    play: `https://hotelsmates.com/tournaments/${tournament.hotel_slug || 'hotel-killarney'}/${tournament.slug || tournament.id}/play/`,
-    leaderboard: `https://hotelsmates.com/tournaments/${tournament.hotel_slug || 'hotel-killarney'}/${tournament.slug || tournament.id}/leaderboard/`
+    dashboard: `${window.location.origin}/games/memory-match?hotel=${tournament.hotel?.slug || 'hotel-killarney'}`,
+    direct: `${window.location.origin}/games/memory-match/tournament/${tournament.id}`,
+    leaderboard: `${window.location.origin}/tournaments/${tournament.hotel?.slug || 'hotel-killarney'}/${tournament.slug || tournament.id}/leaderboard`
   };
 
   const downloadQRCode = () => {
@@ -140,11 +92,20 @@ export default function TournamentQRGenerator({ tournament, onClose }) {
                 <div className="d-grid gap-3 mb-4">
                   <button
                     className="btn btn-success btn-lg"
-                    onClick={() => generateQRCode(tournamentUrls.play, 'Kids Tournament Game')}
+                    onClick={() => generateQRCode(tournamentUrls.dashboard, 'Memory Match Dashboard')}
                     disabled={loading}
                   >
-                    🎮 PLAY TOURNAMENT
-                    <div className="small mt-1">Kids scan this to play the memory game</div>
+                    🎮 GAME DASHBOARD (Recommended)
+                    <div className="small mt-1">Shows tournaments + practice mode for this hotel</div>
+                  </button>
+                  
+                  <button
+                    className="btn btn-primary btn-lg"
+                    onClick={() => generateQRCode(tournamentUrls.direct, 'Direct Tournament')}
+                    disabled={loading}
+                  >
+                    � DIRECT TOURNAMENT
+                    <div className="small mt-1">Goes straight to tournament game</div>
                   </button>
                   
                   <button
@@ -152,25 +113,45 @@ export default function TournamentQRGenerator({ tournament, onClose }) {
                     onClick={() => generateQRCode(tournamentUrls.leaderboard, 'Tournament Champions')}
                     disabled={loading}
                   >
-                    � VIEW CHAMPIONS
+                    🏅 VIEW CHAMPIONS
                     <div className="small mt-1">See who got the best scores!</div>
                   </button>
                 </div>
 
                 <h6 className="mb-3">📋 Share These Links</h6>
                 <div className="mb-3">
-                  <label className="form-label small text-success">🎮 Play Tournament Game</label>
+                  <label className="form-label small text-success">🎮 Game Dashboard (Recommended)</label>
                   <div className="input-group">
                     <input
                       type="text"
                       className="form-control small"
-                      value={tournamentUrls.play}
+                      value={tournamentUrls.dashboard}
                       readOnly
                     />
                     <button
                       className="btn btn-outline-success btn-sm"
                       type="button"
-                      onClick={() => copyToClipboard(tournamentUrls.play)}
+                      onClick={() => copyToClipboard(tournamentUrls.dashboard)}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <div className="small text-muted mt-1">Shows practice + tournaments for this hotel</div>
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label small text-primary">🏆 Direct Tournament</label>
+                  <div className="input-group">
+                    <input
+                      type="text"
+                      className="form-control small"
+                      value={tournamentUrls.direct}
+                      readOnly
+                    />
+                    <button
+                      className="btn btn-outline-primary btn-sm"
+                      type="button"
+                      onClick={() => copyToClipboard(tournamentUrls.direct)}
                     >
                       Copy
                     </button>
@@ -178,7 +159,7 @@ export default function TournamentQRGenerator({ tournament, onClose }) {
                 </div>
 
                 <div className="mb-3">
-                  <label className="form-label small text-warning">🏆 View Champions</label>
+                  <label className="form-label small text-warning">� View Champions</label>
                   <div className="input-group">
                     <input
                       type="text"
