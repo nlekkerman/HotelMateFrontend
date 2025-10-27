@@ -56,7 +56,6 @@ Check browser console for:
 ## ⚡ **Quick Test:**
 Open browser console and run:
 ```javascript
-console.log('Current API Base URL:', window.location.hostname);
 ```
 
 ## 📝 **Recommended Action:**

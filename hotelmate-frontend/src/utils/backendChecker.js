@@ -3,7 +3,6 @@ export const checkBackendAvailability = async () => {
   const localBackend = "http://localhost:8000/api/";
   const prodBackend = "https://hotel-porter-d25ad83b12cf.herokuapp.com/api";
   
-  console.log("🔍 Checking backend availability...");
   
   // Test local backend first
   try {
@@ -16,10 +15,8 @@ export const checkBackendAvailability = async () => {
     });
     
     clearTimeout(timeoutId);
-    console.log("✅ Local backend available at localhost:8000");
     return { available: true, url: localBackend, type: 'local' };
   } catch (error) {
-    console.log("❌ Local backend not available:", error.message);
   }
   
   // Test production backend
@@ -27,10 +24,8 @@ export const checkBackendAvailability = async () => {
     const response = await fetch(`${prodBackend}health/`, { 
       mode: 'no-cors' // This will at least tell us if the server responds
     });
-    console.log("✅ Production backend responding (but CORS may block requests)");
     return { available: true, url: prodBackend, type: 'production', corsIssue: true };
   } catch (error) {
-    console.log("❌ Production backend not available:", error.message);
   }
   
   return { available: false, url: null, type: null };

@@ -33,6 +33,13 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   // Define active path helpers
   const isPartialActive = (path) => {
     if (path === "/") return location.pathname === "/";
+    
+    // Handle paths with query parameters (like Games)
+    if (path.includes('?')) {
+      const pathWithoutQuery = path.split('?')[0];
+      return location.pathname.startsWith(pathWithoutQuery);
+    }
+    
     return location.pathname.startsWith(path);
   };
 
@@ -193,7 +200,7 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
       roles: ["chef", "bartender", "manager"],
     },
     {
-      path: "/games",
+      path: `/games/?hotel=${hotelIdentifier}`,
       label: "Games",
       icon: "controller",
       feature: "games",

@@ -20,18 +20,15 @@ const navigate = useNavigate();
   const [error, setError] = useState("");
 
   useEffect(() => {
-    console.log("⏳ Loading face-api models...");
     Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri("/models"),
       faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
       faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
     ])
       .then(() => {
-        console.log("✅ Models loaded");
         setModelsLoaded(true);
       })
       .catch((err) => {
-        console.error("❌ Model load error:", err);
         setError("Failed to load face models");
       });
   }, []);
@@ -39,7 +36,6 @@ const navigate = useNavigate();
   // inside FaceClockInPage.jsx
   const getDescriptor = async (maxRetries = 10, delayMs = 300) => {
     const videoEl = webcamRef.current?.video;
-    console.log("📸 Getting descriptor… video element:", videoEl);
     if (!videoEl) throw new Error("Webcam not ready");
 
     if (videoEl.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
@@ -56,11 +52,9 @@ const navigate = useNavigate();
         .withFaceDescriptor();
 
       if (detection) {
-        console.log("🧠 Face detection result:", detection);
         return Array.from(detection.descriptor);
       }
 
-      console.warn("❌ No face detected, retrying...");
       await new Promise((resolve) => setTimeout(resolve, delayMs));
       attempt++;
     }
@@ -76,19 +70,16 @@ const navigate = useNavigate();
 
     try {
       const descriptor = await getDescriptor();
-      console.log("📤 Sending descriptor to backend /detect/");
       const res = await api.post(
         `/attendance/clock-logs/detect/${hotel_slug}/`,
         { descriptor }
       );
-      console.log("✅ Backend response:", res.data);
 
       const { staff_name, clocked_in } = res.data;
       setUserName(staff_name);
       setClockAction(clocked_in ? "clock_out" : "clock_in");
       setStep("detected");
     } catch (err) {
-      console.error("❌ detectFace error:", err);
       setError(err.response?.data?.error || err.message);
     } finally {
       setLoading(false);
@@ -96,23 +87,19 @@ const navigate = useNavigate();
   };
 
   const confirmClock = async () => {
-    console.log("👆 [CLICK] Confirm Clock button pressed");
     setLoading(true);
     setError("");
     setMessage("");
 
     try {
       const descriptor = await getDescriptor();
-      console.log("📤 Sending descriptor to backend /face-clock-in/");
       const res = await api.post(
         `/attendance/clock-logs/face-clock-in/${hotel_slug}/`,
         { descriptor }
       );
-      console.log("✅ Clock action result:", res.data);
       setMessage(res.data.message || "Success");
       setStep("confirmed");
     } catch (err) {
-      console.error("❌ confirmClock error:", err);
       setError(err.response?.data?.error || err.message);
     } finally {
       setLoading(false);
@@ -122,7 +109,6 @@ const navigate = useNavigate();
   useEffect(() => {
     if (step === "confirmed") {
       const t = setTimeout(() => {
-        console.log("🔄 Resetting state after confirmation");
         setStep("idle");
         setUserName("");
         setClockAction(null);
@@ -153,7 +139,6 @@ const navigate = useNavigate();
         videoConstraints={{ facingMode: "user" }}
         className="webcam-feed shadow-sm mb-4"
         onUserMedia={() => {
-          console.log("📹 Camera ready");
           setCameraReady(true);
         }}
       />

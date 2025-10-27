@@ -25,7 +25,6 @@ export function OrderCountProvider({ children }) {
       const res = await api.get(`/room_services/${hotelSlug}/orders/pending-count/`);
       setRoomServiceCount(res.data.count);
     } catch (err) {
-      console.error("Room Service count fetch failed:", err);
     }
   }, []);
 
@@ -35,7 +34,6 @@ export function OrderCountProvider({ children }) {
 const res = await api.get(`/room_services/${hotelSlug}/breakfast-orders/breakfast-pending-count/`);
       setBreakfastCount(res.data.count);
     } catch (err) {
-      console.error("Breakfast count fetch failed:", err);
     }
   }, []);
 

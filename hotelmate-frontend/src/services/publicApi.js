@@ -32,7 +32,6 @@ publicApi.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error("[Public API] Request error:", error);
     return Promise.reject(error);
   }
 );

@@ -17,11 +17,8 @@ export default function RosterDashboard() {
   } = useStaffMetadata(hotelSlug);
 
   // For debugging
-  console.log("hotelSlug:", hotelSlug);
-  console.log("departments:", departments);
 
   if (isError) {
-    console.error("Error loading staff metadata:", error);
     return (
       <div className="p-4 text-center text-red-600">
         Error loading departments: {error?.message || "Unknown error"}

@@ -13,9 +13,6 @@ export default function useLogin() {
     setLoading(true);
     setError(null);
 
-    console.log("📡 Sending login request...");
-    console.log("🔗 Endpoint:", LOGIN_ENDPOINT);
-    console.log("📝 Payload:", { username, password });
 
     try {
       const { data } = await axios.post(
@@ -24,7 +21,6 @@ export default function useLogin() {
         { headers: { "Content-Type": "application/json" } }
       );
 
-      console.log("✅ Backend response:", data);
 
       const profileImageUrl = data.profile_image_url?.startsWith("http")
         ? data.profile_image_url
@@ -50,7 +46,6 @@ export default function useLogin() {
         },
       };
 
-      console.log("💾 Saving user to localStorage:", userToSave);
       localStorage.setItem("user", JSON.stringify(userToSave));
 
       const userForContext = {
@@ -71,9 +66,7 @@ export default function useLogin() {
         profile_image_url: profileImageUrl,
       };
 
-      console.log("🔑 Logging in user (AuthContext):", userForContext);
       login(userForContext);
-      console.log("✔️ User logged in successfully");
 
       // Note: Firebase FCM token functionality has been removed
       // Alternative push notification systems can be implemented here if needed
@@ -82,20 +75,16 @@ export default function useLogin() {
       return data;
     } catch (err) {
       setLoading(false);
-      console.error("❌ Login error:", err);
 
       if (err.response) {
-        console.error("❌ Response data:", err.response.data);
         setError(
           err.response.data?.non_field_errors
             ? err.response.data.non_field_errors.join(" ")
             : JSON.stringify(err.response.data)
         );
       } else if (err.request) {
-        console.error("❌ No response received. Request:", err.request);
         setError("No response from server. Check your network or API URL.");
       } else {
-        console.error("❌ Error message:", err.message);
         setError(err.message || "Login failed. Please try again.");
       }
 

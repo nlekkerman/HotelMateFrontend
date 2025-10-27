@@ -10,7 +10,6 @@ const api = axios.create({
   timeout: 30000,
 });
 
-console.log('[API] Using API URL:', baseURL);
 
 // Store the current hotelIdentifier here (default null)
 let currentHotelIdentifier = null;
@@ -18,7 +17,6 @@ let currentHotelIdentifier = null;
 // Function to update hotelIdentifier from outside
 export function setHotelIdentifier(id) {
   currentHotelIdentifier = id;
-  console.log('[API] hotelIdentifier set to:', id);
 }
 
 // Request interceptor to add token + hotel_id + hotelIdentifier header
@@ -37,31 +35,26 @@ api.interceptors.request.use(
       config.headers['Authorization'] = `Token ${token}`;
       
     } else {
-      console.warn('[API] No token found in localStorage.');
     }
 
     if (hotelId) {
       config.headers['X-Hotel-ID'] = hotelId.toString();
     } else {
-      console.warn('[API] No hotel ID found in localStorage.');
     }
 
     if (hotelName) {
     } else {
-      console.warn('[API] No hotel name found in localStorage.');
     }
 
     // Add the hotelIdentifier header dynamically if set
     if (currentHotelIdentifier) {
       config.headers['X-Hotel-Identifier'] = currentHotelIdentifier;
     } else {
-      console.warn('[API] No hotelIdentifier set.');
     }
 
     return config;
   },
   (error) => {
-    console.error('[API] Request error:', error);
     return Promise.reject(error);
   }
 );

@@ -27,7 +27,6 @@ export default function StockDashboard() {
         setCategories(res.data.results || []);
       })
       .catch((err) => {
-        console.error("[StockDashboard] Failed to load categories:", err);
         setCatsError(err.response?.data || err.message);
       })
       .finally(() => setLoadingCats(false));

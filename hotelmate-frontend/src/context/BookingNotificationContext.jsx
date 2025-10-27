@@ -27,7 +27,6 @@ export const BookingNotificationProvider = ({ children }) => {
     channelRef.current = channel;
 
     channel.bind("new-dinner-booking", (booking) => {
-      console.log("🍽️ Booking received:", booking);
       setBookingNotifications((prev) => [booking, ...prev]);
       setHasNewBooking(true);
 
@@ -59,7 +58,6 @@ export const BookingNotificationProvider = ({ children }) => {
       });
       setHasNewBooking(false); // update local state after successful server call
     } catch (err) {
-      console.error("Failed to mark bookings as seen:", err);
     }
   };
 

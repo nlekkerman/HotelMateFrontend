@@ -84,6 +84,8 @@ import WhackAMolePage from "@/games/whack-a-mole/pages/GamePage";
 import MemoryGame from "@/games/memory-match/pages/MemoryGame";
 import MemoryMatchDashboard from "@/games/memory-match/pages/MemoryMatchDashboard";
 import TournamentDashboard from "@/games/memory-match/pages/TournamentDashboard";
+import Leaderboard from "@/games/memory-match/pages/Leaderboard";
+import PersonalStats from "@/games/memory-match/pages/PersonalStats";
 
 const queryClient = new QueryClient();
 // Default settings for all games
@@ -324,6 +326,8 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/games/memory-match/practice" element={<MemoryGame practiceMode={true} />} />
               <Route path="/games/memory-match/tournament/:tournamentId" element={<MemoryGame />} />
               <Route path="/games/memory-match/tournaments" element={<TournamentDashboard />} />
+              <Route path="/games/memory-match/leaderboard" element={<Leaderboard />} />
+              <Route path="/games/memory-match/stats" element={<PersonalStats />} />
               
               <Route
                 path="/games/settings"

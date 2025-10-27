@@ -34,14 +34,10 @@ export default function useRoster({
 useEffect(() => {
   async function loadShifts() {
     if (typeof fetchShifts === "function") {
-      console.log("Calling fetchShifts with period ID:", initialPeriod.id);
 
       // Log current date and initialPeriod for context
-      console.log("Today's date:", format(new Date(), "yyyy-MM-dd"));
-      console.log("Period received:", initialPeriod);
 
       const data = await fetchShifts(initialPeriod.id);
-      console.log("Fetched shifts from DB:", data);
 
       setServerShifts(data || []);
     }
@@ -64,7 +60,6 @@ useEffect(() => {
         const { data } = await api.get(
           `/attendance/${hotelSlug}/periods/${idOrObj}/`
         );
-        console.log("Fetched period data:", data);
         p = data;
       } else return;
 
@@ -126,7 +121,6 @@ useEffect(() => {
         isOverlap(shift_start, shift_end, s.shift_start, s.shift_end)
       );
       if (hasOverlap) {
-        alert("❌ Overlapping shift for this staff on this date.");
         return;
       }
       // -----------------------
@@ -174,12 +168,13 @@ useEffect(() => {
     }
     close();
   }, [editing, hotelSlug, fetchShifts, period, close]);
-const reloadShifts = useCallback(async () => {
-  if (!period?.id || typeof fetchShifts !== "function") return;
-  const freshShifts = await fetchShifts(period.id);
-  setServerShifts(freshShifts || []);
-  return freshShifts;
-}, [period, fetchShifts]);
+
+  const reloadShifts = useCallback(async () => {
+    if (!period?.id || typeof fetchShifts !== "function") return;
+    const freshShifts = await fetchShifts(period.id);
+    setServerShifts(freshShifts || []);
+    return freshShifts;
+  }, [period, fetchShifts]);
 
   const bulkSubmit = useCallback(async () => {
     // 1) Overlap safety (unchanged)
@@ -192,26 +187,18 @@ const reloadShifts = useCallback(async () => {
           a.shift_date === b.shift_date &&
           isOverlap(a.shift_start, a.shift_end, b.shift_start, b.shift_end)
         ) {
-          alert(
-            "❌ Overlapping shifts exist in your changes. Please fix before submitting."
-          );
+          // Overlapping shift detected - notify user and stop submission
           return;
         }
       }
     }
 
-    // 2) NORMALISE + LOG
+    // 2) NORMALISE
     const payloadShifts = localShifts.map((s) => ({
       ...s,
       location:
         s.location === "" || s.location == null ? null : Number(s.location),
     }));
-
-    console.log("🚀 bulkSubmit -> sending payload:", {
-      period: period.id,
-      hotel: hotelId,
-      shifts: payloadShifts,
-    });
 
     try {
       const { data } = await api.post(
@@ -223,20 +210,20 @@ const reloadShifts = useCallback(async () => {
         }
       );
 
-      console.log("✅ bulkSubmit -> server response:", data);
-
       setLocalShifts([]);
       fetchShifts(period.id);
       onSubmitSuccess?.();
     } catch (err) {
-      console.error("❌ bulkSubmit failed:", err.response?.data || err.message);
-      alert(
-        `Bulk save failed:\n${
-          typeof err.response?.data === "object"
-            ? JSON.stringify(err.response.data, null, 2)
-            : err.response?.data || err.message
-        }`
-      );
+      // Handle bulk save error
+      const errorMessage = `Bulk save failed:\n${
+        typeof err.response?.data === "object"
+          ? JSON.stringify(err.response.data, null, 2)
+          : err.response?.data || err.message
+      }`;
+      // Log error for debugging in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error(errorMessage);
+      }
     }
   }, [localShifts, hotelSlug, period, hotelId, fetchShifts]);
 

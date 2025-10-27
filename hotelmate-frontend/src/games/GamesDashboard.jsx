@@ -1,13 +1,22 @@
 // File: C:\Users\nlekk\HotelMateFrontend\hotelmate-frontend\src\games\GamesDashboard.jsx
 
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import smiley from "@/games/whack-a-mole/assets/images/smiley.png";
+
 export default function GamesDashboard() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const hotelParam = searchParams.get('hotel');
 
   const handleNavigate = (path) => {
-    navigate(path);
+    // Add hotel parameter to the path if it exists
+    if (hotelParam) {
+      const separator = path.includes('?') ? '&' : '?';
+      navigate(`${path}${separator}hotel=${hotelParam}`);
+    } else {
+      navigate(path);
+    }
   };
 
   return (

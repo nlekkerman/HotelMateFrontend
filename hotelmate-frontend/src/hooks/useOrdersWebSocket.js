@@ -8,29 +8,23 @@ export default function useOrdersWebSocket(orderId, onMessage) {
   const host = window.location.host;
   const wsUrl = `${protocol}://${host}/ws/orders/${orderId}/`;
 
-  console.log(`[WS] Connecting to ${wsUrl}`);
   const socket = new WebSocket(wsUrl);
 
   socket.onopen = () => {
-    console.log("[WS] connection opened");
   };
 
   socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
-    console.log("[WS] message received:", data);
     onMessage?.(data);
   };
 
   socket.onerror = (err) => {
-    console.error("[WS] error:", err);
   };
 
   socket.onclose = (ev) => {
-    console.log(`[WS] closed (code=${ev.code} reason=${ev.reason})`);
   };
 
   return () => {
-    console.log("[WS] closing socket");
     socket.close();
   };
 }, [orderId, onMessage]);

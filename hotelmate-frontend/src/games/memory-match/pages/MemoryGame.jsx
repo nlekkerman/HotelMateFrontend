@@ -13,15 +13,11 @@ import correctSoundFile from "@/games/whack-a-mole/assets/sounds/yes.wav";
 import wrongSoundFile from "@/games/whack-a-mole/assets/sounds/iihh.wav";
 import winSoundFile from "@/games/whack-a-mole/assets/sounds/yes.wav";
 
-// Helper: get number of pairs per difficulty
-const getPairsForDifficulty = (level) => {
-  if (level === "easy") return 6;         // 3x4 grid (6 pairs, 12 cards total)
-  if (level === "intermediate") return 6; // 3x4 grid (6 pairs, 12 cards total) - Tournament standard
-  return 8;  // hard = 4x4 grid (8 pairs, 16 cards total)
-};
+// Fixed configuration: Always 6 pairs for 3x4 grid (no difficulty selection)
+const FIXED_PAIRS_COUNT = 6; // Always 6 pairs for 3x4 grid (12 total cards)
 
-// Custom hook for game logic with API cards
-function useMemoryGame(difficulty) {
+// Custom hook for game logic with API cards (NO DIFFICULTY - fixed 3x4 grid)
+function useMemoryGame() {
   const [cards, setCards] = useState([]);
   const [flipped, setFlipped] = useState([]);
   const [matched, setMatched] = useState([]);
@@ -34,12 +30,15 @@ function useMemoryGame(difficulty) {
     setError(null);
     
     try {
-      const pairs = getPairsForDifficulty(difficulty);
-      const response = await memoryGameAPI.getGameCards(difficulty, pairs);
+      // Always load 6 pairs for 3x4 grid
+      console.log('🎮 MemoryGame: Loading cards...');
+      const response = await memoryGameAPI.getGameCards();
+      console.log('🎮 MemoryGame: Cards loaded:', response);
       
       // Create card pairs for memory game
       const cardPairs = [];
       response.cards.forEach((card, index) => {
+        console.log(`🎴 Creating pair ${index + 1}:`, card);
         cardPairs.push(
           { id: `${card.id}a`, pairId: index, cardData: card },
           { id: `${card.id}b`, pairId: index, cardData: card }
@@ -56,8 +55,8 @@ function useMemoryGame(difficulty) {
       setLastAction(null);
       setLoading(false);
     } catch (error) {
-      console.error('Failed to load game cards:', error);
-      setError('Failed to load cards. Please try again.');
+      console.error('❌ Backend API failed to load game cards:', error);
+      setError(`Backend API Error: ${error.message}. Game cannot start without backend cards.`);
       setLoading(false);
     }
   };
@@ -68,7 +67,7 @@ function useMemoryGame(difficulty) {
 
   useEffect(() => {
     loadGameCards();
-  }, [difficulty]);
+  }, []); // No dependency on difficulty since we removed it
 
   const handleFlip = (gameIndex) => {
     if (flipped.length === 2 || flipped.includes(gameIndex) || matched.includes(gameIndex)) return;
@@ -103,9 +102,8 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
   // Determine tournament ID - either from props, URL params, or fetch by slug
   const tournamentId = propTournamentId || urlTournamentId;
   
-  // Always use intermediate difficulty (6x4) - both practice and tournament
-  const [difficulty, setDifficulty] = useState("intermediate");
-  const { cards, flipped, matched, handleFlip, resetGame, lastAction, setLastAction, loading, error } = useMemoryGame(difficulty);
+  // Fixed 3x4 grid - no difficulty selection needed
+  const { cards, flipped, matched, handleFlip, resetGame, lastAction, setLastAction, loading, error } = useMemoryGame();
 
   // Game state
   const [time, setTime] = useState(0);
@@ -214,7 +212,7 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
   const handleGameComplete = async () => {
     const endTime = Date.now();
     const timeSeconds = Math.floor((endTime - startTime) / 1000);
-    const localScore = memoryGameAPI.calculateScore(difficulty, timeSeconds, moves);
+    const localScore = memoryGameAPI.calculateScore(timeSeconds, moves);
     
     setFinalScore(localScore);
     
@@ -222,14 +220,12 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
       // Practice mode - use backend practice endpoint for score calculation only
       try {
         const practiceResult = await memoryGameAPI.savePracticeSession({
-          difficulty,
           time_seconds: timeSeconds,
           moves_count: moves
         });
         
         // Save to localStorage for local tracking
         const practiceGame = {
-          difficulty,
           timeSeconds,
           moves,
           score: practiceResult.score,
@@ -245,7 +241,6 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
       } catch (error) {
         // Fallback to local calculation if API fails
         const practiceGame = {
-          difficulty,
           timeSeconds,
           moves,
           score: localScore,
@@ -268,7 +263,7 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
   };
 
   const checkIfNewBest = (gameSession) => {
-    const key = `best_${gameSession.difficulty}_score`;
+    const key = `best_score`; // No difficulty differentiation - single best score
     const previousBest = localStorage.getItem(key);
     if (!previousBest || gameSession.score > parseInt(previousBest)) {
       localStorage.setItem(key, gameSession.score.toString());
@@ -454,8 +449,8 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
             
             <div className="mt-4 p-3 bg-light rounded">
               <small className="text-muted">
-                <strong>All games use 4x3 grid format (6 pairs, 12 cards)</strong><br/>
-                Practice to improve your skills before entering tournaments!
+                <strong>Simplified Memory Match: Fixed 3×4 grid (6 pairs, 12 cards)</strong><br/>
+                No difficulty selection • Everyone plays the same layout • Fair competition for all ages!
               </small>
             </div>
           </div>
@@ -525,7 +520,7 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
               </div>
               <div className="bg-white bg-opacity-90 rounded px-3 py-2 text-center flex-fill" style={{maxWidth: '100px'}}>
                 <div className="small fw-bold text-muted">✅ FOUND</div>
-                <div className="h6 mb-0 text-primary">{matched.length / 2}/{getPairsForDifficulty(difficulty)}</div>
+                <div className="h6 mb-0 text-primary">{matched.length / 2}/{FIXED_PAIRS_COUNT}</div>
               </div>
               {gameState === 'saving' && (
                 <div className="bg-warning bg-opacity-90 rounded px-2 py-2 text-center">
@@ -542,11 +537,11 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
             </div>
           )}
 
-          {/* Game Format Info */}
+          {/* Game Format Info - Always 3x4 Grid */}
           {!isQRTournament && (
             <div className="text-center mb-4">
               <div className={`badge ${gameMode === 'tournament' ? 'bg-success' : 'bg-primary'} fs-6 px-3 py-2`}>
-                {gameMode === 'tournament' ? '🏆 Tournament' : '🎮 Practice'} Mode: 3x4 Grid (6 pairs)
+                {gameMode === 'tournament' ? '🏆 Tournament' : '🎮 Practice'} Mode: Fixed 3×4 Grid (6 pairs) • No Difficulty Selection
               </div>
             </div>
           )}
@@ -556,12 +551,8 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
             className="d-grid justify-content-center align-items-center"
             style={{
               gridTemplateColumns: isQRTournament 
-                ? "repeat(4, minmax(60px, 1fr))" // Mobile 4x3 grid for tournament (6 pairs, 12 cards)
-                : difficulty === "easy"
-                ? "repeat(4, 90px)"  // 4x3 grid (6 pairs, 12 cards)
-                : difficulty === "intermediate"
-                ? "repeat(4, 90px)"  // 4x3 grid (6 pairs, 12 cards)
-                : "repeat(4, 85px)", // 4x4 grid for hard (8 pairs, 16 cards)
+                ? "repeat(4, minmax(60px, 1fr))" // Mobile 3x4 grid for tournament (6 pairs, 12 cards)
+                : "repeat(4, 90px)", // Fixed 3x4 grid (6 pairs, 12 cards) - no difficulty variations
               gap: isQRTournament ? "0.8rem" : "1.2rem",
               maxWidth: isQRTournament ? "95vw" : "650px",
               width: "100%",
