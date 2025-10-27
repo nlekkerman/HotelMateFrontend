@@ -15,9 +15,9 @@ import winSoundFile from "@/games/whack-a-mole/assets/sounds/yes.wav";
 
 // Helper: get number of pairs per difficulty
 const getPairsForDifficulty = (level) => {
-  if (level === "easy") return 8;         // 4x4 grid (8 pairs, 16 cards total)
-  if (level === "intermediate") return 12; // 6x4 grid (12 pairs, 24 cards total) - Tournament standard
-  return 16;  // hard = 6x4 or 8x3 grid (16 pairs, 32 cards total)
+  if (level === "easy") return 6;         // 3x4 grid (6 pairs, 12 cards total)
+  if (level === "intermediate") return 6; // 3x4 grid (6 pairs, 12 cards total) - Tournament standard
+  return 8;  // hard = 4x4 grid (8 pairs, 16 cards total)
 };
 
 // Custom hook for game logic with API cards
@@ -91,10 +91,16 @@ function useMemoryGame(difficulty) {
 }
 
 export default function MemoryGame({ tournamentId: propTournamentId = null, currentView: propCurrentView = 'game', practiceMode = false }) {
-  // Get tournament ID from URL params if not passed as prop
-  const { tournamentId: urlTournamentId } = useParams();
+  // Get tournament info from URL params if not passed as prop
+  const { tournamentId: urlTournamentId, hotelSlug, tournamentSlug } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  
+  // Tournament state
+  const [tournament, setTournament] = useState(null);
+  const [loadingTournament, setLoadingTournament] = useState(false);
+  
+  // Determine tournament ID - either from props, URL params, or fetch by slug
   const tournamentId = propTournamentId || urlTournamentId;
   
   // Always use intermediate difficulty (6x4) - both practice and tournament
@@ -115,10 +121,38 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
   const [hasSeenRules, setHasSeenRules] = useState(false);
   
   // Player info collection for tournament mode
-  const [gameStarted, setGameStarted] = useState(false);
+  const [gameStarted, setGameStarted] = useState(tournamentId ? true : false); // Start immediately for tournaments
+  const [showPlayerForm, setShowPlayerForm] = useState(false);
+  const [playerName, setPlayerName] = useState('');
+  const [roomNumber, setRoomNumber] = useState('');
   
   // Game mode state
   const [gameMode, setGameMode] = useState(practiceMode ? 'practice' : (tournamentId ? 'tournament' : 'selection'));
+
+  // Fetch tournament data if accessing via hotel/tournament slug
+  useEffect(() => {
+    if (hotelSlug && tournamentSlug && !tournamentId) {
+      setLoadingTournament(true);
+      memoryGameAPI.getTournamentBySlug(hotelSlug, tournamentSlug)
+        .then(tournamentData => {
+          if (tournamentData) {
+            setTournament(tournamentData);
+            setGameMode('tournament');
+            setGameStarted(true);
+          } else {
+            console.error('Tournament not found');
+            navigate('/games/memory-match');
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching tournament:', error);
+          navigate('/games/memory-match');
+        })
+        .finally(() => {
+          setLoadingTournament(false);
+        });
+    }
+  }, [hotelSlug, tournamentSlug, tournamentId, navigate]);
 
   // Track moves
   useEffect(() => {
@@ -185,26 +219,51 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
     setFinalScore(localScore);
     
     if (gameMode === 'practice') {
-      // Practice mode - save to localStorage only
-      const practiceGame = {
-        difficulty,
-        timeSeconds,
-        moves,
-        score: localScore,
-        timestamp: Date.now()
-      };
-      
-      const existingGames = JSON.parse(localStorage.getItem('practiceGames') || '[]');
-      existingGames.push(practiceGame);
-      localStorage.setItem('practiceGames', JSON.stringify(existingGames));
-      
-      setGameState('completed');
-      alert(`� Practice completed! Score: ${localScore} points`);
+      // Practice mode - use backend practice endpoint for score calculation only
+      try {
+        const practiceResult = await memoryGameAPI.savePracticeSession({
+          difficulty,
+          time_seconds: timeSeconds,
+          moves_count: moves
+        });
+        
+        // Save to localStorage for local tracking
+        const practiceGame = {
+          difficulty,
+          timeSeconds,
+          moves,
+          score: practiceResult.score,
+          timestamp: Date.now()
+        };
+        
+        const existingGames = JSON.parse(localStorage.getItem('practiceGames') || '[]');
+        existingGames.push(practiceGame);
+        localStorage.setItem('practiceGames', JSON.stringify(existingGames.slice(-10))); // Keep last 10
+        
+        setGameState('completed');
+        alert(`🎯 Practice completed! Score: ${practiceResult.score} points`);
+      } catch (error) {
+        // Fallback to local calculation if API fails
+        const practiceGame = {
+          difficulty,
+          timeSeconds,
+          moves,
+          score: localScore,
+          timestamp: Date.now()
+        };
+        
+        const existingGames = JSON.parse(localStorage.getItem('practiceGames') || '[]');
+        existingGames.push(practiceGame);
+        localStorage.setItem('practiceGames', JSON.stringify(existingGames.slice(-10)));
+        
+        setGameState('completed');
+        alert(`🎯 Practice completed! Score: ${localScore} points (offline)`);
+      }
       
     } else if (gameMode === 'tournament') {
-      // Tournament mode - save anonymously (free kids tournament)
+      // Tournament mode - show player form to collect name and room number
       setGameState('completed');
-      saveTournamentScore();
+      setShowPlayerForm(true);
     }
   };
 
@@ -218,24 +277,23 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
     return false;
   };
 
-  // Save tournament score anonymously (free kids tournament)
+  // Save tournament score with player info (collected after game completion)
   const saveTournamentScore = async () => {
     setGameState('saving');
     
     try {
       const timeSeconds = Math.floor((Date.now() - startTime) / 1000);
-      // Create anonymous session for kids tournament
-      const gameSession = await memoryGameAPI.saveGameSession({
-        difficulty,
+      // Use the new submit_score endpoint from backend instructions
+      const gameSession = await memoryGameAPI.submitTournamentScore(tournamentId, {
+        player_name: playerName || `Player ${Date.now().toString().slice(-4)}`,
+        room_number: roomNumber || "Not specified",
         time_seconds: timeSeconds,
-        moves_count: moves,
-        completed: true,
-        tournament: tournamentId || 'kids-tournament', // Use generic tournament ID for kids
-        player_name: `Player ${Date.now().toString().slice(-4)}`, // Anonymous player
-        room_number: "Kids Tournament" // No real room number needed
+        moves_count: moves
       });
       
-      alert(`🎉 Fantastic job!\n\nYour score: ${gameSession.score} points\nTime: ${formatTime(timeSeconds)}\nMoves: ${moves}\n\n🎁 You've earned a symbolic reward for playing!`);
+      const playerInfo = playerName ? ` by ${playerName}` : '';
+      const rankInfo = gameSession.rank ? ` (Rank: #${gameSession.rank})` : '';
+      alert(`🎉 Score Submitted${playerInfo}!\n\nYour score: ${gameSession.score} points${rankInfo}\nTime: ${formatTime(timeSeconds)}\nMoves: ${moves}\n\n🏆 ${gameSession.message || 'Check the leaderboard to see your ranking!'}`);
       
       // Navigate back to games after showing success
       setTimeout(() => {
@@ -261,6 +319,9 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
     setStartTime(Date.now());
     setMoves(0);
     setFinalScore(0);
+    setShowPlayerForm(false);
+    setPlayerName('');
+    setRoomNumber('');
   };
 
   const startGame = () => {
@@ -269,6 +330,22 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
     setStartTime(Date.now());
     setTime(0);
     setMoves(0);
+  };
+
+  const handlePlayerFormSubmit = () => {
+    if (!playerName.trim()) {
+      alert('Please enter your name to continue');
+      return;
+    }
+    setShowPlayerForm(false);
+    saveTournamentScore();
+  };
+
+  const handleSkipPlayerForm = () => {
+    setPlayerName('');
+    setRoomNumber('');
+    setShowPlayerForm(false);
+    saveTournamentScore();
   };
 
 
@@ -377,7 +454,7 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
             
             <div className="mt-4 p-3 bg-light rounded">
               <small className="text-muted">
-                <strong>All games use 6x4 grid format (12 pairs, 24 cards)</strong><br/>
+                <strong>All games use 4x3 grid format (6 pairs, 12 cards)</strong><br/>
                 Practice to improve your skills before entering tournaments!
               </small>
             </div>
@@ -479,12 +556,12 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
             className="d-grid justify-content-center align-items-center"
             style={{
               gridTemplateColumns: isQRTournament 
-                ? "repeat(6, minmax(55px, 1fr))" // Mobile 6x4 grid for tournament (12 pairs)
+                ? "repeat(4, minmax(60px, 1fr))" // Mobile 4x3 grid for tournament (6 pairs, 12 cards)
                 : difficulty === "easy"
-                ? "repeat(4, 90px)"  // 4x4 grid (8 pairs)
+                ? "repeat(4, 90px)"  // 4x3 grid (6 pairs, 12 cards)
                 : difficulty === "intermediate"
-                ? "repeat(6, 75px)"  // 6x4 grid (12 pairs)
-                : "repeat(6, 70px)", // 6x5+ grid for hard (16 pairs)
+                ? "repeat(4, 90px)"  // 4x3 grid (6 pairs, 12 cards)
+                : "repeat(4, 85px)", // 4x4 grid for hard (8 pairs, 16 cards)
               gap: isQRTournament ? "0.8rem" : "1.2rem",
               maxWidth: isQRTournament ? "95vw" : "650px",
               width: "100%",
@@ -537,6 +614,74 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
             Restart 🔁
           </button>
       </>
+
+      {/* Player Info Modal for Tournament */}
+      {showPlayerForm && (
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1060}}>
+          <div className="card shadow-lg mx-3" style={{maxWidth: '400px', width: '100%'}}>
+            <div className="card-header bg-success text-white text-center">
+              <h4 className="mb-0">🎉 Congratulations!</h4>
+              <p className="mb-0 small">You completed the tournament!</p>
+            </div>
+            <div className="card-body">
+              <div className="text-center mb-4">
+                <div className="fs-5 fw-bold text-success">Final Score: {finalScore} points</div>
+                <div className="text-muted">Time: {formatTime(time)} | Moves: {moves}</div>
+              </div>
+              
+              <p className="text-center mb-4">
+                <strong>Enter your details to appear on the leaderboard:</strong>
+              </p>
+              
+              <div className="mb-3">
+                <label className="form-label">Your Name <span className="text-danger">*</span></label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value)}
+                  placeholder="Enter your name"
+                  maxLength={50}
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="form-label">Room Number <span className="text-muted">(optional)</span></label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={roomNumber}
+                  onChange={(e) => setRoomNumber(e.target.value)}
+                  placeholder="e.g., 205"
+                  maxLength={10}
+                />
+              </div>
+              
+              <div className="d-grid gap-2">
+                <button 
+                  className="btn btn-success btn-lg"
+                  onClick={handlePlayerFormSubmit}
+                  disabled={!playerName.trim()}
+                >
+                  🏆 Submit Score to Leaderboard
+                </button>
+                <button 
+                  className="btn btn-outline-secondary"
+                  onClick={handleSkipPlayerForm}
+                >
+                  Skip (Play Anonymously)
+                </button>
+              </div>
+              
+              <div className="text-center mt-3">
+                <small className="text-muted">
+                  Your information is only used for the tournament leaderboard
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Game Rules Modal */}
       <GameRules 

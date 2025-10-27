@@ -14,20 +14,25 @@ class MemoryGameAPI {
     return path.startsWith("http") ? path : `${this.cloudinaryBase}${path}`;
   }
 
-  // Score calculation function (matches backend logic)
-  calculateScore(difficulty, timeSeconds, movesCount) {
-    const multipliers = { easy: 1.0, intermediate: 1.5, hard: 2.0 };
-    const optimalMoves = { easy: 16, intermediate: 24, hard: 32 }; // easy=8 pairs, intermediate=12 pairs, hard=16 pairs
+  // Score calculation function (matches backend logic - FIXED for 6 pairs = 12 cards)
+  calculateScore(timeSeconds, movesCount) {
+    // New simplified scoring for 6 pairs (12 cards) only
+    const baseScore = 1000;
+    const optimalMoves = 12; // 6 pairs × 2 = 12 moves for perfect game
     
-    const baseScore = multipliers[difficulty] * 1000;
     const timePenalty = timeSeconds * 2;
-    const movesPenalty = Math.max(0, movesCount - optimalMoves[difficulty]) * 5;
+    const movesPenalty = Math.max(0, movesCount - optimalMoves) * 5;
     
     return Math.max(0, Math.floor(baseScore - timePenalty - movesPenalty));
   }
 
+  // Legacy method for backward compatibility
+  calculateScoreWithDifficulty(difficulty, timeSeconds, movesCount) {
+    return this.calculateScore(timeSeconds, movesCount);
+  }
+
   // Card Management - Load cards from database
-  async getGameCards(difficulty = 'easy', pairs = 8) {
+  async getGameCards(difficulty = 'easy', pairs = 6) {
     try {
       // Try public API first for guest access, fallback to authenticated API
       let response;
@@ -106,6 +111,19 @@ class MemoryGameAPI {
     return result;
   }
 
+  // Practice Mode - Calculate score only (not saved to database)
+  async savePracticeSession(gameData) {
+    try {
+      const response = await api.post(`${this.baseURL}/memory-sessions/practice/`, gameData);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to calculate practice score:', error);
+      // Fallback to local calculation
+      const localScore = this.calculateScore(gameData.time_seconds, gameData.moves_count);
+      return { score: localScore, ...gameData };
+    }
+  }
+
   // Game Session Management
   async saveGameSession(gameData) {
     try {
@@ -166,64 +184,7 @@ class MemoryGameAPI {
     }
   }
 
-  // Tournament Management
-  async getTournaments(status = 'active') {
-    try {
-      const response = await api.get(`${this.baseURL}/tournaments/`, {
-        params: { status }
-      });
-      // Handle paginated response
-      return response.data.results || response.data || [];
-    } catch (error) {
-      console.error('Failed to load tournaments:', error);
-      return [];
-    }
-  }
-
-  async createTournament(tournamentData) {
-    try {
-      const response = await api.post(`${this.baseURL}/tournaments/`, tournamentData);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to create tournament:', error);
-      throw error;
-    }
-  }
-
-  async getTournamentDetail(tournamentId) {
-    try {
-      const response = await api.get(`${this.baseURL}/tournaments/${tournamentId}/`);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to load tournament details:', error);
-      return null;
-    }
-  }
-
-  async registerForTournament(tournamentId, participantData) {
-    const response = await api.post(`${this.baseURL}/tournaments/${tournamentId}/register/`, participantData);
-    return response.data;
-  }
-
-  async getTournamentLeaderboard(tournamentId) {
-    const response = await api.get(`${this.baseURL}/tournaments/${tournamentId}/leaderboard/`);
-    return response.data.results || response.data || [];
-  }
-
-  async getTournamentParticipants(tournamentId) {
-    const response = await api.get(`${this.baseURL}/tournaments/${tournamentId}/participants/`);
-    return response.data.results || response.data || [];
-  }
-
-  async startTournament(tournamentId) {
-    const response = await api.post(`${this.baseURL}/tournaments/${tournamentId}/start/`);
-    return response.data;
-  }
-
-  async endTournament(tournamentId) {
-    const response = await api.post(`${this.baseURL}/tournaments/${tournamentId}/end/`);
-    return response.data;
-  }
+  // Old Tournament Management methods removed - using updated methods below with proper error handling
 
   // Achievement System
   async getAchievements() {
@@ -262,7 +223,7 @@ class MemoryGameAPI {
     this.pendingSessions.push({ 
       ...gameData, 
       timestamp: Date.now(),
-      localScore: this.calculateScore(gameData.difficulty, gameData.time_seconds, gameData.moves_count)
+      localScore: this.calculateScore(gameData.time_seconds, gameData.moves_count)
     });
     localStorage.setItem('pendingMemoryGameSessions', JSON.stringify(this.pendingSessions));
   }
@@ -446,16 +407,16 @@ class MemoryGameAPI {
 
   getDifficultyDisplay(difficulty) {
     const displays = {
-      easy: 'Easy (2x4)',
-      intermediate: 'Intermediate (3x4)', 
-      hard: 'Hard (4x4)'
+      easy: 'Easy (4x3 Grid - 6 pairs)',
+      intermediate: 'Intermediate (4x3 Grid - 6 pairs)', 
+      hard: 'Hard (4x4 Grid - 8 pairs)'
     };
     return displays[difficulty] || difficulty;
   }
 
   getOptimalMoves(difficulty) {
-    const optimalMoves = { easy: 16, intermediate: 24, hard: 32 }; // Updated for new grid sizes
-    return optimalMoves[difficulty] || 16;
+    const optimalMoves = { easy: 12, intermediate: 12, hard: 16 }; // Updated for new grid sizes: 6 pairs, 6 pairs, 8 pairs
+    return optimalMoves[difficulty] || 12;
   }
   // Tournament Management Functions
   
@@ -507,6 +468,17 @@ class MemoryGameAPI {
     }
   }
 
+  // NEW: Submit tournament score (after game completion)
+  async submitTournamentScore(tournamentId, scoreData) {
+    try {
+      const response = await api.post(`${this.baseURL}/tournaments/${tournamentId}/submit_score/`, scoreData);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to submit tournament score:', error);
+      throw error;
+    }
+  }
+
   // NEW: Anonymous Tournament Play Session (Key endpoint!)
   async createTournamentPlaySession(tournamentId, gameData) {
     try {
@@ -528,7 +500,7 @@ class MemoryGameAPI {
     }
   }
 
-  // QR Code access - tournaments have qr_code_url field directly
+  // QR Code Management
   getTournamentQRCode(tournament, type = 'play') {
     // Your API shows tournaments have qr_code_url field with the Cloudinary URL
     if (tournament.qr_code_url) {
@@ -541,6 +513,61 @@ class MemoryGameAPI {
     }
     
     return null;
+  }
+
+  // Generate QR Code for Tournament
+  async generateTournamentQRCode(tournamentId) {
+    try {
+      const response = await api.post(`${this.baseURL}/tournaments/${tournamentId}/generate_qr_code/`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to generate QR code:', error);
+      throw error;
+    }
+  }
+
+  // Get Tournament Play URL (what QR code should point to)
+  getTournamentPlayURL(tournament, baseUrl = window.location.origin) {
+    if (tournament.hotel?.slug && tournament.slug) {
+      return `${baseUrl}/tournaments/${tournament.hotel.slug}/${tournament.slug}/play`;
+    }
+    // Fallback to legacy format
+    return `${baseUrl}/games/memory-match/tournament/${tournament.id}`;
+  }
+
+  // Get Tournament by Hotel and Slug (for QR code landing pages)
+  async getTournamentBySlug(hotelSlug, tournamentSlug) {
+    try {
+      const response = await api.get(`${this.baseURL}/tournaments/`, {
+        params: { hotel_slug: hotelSlug, slug: tournamentSlug }
+      });
+      
+      // Return first matching tournament
+      const tournaments = response.data.results || response.data || [];
+      return tournaments.find(t => 
+        t.hotel?.slug === hotelSlug && t.slug === tournamentSlug
+      ) || null;
+    } catch (error) {
+      console.error('Failed to fetch tournament by slug:', error);
+      return null;
+    }
+  }
+
+  // Get Active Tournaments for Hotel (new refactored approach)
+  async getActiveTournamentsForHotel(hotelSlug) {
+    try {
+      const response = await api.get(`${this.baseURL}/tournaments/active/`, {
+        params: { hotel: hotelSlug }
+      });
+      
+      return {
+        tournaments: response.data.tournaments || response.data.results || [],
+        count: response.data.count || 0
+      };
+    } catch (error) {
+      console.error('Failed to fetch active tournaments for hotel:', error);
+      return { tournaments: [], count: 0 };
+    }
   }
 
 }
