@@ -5,7 +5,6 @@ class MemoryGameAPI {
     this.baseURL = '/entertainment';
     this.pendingSessions = this.loadPendingSessions();
     this.cloudinaryBase = import.meta.env.VITE_CLOUDINARY_BASE || '';
-    console.log('🌐 Cloudinary base URL loaded:', this.cloudinaryBase);
   }
 
   // Helper function to get full image URL
@@ -23,13 +22,6 @@ class MemoryGameAPI {
     // Ensure cloudinaryBase has trailing slash
     const baseWithSlash = this.cloudinaryBase.endsWith('/') ? this.cloudinaryBase : `${this.cloudinaryBase}/`;
     const fullUrl = `${baseWithSlash}image/upload/${pathWithExtension}`;
-    
-    console.log(`🖼️ Constructing image URL:`);
-    console.log(`  - Base: ${this.cloudinaryBase}`);
-    console.log(`  - Base with slash: ${baseWithSlash}`);
-    console.log(`  - Path: ${path}`);
-    console.log(`  - Path with extension: ${pathWithExtension}`);
-    console.log(`  - Final URL: ${fullUrl}`);
     
     return fullUrl;
   }
@@ -53,24 +45,18 @@ class MemoryGameAPI {
 
   // Card Management - Load cards from database (NO DIFFICULTY - always 6 pairs for 3x4 grid)
   async getGameCards() {
-    console.log('🎮 Loading game cards for 3x4 grid (6 pairs)...');
     
     // ONLY use the tested api.js - NO FALLBACK to local images
-    console.log('📡 Calling backend API:', `${this.baseURL}/memory-cards/for-game/`);
     const response = await api.get(`${this.baseURL}/memory-cards/for-game/`);
-    console.log('✅ Backend API response:', response.data);
     
     // Handle paginated response
     const data = response.data;
-    console.log('📊 Raw API data structure:', data);
     
     if (data && data.results) {
-      console.log('📋 Processing paginated results...');
       // Fix image URLs by adding Cloudinary base URL if needed
       const cardsWithFullUrls = data.results.map(card => {
         const originalUrl = card.image_url;
         const fullUrl = this.getFullImageUrl(originalUrl);
-        console.log(`🎴 Processing card: ${card.name} - ${originalUrl} → ${fullUrl}`);
         return {
           ...card,
           image_url: fullUrl
@@ -84,20 +70,16 @@ class MemoryGameAPI {
         total_cards: 12,
         cards: cardsWithFullUrls.slice(0, 6) // Ensure exactly 6 cards
       };
-      console.log('🎯 API Success - Final result:', result);
       return result;
     }
     
     // Legacy format support - always return 6 cards
-    console.log('📋 Processing legacy/direct format...');
     const cards = Array.isArray(data) ? data : (data.cards || []);
-    console.log('📋 Raw cards before URL processing:', cards);
     
     // Process URLs for legacy format too
     const cardsWithFullUrls = cards.map(card => {
       const originalUrl = card.image_url;
       const fullUrl = this.getFullImageUrl(originalUrl);
-      console.log(`🎴 Processing legacy card: ${card.name} - ${originalUrl} → ${fullUrl}`);
       return {
         ...card,
         image_url: fullUrl
@@ -111,7 +93,6 @@ class MemoryGameAPI {
       total_cards: 12,
       cards: cardsWithFullUrls.slice(0, 6)
     };
-    console.log('🎯 Backend Success (legacy format):', result);
     return result;
   }
 
@@ -386,14 +367,6 @@ class MemoryGameAPI {
       
       // Backend returns { tournaments: [...], count: N }
       if (response.data && response.data.tournaments) {
-        console.log(`🏆 Found ${response.data.count} tournaments for ${hotelSlug}:`);
-        response.data.tournaments.forEach((tournament, index) => {
-          console.log(`   ${index + 1}. "${tournament.name}" (ID: ${tournament.id})`);
-          console.log(`      Hotel: ${tournament.hotel}`);
-          console.log(`      Status: ${tournament.status || 'N/A'}`);
-          console.log(`      Start: ${tournament.start_date}`);
-          console.log(`      End: ${tournament.end_date}`);
-        });
         return response.data.tournaments;
       }
       
@@ -447,11 +420,7 @@ class MemoryGameAPI {
 
   async getTournamentLeaderboard(tournamentId) {
     try {
-      console.log(`📊 Requesting leaderboard: GET ${this.baseURL}/tournaments/${tournamentId}/leaderboard/`);
       const response = await api.get(`${this.baseURL}/tournaments/${tournamentId}/leaderboard/`);
-      
-      console.log(`📋 Leaderboard API response status:`, response.status);
-      console.log(`📋 Leaderboard API response data:`, response.data);
       
       return response.data;
     } catch (error) {
@@ -468,7 +437,6 @@ class MemoryGameAPI {
   async isHighScore(tournamentId, timeSeconds, movesCount) {
     try {
       const calculatedScore = this.calculateScore(timeSeconds, movesCount);
-      console.log(`🎯 Checking if score ${calculatedScore} qualifies as high score for tournament ${tournamentId}`);
       
       // Get current leaderboard to check if this score would qualify
       const leaderboardData = await this.getTournamentLeaderboard(tournamentId);
@@ -486,11 +454,8 @@ class MemoryGameAPI {
         leaderboardArray = leaderboardData.data;
       }
       
-      console.log(`📊 Current leaderboard has ${leaderboardArray.length} entries`);
-      
       // If there are fewer than 10 entries, it's automatically a high score
       if (leaderboardArray.length < 10) {
-        console.log(`✅ High score: Leaderboard has ${leaderboardArray.length} entries (less than 10)`);
         return {
           isHighScore: true,
           rank: leaderboardArray.length + 1,

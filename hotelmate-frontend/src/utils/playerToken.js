@@ -23,9 +23,6 @@ export const PlayerTokenManager = {
       const randomString = Math.random().toString(36).substr(2, 9);
       token = `player_${timestamp}_${randomString}`;
       localStorage.setItem('tournament_player_token', token);
-      console.log('🔑 Generated new player token:', token);
-    } else {
-      console.log('🔑 Using existing player token:', token);
     }
     return token;
   },
@@ -42,7 +39,6 @@ export const PlayerTokenManager = {
     if (room && room.trim()) {
       localStorage.setItem('room_number', room.trim());
     }
-    console.log('💾 Stored player info:', { name: name?.trim(), room: room?.trim() });
   },
 
   /**
@@ -54,7 +50,6 @@ export const PlayerTokenManager = {
       name: localStorage.getItem('player_name') || '',
       room: localStorage.getItem('room_number') || ''
     };
-    console.log('📋 Retrieved stored player info:', stored);
     return stored;
   },
 
@@ -65,7 +60,6 @@ export const PlayerTokenManager = {
   hasPlayedBefore() {
     const hasToken = localStorage.getItem('tournament_player_token') !== null;
     const hasPlayerInfo = localStorage.getItem('player_name') !== null;
-    console.log('❓ Player has played before:', hasToken && hasPlayerInfo);
     return hasToken && hasPlayerInfo;
   },
 
@@ -77,7 +71,6 @@ export const PlayerTokenManager = {
     localStorage.removeItem('tournament_player_token');
     localStorage.removeItem('player_name');
     localStorage.removeItem('room_number');
-    console.log('🧹 Cleared all player data - starting fresh');
   },
 
   /**
@@ -103,7 +96,6 @@ export const PlayerTokenManager = {
   updatePlayerName(name) {
     if (name && name.trim()) {
       localStorage.setItem('player_name', name.trim());
-      console.log('📝 Updated player name:', name.trim());
     }
   },
 
@@ -114,7 +106,6 @@ export const PlayerTokenManager = {
   updateRoomNumber(room) {
     if (room && room.trim()) {
       localStorage.setItem('room_number', room.trim());
-      console.log('🏠 Updated room number:', room.trim());
     }
   },
 

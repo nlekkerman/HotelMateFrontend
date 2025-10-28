@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import memoryGameAPI from '@/services/memoryGameAPI';
 import TournamentRules from '../components/TournamentRules';
+import { PlayerTokenManager } from '@/utils/playerToken';
 
 export default function TournamentDashboard() {
   const navigate = useNavigate();
@@ -44,10 +45,7 @@ export default function TournamentDashboard() {
       
       // If we have an active tournament, show its leaderboard
       if (nextTournament && nextTournament.id) {
-        console.log(`📊 Fetching leaderboard for tournament: ${nextTournament.name} (ID: ${nextTournament.id})`);
         const response = await memoryGameAPI.getTournamentLeaderboard(nextTournament.id);
-        
-        console.log(`📋 Tournament leaderboard response:`, response);
         
         let leaderboardArray = [];
         
@@ -65,32 +63,12 @@ export default function TournamentDashboard() {
           // Wrapped in data key
           leaderboardArray = response.data;
         } else {
-          console.log(`📋 No leaderboard data found for tournament ${nextTournament.id}`);
           leaderboardArray = [];
-        }
-        
-        // Log the actual data structure to debug player names
-        if (leaderboardArray.length > 0) {
-          console.log(`📋 First leaderboard entry structure:`, leaderboardArray[0]);
-          console.log(`📋 Available fields:`, Object.keys(leaderboardArray[0]));
-          
-          // Enhanced debugging for player names
-          console.log(`🔍 Debugging player name fields for each entry:`);
-          leaderboardArray.slice(0, 3).forEach((entry, index) => {
-            console.log(`   Entry ${index + 1}:`);
-            console.log(`     - player_name: "${entry.player_name}"`);
-            console.log(`     - name: "${entry.name}"`);
-            console.log(`     - playerName: "${entry.playerName}"`);
-            console.log(`     - user: "${entry.user}"`);
-            console.log(`     - participant_name: "${entry.participant_name}"`);
-            console.log(`     - All keys: [${Object.keys(entry).join(', ')}]`);
-          });
         }
         
         setLeaderboardData(leaderboardArray);
       } else {
         // No active tournament - show general leaderboard as fallback
-        console.log(`📊 No active tournament - showing general leaderboard`);
         const response = await memoryGameAPI.getGeneralLeaderboard();
         
         if (response && response.leaderboard) {
@@ -112,39 +90,15 @@ export default function TournamentDashboard() {
   const fetchAllTournaments = async () => {
     try {
       setTournamentLoading(true);
-      console.log(`🔍 Fetching tournaments from database for ${hotelSlug}...`);
       
       // Get tournaments for this specific hotel
       const tournaments = await memoryGameAPI.getTournaments(hotelSlug);
-      console.log(`📋 Raw tournaments response:`, tournaments);
-      console.log(`📋 Number of tournaments found:`, tournaments ? tournaments.length : 0);
       
       if (tournaments && tournaments.length > 0) {
         tournaments.forEach((tournament, index) => {
           const now = new Date();
           const startTime = new Date(tournament.start_date);
           const endTime = new Date(tournament.end_date);
-          
-          console.log(`📋 Tournament ${index + 1}:`, {
-            id: tournament.id,
-            name: tournament.name,
-            hotel: tournament.hotel,
-            status: tournament.status,
-            is_active: tournament.is_active,
-            start_date: tournament.start_date,
-            end_date: tournament.end_date,
-            now: now.toISOString(),
-            startTime: startTime.toISOString(),
-            endTime: endTime.toISOString(),
-            nowTimestamp: now.getTime(),
-            startTimestamp: startTime.getTime(),
-            endTimestamp: endTime.getTime(),
-            isNowAfterStart: now >= startTime,
-            isNowBeforeEnd: now <= endTime,
-            isActiveByTime: now >= startTime && now <= endTime,
-            minutesToStart: Math.floor((startTime.getTime() - now.getTime()) / (1000 * 60)),
-            minutesToEnd: Math.floor((endTime.getTime() - now.getTime()) / (1000 * 60))
-          });
         });
       }
       
@@ -152,14 +106,11 @@ export default function TournamentDashboard() {
       
       // Get the next relevant tournament (active or upcoming) for this hotel
       const result = await memoryGameAPI.getNextTournament(hotelSlug);
-      console.log(`🎯 getNextTournament result:`, result);
       
       if (result.tournament) {
         setNextTournament(result.tournament);
-        console.log(`🎯 Next tournament for ${hotelSlug}: "${result.tournament.name}" (${result.status})`);
       } else {
         setNextTournament(null);
-        console.log(`❌ No next tournament found for ${hotelSlug}. Result:`, result);
       }
       
     } catch (error) {
@@ -483,7 +434,7 @@ export default function TournamentDashboard() {
                   margin: '10px 0'
                 }}>
                   <h4 className="mb-2">🔥 {tournamentState.tournament.name} is LIVE!</h4>
-                  <h3 className="display-5 mb-3">Play Now!</h3>
+                  <h3 className="display-5 mb-3">Scroll down to Play Now!</h3>
                   <p className="mb-2">
                     Started: {tournamentState.tournamentTime.toLocaleTimeString('en-US', { 
                       hour: '2-digit', 
@@ -600,6 +551,51 @@ export default function TournamentDashboard() {
 
 // Quick Leaderboard Component
 const QuickLeaderboard = ({ leaderboardData, leaderboardLoading, leaderboardError, nextTournament }) => {
+  const playerToken = PlayerTokenManager.getPlayerToken();
+  const playerName = PlayerTokenManager.getDisplayName();
+  const playerRoom = PlayerTokenManager.getDisplayRoom();
+  const leaderboardRef = useRef(null);
+
+  // Check if an entry belongs to current player
+  const isCurrentPlayerEntry = (session) => {
+    // Match by name and room (primary method)
+    const nameMatch = playerName && session.player_name === playerName;
+    const roomMatch = !playerRoom || !session.room_number || session.room_number === playerRoom || session.room_number === "Not specified";
+    
+    return nameMatch && roomMatch;
+  };
+
+  // Find current player's rank in full leaderboard
+  const currentPlayerRank = leaderboardData ? leaderboardData.findIndex(session => isCurrentPlayerEntry(session)) + 1 : 0;
+  const hasCurrentPlayer = currentPlayerRank > 0;
+  
+  // Show top 5 + current player if not in top 5
+  let displayPlayers = [];
+  if (leaderboardData && leaderboardData.length > 0) {
+    displayPlayers = leaderboardData.slice(0, 5);
+    if (hasCurrentPlayer && currentPlayerRank > 5) {
+      const playerEntry = { ...leaderboardData[currentPlayerRank - 1], isCurrentPlayer: true };
+      displayPlayers.push(playerEntry);
+    }
+  }
+
+  // Auto-scroll to current player's entry (hook must be called always)
+  useEffect(() => {
+    if (hasCurrentPlayer && leaderboardRef.current && !leaderboardLoading && !leaderboardError) {
+      const playerElement = leaderboardRef.current.querySelector('.current-player-entry');
+      if (playerElement) {
+        setTimeout(() => {
+          playerElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          });
+        }, 500);
+      }
+    }
+  }, [hasCurrentPlayer, leaderboardData, leaderboardLoading, leaderboardError]);
+
+  // Early returns after all hooks are called
   if (leaderboardLoading) {
     return (
       <div className="text-center py-3">
@@ -630,30 +626,46 @@ const QuickLeaderboard = ({ leaderboardData, leaderboardLoading, leaderboardErro
     );
   }
 
-  const topPlayers = leaderboardData.slice(0, 5); // Show top 5 instead of 3
-
   return (
-    <div>
+    <div ref={leaderboardRef}>
       <p className="text-muted mb-3 text-center">
         {nextTournament ? `${nextTournament.name} - Top Players` : 'Top players today'}
         {leaderboardData.length > 0 && (
           <span className="badge bg-secondary ms-2">{leaderboardData.length} total</span>
         )}
+        {hasCurrentPlayer && (
+          <span className="badge bg-success ms-2">You: #{currentPlayerRank}</span>
+        )}
       </p>
       <div className="d-grid gap-2">
-        {topPlayers.map((session, index) => (
-          <div 
-            key={session.id || index} 
-            className="d-flex justify-content-between align-items-center p-3 bg-light rounded border"
-          >
+        {displayPlayers.map((session, index) => {
+          const isCurrentPlayer = session.isCurrentPlayer || (index < 5 && isCurrentPlayerEntry(session));
+          const actualRank = session.isCurrentPlayer ? currentPlayerRank : index + 1;
+          
+          return (
+            <div 
+              key={session.id || index} 
+              className={`d-flex justify-content-between align-items-center p-3 rounded border ${
+                isCurrentPlayer 
+                  ? 'bg-success bg-opacity-10 border-success border-2 current-player-entry' 
+                  : 'bg-light'
+              }`}
+              style={isCurrentPlayer ? { 
+                boxShadow: '0 0 10px rgba(25, 135, 84, 0.3)',
+                transform: 'scale(1.02)' 
+              } : {}}
+            >
             <div className="d-flex align-items-center flex-grow-1">
               <span className="me-3 fw-bold fs-4">
-                {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                {actualRank === 1 ? '🥇' : actualRank === 2 ? '🥈' : actualRank === 3 ? '🥉' : `#${actualRank}`}
               </span>
               <div className="d-flex flex-column flex-grow-1">
                 <div className="d-flex justify-content-between align-items-center">
-                  <span className="fw-bold fs-5 text-dark">
-                    {session.player_name || session.participant_name || session.name || session.playerName || session.user || `Anonymous Player ${index + 1}`}
+                  <span className={`fw-bold fs-5 ${isCurrentPlayer ? 'text-success' : 'text-dark'}`}>
+                    {isCurrentPlayer ? '👤 You' : (session.player_name || session.participant_name || session.name || session.playerName || session.user || `Anonymous Player ${actualRank}`)}
+                    {isCurrentPlayer && session.player_name && (
+                      <span className="text-muted small ms-2">({session.player_name})</span>
+                    )}
                   </span>
                   <span className="badge bg-primary fs-6 ms-2">{session.score || 0} pts</span>
                 </div>
@@ -676,7 +688,8 @@ const QuickLeaderboard = ({ leaderboardData, leaderboardLoading, leaderboardErro
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

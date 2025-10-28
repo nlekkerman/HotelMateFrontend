@@ -1,10 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { memoryGameAPI } from '@/services/memoryGameAPI';
+import { PlayerTokenManager } from '@/utils/playerToken';
 
 export default function Leaderboard({ difficulty = 'easy', tournamentId = null }) {
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const leaderboardRef = useRef(null);
+  
+  // Player identification
+  const playerName = PlayerTokenManager.getDisplayName();
+  const playerRoom = PlayerTokenManager.getDisplayRoom();
   const [selectedDifficulty, setSelectedDifficulty] = useState(difficulty);
 
   useEffect(() => {
@@ -41,14 +47,40 @@ export default function Leaderboard({ difficulty = 'easy', tournamentId = null }
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (timestamp) => {
+    return new Date(timestamp).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
   };
+
+  // Check if an entry belongs to current player
+  const isCurrentPlayerEntry = (entry) => {
+    const nameMatch = playerName && entry.player_name === playerName;
+    const roomMatch = !playerRoom || !entry.room_number || entry.room_number === playerRoom || entry.room_number === "Not specified";
+    return nameMatch && roomMatch;
+  };
+
+  // Auto-scroll to current player's entry
+  useEffect(() => {
+    if (leaderboard.length > 0 && playerName && leaderboardRef.current) {
+      const playerEntryIndex = leaderboard.findIndex(isCurrentPlayerEntry);
+      if (playerEntryIndex >= 0) {
+        setTimeout(() => {
+          const playerRow = leaderboardRef.current.querySelector('.current-player-row');
+          if (playerRow) {
+            playerRow.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center',
+              inline: 'nearest'
+            });
+          }
+        }, 500);
+      }
+    }
+  }, [leaderboard, playerName]);
 
   const getRankIcon = (rank) => {
     switch (rank) {
@@ -140,19 +172,31 @@ export default function Leaderboard({ difficulty = 'easy', tournamentId = null }
                         <th scope="col" className="text-center">Date</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody ref={leaderboardRef}>
                       {leaderboard.map((entry, index) => {
                         const rank = entry.rank || (index + 1);
+                        const isCurrentPlayer = isCurrentPlayerEntry(entry);
                         return (
-                          <tr key={index} className={getRankClass(rank)}>
+                          <tr 
+                            key={index} 
+                            className={`${getRankClass(rank)} ${isCurrentPlayer ? 'table-success current-player-row' : ''}`}
+                            style={isCurrentPlayer ? { 
+                              boxShadow: '0 0 10px rgba(25, 135, 84, 0.3)',
+                              transform: 'scale(1.01)' 
+                            } : {}}
+                          >
                             <td className="text-center fw-bold">
                               <span className="fs-5">{getRankIcon(rank)}</span>
+                              {isCurrentPlayer && <span className="ms-2 text-success">👤</span>}
                             </td>
                             <td>
                               <div className="d-flex align-items-center">
                                 <div>
-                                  <div className="fw-semibold">
-                                    {entry.player_name || entry.participant_name || entry.user || 'Anonymous'}
+                                  <div className={`fw-semibold ${isCurrentPlayer ? 'text-success' : ''}`}>
+                                    {isCurrentPlayer ? '👤 You' : (entry.player_name || entry.participant_name || entry.user || 'Anonymous')}
+                                    {isCurrentPlayer && entry.player_name && (
+                                      <span className="text-muted small ms-2">({entry.player_name})</span>
+                                    )}
                                   </div>
                                   {entry.user && entry.participant_name && (
                                     <small className="text-muted">({entry.user})</small>

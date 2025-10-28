@@ -34,14 +34,11 @@ function useMemoryGame() {
     
     try {
       // Always load 6 pairs for 3x4 grid
-      console.log('🎮 MemoryGame: Loading cards...');
       const response = await memoryGameAPI.getGameCards();
-      console.log('🎮 MemoryGame: Cards loaded:', response);
       
       // Create card pairs for memory game
       const cardPairs = [];
       response.cards.forEach((card, index) => {
-        console.log(`🎴 Creating pair ${index + 1}:`, card);
         cardPairs.push(
           { id: `${card.id}a`, pairId: index, cardData: card },
           { id: `${card.id}b`, pairId: index, cardData: card }
@@ -192,11 +189,11 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
   useEffect(() => {
     if (lastAction === "match") {
       correctSound.current.currentTime = 0; // Reset audio to beginning
-      correctSound.current.play().catch(e => console.log('Audio play failed:', e));
+      correctSound.current.play().catch(e => {/* Audio play failed */});
     }
     if (lastAction === "mismatch") {
       wrongSound.current.currentTime = 0; // Reset audio to beginning
-      wrongSound.current.play().catch(e => console.log('Audio play failed:', e));
+      wrongSound.current.play().catch(e => {/* Audio play failed */});
     }
     
     // Reset lastAction after a short delay to allow for consecutive sounds
@@ -266,15 +263,12 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
       setGameState('completed');
       
       try {
-        console.log(`🏆 Checking if score qualifies as high score for tournament ${tournamentId}`);
         const highScoreCheck = await memoryGameAPI.isHighScore(tournamentId, timeSeconds, moves);
         
         if (highScoreCheck.isHighScore) {
-          console.log(`✅ Score qualifies as high score:`, highScoreCheck);
           // Show player form to collect name and room number
           setShowPlayerForm(true);
         } else {
-          console.log(`❌ Score doesn't qualify as high score:`, highScoreCheck);
           // Just show completion message without collecting player info
           alert(`🎮 Game completed!\n\nYour score: ${localScore} points\nTime: ${formatTime(timeSeconds)}\nMoves: ${moves}\n\n${highScoreCheck.reason}\nKeep practicing to make it to the leaderboard! 💪`);
           
@@ -317,15 +311,12 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
         moves_count: moves
       };
       
-      console.log('🎯 Submitting tournament score with token:', scoreData);
-      
       // Submit to backend with token-based tracking
       const gameSession = await memoryGameAPI.submitTournamentScore(tournamentId, scoreData);
       
       // Store player info for future sessions
       if (playerName && roomNumber) {
         PlayerTokenManager.storePlayerInfo(playerName, roomNumber);
-        console.log('💾 Player info stored for future sessions');
       }
       
       // Handle different response types from token-based backend
@@ -359,8 +350,14 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
       
     } catch (error) {
       console.error('Failed to save tournament score:', error);
-      // Even if API fails, show success message for kids
-      alert(`🎮 Amazing game!\n\nYour score: ${finalScore} points\nTime: ${formatTime(time)}\nMoves: ${moves}\n\n🌟 Great job playing!`);
+      
+      // Check if tournament ended while playing
+      if (error.response?.status === 400 && error.response?.data?.error?.includes('not currently active')) {
+        alert(`⏰ Tournament Ended!\n\nThe tournament ended while you were playing.\n\nYour score: ${finalScore} points\nTime: ${formatTime(time)}\nMoves: ${moves}\n\n🏆 Great game! Check for new tournaments on the dashboard.`);
+      } else {
+        // General error - show encouraging message for kids
+        alert(`🎮 Amazing game!\n\nYour score: ${finalScore} points\nTime: ${formatTime(time)}\nMoves: ${moves}\n\n🌟 Great job playing!`);
+      }
       
       setTimeout(() => {
         navigate('/games/memory-match/tournaments?hotel=hotel-killarney');
@@ -396,8 +393,6 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
     }
     
     setGameState('saving');
-    
-    console.log(`🎯 Player "${playerName}" submitting score - unlimited attempts allowed, only higher scores will be saved`);
     
     setShowPlayerForm(false);
     saveTournamentScore();
@@ -442,7 +437,6 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
           const storedInfo = PlayerTokenManager.getStoredPlayerInfo();
           setPlayerName(storedInfo.name);
           setRoomNumber(storedInfo.room);
-          console.log('🔄 Returning player detected, loaded stored info:', storedInfo);
         }
         
         // Initialize API
@@ -711,7 +705,6 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
                       setRoomNumber('');
                       setHasPlayedBefore(false);
                       setPlayerToken(PlayerTokenManager.getPlayerToken());
-                      console.log('🧹 Started as new player');
                     }}
                   >
                     🔄 Start as New Player
