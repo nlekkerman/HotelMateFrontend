@@ -3,6 +3,7 @@ import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import backImg from "../assets/images/card-back.png";
 import GameRules from "../components/GameRules";
+import PlayerInfoForm from "../components/PlayerInfoForm";
 import { memoryGameAPI } from "@/services/memoryGameAPI";
 import { usePersonalBest } from "../hooks/usePersonalBest";
 
@@ -120,10 +121,11 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
   const [hasSeenRules, setHasSeenRules] = useState(false);
   
   // Player info collection for tournament mode
-  const [gameStarted, setGameStarted] = useState(tournamentId ? true : false); // Start immediately for tournaments
-  const [showPlayerForm, setShowPlayerForm] = useState(false);
+  const [gameStarted, setGameStarted] = useState(true); // Always start immediately - no welcome screen
+  const [showPlayerForm, setShowPlayerForm] = useState(false); // Only show form for high scores after game completion
   const [playerName, setPlayerName] = useState('');
   const [roomNumber, setRoomNumber] = useState('');
+  const [playerData, setPlayerData] = useState(null);
   
   // Game mode state
   const [gameMode, setGameMode] = useState(practiceMode ? 'practice' : (tournamentId ? 'tournament' : 'selection'));
@@ -257,9 +259,32 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
       }
       
     } else if (gameMode === 'tournament') {
-      // Tournament mode - show player form to collect name and room number
+      // Tournament mode - check if it's a high score first
       setGameState('completed');
-      setShowPlayerForm(true);
+      
+      try {
+        console.log(`🏆 Checking if score qualifies as high score for tournament ${tournamentId}`);
+        const highScoreCheck = await memoryGameAPI.isHighScore(tournamentId, timeSeconds, moves);
+        
+        if (highScoreCheck.isHighScore) {
+          console.log(`✅ Score qualifies as high score:`, highScoreCheck);
+          // Show player form to collect name and room number
+          setShowPlayerForm(true);
+        } else {
+          console.log(`❌ Score doesn't qualify as high score:`, highScoreCheck);
+          // Just show completion message without collecting player info
+          alert(`🎮 Game completed!\n\nYour score: ${localScore} points\nTime: ${formatTime(timeSeconds)}\nMoves: ${moves}\n\n${highScoreCheck.reason}\nKeep practicing to make it to the leaderboard! 💪`);
+          
+          // Navigate back to tournament dashboard after showing message
+          setTimeout(() => {
+            navigate('/games/memory-match/tournaments?hotel=hotel-killarney');
+          }, 3000);
+        }
+      } catch (error) {
+        console.error('Failed to check high score status:', error);
+        // If check fails, default to showing the form to be safe
+        setShowPlayerForm(true);
+      }
     }
   };
 
@@ -328,11 +353,36 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
     setMoves(0);
   };
 
-  const handlePlayerFormSubmit = () => {
+  const handlePlayerFormSubmit = async () => {
     if (!playerName.trim()) {
       alert('Please enter your name to continue');
       return;
     }
+    
+    setGameState('saving');
+    
+    try {
+      // Check if player has already played in this tournament
+      console.log(`🔍 Checking if player "${playerName}" has already played tournament ${tournamentId}`);
+      const playerCheck = await memoryGameAPI.hasPlayerAlreadyPlayed(tournamentId, playerName, roomNumber);
+      
+      if (playerCheck.hasPlayed) {
+        setGameState('completed');
+        alert(`❌ Already Played!\n\n${playerCheck.message}\n\nEach player can only participate once per tournament. Thank you for playing! 🎮`);
+        
+        // Navigate back to tournament dashboard
+        setTimeout(() => {
+          navigate('/games/memory-match/tournaments?hotel=hotel-killarney');
+        }, 3000);
+        return;
+      }
+      
+      console.log(`✅ Player "${playerName}" can submit their score`);
+    } catch (error) {
+      console.warn('Could not verify player status, allowing submission:', error);
+      // Continue with submission if check fails to be safe
+    }
+    
     setShowPlayerForm(false);
     saveTournamentScore();
   };
@@ -342,6 +392,20 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
     setRoomNumber('');
     setShowPlayerForm(false);
     saveTournamentScore();
+  };
+
+  // New handlers for PlayerInfoForm
+  const handleStartGame = (playerInfo) => {
+    setPlayerData(playerInfo);
+    setPlayerName(playerInfo.name);
+    setRoomNumber(playerInfo.room);
+    setShowPlayerForm(false);
+    setGameStarted(true);
+    startGame();
+  };
+
+  const handleBackToDashboard = () => {
+    navigate('/games/memory-match/tournaments?hotel=hotel-killarney');
   };
 
 
@@ -374,44 +438,7 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // QR Code Tournament Welcome Screen for Kids
-  if (tournamentId && gameMode === 'tournament' && !gameStarted) {
-    return (
-      <div className="position-fixed top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-gradient" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', zIndex: 1050}}>
-        <div className="text-center text-white px-3" style={{maxWidth: '90vw'}}>
-          <h1 className="display-4 fw-bold mb-4 text-shadow">🎮 Kids Tournament!</h1>
-          <div className="card bg-white bg-opacity-90 shadow-lg mx-auto mb-4" style={{maxWidth: '400px'}}>
-            <div className="card-body p-4">
-              <h3 className="text-primary mb-3">📱 Welcome!</h3>
-              <div className="text-start">
-                <p className="mb-2">🎯 <strong>Your Mission:</strong> Find matching pairs</p>
-                <p className="mb-2">📱 <strong>Mobile Optimized:</strong> Perfect for your phone</p>
-                <p className="mb-2">🎁 <strong>Free & Fun:</strong> No registration needed</p>
-                <p className="mb-2">🏆 <strong>Show Off:</strong> Get on the champions board</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="d-grid gap-3" style={{maxWidth: '300px', margin: '0 auto'}}>
-            <button 
-              className="btn btn-success btn-lg py-3 fw-bold"
-              onClick={() => {
-                setGameStarted(true);
-                startGame();
-              }}
-              style={{fontSize: '1.2rem'}}
-            >
-              🚀 START PLAYING!
-            </button>
-          </div>
-          
-          <p className="mt-4 small text-white-50">
-            💡 Tip: Turn your phone to landscape mode for the best experience!
-          </p>
-        </div>
-      </div>
-    );
-  }
+
 
   // Auto-redirect to tournament dashboard instead of mode selection
   if (gameMode === 'selection') {

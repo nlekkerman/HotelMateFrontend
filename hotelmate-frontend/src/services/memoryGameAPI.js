@@ -379,14 +379,45 @@ class MemoryGameAPI {
   }
   // Tournament Management Functions
   
-  async getTournaments() {
+  async getTournaments(hotelSlug = 'hotel-killarney') {
+    try {
+      // Use the correct backend endpoint for active tournaments by hotel
+      const response = await api.get(`${this.baseURL}/tournaments/active_for_hotel/?hotel=${hotelSlug}`);
+      
+      // Backend returns { tournaments: [...], count: N }
+      if (response.data && response.data.tournaments) {
+        console.log(`🏆 Found ${response.data.count} tournaments for ${hotelSlug}:`);
+        response.data.tournaments.forEach((tournament, index) => {
+          console.log(`   ${index + 1}. "${tournament.name}" (ID: ${tournament.id})`);
+          console.log(`      Hotel: ${tournament.hotel}`);
+          console.log(`      Status: ${tournament.status || 'N/A'}`);
+          console.log(`      Start: ${tournament.start_date}`);
+          console.log(`      End: ${tournament.end_date}`);
+        });
+        return response.data.tournaments;
+      }
+      
+      return [];
+    } catch (error) {
+      console.error(`❌ Failed to fetch tournaments for ${hotelSlug}:`, error);
+      
+      // If 404 or 500, backend probably doesn't have tournament endpoints yet
+      if (error.response?.status === 404 || error.response?.status === 500) {
+        throw new Error(`Tournament API endpoints not implemented for hotel ${hotelSlug}`);
+      }
+      throw error;
+    }
+  }
+
+  // Get all tournaments (no hotel filter) - for management dashboard
+  async getAllTournaments() {
     try {
       const response = await api.get(`${this.baseURL}/tournaments/`);
       return response.data;
     } catch (error) {
-      // If 404 or 500, backend probably doesn't have tournament endpoints yet
+      console.error('❌ Failed to fetch all tournaments:', error);
       if (error.response?.status === 404 || error.response?.status === 500) {
-        throw new Error('Tournament API endpoints not implemented on backend yet');
+        throw new Error('Tournament management API endpoints not implemented yet');
       }
       throw error;
     }
@@ -416,19 +447,344 @@ class MemoryGameAPI {
 
   async getTournamentLeaderboard(tournamentId) {
     try {
+      console.log(`📊 Requesting leaderboard: GET ${this.baseURL}/tournaments/${tournamentId}/leaderboard/`);
       const response = await api.get(`${this.baseURL}/tournaments/${tournamentId}/leaderboard/`);
+      
+      console.log(`📋 Leaderboard API response status:`, response.status);
+      console.log(`📋 Leaderboard API response data:`, response.data);
+      
       return response.data;
     } catch (error) {
+      console.error(`❌ Tournament leaderboard API error:`, error);
+      if (error.response) {
+        console.error(`❌ Response status:`, error.response.status);
+        console.error(`❌ Response data:`, error.response.data);
+      }
       throw error;
+    }
+  }
+
+  // Check if a score qualifies as a high score for the tournament
+  async isHighScore(tournamentId, timeSeconds, movesCount) {
+    try {
+      const calculatedScore = this.calculateScore(timeSeconds, movesCount);
+      console.log(`🎯 Checking if score ${calculatedScore} qualifies as high score for tournament ${tournamentId}`);
+      
+      // Get current leaderboard to check if this score would qualify
+      const leaderboardData = await this.getTournamentLeaderboard(tournamentId);
+      
+      let leaderboardArray = [];
+      
+      // Handle different response formats from backend
+      if (Array.isArray(leaderboardData)) {
+        leaderboardArray = leaderboardData;
+      } else if (leaderboardData && leaderboardData.sessions && Array.isArray(leaderboardData.sessions)) {
+        leaderboardArray = leaderboardData.sessions;
+      } else if (leaderboardData && leaderboardData.results && Array.isArray(leaderboardData.results)) {
+        leaderboardArray = leaderboardData.results;
+      } else if (leaderboardData && leaderboardData.data && Array.isArray(leaderboardData.data)) {
+        leaderboardArray = leaderboardData.data;
+      }
+      
+      console.log(`📊 Current leaderboard has ${leaderboardArray.length} entries`);
+      
+      // If there are fewer than 10 entries, it's automatically a high score
+      if (leaderboardArray.length < 10) {
+        console.log(`✅ High score: Leaderboard has ${leaderboardArray.length} entries (less than 10)`);
+        return {
+          isHighScore: true,
+          rank: leaderboardArray.length + 1,
+          reason: `Leaderboard has ${leaderboardArray.length} entries`
+        };
+      }
+      
+      // Check if score is higher than the lowest score in top 10
+      const sortedScores = leaderboardArray
+        .map(session => session.score || 0)
+        .sort((a, b) => b - a); // Sort descending
+      
+      const lowestTop10Score = sortedScores[9] || 0; // 10th place (index 9)
+      
+      if (calculatedScore > lowestTop10Score) {
+        console.log(`✅ High score: ${calculatedScore} > ${lowestTop10Score} (10th place)`);
+        // Calculate estimated rank
+        const betterScores = sortedScores.filter(score => score > calculatedScore);
+        const estimatedRank = betterScores.length + 1;
+        
+        return {
+          isHighScore: true,
+          rank: estimatedRank,
+          reason: `Score beats 10th place (${lowestTop10Score})`
+        };
+      }
+      
+      console.log(`❌ Not a high score: ${calculatedScore} <= ${lowestTop10Score} (10th place)`);
+      return {
+        isHighScore: false,
+        rank: null,
+        reason: `Score doesn't beat 10th place (${lowestTop10Score})`
+      };
+      
+    } catch (error) {
+      console.warn(`⚠️ Could not check high score status, defaulting to true:`, error.message);
+      // If we can't check the leaderboard, assume it's a high score to be safe
+      return {
+        isHighScore: true,
+        rank: null,
+        reason: 'Could not verify leaderboard, allowing submission'
+      };
+    }
+  }
+
+  // Check if player has already played in this tournament
+  async hasPlayerAlreadyPlayed(tournamentId, playerName, roomNumber) {
+    try {
+      console.log(`🔍 Checking if player "${playerName}" (Room: ${roomNumber}) has already played tournament ${tournamentId}`);
+      
+      const leaderboardData = await this.getTournamentLeaderboard(tournamentId);
+      
+      let leaderboardArray = [];
+      
+      // Handle different response formats from backend
+      if (Array.isArray(leaderboardData)) {
+        leaderboardArray = leaderboardData;
+      } else if (leaderboardData && leaderboardData.sessions && Array.isArray(leaderboardData.sessions)) {
+        leaderboardArray = leaderboardData.sessions;
+      } else if (leaderboardData && leaderboardData.results && Array.isArray(leaderboardData.results)) {
+        leaderboardArray = leaderboardData.results;
+      } else if (leaderboardData && leaderboardData.data && Array.isArray(leaderboardData.data)) {
+        leaderboardArray = leaderboardData.data;
+      }
+      
+      // Check for existing player by name and/or room number
+      const existingEntry = leaderboardArray.find(session => {
+        const sessionName = session.player_name || session.name || session.playerName;
+        const sessionRoom = session.room_number || session.roomNumber;
+        
+        // Match by name (case insensitive)
+        const nameMatch = sessionName && playerName && 
+          sessionName.toLowerCase().trim() === playerName.toLowerCase().trim();
+        
+        // Match by room number (if both provided)
+        const roomMatch = sessionRoom && roomNumber && 
+          sessionRoom.toString().trim() === roomNumber.toString().trim();
+        
+        // Player has already played if either name matches or both name and room match
+        return nameMatch || (nameMatch && roomMatch);
+      });
+      
+      if (existingEntry) {
+        console.log(`❌ Player already played:`, existingEntry);
+        return {
+          hasPlayed: true,
+          existingEntry: existingEntry,
+          message: `Player "${playerName}" has already participated in this tournament.`
+        };
+      }
+      
+      console.log(`✅ Player has not played yet`);
+      return {
+        hasPlayed: false,
+        existingEntry: null,
+        message: null
+      };
+      
+    } catch (error) {
+      console.warn(`⚠️ Could not check if player already played:`, error.message);
+      // If we can't check, allow the submission to be safe
+      return {
+        hasPlayed: false,
+        existingEntry: null,
+        message: null
+      };
+    }
+  }
+
+  // Get tournaments that are CURRENTLY ACTIVE (running right now)
+  async getActiveTournaments(hotelSlug = 'hotel-killarney') {
+    try {
+      const tournaments = await this.getTournaments(hotelSlug);
+      if (!tournaments || !Array.isArray(tournaments)) {
+        console.log(`📅 No tournaments found for ${hotelSlug}`);
+        return [];
+      }
+
+      const now = new Date();
+      console.log(`🕐 Checking active tournaments for ${hotelSlug} at: ${now.toISOString()}`);
+      
+      const activeTournaments = tournaments.filter(tournament => {
+        const startTime = new Date(tournament.start_date);
+        const endTime = new Date(tournament.end_date);
+        
+        // Use both status field AND time validation
+        const isActiveByStatus = tournament.status === 'active';
+        const isActiveByTime = now >= startTime && now <= endTime;
+        
+        console.log(`🔍 Checking tournament "${tournament.name}" (ID: ${tournament.id}):`);
+        console.log(`   Status field: ${tournament.status}`);
+        console.log(`   is_active field: ${tournament.is_active}`);
+        console.log(`   Start: ${startTime.toISOString()}`);
+        console.log(`   End: ${endTime.toISOString()}`);
+        console.log(`   Now: ${now.toISOString()}`);
+        console.log(`   Active by status: ${isActiveByStatus}`);
+        console.log(`   Active by time: ${isActiveByTime}`);
+        console.log(`   Time until start: ${Math.floor((startTime.getTime() - now.getTime()) / 1000 / 60)} minutes`);
+        console.log(`   Time until end: ${Math.floor((endTime.getTime() - now.getTime()) / 1000 / 60)} minutes`);
+        
+        // Tournament is active if backend says "active" AND it hasn't ended yet
+        // Allow some flexibility - if backend says active, trust it unless clearly expired
+        const hasNotEnded = now <= endTime;
+        console.log(`   Has not ended: ${hasNotEnded}`);
+        const isActive = isActiveByStatus && hasNotEnded;
+        
+        if (isActive) {
+          console.log(`🏆 ✅ ACTIVE TOURNAMENT FOUND: "${tournament.name}"`);
+        } else if (isActiveByStatus && !hasNotEnded) {
+          console.log(`❌ Status says active but tournament ended - Status: ${tournament.status}, Ended: ${!hasNotEnded}`);
+        } else {
+          console.log(`❌ Not active - Status: ${tournament.status}, Has not ended: ${hasNotEnded}`);
+        }
+        
+        return isActive;
+      });
+
+      console.log(`✅ Found ${activeTournaments.length} active tournaments for ${hotelSlug}`);
+      return activeTournaments;
+    } catch (error) {
+      console.error(`❌ Failed to fetch active tournaments for ${hotelSlug}:`, error);
+      return [];
+    }
+  }
+
+  // Get tournaments that are UPCOMING (starting within next 2 hours)
+  async getUpcomingTournaments(hoursAhead = 2, hotelSlug = 'hotel-killarney') {
+    try {
+      const tournaments = await this.getTournaments(hotelSlug);
+      if (!tournaments || !Array.isArray(tournaments)) {
+        console.log(`📅 No tournaments found for ${hotelSlug}`);
+        return [];
+      }
+
+      const now = new Date();
+      const lookAheadTime = new Date(now.getTime() + (hoursAhead * 60 * 60 * 1000));
+      
+      console.log(`🔍 Looking for upcoming tournaments for ${hotelSlug}:`);
+      console.log(`   Now: ${now.toISOString()}`);
+      console.log(`   ${hoursAhead}h ahead: ${lookAheadTime.toISOString()}`);
+      
+      const upcomingTournaments = tournaments.filter(tournament => {
+        const startTime = new Date(tournament.start_date);
+        
+        // Check if tournament is upcoming and within the time window
+        const isUpcoming = startTime > now && startTime <= lookAheadTime;
+        
+        if (isUpcoming) {
+          console.log(`📅 UPCOMING: "${tournament.name}" (ID: ${tournament.id})`);
+          console.log(`   Hotel: ${tournament.hotel}`);
+          console.log(`   Starts: ${startTime.toISOString()}`);
+          console.log(`   Status: ${tournament.status || 'upcoming (assumed)'}`);
+          const minutesUntil = Math.floor((startTime.getTime() - now.getTime()) / (1000 * 60));
+          console.log(`   In ${minutesUntil} minutes`);
+        }
+        
+        return isUpcoming;
+      }).sort((a, b) => new Date(a.start_date) - new Date(b.start_date)); // Sort by start time
+
+      console.log(`✅ Found ${upcomingTournaments.length} upcoming tournaments for ${hotelSlug}`);
+      return upcomingTournaments;
+    } catch (error) {
+      console.error(`❌ Failed to fetch upcoming tournaments for ${hotelSlug}:`, error);
+      return [];
+    }
+  }
+
+  // Get the next relevant tournament (active or upcoming)
+  async getNextTournament(hotelSlug = 'hotel-killarney') {
+    try {
+      console.log(`🎯 Finding next tournament for ${hotelSlug}...`);
+      
+      // First check for active tournaments
+      const activeTournaments = await this.getActiveTournaments(hotelSlug);
+      if (activeTournaments.length > 0) {
+        console.log(`🎯 Using active tournament: "${activeTournaments[0].name}" for ${hotelSlug}`);
+        return {
+          tournament: activeTournaments[0],
+          status: 'active',
+          allActive: activeTournaments,
+          hotelSlug: hotelSlug
+        };
+      }
+
+      // Then check for upcoming tournaments (within next 2 hours)
+      const upcomingTournaments = await this.getUpcomingTournaments(2, hotelSlug);
+      if (upcomingTournaments.length > 0) {
+        console.log(`🎯 Using upcoming tournament: "${upcomingTournaments[0].name}" for ${hotelSlug}`);
+        return {
+          tournament: upcomingTournaments[0],
+          status: 'upcoming',
+          allUpcoming: upcomingTournaments,
+          hotelSlug: hotelSlug
+        };
+      }
+
+      console.log(`❌ No active or upcoming tournaments found for ${hotelSlug}`);
+      return {
+        tournament: null,
+        status: 'none',
+        allActive: [],
+        allUpcoming: [],
+        hotelSlug: hotelSlug
+      };
+      
+    } catch (error) {
+      console.error(`❌ Failed to get next tournament for ${hotelSlug}:`, error);
+      return {
+        tournament: null,
+        status: 'error',
+        error: error.message,
+        allActive: [],
+        allUpcoming: [],
+        hotelSlug: hotelSlug
+      };
+    }
+  }
+
+  // Legacy method - kept for backward compatibility
+  async hasActiveTournament() {
+    try {
+      const result = await this.getNextTournament();
+      return {
+        hasActive: result.status === 'active',
+        activeTournaments: result.allActive || [],
+        count: result.allActive?.length || 0,
+        nextTournament: result.tournament,
+        status: result.status
+      };
+    } catch (error) {
+      console.error('❌ Failed to check for active tournaments:', error);
+      return {
+        hasActive: false,
+        activeTournaments: [],
+        count: 0,
+        error: error.message
+      };
     }
   }
 
   // NEW: Submit tournament score (after game completion)
   async submitTournamentScore(tournamentId, scoreData) {
     try {
+      console.log(`🎯 Submitting score to tournament ${tournamentId}:`, scoreData);
       const response = await api.post(`${this.baseURL}/tournaments/${tournamentId}/submit_score/`, scoreData);
+      
+      console.log(`✅ Score submitted successfully:`, response.data);
+      console.log(`   Score: ${response.data.score}`);
+      console.log(`   Rank: ${response.data.rank || 'N/A'}`);
+      console.log(`   Message: ${response.data.message || 'N/A'}`);
+      
       return response.data;
     } catch (error) {
+      console.error(`❌ Failed to submit score to tournament ${tournamentId}:`, error);
       throw error;
     }
   }
