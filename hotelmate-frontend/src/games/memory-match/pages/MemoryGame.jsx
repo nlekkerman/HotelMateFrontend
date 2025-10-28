@@ -4,6 +4,7 @@ import Card from "../components/Card";
 import backImg from "../assets/images/card-back.png";
 import GameRules from "../components/GameRules";
 import { memoryGameAPI } from "@/services/memoryGameAPI";
+import { usePersonalBest } from "../hooks/usePersonalBest";
 
 
 // Static images removed - now using API cards from database
@@ -412,51 +413,11 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
     );
   }
 
-  // Mode Selection Screen (only for non-QR access)
+  // Auto-redirect to tournament dashboard instead of mode selection
   if (gameMode === 'selection') {
-    return (
-      <div className="container-fluid min-vh-100 d-flex flex-column align-items-center justify-content-center bg-warning bg-opacity-25 py-5">
-        <h1 className="display-4 fw-bold mb-4 text-center">🧠 Memory Match Game 🧠</h1>
-        
-        <div className="card shadow-lg" style={{maxWidth: '500px', width: '100%'}}>
-          <div className="card-body text-center p-5">
-            <h3 className="card-title mb-4">Choose Game Mode</h3>
-            
-            <div className="d-grid gap-3">
-              <button 
-                className="btn btn-primary btn-lg"
-                onClick={() => setGameMode('practice')}
-              >
-                🎮 Practice Mode
-                <div className="small text-light mt-1">Play for fun • Scores saved locally • No time limits</div>
-              </button>
-              
-              <button 
-                className="btn btn-outline-primary"
-                onClick={() => navigate('/games/memory-match/stats')}
-              >
-                📊 View Practice Statistics
-              </button>
-              
-              <button 
-                className="btn btn-success btn-lg"
-                onClick={() => setGameMode('tournament')}
-              >
-                🏆 Kids Tournament
-                <div className="small text-light mt-1">Free fun tournament • No registration • Symbolic rewards only</div>
-              </button>
-            </div>
-            
-            <div className="mt-4 p-3 bg-light rounded">
-              <small className="text-muted">
-                <strong>Simplified Memory Match: Fixed 3×4 grid (6 pairs, 12 cards)</strong><br/>
-                No difficulty selection • Everyone plays the same layout • Fair competition for all ages!
-              </small>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    // Redirect directly to tournament dashboard
+    navigate('/games/memory-match/tournaments?hotel=hotel-killarney');
+    return null;
   }
 
   // Use full screen layout for QR tournament access (kids on mobile)
@@ -493,9 +454,12 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
         {!isQRTournament && (
           <button 
             className="btn btn-outline-secondary"
-            onClick={() => setGameMode('selection')}
+            onClick={() => {
+              // Always navigate back to Tournament Dashboard
+              navigate('/games/memory-match/tournaments?hotel=hotel-killarney');
+            }}
           >
-            ← Back to Mode Selection
+            ← Back to Tournament
           </button>
         )}
         <button 
