@@ -6,6 +6,7 @@ import GameRules from "../components/GameRules";
 import PlayerInfoForm from "../components/PlayerInfoForm";
 import { memoryGameAPI } from "@/services/memoryGameAPI";
 import { usePersonalBest } from "../hooks/usePersonalBest";
+import { PlayerTokenManager } from "@/utils/playerToken";
 
 
 // Static images removed - now using API cards from database
@@ -120,12 +121,14 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
   const [showRules, setShowRules] = useState(false);
   const [hasSeenRules, setHasSeenRules] = useState(false);
   
-  // Player info collection for tournament mode
+  // Player info collection for tournament mode with token support
   const [gameStarted, setGameStarted] = useState(true); // Always start immediately - no welcome screen
   const [showPlayerForm, setShowPlayerForm] = useState(false); // Only show form for high scores after game completion
   const [playerName, setPlayerName] = useState('');
   const [roomNumber, setRoomNumber] = useState('');
   const [playerData, setPlayerData] = useState(null);
+  const [playerToken, setPlayerToken] = useState('');
+  const [hasPlayedBefore, setHasPlayedBefore] = useState(false);
   
   // Game mode state
   const [gameMode, setGameMode] = useState(practiceMode ? 'practice' : (tournamentId ? 'tournament' : 'selection'));
@@ -298,27 +301,60 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
     return false;
   };
 
-  // Save tournament score with player info (collected after game completion)
+  // Save tournament score with player info and token (collected after game completion)
   const saveTournamentScore = async () => {
     setGameState('saving');
     
     try {
       const timeSeconds = Math.floor((Date.now() - startTime) / 1000);
-      // Use the new submit_score endpoint from backend instructions
-      const gameSession = await memoryGameAPI.submitTournamentScore(tournamentId, {
+      
+      // Prepare score data with token for backend tracking
+      const scoreData = {
+        player_token: playerToken,
         player_name: playerName || `Player ${Date.now().toString().slice(-4)}`,
         room_number: roomNumber || "Not specified",
         time_seconds: timeSeconds,
         moves_count: moves
-      });
+      };
       
+      console.log('🎯 Submitting tournament score with token:', scoreData);
+      
+      // Submit to backend with token-based tracking
+      const gameSession = await memoryGameAPI.submitTournamentScore(tournamentId, scoreData);
+      
+      // Store player info for future sessions
+      if (playerName && roomNumber) {
+        PlayerTokenManager.storePlayerInfo(playerName, roomNumber);
+        console.log('💾 Player info stored for future sessions');
+      }
+      
+      // Handle different response types from token-based backend
       const playerInfo = playerName ? ` by ${playerName}` : '';
       const rankInfo = gameSession.rank ? ` (Rank: #${gameSession.rank})` : '';
-      alert(`🎉 Score Submitted${playerInfo}!\n\nYour score: ${gameSession.score} points${rankInfo}\nTime: ${formatTime(timeSeconds)}\nMoves: ${moves}\n\n🏆 ${gameSession.message || 'Check the leaderboard to see your ranking!'}`);
       
-      // Navigate back to games after showing success
+      let alertMessage = '';
+      let alertTitle = '';
+      
+      if (gameSession.updated === false) {
+        // Player already has a better score
+        alertTitle = '🎮 Good Try!';
+        alertMessage = `Current game: ${gameSession.score} points\nYour best score: ${gameSession.best_score} points${rankInfo}\n\n${gameSession.message}\n\nKeep practicing to beat your record! 💪`;
+      } else if (gameSession.is_personal_best) {
+        // New or improved personal best
+        const isFirstTime = gameSession.score === gameSession.best_score && hasPlayedBefore === false;
+        alertTitle = isFirstTime ? '🎉 Welcome to the Tournament!' : '🚀 New Personal Best!';
+        alertMessage = `${gameSession.message}\n\nYour score: ${gameSession.score} points${rankInfo}\nTime: ${formatTime(timeSeconds)}\nMoves: ${moves}\n\n🏆 Check the leaderboard to see your ranking!`;
+      } else {
+        // Default case
+        alertTitle = '🎉 Score Submitted!';
+        alertMessage = `Your score: ${gameSession.score} points${rankInfo}\nTime: ${formatTime(timeSeconds)}\nMoves: ${moves}\n\n🏆 ${gameSession.message || 'Check the leaderboard to see your ranking!'}`;
+      }
+      
+      alert(`${alertTitle}\n\n${alertMessage}`);
+      
+      // Navigate back to tournament dashboard after showing success
       setTimeout(() => {
-        navigate('/games');
+        navigate('/games/memory-match/tournaments?hotel=hotel-killarney');
       }, 3000);
       
     } catch (error) {
@@ -327,7 +363,7 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
       alert(`🎮 Amazing game!\n\nYour score: ${finalScore} points\nTime: ${formatTime(time)}\nMoves: ${moves}\n\n🌟 Great job playing!`);
       
       setTimeout(() => {
-        navigate('/games');
+        navigate('/games/memory-match/tournaments?hotel=hotel-killarney');
       }, 3000);
     }
   };
@@ -410,18 +446,34 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
 
 
 
-  // Auto-sync pending sessions and migrate old data on mount
+  // Initialize player token and stored info on mount
   useEffect(() => {
-    const initializeAPI = async () => {
+    const initializePlayer = async () => {
       try {
+        // Initialize player token system
+        const token = PlayerTokenManager.getPlayerToken();
+        setPlayerToken(token);
+        
+        // Check if player has played before and get stored info
+        const playedBefore = PlayerTokenManager.hasPlayedBefore();
+        setHasPlayedBefore(playedBefore);
+        
+        if (playedBefore) {
+          const storedInfo = PlayerTokenManager.getStoredPlayerInfo();
+          setPlayerName(storedInfo.name);
+          setRoomNumber(storedInfo.room);
+          console.log('🔄 Returning player detected, loaded stored info:', storedInfo);
+        }
+        
+        // Initialize API
         await memoryGameAPI.migrateLocalStorageData();
         await memoryGameAPI.syncPendingSessions();
       } catch (error) {
-        console.error('Failed to initialize API:', error);
+        console.error('Failed to initialize player/API:', error);
       }
     };
     
-    initializeAPI();
+    initializePlayer();
   }, []);
 
   // Show rules automatically for tournament mode
@@ -600,7 +652,7 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
       {/* Player Info Modal for Tournament */}
       {showPlayerForm && (
         <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1060}}>
-          <div className="card shadow-lg mx-3" style={{maxWidth: '400px', width: '100%'}}>
+          <div className="card shadow-lg mx-3" style={{maxWidth: '450px', width: '100%'}}>
             <div className="card-header bg-success text-white text-center">
               <h4 className="mb-0">🎉 Congratulations!</h4>
               <p className="mb-0 small">You completed the tournament!</p>
@@ -610,6 +662,12 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
                 <div className="fs-5 fw-bold text-success">Final Score: {finalScore} points</div>
                 <div className="text-muted">Time: {formatTime(time)} | Moves: {moves}</div>
               </div>
+              
+              {hasPlayedBefore && (
+                <div className="alert alert-info small mb-3">
+                  👋 Welcome back! We'll update your best score if this is better.
+                </div>
+              )}
               
               <p className="text-center mb-4">
                 <strong>Enter your details to appear on the leaderboard:</strong>
@@ -660,6 +718,26 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
                   Your information is only used for the tournament leaderboard
                 </small>
               </div>
+              
+              {hasPlayedBefore && (
+                <div className="text-center mt-3 pt-3 border-top">
+                  <small className="text-muted d-block mb-2">Playing for someone else?</small>
+                  <button 
+                    type="button"
+                    className="btn btn-outline-secondary btn-sm"
+                    onClick={() => {
+                      PlayerTokenManager.clearPlayerToken();
+                      setPlayerName('');
+                      setRoomNumber('');
+                      setHasPlayedBefore(false);
+                      setPlayerToken(PlayerTokenManager.getPlayerToken());
+                      console.log('🧹 Started as new player');
+                    }}
+                  >
+                    🔄 Start as New Player
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

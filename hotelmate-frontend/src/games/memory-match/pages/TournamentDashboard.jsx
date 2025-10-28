@@ -73,6 +73,18 @@ export default function TournamentDashboard() {
         if (leaderboardArray.length > 0) {
           console.log(`📋 First leaderboard entry structure:`, leaderboardArray[0]);
           console.log(`📋 Available fields:`, Object.keys(leaderboardArray[0]));
+          
+          // Enhanced debugging for player names
+          console.log(`🔍 Debugging player name fields for each entry:`);
+          leaderboardArray.slice(0, 3).forEach((entry, index) => {
+            console.log(`   Entry ${index + 1}:`);
+            console.log(`     - player_name: "${entry.player_name}"`);
+            console.log(`     - name: "${entry.name}"`);
+            console.log(`     - playerName: "${entry.playerName}"`);
+            console.log(`     - user: "${entry.user}"`);
+            console.log(`     - participant_name: "${entry.participant_name}"`);
+            console.log(`     - All keys: [${Object.keys(entry).join(', ')}]`);
+          });
         }
         
         setLeaderboardData(leaderboardArray);
@@ -641,7 +653,7 @@ const QuickLeaderboard = ({ leaderboardData, leaderboardLoading, leaderboardErro
               <div className="d-flex flex-column flex-grow-1">
                 <div className="d-flex justify-content-between align-items-center">
                   <span className="fw-bold fs-5 text-dark">
-                    {session.player_name || session.name || session.playerName || `Anonymous Player ${index + 1}`}
+                    {session.player_name || session.participant_name || session.name || session.playerName || session.user || `Anonymous Player ${index + 1}`}
                   </span>
                   <span className="badge bg-primary fs-6 ms-2">{session.score || 0} pts</span>
                 </div>

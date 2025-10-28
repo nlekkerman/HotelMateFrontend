@@ -152,7 +152,7 @@ export default function Leaderboard({ difficulty = 'easy', tournamentId = null }
                               <div className="d-flex align-items-center">
                                 <div>
                                   <div className="fw-semibold">
-                                    {entry.participant_name || entry.user || 'Anonymous'}
+                                    {entry.player_name || entry.participant_name || entry.user || 'Anonymous'}
                                   </div>
                                   {entry.user && entry.participant_name && (
                                     <small className="text-muted">({entry.user})</small>
@@ -210,7 +210,7 @@ export default function Leaderboard({ difficulty = 'easy', tournamentId = null }
                       <div className="display-1">🥇</div>
                       <h5 className="card-title text-warning">1st Place</h5>
                       <h6 className="card-subtitle mb-2">
-                        {leaderboard[0].participant_name || leaderboard[0].user}
+                        {leaderboard[0].player_name || leaderboard[0].participant_name || leaderboard[0].user}
                       </h6>
                       <p className="card-text">
                         <strong>{leaderboard[0].score?.toLocaleString()}</strong> points
@@ -229,7 +229,7 @@ export default function Leaderboard({ difficulty = 'easy', tournamentId = null }
                       <div className="display-2">🥈</div>
                       <h5 className="card-title text-secondary">2nd Place</h5>
                       <h6 className="card-subtitle mb-2">
-                        {leaderboard[1].participant_name || leaderboard[1].user}
+                        {leaderboard[1].player_name || leaderboard[1].participant_name || leaderboard[1].user}
                       </h6>
                       <p className="card-text">
                         <strong>{leaderboard[1].score?.toLocaleString()}</strong> points
@@ -248,7 +248,7 @@ export default function Leaderboard({ difficulty = 'easy', tournamentId = null }
                       <div className="display-2">🥉</div>
                       <h5 className="card-title text-danger">3rd Place</h5>
                       <h6 className="card-subtitle mb-2">
-                        {leaderboard[2].participant_name || leaderboard[2].user}
+                        {leaderboard[2].player_name || leaderboard[2].participant_name || leaderboard[2].user}
                       </h6>
                       <p className="card-text">
                         <strong>{leaderboard[2].score?.toLocaleString()}</strong> points

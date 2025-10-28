@@ -771,20 +771,34 @@ class MemoryGameAPI {
     }
   }
 
-  // NEW: Submit tournament score (after game completion)
+  // NEW: Submit tournament score with token-based player tracking
   async submitTournamentScore(tournamentId, scoreData) {
     try {
       console.log(`🎯 Submitting score to tournament ${tournamentId}:`, scoreData);
+      
+      // Ensure we have a player_token in the scoreData
+      if (!scoreData.player_token) {
+        console.warn('⚠️ No player_token provided in scoreData - this may cause tracking issues');
+      }
+      
       const response = await api.post(`${this.baseURL}/tournaments/${tournamentId}/submit_score/`, scoreData);
       
       console.log(`✅ Score submitted successfully:`, response.data);
       console.log(`   Score: ${response.data.score}`);
+      console.log(`   Best Score: ${response.data.best_score}`);
       console.log(`   Rank: ${response.data.rank || 'N/A'}`);
+      console.log(`   Is Personal Best: ${response.data.is_personal_best}`);
+      console.log(`   Updated: ${response.data.updated}`);
       console.log(`   Message: ${response.data.message || 'N/A'}`);
+      console.log(`   Player Token: ${response.data.player_token || 'N/A'}`);
       
       return response.data;
     } catch (error) {
       console.error(`❌ Failed to submit score to tournament ${tournamentId}:`, error);
+      if (error.response) {
+        console.error(`❌ Response status: ${error.response.status}`);
+        console.error(`❌ Response data:`, error.response.data);
+      }
       throw error;
     }
   }
