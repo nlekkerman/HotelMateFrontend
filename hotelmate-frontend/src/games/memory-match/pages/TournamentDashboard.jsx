@@ -1,314 +1,421 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import memoryGameAPI from '@/services/memoryGameAPI';
-import TournamentQRGenerator from '../components/TournamentQRGenerator';
 
 export default function TournamentDashboard() {
   const navigate = useNavigate();
-  const [tournaments, setTournaments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [selectedTournament, setSelectedTournament] = useState(null);
-  const [showQRGenerator, setShowQRGenerator] = useState(false);
-  const [newTournament, setNewTournament] = useState({
-    name: '',
-    description: '',
-    start_date: '',
-    end_date: '',
-    is_active: true
-  });
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState(null);
+  const flashIntervalRef = useRef(null);
+  const [flashState, setFlashState] = useState(false);
 
   useEffect(() => {
-    fetchTournaments();
+    fetchLeaderboardData();
   }, []);
 
-  const fetchTournaments = async () => {
+  const fetchLeaderboardData = async () => {
     try {
-      setLoading(true);
-      // Try to fetch from API, fallback to mock data if backend not ready
-      const response = await memoryGameAPI.getTournaments();
-      console.log('API Response:', response);
+      setLeaderboardLoading(true);
+      setLeaderboardError(null);
       
-      // Handle different response structures
-      let tournamentData = [];
-      if (Array.isArray(response)) {
-        tournamentData = response;
-      } else if (response && Array.isArray(response.results)) {
-        tournamentData = response.results;
-      } else if (response && Array.isArray(response.data)) {
-        tournamentData = response.data;
+      // Fetch general leaderboard data
+      const response = await memoryGameAPI.getGeneralLeaderboard();
+      
+      if (response && response.leaderboard) {
+        setLeaderboardData(response.leaderboard);
       } else {
-        tournamentData = [];
+        setLeaderboardData([]);
       }
       
-      setTournaments(tournamentData);
     } catch (error) {
-      console.warn('Tournament API not available yet:', error.message);
-      // No mock data - show empty state with clear API message
-      setTournaments([]);
+      console.warn('Leaderboard API not available:', error.message);
+      setLeaderboardError('Unable to load rankings. Please try again later.');
+      setLeaderboardData([]);
     } finally {
-      setLoading(false);
+      setLeaderboardLoading(false);
     }
   };
 
-  const handleCreateTournament = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await memoryGameAPI.createTournament(newTournament);
-      setTournaments([response.data || response, ...tournaments]);
-      setShowCreateForm(false);
-      setNewTournament({
-        name: '',
-        description: '',
-        start_date: '',
-        end_date: '',
-        is_active: true
-      });
-      alert('🏆 Kids Tournament created successfully!');
-    } catch (error) {
-      console.warn('Tournament API not available, creating mock tournament:', error.message);
-      // Create mock tournament until backend is ready
-      const mockTournament = {
-        id: `mock-${Date.now()}`,
-        ...newTournament,
-        is_active: true
+  // Mock daily tournament at 12:00 PM hotel time
+  const getTodayTournamentTime = useCallback(() => {
+    const today = new Date();
+    const tournamentTime = new Date(today);
+    tournamentTime.setHours(12, 0, 0, 0); // 12:00 PM
+    
+    // If it's past 12 PM today, set it for tomorrow
+    if (currentTime >= tournamentTime) {
+      tournamentTime.setDate(tournamentTime.getDate() + 1);
+    }
+    
+    return tournamentTime;
+  }, [currentTime]);
+
+  // Update current time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Handle countdown flashing and colors
+  useEffect(() => {
+    const tournamentTime = getTodayTournamentTime();
+    const timeUntilTournament = tournamentTime.getTime() - currentTime.getTime();
+    const minutesUntil = Math.floor(timeUntilTournament / (1000 * 60));
+    
+    // Clear existing flash interval
+    if (flashIntervalRef.current) {
+      clearInterval(flashIntervalRef.current);
+      flashIntervalRef.current = null;
+    }
+    
+    // Set up flashing based on time remaining
+    if (minutesUntil <= 5 && minutesUntil > 1) {
+      // Orange flashing (every second)
+      flashIntervalRef.current = setInterval(() => {
+        setFlashState(prev => !prev);
+      }, 1000);
+    } else if (minutesUntil <= 1 && timeUntilTournament > 0) {
+      // Red flashing (twice per second)
+      flashIntervalRef.current = setInterval(() => {
+        setFlashState(prev => !prev);
+      }, 500);
+    } else {
+      // No flashing
+      setFlashState(false);
+    }
+
+    return () => {
+      if (flashIntervalRef.current) {
+        clearInterval(flashIntervalRef.current);
+      }
+    };
+  }, [currentTime, getTodayTournamentTime]);
+
+  const getTournamentState = () => {
+    const tournamentTime = getTodayTournamentTime();
+    const timeUntilTournament = tournamentTime.getTime() - currentTime.getTime();
+    const tournamentEndTime = new Date(tournamentTime.getTime() + (2 * 60 * 60 * 1000)); // 2 hours duration
+    
+    if (timeUntilTournament > 0) {
+      return {
+        state: 'countdown',
+        timeRemaining: timeUntilTournament,
+        tournamentTime,
+        canPlay: false
       };
-      setTournaments([mockTournament, ...tournaments]);
-      setShowCreateForm(false);
-      setNewTournament({
-        name: '',
-        description: '',
-        start_date: '',
-        end_date: '',
-        is_active: true
-      });
-      alert('🏆 Demo Tournament created! (Backend API will be needed for full functionality)');
+    } else if (currentTime < tournamentEndTime) {
+      return {
+        state: 'active',
+        timeRemaining: 0,
+        tournamentTime,
+        canPlay: true,
+        endTime: tournamentEndTime
+      };
+    } else {
+      return {
+        state: 'ended',
+        timeRemaining: 0,
+        tournamentTime,
+        canPlay: false,
+        endTime: tournamentEndTime
+      };
     }
   };
 
-  const handleGenerateQR = (tournament) => {
-    setSelectedTournament(tournament);
-    setShowQRGenerator(true);
+  const formatCountdown = (milliseconds) => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const getCountdownStyle = () => {
+    const { timeRemaining } = getTournamentState();
+    const minutesUntil = Math.floor(timeRemaining / (1000 * 60));
+    
+    let baseStyle = {
+      transition: 'all 0.3s ease',
+      borderRadius: '15px',
+      padding: '20px',
+      margin: '10px 0'
+    };
+
+    if (minutesUntil <= 5 && minutesUntil > 1) {
+      // Orange warning phase
+      return {
+        ...baseStyle,
+        backgroundColor: flashState ? '#ff8c00' : '#ffa500',
+        color: 'white',
+        boxShadow: flashState ? '0 0 20px rgba(255, 140, 0, 0.7)' : '0 4px 8px rgba(0,0,0,0.1)'
+      };
+    } else if (minutesUntil <= 1 && timeRemaining > 0) {
+      // Red critical phase
+      return {
+        ...baseStyle,
+        backgroundColor: flashState ? '#dc3545' : '#ff0000',
+        color: 'white',
+        boxShadow: flashState ? '0 0 25px rgba(220, 53, 69, 0.8)' : '0 4px 8px rgba(0,0,0,0.1)',
+        animation: flashState ? 'pulse 0.5s ease-in-out' : 'none'
+      };
+    } else {
+      // Normal phase
+      return {
+        ...baseStyle,
+        backgroundColor: '#e9ecef',
+        color: '#495057'
+      };
+    }
   };
 
-  if (showQRGenerator && selectedTournament) {
-    return (
-      <TournamentQRGenerator
-        tournament={selectedTournament}
-        onClose={() => {
-          setShowQRGenerator(false);
-          setSelectedTournament(null);
-        }}
-      />
-    );
-  }
+  const handlePlayTournament = () => {
+    const { canPlay } = getTournamentState();
+    if (canPlay) {
+      navigate('/games/memory-match/practice');
+    }
+  };
+
+  const handlePlayPractice = () => {
+    navigate('/games/memory-match/practice');
+  };
+
+  const tournamentState = getTournamentState();
 
   return (
-    <div className="container py-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h2>🏆 Kids Tournament Dashboard</h2>
-          <p className="text-muted">Create and manage fun tournaments for kids</p>
-          
-          {/* Backend Status Alert */}
-          <div className="alert alert-success alert-sm mt-2">
-            <small>
-              <strong>🎯 Simplified Memory Match:</strong> All tournaments now use fixed 3×4 grid (6 pairs, 12 cards). 
-              No difficulty selection • Fair play for all ages • Players scan QR → Play immediately → Enter name/room after completion.
-            </small>
-          </div>
-        </div>
-        <div>
-          <button
-            className="btn btn-success me-2"
-            onClick={() => setShowCreateForm(!showCreateForm)}
-          >
-            {showCreateForm ? '❌ Cancel' : '➕ Create Tournament'}
-          </button>
-          <button
-            className="btn btn-outline-secondary"
-            onClick={() => navigate('/games')}
-          >
-            🎮 Back to Games
-          </button>
-        </div>
-      </div>
+    <div className="container-fluid min-vh-100 bg-gradient" style={{
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    }}>
+      <style jsx>{`
+        @keyframes pulse {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.02); }
+          100% { transform: scale(1); }
+        }
+        
+        .tournament-card {
+          backdrop-filter: blur(10px);
+          background: rgba(255, 255, 255, 0.95);
+          border: none;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .countdown-display {
+          font-family: 'Courier New', monospace;
+          font-weight: bold;
+          text-align: center;
+        }
+        
+        .btn-tournament {
+          transition: all 0.2s ease;
+          border-radius: 12px;
+          padding: 12px 24px;
+          font-weight: 600;
+        }
+        
+        .btn-tournament:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-tournament:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      `}</style>
 
-      {/* Create Tournament Form */}
-      {showCreateForm && (
-        <div className="card mb-4">
-          <div className="card-header">
-            <h5 className="mb-0">➕ Create New Kids Tournament</h5>
-          </div>
-          <div className="card-body">
-            <form onSubmit={handleCreateTournament}>
-              <div className="row">
-                <div className="col-md-6">
-                  <div className="mb-3">
-                    <label className="form-label">Tournament Name *</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={newTournament.name}
-                      onChange={(e) => setNewTournament({...newTournament, name: e.target.value})}
-                      placeholder="e.g., Kids Memory Challenge 2025"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="col-md-6">
-                  <div className="mb-3">
-                    <label className="form-label">Description</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={newTournament.description}
-                      onChange={(e) => setNewTournament({...newTournament, description: e.target.value})}
-                      placeholder="Fun memory game tournament for kids!"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="row">
-                <div className="col-md-6">
-                  <div className="mb-3">
-                    <label className="form-label">Start Date & Time</label>
-                    <input
-                      type="datetime-local"
-                      className="form-control"
-                      value={newTournament.start_date}
-                      onChange={(e) => setNewTournament({...newTournament, start_date: e.target.value})}
-                    />
-                  </div>
-                </div>
-                <div className="col-md-6">
-                  <div className="mb-3">
-                    <label className="form-label">End Date & Time</label>
-                    <input
-                      type="datetime-local"
-                      className="form-control"
-                      value={newTournament.end_date}
-                      onChange={(e) => setNewTournament({...newTournament, end_date: e.target.value})}
-                    />
-                  </div>
-                </div>
-              </div>
+      <div className="row justify-content-center py-4">
+        <div className="col-12 col-md-10 col-lg-8">
+          {/* Header */}
+          <header className="text-center text-white mb-4">
+            <h1 className="h2 mb-0">🏆 Daily Tournament</h1>
+            <p className="lead">Daily Memory Match Tournament at 12:00 PM</p>
+          </header>
 
-              <div className="alert alert-info">
-                <h6>🎮 Tournament Settings (Simplified):</h6>
-                <ul className="mb-0 small">
-                  <li>✅ Fixed 3×4 grid (6 pairs, 12 cards) - no difficulty selection</li>
-                  <li>✅ Free entry - no registration required</li>
-                  <li>🎁 Symbolic rewards only</li>
-                  <li>📱 Mobile-friendly for kids</li>
-                  <li>🏆 Fair play - everyone gets same challenge</li>
-                </ul>
-              </div>
+          {/* Tournament Countdown Display */}
+          <div className="card tournament-card mb-4">
+            <div className="card-body">
+              {tournamentState.state === 'countdown' && (
+                <div className="countdown-display" style={getCountdownStyle()}>
+                  <h4 className="mb-2">⏰ Next Tournament Starting In:</h4>
+                  <h2 className="display-4 mb-3" style={{ fontSize: '2.5rem' }}>
+                    {formatCountdown(tournamentState.timeRemaining)}
+                  </h2>
+                  <p className="mb-0">
+                    Tournament starts at {tournamentState.tournamentTime.toLocaleTimeString('en-US', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })} today
+                  </p>
+                </div>
+              )}
 
-              <div className="d-flex gap-2">
-                <button type="submit" className="btn btn-success">
-                  🏆 Create Tournament
-                </button>
-                <button 
-                  type="button" 
-                  className="btn btn-outline-secondary"
-                  onClick={() => setShowCreateForm(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+              {tournamentState.state === 'active' && (
+                <div className="text-center" style={{
+                  backgroundColor: '#28a745',
+                  color: 'white',
+                  borderRadius: '15px',
+                  padding: '20px',
+                  margin: '10px 0'
+                }}>
+                  <h4 className="mb-2">🔥 Tournament is LIVE!</h4>
+                  <h3 className="display-5 mb-3">Play Now!</h3>
+                  <p className="mb-0">
+                    Tournament ends at {tournamentState.endTime.toLocaleTimeString('en-US', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </p>
+                </div>
+              )}
 
-      {/* Tournaments List */}
-      <div className="card">
-        <div className="card-header">
-          <h5 className="mb-0">🏆 Active Tournaments</h5>
-        </div>
-        <div className="card-body">
-          {loading ? (
-            <div className="text-center py-4">
-              <div className="spinner-border text-primary"></div>
-              <p className="mt-2">Loading tournaments...</p>
+              {tournamentState.state === 'ended' && (
+                <div className="text-center" style={{
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  borderRadius: '15px',
+                  padding: '20px',
+                  margin: '10px 0'
+                }}>
+                  <h4 className="mb-2">📊 Tournament Ended</h4>
+                  <h5 className="mb-3">Check the Results!</h5>
+                  <p className="mb-3">Next tournament tomorrow at 12:00 PM</p>
+                </div>
+              )}
             </div>
-          ) : tournaments.length === 0 ? (
-            <div className="text-center py-5">
-              <i className="bi bi-trophy" style={{fontSize: '3rem', color: '#6c757d'}}></i>
-              <h5 className="mt-3">No tournaments yet</h5>
-              <p className="text-muted">Create your first kids tournament!</p>
-            </div>
-          ) : (
-            <div className="row g-3">
-              {Array.isArray(tournaments) && tournaments.map(tournament => (
-                <div key={tournament.id} className="col-12 col-md-6 col-lg-4">
-                  <div className="card h-100 border-start border-primary border-4">
-                    <div className="card-body">
-                      <h6 className="card-title d-flex align-items-center">
-                        🏆 {tournament.name}
-                        {tournament.is_active && (
-                          <span className="badge bg-success ms-2 small">Active</span>
-                        )}
-                      </h6>
-                      
-                      {tournament.description && (
-                        <p className="card-text small text-muted">
-                          {tournament.description}
-                        </p>
-                      )}
-                      
-                      <div className="small text-muted mb-3">
-                        {tournament.start_date && (
-                          <div>📅 Starts: {formatDate(tournament.start_date)}</div>
-                        )}
-                        {tournament.end_date && (
-                          <div>🏁 Ends: {formatDate(tournament.end_date)}</div>
-                        )}
-                      </div>
+          </div>
 
-                      <div className="d-grid gap-2">
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => handleGenerateQR(tournament)}
-                        >
-                          📱 Generate QR Code
-                        </button>
-                        
-                        <div className="btn-group" role="group">
-                          <button
-                            className="btn btn-outline-info btn-sm"
-                            onClick={() => navigate(`/tournament/${tournament.id}/leaderboard`)}
-                          >
-                            🏆 Leaderboard
-                          </button>
-                          <button
-                            className="btn btn-outline-success btn-sm"
-                            onClick={() => navigate(`/tournament/${tournament.id}`)}
-                          >
-                            🎮 Play
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+          {/* Game Buttons */}
+          <div className="row g-4 mb-4">
+            <div className="col-12 col-md-6">
+              <div className="card tournament-card h-100">
+                <div className="card-body text-center p-4">
+                  <div className="display-1 mb-3">🏃‍♀️</div>
+                  <h3 className="text-primary mb-3">Practice Mode</h3>
+                  <p className="text-muted mb-4">
+                    Play anytime • Perfect your skills • No pressure!
+                  </p>
+                  <button
+                    className="btn btn-primary btn-tournament w-100"
+                    onClick={handlePlayPractice}
+                    aria-label="Start practice game"
+                  >
+                    🎮 Practice Now
+                  </button>
                 </div>
-              ))}
+              </div>
             </div>
-          )}
+
+            <div className="col-12 col-md-6">
+              <div className="card tournament-card h-100">
+                <div className="card-body text-center p-4">
+                  <div className="display-1 mb-3">🏆</div>
+                  <h3 className="text-warning mb-3">Tournament Mode</h3>
+                  <p className="text-muted mb-4">
+                    Compete for the leaderboard • Win amazing prizes!
+                  </p>
+                  <button
+                    className={`btn btn-tournament w-100 ${
+                      tournamentState.canPlay ? 'btn-warning' : 'btn-secondary'
+                    }`}
+                    onClick={handlePlayTournament}
+                    disabled={!tournamentState.canPlay}
+                    aria-label={tournamentState.canPlay ? 'Play tournament game' : 'Tournament not available'}
+                  >
+                    {tournamentState.state === 'countdown' && '⏰ Tournament Starts Soon'}
+                    {tournamentState.state === 'active' && '🔥 Play Tournament!'}
+                    {tournamentState.state === 'ended' && '📊 Tournament Ended'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Leaderboard Preview */}
+          <div className="card tournament-card mb-4">
+            <div className="card-header bg-info text-white">
+              <div className="d-flex justify-content-between align-items-center">
+                <h5 className="mb-0">🏆 Current Rankings</h5>
+              </div>
+            </div>
+            <div className="card-body">
+              <QuickLeaderboard 
+                leaderboardData={leaderboardData}
+                leaderboardLoading={leaderboardLoading}
+                leaderboardError={leaderboardError}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+// Quick Leaderboard Component
+const QuickLeaderboard = ({ leaderboardData, leaderboardLoading, leaderboardError }) => {
+  if (leaderboardLoading) {
+    return (
+      <div className="text-center py-3">
+        <div className="spinner-border spinner-border-sm text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+        <div className="mt-2 text-muted">Loading rankings...</div>
+      </div>
+    );
+  }
+
+  if (leaderboardError) {
+    return (
+      <div className="alert alert-warning text-center mb-0">
+        <i className="fas fa-exclamation-triangle me-2"></i>
+        Unable to load leaderboard data
+      </div>
+    );
+  }
+
+  if (!leaderboardData || leaderboardData.length === 0) {
+    return (
+      <div className="text-center py-3 text-muted">
+        <i className="fas fa-trophy fa-2x mb-2 opacity-50"></i>
+        <div>No rankings yet</div>
+        <small>Play some games to see the leaderboard!</small>
+      </div>
+    );
+  }
+
+  const topThree = leaderboardData.slice(0, 3);
+
+  return (
+    <div>
+      <p className="text-muted mb-3 text-center">Top 3 players today</p>
+      <div className="d-grid gap-2">
+        {topThree.map((player, index) => (
+          <div 
+            key={player.id || index} 
+            className="d-flex justify-content-between align-items-center p-2 bg-light rounded"
+          >
+            <div className="d-flex align-items-center">
+              <span className="me-2 fw-bold fs-5">
+                {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+              </span>
+              <span className="fw-bold">{player.player_name}</span>
+            </div>
+            <span className="badge bg-primary fs-6">{player.score || 0} pts</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
