@@ -450,13 +450,8 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
     initializePlayer();
   }, []);
 
-  // Show rules automatically for tournament mode
-  useEffect(() => {
-    if (tournamentId && gameMode === 'tournament' && gameStarted && !hasSeenRules) {
-      setShowRules(true);
-      setHasSeenRules(true);
-    }
-  }, [tournamentId, gameMode, gameStarted, hasSeenRules]);
+  // Rules modal is now only shown when user clicks the "Rules & Tips" button
+  // Removed automatic rules display for tournament mode to allow direct game start
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -473,12 +468,17 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
     return null;
   }
 
-  // Use full screen layout for QR tournament access (kids on mobile)
+  // Use responsive layout that fits within the main layout structure
   const isQRTournament = tournamentId && gameMode === 'tournament';
   
   return (
-    <div className={`${isQRTournament ? 'position-fixed top-0 start-0 w-100 h-100 overflow-auto' : 'container-fluid min-vh-100'} d-flex flex-column align-items-center justify-content-center ${isQRTournament ? 'bg-gradient' : 'bg-warning bg-opacity-25'} ${isQRTournament ? 'py-2' : 'py-5'}`} style={isQRTournament ? {background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', zIndex: 1050} : {}}>
-      <h1 className={`${isQRTournament ? 'display-6' : 'display-5'} fw-bold mb-3 text-center ${isQRTournament ? 'text-white text-shadow' : ''}`}>🧠 Memory Match Game 🧠</h1>
+    <div className={`container-fluid d-flex flex-column align-items-center justify-content-start ${isQRTournament ? 'bg-gradient' : 'bg-warning bg-opacity-25'} py-4`} style={isQRTournament ? {
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      minHeight: 'calc(100vh - 140px)' // Account for navbar and logo banner
+    } : {
+      minHeight: 'calc(100vh - 140px)'
+    }}>
+      <h1 className={`${isQRTournament ? 'h4' : 'display-5'} fw-bold ${isQRTournament ? 'mb-2' : 'mb-3'} text-center ${isQRTournament ? 'text-white text-shadow' : ''}`}>🧠 Memory Match Game 🧠</h1>
 
       {/* Mode Banner */}
       {gameMode === 'practice' && !isQRTournament && (
@@ -489,8 +489,8 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
       )}
       
       {gameMode === 'tournament' && isQRTournament && (
-        <div className="alert alert-light text-center mb-3 mx-2" style={{maxWidth: '90vw'}}>
-          <h5 className="text-primary mb-2">🏆 Kids Tournament</h5>
+        <div className="alert alert-light text-center mb-2 mx-1 py-2" style={{maxWidth: '95vw'}}>
+          <h6 className="text-primary mb-1">🏆 Kids Tournament</h6>
           <p className="mb-0 small">Find all matching pairs as fast as you can! 🎮✨</p>
         </div>
       )}
@@ -503,7 +503,7 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
       )}
 
       {/* Game Controls */}
-      <div className="mb-4 d-flex gap-2 justify-content-center flex-wrap">
+      <div className={`${isQRTournament ? 'mb-2' : 'mb-4'} d-flex gap-2 justify-content-center flex-wrap`}>
         {!isQRTournament && (
           <button 
             className="btn btn-outline-secondary"
@@ -516,7 +516,7 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
           </button>
         )}
         <button 
-          className="btn btn-info"
+          className={`btn btn-info ${isQRTournament ? 'btn-sm' : ''}`}
           onClick={() => setShowRules(true)}
         >
           📋 Rules & Tips
@@ -526,22 +526,22 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
       <>
           {/* Timer and Game Info - Mobile Optimized for QR Tournament */}
           {isQRTournament ? (
-            <div className="d-flex justify-content-center gap-2 mb-3 px-2">
-              <div className="bg-white bg-opacity-90 rounded px-3 py-2 text-center flex-fill" style={{maxWidth: '100px'}}>
-                <div className="small fw-bold text-muted">⏱️ TIME</div>
-                <div className="h6 mb-0 text-primary">{formatTime(time)}</div>
+            <div className="d-flex justify-content-center gap-1 mb-2 px-1">
+              <div className="bg-white bg-opacity-90 rounded px-2 py-1 text-center flex-fill" style={{maxWidth: '80px'}}>
+                <div style={{fontSize: '0.65rem'}} className="fw-bold text-muted">⏱️ TIME</div>
+                <div className="small mb-0 text-primary fw-bold">{formatTime(time)}</div>
               </div>
-              <div className="bg-white bg-opacity-90 rounded px-3 py-2 text-center flex-fill" style={{maxWidth: '100px'}}>
-                <div className="small fw-bold text-muted">🎯 MOVES</div>
-                <div className="h6 mb-0 text-primary">{moves}</div>
+              <div className="bg-white bg-opacity-90 rounded px-2 py-1 text-center flex-fill" style={{maxWidth: '80px'}}>
+                <div style={{fontSize: '0.65rem'}} className="fw-bold text-muted">🎯 MOVES</div>
+                <div className="small mb-0 text-primary fw-bold">{moves}</div>
               </div>
-              <div className="bg-white bg-opacity-90 rounded px-3 py-2 text-center flex-fill" style={{maxWidth: '100px'}}>
-                <div className="small fw-bold text-muted">✅ FOUND</div>
-                <div className="h6 mb-0 text-primary">{matched.length / 2}/{FIXED_PAIRS_COUNT}</div>
+              <div className="bg-white bg-opacity-90 rounded px-2 py-1 text-center flex-fill" style={{maxWidth: '80px'}}>
+                <div style={{fontSize: '0.65rem'}} className="fw-bold text-muted">✅ FOUND</div>
+                <div className="small mb-0 text-primary fw-bold">{matched.length / 2}/{FIXED_PAIRS_COUNT}</div>
               </div>
               {gameState === 'saving' && (
-                <div className="bg-warning bg-opacity-90 rounded px-2 py-2 text-center">
-                  <div className="small fw-bold">💾 SAVING</div>
+                <div className="bg-warning bg-opacity-90 rounded px-1 py-1 text-center">
+                  <div style={{fontSize: '0.65rem'}} className="fw-bold">💾 SAVING</div>
                 </div>
               )}
             </div>
@@ -568,12 +568,13 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
             className="d-grid justify-content-center align-items-center"
             style={{
               gridTemplateColumns: isQRTournament 
-                ? "repeat(4, minmax(60px, 1fr))" // Mobile 3x4 grid for tournament (6 pairs, 12 cards)
+                ? "repeat(4, minmax(50px, 1fr))" // Smaller cards for mobile tournament
                 : "repeat(4, 90px)", // Fixed 3x4 grid (6 pairs, 12 cards) - no difficulty variations
-              gap: isQRTournament ? "0.8rem" : "1.2rem",
-              maxWidth: isQRTournament ? "95vw" : "650px",
+              gap: isQRTournament ? "0.4rem" : "1.2rem",
+              maxWidth: isQRTournament ? "100vw" : "650px",
               width: "100%",
-              padding: isQRTournament ? "0.5rem" : "1rem",
+              padding: isQRTournament ? "0.2rem" : "1rem",
+              margin: isQRTournament ? "0" : "auto",
             }}
           >
             {loading ? (

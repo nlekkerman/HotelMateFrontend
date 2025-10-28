@@ -13,7 +13,7 @@ const MemoryMatchDashboard = () => {
   const [gameSettings, setGameSettings] = useState({
     dailyTournamentTime: '12:00',
     tournamentDuration: 2, // hours
-    maxParticipants: 50,
+    maxParticipants: 200, // Unlimited games per player, higher unique player limit
     prizesEnabled: true
   });
   const navigate = useNavigate();
@@ -27,7 +27,7 @@ const MemoryMatchDashboard = () => {
     start_date: '',
     end_date: '',
     is_active: true,
-    max_participants: 50,
+    max_participants: 200, // Higher limit for unique players with unlimited attempts
     prize_description: ''
   });
 
@@ -81,7 +81,7 @@ const MemoryMatchDashboard = () => {
         start_date: '',
         end_date: '',
         is_active: true,
-        max_participants: 50,
+        max_participants: 200,
         prize_description: ''
       });
       
@@ -105,7 +105,7 @@ const MemoryMatchDashboard = () => {
         start_date: '',
         end_date: '',
         is_active: true,
-        max_participants: 50,
+        max_participants: 200,
         prize_description: ''
       });
       
@@ -263,15 +263,18 @@ const MemoryMatchDashboard = () => {
                     </div>
                     
                     <div className="col-12 col-md-6">
-                      <label className="form-label fw-bold">Max Participants</label>
+                      <label className="form-label fw-bold">Max Unique Players</label>
                       <input
                         type="number"
                         className="form-control"
                         value={newTournament.max_participants}
                         onChange={(e) => setNewTournament({...newTournament, max_participants: parseInt(e.target.value)})}
                         min="1"
-                        max="100"
+                        max="1000"
                       />
+                      <div className="form-text">
+                        <small>Players can play unlimited times - only their highest score counts</small>
+                      </div>
                     </div>
                     
                     <div className="col-12">
@@ -322,6 +325,7 @@ const MemoryMatchDashboard = () => {
                     <ul className="mb-0 small">
                       <li>✅ Fixed 3×4 grid (6 pairs, 12 cards) - fair for all ages</li>
                       <li>✅ Simple scoring system - time + moves</li>
+                      <li>✅ Unlimited attempts - only highest score counts</li>
                       <li>✅ Kid-friendly interface with countdown timer</li>
                       <li>✅ Real-time leaderboard updates</li>
                     </ul>
@@ -398,7 +402,7 @@ const MemoryMatchDashboard = () => {
                       <tr>
                         <th>Tournament</th>
                         <th>Status</th>
-                        <th>Participants</th>
+                        <th>Unique Players</th>
                         <th>Schedule</th>
                         <th>Actions</th>
                       </tr>
@@ -442,7 +446,7 @@ const MemoryMatchDashboard = () => {
                             </td>
                             <td>
                               <span className="badge bg-info text-dark">
-                                {tournament.participant_count || 0}/{tournament.max_participants || 50}
+                                {tournament.participant_count || 0}/{tournament.max_participants || 200}
                               </span>
                             </td>
                             <td>
