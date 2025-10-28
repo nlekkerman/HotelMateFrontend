@@ -336,9 +336,9 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
       let alertTitle = '';
       
       if (gameSession.updated === false) {
-        // Player already has a better score
+        // Player has a better existing score - this score was not saved
         alertTitle = '🎮 Good Try!';
-        alertMessage = `Current game: ${gameSession.score} points\nYour best score: ${gameSession.best_score} points${rankInfo}\n\n${gameSession.message}\n\nKeep practicing to beat your record! 💪`;
+        alertMessage = `This game: ${gameSession.score} points\nYour best: ${gameSession.best_score} points${rankInfo}\n\n${gameSession.message}\n\nYour best score stays on the leaderboard! 🏆\nPlay unlimited times to beat your record! �`;
       } else if (gameSession.is_personal_best) {
         // New or improved personal best
         const isFirstTime = gameSession.score === gameSession.best_score && hasPlayedBefore === false;
@@ -397,27 +397,7 @@ export default function MemoryGame({ tournamentId: propTournamentId = null, curr
     
     setGameState('saving');
     
-    try {
-      // Check if player has already played in this tournament
-      console.log(`🔍 Checking if player "${playerName}" has already played tournament ${tournamentId}`);
-      const playerCheck = await memoryGameAPI.hasPlayerAlreadyPlayed(tournamentId, playerName, roomNumber);
-      
-      if (playerCheck.hasPlayed) {
-        setGameState('completed');
-        alert(`❌ Already Played!\n\n${playerCheck.message}\n\nEach player can only participate once per tournament. Thank you for playing! 🎮`);
-        
-        // Navigate back to tournament dashboard
-        setTimeout(() => {
-          navigate('/games/memory-match/tournaments?hotel=hotel-killarney');
-        }, 3000);
-        return;
-      }
-      
-      console.log(`✅ Player "${playerName}" can submit their score`);
-    } catch (error) {
-      console.warn('Could not verify player status, allowing submission:', error);
-      // Continue with submission if check fails to be safe
-    }
+    console.log(`🎯 Player "${playerName}" submitting score - unlimited attempts allowed, only higher scores will be saved`);
     
     setShowPlayerForm(false);
     saveTournamentScore();
