@@ -88,6 +88,8 @@ export default function GameRules({ isVisible, onClose, isQRTournament = false }
               <ul className="mb-0 small">
                 <li>🎯 <strong>Goal:</strong> Find all 6 matching pairs (12 cards total)</li>
                 <li>📐 <strong>Layout:</strong> Fixed 3×4 grid • No difficulty selection</li>
+                <li>♾️ <strong>Unlimited Play:</strong> Play as many times as you want!</li>
+                <li>🏆 <strong>Best Score:</strong> Only your highest score counts on leaderboard</li>
                 <li>⏱️ <strong>Speed:</strong> Faster times = higher scores</li>
                 <li>🎯 <strong>Accuracy:</strong> Fewer moves = better score (perfect: 12 moves)</li>
                 <li>🎁 <strong>Fair Play:</strong> Everyone gets the same challenge!</li>
@@ -104,6 +106,29 @@ export default function GameRules({ isVisible, onClose, isQRTournament = false }
               <li>😊 <strong>Fun:</strong> Don't worry about mistakes - it's all about having fun!</li>
             </ul>
           </div>
+
+          {isQRTournament && (
+            <div className="alert alert-warning mt-4">
+              <h6>🎁 Prize Breakdown</h6>
+              <div className="row g-2 small">
+                <div className="col-4 text-center">
+                  <div className="fw-bold text-warning">🥇 1st Place</div>
+                  <div>Special Trophy</div>
+                </div>
+                <div className="col-4 text-center">
+                  <div className="fw-bold text-secondary">🥈 2nd Place</div>
+                  <div>Silver Medal</div>
+                </div>
+                <div className="col-4 text-center">
+                  <div className="fw-bold text-warning">🥉 3rd Place</div>
+                  <div>Bronze Medal</div>
+                </div>
+                <div className="col-12 text-center mt-2 small text-muted">
+                  🌟 All participants get certificates of completion!
+                </div>
+              </div>
+            </div>
+          )}
           
           <div className="d-grid gap-2 mt-4">
             <button 

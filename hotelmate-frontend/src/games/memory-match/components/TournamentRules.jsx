@@ -60,7 +60,8 @@ const TournamentRules = ({ tournament, onStartGame, onGoBack }) => {
               <div className="alert alert-warning mb-4">
                 <h5 className="alert-heading">📋 Important Notes</h5>
                 <ul className="mb-0">
-                  <li>• <strong>One attempt per tournament:</strong> You can only play once per tournament</li>
+                  <li>• <strong>Unlimited attempts:</strong> Play as many times as you want!</li>
+                  <li>• <strong>Best score only:</strong> Only your highest score appears on the leaderboard</li>
                   <li>• <strong>High score collection:</strong> Name and room number collected only for qualifying scores</li>
                   <li>• <strong>Fair play:</strong> No refreshing or closing the game during play</li>
                   <li>• <strong>Tournament period:</strong> Must complete before tournament ends</li>
