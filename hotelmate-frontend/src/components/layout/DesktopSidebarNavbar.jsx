@@ -30,6 +30,14 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const { canAccess } = usePermissions();
   const servicesRef = useRef(null);
 
+  // Hide desktop sidebar for the exact public tournament view when user is anonymous
+  const searchParams = new URLSearchParams(location.search);
+  const isMemoryMatchTournamentExact =
+    /^\/games\/memory-match\/tournaments\/?$/.test(location.pathname) &&
+    searchParams.get("hotel") === "hotel-killarney";
+
+  if (!user && isMemoryMatchTournamentExact) return null;
+
   // Define active path helpers
   const isPartialActive = (path) => {
     if (path === "/") return location.pathname === "/";

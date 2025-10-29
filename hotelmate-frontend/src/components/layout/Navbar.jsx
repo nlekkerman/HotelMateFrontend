@@ -42,7 +42,14 @@ const Navbar = () => {
     /^\/room_services\/[^/]+\/room\/[^/]+\/menu\/?$/,
     /^\/hotel_info\/[^/]+(\/[^/]+)?\/?$/,
   ];
-  if (!user && hiddenNavPatterns.some((re) => re.test(pathname))) {
+  // Hide nav for certain private routes when user is anonymous.
+  // Also hide for the exact public tournament view: /games/memory-match/tournaments?hotel=hotel-killarney
+  const searchParams = new URLSearchParams(location.search);
+  const isMemoryMatchTournamentExact =
+    /^\/games\/memory-match\/tournaments\/?$/.test(pathname) &&
+    searchParams.get("hotel") === "hotel-killarney";
+
+  if (!user && (hiddenNavPatterns.some((re) => re.test(pathname)) || isMemoryMatchTournamentExact)) {
     return null;
   }
 
