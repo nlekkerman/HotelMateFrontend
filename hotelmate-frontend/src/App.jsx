@@ -84,6 +84,7 @@ import WhackAMolePage from "@/games/whack-a-mole/pages/GamePage";
 import MemoryGame from "@/games/memory-match/pages/MemoryGame";
 import MemoryMatchDashboard from "@/games/memory-match/pages/MemoryMatchDashboard";
 import TournamentDashboard from "@/games/memory-match/pages/TournamentDashboard";
+import TournamentWinners from "@/games/memory-match/pages/TournamentWinners";
 import Leaderboard from "@/games/memory-match/pages/Leaderboard";
 import PersonalStats from "@/games/memory-match/pages/PersonalStats";
 
@@ -325,6 +326,12 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/games/memory-match" element={<MemoryMatchDashboard />} />
               <Route path="/games/memory-match/practice" element={<MemoryGame practiceMode={true} />} />
               <Route path="/games/memory-match/tournament/:tournamentId" element={<MemoryGame />} />
+              <Route path="/games/memory-match/tournament/:tournamentId/winners" element={
+                /* Lazy simple winners page */
+                <React.Suspense fallback={<div>Loading...</div>}>
+                  <TournamentWinners />
+                </React.Suspense>
+              } />
               <Route path="/games/memory-match/tournaments" element={<TournamentDashboard />} />
               <Route path="/games/memory-match/leaderboard" element={<Leaderboard />} />
               <Route path="/games/memory-match/stats" element={<PersonalStats />} />
