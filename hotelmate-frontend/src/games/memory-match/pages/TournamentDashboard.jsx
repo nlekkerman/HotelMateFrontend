@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import memoryGameAPI from '@/services/memoryGameAPI';
+import '../styles/tournament.css';
 import TournamentRules from '../components/TournamentRules';
+import TournamentDashboardHeader from '../components/TournamentDashboardHeader';
+import NextTournamentPanel from '../components/NextTournamentPanel';
+import PreviousTournamentPanel from '../components/PreviousTournamentPanel';
 import { PlayerTokenManager } from '@/utils/playerToken';
 
 export default function TournamentDashboard() {
@@ -16,26 +20,81 @@ export default function TournamentDashboard() {
   const [allTournaments, setAllTournaments] = useState([]);
   const [tournamentLoading, setTournamentLoading] = useState(true);
   const [nextTournament, setNextTournament] = useState(null);
+  const [tournamentsSummary, setTournamentsSummary] = useState(null);
   const [showRules, setShowRules] = useState(false);
   
-  // Get hotel from URL params (e.g., ?hotel=hotel-killarney)
-  const hotelSlug = searchParams.get('hotel') || 'hotel-killarney';
+  // Hardcoded hotel slug per request
+  const hotelSlug = 'hotel-killarney';
 
   useEffect(() => {
-    fetchAllTournaments();
-    
-    // Refresh tournaments every 30 seconds to check for changes
-    const interval = setInterval(fetchAllTournaments, 30000);
-    return () => clearInterval(interval);
+    // Start a visibility-aware polling loop for tournaments.
+    // Poll faster when the page is visible, slower when hidden to save requests
+    let mounted = true;
+    let timeoutId = null;
+    const visibleInterval = 30000; // 30s when visible
+    const hiddenInterval = 120000; // 2m when hidden
+
+    async function poll() {
+      if (!mounted) return;
+      try {
+        await fetchAllTournaments();
+      } catch (e) {
+        // swallow - fetchAllTournaments handles its own errors
+      }
+      const delay = document.hidden ? hiddenInterval : visibleInterval;
+      timeoutId = setTimeout(poll, delay);
+    }
+
+    poll();
+
+    function handleVisibility() {
+      // When becoming visible, trigger an immediate refresh (will no-op if data unchanged)
+      if (!document.hidden) {
+        fetchAllTournaments();
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      mounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [hotelSlug]); // Re-fetch when hotel changes
 
   // Fetch leaderboard when tournament changes
   useEffect(() => {
-    fetchLeaderboardData();
-    
-    // Refresh leaderboard every 60 seconds to get new scores
-    const leaderboardInterval = setInterval(fetchLeaderboardData, 60000);
-    return () => clearInterval(leaderboardInterval);
+    // Visibility-aware polling for leaderboard. Update state only when data changes
+    let mounted = true;
+    let timeoutId = null;
+    const visibleInterval = 15000; // 15s when visible
+    const hiddenInterval = 60000; // 60s when hidden
+
+    async function pollLeaderboard() {
+      if (!mounted) return;
+      try {
+        await fetchLeaderboardData();
+      } catch (e) {
+        // ignore
+      }
+      const delay = document.hidden ? hiddenInterval : visibleInterval;
+      timeoutId = setTimeout(pollLeaderboard, delay);
+    }
+
+    pollLeaderboard();
+
+    function handleVisibility() {
+      if (!document.hidden) {
+        fetchLeaderboardData();
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      mounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [nextTournament]); // Re-fetch when tournament changes
 
   const fetchLeaderboardData = async () => {
@@ -66,7 +125,15 @@ export default function TournamentDashboard() {
           leaderboardArray = [];
         }
         
-        setLeaderboardData(leaderboardArray);
+        // Only update state if data changed to avoid UI blinking
+        setLeaderboardData(prev => {
+          try {
+            const prevStr = JSON.stringify(prev || []);
+            const newStr = JSON.stringify(leaderboardArray || []);
+            if (prevStr === newStr) return prev;
+          } catch (e) {}
+          return leaderboardArray;
+        });
       } else {
         // No active tournament - show general leaderboard as fallback
         const response = await memoryGameAPI.getGeneralLeaderboard();
@@ -102,15 +169,41 @@ export default function TournamentDashboard() {
         });
       }
       
-      setAllTournaments(tournaments || []);
+      // Only update tournaments state when it actually changes (prevents UI jitter)
+      setAllTournaments(prev => {
+        try {
+          const prevStr = JSON.stringify(prev || []);
+          const newStr = JSON.stringify(tournaments || []);
+          if (prevStr === newStr) return prev;
+        } catch (e) {}
+        return tournaments || [];
+      });
       
       // Get the next relevant tournament (active or upcoming) for this hotel
       const result = await memoryGameAPI.getNextTournament(hotelSlug);
-      
-      if (result.tournament) {
-        setNextTournament(result.tournament);
-      } else {
-        setNextTournament(null);
+      const fetchedNext = result.tournament || null;
+      setNextTournament(prev => {
+        try {
+          const prevStr = JSON.stringify(prev || {});
+          const newStr = JSON.stringify(fetchedNext || {});
+          if (prevStr === newStr) return prev;
+        } catch (e) {}
+        return fetchedNext;
+      });
+
+      // fetch the single-call tournaments summary from backend (parent centralised)
+      try {
+        const summary = await memoryGameAPI.getTournamentsSummary(hotelSlug);
+        setTournamentsSummary(prev => {
+          try {
+            const prevStr = JSON.stringify(prev || {});
+            const newStr = JSON.stringify(summary || {});
+            if (prevStr === newStr) return prev;
+          } catch (e) {}
+          return summary || null;
+        });
+      } catch (err) {
+        // keep previous summary instead of overwriting with null to avoid UI flicker
       }
       
     } catch (error) {
@@ -310,6 +403,17 @@ export default function TournamentDashboard() {
 
   const tournamentState = getTournamentState();
 
+  // Tournament summary and finished list are now handled by TournamentDashboardHeader component
+
+  // Compute an upcoming (next scheduled) tournament independent of the header's active/next logic.
+  const upcomingTournament = (tournamentsSummary && tournamentsSummary.next)
+    ? tournamentsSummary.next
+    : (allTournaments || []).filter(t => t.start_date && new Date(t.start_date) > new Date()).sort((a,b) => new Date(a.start_date) - new Date(b.start_date))[0] || null;
+
+  const previousTournament = (tournamentsSummary && tournamentsSummary.previous)
+    ? tournamentsSummary.previous
+    : (allTournaments || []).filter(t => t.end_date && new Date(t.end_date) < new Date()).sort((a,b) => new Date(b.end_date) - new Date(a.end_date))[0] || null;
+
   // Show rules screen if requested
   if (showRules && nextTournament) {
     return (
@@ -325,43 +429,7 @@ export default function TournamentDashboard() {
     <div className="container-fluid min-vh-100 bg-gradient" style={{
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
     }}>
-      <style jsx>{`
-        @keyframes pulse {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.02); }
-          100% { transform: scale(1); }
-        }
-        
-        .tournament-card {
-          backdrop-filter: blur(10px);
-          background: rgba(255, 255, 255, 0.95);
-          border: none;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-        
-        .countdown-display {
-          font-family: 'Courier New', monospace;
-          font-weight: bold;
-          text-align: center;
-        }
-        
-        .btn-tournament {
-          transition: all 0.2s ease;
-          border-radius: 12px;
-          padding: 12px 24px;
-          font-weight: 600;
-        }
-        
-        .btn-tournament:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-        
-        .btn-tournament:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-      `}</style>
+      {/* tournament.css imported at module top - contains keyframes and utility classes */}
 
       <div className="row justify-content-center py-4">
         <div className="col-12 col-md-10 col-lg-8">
@@ -377,108 +445,20 @@ export default function TournamentDashboard() {
             )}
           </header>
 
-          {/* Tournament Display - REAL TOURNAMENTS ONLY */}
-          <div className="card tournament-card mb-4">
-            <div className="card-body">
-              {tournamentState.state === 'no-tournaments' && (
-                <div className="text-center" style={{
-                  backgroundColor: '#e9ecef',
-                  color: '#495057',
-                  borderRadius: '15px',
-                  padding: '20px',
-                  margin: '10px 0'
-                }}>
-                  <h4 className="mb-2">📅 No Tournaments Available</h4>
-                  <p className="mb-3">Check back later for upcoming tournaments!</p>
-                  <button 
-                    className="btn btn-primary btn-sm"
-                    onClick={fetchAllTournaments}
-                    disabled={tournamentLoading}
-                  >
-                    {tournamentLoading ? '🔄 Loading...' : '🔄 Refresh'}
-                  </button>
-                </div>
-              )}
+          {/* Tournament header (summary / countdown / last finished / winners) */}
+          <TournamentDashboardHeader
+            summary={tournamentsSummary}
+            loading={tournamentLoading}
+            allTournaments={allTournaments}
+            hotelSlug={hotelSlug}
+          />
 
-              {tournamentState.state === 'countdown' && (
-                <div className="countdown-display" style={getCountdownStyle()}>
-                  <h4 className="mb-2">⏰ {tournamentState.tournament.name} Starting In:</h4>
-                  <h2 className="display-4 mb-3" style={{ fontSize: '2.5rem' }}>
-                    {formatCountdown(tournamentState.timeRemaining)}
-                  </h2>
-                  <p className="mb-2">
-                    Starts: {tournamentState.tournamentTime.toLocaleString('en-US', { 
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </p>
-                  <p className="mb-0 small text-muted">
-                    Ends: {tournamentState.endTime.toLocaleString('en-US', {
-                      month: 'short',
-                      day: 'numeric', 
-                      hour: '2-digit', 
-                      minute: '2-digit'
-                    })}
-                  </p>
-                </div>
-              )}
+          {/* Standalone upcoming tournament panel (separate styling/color) */}
+          {upcomingTournament && <NextTournamentPanel tournament={upcomingTournament} />}
+          {/* Previous tournament panel with winners button (separate and outside header) */}
+          {previousTournament && <PreviousTournamentPanel tournament={previousTournament} />}
 
-              {tournamentState.state === 'active' && (
-                <div className="text-center" style={{
-                  backgroundColor: '#28a745',
-                  color: 'white',
-                  borderRadius: '15px',
-                  padding: '20px',
-                  margin: '10px 0'
-                }}>
-                  <h4 className="mb-2">🔥 {tournamentState.tournament.name} is LIVE!</h4>
-                  <h3 className="display-5 mb-3">Scroll down to Play Now!</h3>
-                  <p className="mb-2">
-                    Started: {tournamentState.tournamentTime.toLocaleTimeString('en-US', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </p>
-                  <p className="mb-0">
-                    Ends: {tournamentState.endTime.toLocaleTimeString('en-US', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </p>
-                </div>
-              )}
-
-              {tournamentState.state === 'ended' && (
-                <div className="text-center" style={{
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  borderRadius: '15px',
-                  padding: '20px',
-                  margin: '10px 0'
-                }}>
-                  <h4 className="mb-2">📊 {tournamentState.tournament.name} Ended</h4>
-                  <h5 className="mb-3">Check the Results!</h5>
-                  <p className="mb-0">
-                    Ended: {tournamentState.endTime.toLocaleString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit', 
-                      minute: '2-digit'
-                    })}
-                  </p>
-                  <button 
-                    className="btn btn-light btn-sm mt-3"
-                    onClick={fetchAllTournaments}
-                    disabled={tournamentLoading}
-                  >
-                    {tournamentLoading ? '🔄 Checking...' : '🔄 Check for New Tournaments'}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+        
 
           {/* Game Buttons */}
           <div className="row g-4 mb-4">
@@ -555,6 +535,7 @@ const QuickLeaderboard = ({ leaderboardData, leaderboardLoading, leaderboardErro
   const playerName = PlayerTokenManager.getDisplayName();
   const playerRoom = PlayerTokenManager.getDisplayRoom();
   const leaderboardRef = useRef(null);
+    const prevLeaderboardRef = useRef(null);
 
   // Check if an entry belongs to current player
   const isCurrentPlayerEntry = (session) => {
@@ -579,21 +560,42 @@ const QuickLeaderboard = ({ leaderboardData, leaderboardLoading, leaderboardErro
     }
   }
 
-  // Auto-scroll to current player's entry (hook must be called always)
+  // Auto-scroll to current player's entry only when leaderboard data changed
   useEffect(() => {
-    if (hasCurrentPlayer && leaderboardRef.current && !leaderboardLoading && !leaderboardError) {
-      const playerElement = leaderboardRef.current.querySelector('.current-player-entry');
-      if (playerElement) {
-        setTimeout(() => {
-          playerElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center',
-            inline: 'nearest'
-          });
-        }, 500);
+    if (leaderboardLoading || leaderboardError) return;
+
+    try {
+      const prevStr = prevLeaderboardRef.current;
+      const newStr = JSON.stringify(leaderboardData || []);
+
+      // If data did not change, do nothing (prevents blinking)
+      if (prevStr === newStr) return;
+
+      // Data changed — decide whether to scroll to current player
+      const prevArray = prevStr ? JSON.parse(prevStr) : [];
+      const prevRank = prevArray.findIndex(session => isCurrentPlayerEntry(session));
+      const newRank = (leaderboardData || []).findIndex(session => isCurrentPlayerEntry(session));
+
+      // Save new snapshot
+      prevLeaderboardRef.current = newStr;
+
+      // Scroll if player is present and rank changed (or this is the first load)
+      if (newRank >= 0 && (prevStr === null || prevRank !== newRank)) {
+        const playerElement = leaderboardRef.current.querySelector('.current-player-entry');
+        if (playerElement) {
+          setTimeout(() => {
+            playerElement.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center',
+              inline: 'nearest'
+            });
+          }, 500);
+        }
       }
+    } catch (e) {
+      // ignore JSON parse errors
     }
-  }, [hasCurrentPlayer, leaderboardData, leaderboardLoading, leaderboardError]);
+  }, [leaderboardData, leaderboardLoading, leaderboardError]);
 
   // Early returns after all hooks are called
   if (leaderboardLoading) {

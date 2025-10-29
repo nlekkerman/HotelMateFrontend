@@ -714,6 +714,19 @@ class MemoryGameAPI {
     }
   }
 
+  // Get a single summary object: { active, next, previous }
+  async getTournamentsSummary(hotelSlug = 'hotel-killarney') {
+    try {
+      const response = await api.get(`${this.baseURL}/tournaments/summary/?hotel=${hotelSlug}`);
+      // Expect backend to return an object with keys active, next, previous
+      return response.data;
+    } catch (error) {
+      console.warn(`⚠️ Failed to fetch tournaments summary for ${hotelSlug}:`, error?.message || error);
+      // Return a safe default so UI can render fallback text
+      return { active: null, next: null, previous: null };
+    }
+  }
+
   // Legacy method - kept for backward compatibility
   async hasActiveTournament() {
     try {
@@ -844,7 +857,7 @@ class MemoryGameAPI {
       
       // Try multiple endpoint patterns based on backend documentation
       const endpoints = [
-        `${this.baseURL}/tournaments/active_for_hotel/?hotel=${hotelSlug}`,
+        `${this.baseURL}/tournaments/active/?hotel=${hotelSlug}`,
         `${this.baseURL}/tournaments/active/?hotel=${hotelSlug}`,
         `${this.baseURL}/tournaments/?hotel=${hotelSlug}&status=active`,
         `${this.baseURL}/tournaments/?hotel_slug=${hotelSlug}`,
