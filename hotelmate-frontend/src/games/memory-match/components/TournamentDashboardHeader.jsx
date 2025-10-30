@@ -102,12 +102,17 @@ export default function TournamentDashboardHeader({ summary = null, loading = fa
     headerBgClass = '';
   }
 
+  // Center the compact "Next" block in the header when there's only an upcoming tournament
+  const contentClass = (safeSummary.next && !safeSummary.active)
+    ? 'flex-grow-1 d-flex flex-column justify-content-center align-items-center text-center'
+    : 'flex-grow-1';
+
   // The inline results fetch UI has been removed to simplify the header.
 
   return (
     <div className="card tournament-card mb-3">
-      <div className={`card-body ${headerBgClass} d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3`} style={headerStyle}>
-        <div className="flex-grow-1">
+      <div className={`card-body ${headerBgClass} d-flex flex-column flex-md-row justify-content-center align-items-start align-items-md-center gap-3`} style={headerStyle}>
+  <div className={contentClass}>
           {loading ? (
             <div className="p-2 rounded mb-1 text-muted" style={{ fontWeight: 700 }}>Loading tournaments...</div>
           ) : safeSummary.active ? (
@@ -122,6 +127,10 @@ export default function TournamentDashboardHeader({ summary = null, loading = fa
           ) : safeSummary.next ? (
             <div>
               <div className="mb-2" style={{ fontWeight: 700, fontSize: '1rem' }}>{`Next — ${safeSummary.next.name}`}</div>
+              <div className="d-flex align-items-baseline gap-3">
+                <div className="small" style={{ fontWeight: 700 }}>Starts in</div>
+                <div className="fs-1 fw-bold" style={{ fontFamily: 'Courier New, monospace' }}>{formatCountdown(safeSummary.next.start_date)}</div>
+              </div>
               <div className="small text-muted">Starts: {formatDate(safeSummary.next.start_date)}</div>
             </div>
           ) : (

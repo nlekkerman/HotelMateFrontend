@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import memoryGameAPI from '@/services/memoryGameAPI';
 import '../styles/tournament.css';
 import TournamentRules from '../components/TournamentRules';
+import tournamentHeaderImg from '../assets/images/tournament-header.png';
 import TournamentDashboardHeader from '../components/TournamentDashboardHeader';
 import NextTournamentPanel from '../components/NextTournamentPanel';
 import PreviousTournamentPanel from '../components/PreviousTournamentPanel';
@@ -433,17 +434,23 @@ export default function TournamentDashboard() {
 
       <div className="row justify-content-center py-4">
         <div className="col-12 col-md-10 col-lg-8">
-          {/* Header */}
-          <header className="text-center text-white mb-4">
-            <h1 className="h2 mb-0">🏆 Memory Match Tournament</h1>
-            {tournamentLoading ? (
-              <p className="lead">Loading tournaments from database...</p>
-            ) : nextTournament ? (
-              <p className="lead">{nextTournament.name}</p>
-            ) : (
-              <p className="lead">No tournaments available</p>
-            )}
-          </header>
+          {/* Header (uses tournament image as background) */}
+          <header
+            className="text-center text-white mb-4"
+            role="img"
+            aria-label="Tournament banner"
+            style={{
+              backgroundImage: `linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0.25)), url(${tournamentHeaderImg})`,
+              /* zoomed out more so image shows more of its edges */
+              backgroundSize: '60%',
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'center',
+              padding: '1rem 0',
+              borderRadius: '8px',
+              minHeight: 300,
+              width: '100%'
+            }}
+          />
 
           {/* Tournament header (summary / countdown / last finished / winners) */}
           <TournamentDashboardHeader
@@ -453,8 +460,16 @@ export default function TournamentDashboard() {
             hotelSlug={hotelSlug}
           />
 
-          {/* Standalone upcoming tournament panel (separate styling/color) */}
-          {upcomingTournament && <NextTournamentPanel tournament={upcomingTournament} />}
+          {/* Prizes & Winners (placeholder) */}
+          <PrizesAndWinners tournament={previousTournament} />
+
+          {/* Standalone upcoming tournament panel (separate styling/color).
+              Show the Next panel only when a tournament is currently ACTIVE so we
+              don't duplicate the countdown — when there's no active tournament the
+              header already displays the next countdown. */}
+          {tournamentState.state === 'active' && upcomingTournament && (
+            <NextTournamentPanel tournament={upcomingTournament} />
+          )}
           {/* Previous tournament panel with winners button (separate and outside header) */}
           {previousTournament && <PreviousTournamentPanel tournament={previousTournament} />}
 
@@ -692,6 +707,113 @@ const QuickLeaderboard = ({ leaderboardData, leaderboardLoading, leaderboardErro
           </div>
           );
         })}
+      </div>
+    </div>
+  );
+};
+
+// Prizes & Winners (shows prizes and top 5 winners from previous tournament when available)
+const PrizesAndWinners = ({ tournament }) => {
+  const [winners, setWinners] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    let timeoutId = null;
+    const visibleInterval = 60000; // 1m
+    const hiddenInterval = 300000; // 5m
+
+    async function fetchWinners() {
+      if (!mounted) return;
+      if (!tournament || !tournament.id) return;
+      setLoading(true);
+      try {
+        const data = await memoryGameAPI.getTournamentLeaderboard(tournament.id);
+
+        let list = [];
+        if (Array.isArray(data)) list = data;
+        else if (data && Array.isArray(data.results)) list = data.results;
+        else if (data && Array.isArray(data.sessions)) list = data.sessions;
+        else if (data && Array.isArray(data.data)) list = data.data;
+
+        const topFive = list.slice(0, 5);
+
+        setWinners(prev => {
+          try {
+            const prevStr = JSON.stringify(prev || []);
+            const newStr = JSON.stringify(topFive || []);
+            if (prevStr === newStr) return prev;
+          } catch (e) {}
+          return topFive;
+        });
+      } catch (err) {
+        // keep previous winners on error
+      } finally {
+        if (mounted) setLoading(false);
+      }
+
+      const delay = document.hidden ? hiddenInterval : visibleInterval;
+      timeoutId = setTimeout(fetchWinners, delay);
+    }
+
+    function handleVisibility() {
+      if (!document.hidden) fetchWinners();
+    }
+
+    if (tournament && tournament.id) {
+      fetchWinners();
+      document.addEventListener('visibilitychange', handleVisibility);
+    }
+
+    return () => {
+      mounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [tournament?.id]);
+
+  return (
+    <div className="card tournament-card mb-4 border-0 shadow-sm">
+      <div className="card-header bg-success text-white py-3" />
+
+      <div className="card-body text-center py-4">
+        <p className="mb-3 fw-semibold" style={{ fontSize: '1.05rem' }}>Prizes:</p>
+
+        <ul className="list-unstyled mb-3">
+          <li className="mx-auto" style={{ maxWidth: 720 }}>
+            <div className="p-3 rounded border border-2 border-success bg-success bg-opacity-10">
+              <div className="fw-semibold" style={{ fontSize: '1.05rem' }}>
+                🧠✨ The first 5 memory masters will win a special treats bag waiting for them at breakfast tomorrow! 🍩🎁
+              </div>
+            </div>
+          </li>
+        </ul>
+
+        <hr />
+
+        <h6 className="mb-2" style={{ fontWeight: 700 }}>Winners</h6>
+        <div className="mx-auto" style={{ maxWidth: 720 }}>
+          {loading && winners.length === 0 ? (
+            <div className="text-muted small">Loading winners...</div>
+          ) : winners && winners.length > 0 ? (
+            <ol className="text-start mb-0" style={{ paddingLeft: '1.15rem' }}>
+              {winners.map((w, i) => (
+                <li key={w.id || i} className="mb-2">
+                  <div className="fw-semibold">{w.player_name || w.participant_name || w.name || 'Anonymous'}</div>
+                  <div className="small text-muted">{w.score ? `${w.score} pts` : ''}</div>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <div className="rounded p-3" style={{
+              minHeight: 72,
+              border: '2px dashed rgba(0,0,0,0.08)',
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.6), rgba(250,250,250,0.6))'
+            }}>
+              <div className="text-muted">Winners will be added here after the tournament concludes.</div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
