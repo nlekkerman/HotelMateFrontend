@@ -82,7 +82,7 @@ export default function NextTournamentPanel({ tournament }) {
   return (
     <div className="card tournament-card mb-3">
       <div className={`card-body ${panelClass}`} style={panelStyle}>
-        <h5 className={`mb-2 ${panelClass.includes('text-white') ? 'text-white' : ''}`}>Upcoming Tournament</h5>
+        <h5 className={`mb-2 d-flex justify-content-center  ${panelClass.includes('text-white') ? 'text-white' : ''}`}>Upcoming Tournament</h5>
         <div className="mb-2 fw-semibold">{tournament.name}</div>
 
         {isActive ? (

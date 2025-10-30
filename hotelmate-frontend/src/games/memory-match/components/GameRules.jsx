@@ -109,24 +109,7 @@ export default function GameRules({ isVisible, onClose, isQRTournament = false }
 
           {isQRTournament && (
             <div className="alert alert-warning mt-4">
-              <h6>🎁 Prize Breakdown</h6>
-              <div className="row g-2 small">
-                <div className="col-4 text-center">
-                  <div className="fw-bold text-warning">🥇 1st Place</div>
-                  <div>Special Trophy</div>
-                </div>
-                <div className="col-4 text-center">
-                  <div className="fw-bold text-secondary">🥈 2nd Place</div>
-                  <div>Silver Medal</div>
-                </div>
-                <div className="col-4 text-center">
-                  <div className="fw-bold text-warning">🥉 3rd Place</div>
-                  <div>Bronze Medal</div>
-                </div>
-                <div className="col-12 text-center mt-2 small text-muted">
-                  🌟 All participants get certificates of completion!
-                </div>
-              </div>
+              <p className="mb-0">🌈 Match fast, think smart! The first 5 champions will wake up to a magical treats bag at breakfast tomorrow morning! 🍭⭐</p>
             </div>
           )}
           

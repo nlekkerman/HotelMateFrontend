@@ -62,9 +62,8 @@ export default function NextTournament({ tournament }) {
 
   return (
     <div>
-      <div className="mb-2" style={{ fontWeight: 700, fontSize: '1rem' }}>Next tournament starts in</div>
 
-      <div className="d-flex align-items-center gap-3">
+      <div className="d-flex align-items-center flex-column gap-3">
         <div className="display-4 fw-bold" style={{ fontFamily: 'Courier New, monospace', fontSize: '2.25rem' }}>
           {formatCountdown(tournament.start_date)}
         </div>
