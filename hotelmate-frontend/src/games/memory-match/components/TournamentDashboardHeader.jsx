@@ -117,7 +117,7 @@ export default function TournamentDashboardHeader({ summary = null, loading = fa
             <div className="p-2 rounded mb-1 text-muted" style={{ fontWeight: 700 }}>Loading tournaments...</div>
           ) : safeSummary.active ? (
             <div>
-              <div className="mb-2" style={{ fontWeight: 700, fontSize: '1rem' }}>LIVE NOW — {safeSummary.active.name}</div>
+              <div className="mb-2" style={{ fontWeight: 700, fontSize: '1rem' }}>LIVE NOW <br></br> {safeSummary.active.name}</div>
               <div className="d-flex align-items-baseline gap-3">
                 <div className="small" style={{ fontWeight: 700 }}>Ends in</div>
                 <div className="fs-1 fw-bold" style={{ fontFamily: 'Courier New, monospace' }}>{formatCountdown(safeSummary.active.end_date)}</div>

@@ -434,23 +434,18 @@ export default function TournamentDashboard() {
 
       <div className="row justify-content-center py-4">
         <div className="col-12 col-md-10 col-lg-8">
-          {/* Header (uses tournament image as background) */}
+          {/* Header (banner image shown as an <img> to avoid background cropping/gray bands) */}
           <header
-            className="text-center text-white mb-4"
+            className="text-center text-white mb-4 tournament-banner"
             role="img"
             aria-label="Tournament banner"
-            style={{
-              backgroundImage: `linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0.25)), url(${tournamentHeaderImg})`,
-              /* zoomed out more so image shows more of its edges */
-              backgroundSize: '60%',
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'center',
-              padding: '1rem 0',
-              borderRadius: '8px',
-              minHeight: 300,
-              width: '100%'
-            }}
-          />
+          >
+            <img
+              src={tournamentHeaderImg}
+              alt="Tournament banner"
+              className="tournament-banner-img"
+            />
+          </header>
 
           {/* Tournament header (summary / countdown / last finished / winners) */}
           <TournamentDashboardHeader
