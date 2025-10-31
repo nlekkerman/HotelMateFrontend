@@ -487,7 +487,10 @@ export default function TournamentDashboard() {
           />
 
           {/* Prizes & Winners (placeholder) */}
-          <PrizesAndWinners tournament={previousTournament} />
+          <PrizesAndWinners 
+            tournament={previousTournament} 
+            tournamentState={tournamentState}
+          />
 
           {/* Standalone upcoming tournament panel (separate styling/color).
               Show the Next panel only when a tournament is currently ACTIVE so we
@@ -807,9 +810,15 @@ const QuickLeaderboard = ({
 };
 
 // Prizes & Winners (shows prizes and top 5 winners from previous tournament when available)
-const PrizesAndWinners = ({ tournament }) => {
+const PrizesAndWinners = ({ tournament, tournamentState }) => {
   const [winners, setWinners] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Check if there's an active tournament (hide winners during active tournaments)
+  const hasActiveTournament = tournamentState && (
+    tournamentState.state === "active" || 
+    tournamentState.state === "countdown"
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -820,6 +829,14 @@ const PrizesAndWinners = ({ tournament }) => {
     async function fetchWinners() {
       if (!mounted) return;
       if (!tournament || !tournament.id) return;
+      
+      // Clear winners if there's an active tournament
+      if (hasActiveTournament) {
+        setWinners([]);
+        setLoading(false);
+        return;
+      }
+      
       setLoading(true);
       try {
         const data = await memoryGameAPI.getTournamentLeaderboard(
@@ -866,7 +883,7 @@ const PrizesAndWinners = ({ tournament }) => {
       if (timeoutId) clearTimeout(timeoutId);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [tournament?.id]);
+  }, [tournament?.id, hasActiveTournament]);
 
   return (
     <div className="card tournament-card mb-4 border-0 shadow-sm">
@@ -904,7 +921,21 @@ const PrizesAndWinners = ({ tournament }) => {
           Winners
         </h6>
         <div className="mx-auto" style={{ maxWidth: 720 }}>
-          {loading && winners.length === 0 ? (
+          {hasActiveTournament ? (
+            <div
+              className="rounded p-3"
+              style={{
+                minHeight: 72,
+                border: "2px dashed rgba(0,0,0,0.08)",
+                background:
+                  "linear-gradient(180deg, rgba(255,255,255,0.6), rgba(250,250,250,0.6))",
+              }}
+            >
+              <div className="text-muted">
+                🏆 Tournament in progress! Winners will be announced after the tournament ends.
+              </div>
+            </div>
+          ) : loading && winners.length === 0 ? (
             <div className="text-muted small">Loading winners...</div>
           ) : winners && winners.length > 0 ? (
             <ol className="text-start mb-0" style={{ paddingLeft: "1.15rem" }}>
