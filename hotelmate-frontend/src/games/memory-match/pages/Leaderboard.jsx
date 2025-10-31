@@ -23,18 +23,59 @@ const Leaderboard = () => {
     try {
       setError(null);
       setLoading(true);
-      
-      let data;
+      let rows = [];
+
       if (tournamentId) {
-        // Tournament-specific leaderboard
-        data = await memoryGameAPI.getTournamentLeaderboard(tournamentId);
-        setTournamentInfo(data.tournament);
-        setLeaderboard(data.leaderboard || []);
+        // Tournament-specific leaderboard: backend returns a full deduped array
+        const data = await memoryGameAPI.getTournamentLeaderboard(tournamentId);
+        // Data may be an array or an object containing keys - normalize
+        if (Array.isArray(data)) rows = data;
+        else if (data && Array.isArray(data.results)) rows = data.results;
+        else if (data && Array.isArray(data.sessions)) rows = data.sessions;
+        else if (data && Array.isArray(data.data)) rows = data.data;
+        else rows = [];
+
+        // Try to fetch tournament metadata if available (separate endpoint)
+        try {
+          const meta = await memoryGameAPI.getTournament(tournamentId);
+          setTournamentInfo(meta || null);
+        } catch (metaErr) {
+          setTournamentInfo(null);
+        }
       } else {
-        // General leaderboard
-        data = await memoryGameAPI.getGeneralLeaderboard(hotelSlug);
-        setLeaderboard(data.leaderboard || []);
+        // General memory-game leaderboard (full, deduped by backend)
+        const data = await memoryGameAPI.getGeneralLeaderboard(hotelSlug);
+        if (Array.isArray(data)) rows = data;
+        else if (data && Array.isArray(data.results)) rows = data.results;
+        else if (data && Array.isArray(data.leaderboard)) rows = data.leaderboard;
+        else if (data && Array.isArray(data.data)) rows = data.data;
+        else rows = [];
       }
+
+      // Normalize rows to a consistent shape used by the table
+      // Backend may return different keys for memory vs tournament leaderboards
+      const normalized = (rows || []).map((r, idx) => {
+        return {
+          // use backend-provided rank when present, otherwise fallback to index+1
+          rank: r.rank || (idx + 1),
+          // Display name: tournament uses player_name, memory uses user
+          player_name: r.player_name || r.user || r.name || r.participant_name || r.player || 'Anonymous',
+          // Score/time fields
+          best_score: r.score || r.best_score || 0,
+          best_time: r.time_seconds || r.best_time || r.time_seconds || null,
+          // Optional tournament fields
+          room_number: r.room_number || r.room || null,
+          moves_count: r.moves_count || r.moves || null,
+          games_played: r.games_played || r.played || 0,
+          win_rate: r.win_rate || r.winRate || null,
+          // keep original id/session
+          id: r.session_id || r.id || r.session || idx,
+          // keep raw row for any special needs
+          raw: r
+        };
+      });
+
+      setLeaderboard(normalized);
       
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
@@ -53,11 +94,20 @@ const Leaderboard = () => {
   };
 
   const getRankEmoji = (rank) => {
+    // Provide medal/icon for top 5 ranks
     switch (rank) {
-      case 1: return '🥇';
-      case 2: return '🥈';
-      case 3: return '🥉';
-      default: return `${rank}.`;
+      case 1:
+        return '🥇';
+      case 2:
+        return '🥈';
+      case 3:
+        return '🥉';
+      case 4:
+        return '🏅'; // medal
+      case 5:
+        return '🏅'; // medal (same icon for 4th & 5th)
+      default:
+        return `${rank}.`;
     }
   };
 
@@ -145,7 +195,8 @@ const Leaderboard = () => {
                     </thead>
                     <tbody>
                       {leaderboard.map((player, index) => {
-                        const rank = index + 1;
+                        // Prefer server-provided rank (backend assigns rank); fallback to index
+                        const rank = player.rank || (index + 1);
                         const isCurrentUser = user && player.player_name === user.username;
                         
                         return (

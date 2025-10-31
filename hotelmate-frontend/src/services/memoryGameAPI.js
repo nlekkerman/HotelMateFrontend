@@ -418,10 +418,12 @@ class MemoryGameAPI {
     }
   }
 
-  async getTournamentLeaderboard(tournamentId) {
+  async getTournamentLeaderboard(tournamentId, limit = null) {
     try {
-      const response = await api.get(`${this.baseURL}/tournaments/${tournamentId}/leaderboard/`);
-      
+      const url = `${this.baseURL}/tournaments/${tournamentId}/leaderboard/`;
+      const config = limit ? { params: { limit } } : undefined;
+      const response = await api.get(url, config);
+
       return response.data;
     } catch (error) {
       console.error(`❌ Tournament leaderboard API error:`, error);
@@ -900,9 +902,11 @@ class MemoryGameAPI {
     }
   }
 
-  async getTournamentLeaderboard(tournamentId) {
+  async getTournamentLeaderboard(tournamentId, limit = null) {
     try {
-      const response = await api.get(`${this.baseURL}/tournaments/${tournamentId}/leaderboard/`);
+      const url = `${this.baseURL}/tournaments/${tournamentId}/leaderboard/`;
+      const config = limit ? { params: { limit } } : undefined;
+      const response = await api.get(url, config);
       return response.data;
     } catch (error) {
       console.error(`Failed to fetch tournament ${tournamentId} leaderboard:`, error);

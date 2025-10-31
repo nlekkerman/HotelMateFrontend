@@ -69,7 +69,7 @@ export default function TournamentWinners() {
                 <div key={r.id || idx} className={`list-group-item ${idx === 0 ? 'list-group-item-primary' : ''}`}>
                   <div className="d-flex justify-content-between">
                     <div>
-                      <strong>{idx+1}) {r.player_name}</strong>
+                      <strong>{idx+1}. {r.player_name}</strong>
                       <div className="small text-muted">{r.room_number ? `Room ${r.room_number}` : ''}</div>
                     </div>
                     <div className="text-end">
