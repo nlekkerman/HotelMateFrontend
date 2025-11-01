@@ -907,9 +907,13 @@ const PrizesAndWinners = ({ tournament, tournamentState }) => {
                 className="fw-semibold text-white"
                 style={{ fontSize: "1.05rem" }}
               >
-                The Memory Match magic is on! Only the top 5 brainy heroes
-                will claim their reward — a chilling Zombie Eye or a
-                spooky-sweet Bloody Pumpkin mocktail at the end! 🍬🧃{" "}
+                🎉 Attention Little Memory Champions! 🎉
+
+Today’s winners will get a delicious dessert of their choice! 😋🍦🍰🧁
+
+After the winners are announced, please go to the restaurant host desk at Strawberry Tree Restaurant 🍓🌳 — that’s where your yummy prize will be waiting for you!
+
+So get ready, flip those cards like superheroes, and let your memory magic shine! 🧠✨💫{" "}
               </div>
             </div>
           </li>

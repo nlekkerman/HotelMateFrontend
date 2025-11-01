@@ -26,8 +26,10 @@ export default function useLogin() {
         ? data.profile_image_url
         : `${import.meta.env.VITE_CLOUDINARY_BASE}image/upload/v1753188341/${data.profile_image_url}.png`;
 
+
       const userToSave = {
         id: data.staff_id,
+        staff_id: data.staff_id, // Ensure staff_id is present for profile edit logic
         token: data.token,
         username: data.username,
         hotel_id: data.hotel_id,
@@ -48,8 +50,10 @@ export default function useLogin() {
 
       localStorage.setItem("user", JSON.stringify(userToSave));
 
+
       const userForContext = {
         id: data.staff_id,
+        staff_id: data.staff_id, // Ensure staff_id is present for profile edit logic
         username: data.username,
         token: data.token,
         hotel_id: data.hotel_id,
