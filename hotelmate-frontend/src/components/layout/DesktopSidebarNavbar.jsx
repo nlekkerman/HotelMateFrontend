@@ -10,6 +10,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigation } from "@/hooks/useNavigation";
 import { useChat } from "@/context/ChatContext";
 import { useBookingNotifications } from "@/context/BookingNotificationContext";
+import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationContext";
 
 const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const location = useLocation();
@@ -20,6 +21,7 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const { totalUnread, markConversationRead } = useChat();
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
   const { hasNewBooking } = useBookingNotifications();
+  const { hasNewRoomService, hasNewBreakfast } = useRoomServiceNotifications();
   const { roomServiceCount, breakfastCount, totalServiceCount } =
     useOrderCount(hotelIdentifier);
   const [staffProfile, setStaffProfile] = useState(null);
@@ -154,12 +156,17 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
           )}
 
           {visibleNavItems.map((item) => {
-            const showNewBadge =
+            const showNewBadge = 
               item.slug === "bookings" ? hasNewBooking : 
               item.slug === "chat" ? totalUnread > 0 : 
+              item.slug === "room-service" ? hasNewRoomService :
+              item.slug === "breakfast" ? hasNewBreakfast :
               false;
 
-            return (
+            // Add order counts for room service and breakfast
+            let orderCount = 0;
+            if (item.slug === "room-service") orderCount = roomServiceCount;
+            if (item.slug === "breakfast") orderCount = breakfastCount;            return (
               <li className="nav-item" key={item.slug}>
                 <Link
                   className={`nav-link text-white ${
@@ -176,82 +183,13 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
                   {item.slug === "chat" && !collapsed && totalUnread > 0 && (
                     <span className="badge bg-danger ms-2">{totalUnread}</span>
                   )}
+                  {orderCount > 0 && !collapsed && (
+                    <span className="badge bg-danger ms-2">{orderCount}</span>
+                  )}
                 </Link>
               </li>
             );
           })}
-
-
-          {servicesDropdownOpen !== null && (
-            <li className="nav-item" ref={servicesRef}>
-              <div
-                className={`nav-link d-flex align-items-center  text-white ${
-                  collapsed ? "justify-content-start" : "justify-content-start"
-                }`}
-                style={{ cursor: "pointer" }}
-                onClick={() => setServicesDropdownOpen(!servicesDropdownOpen)}
-                title={collapsed ? "Services" : ""} // Tooltip when collapsed
-              >
-                {/* Icon always visible */}
-                <i className="bi bi-cup-hot me-2" />
-
-                {/* Show text + badge + chevron only if expanded */}
-                {!collapsed && (
-                  <>
-                    <span>Services</span>
-                    {roomServiceCount + breakfastCount > 0 && (
-                      <span className="badge bg-danger ms-2">
-                        {roomServiceCount + breakfastCount}
-                      </span>
-                    )}
-                    <i
-                      className={`ms-3 bi bi-chevron-${
-                        servicesDropdownOpen ? "up" : "down"
-                      }`}
-                      style={{ fontSize: "0.8rem" }}
-                    />
-                  </>
-                )}
-              </div>
-
-              {/* Submenu only when expanded */}
-              {!collapsed && servicesDropdownOpen && (
-                <ul className="nav flex-column ms-3">
-                  {[
-                    {
-                      label: "Room Service",
-                      icon: "box",
-                      count: roomServiceCount,
-                    },
-                    {
-                      label: "Breakfast",
-                      icon: "egg-fried",
-                      count: breakfastCount,
-                    },
-                  ].map(({ label, icon, count }) => (
-                    <li className="nav-item" key={label}>
-                      <Link
-                        className="nav-link text-white d-flex 
-              "
-                        to={`/services/${label
-                          .toLowerCase()
-                          .replace(" ", "-")}`}
-                        onClick={() => setCollapsed(true)}
-                      >
-                        <div>
-                          <i className={`bi bi-${icon} me-2`} />
-                          {label}
-                        </div>
-                        {count > 0 && (
-                          <span className="badge bg-danger ms-2">{count}</span>
-                        )}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          )}
 
           {/* LOGIN / REGISTER if not logged in */}
           {!user && (

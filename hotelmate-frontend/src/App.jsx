@@ -13,15 +13,16 @@ import "react-toastify/dist/ReactToastify.css";
 import { UIProvider } from "@/context/UIContext";
 import { ChatProvider } from "@/context/ChatContext";
 import { BookingNotificationProvider } from "@/context/BookingNotificationContext";
+import { RoomServiceNotificationProvider } from "@/context/RoomServiceNotificationContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { useUnreadConversations } from "@/components/chat/hooks/useUnreadConversations";
 import MobileNavbar from "@/components/layout/MobileNavbar";
 import DesktopSidebarNavbar from "@/components/layout/DesktopSidebarNavbar";
 import NetworkHandler from "@/components/offline/NetworkHandler";
 import LogoBanner from "./components/layout/LogoBanner";
+import PusherDebugger from "@/components/utils/PusherDebugger";
 
 // Pages + Components
 import Home from "@/pages/home/Home";
@@ -100,14 +101,11 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
   const location = useLocation();
   const isClockInPage = location.pathname.startsWith("/clock-in");
   const { user } = useAuth();
-  const { unreadCount: chatUnreadCount, markConversationRead } =
-    useUnreadConversations();
 
   const [selectedRoom, setSelectedRoom] = useState(null);
 
   const handleSelectRoom = async (roomNumber, conversationId) => {
     setSelectedRoom(roomNumber);
-    await markConversationRead(conversationId);
   };
 
   const sidebar = !isMobile && !isClockInPage && (
@@ -115,7 +113,6 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
       <DesktopSidebarNavbar
         collapsed={collapsed}
         setCollapsed={setCollapsed}
-        chatUnreadCount={chatUnreadCount}
       />
     </div>
   );
@@ -148,6 +145,9 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 path="/reset-password/:uid/:token/"
                 element={<ResetPassword />}
               />
+
+              {/* Debug Route - REMOVE IN PRODUCTION */}
+              <Route path="/pusher-debug" element={<PusherDebugger />} />
 
               {/* PIN Auth */}
               <Route
@@ -372,14 +372,16 @@ export default function App() {
           <ThemeProvider>
             <ChatProvider>
               <BookingNotificationProvider>
-                <BrowserRouter>
-                  <NetworkHandler />
-                  <AppLayout
-                    collapsed={collapsed}
-                    setCollapsed={setCollapsed}
-                    isMobile={isMobile}
-                  />
-                </BrowserRouter>
+                <RoomServiceNotificationProvider>
+                  <BrowserRouter>
+                    <NetworkHandler />
+                    <AppLayout
+                      collapsed={collapsed}
+                      setCollapsed={setCollapsed}
+                      isMobile={isMobile}
+                    />
+                  </BrowserRouter>
+                </RoomServiceNotificationProvider>
               </BookingNotificationProvider>
             </ChatProvider>
           </ThemeProvider>

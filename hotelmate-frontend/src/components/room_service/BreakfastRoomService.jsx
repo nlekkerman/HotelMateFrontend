@@ -3,16 +3,19 @@ import { useAuth } from "@/context/AuthContext";
 import api from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useTheme } from "@/context/ThemeContext";
+import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationContext";
 
 export default function BreakfastRoomService() {
   const { user } = useAuth();
   const hotelSlug = user?.hotel_slug;
-const { refreshAll } = useOrderCount(hotelSlug);  const [orders, setOrders] = useState([]);
+  const { refreshAll } = useOrderCount(hotelSlug);
+  const { hasNewBreakfast, markBreakfastRead } = useRoomServiceNotifications();
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { mainColor } = useTheme();
 
-  useEffect(() => {
+  const fetchOrders = () => {
     if (!hotelSlug) {
       setError("No hotel identifier found.");
       return;
@@ -27,12 +30,28 @@ const { refreshAll } = useOrderCount(hotelSlug);  const [orders, setOrders] = us
         let data = res.data;
         if (data && Array.isArray(data.results)) data = data.results;
         setOrders(Array.isArray(data) ? data : []);
+        
+        // Mark notifications as read when viewing the page
+        if (hasNewBreakfast) {
+          markBreakfastRead();
+        }
       })
       .catch((err) => {
         setError("Error fetching breakfast orders.");
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchOrders();
   }, [hotelSlug]);
+
+  // Refresh orders when new breakfast notification arrives
+  useEffect(() => {
+    if (hasNewBreakfast) {
+      fetchOrders();
+    }
+  }, [hasNewBreakfast]);
 
   const handleStatusChange = (order, newStatus) => {
     const prev = order.status;

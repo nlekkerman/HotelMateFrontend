@@ -68,6 +68,15 @@ export function useNavigation() {
     return canAccessNav(item.slug);
   });
 
+  // Debug logging to compare available vs visible
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    console.group('🔍 Navigation Comparison');
+    console.log('All Available Items:', allNavItems.map(i => i.slug));
+    console.log('Visible Items:', visibleNavItems.map(i => i.slug));
+    console.log('Hidden Items:', allNavItems.filter(i => !visibleNavItems.includes(i)).map(i => i.slug));
+    console.groupEnd();
+  }
+
   return { 
     visibleNavItems, 
     allNavItems,

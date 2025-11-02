@@ -9,6 +9,7 @@ import { useChat } from "@/context/ChatContext";
 import { useTheme } from "@/context/ThemeContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigation } from "@/hooks/useNavigation";
+import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationContext";
 
 const MobileNavbar = () => {
   const location = useLocation();
@@ -17,13 +18,13 @@ const MobileNavbar = () => {
   const hotelIdentifier = user?.hotel_slug;
   const { mainColor } = useTheme();
   const { totalUnread } = useChat();
+  const { hasNewRoomService, hasNewBreakfast } = useRoomServiceNotifications();
   const { roomServiceCount, breakfastCount, totalServiceCount } =
     useOrderCount(hotelIdentifier);
   const [staffProfile, setStaffProfile] = useState(null);
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
 
   // Use usePermissions WITHOUT argument — it reads roles from localStorage inside
   const { canAccess } = usePermissions();
@@ -48,21 +49,6 @@ const MobileNavbar = () => {
     logout();
     navigate("/login");
   };
-
-  const servicesNavItems = [
-    {
-      path: "/services/room-service",
-      label: "Room Service",
-      icon: "box",
-      roles: ["receptionist", "porter", "waiter", "manager"],
-    },
-    {
-      path: "/services/breakfast",
-      label: "Breakfast",
-      icon: "egg-fried",
-      roles: ["receptionist", "porter", "waiter", "manager"],
-    },
-  ];
 
   const isActive = (path) => {
     // Handle paths with query parameters (like Games)
@@ -193,98 +179,54 @@ const MobileNavbar = () => {
 
             {user && (
               <>
-                {visibleNavItems.map((item) => (
-                  <li className="nav-item" key={item.slug}>
-                    <Link
-                      className={`nav-link ${
-                        isActive(item.path) ? "active" : ""
-                      } text-white d-flex justify-content-between align-items-center`}
-                      to={item.path}
-                      onClick={toggleNavbar}
-                    >
-                      <div>
-                        <i className={`bi bi-${item.icon} me-2`} />
-                        {item.name}
-                      </div>
+                {visibleNavItems.map((item) => {
+                  // Add order counts for room service and breakfast
+                  let orderCount = 0;
+                  if (item.slug === "room-service") orderCount = roomServiceCount;
+                  if (item.slug === "breakfast") orderCount = breakfastCount;
 
-                      {/* Add badge only for chat */}
-                      {item.slug === "chat" && totalUnread > 0 && (
-                        <span className="badge bg-danger ms-2">
-                          {totalUnread}
-                        </span>
-                      )}
-                    </Link>
-                  </li>
-                ))}
-                {servicesNavItems.some(({ roles }) => canAccess(roles)) && (
-                  <li className="nav-item dropdown">
-                    <div
-                      className="nav-link d-flex justify-content-between align-items-center text-white"
-                      style={{ cursor: "pointer" }}
-                      onClick={() =>
-                        setServicesDropdownOpen(!servicesDropdownOpen)
-                      }
-                    >
-                      <span>
-                        <i className="bi bi-cup-hot me-2" />
-                        Services
-                      </span>
+                  // Show NEW badge for notifications
+                  const showNewBadge = 
+                    item.slug === "room-service" ? hasNewRoomService :
+                    item.slug === "breakfast" ? hasNewBreakfast :
+                    false;
 
-                      {roomServiceCount + breakfastCount > 0 && (
-                        <span className="badge bg-danger ms-2">
-                          {roomServiceCount + breakfastCount}
-                        </span>
-                      )}
+                  return (
+                    <li className="nav-item" key={item.slug}>
+                      <Link
+                        className={`nav-link ${
+                          isActive(item.path) ? "active" : ""
+                        } text-white d-flex justify-content-between align-items-center`}
+                        to={item.path}
+                        onClick={toggleNavbar}
+                      >
+                        <div>
+                          <i className={`bi bi-${item.icon} me-2`} />
+                          {item.name}
+                        </div>
 
-                      <i
-                        className={`bi bi-chevron-${
-                          servicesDropdownOpen ? "up" : "down"
-                        }`}
-                        style={{ fontSize: "0.8rem" }}
-                      />
-                    </div>
+                        {/* Show NEW badge */}
+                        {showNewBadge && (
+                          <span className="badge bg-danger ms-2">NEW</span>
+                        )}
 
-                    {servicesDropdownOpen && (
-                      <ul className="nav flex-column ms-3">
-                        {servicesNavItems
-                          .filter(({ roles }) => canAccess(roles))
-                          .map(({ path, label, icon }) => {
-                            const badgeCount =
-                              label === "Room Service"
-                                ? roomServiceCount
-                                : label === "Breakfast"
-                                ? breakfastCount
-                                : 0;
+                        {/* Add badge for chat */}
+                        {item.slug === "chat" && totalUnread > 0 && (
+                          <span className="badge bg-danger ms-2">
+                            {totalUnread}
+                          </span>
+                        )}
 
-                            return (
-                              <li className="nav-item" key={path}>
-                                <Link
-                                  className={`nav-link text-white d-flex justify-content-between align-items-center ${
-                                    isActive(path) ? "active" : ""
-                                  }`}
-                                  to={path}
-                                  onClick={() => {
-                                    toggleNavbar();
-                                    setServicesDropdownOpen(false);
-                                  }}
-                                >
-                                  <div>
-                                    <i className={`bi bi-${icon} me-2`} />
-                                    {label}
-                                  </div>
-                                  {badgeCount > 0 && (
-                                    <span className="badge bg-danger ms-2">
-                                      {badgeCount}
-                                    </span>
-                                  )}
-                                </Link>
-                              </li>
-                            );
-                          })}
-                      </ul>
-                    )}
-                  </li>
-                )}
+                        {/* Add badge for room service and breakfast */}
+                        {orderCount > 0 && (
+                          <span className="badge bg-danger ms-2">
+                            {orderCount}
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
 
                 <li className="nav-item">
                   <button

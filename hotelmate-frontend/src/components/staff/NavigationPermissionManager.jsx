@@ -145,6 +145,20 @@ const NavigationPermissionManager = ({ staffId }) => {
         The staff member will need to re-login to see changes.
       </p>
 
+      {/* Backend vs Frontend Comparison */}
+      <div className="alert alert-warning mb-3">
+        <h6 className="mb-2">
+          <i className="bi bi-exclamation-triangle me-2"></i>
+          Navigation Items Comparison
+        </h6>
+        <small className="d-block mb-2">
+          <strong>Backend items ({availableNavItems.length}):</strong> {availableNavItems.map(i => i.slug).join(', ')}
+        </small>
+        <small className="d-block text-muted">
+          Check browser console (F12) for detailed comparison of visible vs available items.
+        </small>
+      </div>
+
       {/* Select All / Deselect All */}
       <div className="btn-group mb-3">
         <button 
@@ -193,7 +207,7 @@ const NavigationPermissionManager = ({ staffId }) => {
                 </div>
                 <div className="flex-grow-1">
                   <div className="d-flex align-items-center mb-1">
-                    <i className={`bi bi-${item.icon || 'circle'} me-2 fs-5`}></i>
+                    <i className={`bi bi-${item.icon} me-2 fs-5`}></i>
                     <strong>{item.name}</strong>
                   </div>
                   <div className="d-flex align-items-center gap-3 flex-wrap">

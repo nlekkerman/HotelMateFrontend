@@ -3,17 +3,19 @@ import { useAuth } from "@/context/AuthContext";
 import api from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useTheme } from "@/context/ThemeContext";
+import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationContext";
 
 export default function RoomServiceOrders() {
   const { user } = useAuth();
   const hotelSlug = user?.hotel_slug;
   const { refreshAll: refreshCount } = useOrderCount(hotelSlug);
+  const { hasNewRoomService, markRoomServiceRead } = useRoomServiceNotifications();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { mainColor } = useTheme();
 
-  useEffect(() => {
+  const fetchOrders = () => {
     if (!hotelSlug) {
       setError("No hotel identifier found.");
       return;
@@ -28,12 +30,28 @@ export default function RoomServiceOrders() {
         let data = res.data;
         if (data && Array.isArray(data.results)) data = data.results;
         setOrders(Array.isArray(data) ? data : []);
+        
+        // Mark notifications as read when viewing the page
+        if (hasNewRoomService) {
+          markRoomServiceRead();
+        }
       })
       .catch(() => {
         setError("Error fetching room service orders.");
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchOrders();
   }, [hotelSlug]);
+
+  // Refresh orders when new room service notification arrives
+  useEffect(() => {
+    if (hasNewRoomService) {
+      fetchOrders();
+    }
+  }, [hasNewRoomService]);
 
   // Use WebSocket for first order only, for example
   const firstOrderId = orders.length > 0 ? orders[0].id : null;

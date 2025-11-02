@@ -9,6 +9,7 @@ function StaffDetails() {
   const navigate = useNavigate();
   const [staff, setStaff] = useState(null);
   const [error, setError] = useState(null);
+  const [showPermissions, setShowPermissions] = useState(false);
   const { hotelSlug, id } = useParams();
   const { canAccess } = usePermissions();
   
@@ -51,7 +52,16 @@ function StaffDetails() {
 
   return (
     <div className="container mt-4 mb-5 p-4 bg-white rounded shadow-sm">
-      <h2 className="mb-4 text-primary">👤 Staff Details</h2>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="mb-0 text-primary">👤 Staff Details</h2>
+        <button
+          onClick={() => navigate(`/${hotelSlug}/staff`)}
+          className="btn btn-outline-secondary"
+        >
+          <i className="bi bi-arrow-left me-2"></i>
+          Back to Staff List
+        </button>
+      </div>
 
       <div
         className="mb-4  d-flex align-items-center justify-content-start"
@@ -124,18 +134,19 @@ function StaffDetails() {
       {canAccess(['super_staff_admin']) && (
         <div className="mt-5">
           <hr className="mb-4" />
-          <NavigationPermissionManager staffId={id} />
+          <button 
+            className="btn btn-outline-primary mb-3"
+            onClick={() => setShowPermissions(!showPermissions)}
+          >
+            <i className={`bi bi-${showPermissions ? 'eye-slash' : 'key'} me-2`}></i>
+            {showPermissions ? 'Hide' : 'Manage'} Navigation Permissions
+          </button>
+          
+          {showPermissions && (
+            <NavigationPermissionManager staffId={id} />
+          )}
         </div>
       )}
-
-      <div className="mt-4">
-        <button
-          onClick={() => navigate(`/${hotelSlug}/staff`)}
-          className="btn btn-outline-secondary"
-        >
-          ← Back to Staff List
-        </button>
-      </div>
     </div>
   );
 }
