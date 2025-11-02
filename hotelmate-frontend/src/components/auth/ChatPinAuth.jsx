@@ -9,6 +9,7 @@ export default function ChatPinAuth() {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [guestSession, setGuestSession] = useState(null);
 
   const {
@@ -36,9 +37,8 @@ export default function ChatPinAuth() {
         );
       } else {
         console.log('❌ No valid session, showing PIN entry');
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
 
     checkExistingSession();
@@ -46,8 +46,13 @@ export default function ChatPinAuth() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!pin || pin.length < 4 || submitting) {
+      return;
+    }
+    
     setError("");
-    setLoading(true);
+    setSubmitting(true);
 
     try {
       // Initialize new session with PIN using the backend API
@@ -64,28 +69,33 @@ export default function ChatPinAuth() {
     } catch (err) {
       console.error("Error during guest session initialization:", err);
       setError(err.message || "Invalid PIN. Please try again.");
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  if (loading && !guestSession) {
+  if (loading) {
     return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <div className="text-white">Loading...</div>
+      <div className="d-flex justify-content-center align-items-center vh-100 main-bg">
+        <div className="spinner-border text-white" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="d-flex justify-content-center align-items-center vh-100">
+    <div className="d-flex justify-content-center align-items-center vh-100 main-bg">
       <form
         onSubmit={handleSubmit}
-        className="p-4 border main-bg text-white rounded d-flex flex-column align-items-center"
-        style={{ maxWidth: "400px", width: "100%" }}
+        className="p-4 border text-white rounded d-flex flex-column align-items-center"
+        style={{ 
+          maxWidth: "400px", 
+          width: "90%",
+          backgroundColor: "rgba(0, 0, 0, 0.3)",
+          backdropFilter: "blur(10px)"
+        }}
       >
-        {logoLoading && <span>Loading logo...</span>}
-        {logoError && <span>Error loading logo</span>}
-        {hotelLogo && (
+        {!logoLoading && !logoError && hotelLogo && (
           <img
             src={hotelLogo}
             alt="Hotel Logo"
@@ -94,25 +104,39 @@ export default function ChatPinAuth() {
           />
         )}
 
-        <h4 className="mb-4 text-small">Enter Chat PIN for Room {room_number}</h4>
+        <h4 className="mb-4 text-center">Enter Chat PIN for Room {room_number}</h4>
 
         <div className="mb-3 w-100">
           <input
-            type="tel"
+            type="text"
             inputMode="numeric"
             pattern="[0-9]*"
+            maxLength="6"
             value={pin}
-            onChange={(e) => setPin(e.target.value)}
+            onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, ''))}
             placeholder="Enter PIN"
             className={`form-control ${error ? "is-invalid" : ""}`}
+            style={{ fontSize: '1.5rem', textAlign: 'center', letterSpacing: '0.3em', padding: '0.75rem' }}
             required
-            disabled={loading}
+            disabled={submitting}
           />
-          {error && <div className="invalid-feedback">{error}</div>}
+          {error && <div className="invalid-feedback d-block text-center">{error}</div>}
         </div>
 
-        <button type="submit" className="btn custom-button w-100" disabled={loading || !pin}>
-          {loading ? 'Verifying...' : 'Submit'}
+        <button 
+          type="submit" 
+          className="btn custom-button w-100"
+          disabled={submitting || !pin || pin.length < 4}
+          style={{ minHeight: '48px' }}
+        >
+          {submitting ? (
+            <>
+              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              Verifying...
+            </>
+          ) : (
+            'Submit'
+          )}
         </button>
       </form>
     </div>
