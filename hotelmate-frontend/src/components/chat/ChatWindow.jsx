@@ -546,24 +546,24 @@ const ChatWindow = ({
             </div>
           )}
           
-          {/* For STAFF view: Show Room Number - Guest Name */}
+          {/* For STAFF view: Show Guest Name (Room Number) */}
           {!isGuest && (
-            <h5 className="mb-0">
-              {roomNumber && `Room ${roomNumber}`}
-              {roomNumber && conversationDetails?.guest_name && ' - '}
+            <h5 className="mb-0" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {conversationDetails?.guest_name && (
-                <span style={{ fontWeight: 'normal' }}>
+                <>
                   {conversationDetails.guest_name}
-                </span>
+                  {roomNumber && <span style={{ fontWeight: 'normal', fontSize: '0.75em', opacity: 0.9 }}> (Room {roomNumber})</span>}
+                </>
               )}
-              {!roomNumber && !conversationDetails?.guest_name && 'Chat'}
+              {!conversationDetails?.guest_name && roomNumber && `Room ${roomNumber}`}
+              {!conversationDetails?.guest_name && !roomNumber && 'Chat'}
             </h5>
           )}
 
           {/* For GUEST view: Show Staff Name */}
-          {isGuest && currentStaff && (
+          {isGuest && (
             <h5 className="mb-0">
-              Chat with {currentStaff.name}
+              {currentStaff ? `Chat with ${currentStaff.name}` : 'Hotel Reception'}
             </h5>
           )}
           
@@ -621,8 +621,15 @@ const ChatWindow = ({
           const isMine =
             (msg.sender_type === "staff" && msg.staff === userId) ||
             (msg.sender_type === "guest" && !userId);
-          const senderName =
-            msg.sender_type === "guest" ? msg.guest_name : "Reception";
+          
+          // Determine sender name
+          let senderName;
+          if (msg.sender_type === "guest") {
+            senderName = msg.guest_name || "Guest";
+          } else {
+            // For staff messages, use staff_name if available, otherwise use currentStaff name for guests
+            senderName = msg.staff_name || (isGuest && currentStaff ? currentStaff.name : "Reception");
+          }
 
           const messageTime = msg.timestamp
             ? new Date(msg.timestamp).toLocaleTimeString([], {

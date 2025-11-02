@@ -40,12 +40,19 @@ const ChatSidebar = ({
             key={conv.conversation_id}
             className={`shadow chat-room ${selectedRoom === conv.room_number ? "selected" : ""}`}
             onClick={() => handleConversationClick(conv)}
+            style={{
+              padding: 0,
+              overflow: 'hidden'
+            }}
           >
-            {/* Small header for this conversation */}
-            <div className="conversation-header mb-2 pb-1" style={{
-              borderBottom: selectedRoom === conv.room_number 
-                ? '1px solid rgba(255,255,255,0.3)' 
-                : '1px solid rgba(var(--main-color-rgb), 0.2)'
+            {/* Header at the very top - full width */}
+            <div className="conversation-header" style={{
+              backgroundColor: selectedRoom === conv.room_number 
+                ? 'rgba(var(--main-color-rgb), 0.95)' 
+                : 'rgba(var(--main-color-rgb), 0.85)',
+              padding: '0.5rem 1rem',
+              margin: 0,
+              width: '100%'
             }}>
               <div className="d-flex justify-content-between align-items-center">
                 <div>
@@ -53,7 +60,7 @@ const ChatSidebar = ({
                     <strong style={{ 
                       fontSize: isMobile ? '1.1rem' : '1rem',
                       lineHeight: 1.2,
-                      color: selectedRoom === conv.room_number ? '#fff' : 'rgba(var(--main-color-rgb), 0.9)'
+                      color: '#fff'
                     }}>
                       {conv.guest_name} <span style={{ fontWeight: 'normal', fontSize: '0.9em' }}>(Room {conv.room_number})</span>
                     </strong>
@@ -62,7 +69,7 @@ const ChatSidebar = ({
                     <strong style={{ 
                       fontSize: isMobile ? '1.1rem' : '1rem',
                       lineHeight: 1.2,
-                      color: selectedRoom === conv.room_number ? '#fff' : 'rgba(var(--main-color-rgb), 0.9)'
+                      color: '#fff'
                     }}>
                       Room {conv.room_number}
                     </strong>
@@ -74,7 +81,10 @@ const ChatSidebar = ({
               </div>
             </div>
             
-            <div className="d-flex justify-content-between align-items-center">
+            {/* Message content below header */}
+            <div className="d-flex justify-content-between align-items-center" style={{
+              padding: '0.75rem 1rem'
+            }}>
               <div 
                 className="last-message" 
                 style={{ 
