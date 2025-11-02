@@ -123,7 +123,7 @@ export default function ChatPinAuth() {
         <button 
           type="submit" 
           className="btn custom-button w-100"
-          disabled={submitting || !pin || pin.length < 4}
+          disabled={submitting || !pin}
           style={{ minHeight: '48px' }}
         >
           {submitting ? (
