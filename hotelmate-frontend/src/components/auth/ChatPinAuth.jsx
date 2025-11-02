@@ -23,11 +23,18 @@ export default function ChatPinAuth() {
   // Check for existing session on mount
   useEffect(() => {
     const checkExistingSession = async () => {
+      // Use window global to absolutely prevent multiple executions
+      if (window.__guestSessionCheckInProgress) {
+        console.log('⏭️ Session check already in progress globally');
+        return;
+      }
+      
       if (isNavigatingRef.current || hasCheckedSessionRef.current) {
         console.log('⏭️ Skipping session check - already done');
         return;
       }
       
+      window.__guestSessionCheckInProgress = true;
       hasCheckedSessionRef.current = true;
       console.log('🔍 Checking existing session...');
       
@@ -38,16 +45,18 @@ export default function ChatPinAuth() {
       const isValid = await session.validate();
       
       if (isValid) {
-        console.log('✅ Existing guest session validated');
+        console.log('✅ Existing guest session validated - NAVIGATING NOW');
         isNavigatingRef.current = true;
         // Redirect to chat with conversation ID
         const conversationId = session.getConversationId();
-        navigate(
-          `/chat/${hotelSlug}/conversations/${conversationId}/messages/send`,
-          { state: { room_number, isGuest: true }, replace: true }
-        );
+        
+        // Use window.location for hard navigation to stop all re-renders
+        const targetUrl = `/chat/${hotelSlug}/conversations/${conversationId}/messages/send`;
+        console.log('🚀 Hard navigating to:', targetUrl);
+        window.location.href = targetUrl;
       } else {
         console.log('❌ No valid session, showing PIN entry');
+        window.__guestSessionCheckInProgress = false;
         setLoading(false);
       }
     };
