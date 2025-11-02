@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { GuestChatSession } from "@/utils/guestChatSession";
 import useHotelLogo from "@/hooks/useHotelLogo";
@@ -11,6 +11,7 @@ export default function ChatPinAuth() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [guestSession, setGuestSession] = useState(null);
+  const isNavigatingRef = useRef(false);
 
   const {
     logoUrl: hotelLogo,
@@ -21,6 +22,8 @@ export default function ChatPinAuth() {
   // Check for existing session on mount
   useEffect(() => {
     const checkExistingSession = async () => {
+      if (isNavigatingRef.current) return;
+      
       const session = new GuestChatSession(hotelSlug, room_number);
       setGuestSession(session);
       
@@ -29,11 +32,12 @@ export default function ChatPinAuth() {
       
       if (isValid) {
         console.log('✅ Existing guest session validated');
+        isNavigatingRef.current = true;
         // Redirect to chat with conversation ID
         const conversationId = session.getConversationId();
         navigate(
           `/chat/${hotelSlug}/conversations/${conversationId}/messages/send`,
-          { state: { room_number, isGuest: true } }
+          { state: { room_number, isGuest: true }, replace: true }
         );
       } else {
         console.log('❌ No valid session, showing PIN entry');
@@ -47,7 +51,7 @@ export default function ChatPinAuth() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!pin || submitting) {
+    if (!pin || submitting || isNavigatingRef.current) {
       return;
     }
     
@@ -60,11 +64,13 @@ export default function ChatPinAuth() {
       
       console.log('✅ Guest session initialized:', sessionData);
       
+      isNavigatingRef.current = true;
+      
       // Navigate to chat with conversation ID
       const conversationId = sessionData.conversation_id;
       navigate(
         `/chat/${hotelSlug}/conversations/${conversationId}/messages/send`,
-        { state: { room_number, isGuest: true } }
+        { state: { room_number, isGuest: true }, replace: true }
       );
     } catch (err) {
       console.error("Error during guest session initialization:", err);
@@ -73,7 +79,7 @@ export default function ChatPinAuth() {
     }
   };
 
-  if (loading) {
+  if (loading || isNavigatingRef.current) {
     return (
       <div className="d-flex justify-content-center align-items-center vh-100 main-bg">
         <div className="spinner-border text-white" role="status">
