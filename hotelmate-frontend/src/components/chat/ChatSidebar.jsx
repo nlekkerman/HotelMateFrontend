@@ -45,7 +45,7 @@ const ChatSidebar = ({
               overflow: 'hidden'
             }}
           >
-            {/* Header at the very top - full width */}
+            {/* ASESHeader at the very top - full width */}
             <div className="conversation-header" style={{
               backgroundColor: selectedRoom === conv.room_number 
                 ? 'rgba(var(--main-color-rgb), 0.95)' 
