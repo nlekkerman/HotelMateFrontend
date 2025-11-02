@@ -3,15 +3,22 @@ import { useState, useEffect } from "react";
 import ChatSidebar from "@/components/chat/ChatSidebar";
 import ChatWindow from "@/components/chat/ChatWindow";
 import { useAuth } from "@/context/AuthContext";
+import { useChat } from "@/context/ChatContext";
 
 const ChatHomePage = ({ selectedRoom, onSelectRoom, onUnreadChange }) => {
   const { hotelSlug } = useParams();
   const { user } = useAuth();
+  const { conversations } = useChat();
   const userId = user?.id;
 
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showSidebar, setShowSidebar] = useState(true); // Always start with sidebar visible
+
+  // Get the full conversation object
+  const currentConversation = conversations.find(
+    (c) => c.conversation_id === selectedConversation
+  );
 
   // Listen to window resize to auto-show/hide sidebar
   useEffect(() => {
@@ -70,13 +77,14 @@ const ChatHomePage = ({ selectedRoom, onSelectRoom, onUnreadChange }) => {
 
       {/* Main content */}
       <main className={`chat-main ${isMobile && selectedConversation ? 'mobile-chat-active' : ''}`}>
-        {selectedRoom && selectedConversation ? (
+        {selectedRoom && selectedConversation && currentConversation ? (
           <ChatWindow
             hotelSlug={hotelSlug}
             conversationId={selectedConversation}
             roomNumber={selectedRoom}
             userId={userId}
             onClose={handleCloseChat}
+            conversationData={currentConversation}
           />
         ) : !isMobile ? (
           <div className="chat-placeholder">

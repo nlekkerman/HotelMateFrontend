@@ -30,14 +30,6 @@ const ChatSidebar = ({
 
   return (
     <aside className={`chat-sidebar ${isMobile ? "mobile" : "desktop"}`}>
-      {isMobile && (
-        <div className="mb-3">
-          <h3 className="text-center" style={{ color: 'rgba(var(--main-color-rgb), 0.9)' }}>
-            Room Chats
-          </h3>
-        </div>
-      )}
-
       {conversations.length === 0 ? (
         <div className="text-center text-muted p-4">
           <p>No active conversations</p>
@@ -49,13 +41,37 @@ const ChatSidebar = ({
             className={`shadow chat-room ${selectedRoom === conv.room_number ? "selected" : ""}`}
             onClick={() => handleConversationClick(conv)}
           >
-            <div className="room-header d-flex justify-content-between align-items-center mb-2">
-              <strong style={{ fontSize: isMobile ? '1.1rem' : '1rem' }}>
-                Room {conv.room_number}
-              </strong>
-              {conv.unread_count > 0 && (
-                <span className="badge bg-danger">{conv.unread_count}</span>
-              )}
+            {/* Small header for this conversation */}
+            <div className="conversation-header mb-2 pb-1" style={{
+              borderBottom: selectedRoom === conv.room_number 
+                ? '1px solid rgba(255,255,255,0.3)' 
+                : '1px solid rgba(var(--main-color-rgb), 0.2)'
+            }}>
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  {conv.guest_name && (
+                    <strong style={{ 
+                      fontSize: isMobile ? '1.1rem' : '1rem',
+                      lineHeight: 1.2,
+                      color: selectedRoom === conv.room_number ? '#fff' : 'rgba(var(--main-color-rgb), 0.9)'
+                    }}>
+                      {conv.guest_name} <span style={{ fontWeight: 'normal', fontSize: '0.9em' }}>(Room {conv.room_number})</span>
+                    </strong>
+                  )}
+                  {!conv.guest_name && (
+                    <strong style={{ 
+                      fontSize: isMobile ? '1.1rem' : '1rem',
+                      lineHeight: 1.2,
+                      color: selectedRoom === conv.room_number ? '#fff' : 'rgba(var(--main-color-rgb), 0.9)'
+                    }}>
+                      Room {conv.room_number}
+                    </strong>
+                  )}
+                </div>
+                {conv.unread_count > 0 && (
+                  <span className="badge bg-danger">{conv.unread_count}</span>
+                )}
+              </div>
             </div>
             
             <div className="d-flex justify-content-between align-items-center">

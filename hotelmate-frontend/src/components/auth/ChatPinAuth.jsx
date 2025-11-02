@@ -1,14 +1,15 @@
-import { useState } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
-import api from "@/services/api";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { GuestChatSession } from "@/utils/guestChatSession";
 import useHotelLogo from "@/hooks/useHotelLogo";
 
 export default function ChatPinAuth() {
   const { hotelSlug, room_number } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [guestSession, setGuestSession] = useState(null);
 
   const {
     logoUrl: hotelLogo,
@@ -16,41 +17,64 @@ export default function ChatPinAuth() {
     error: logoError,
   } = useHotelLogo(hotelSlug);
 
+  // Check for existing session on mount
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      const session = new GuestChatSession(hotelSlug, room_number);
+      setGuestSession(session);
+      
+      // Try to validate existing session
+      const isValid = await session.validate();
+      
+      if (isValid) {
+        console.log('✅ Existing guest session validated');
+        // Redirect to chat with conversation ID
+        const conversationId = session.getConversationId();
+        navigate(
+          `/chat/${hotelSlug}/conversations/${conversationId}/messages/send`,
+          { state: { room_number, isGuest: true } }
+        );
+      } else {
+        console.log('❌ No valid session, showing PIN entry');
+      }
+      
+      setLoading(false);
+    };
+
+    checkExistingSession();
+  }, [hotelSlug, room_number, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
     try {
-      // 1️⃣ Validate the room PIN
-      const pinRes = await api.post(
-        `/chat/${hotelSlug}/messages/room/${room_number}/validate-chat-pin/`,
-        { pin }
-      );
-
-      if (!pinRes.data.valid) {
-        setError("Invalid PIN. Please try again.");
-        return;
-      }
-
-      // 2️⃣ PIN is valid, create/get conversation
-      const convRes = await api.post(
-        `/chat/${hotelSlug}/conversations/from-room/${room_number}/`
-      );
-
-      const conversationId = convRes.data.conversation_id;
-
-      // 3️⃣ Store session flag
-      sessionStorage.setItem(`chat_pin_ok_${room_number}`, "true");
-
-      // 4️⃣ Navigate to conversation messages/send page
+      // Initialize new session with PIN using the backend API
+      const sessionData = await guestSession.initialize(pin);
+      
+      console.log('✅ Guest session initialized:', sessionData);
+      
+      // Navigate to chat with conversation ID
+      const conversationId = sessionData.conversation_id;
       navigate(
         `/chat/${hotelSlug}/conversations/${conversationId}/messages/send`,
-        { state: { room_number } }
+        { state: { room_number, isGuest: true } }
       );
     } catch (err) {
-      console.error("Error during PIN validation or conversation creation:", err);
-      setError("Error validating PIN or creating conversation. Try again later.");
+      console.error("Error during guest session initialization:", err);
+      setError(err.message || "Invalid PIN. Please try again.");
+      setLoading(false);
     }
   };
+
+  if (loading && !guestSession) {
+    return (
+      <div className="d-flex justify-content-center align-items-center vh-100">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="d-flex justify-content-center align-items-center vh-100">

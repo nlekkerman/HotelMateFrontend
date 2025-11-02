@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import api from "@/services/api";
 import { FaPaperPlane, FaTimes, FaArrowLeft, FaAngleDoubleDown, FaCheck, FaCheckDouble, FaSmile } from "react-icons/fa";
 import { useChat } from "@/context/ChatContext";
 import useHotelLogo from "@/hooks/useHotelLogo";
 import { toast } from "react-toastify";
 import EmojiPicker from "emoji-picker-react";
+import { GuestChatSession } from "@/utils/guestChatSession";
+import { useGuestPusher } from "@/hooks/useGuestPusher";
 
 const MESSAGE_LIMIT = 10;
 
@@ -14,6 +16,7 @@ const ChatWindow = ({
   conversationId: propConversationId,
   hotelSlug: propHotelSlug,
   roomNumber: propRoomNumber,
+  conversationData: propConversationData,
   onNewMessage,
   onClose,
 }) => {
@@ -21,13 +24,22 @@ const ChatWindow = ({
     hotelSlug: paramHotelSlug,
     conversationId: paramConversationIdFromURL,
   } = useParams();
+  const location = useLocation();
   const hotelSlug = propHotelSlug || paramHotelSlug;
   const conversationId = propConversationId || paramConversationIdFromURL;
-  const roomNumber = propRoomNumber;
+  const roomNumber = propRoomNumber || location.state?.room_number;
+  const isGuest = location.state?.isGuest || false;
 
   const storedUser = localStorage.getItem("user");
   const userId =
     propUserId || (storedUser ? JSON.parse(storedUser).id : undefined);
+  
+  // Guest session management
+  const [guestSession, setGuestSession] = useState(null);
+  const [currentStaff, setCurrentStaff] = useState(null);
+  
+  // Use conversation data from props (already fetched in ChatHomePage)
+  const [conversationDetails, setConversationDetails] = useState(propConversationData || null);
   const {
     logoUrl: hotelLogo,
     loading: logoLoading,
@@ -39,7 +51,6 @@ const ChatWindow = ({
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [seenMessages, setSeenMessages] = useState(new Set());
-  const [conversationDetails, setConversationDetails] = useState(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [messageStatuses, setMessageStatuses] = useState(new Map()); // Track message statuses: pending, delivered, seen
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -49,6 +60,7 @@ const ChatWindow = ({
   const observerRef = useRef(null);
   const emojiPickerRef = useRef(null);
   const emojiButtonRef = useRef(null);
+  const messageInputRef = useRef(null);
   const { markConversationRead, pusherInstance, setCurrentConversationId } = useChat();
 
   // Scroll to bottom only on initial load or when sending a new message
@@ -56,17 +68,15 @@ const ChatWindow = ({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Fetch conversation details
-  const fetchConversationDetails = async () => {
-    if (!conversationId || !hotelSlug) return;
-    
-    try {
-      const res = await api.get(`/chat/${hotelSlug}/conversations/${conversationId}/`);
-      setConversationDetails(res.data);
-    } catch (err) {
-      console.error("Error fetching conversation details:", err);
+  // Update conversation details when prop changes
+  useEffect(() => {
+    if (propConversationData) {
+      setConversationDetails(propConversationData);
+      console.log('📋 Using conversation data from props:', propConversationData);
     }
-  };
+  }, [propConversationData]);
+
+  // Remove the unnecessary fetchConversationDetails function since we have data from props
 
   // Fetch messages
   const fetchMessages = async (beforeId = null) => {
@@ -101,6 +111,18 @@ const ChatWindow = ({
         setMessages(newMessages);
         setLoading(false);
         scrollToBottom();
+        
+        // Extract guest name from first guest message if conversation details not available
+        if (!conversationDetails?.guest_name && newMessages.length > 0) {
+          const guestMessage = newMessages.find(msg => msg.sender_type === 'guest');
+          if (guestMessage?.guest_name) {
+            setConversationDetails(prev => ({
+              ...prev,
+              guest_name: guestMessage.guest_name,
+              room_number: guestMessage.room_number || roomNumber
+            }));
+          }
+        }
       }
 
       if (newMessages.length < MESSAGE_LIMIT) setHasMore(false);
@@ -120,108 +142,198 @@ const ChatWindow = ({
     setLoading(true);
     setHasMore(true);
     setLoadingMore(false);
-    setConversationDetails(null);
 
-    // Update current conversation ID in context
-    setCurrentConversationId(conversationId);
+    // Update current conversation ID in context (only for staff)
+    if (userId) {
+      setCurrentConversationId(conversationId);
+    }
 
-    fetchConversationDetails();
+    // Initialize guest session if this is a guest
+    if (isGuest && hotelSlug && roomNumber) {
+      const session = new GuestChatSession(hotelSlug, roomNumber);
+      setGuestSession(session);
+      
+      // Load saved staff handler if exists
+      const savedStaff = session.getCurrentStaffHandler();
+      if (savedStaff) {
+        setCurrentStaff(savedStaff);
+      }
+    }
+
     fetchMessages();
 
     return () => {
-      setCurrentConversationId(null);
+      if (userId) {
+        setCurrentConversationId(null);
+      }
     };
-  }, [conversationId, setCurrentConversationId]);
+  }, [conversationId, setCurrentConversationId, isGuest, hotelSlug, roomNumber, userId]);
 
-  // Pusher real-time updates - reuse global instance
+  // Pusher real-time updates - reuse global instance for staff, separate for guests
   useEffect(() => {
-    if (!conversationId || !pusherInstance) return;
+    if (!conversationId || !hotelSlug) return;
 
-    const channelName = `${hotelSlug}-conversation-${conversationId}-chat`;
-    
-    // Get existing channel or subscribe to a new one
-    let channel = pusherInstance.channel(channelName);
-    if (!channel) {
-      channel = pusherInstance.subscribe(channelName);
-    }
+    // For authenticated staff, use the global Pusher instance from ChatContext
+    if (userId && pusherInstance) {
+      const channelName = `${hotelSlug}-conversation-${conversationId}-chat`;
+      
+      // Get existing channel or subscribe to a new one
+      let channel = pusherInstance.channel(channelName);
+      if (!channel) {
+        channel = pusherInstance.subscribe(channelName);
+      }
 
-    // Unbind any existing handlers to avoid duplicates
-    channel.unbind("new-message");
-    channel.unbind("message-delivered");
-    channel.unbind("messages-read-by-staff");
-    channel.unbind("messages-read-by-guest");
-    
-    // Listen for new messages
-    channel.bind("new-message", (message) => {
-      setMessages((prev) => {
-        // Check if this message already exists by ID
-        if (prev.some((m) => m.id === message.id)) {
-          return prev;
-        }
-        return [...prev, message];
+      // Unbind any existing handlers to avoid duplicates
+      channel.unbind("new-message");
+      channel.unbind("message-delivered");
+      channel.unbind("messages-read-by-staff");
+      channel.unbind("messages-read-by-guest");
+      
+      // Listen for new messages
+      channel.bind("new-message", (message) => {
+        setMessages((prev) => {
+          // Check if this message already exists by ID
+          if (prev.some((m) => m.id === message.id)) {
+            return prev;
+          }
+          return [...prev, message];
+        });
+        scrollToBottom();
       });
-      scrollToBottom();
-    });
 
-    // Listen for message delivered event (from backend)
-    channel.bind("message-delivered", (data) => {
-      const { message_id } = data;
-      if (message_id) {
-        setMessageStatuses(prev => {
-          const newMap = new Map(prev);
-          newMap.set(message_id, 'delivered');
-          return newMap;
-        });
-      }
-    });
-
-    // Listen for messages read by staff (affects guest's messages)
-    channel.bind("messages-read-by-staff", (data) => {
-      const { message_ids } = data;
-      if (message_ids && Array.isArray(message_ids)) {
-        setMessageStatuses(prev => {
-          const newMap = new Map(prev);
-          message_ids.forEach(id => {
-            newMap.set(id, 'read');
+      // Listen for message delivered event (from backend)
+      channel.bind("message-delivered", (data) => {
+        const { message_id } = data;
+        if (message_id) {
+          setMessageStatuses(prev => {
+            const newMap = new Map(prev);
+            newMap.set(message_id, 'delivered');
+            return newMap;
           });
-          return newMap;
-        });
-        
-        // Also update the messages array with read status
-        setMessages(prevMessages => 
-          prevMessages.map(msg => 
-            message_ids.includes(msg.id)
-              ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_staff: true }
-              : msg
-          )
-        );
-      }
-    });
+        }
+      });
 
-    // Listen for messages read by guest (affects staff's messages)
-    channel.bind("messages-read-by-guest", (data) => {
-      const { message_ids } = data;
-      if (message_ids && Array.isArray(message_ids)) {
-        setMessageStatuses(prev => {
-          const newMap = new Map(prev);
-          message_ids.forEach(id => {
-            newMap.set(id, 'read');
+      // Listen for messages read by staff (affects guest's messages)
+      channel.bind("messages-read-by-staff", (data) => {
+        const { message_ids } = data;
+        if (message_ids && Array.isArray(message_ids)) {
+          setMessageStatuses(prev => {
+            const newMap = new Map(prev);
+            message_ids.forEach(id => {
+              newMap.set(id, 'read');
+            });
+            return newMap;
           });
-          return newMap;
-        });
-        
-        // Also update the messages array with read status
-        setMessages(prevMessages => 
-          prevMessages.map(msg => 
-            message_ids.includes(msg.id)
-              ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_guest: true }
-              : msg
-          )
-        );
-      }
-    });
+          
+          // Also update the messages array with read status
+          setMessages(prevMessages => 
+            prevMessages.map(msg => 
+              message_ids.includes(msg.id)
+                ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_staff: true }
+                : msg
+            )
+          );
+        }
+      });
 
-    // Set up intersection observer for message seen status
+      // Listen for messages read by guest (affects staff's messages)
+      channel.bind("messages-read-by-guest", (data) => {
+        const { message_ids } = data;
+        if (message_ids && Array.isArray(message_ids)) {
+          setMessageStatuses(prev => {
+            const newMap = new Map(prev);
+            message_ids.forEach(id => {
+              newMap.set(id, 'read');
+            });
+            return newMap;
+          });
+          
+          // Also update the messages array with read status
+          setMessages(prevMessages => 
+            prevMessages.map(msg => 
+              message_ids.includes(msg.id)
+                ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_guest: true }
+                : msg
+            )
+          );
+        }
+      });
+
+      return () => {
+        // Only unbind our handlers, don't unsubscribe the channel
+        if (channel) {
+          channel.unbind("new-message");
+          channel.unbind("message-delivered");
+          channel.unbind("messages-read-by-staff");
+          channel.unbind("messages-read-by-guest");
+        }
+      };
+    }
+  }, [hotelSlug, conversationId, pusherInstance, userId]);
+
+  // Guest Pusher setup - separate hook for guests
+  const handleNewStaffMessage = (data) => {
+    console.log('📨 New staff message received by guest:', data);
+    
+    // Add message to list (check for duplicates)
+    setMessages(prev => {
+      if (prev.find(m => m.id === data.id)) {
+        return prev;
+      }
+      return [...prev, data];
+    });
+    
+    // Update current staff handler
+    if (data.staff_info) {
+      setCurrentStaff(data.staff_info);
+      guestSession?.saveToLocalStorage({ current_staff_handler: data.staff_info });
+    }
+    
+    // Show notification if tab not focused
+    if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+      const staffName = data.staff_info?.name || 'Hotel Staff';
+      const notification = new Notification(`Message from ${staffName}`, {
+        body: data.message?.substring(0, 100) || '',
+        icon: data.staff_info?.profile_image || '/hotel-icon.png',
+        tag: `chat-${data.id}`,
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+    }
+    
+    scrollToBottom();
+  };
+
+  const handleNewMessage = (data) => {
+    console.log('💬 New message received by guest:', data);
+    
+    // Add message if not already present
+    setMessages(prev => {
+      if (prev.find(m => m.id === data.id)) {
+        return prev;
+      }
+      return [...prev, data];
+    });
+    
+    scrollToBottom();
+  };
+
+  // Use guest Pusher hook if this is a guest session
+  useGuestPusher(
+    isGuest && guestSession ? guestSession.getPusherChannel() : null,
+    {
+      'new-staff-message': handleNewStaffMessage,
+      'new-message': handleNewMessage,
+    }
+  );
+
+  // Set up intersection observer for message seen status (for staff only)
+  useEffect(() => {
+    if (!conversationId || !userId) return;
+
     const observerCallback = (entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
@@ -246,29 +358,32 @@ const ChatWindow = ({
     });
 
     return () => {
-      // Only unbind our handlers, don't unsubscribe the channel
-      // (ChatContext might still need it for notifications)
-      if (channel) {
-        channel.unbind("new-message");
-        channel.unbind("message-delivered");
-        channel.unbind("messages-read-by-staff");
-        channel.unbind("messages-read-by-guest");
-      }
       if (observerRef.current) {
         observerRef.current.disconnect();
       }
     };
-  }, [hotelSlug, conversationId, pusherInstance, userId]);
+  }, [conversationId, userId]);
   // Removed seenMessages from deps to prevent re-subscription
 
   // Auto-mark messages as read when viewing conversation (after 1 second delay)
+  // Works for both staff and guests
   useEffect(() => {
     if (!conversationId) return;
 
     const markAsRead = async () => {
       try {
-        await api.post(`/chat/conversations/${conversationId}/mark-read/`);
-        console.log('Marked conversation as read');
+        // For staff: use the existing endpoint
+        if (userId) {
+          await api.post(`/chat/conversations/${conversationId}/mark-read/`);
+          console.log('✅ Staff marked conversation as read');
+        } 
+        // For guests: use session token
+        else if (guestSession) {
+          await api.post(`/chat/conversations/${conversationId}/mark-read/`, {
+            session_token: guestSession.getToken()
+          });
+          console.log('✅ Guest marked conversation as read');
+        }
       } catch (error) {
         console.error('Failed to mark conversation as read:', error);
       }
@@ -278,7 +393,7 @@ const ChatWindow = ({
     const timer = setTimeout(markAsRead, 1000);
 
     return () => clearTimeout(timer);
-  }, [conversationId]);
+  }, [conversationId, userId, guestSession]);
 
   // Infinite scroll
   const handleScroll = () => {
@@ -309,14 +424,28 @@ const ChatWindow = ({
     setMessageStatuses(prev => new Map(prev).set(tempId, 'pending'));
 
     try {
+      const payload = {
+        message: messageToSend,
+        sender_type: userId ? "staff" : "guest",
+      };
+
+      // Add staff_id for staff, or session_token for guests
+      if (userId) {
+        payload.staff_id = userId;
+      } else if (guestSession) {
+        payload.session_token = guestSession.getToken();
+      }
+
       const response = await api.post(
         `/chat/${hotelSlug}/conversations/${conversationId}/messages/send/`,
-        {
-          message: messageToSend,
-          sender_type: userId ? "staff" : "guest",
-          staff_id: userId || undefined,
-        }
+        payload
       );
+
+      // Update staff handler if changed (for guests)
+      if (!userId && response.data?.staff_info) {
+        setCurrentStaff(response.data.staff_info);
+        guestSession?.saveToLocalStorage({ current_staff_handler: response.data.staff_info });
+      }
 
       // When we get response, mark as delivered and map tempId to real ID
       if (response.data?.id) {
@@ -347,6 +476,21 @@ const ChatWindow = ({
   const handleEmojiClick = (emojiData) => {
     setNewMessage(prev => prev + emojiData.emoji);
     setShowEmojiPicker(false);
+    // Return focus to input after selecting emoji (without triggering keyboard on mobile)
+    if (messageInputRef.current) {
+      messageInputRef.current.focus();
+    }
+  };
+
+  const handleEmojiButtonClick = () => {
+    // Blur the message input to prevent keyboard from showing on mobile
+    if (messageInputRef.current) {
+      messageInputRef.current.blur();
+    }
+    // Small delay to ensure blur happens before toggling picker
+    setTimeout(() => {
+      setShowEmojiPicker(!showEmojiPicker);
+    }, 50);
   };
 
   // Close emoji picker when clicking outside
@@ -387,13 +531,59 @@ const ChatWindow = ({
           </button>
         )}
         <div className="chat-header-info">
-          <h5 className="mb-0">
-            {roomNumber ? `Room ${roomNumber}` : 'Chat'}
-          </h5>
-          {conversationDetails?.guest_name && (
-            <small className="text-white-50">
-              {conversationDetails.guest_name}
-            </small>
+          {/* Hotel logo for guests */}
+          {isGuest && hotelLogo && (
+            <div className="hotel-logo-header mb-2">
+              {logoLoading && <span className="text-white-50">Loading logo...</span>}
+              {logoError && <span className="text-white-50">Error loading logo</span>}
+              {!logoLoading && !logoError && (
+                <img
+                  src={hotelLogo}
+                  alt="Hotel Logo"
+                  style={{ maxHeight: 50, objectFit: "contain" }}
+                />
+              )}
+            </div>
+          )}
+          
+          {/* For STAFF view: Show Room Number - Guest Name */}
+          {!isGuest && (
+            <h5 className="mb-0">
+              {roomNumber && `Room ${roomNumber}`}
+              {roomNumber && conversationDetails?.guest_name && ' - '}
+              {conversationDetails?.guest_name && (
+                <span style={{ fontWeight: 'normal' }}>
+                  {conversationDetails.guest_name}
+                </span>
+              )}
+              {!roomNumber && !conversationDetails?.guest_name && 'Chat'}
+            </h5>
+          )}
+
+          {/* For GUEST view: Show Staff Name */}
+          {isGuest && currentStaff && (
+            <h5 className="mb-0">
+              Chat with {currentStaff.name}
+            </h5>
+          )}
+          
+          {/* Show current staff handler details for guests */}
+          {isGuest && currentStaff && (
+            <div className="current-staff-handler mt-2 d-flex align-items-center">
+              {currentStaff.profile_image && (
+                <img 
+                  src={currentStaff.profile_image} 
+                  alt={currentStaff.name}
+                  className="staff-avatar me-2"
+                  style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }}
+                />
+              )}
+              <div className="staff-details">
+                <small className="text-white-50">
+                  {currentStaff.role}
+                </small>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -415,24 +605,6 @@ const ChatWindow = ({
         ref={messagesContainerRef}
         onScroll={handleScroll}
       >
-        {!userId && (
-          <div className="chat-logo-container rounded-pill shadow-lg">
-            <div
-              className={`chat-logo-inner ${newMessage.trim() ? "shake" : ""}`}
-            >
-              {logoLoading && <span>Loading logo...</span>}
-              {logoError && <span>Error loading logo</span>}
-              {hotelLogo && (
-                <img
-                  src={hotelLogo}
-                  alt="Hotel Logo"
-                  style={{ maxHeight: 80, objectFit: "contain" }}
-                />
-              )}
-            </div>
-          </div>
-        )}
-
         {loading && (
           <div className="loading text-center">
             <div className="spinner"></div>
@@ -534,7 +706,7 @@ const ChatWindow = ({
         <button
           ref={emojiButtonRef}
           className="btn d-flex align-items-center justify-content-center"
-          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          onClick={handleEmojiButtonClick}
           disabled={!conversationId}
           title="Add emoji"
           style={{ marginRight: '0.5rem' }}
@@ -543,6 +715,7 @@ const ChatWindow = ({
         </button>
 
         <input
+          ref={messageInputRef}
           type="text"
           className="message-form-control me-2"
           placeholder="Type a message..."
