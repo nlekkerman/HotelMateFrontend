@@ -47,6 +47,10 @@ export default function ChatPinAuth() {
       if (isValid) {
         console.log('✅ Existing guest session validated - NAVIGATING NOW');
         isNavigatingRef.current = true;
+        
+        // Set the flag that RequireChatPin checks
+        sessionStorage.setItem(`chat_pin_ok_${room_number}`, 'true');
+        
         // Redirect to chat with conversation ID
         const conversationId = session.getConversationId();
         
@@ -81,6 +85,9 @@ export default function ChatPinAuth() {
       console.log('✅ Guest session initialized:', sessionData);
       
       isNavigatingRef.current = true;
+      
+      // Set the flag that RequireChatPin checks
+      sessionStorage.setItem(`chat_pin_ok_${room_number}`, 'true');
       
       // Navigate to chat with conversation ID
       const conversationId = sessionData.conversation_id;
