@@ -12,6 +12,7 @@ export default function ChatPinAuth() {
   const [submitting, setSubmitting] = useState(false);
   const [guestSession, setGuestSession] = useState(null);
   const isNavigatingRef = useRef(false);
+  const hasCheckedSessionRef = useRef(false);
 
   const {
     logoUrl: hotelLogo,
@@ -22,7 +23,13 @@ export default function ChatPinAuth() {
   // Check for existing session on mount
   useEffect(() => {
     const checkExistingSession = async () => {
-      if (isNavigatingRef.current) return;
+      if (isNavigatingRef.current || hasCheckedSessionRef.current) {
+        console.log('⏭️ Skipping session check - already done');
+        return;
+      }
+      
+      hasCheckedSessionRef.current = true;
+      console.log('🔍 Checking existing session...');
       
       const session = new GuestChatSession(hotelSlug, room_number);
       setGuestSession(session);
@@ -46,7 +53,7 @@ export default function ChatPinAuth() {
     };
 
     checkExistingSession();
-  }, [hotelSlug, room_number, navigate]);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
