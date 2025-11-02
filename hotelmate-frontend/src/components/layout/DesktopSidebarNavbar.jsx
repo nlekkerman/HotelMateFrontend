@@ -7,6 +7,7 @@ import api from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useTheme } from "@/context/ThemeContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useNavigation } from "@/hooks/useNavigation";
 import { useChat } from "@/context/ChatContext";
 import { useBookingNotifications } from "@/context/BookingNotificationContext";
 
@@ -28,6 +29,7 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const [flyoutOpen, setFlyoutOpen] = useState(false);
 
   const { canAccess } = usePermissions();
+  const { visibleNavItems, hasNavigation } = useNavigation();
   const servicesRef = useRef(null);
 
   // Hide desktop sidebar for the exact public tournament view when user is anonymous
@@ -36,7 +38,9 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
     /^\/games\/memory-match\/tournaments\/?$/.test(location.pathname) &&
     searchParams.get("hotel") === "hotel-killarney";
 
+  // Hide navigation completely for non-authenticated users or users without permissions
   if (!user && isMemoryMatchTournamentExact) return null;
+  if (!user || !hasNavigation) return null;
 
   // Define active path helpers
   const isPartialActive = (path) => {
@@ -101,121 +105,6 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
     navigate("/login");
   };
 
-  const navItems = [
-    {
-      path: "/",
-      label: "Home",
-      icon: "house",
-      roles: [
-        "porter",
-        "receptionist",
-        "waiter",
-        "bartender",
-        "chef",
-        "supervisor",
-        "housekeeping_attendant",
-        "manager",
-        "technician",
-        "security",
-        "concierge",
-        "leisure_staff",
-        "maintenance_staff",
-        "other",
-      ],
-    },
-    {
-      path: `/hotel/${hotelIdentifier}/chat`,
-      label: "Chat",
-      icon: "chat-dots", // Bootstrap icon
-      roles: ["receptionist", "porter", "manager", "concierge", "staff_admin"],
-      badge: totalUnread > 0 ? totalUnread : null,
-    },
-    {
-      path: "/reception",
-      label: "Reception",
-      icon: "bell",
-      feature: "reception",
-      roles: ["receptionist", "manager", "concierge"],
-    },
-    {
-      path: "/rooms",
-      label: "Rooms",
-      icon: "door-closed",
-      feature: "reception",
-      roles: ["receptionist", "manager"],
-    },
-    {
-      path: `/${hotelIdentifier}/guests`,
-      label: "Guests",
-      icon: "people",
-      feature: "reception",
-      roles: ["receptionist", "manager"],
-    },
-    {
-      path: `/roster/${hotelIdentifier}`,
-      label: "Roster",
-      icon: "calendar-week",
-      feature: "roster",
-      roles: ["manager", "staff_admin", "super_staff_admin"],
-    },
-    {
-      path: `/${hotelIdentifier}/staff`,
-      label: "Staff",
-      icon: "person-badge",
-      feature: "profile",
-      roles: ["staff_admin", "super_staff_admin"],
-    },
-    {
-      path: `/${hotelIdentifier}/restaurants`,
-      label: "Restaurants",
-      icon: "shop-window", // Bootstrap Icon for restaurants/buildings
-      roles: ["manager", "staff_admin", "super_staff_admin"], // adjust as needed
-    },
-
-    {
-      path: "/bookings",
-      label: "Bookings",
-      icon: "calendar-check",
-      feature: "reception",
-      roles: ["receptionist", "manager", "waiter"],
-    },
-    {
-      path: "/maintenance",
-      label: "Maintenance",
-      icon: "tools",
-      feature: "maintenance",
-      roles: ["maintenance_staff", "manager", "super_staff_admin"],
-    },
-    {
-      path: `/hotel_info/${hotelIdentifier}`,
-      label: "Info",
-      icon: "info-circle",
-      feature: "reception",
-      roles: ["receptionist", "manager"],
-    },
-    {
-      path: `/good_to_know_console/${hotelIdentifier}`,
-      label: "Good To Know",
-      icon: "book",
-      feature: "hotel_info",
-      roles: ["staff_admin", "super_staff_admin"],
-    },
-    {
-      path: `/stock_tracker/${hotelIdentifier}`,
-      label: "Stock Dashboard",
-      icon: "graph-up",
-      feature: "stock_tracker",
-      roles: ["chef", "bartender", "manager"],
-    },
-    {
-      path: `/games/?hotel=${hotelIdentifier}`,
-      label: "Games",
-      icon: "controller",
-      feature: "games",
-      roles: ["manager", "staff_admin", "super_staff_admin"],
-    },
-  ];
-
   return (
     <>
       <nav
@@ -264,30 +153,33 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
             </li>
           )}
 
-          {navItems
-  .filter((item) => canAccess(item.roles))
-  .map((item) => {
-    const showNewBadge =
-      item.path === "/bookings" ? hasNewBooking : item.path === `/hotel/${hotelIdentifier}/chat` ? totalUnread > 0 : false;
+          {visibleNavItems.map((item) => {
+            const showNewBadge =
+              item.slug === "bookings" ? hasNewBooking : 
+              item.slug === "chat" ? totalUnread > 0 : 
+              false;
 
-    return (
-      <li className="nav-item" key={item.path}>
-        <Link
-          className={`nav-link text-white ${
-            isPartialActive(item.path) ? "active-icon-bg" : ""
-          }`}
-          to={item.path}
-          onClick={() => setCollapsed(true)}
-        >
-          <i className={`bi bi-${item.icon} me-2`} />
-          {!collapsed && item.label}
-          {showNewBadge && (
-            <span className="badge bg-danger ms-2">NEW</span>
-          )}
-        </Link>
-      </li>
-    );
-  })}
+            return (
+              <li className="nav-item" key={item.slug}>
+                <Link
+                  className={`nav-link text-white ${
+                    isPartialActive(item.path) ? "active-icon-bg" : ""
+                  }`}
+                  to={item.path}
+                  onClick={() => setCollapsed(true)}
+                >
+                  <i className={`bi bi-${item.icon} me-2`} />
+                  {!collapsed && item.name}
+                  {showNewBadge && (
+                    <span className="badge bg-danger ms-2">NEW</span>
+                  )}
+                  {item.slug === "chat" && !collapsed && totalUnread > 0 && (
+                    <span className="badge bg-danger ms-2">{totalUnread}</span>
+                  )}
+                </Link>
+              </li>
+            );
+          })}
 
 
           {servicesDropdownOpen !== null && (
@@ -358,21 +250,6 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
                   ))}
                 </ul>
               )}
-            </li>
-          )}
-
-          {/* SETTINGS if super admin */}
-          {canAccess(["super_staff_admin"]) && (
-            <li className="nav-item mt-2">
-              <Link
-                className="nav-link text-white d-flex "
-                to="/settings"
-                title="Settings"
-                onClick={() => setCollapsed(true)}
-              >
-                <i className="bi bi-gear" />
-                {!collapsed && <span className="ms-2">Settings</span>}
-              </Link>
             </li>
           )}
 

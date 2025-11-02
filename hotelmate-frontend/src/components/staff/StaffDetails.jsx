@@ -2,12 +2,16 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FaUserCircle } from "react-icons/fa";
 import api from "@/services/api";
+import { usePermissions } from "@/hooks/usePermissions";
+import NavigationPermissionManager from "./NavigationPermissionManager";
 
 function StaffDetails() {
   const navigate = useNavigate();
   const [staff, setStaff] = useState(null);
   const [error, setError] = useState(null);
   const { hotelSlug, id } = useParams();
+  const { canAccess } = usePermissions();
+  
   useEffect(() => {
     const fetchStaff = async () => {
       console.log("[StaffDetails] Fetching staff details for:", {
@@ -115,6 +119,14 @@ function StaffDetails() {
           </p>
         </div>
       </div>
+
+      {/* Navigation Permissions Section - Super Admin Only */}
+      {canAccess(['super_staff_admin']) && (
+        <div className="mt-5">
+          <hr className="mb-4" />
+          <NavigationPermissionManager staffId={id} />
+        </div>
+      )}
 
       <div className="mt-4">
         <button

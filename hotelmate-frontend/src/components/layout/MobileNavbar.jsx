@@ -8,6 +8,7 @@ import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useChat } from "@/context/ChatContext";
 import { useTheme } from "@/context/ThemeContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useNavigation } from "@/hooks/useNavigation";
 
 const MobileNavbar = () => {
   const location = useLocation();
@@ -26,6 +27,7 @@ const MobileNavbar = () => {
 
   // Use usePermissions WITHOUT argument — it reads roles from localStorage inside
   const { canAccess } = usePermissions();
+  const { visibleNavItems, hasNavigation } = useNavigation();
 
   useEffect(() => {
     if (!user) {
@@ -46,115 +48,6 @@ const MobileNavbar = () => {
     logout();
     navigate("/login");
   };
-
-  const navItems = [
-    {
-      path: "/",
-      label: "Home",
-      icon: "house",
-      roles: [
-        "porter",
-        "receptionist",
-        "waiter",
-        "bartender",
-        "chef",
-        "supervisor",
-        "housekeeping_attendant",
-        "manager",
-        "technician",
-        "security",
-        "concierge",
-        "leisure_staff",
-        "maintenance_staff",
-        "other",
-      ],
-    },
-    {
-      path: `/hotel/${hotelIdentifier}/chat`,
-      label: "Chat",
-      icon: "chat-dots", // Bootstrap icon
-      roles: ["receptionist", "porter", "manager", "concierge", "staff_admin"], // adjust roles
-    },
-    {
-      path: "/reception",
-      label: "Reception",
-      icon: "bell",
-      roles: ["receptionist", "manager", "concierge"],
-    },
-    {
-      path: "/rooms",
-      label: "Rooms",
-      icon: "door-closed",
-      roles: ["receptionist", "manager"],
-    },
-    {
-      path: `/${hotelIdentifier}/guests`,
-      label: "Guests",
-      icon: "people",
-      roles: ["receptionist", "manager"],
-    },
-    {
-      path: `/roster/${hotelIdentifier}`,
-      label: "Roster",
-      icon: "calendar-week",
-      feature: "roster",
-      roles: ["manager", "staff_admin", "super_staff_admin"],
-    },
-    {
-      path: `/${hotelIdentifier}/restaurants`,
-      label: "Restaurants",
-      icon: "shop-window", // Bootstrap Icon for restaurants/buildings
-      roles: ["manager", "staff_admin", "super_staff_admin"], // adjust as needed
-    },
-    {
-      path: `/${hotelIdentifier}/staff`,
-      label: "Staff",
-      icon: "person-badge",
-      roles: ["staff_admin", "super_staff_admin"],
-    },
-    {
-      path: "/bookings",
-      label: "Bookings",
-      icon: "calendar-check",
-      roles: ["receptionist", "manager"],
-    },
-    {
-      path: "/maintenance",
-      label: "Maintenance",
-      icon: "tools",
-      roles: ["maintenance_staff", "manager", "super_staff_admin"],
-    },
-    {
-      path: `/hotel_info/${hotelIdentifier}`,
-      label: "Info",
-      icon: "info-circle",
-      roles: ["receptionist", "manager"],
-    },
-    {
-      path: `/good_to_know_console/${hotelIdentifier}`,
-      label: "Good To Know",
-      icon: "book",
-      roles: ["staff_admin", "super_staff_admin"],
-    },
-    {
-      path: `/stock_tracker/${hotelIdentifier}`,
-      label: "Stock Dashboard",
-      icon: "graph-up",
-      roles: ["chef", "bartender", "manager"],
-    },
-    {
-      path: `/games/?hotel=${hotelIdentifier}`,
-      label: "Games",
-      icon: "controller",
-      roles: ["manager", "staff_admin", "super_staff_admin"],
-    },
-    {
-      path: "/settings",
-      label: "Settings",
-      icon: "gear",
-      roles: ["super_staff_admin"],
-    },
-  ];
 
   const servicesNavItems = [
     {
@@ -193,8 +86,10 @@ const MobileNavbar = () => {
     /^\/games\/memory-match\/tournaments\/?$/.test(location.pathname) &&
     searchParams.get("hotel") === "hotel-killarney";
 
+  // Hide navigation completely for non-authenticated users or users without permissions
   if (!user && (hiddenNavPatterns.some((re) => re.test(location.pathname)) || isMemoryMatchTournamentExact))
     return null;
+  if (!user || !hasNavigation) return null;
 
   return (
     <nav
@@ -298,31 +193,29 @@ const MobileNavbar = () => {
 
             {user && (
               <>
-                {navItems
-                  .filter((item) => canAccess(item.roles))
-                  .map(({ path, label, icon }) => (
-                    <li className="nav-item" key={path}>
-                      <Link
-                        className={`nav-link ${
-                          isActive(path) ? "active" : ""
-                        } text-white d-flex justify-content-between align-items-center`}
-                        to={path}
-                        onClick={toggleNavbar}
-                      >
-                        <div>
-                          <i className={`bi bi-${icon} me-2`} />
-                          {label}
-                        </div>
+                {visibleNavItems.map((item) => (
+                  <li className="nav-item" key={item.slug}>
+                    <Link
+                      className={`nav-link ${
+                        isActive(item.path) ? "active" : ""
+                      } text-white d-flex justify-content-between align-items-center`}
+                      to={item.path}
+                      onClick={toggleNavbar}
+                    >
+                      <div>
+                        <i className={`bi bi-${item.icon} me-2`} />
+                        {item.name}
+                      </div>
 
-                        {/* Add badge only for chat */}
-                        {label === "Chat" && totalUnread > 0 && (
-                          <span className="badge bg-danger ms-2">
-                            {totalUnread}
-                          </span>
-                        )}
-                      </Link>
-                    </li>
-                  ))}
+                      {/* Add badge only for chat */}
+                      {item.slug === "chat" && totalUnread > 0 && (
+                        <span className="badge bg-danger ms-2">
+                          {totalUnread}
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                ))}
                 {servicesNavItems.some(({ roles }) => canAccess(roles)) && (
                   <li className="nav-item dropdown">
                     <div
