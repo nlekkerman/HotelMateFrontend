@@ -98,19 +98,21 @@ export default function ChatPinAuth() {
 
         <div className="mb-3 w-100">
           <input
-            type="password"
+            type="tel"
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={pin}
             onChange={(e) => setPin(e.target.value)}
             placeholder="Enter PIN"
             className={`form-control ${error ? "is-invalid" : ""}`}
             required
-            autoFocus
+            disabled={loading}
           />
           {error && <div className="invalid-feedback">{error}</div>}
         </div>
 
-        <button type="submit" className="btn custom-button w-100">
-          Submit
+        <button type="submit" className="btn custom-button w-100" disabled={loading || !pin}>
+          {loading ? 'Verifying...' : 'Submit'}
         </button>
       </form>
     </div>
