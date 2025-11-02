@@ -47,7 +47,7 @@ export default function ChatPinAuth() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!pin || pin.length < 4 || submitting) {
+    if (!pin || submitting) {
       return;
     }
     
@@ -108,15 +108,12 @@ export default function ChatPinAuth() {
 
         <div className="mb-3 w-100">
           <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength="6"
+            type="password"
             value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, ''))}
+            onChange={(e) => setPin(e.target.value)}
             placeholder="Enter PIN"
             className={`form-control ${error ? "is-invalid" : ""}`}
-            style={{ fontSize: '1.5rem', textAlign: 'center', letterSpacing: '0.3em', padding: '0.75rem' }}
+            style={{ fontSize: '1.2rem', padding: '0.75rem' }}
             required
             disabled={submitting}
           />
