@@ -16,6 +16,18 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  
+  // Early return checks BEFORE any other hooks
+  const searchParams = new URLSearchParams(location.search);
+  const isMemoryMatchTournamentExact =
+    /^\/games\/memory-match\/tournaments\/?$/.test(location.pathname) &&
+    searchParams.get("hotel") === "hotel-killarney";
+
+  // Hide navigation completely for non-authenticated users or users without permissions
+  if (!user && isMemoryMatchTournamentExact) return null;
+  if (!user) return null;
+  
+  // Now safe to use all hooks
   const hotelIdentifier = user?.hotel_slug;
   const { mainColor } = useTheme();
   const { totalUnread, markConversationRead } = useChat();
@@ -24,6 +36,18 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const { hasNewRoomService, hasNewBreakfast } = useRoomServiceNotifications();
   const { roomServiceCount, breakfastCount, totalServiceCount } =
     useOrderCount(hotelIdentifier);
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('📊 Desktop Sidebar Counts:', { 
+      roomServiceCount, 
+      breakfastCount, 
+      totalServiceCount,
+      hasNewRoomService,
+      hasNewBreakfast
+    });
+  }, [roomServiceCount, breakfastCount, totalServiceCount, hasNewRoomService, hasNewBreakfast]);
+  
   const [staffProfile, setStaffProfile] = useState(null);
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
@@ -33,16 +57,9 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const { canAccess } = usePermissions();
   const { visibleNavItems, hasNavigation } = useNavigation();
   const servicesRef = useRef(null);
-
-  // Hide desktop sidebar for the exact public tournament view when user is anonymous
-  const searchParams = new URLSearchParams(location.search);
-  const isMemoryMatchTournamentExact =
-    /^\/games\/memory-match\/tournaments\/?$/.test(location.pathname) &&
-    searchParams.get("hotel") === "hotel-killarney";
-
-  // Hide navigation completely for non-authenticated users or users without permissions
-  if (!user && isMemoryMatchTournamentExact) return null;
-  if (!user || !hasNavigation) return null;
+  
+  // Check if user has navigation permissions
+  if (!hasNavigation) return null;
 
   // Define active path helpers
   const isPartialActive = (path) => {
@@ -130,11 +147,11 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
         </div>
 
         <ul className="nav nav-pills flex-column mb-auto px-2">
-          {staffProfile && (
+          {user && (
              <li className="nav-item">
                 <button
-                  className="btn btn-success text-white"
-                  onClick={() => navigate("/clock-in/hotel-killarney")}
+                  className="btn btn-success text-white w-100"
+                  onClick={() => navigate(`/clock-in/${hotelIdentifier}`)}
                 >
                   <i className="bi bi-clock" />
                 {!collapsed && <span className="ms-2">Clock In / Out</span>}
@@ -156,6 +173,12 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
           )}
 
           {visibleNavItems.map((item) => {
+            // Add order counts for room service and breakfast
+            let orderCount = 0;
+            if (item.slug === "room-service") orderCount = roomServiceCount;
+            if (item.slug === "breakfast") orderCount = breakfastCount;
+            if (item.slug === "chat") orderCount = totalUnread;
+            
             const showNewBadge = 
               item.slug === "bookings" ? hasNewBooking : 
               item.slug === "chat" ? totalUnread > 0 : 
@@ -163,13 +186,13 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
               item.slug === "breakfast" ? hasNewBreakfast :
               false;
 
-            // Add order counts for room service and breakfast
-            let orderCount = 0;
-            if (item.slug === "room-service") orderCount = roomServiceCount;
-            if (item.slug === "breakfast") orderCount = breakfastCount;            return (
+            // Show indicator if there's a count OR a new badge
+            const hasNotification = orderCount > 0 || showNewBadge;
+            
+            return (
               <li className="nav-item" key={item.slug}>
                 <Link
-                  className={`nav-link text-white ${
+                  className={`nav-link text-white position-relative ${
                     isPartialActive(item.path) ? "active-icon-bg" : ""
                   }`}
                   to={item.path}
@@ -177,14 +200,27 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
                 >
                   <i className={`bi bi-${item.icon} me-2`} />
                   {!collapsed && item.name}
-                  {showNewBadge && (
+                  
+                  {/* When collapsed: show small dot if there are notifications or count */}
+                  {collapsed && hasNotification && (
+                    <span 
+                      className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"
+                      style={{ width: '10px', height: '10px' }}
+                    >
+                      <span className="visually-hidden">New notifications</span>
+                    </span>
+                  )}
+                  
+                  {/* When expanded: show count badge */}
+                  {!collapsed && orderCount > 0 && (
+                    <span className="badge bg-danger ms-2 rounded-pill">
+                      {orderCount}
+                    </span>
+                  )}
+                  
+                  {/* When expanded and NEW but no count: show NEW badge */}
+                  {!collapsed && showNewBadge && orderCount === 0 && (
                     <span className="badge bg-danger ms-2">NEW</span>
-                  )}
-                  {item.slug === "chat" && !collapsed && totalUnread > 0 && (
-                    <span className="badge bg-danger ms-2">{totalUnread}</span>
-                  )}
-                  {orderCount > 0 && !collapsed && (
-                    <span className="badge bg-danger ms-2">{orderCount}</span>
                   )}
                 </Link>
               </li>

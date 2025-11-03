@@ -22,18 +22,28 @@ export function OrderCountProvider({ children }) {
   const refreshRoomService = useCallback(async (hotelSlug) => {
     if (!hotelSlug) return;
     try {
-      const res = await api.get(`/room_services/${hotelSlug}/orders/pending-count/`);
-      setRoomServiceCount(res.data.count);
+      // Get all orders and count only pending ones (matching RoomServiceOrdersManagement logic)
+      const res = await api.get(`/room_services/${hotelSlug}/orders/`);
+      const ordersData = Array.isArray(res.data.results) ? res.data.results : res.data;
+      const pendingCount = ordersData.filter(order => order.status === 'pending').length;
+      console.log('🔢 Room Service Count:', { total: ordersData.length, pending: pendingCount });
+      setRoomServiceCount(pendingCount);
     } catch (err) {
+      console.error('Error fetching room service count:', err);
     }
   }, []);
 
   const refreshBreakfast = useCallback(async (hotelSlug) => {
     if (!hotelSlug) return;
     try {
-const res = await api.get(`/room_services/${hotelSlug}/breakfast-orders/breakfast-pending-count/`);
-      setBreakfastCount(res.data.count);
+      // Get all breakfast orders and count only pending ones (matching RoomServiceOrdersManagement logic)
+      const res = await api.get(`/room_services/${hotelSlug}/breakfast-orders/`);
+      const ordersData = Array.isArray(res.data.results) ? res.data.results : res.data;
+      const pendingCount = ordersData.filter(order => order.status === 'pending').length;
+      console.log('🔢 Breakfast Count:', { total: ordersData.length, pending: pendingCount });
+      setBreakfastCount(pendingCount);
     } catch (err) {
+      console.error('Error fetching breakfast count:', err);
     }
   }, []);
 

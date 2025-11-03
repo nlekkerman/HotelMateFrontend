@@ -98,13 +98,13 @@ const MobileNavbar = () => {
               className="navbar-toggler-icon"
               style={{ filter: "invert(1)" }}
             />
-            {/* "NEW" badge on burger */}
-            {totalUnread > 0 && (
-              <span
-                className="position-absolute start-0 top-50 translate-middle badge rounded-pill bg-danger"
-                style={{ fontSize: "0.6rem", padding: "0.2em 0.4em" }}
+            {/* Small dot indicator on hamburger when collapsed and there are notifications */}
+            {collapsed && (totalUnread > 0 || hasNewRoomService || hasNewBreakfast || totalServiceCount > 0) && (
+              <span 
+                className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"
+                style={{ width: '10px', height: '10px' }}
               >
-                NEW
+                <span className="visually-hidden">New notifications</span>
               </span>
             )}
           </button>
@@ -112,11 +112,11 @@ const MobileNavbar = () => {
 
         <div className={`collapse navbar-collapse ${!collapsed ? "show" : ""}`}>
           <ul className="navbar-nav ms-auto mb-2 mb-lg-0 gap-3 shadow-lg p-2 rounded m-2">
-            {user?.is_superuser && (
+            {user && (
               <li className="nav-item">
                 <button
                   className="btn btn-primary text-white w-100"
-                  onClick={() => navigate("/clock-in/hotel-killarney")}
+                  onClick={() => navigate(`/clock-in/${hotelIdentifier}`)}
                 >
                   <i className="bi bi-clock me-2" />
                   Clock In / Out
@@ -184,11 +184,13 @@ const MobileNavbar = () => {
                   let orderCount = 0;
                   if (item.slug === "room-service") orderCount = roomServiceCount;
                   if (item.slug === "breakfast") orderCount = breakfastCount;
+                  if (item.slug === "chat") orderCount = totalUnread;
 
                   // Show NEW badge for notifications
                   const showNewBadge = 
                     item.slug === "room-service" ? hasNewRoomService :
                     item.slug === "breakfast" ? hasNewBreakfast :
+                    item.slug === "chat" ? totalUnread > 0 :
                     false;
 
                   return (
@@ -205,23 +207,16 @@ const MobileNavbar = () => {
                           {item.name}
                         </div>
 
-                        {/* Show NEW badge */}
-                        {showNewBadge && (
-                          <span className="badge bg-danger ms-2">NEW</span>
-                        )}
-
-                        {/* Add badge for chat */}
-                        {item.slug === "chat" && totalUnread > 0 && (
-                          <span className="badge bg-danger ms-2">
-                            {totalUnread}
-                          </span>
-                        )}
-
-                        {/* Add badge for room service and breakfast */}
+                        {/* Show count badge when menu is expanded */}
                         {orderCount > 0 && (
-                          <span className="badge bg-danger ms-2">
+                          <span className="badge bg-danger rounded-pill">
                             {orderCount}
                           </span>
+                        )}
+
+                        {/* Show NEW badge when expanded but no count */}
+                        {showNewBadge && orderCount === 0 && (
+                          <span className="badge bg-danger">NEW</span>
                         )}
                       </Link>
                     </li>
