@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Pusher from "pusher-js";
 import api from "@/services/api";
 import { useMediaQuery } from "react-responsive";
+import FirebaseService from "@/services/FirebaseService";
 import "@/games/whack-a-mole/styles/InterfaceStyles.css";
 import "@/styles/main.css";
 
@@ -354,6 +355,58 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
 export default function App() {
   const [collapsed, setCollapsed] = useState(false);
   const isMobile = useMediaQuery({ maxWidth: 991 });
+
+  useEffect(() => {
+    // Initialize Firebase Cloud Messaging
+    const initializeFCM = async () => {
+      try {
+        // Check if user is authenticated
+        const userStr = localStorage.getItem('user');
+        
+        if (userStr && FirebaseService.isSupported()) {
+          console.log('Initializing Firebase Cloud Messaging...');
+          
+          // Initialize FCM (request permission and get token)
+          const initialized = await FirebaseService.initialize();
+          
+          if (initialized) {
+            console.log('FCM initialized successfully');
+            
+            // Set up foreground message listener
+            const unsubscribeForeground = FirebaseService.setupForegroundMessageListener((payload) => {
+              console.log('Received notification while app is open:', payload);
+              
+              // You can show a toast notification here
+              // toast.info(payload.notification?.body);
+            });
+
+            // Set up service worker message listener (for notification clicks)
+            const unsubscribeServiceWorker = FirebaseService.setupServiceWorkerMessageListener((data) => {
+              console.log('Notification clicked, data:', data);
+              
+              // Handle navigation based on notification data
+              // For example, you could use navigate() from react-router-dom
+              if (data.route) {
+                window.location.href = data.route;
+              }
+            });
+
+            // Cleanup on unmount
+            return () => {
+              unsubscribeForeground();
+              unsubscribeServiceWorker();
+            };
+          } else {
+            console.log('FCM initialization failed or permission denied');
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing FCM:', error);
+      }
+    };
+
+    initializeFCM();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

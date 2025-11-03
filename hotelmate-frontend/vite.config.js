@@ -31,6 +31,12 @@ export default defineConfig({
           datepicker: ["react-datepicker"],
         },
       },
+      // Ensure service worker is copied to build output
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+      },
     },
+    // Copy service worker to build output
+    copyPublicDir: true,
   },
 });
