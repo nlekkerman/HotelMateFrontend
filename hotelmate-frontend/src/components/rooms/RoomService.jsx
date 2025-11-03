@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import DeletionModal from "@/components/modals/DeletionModal";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import useOrdersWebSocket from "@/hooks/useOrdersWebSocket";
+import { useGuestPusher } from "@/hooks/useGuestPusher";
 
 
 export default function RoomService({ isAdmin }) {
@@ -15,12 +16,40 @@ export default function RoomService({ isAdmin }) {
   const [orderItems, setOrderItems] = useState({});
   const [currentOrder, setCurrentOrder] = useState(null);
   const currentOrderId = currentOrder?.id ?? null;
-/*
-useOrdersWebSocket(currentOrderId, (data) => {
-  setCurrentOrder((prev) =>
-    prev && prev.id === data.id ? { ...prev, status: data.status } : prev
-  );
-});*/
+
+  // Pusher: Listen for order status updates
+  const channelName = hotelIdentifier && roomNumber 
+    ? `${hotelIdentifier}-room-${roomNumber}` 
+    : null;
+
+  useGuestPusher(channelName, {
+    'order-status-update': (data) => {
+      console.log('📦 Order status update received:', data);
+      
+      // Update current order status if it matches
+      if (currentOrder && currentOrder.id === data.order_id) {
+        setCurrentOrder(prev => ({
+          ...prev,
+          status: data.status
+        }));
+        
+        // Show toast notification
+        const statusMessages = {
+          'accepted': '✅ Your order has been accepted!',
+          'preparing': '👨‍🍳 Your order is being prepared!',
+          'ready': '🎉 Your order is ready!',
+          'delivered': '✅ Your order has been delivered!',
+          'completed': '✅ Order completed!',
+          'cancelled': '❌ Your order has been cancelled.'
+        };
+        
+        toast.info(statusMessages[data.status] || `Order status: ${data.status}`, {
+          autoClose: 5000
+        });
+      }
+    }
+  });
+
   const [previousOrders, setPreviousOrders] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);

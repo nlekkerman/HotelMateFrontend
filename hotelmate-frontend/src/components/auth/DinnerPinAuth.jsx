@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import api from "@/services/api";
 import useHotelLogo from "@/hooks/useHotelLogo"; 
+import { requestFCMPermission } from "@/utils/fcm"; 
 
 export default function DinnerPinAuth() {
   const [pin, setPin] = useState("");
@@ -28,6 +29,23 @@ export default function DinnerPinAuth() {
       if (response.data.valid) {
         sessionStorage.setItem(`pin_ok_${roomNumber}`, "true");
         setValidated(true); // ✅ Update state to hide form
+
+        // Request FCM permission and save token
+        try {
+          const fcmToken = await requestFCMPermission();
+          
+          if (fcmToken) {
+            // Save FCM token to backend
+            await api.post(
+              `/api/room_services/${hotelSlug}/room/${roomNumber}/save-fcm-token/`,
+              { fcm_token: fcmToken }
+            );
+            console.log('✅ FCM token saved successfully');
+          }
+        } catch (fcmError) {
+          // FCM is optional - don't block navigation if it fails
+          console.warn('⚠️ FCM permission denied or failed:', fcmError);
+        }
 
         const target =
           location.state?.next ||
@@ -66,6 +84,21 @@ export default function DinnerPinAuth() {
     )}
     <div className="mb-4">
       <h2 className="mb-4">Enter PIN for Room {roomNumber}</h2>
+      
+      {/* Notification Information */}
+      <div className="alert alert-info mb-3" role="alert">
+        <div className="d-flex align-items-start">
+          <span className="me-2" style={{ fontSize: '1.5rem' }}>🔔</span>
+          <div>
+            <strong>Stay Updated!</strong>
+            <p className="mb-0 mt-1" style={{ fontSize: '0.9rem' }}>
+              After verifying your PIN, please <strong>allow notifications</strong> to receive 
+              real-time updates about your booking status.
+            </p>
+          </div>
+        </div>
+      </div>
+      
       <div className="mb-3">
         <input
           type="password"
