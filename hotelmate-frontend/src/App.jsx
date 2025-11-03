@@ -32,6 +32,7 @@ import Register from "@/components/auth/Register";
 import RegistrationSuccess from "@/components/auth/RegistrationSuccess";
 import ForgotPassword from "@/components/auth/ForgotPassword";
 import ResetPassword from "@/components/auth/ResetPassword";
+import Logout from "@/components/auth/Logout";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import RequirePin from "@/components/auth/RequirePin";
 import RequireChatPin from "@/components/auth/RequireChatPin";
@@ -104,6 +105,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
   const location = useLocation();
   const isClockInPage = location.pathname.startsWith("/clock-in");
   const isAuthPage = location.pathname === "/login" || 
+                     location.pathname === "/logout" ||
                      location.pathname === "/register" || 
                      location.pathname === "/forgot-password" ||
                      location.pathname === "/registration-success" ||
@@ -162,6 +164,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
             <Routes>
               {/* Public Routes - Always Accessible */}
               <Route path="/login" element={<Login />} />
+              <Route path="/logout" element={<Logout />} />
               <Route path="/register" element={<RegisterWithToken />} />
               <Route path="/registration-success" element={<RegistrationSuccess />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
