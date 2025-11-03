@@ -1,8 +1,7 @@
 // src/pages/Settings.jsx
 import React from "react";
 import ColorSelector from "@/components/utils/ColorSelector";
-import FCMStatusChecker from "@/components/utils/FCMStatusChecker";
-import FCMTest from "@/components/utils/FCMTest";
+
 
 export default function Settings() {
   return (
@@ -21,9 +20,9 @@ export default function Settings() {
         </div> */}
         
         {/* Status Checker - Shows what's ready */}
-        <div className="col-12">
+        {/* <div className="col-12">
           <FCMStatusChecker />
-        </div>
+        </div> */}
         
         {/* Debug Panel - Full testing tools */}
         <div className="col-12">

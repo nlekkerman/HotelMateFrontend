@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
+import { requestFirebaseNotificationPermission } from "@/utils/firebaseNotifications";
 
 const LOGIN_ENDPOINT = `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/staff/login/`;
 
@@ -71,6 +72,14 @@ export default function useLogin() {
       };
 
       login(userForContext);
+
+      // Request Firebase notification permission and get FCM token
+      try {
+        await requestFirebaseNotificationPermission();
+      } catch (fcmError) {
+        console.error("Failed to get FCM token:", fcmError);
+        // Don't block login if FCM fails
+      }
 
       setLoading(false);
       return data;
