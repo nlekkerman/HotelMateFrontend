@@ -3,6 +3,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { OrderCountProvider } from "@/hooks/useOrderCount.jsx";
+import { listenForFirebaseMessages } from "@/utils/firebaseNotifications";
 
 
 // Helper to pull hotel_slug out of localStorage
@@ -39,6 +40,43 @@ async function applySavedTheme() {
 
 async function bootstrap() {
   await applySavedTheme();
+
+  // Register Firebase service worker for push notifications
+  if ("serviceWorker" in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.register(
+        "/firebase-messaging-sw.js"
+      );
+      console.log("🚀 Firebase SW registered:", registration);
+
+      // Handle foreground FCM messages
+      listenForFirebaseMessages((payload) => {
+        console.log("🔥 [FG FCM] Payload received:", payload);
+
+        // Show notification for room_service, breakfast, or stock_movement
+        if (
+          ["room_service", "room_service_order", "breakfast", "stock_movement"].includes(payload?.data?.type) &&
+          payload?.notification
+        ) {
+          console.log(
+            "🔔 [FG FCM] Displaying notification for type:",
+            payload.data.type
+          );
+          new Notification(payload.notification.title, {
+            body: payload.notification.body,
+            icon: "/favicon.ico",
+          });
+        } else {
+          console.log(
+            "ℹ️ [FG FCM] Ignored notification with unknown type:",
+            payload?.data?.type
+          );
+        }
+      });
+    } catch (err) {
+      console.error("❌ SW registration failed:", err);
+    }
+  }
 
   ReactDOM.createRoot(document.getElementById("root")).render(
     <React.StrictMode>
