@@ -56,6 +56,13 @@ const Login = () => {
         </div>
       )}
 
+      <div className="alert alert-info w-50 mt-3">
+        <small>
+          <i className="bi bi-info-circle me-2"></i>
+          <strong>New staff?</strong> You need a QR code registration package from your hotel manager.
+        </small>
+      </div>
+
       <form onSubmit={handleSubmit} className="w-50">
         <div className="mb-3">
           <label className="form-label" htmlFor="username">

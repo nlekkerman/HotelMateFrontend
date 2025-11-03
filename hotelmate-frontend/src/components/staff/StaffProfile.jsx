@@ -181,11 +181,7 @@ export default function StaffProfile() {
 
   return (
     <div className="container py-4">
-      {/* DEBUG: Show staff.id and user.staff_id */}
-      <div className="alert alert-info mb-2">
-        <div><b>Debug:</b> staff.id = {staff?.id?.toString()} | user.staff_id = {user?.staff_id?.toString()}</div>
-        <div>isOwnProfile: {isOwnProfile ? 'true' : 'false'}</div>
-      </div>
+     
       <div className="d-flex flex-column g-4 justify-content-center align-items-center">
         {/* RIGHT: Weekly roster (8/12 on lg+, full width on small) */}
         <div className="col-12 col-lg-8 mb-4">

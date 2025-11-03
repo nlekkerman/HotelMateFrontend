@@ -24,23 +24,17 @@ export default function RoomService({ isAdmin }) {
 
   useGuestPusher(channelName, {
     'order-status-update': (data) => {
-      console.log('📦 Order status update received:', data);
-      
       // Extract order ID and status (handle both field name formats)
       const orderId = Number(data.updated_order_id || data.order_id);
       const newStatus = data.new_status || data.status;
       
       if (!orderId || !newStatus) {
-        console.error('❌ Invalid Pusher data:', data);
         return;
       }
-      
-      console.log(`🔄 Updating order #${orderId} to status: ${newStatus}`);
       
       // Update currentOrder if it matches - use functional setState to access current value
       setCurrentOrder(prev => {
         if (prev && Number(prev.id) === orderId) {
-          console.log('✅ Updating currentOrder from', prev.status, 'to', newStatus);
           return {
             ...prev,
             status: newStatus
@@ -51,22 +45,11 @@ export default function RoomService({ isAdmin }) {
       
       // Also update in previousOrders list
       setPreviousOrders(prev => {
-        console.log('📋 Previous orders before update:', prev.map(o => `#${o.id}:${o.status}`));
-        
         const updated = prev.map(order => 
           Number(order.id) === orderId 
             ? { ...order, status: newStatus }
             : order
         );
-        
-        console.log('📋 Previous orders after update:', updated.map(o => `#${o.id}:${o.status}`));
-        
-        const wasUpdated = prev.some(order => Number(order.id) === orderId);
-        if (wasUpdated) {
-          console.log('✅ Updated order #' + orderId + ' in orders list to:', newStatus);
-        } else {
-          console.warn('⚠️ Order #' + orderId + ' not found in orders list');
-        }
         
         return updated;
       });
@@ -83,12 +66,6 @@ export default function RoomService({ isAdmin }) {
       
       toast.info(statusMessages[newStatus] || `Order status: ${newStatus}`, {
         autoClose: 5000
-      });
-      
-      console.log('📊 Order update summary:', {
-        orderId: orderId,
-        newStatus: newStatus,
-        timestamp: new Date().toISOString()
       });
     }
   });
@@ -131,28 +108,19 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
       })
 
       .then((res) => {
-        console.log('📥 Raw API response for orders:', res.data);
-        
         let data = res.data;
 
         if (data && Array.isArray(data.results)) {
-          console.log('📦 Found paginated results, count:', data.results.length);
           data = data.results;
         }
 
         if (!Array.isArray(data)) {
-          console.warn("Unexpected previousOrders response:", data);
           data = [];
         }
-
-        console.log('📋 All orders before filtering:', data);
 
         const filtered = data.filter(
           (ord) => String(ord.room_number) === String(roomNumber)
         );
-
-        console.log('✅ Filtered orders for room', roomNumber, ':', filtered);
-        console.log('📊 Total orders:', filtered.length);
 
         setPreviousOrders(filtered);
 
@@ -161,11 +129,9 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
           (ord) => ord.status !== "completed" && ord.status !== "cancelled"
         );
         
-        console.log('🎯 Current active order:', latestForRoom);
         setCurrentOrder(latestForRoom || null);
       })
       .catch((err) => {
-        console.error('❌ Error fetching orders:', err);
         setPreviousOrders([]);
       });
   }, [roomNumber, hotelIdentifier]);
@@ -200,8 +166,6 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
       })),
     };
 
-    console.log('📤 Placing new order:', payload);
-
     try {
       setHotelIdentifier(hotelIdentifier);
 
@@ -211,8 +175,6 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
         payload
       );
 
-      console.log('✅ Order placed successfully:', orderResp.data);
-
       // 1) Update local state
       setCurrentOrder(orderResp.data);
       setOrderItems({});
@@ -221,24 +183,19 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
       
       // Add to the beginning of the list (only if not already present)
       setPreviousOrders((prev) => {
-        console.log('📝 Adding order to list. Previous count:', prev.length);
-        
         // Check if order already exists in the list
         const alreadyExists = prev.some(order => order.id === orderResp.data.id);
         if (alreadyExists) {
-          console.log('⚠️ Order already exists in list, skipping addition');
           return prev;
         }
         
         const newList = [orderResp.data, ...prev];
-        console.log('📝 New orders count:', newList.length);
         return newList;
       });
 
       // 2) Refresh the navbar badge count
       refreshCount();
     } catch (err) {
-      console.error('❌ Error placing order:', err);
       setSubmitError(err.response?.data || err.message);
     } finally {
       setSubmitting(false);
@@ -502,7 +459,6 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
               <p className="text-muted">No orders yet.</p>
             ) : (
               <>
-                {console.log('🎨 Rendering orders in UI:', previousOrders.length, previousOrders.map(o => `#${o.id} (${o.status})`).join(', '))}
                 {previousOrders.map((ord) => (
                   <div key={ord.id} className="card mb-3 bg-dark border-light">
                     <div className="card-body">

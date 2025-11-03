@@ -16,18 +16,6 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  
-  // Early return checks BEFORE any other hooks
-  const searchParams = new URLSearchParams(location.search);
-  const isMemoryMatchTournamentExact =
-    /^\/games\/memory-match\/tournaments\/?$/.test(location.pathname) &&
-    searchParams.get("hotel") === "hotel-killarney";
-
-  // Hide navigation completely for non-authenticated users or users without permissions
-  if (!user && isMemoryMatchTournamentExact) return null;
-  if (!user) return null;
-  
-  // Now safe to use all hooks
   const hotelIdentifier = user?.hotel_slug;
   const { mainColor } = useTheme();
   const { totalUnread, markConversationRead } = useChat();
@@ -36,17 +24,6 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const { hasNewRoomService, hasNewBreakfast } = useRoomServiceNotifications();
   const { roomServiceCount, breakfastCount, totalServiceCount } =
     useOrderCount(hotelIdentifier);
-  
-  // Debug logging
-  useEffect(() => {
-    console.log('📊 Desktop Sidebar Counts:', { 
-      roomServiceCount, 
-      breakfastCount, 
-      totalServiceCount,
-      hasNewRoomService,
-      hasNewBreakfast
-    });
-  }, [roomServiceCount, breakfastCount, totalServiceCount, hasNewRoomService, hasNewBreakfast]);
   
   const [staffProfile, setStaffProfile] = useState(null);
   const [isOnDuty, setIsOnDuty] = useState(false);
@@ -58,8 +35,11 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const { visibleNavItems, hasNavigation } = useNavigation();
   const servicesRef = useRef(null);
   
-  // Check if user has navigation permissions
-  if (!hasNavigation) return null;
+  // Early return checks AFTER all hooks
+  const searchParams = new URLSearchParams(location.search);
+  const isMemoryMatchTournamentExact =
+    /^\/games\/memory-match\/tournaments\/?$/.test(location.pathname) &&
+    searchParams.get("hotel") === "hotel-killarney";
 
   // Define active path helpers
   const isPartialActive = (path) => {
@@ -226,34 +206,6 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
               </li>
             );
           })}
-
-          {/* LOGIN / REGISTER if not logged in */}
-          {!user && (
-            <>
-              <li className="nav-item mt-2">
-                <Link
-                  className="nav-link text-white d-flex align-items-center justify-content-center"
-                  to="/login"
-                  title="Login"
-                  onClick={() => setCollapsed(true)}
-                >
-                  <i className="bi bi-box-arrow-in-right" />
-                  {!collapsed && <span className="ms-2">Login</span>}
-                </Link>
-              </li>
-              <li className="nav-item mt-2">
-                <Link
-                  className="nav-link text-white d-flex align-items-center justify-content-center"
-                  to="/register"
-                  title="Register"
-                  onClick={() => setCollapsed(true)}
-                >
-                  <i className="bi bi-person-plus" />
-                  {!collapsed && <span className="ms-2">Register</span>}
-                </Link>
-              </li>
-            </>
-          )}
 
           {/* LOGOUT if logged in */}
           {user && (

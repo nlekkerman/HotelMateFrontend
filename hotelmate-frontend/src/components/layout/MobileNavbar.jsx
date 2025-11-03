@@ -150,33 +150,6 @@ const MobileNavbar = () => {
               </li>
             )}
 
-            {!user && (
-              <>
-                <li className="nav-item">
-                  <Link
-                    className={`nav-link ${
-                      isActive("/login") ? "active" : ""
-                    } text-white`}
-                    to="/login"
-                    onClick={toggleNavbar}
-                  >
-                    Login
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link
-                    className={`nav-link ${
-                      isActive("/register") ? "active" : ""
-                    } text-white`}
-                    to="/register"
-                    onClick={toggleNavbar}
-                  >
-                    Register
-                  </Link>
-                </li>
-              </>
-            )}
-
             {user && (
               <>
                 {visibleNavItems.map((item) => {

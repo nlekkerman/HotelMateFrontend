@@ -1,18 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import useAxiosPost from '@/hooks/useAxiosPost';
 
 const Register = () => {
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     username: '',
     password: '',
     confirmPassword: '',
     registrationCode: '', // <-- added field
+    qrToken: '', // <-- QR token from URL
+    hotelSlug: '', // <-- hotel slug from URL
   });
 
   const [error, setError] = useState(null);
+  const [isQRRegistration, setIsQRRegistration] = useState(false);
   const navigate = useNavigate();
   const { postData, loading, error: requestError } = useAxiosPost('/staff/register/');
+
+  // Extract QR token and hotel slug from URL on component mount
+  useEffect(() => {
+    const token = searchParams.get('token');
+    const hotel = searchParams.get('hotel');
+    
+    if (token && hotel) {
+      console.log('🔐 QR Registration detected:', { token: token.substring(0, 10) + '...', hotel });
+      setIsQRRegistration(true);
+      setFormData(prev => ({
+        ...prev,
+        qrToken: token,
+        hotelSlug: hotel,
+      }));
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (requestError) setError(requestError);
@@ -41,9 +61,15 @@ const Register = () => {
       registration_code: formData.registrationCode,
     };
 
+    // Add QR token if this is a QR-based registration
+    if (formData.qrToken) {
+      payload.qr_token = formData.qrToken;
+      console.log('🔐 Including QR token in registration');
+    }
+
     console.log('🚀 Sending registration request:', {
       endpoint: '/staff/register/',
-      payload: { ...payload, password: '[HIDDEN]' }
+      payload: { ...payload, password: '[HIDDEN]', qr_token: payload.qr_token ? '[PRESENT]' : '[NONE]' }
     });
 
     try {
@@ -105,6 +131,15 @@ const Register = () => {
           <div className="card shadow-sm">
             <div className="card-body p-4">
               <h2 className="text-center mb-4">Register New Staff Account</h2>
+              
+              {isQRRegistration && (
+                <div className="alert alert-success mb-4">
+                  <i className="fas fa-qrcode me-2"></i>
+                  <strong>QR Code Detected!</strong> Registration for <strong>{formData.hotelSlug}</strong>
+                  <br />
+                  <small>Please enter your details and the registration code from your package.</small>
+                </div>
+              )}
               
               <div className="alert alert-info mb-4">
                 <h6 className="alert-heading">

@@ -1,32 +1,36 @@
 // src/pages/Settings.jsx
 import React from "react";
 import ColorSelector from "@/components/utils/ColorSelector";
-
+import QRRegistrationManager from "@/components/utils/QRRegistrationManager";
 
 export default function Settings() {
   return (
-    <div className="container py-5">
-      <h2 className="mb-4">Settings</h2>
+    <div className="container-fluid py-4">
+      <div className="row">
+        <div className="col-12">
+          <h2 className="mb-4">Hotel Settings</h2>
+        </div>
+      </div>
       
-      <div className="row g-4">
-        <div className="col-12 col-lg-6">
-          <h5 className="mb-3">Customize Hotel</h5>
-          <ColorSelector />
+      <div className="row">
+        {/* QR Registration Manager */}
+        <div className="col-12 mb-4">
+          <QRRegistrationManager />
         </div>
         
-        {/* <div className="col-12 col-lg-6">
-          <h5 className="mb-3">Notifications</h5>
-          <NotificationSettings />
-        </div> */}
-        
-        {/* Status Checker - Shows what's ready */}
-        {/* <div className="col-12">
-          <FCMStatusChecker />
-        </div> */}
-        
-        {/* Debug Panel - Full testing tools */}
-        <div className="col-12">
-          <FCMTest />
+        {/* Color Selector */}
+        <div className="col-12 mb-4">
+          <div className="card shadow-sm">
+            <div className="card-header bg-primary text-white">
+              <h5 className="mb-0">
+                <i className="fas fa-palette me-2"></i>
+                Theme Customization
+              </h5>
+            </div>
+            <div className="card-body">
+              <ColorSelector />
+            </div>
+          </div>
         </div>
       </div>
     </div>
