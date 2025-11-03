@@ -199,7 +199,12 @@ const StaffCreate = () => {
     console.log("Staff created successfully:", response.data);
     
     // Show success message
-    alert(`Staff profile created! Registration code ${response.data.deleted_code} has been deleted.`);
+    const registrationCode = response.data.deleted_code || response.data.registration_code;
+    if (registrationCode) {
+      alert(`Staff profile created successfully! Registration code "${registrationCode}" has been marked as used.`);
+    } else {
+      alert('Staff profile created successfully!');
+    }
     
     closeModal();
 

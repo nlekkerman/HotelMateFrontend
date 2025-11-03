@@ -101,7 +101,8 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    // Use window.location for a full page reload to ensure clean state
+    window.location.href = "/login";
   };
 
   return (

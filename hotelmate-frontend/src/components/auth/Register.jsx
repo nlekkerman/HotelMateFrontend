@@ -20,17 +20,25 @@ const Register = () => {
 
   // Extract QR token and hotel slug from URL on component mount
   useEffect(() => {
+    console.log('🔍 Checking URL for QR parameters...');
+    console.log('🔍 Current URL:', window.location.href);
+    
     const token = searchParams.get('token');
     const hotel = searchParams.get('hotel');
     
+    console.log('🔍 Extracted token:', token ? token.substring(0, 10) + '...' : 'NULL');
+    console.log('🔍 Extracted hotel:', hotel || 'NULL');
+    
     if (token && hotel) {
-      console.log('🔐 QR Registration detected:', { token: token.substring(0, 10) + '...', hotel });
+      console.log('✅ QR Registration detected:', { token: token.substring(0, 10) + '...', hotel });
       setIsQRRegistration(true);
       setFormData(prev => ({
         ...prev,
         qrToken: token,
         hotelSlug: hotel,
       }));
+    } else {
+      console.warn('⚠️ No QR parameters found - registration will use legacy method (may fail if QR required)');
     }
   }, [searchParams]);
 
@@ -65,11 +73,18 @@ const Register = () => {
     if (formData.qrToken) {
       payload.qr_token = formData.qrToken;
       console.log('🔐 Including QR token in registration');
+    } else {
+      console.warn('⚠️ No QR token found - this might fail if backend requires it');
     }
 
     console.log('🚀 Sending registration request:', {
       endpoint: '/staff/register/',
-      payload: { ...payload, password: '[HIDDEN]', qr_token: payload.qr_token ? '[PRESENT]' : '[NONE]' }
+      payload: { 
+        username: payload.username,
+        registration_code: payload.registration_code,
+        password: '[HIDDEN]', 
+        qr_token: payload.qr_token ? `${payload.qr_token.substring(0, 10)}...` : '[NONE]'
+      }
     });
 
     try {

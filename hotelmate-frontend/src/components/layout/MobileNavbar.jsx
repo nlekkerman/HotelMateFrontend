@@ -47,7 +47,8 @@ const MobileNavbar = () => {
   const toggleNavbar = () => setCollapsed((prev) => !prev);
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    // Use window.location for a full page reload to ensure clean state
+    window.location.href = "/login";
   };
 
   const isActive = (path) => {
