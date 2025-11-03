@@ -2,18 +2,21 @@ import axios from "axios";
 
 // Determine the baseURL dynamically
 const baseURL = (() => {
+  // If VITE_API_URL is set in .env, always use it (for both dev and prod)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
   const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
   const isDev = import.meta.env.DEV;
   
   if (isLocal && isDev) {
-    // For development, try local backend first
-    // If local backend is not available, the interceptor will handle fallback
+    // For development with local backend
     return "http://localhost:8000/api/";
   }
   
-  // Production or when VITE_API_URL is explicitly set
-  const prodUrl = import.meta.env.VITE_API_URL || "https://hotel-porter-d25ad83b12cf.herokuapp.com/api";
-  return prodUrl;
+  // Fallback to production URL
+  return "https://hotel-porter-d25ad83b12cf.herokuapp.com/api";
 })();
 
 const api = axios.create({

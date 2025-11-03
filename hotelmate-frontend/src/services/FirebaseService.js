@@ -64,13 +64,34 @@ class FirebaseService {
     }
 
     try {
-      // Register service worker
+      // Clear all Firebase IndexedDB data to force fresh initialization
+      const databases = await indexedDB.databases();
+      for (const db of databases) {
+        if (db.name?.includes('firebase')) {
+          console.log('🗑️ Deleting Firebase database:', db.name);
+          indexedDB.deleteDatabase(db.name);
+        }
+      }
+
+      // Unregister old service workers and register fresh one
+      const existingRegistrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of existingRegistrations) {
+        if (registration.active?.scriptURL.includes('firebase-messaging-sw.js')) {
+          console.log('🔄 Unregistering old service worker...');
+          await registration.unregister();
+        }
+      }
+
+      // Wait a bit for cleanup
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Register service worker with updated configuration
       const registration = await navigator.serviceWorker.register(
         '/firebase-messaging-sw.js',
-        { scope: '/' }
+        { scope: '/', updateViaCache: 'none' }
       );
       
-      console.log('Service Worker registered:', registration);
+      console.log('✅ Service Worker registered:', registration);
 
       // Wait for service worker to be ready
       await navigator.serviceWorker.ready;

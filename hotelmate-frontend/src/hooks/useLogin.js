@@ -1,7 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
-import FirebaseService from "@/services/FirebaseService";
 
 const LOGIN_ENDPOINT = `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/staff/login/`;
 
@@ -72,25 +71,6 @@ export default function useLogin() {
       };
 
       login(userForContext);
-
-      // Initialize FCM for push notifications after successful login
-      console.log('🔥 Login successful - Initializing FCM for user:', userForContext.username);
-      
-      // Run FCM initialization asynchronously (don't block login)
-      setTimeout(async () => {
-        try {
-          if (FirebaseService.isSupported()) {
-            const initialized = await FirebaseService.initialize();
-            if (initialized) {
-              console.log('✅ FCM token obtained and saved to backend');
-            } else {
-              console.log('ℹ️ FCM not initialized (permission may be needed)');
-            }
-          }
-        } catch (error) {
-          console.error('❌ Error initializing FCM after login:', error);
-        }
-      }, 1000); // Wait 1 second after login to initialize FCM
 
       setLoading(false);
       return data;
