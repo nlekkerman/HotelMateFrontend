@@ -36,7 +36,7 @@ export default function PinAuth() {
           if (fcmToken) {
             // Save FCM token to backend
             await api.post(
-              `/api/room_services/${hotelIdentifier}/room/${roomNumber}/save-fcm-token/`,
+              `/room_services/${hotelIdentifier}/room/${roomNumber}/save-fcm-token/`,
               { fcm_token: fcmToken }
             );
             console.log('✅ FCM token saved successfully');

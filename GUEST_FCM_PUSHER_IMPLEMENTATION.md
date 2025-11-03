@@ -286,3 +286,147 @@ The frontend now fully supports:
 - 🔐 **Environment Variable Configuration** for security
 
 **Status:** Ready for testing and deployment! ✅
+
+---
+
+## 🔧 Troubleshooting
+
+### Issue: Guest doesn't receive Pusher updates when staff changes order status
+
+**Symptoms:**
+- Staff changes order status at `/services/room-service`
+- Guest's browser doesn't update in real-time
+- No toast notification appears
+
+**Diagnosis:**
+
+1. **Check Browser Console (Guest Side):**
+   ```javascript
+   // Should see on page load:
+   ✅ Guest subscribed to Pusher channel: hotel-killarney-room-102
+   
+   // Should see when status changes:
+   📦 Order status update received: { order_id: 123, status: "accepted" }
+   ```
+
+2. **Verify Pusher Channel Format:**
+   ```javascript
+   // Frontend expects:
+   Channel: {hotelIdentifier}-room-{roomNumber}
+   Example: hotel-killarney-room-102
+   
+   // Backend must send to same channel!
+   ```
+
+3. **Verify Pusher Event Name:**
+   ```javascript
+   // Frontend listens for:
+   Event: "order-status-update"
+   
+   // Backend must trigger same event!
+   ```
+
+4. **Check Backend is Sending Pusher Event:**
+   
+   **Backend should do this when order status changes:**
+   ```python
+   # In your order update view/signal
+   from pusher import Pusher
+   
+   pusher_client = Pusher(
+       app_id=settings.PUSHER_APP_ID,
+       key=settings.PUSHER_KEY,
+       secret=settings.PUSHER_SECRET,
+       cluster=settings.PUSHER_CLUSTER,
+       ssl=True
+   )
+   
+   # When order status changes:
+   channel_name = f"{hotel_slug}-room-{room_number}"
+   
+   pusher_client.trigger(
+       channel_name,
+       'order-status-update',
+       {
+           'order_id': order.id,
+           'status': order.status,
+           'room_number': order.room_number
+       }
+   )
+   ```
+
+5. **Verify Room Number Format:**
+   - Frontend sends: `roomNumber` from URL params
+   - Channel: `hotel-slug-room-102`
+   - Make sure backend uses same room number (not padded, no extra formatting)
+
+**Solution:**
+
+The **backend must send Pusher event** when order status is updated via:
+- PATCH `/api/room_services/{slug}/orders/{id}/`
+
+Add Pusher event trigger in:
+- ✅ Order update view (after successful PATCH)
+- ✅ Order update signal (Django signal on Order.save())
+- ✅ Admin panel (if status changed via admin)
+
+**Test Command (Backend):**
+```python
+# Django shell
+from pusher import Pusher
+pusher = Pusher(...)
+pusher.trigger('hotel-killarney-room-102', 'order-status-update', {
+    'order_id': 123,
+    'status': 'accepted'
+})
+```
+
+---
+
+## 📞 Support Checklist
+
+If Pusher still doesn't work:
+
+1. ✅ Check Pusher dashboard for events being sent
+2. ✅ Verify PUSHER_KEY matches in frontend .env
+3. ✅ Verify PUSHER_CLUSTER matches (eu, us, etc.)
+4. ✅ Check browser console for Pusher connection errors
+5. ✅ Verify channel name format matches exactly
+6. ✅ Check if guest is still on the page (not navigated away)
+7. ✅ Verify `currentOrder` state has the order ID
+
+---
+
+## ✅ **TESTED & WORKING!**
+
+**Test Results (November 3, 2025):**
+
+```javascript
+// ✅ Pusher Real-Time Update - WORKS!
+📦 Order status update received: {
+  order_id: 505, 
+  room_number: 101, 
+  status: 'accepted', 
+  old_status: 'pending'
+}
+
+// ✅ FCM Push Notification - WORKS!
+🔥 [FG FCM] Payload received: {
+  notification: {
+    title: '🔔 Order Status Update', 
+    body: 'Your order is now accepted'
+  }
+}
+```
+
+**What's Working:**
+- ✅ Guest places order
+- ✅ Staff changes status
+- ✅ Guest receives Pusher update (browser open)
+- ✅ Guest receives FCM notification (browser closed)
+- ✅ UI updates in real-time
+- ✅ Toast notifications show status changes
+
+**Status:** FULLY FUNCTIONAL! 🎉
+
+---

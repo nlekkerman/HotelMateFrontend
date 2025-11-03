@@ -37,7 +37,7 @@ export default function DinnerPinAuth() {
           if (fcmToken) {
             // Save FCM token to backend
             await api.post(
-              `/api/room_services/${hotelSlug}/room/${roomNumber}/save-fcm-token/`,
+              `/room_services/${hotelSlug}/room/${roomNumber}/save-fcm-token/`,
               { fcm_token: fcmToken }
             );
             console.log('✅ FCM token saved successfully');

@@ -53,14 +53,27 @@ async function bootstrap() {
       listenForFirebaseMessages((payload) => {
         console.log("🔥 [FG FCM] Payload received:", payload);
 
-        // Show notification for room_service, breakfast, or stock_movement
+        // Show notification for room_service, breakfast, stock_movement, or order status updates
+        const notificationType = payload?.data?.type;
+        const hasOrderId = payload?.data?.order_id;
+        
         if (
-          ["room_service", "room_service_order", "breakfast", "stock_movement"].includes(payload?.data?.type) &&
+          ["room_service", "room_service_order", "breakfast", "stock_movement"].includes(notificationType) &&
           payload?.notification
         ) {
           console.log(
             "🔔 [FG FCM] Displaying notification for type:",
-            payload.data.type
+            notificationType
+          );
+          new Notification(payload.notification.title, {
+            body: payload.notification.body,
+            icon: "/favicon.ico",
+          });
+        } else if (hasOrderId && payload?.notification) {
+          // Guest order status update (no type field)
+          console.log(
+            "🔔 [FG FCM] Displaying order status update for order:",
+            payload.data.order_id
           );
           new Notification(payload.notification.title, {
             body: payload.notification.body,
@@ -68,8 +81,10 @@ async function bootstrap() {
           });
         } else {
           console.log(
-            "ℹ️ [FG FCM] Ignored notification with unknown type:",
-            payload?.data?.type
+            "ℹ️ [FG FCM] Ignored notification - type:",
+            notificationType,
+            "hasOrderId:",
+            hasOrderId
           );
         }
       });

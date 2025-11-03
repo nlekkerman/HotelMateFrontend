@@ -26,27 +26,70 @@ export default function RoomService({ isAdmin }) {
     'order-status-update': (data) => {
       console.log('📦 Order status update received:', data);
       
-      // Update current order status if it matches
-      if (currentOrder && currentOrder.id === data.order_id) {
-        setCurrentOrder(prev => ({
-          ...prev,
-          status: data.status
-        }));
-        
-        // Show toast notification
-        const statusMessages = {
-          'accepted': '✅ Your order has been accepted!',
-          'preparing': '👨‍🍳 Your order is being prepared!',
-          'ready': '🎉 Your order is ready!',
-          'delivered': '✅ Your order has been delivered!',
-          'completed': '✅ Order completed!',
-          'cancelled': '❌ Your order has been cancelled.'
-        };
-        
-        toast.info(statusMessages[data.status] || `Order status: ${data.status}`, {
-          autoClose: 5000
-        });
+      // Extract order ID and status (handle both field name formats)
+      const orderId = Number(data.updated_order_id || data.order_id);
+      const newStatus = data.new_status || data.status;
+      
+      if (!orderId || !newStatus) {
+        console.error('❌ Invalid Pusher data:', data);
+        return;
       }
+      
+      console.log(`🔄 Updating order #${orderId} to status: ${newStatus}`);
+      
+      // Update currentOrder if it matches - use functional setState to access current value
+      setCurrentOrder(prev => {
+        if (prev && Number(prev.id) === orderId) {
+          console.log('✅ Updating currentOrder from', prev.status, 'to', newStatus);
+          return {
+            ...prev,
+            status: newStatus
+          };
+        }
+        return prev;
+      });
+      
+      // Also update in previousOrders list
+      setPreviousOrders(prev => {
+        console.log('📋 Previous orders before update:', prev.map(o => `#${o.id}:${o.status}`));
+        
+        const updated = prev.map(order => 
+          Number(order.id) === orderId 
+            ? { ...order, status: newStatus }
+            : order
+        );
+        
+        console.log('📋 Previous orders after update:', updated.map(o => `#${o.id}:${o.status}`));
+        
+        const wasUpdated = prev.some(order => Number(order.id) === orderId);
+        if (wasUpdated) {
+          console.log('✅ Updated order #' + orderId + ' in orders list to:', newStatus);
+        } else {
+          console.warn('⚠️ Order #' + orderId + ' not found in orders list');
+        }
+        
+        return updated;
+      });
+      
+      // Show toast notification
+      const statusMessages = {
+        'accepted': '✅ Your order has been accepted!',
+        'preparing': '👨‍🍳 Your order is being prepared!',
+        'ready': '🎉 Your order is ready!',
+        'delivered': '✅ Your order has been delivered!',
+        'completed': '✅ Order completed!',
+        'cancelled': '❌ Your order has been cancelled.'
+      };
+      
+      toast.info(statusMessages[newStatus] || `Order status: ${newStatus}`, {
+        autoClose: 5000
+      });
+      
+      console.log('📊 Order update summary:', {
+        orderId: orderId,
+        newStatus: newStatus,
+        timestamp: new Date().toISOString()
+      });
     }
   });
 
@@ -88,9 +131,12 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
       })
 
       .then((res) => {
+        console.log('📥 Raw API response for orders:', res.data);
+        
         let data = res.data;
 
         if (data && Array.isArray(data.results)) {
+          console.log('📦 Found paginated results, count:', data.results.length);
           data = data.results;
         }
 
@@ -99,20 +145,27 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
           data = [];
         }
 
+        console.log('📋 All orders before filtering:', data);
+
         const filtered = data.filter(
           (ord) => String(ord.room_number) === String(roomNumber)
         );
+
+        console.log('✅ Filtered orders for room', roomNumber, ':', filtered);
+        console.log('📊 Total orders:', filtered.length);
 
         setPreviousOrders(filtered);
 
         // Latest active (non-completed)
         const latestForRoom = filtered.find(
-          (ord) => ord.status !== "completed"
+          (ord) => ord.status !== "completed" && ord.status !== "cancelled"
         );
+        
+        console.log('🎯 Current active order:', latestForRoom);
         setCurrentOrder(latestForRoom || null);
       })
       .catch((err) => {
-        console.error(err);
+        console.error('❌ Error fetching orders:', err);
         setPreviousOrders([]);
       });
   }, [roomNumber, hotelIdentifier]);
@@ -147,6 +200,8 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
       })),
     };
 
+    console.log('📤 Placing new order:', payload);
+
     try {
       setHotelIdentifier(hotelIdentifier);
 
@@ -156,16 +211,34 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
         payload
       );
 
+      console.log('✅ Order placed successfully:', orderResp.data);
+
       // 1) Update local state
       setCurrentOrder(orderResp.data);
       setOrderItems({});
       setShowOrderPanel(false);
       toast.success("Order submitted successfully!");
-      setPreviousOrders((prev) => [orderResp.data, ...prev]);
+      
+      // Add to the beginning of the list (only if not already present)
+      setPreviousOrders((prev) => {
+        console.log('📝 Adding order to list. Previous count:', prev.length);
+        
+        // Check if order already exists in the list
+        const alreadyExists = prev.some(order => order.id === orderResp.data.id);
+        if (alreadyExists) {
+          console.log('⚠️ Order already exists in list, skipping addition');
+          return prev;
+        }
+        
+        const newList = [orderResp.data, ...prev];
+        console.log('📝 New orders count:', newList.length);
+        return newList;
+      });
 
       // 2) Refresh the navbar badge count
       refreshCount();
     } catch (err) {
+      console.error('❌ Error placing order:', err);
       setSubmitError(err.response?.data || err.message);
     } finally {
       setSubmitting(false);
@@ -206,30 +279,91 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
   return (
     <div className="container my-4">
       <h2>Room Service — Room {roomNumber}</h2>
-      {currentOrder && (
-        <div className="alert alert-warning d-flex align-items-center justify-content-between shadow-sm border border-dark">
-          <div>
-            <h5 className="mb-1">Current Order Status</h5>
-            <p className="mb-0">
-              Order <strong>#{currentOrder.id}</strong> is currently{" "}
-              <span
-                className={`badge px-3 py-2 fs-6 ${
-                  currentOrder.status === "pending"
-                    ? "bg-warning text-dark"
-                    : currentOrder.status === "accepted"
-                    ? "bg-primary"
-                    : "bg-success"
-                }`}
-              >
-                {currentOrder.status.toUpperCase()}
-              </span>
-            </p>
+      
+      {/* Active Orders Section */}
+      {(() => {
+        const activeOrders = previousOrders.filter(
+          ord => ord.status !== 'completed' && ord.status !== 'cancelled'
+        );
+        
+        return activeOrders.length > 0 && (
+          <div className="mb-4">
+            <h4 className="mb-3">
+              <i className="bi bi-clock-history me-2"></i>
+              Active Orders ({activeOrders.length})
+            </h4>
+            <div className="row">
+              {activeOrders.map((ord) => {
+                // Status messages
+                const statusMessage = {
+                  'pending': '⏳ Your order has been received and is waiting to be confirmed.',
+                  'accepted': '✅ Your order has been accepted and will be prepared shortly.',
+                  'preparing': '👨‍🍳 Your order is being prepared. It will be delivered to your room soon!',
+                  'ready': '🎉 Your order is ready and will be delivered to your room shortly!',
+                  'delivered': '✅ Your order has been delivered to your room. Enjoy!'
+                };
+                
+                return (
+                  <div key={ord.id} className="col-md-6 mb-3">
+                    <div className="card border-primary shadow-sm">
+                      <div className="card-body">
+                        <div className="d-flex justify-content-between align-items-center mb-3">
+                          <h5 className="mb-0">Order #{ord.id}</h5>
+                          <span
+                            className={`badge px-3 py-2 fs-6 ${
+                              ord.status === "pending"
+                                ? "bg-warning text-dark"
+                                : ord.status === "accepted"
+                                ? "bg-info text-dark"
+                                : ord.status === "preparing"
+                                ? "bg-primary text-white"
+                                : ord.status === "ready"
+                                ? "bg-success text-white"
+                                : ord.status === "delivered"
+                                ? "bg-success text-white"
+                                : "bg-secondary"
+                            }`}
+                          >
+                            {ord.status.toUpperCase()}
+                          </span>
+                        </div>
+                        
+                        {/* Status message */}
+                        <div className="alert alert-light mb-3 py-2 px-3 small">
+                          {statusMessage[ord.status] || 'Your order is being processed.'}
+                        </div>
+                        
+                        <ul className="list-group list-group-flush">
+                          {ord.items.map((oi) => (
+                            <li
+                              key={oi.id}
+                              className="list-group-item d-flex justify-content-between px-0"
+                            >
+                              <span>
+                                {oi.item.name} × {oi.quantity}
+                              </span>
+                              <span className="text-muted">
+                                €{(Number(oi.item.price) * oi.quantity).toFixed(2)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="d-flex justify-content-between mt-3 pt-2 border-top">
+                          <strong>Total</strong>
+                          <strong className="text-primary">€{Number(ord.total_price).toFixed(2)}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <i className="bi bi-info-circle fs-4 text-dark ms-3" />
-        </div>
-      )}
+        );
+      })()}
 
       {/* Menu grid */}
+      <h4 className="mb-3 mt-4">Menu</h4>
       <div className="row">
         {items.map((item) => {
           const price = Number(item.price) || 0;
@@ -361,39 +495,66 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
             {submitting ? "Placing Order…" : "Place Order"}
           </button>
 
-          {/* Previous Orders */}
-          <div className="previous-orders bg-black bg-opacity-75 text-white">
-            <h5>Previous Orders</h5>
+          {/* All Orders */}
+          <div className="all-orders bg-black bg-opacity-75 text-white">
+            <h5 className="mb-3">Your Orders ({previousOrders.length})</h5>
             {previousOrders.length === 0 ? (
-              <p>No previous orders.</p>
+              <p className="text-muted">No orders yet.</p>
             ) : (
-              previousOrders.map((ord) => (
-                <div key={ord.id} className="card mb-2 bg-transparent">
-                  <div className="card-body bg-transparent text-white">
-                    <div className="d-flex justify-content-between">
-                      <span>
-                        <strong>Order #{ord.id}</strong>
-                      </span>
-                      <span>{ord.status}</span>
-                    </div>
-                    <ul className="list-group mt-2">
-                      {ord.items.map((oi) => (
-                        <li
-                          key={oi.id}
-                          className="list-group-item d-flex justify-content-between bg-transparent text-white"
+              <>
+                {console.log('🎨 Rendering orders in UI:', previousOrders.length, previousOrders.map(o => `#${o.id} (${o.status})`).join(', '))}
+                {previousOrders.map((ord) => (
+                  <div key={ord.id} className="card mb-3 bg-dark border-light">
+                    <div className="card-body">
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <span className="text-white">
+                          <strong>Order #{ord.id}</strong>
+                        </span>
+                        <span
+                          className={`badge px-3 py-2 ${
+                            ord.status === "pending"
+                              ? "bg-warning text-dark"
+                              : ord.status === "accepted"
+                              ? "bg-info text-dark"
+                              : ord.status === "preparing"
+                              ? "bg-primary"
+                              : ord.status === "ready"
+                              ? "bg-success"
+                              : ord.status === "delivered"
+                              ? "bg-success"
+                              : ord.status === "completed"
+                              ? "bg-secondary"
+                              : ord.status === "cancelled"
+                              ? "bg-danger"
+                              : "bg-secondary"
+                          }`}
                         >
-                          <span>
-                            {oi.item.name} × {oi.quantity}
-                          </span>
-                          <span>
-                            €{(Number(oi.item.price) * oi.quantity).toFixed(2)}
-                          </span>
+                          {ord.status.toUpperCase()}
+                        </span>
+                      </div>
+                      <ul className="list-group mt-2">
+                        {ord.items.map((oi) => (
+                          <li
+                            key={oi.id}
+                            className="list-group-item d-flex justify-content-between bg-transparent text-white border-secondary"
+                          >
+                            <span>
+                              {oi.item.name} × {oi.quantity}
+                            </span>
+                            <span>
+                              €{(Number(oi.item.price) * oi.quantity).toFixed(2)}
+                            </span>
+                          </li>
+                        ))}
+                        <li className="list-group-item d-flex justify-content-between bg-transparent text-white border-secondary fw-bold">
+                          <span>Total</span>
+                          <span>€{Number(ord.total_price).toFixed(2)}</span>
                         </li>
-                      ))}
-                    </ul>
+                      </ul>
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </>
             )}
           </div>
         </div>

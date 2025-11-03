@@ -18,8 +18,8 @@ const DEFAULT_NAV_ITEMS = [
   { slug: 'stock_tracker', name: 'Stock Dashboard', path: '/stock_tracker/{hotelSlug}', icon: 'graph-up' },
   { slug: 'games', name: 'Games', path: '/games/?hotel={hotelSlug}', icon: 'controller' },
   { slug: 'settings', name: 'Settings', path: '/settings', icon: 'gear' },
-  { slug: 'room_service', name: 'Room Service', path: '/services/room-service', icon: 'box' },
-  { slug: 'breakfast', name: 'Breakfast', path: '/services/breakfast', icon: 'egg-fried' },
+  { slug: 'room_service', name: 'Room Service', path: '/room_services/{hotelSlug}/orders-management', icon: 'box' },
+  { slug: 'breakfast', name: 'Breakfast', path: '/room_services/{hotelSlug}/breakfast-orders', icon: 'egg-fried' },
 ];
 
 /**
