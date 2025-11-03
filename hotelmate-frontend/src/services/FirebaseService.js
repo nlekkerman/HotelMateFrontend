@@ -113,20 +113,28 @@ class FirebaseService {
    */
   async saveFCMTokenToBackend(fcmToken) {
     try {
+      console.log('💾 Attempting to save FCM token to backend...');
+      console.log('📝 Token:', fcmToken.substring(0, 50) + '...');
+      
       // Get user object from localStorage
       const userStr = localStorage.getItem('user');
       if (!userStr) {
-        console.warn('No user found in localStorage. Cannot save FCM token to backend.');
+        console.error('❌ No user found in localStorage. Cannot save FCM token to backend.');
         return;
       }
 
       const user = JSON.parse(userStr);
+      console.log('👤 User found:', user.username, 'ID:', user.staff_id);
+      
       const authToken = user.token;
       
       if (!authToken) {
-        console.warn('No auth token found. Cannot save FCM token to backend.');
+        console.error('❌ No auth token found in user object. Cannot save FCM token to backend.');
         return;
       }
+
+      console.log('🔑 Auth token found:', authToken.substring(0, 20) + '...');
+      console.log('🌐 API URL:', `${API_BASE_URL}/api/staff/save-fcm-token/`);
 
       const response = await axios.post(
         `${API_BASE_URL}/api/staff/save-fcm-token/`,
@@ -139,10 +147,14 @@ class FirebaseService {
         }
       );
 
-      console.log('FCM token saved to backend:', response.data);
+      console.log('✅ FCM token saved to backend successfully!');
+      console.log('📊 Response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Error saving FCM token to backend:', error.response?.data || error.message);
+      console.error('❌ Error saving FCM token to backend:');
+      console.error('Status:', error.response?.status);
+      console.error('Data:', error.response?.data);
+      console.error('Message:', error.message);
       throw error;
     }
   }

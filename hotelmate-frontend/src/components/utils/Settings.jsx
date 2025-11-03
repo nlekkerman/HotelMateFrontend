@@ -2,6 +2,7 @@
 import React from "react";
 import ColorSelector from "@/components/utils/ColorSelector";
 import NotificationSettings from "@/components/utils/NotificationSettings";
+import FCMStatusChecker from "@/components/utils/FCMStatusChecker";
 import FCMTest from "@/components/utils/FCMTest";
 
 export default function Settings() {
@@ -20,7 +21,12 @@ export default function Settings() {
           <NotificationSettings />
         </div>
         
-        {/* Debug Panel - Remove in production */}
+        {/* Status Checker - Shows what's ready */}
+        <div className="col-12">
+          <FCMStatusChecker />
+        </div>
+        
+        {/* Debug Panel - Full testing tools */}
         <div className="col-12">
           <FCMTest />
         </div>

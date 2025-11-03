@@ -364,17 +364,18 @@ export default function App() {
         const userStr = localStorage.getItem('user');
         
         if (userStr && FirebaseService.isSupported()) {
-          console.log('Initializing Firebase Cloud Messaging...');
+          const user = JSON.parse(userStr);
+          console.log('🔥 User logged in:', user.username, '- Initializing FCM...');
           
           // Initialize FCM (request permission and get token)
           const initialized = await FirebaseService.initialize();
           
           if (initialized) {
-            console.log('FCM initialized successfully');
+            console.log('✅ FCM initialized successfully - Token saved to backend');
             
             // Set up foreground message listener
             const unsubscribeForeground = FirebaseService.setupForegroundMessageListener((payload) => {
-              console.log('Received notification while app is open:', payload);
+              console.log('📬 Received notification while app is open:', payload);
               
               // You can show a toast notification here
               // toast.info(payload.notification?.body);
@@ -382,10 +383,9 @@ export default function App() {
 
             // Set up service worker message listener (for notification clicks)
             const unsubscribeServiceWorker = FirebaseService.setupServiceWorkerMessageListener((data) => {
-              console.log('Notification clicked, data:', data);
+              console.log('🔔 Notification clicked, data:', data);
               
               // Handle navigation based on notification data
-              // For example, you could use navigate() from react-router-dom
               if (data.route) {
                 window.location.href = data.route;
               }
@@ -397,15 +397,32 @@ export default function App() {
               unsubscribeServiceWorker();
             };
           } else {
-            console.log('FCM initialization failed or permission denied');
+            console.log('⚠️ FCM initialization failed or permission denied');
           }
+        } else {
+          console.log('ℹ️ User not logged in or FCM not supported - skipping FCM initialization');
         }
       } catch (error) {
-        console.error('Error initializing FCM:', error);
+        console.error('❌ Error initializing FCM:', error);
       }
     };
 
+    // Run FCM initialization
     initializeFCM();
+    
+    // Listen for storage changes (when user logs in in another tab)
+    const handleStorageChange = (e) => {
+      if (e.key === 'user' && e.newValue) {
+        console.log('🔄 User login detected - reinitializing FCM');
+        initializeFCM();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   return (
