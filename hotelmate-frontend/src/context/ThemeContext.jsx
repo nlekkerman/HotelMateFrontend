@@ -17,7 +17,27 @@ const ThemeContext = createContext({
 export function ThemeProvider({ children }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const hotelSlug = user?.hotel_slug;
+  
+  // Get hotel slug from either logged-in user OR guest session
+  const hotelSlug = React.useMemo(() => {
+    // First check if staff user is logged in
+    if (user?.hotel_slug) {
+      return user.hotel_slug;
+    }
+    
+    // If no user, check for guest session
+    try {
+      const guestSession = localStorage.getItem('hotelmate_guest_chat_session');
+      if (guestSession) {
+        const session = JSON.parse(guestSession);
+        return session.hotel_slug;
+      }
+    } catch (err) {
+      console.error('Failed to parse guest session:', err);
+    }
+    
+    return null;
+  }, [user]);
 
   // 1️⃣ Fetch theme
   const { data, isLoading } = useQuery({
