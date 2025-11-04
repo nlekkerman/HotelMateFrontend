@@ -1184,15 +1184,37 @@ const ChatWindow = ({
         }
         // DON'T set Content-Type - browser sets it with boundary
 
-        // Use fetch for file upload (not axios wrapper)
-        response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/api/chat/${hotelSlug}/conversations/${conversationId}/upload-attachment/`,
-          {
-            method: 'POST',
-            headers: headers,
-            body: formData
+        // Build upload URL using the same logic as api.js
+        const getApiBaseUrl = () => {
+          if (import.meta.env.VITE_API_URL) {
+            // Remove trailing /api if present, we'll add it back
+            return import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '');
           }
-        );
+          
+          const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+          const isDev = import.meta.env.DEV;
+          
+          if (isLocal && isDev) {
+            return "http://localhost:8000";
+          }
+          
+          return "https://hotel-porter-d25ad83b12cf.herokuapp.com";
+        };
+        
+        const apiBase = getApiBaseUrl();
+        const uploadUrl = `${apiBase}/api/chat/${hotelSlug}/conversations/${conversationId}/upload-attachment/`;
+        console.log('📤 [UPLOAD] Full upload URL:', uploadUrl);
+        console.log('📤 [UPLOAD] URL parts:', {
+          apiBase,
+          hotelSlug,
+          conversationId
+        });
+        
+        response = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: headers,
+          body: formData
+        });
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -2025,39 +2047,41 @@ const ChatWindow = ({
                 </div>
               </div>
               {/* Footer with time, status, reply, and share */}
-              {console.log('🔍 [BUTTON DEBUG] Rendering buttons for message:', msg.id, 'isGuest:', isGuest, 'userId:', userId)}
               <div 
                 className={`small d-flex align-items-center gap-2 ${isMine ? 'justify-content-end' : 'justify-content-start'}`}
                 style={{
                   width: '100%',
-                  marginTop: '8px'
+                  marginTop: '8px',
+                  position: 'relative',
+                  zIndex: 1
                 }}
               >
                 <div
+                  className="message-action-buttons"
                   style={{
-                    display: 'inline-flex',
+                    display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
-                    backgroundColor: 'rgba(0, 123, 255, 0.08)',
-                    backdropFilter: 'blur(4px)',
-                    padding: '8px 12px',
+                    backgroundColor: '#e3f2fd',
+                    padding: '10px 16px',
                     borderRadius: '8px',
-                    border: '1px solid rgba(0, 123, 255, 0.2)'
+                    border: '2px solid #007bff',
+                    minHeight: '40px'
                   }}
                 >
                 {/* Reply button */}
-                {console.log('✅ [BUTTON DEBUG] Reply button should render here')}
                 <button
-                  className="btn btn-link p-0"
+                  className="btn btn-link p-0 reply-action-btn"
                   style={{ 
-                    fontSize: '0.8rem',
+                    fontSize: '0.9rem',
                     textDecoration: 'none',
                     color: '#007bff',
-                    fontWeight: '500',
-                    padding: '0',
-                    border: 'none',
-                    background: 'none',
-                    cursor: 'pointer'
+                    fontWeight: '600',
+                    padding: '4px 8px',
+                    border: '1px solid #007bff',
+                    background: 'white',
+                    cursor: 'pointer',
+                    borderRadius: '4px'
                   }}
                   onClick={() => {
                     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
