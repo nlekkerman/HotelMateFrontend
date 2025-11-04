@@ -713,8 +713,8 @@ body.terminal-mode,
   z-index: 1200;
   border-radius: 0 0 12px 12px;
   display: flex;
-  gap: 0.75rem;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.5rem;
   background-color: rgba(var(--main-color-rgb), 0.95);
   box-sizing: border-box;
   border-top: 1px solid rgba(var(--main-color-rgb), 0.2);
@@ -732,19 +732,33 @@ body.terminal-mode,
   padding: 0;
   background-color: rgba(255, 255, 255, 0.95);
   color: rgba(var(--main-color-rgb), 0.9);
-  border: none;
+  border: 2px solid rgba(var(--main-color-rgb), 0.3);
   transition: all 0.3s ease;
+  flex-shrink: 0;
 }
 
 .chat-input-vertical .btn:hover:not(:disabled) {
   background-color: #ffffff;
   transform: scale(1.1);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border-color: rgba(var(--main-color-rgb), 0.6);
 }
 
 .chat-input-vertical .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Send button - make it stand out */
+.chat-input-vertical .btn:last-child {
+  background-color: white;
+  color: rgba(var(--main-color-rgb), 0.9);
+  border-color: rgba(var(--main-color-rgb), 0.3);
+}
+
+.chat-input-vertical .btn:last-child:hover:not(:disabled) {
+  background-color: #f8f9fa;
+  border-color: rgba(var(--main-color-rgb), 0.6);
 }
 
 .message-form-control {

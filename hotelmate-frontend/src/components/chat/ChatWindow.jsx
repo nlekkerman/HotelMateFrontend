@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import api from "@/services/api";
-import { FaPaperPlane, FaTimes, FaArrowLeft, FaAngleDoubleDown, FaCheck, FaCheckDouble, FaSmile } from "react-icons/fa";
+import { FaPaperPlane, FaTimes, FaArrowLeft, FaAngleDoubleDown, FaCheck, FaCheckDouble, FaSmile, FaPaperclip } from "react-icons/fa";
 import { useChat } from "@/context/ChatContext";
 import useHotelLogo from "@/hooks/useHotelLogo";
 import EmojiPicker from "emoji-picker-react";
@@ -11,6 +11,44 @@ import { messaging } from "@/firebase";
 import { onMessage } from "firebase/messaging";
 
 const MESSAGE_LIMIT = 10;
+
+// Cloudinary configuration from environment
+const CLOUDINARY_BASE = import.meta.env.VITE_CLOUDINARY_BASE || "https://res.cloudinary.com/dg0ssec7u/";
+const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "dg0ssec7u";
+
+// File upload constraints (matching backend)
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_FILE_TYPES = [
+  'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp',
+  'application/pdf',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain', 'text/csv'
+];
+
+// Helper: Build full Cloudinary URL if needed
+const getCloudinaryUrl = (url) => {
+  if (!url) return '';
+  
+  // If already a Cloudinary URL, return as-is
+  if (url.includes('res.cloudinary.com')) {
+    return url;
+  }
+  
+  // If it's a backend URL (not Cloudinary), we need to fix it
+  // Backend should return Cloudinary URLs, but if it returns local paths...
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    console.warn('⚠️ Backend returned non-Cloudinary URL:', url);
+    console.warn('⚠️ Backend needs CLOUDINARY_URL configured in .env');
+    // Return as-is and let it fail so user knows backend is misconfigured
+    return url;
+  }
+  
+  // If it's a relative path, prefix with Cloudinary base
+  // Remove leading slash if present
+  const cleanPath = url.startsWith('/') ? url.slice(1) : url;
+  return `${CLOUDINARY_BASE}${cleanPath}`;
+};
 
 const ChatWindow = ({
   userId: propUserId,
@@ -115,6 +153,8 @@ const ChatWindow = ({
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [messageStatuses, setMessageStatuses] = useState(new Map()); // Track message statuses: pending, delivered, seen
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
   const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -122,6 +162,7 @@ const ChatWindow = ({
   const emojiPickerRef = useRef(null);
   const emojiButtonRef = useRef(null);
   const messageInputRef = useRef(null);
+  const fileInputRef = useRef(null);
   const { markConversationRead, pusherInstance, setCurrentConversationId } = useChat();
 
   // Scroll to bottom only on initial load or when sending a new message
@@ -863,24 +904,70 @@ const ChatWindow = ({
     }
   };
 
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    const errors = [];
+    
+    // Validate each file
+    const validFiles = files.filter(file => {
+      // Check file size (10MB max)
+      if (file.size > MAX_FILE_SIZE) {
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        errors.push(`${file.name}: Too large (${sizeMB}MB, max 10MB)`);
+        return false;
+      }
+      
+      // Check file type
+      if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+        errors.push(`${file.name}: File type not allowed (${file.type})`);
+        return false;
+      }
+      
+      return true;
+    });
+    
+    // Show errors if any
+    if (errors.length > 0) {
+      alert('Some files could not be added:\n\n' + errors.join('\n'));
+    }
+    
+    // Add valid files
+    if (validFiles.length > 0) {
+      setSelectedFiles([...selectedFiles, ...validFiles]);
+      console.log(`✅ Added ${validFiles.length} valid file(s) for upload`);
+    }
+    
+    e.target.value = ''; // Reset input
+  };
+
+  const removeFile = (index) => {
+    setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
+  };
+
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !conversationId) return;
+    // Allow sending if there's either a message or files
+    if ((!newMessage.trim() && selectedFiles.length === 0) || !conversationId) return;
 
     const messageToSend = newMessage;
+    const filesToSend = [...selectedFiles];
     const tempId = `temp-${Date.now()}`; // Temporary ID for tracking
+    
     setNewMessage("");
+    setSelectedFiles([]);
+    setUploading(true);
 
     // Add temporary message to UI with pending status
     const tempMessage = {
       id: tempId,
-      message: messageToSend,
+      message: messageToSend || (filesToSend.length > 0 ? `📎 ${filesToSend.length} file(s)` : ''),
       sender_type: userId ? 'staff' : 'guest',
       staff: userId,
       guest_name: isGuest ? (guestSession?.getGuestName() || 'You') : null,
       staff_name: userId ? 'You' : null,
       timestamp: new Date().toISOString(),
       created_at: new Date().toISOString(),
-      status: 'pending'
+      status: 'pending',
+      has_attachments: filesToSend.length > 0
     };
 
     setMessages(prev => [...prev, tempMessage]);
@@ -888,52 +975,114 @@ const ChatWindow = ({
     scrollToBottom();
 
     try {
-      // Simplified payload - backend determines sender_type from token presence
-      const payload = {};
+      let response;
       
-      if (userId) {
-        // Staff sends with staff_id
-        payload.message = messageToSend;
-        payload.staff_id = userId;
-      } else if (guestSession) {
-        // Guest sends with ONLY message and session_token
-        payload.message = messageToSend;
-        payload.session_token = guestSession.getToken();
-      } else {
-        console.error('❌ Cannot send message: No userId or guestSession');
-        // Mark as failed
-        setMessageStatuses(prev => new Map(prev).set(tempId, 'failed'));
-        setMessages(prev => 
-          prev.map(msg => msg.id === tempId ? { ...msg, status: 'failed' } : msg)
+      // If files are present, use upload endpoint with FormData
+      if (filesToSend.length > 0) {
+        const formData = new FormData();
+        
+        // Add files
+        filesToSend.forEach((file, index) => {
+          formData.append('files', file);
+          console.log(`📎 File ${index + 1}: ${file.name} (${(file.size / 1024).toFixed(1)}KB, ${file.type})`);
+        });
+        
+        // Add message text if present
+        if (messageToSend.trim()) {
+          formData.append('message', messageToSend.trim());
+        }
+        
+        // Add authentication
+        const authToken = localStorage.getItem('authToken');
+        if (userId) {
+          // Staff - token already in api headers
+          console.log('👤 Staff upload with auth token');
+        } else if (guestSession) {
+          // Guest - add session token
+          formData.append('session_token', guestSession.getToken());
+          console.log('👤 Guest upload with session token');
+        }
+
+        console.log('📤 Uploading to Cloudinary via backend:', {
+          endpoint: `/api/chat/${hotelSlug}/conversations/${conversationId}/upload-attachment/`,
+          fileCount: filesToSend.length,
+          totalSize: `${(filesToSend.reduce((sum, f) => sum + f.size, 0) / 1024).toFixed(1)}KB`,
+          hasMessage: !!messageToSend.trim(),
+          isGuest,
+          conversationId,
+          cloudinaryBase: CLOUDINARY_BASE
+        });
+
+        // Use fetch for file upload (not axios wrapper)
+        response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/api/chat/${hotelSlug}/conversations/${conversationId}/upload-attachment/`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': authToken ? `Token ${authToken}` : '',
+              // DON'T set Content-Type - browser sets it with boundary
+            },
+            body: formData
+          }
         );
-        return;
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.error || errorData.details?.join('\n') || 'Upload failed';
+          console.error('❌ Upload failed:', errorMessage);
+          throw new Error(errorMessage);
+        }
+        
+        const data = await response.json();
+        console.log('✅ Upload successful - files stored in Cloudinary:', {
+          messageId: data.message?.id,
+          attachmentCount: data.attachments?.length,
+          attachments: data.attachments?.map(a => ({
+            name: a.file_name,
+            url: a.file_url,
+            type: a.file_type,
+            size: a.file_size_display
+          }))
+        });
+        response = { data }; // Normalize response format
+        
+      } else {
+        // No files - use regular message endpoint
+        const payload = {};
+        
+        if (userId) {
+          payload.message = messageToSend;
+          payload.staff_id = userId;
+        } else if (guestSession) {
+          payload.message = messageToSend;
+          payload.session_token = guestSession.getToken();
+        } else {
+          console.error('❌ Cannot send message: No userId or guestSession');
+          setMessageStatuses(prev => new Map(prev).set(tempId, 'failed'));
+          setMessages(prev => 
+            prev.map(msg => msg.id === tempId ? { ...msg, status: 'failed' } : msg)
+          );
+          setUploading(false);
+          return;
+        }
+
+        response = await api.post(
+          `/chat/${hotelSlug}/conversations/${conversationId}/messages/send/`,
+          payload
+        );
       }
-
-      console.log('📤 Sending message:', {
-        isGuest,
-        hasUserId: !!userId,
-        hasSessionToken: !!payload.session_token,
-        hasStaffId: !!payload.staff_id,
-        payload,
-        conversationId,
-        hotelSlug
-      });
-
-      const response = await api.post(
-        `/chat/${hotelSlug}/conversations/${conversationId}/messages/send/`,
-        payload
-      );
 
       console.log('✅ Message sent successfully - RAW response:', response.data);
       
-      // Backend returns: {conversation_id: 37, message: {...}}
       // Extract the actual message object
       const messageData = response.data?.message || response.data;
       
       console.log('✅ Extracted message data:', {
         messageId: messageData?.id,
         sender_type: messageData?.sender_type,
-        message: messageData?.message
+        message: messageData?.message,
+        has_attachments: messageData?.has_attachments,
+        attachments_count: messageData?.attachments?.length
       });
 
       // Update staff handler if changed (for guests)
@@ -951,11 +1100,9 @@ const ChatWindow = ({
           
           if (realMessageExists) {
             console.log(`⚠️ Real message ${messageData.id} already exists, just removing temp`);
-            // Real message already added by Pusher, just remove temp
             return prev.filter(msg => msg.id !== tempId);
           } else {
             console.log(`✅ Replacing temp ${tempId} with real ${messageData.id}`);
-            // Replace temp with real message
             return prev.map(msg => msg.id === tempId ? { ...messageData, status: 'delivered' } : msg);
           }
         });
@@ -970,22 +1117,36 @@ const ChatWindow = ({
 
       scrollToBottom();
       
-      // Blur input after sending (especially for staff using Enter key)
+      // Blur input after sending
       if (messageInputRef.current) {
         messageInputRef.current.blur();
       }
       
     } catch (err) {
-      console.error("Failed to send message:", err);
+      console.error("❌ Failed to send message:", err);
+      
+      // Show user-friendly error message
+      let errorMessage = 'Failed to send message. ';
+      if (err.message) {
+        errorMessage += err.message;
+      } else {
+        errorMessage += 'Please check your connection and try again.';
+      }
+      
+      // For file uploads, provide additional context
+      if (filesToSend.length > 0) {
+        errorMessage += '\n\nTip: Files are uploaded to Cloudinary. Check file size (max 10MB) and type.';
+      }
+      
+      alert(errorMessage);
       
       // Mark message as failed in UI
       setMessageStatuses(prev => new Map(prev).set(tempId, 'failed'));
       setMessages(prev => 
         prev.map(msg => msg.id === tempId ? { ...msg, status: 'failed' } : msg)
       );
-      
-      // Don't restore to input - let user see the failed message in chat
-      // They can retry by typing again
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -1217,7 +1378,75 @@ const ChatWindow = ({
                 } ${status === 'failed' ? 'opacity-75' : ''}`}
                 style={status === 'failed' ? { border: '1px solid #dc3545' } : {}}
               >
-                {msg.message}
+                {msg.message && <div>{msg.message}</div>}
+                
+                {/* Render attachments */}
+                {msg.attachments && msg.attachments.length > 0 && (
+                  <div className="message-attachments mt-2">
+                    {msg.attachments.map(att => {
+                      // Ensure we have full Cloudinary URL
+                      const fullFileUrl = getCloudinaryUrl(att.file_url);
+                      const fullThumbnailUrl = att.thumbnail_url ? getCloudinaryUrl(att.thumbnail_url) : null;
+                      
+                      return (
+                        <div key={att.id} className="attachment mb-2">
+                          {att.file_type === 'image' ? (
+                            // Show images inline
+                            <img 
+                              src={fullThumbnailUrl || fullFileUrl} 
+                              alt={att.file_name}
+                              style={{ 
+                                maxWidth: '300px', 
+                                maxHeight: '300px',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                objectFit: 'cover'
+                              }}
+                              onClick={() => window.open(fullFileUrl, '_blank')}
+                              title="Click to open full size"
+                            />
+                          ) : (
+                            // Show document with download button
+                            <div 
+                              className="document d-flex align-items-center gap-2 p-2 rounded"
+                              style={{ 
+                                backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                                maxWidth: '300px'
+                              }}
+                            >
+                              <span style={{ fontSize: '1.5rem' }}>
+                                {att.file_type === 'pdf' ? '📄' : '📎'}
+                              </span>
+                              <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                                <div 
+                                  className="text-truncate" 
+                                  style={{ fontSize: '0.9rem', fontWeight: '500' }}
+                                  title={att.file_name}
+                                >
+                                  {att.file_name}
+                                </div>
+                                <small className="text-muted">{att.file_size_display || `${(att.file_size / 1024).toFixed(1)} KB`}</small>
+                              </div>
+                              <a 
+                                href={fullFileUrl} 
+                                download={att.file_name}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-sm btn-primary"
+                                style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                ⬇️ Download
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
               <div className={`small mt-1 d-flex align-items-center gap-2 ${isMine ? 'justify-content-end' : 'justify-content-start'}`}>
                 {messageTime && <span className="text-muted">{messageTime}</span>}
@@ -1270,7 +1499,7 @@ const ChatWindow = ({
       )}
 
       {/* Chat Footer - Fixed at bottom */}
-      <div className="chat-input-vertical d-flex p-2 border-start" style={{ position: 'relative' }}>
+      <div className="chat-input-vertical p-2 border-start" style={{ position: 'relative' }}>
         {/* Emoji Picker */}
         {showEmojiPicker && (
           <div 
@@ -1281,25 +1510,122 @@ const ChatWindow = ({
           </div>
         )}
 
-        {/* Emoji Button */}
-        <button
-          ref={emojiButtonRef}
-          className="btn d-flex align-items-center justify-content-center"
-          onClick={handleEmojiButtonClick}
-          disabled={!conversationId}
-          title="Add emoji"
-          style={{ marginRight: '0.5rem' }}
-        >
-          <FaSmile />
-        </button>
+        {/* File Previews */}
+        {selectedFiles.length > 0 && (
+          <div 
+            className="file-previews d-flex gap-2 p-2 mb-2 overflow-auto" 
+            style={{ 
+              backgroundColor: '#f5f5f5', 
+              borderRadius: '8px',
+              maxHeight: '120px'
+            }}
+          >
+            {selectedFiles.map((file, index) => (
+              <div 
+                key={index} 
+                className="file-preview position-relative d-flex flex-column align-items-center p-2 bg-white rounded"
+                style={{ minWidth: '80px' }}
+              >
+                {file.type.startsWith('image/') ? (
+                  <img 
+                    src={URL.createObjectURL(file)} 
+                    alt={file.name}
+                    style={{ 
+                      width: '60px', 
+                      height: '60px', 
+                      objectFit: 'cover',
+                      borderRadius: '4px'
+                    }}
+                  />
+                ) : (
+                  <div 
+                    className="file-icon d-flex align-items-center justify-content-center"
+                    style={{ 
+                      fontSize: '30px',
+                      width: '60px',
+                      height: '60px'
+                    }}
+                  >
+                    📄
+                  </div>
+                )}
+                <span 
+                  className="file-name text-truncate mt-1" 
+                  style={{ 
+                    fontSize: '10px',
+                    maxWidth: '70px'
+                  }}
+                  title={file.name}
+                >
+                  {file.name}
+                </span>
+                <button
+                  className="btn btn-sm position-absolute"
+                  onClick={() => removeFile(index)}
+                  style={{
+                    top: '2px',
+                    right: '2px',
+                    background: 'rgba(255, 0, 0, 0.8)',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '20px',
+                    height: '20px',
+                    padding: '0',
+                    fontSize: '10px',
+                    color: 'white',
+                    lineHeight: '1'
+                  }}
+                  title="Remove file"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
-        <input
-          ref={messageInputRef}
-          type="text"
-          className="message-form-control me-2"
-          placeholder="Type a message..."
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
+        {/* Input Row */}
+        <div className="d-flex align-items-center">
+          {/* Hidden File Input */}
+          <input
+            type="file"
+            multiple
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+            onChange={handleFileSelect}
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+          />
+
+          {/* Attachment Button */}
+          <button
+            className="btn d-flex align-items-center justify-content-center"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!conversationId || uploading}
+            title="Attach files"
+            style={{ marginRight: '0.5rem' }}
+          >
+            <FaPaperclip />
+          </button>
+
+          {/* Emoji Button */}
+          <button
+            ref={emojiButtonRef}
+            className="btn d-flex align-items-center justify-content-center"
+            onClick={handleEmojiButtonClick}
+            disabled={!conversationId || uploading}
+            title="Add emoji"
+            style={{ marginRight: '0.5rem' }}
+          >
+            <FaSmile />
+          </button>
+
+          <input
+            ref={messageInputRef}
+            type="text"
+            className="message-form-control me-2"
+            placeholder="Type a message..."
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
           onClick={async () => {
             if (!conversationId) return;
             
@@ -1386,17 +1712,23 @@ const ChatWindow = ({
             }
           }}
           onKeyDown={(e) => {
-            if (e.key === "Enter") handleSendMessage();
+            if (e.key === "Enter" && !uploading) handleSendMessage();
           }}
-          disabled={!conversationId}
+          disabled={!conversationId || uploading}
         />
-        <button
-          className="btn d-flex align-items-center justify-content-center"
-          onClick={handleSendMessage}
-          disabled={!conversationId}
-        >
-          <FaPaperPlane />
-        </button>
+          <button
+            className="btn d-flex align-items-center justify-content-center"
+            onClick={handleSendMessage}
+            disabled={!conversationId || uploading || (!newMessage.trim() && selectedFiles.length === 0)}
+            title={uploading ? "Uploading..." : "Send message"}
+          >
+            {uploading ? (
+              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            ) : (
+              <FaPaperPlane />
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
