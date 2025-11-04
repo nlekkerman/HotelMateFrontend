@@ -10,7 +10,7 @@ export class GuestChatSession {
 
   /**
    * Initialize new session with PIN
-   * Uses the new backend endpoint that returns complete session_data
+   * Uses the NEW validate-chat-pin endpoint with correct path
    */
   async initialize(pin, fcmToken = null) {
     try {
@@ -19,8 +19,9 @@ export class GuestChatSession {
         payload.fcm_token = fcmToken;
       }
 
+      // Use NEW endpoint with correct path: /messages/room/
       const response = await fetch(
-        `${this.apiBase}/${this.hotelSlug}/room/${this.roomNumber}/validate-chat-pin/`,
+        `${this.apiBase}/${this.hotelSlug}/messages/room/${this.roomNumber}/validate-chat-pin/`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -35,7 +36,7 @@ export class GuestChatSession {
 
       const data = await response.json();
       
-      // Backend now returns: { valid: true/false, session_data: {...}, fcm_token_saved: true/false }
+      // NEW backend returns: { valid: true/false, session_data: {...}, fcm_token_saved: true/false }
       if (!data.valid) {
         throw new Error('Invalid PIN');
       }
