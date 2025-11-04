@@ -3,9 +3,8 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef } f
 import Pusher from "pusher-js";
 import api from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
-import { toast } from "react-toastify";
 
-const ChatContext = createContext();
+const ChatContext = createContext(undefined);
 
 export const ChatProvider = ({ children }) => {
   const { user } = useAuth();
@@ -38,7 +37,6 @@ export const ChatProvider = ({ children }) => {
       setConversations(convs);
     } catch (err) {
       console.error("Failed to fetch conversations:", err);
-      toast.error("Failed to load conversations. Please refresh the page.");
     }
   }, [user?.hotel_slug]);
 
@@ -93,16 +91,6 @@ export const ChatProvider = ({ children }) => {
           window.focus();
           window.location.href = `/${user.hotel_slug}/chat`;
         };
-      }
-
-      // Show toast notification
-      if (data.conversation_id !== currentConversationId) {
-        toast.info(`New message from Room ${data.room_number}`, {
-          autoClose: 4000,
-          onClick: () => {
-            window.location.href = `/${user.hotel_slug}/chat`;
-          },
-        });
       }
     });
 
@@ -201,4 +189,10 @@ export const ChatProvider = ({ children }) => {
   );
 };
 
-export const useChat = () => useContext(ChatContext);
+export const useChat = () => {
+  const context = useContext(ChatContext);
+  if (context === undefined) {
+    throw new Error('useChat must be used within a ChatProvider');
+  }
+  return context;
+};

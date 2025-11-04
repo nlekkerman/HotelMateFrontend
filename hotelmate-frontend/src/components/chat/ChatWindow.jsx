@@ -4,7 +4,6 @@ import api from "@/services/api";
 import { FaPaperPlane, FaTimes, FaArrowLeft, FaAngleDoubleDown, FaCheck, FaCheckDouble, FaSmile } from "react-icons/fa";
 import { useChat } from "@/context/ChatContext";
 import useHotelLogo from "@/hooks/useHotelLogo";
-import { toast } from "react-toastify";
 import EmojiPicker from "emoji-picker-react";
 import { GuestChatSession } from "@/utils/guestChatSession";
 import { useGuestPusher } from "@/hooks/useGuestPusher";
@@ -228,7 +227,6 @@ const ChatWindow = ({
       if (newMessages.length < MESSAGE_LIMIT) setHasMore(false);
     } catch (err) {
       console.error("Error fetching messages:", err);
-      toast.error("Failed to load messages. Please try again.");
       setLoading(false);
       setLoadingMore(false);
     }
@@ -356,13 +354,9 @@ const ChatWindow = ({
         const storedUser = localStorage.getItem("user");
         const currentStaffName = storedUser ? JSON.parse(storedUser).first_name + ' ' + JSON.parse(storedUser).last_name : '';
         
-        // Only show notification if another staff member took over
+        // Log if another staff member took over
         if (data.staff_name && data.staff_name !== currentStaffName) {
-          toast.info(`${data.staff_name} (${data.staff_role}) is now handling this conversation`, {
-            position: "top-right",
-            autoClose: 5000,
-          });
-          console.log('📢 Showing handoff notification:', data.staff_name);
+          console.log('📢 Staff handoff:', data.staff_name, 'is now handling this conversation');
         }
       });
 
@@ -797,8 +791,22 @@ const ChatWindow = ({
     const tempId = `temp-${Date.now()}`; // Temporary ID for tracking
     setNewMessage("");
 
-    // Mark as pending
+    // Add temporary message to UI with pending status
+    const tempMessage = {
+      id: tempId,
+      message: messageToSend,
+      sender_type: userId ? 'staff' : 'guest',
+      staff: userId,
+      guest_name: isGuest ? (guestSession?.getGuestName() || 'You') : null,
+      staff_name: userId ? 'You' : null,
+      timestamp: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      status: 'pending'
+    };
+
+    setMessages(prev => [...prev, tempMessage]);
     setMessageStatuses(prev => new Map(prev).set(tempId, 'pending'));
+    scrollToBottom();
 
     try {
       // Simplified payload - backend determines sender_type from token presence
@@ -814,7 +822,11 @@ const ChatWindow = ({
         payload.session_token = guestSession.getToken();
       } else {
         console.error('❌ Cannot send message: No userId or guestSession');
-        toast.error("Unable to send message. Please refresh and try again.");
+        // Mark as failed
+        setMessageStatuses(prev => new Map(prev).set(tempId, 'failed'));
+        setMessages(prev => 
+          prev.map(msg => msg.id === tempId ? { ...msg, status: 'failed' } : msg)
+        );
         return;
       }
 
@@ -851,8 +863,11 @@ const ChatWindow = ({
         guestSession?.saveToLocalStorage({ current_staff_handler: messageData.staff_info });
       }
 
-      // When we get response, mark as delivered and map tempId to real ID
+      // Replace temp message with real message from backend
       if (messageData?.id) {
+        setMessages(prev => 
+          prev.map(msg => msg.id === tempId ? { ...messageData, status: 'delivered' } : msg)
+        );
         setMessageStatuses(prev => {
           const newMap = new Map(prev);
           newMap.delete(tempId);
@@ -861,19 +876,19 @@ const ChatWindow = ({
         });
       }
 
-      // Message will appear via Pusher
       scrollToBottom();
       
     } catch (err) {
       console.error("Failed to send message:", err);
-      setMessageStatuses(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(tempId);
-        return newMap;
-      });
-      toast.error("Failed to send message. Please try again.");
-      // Restore the message in the input on failure
-      setNewMessage(messageToSend);
+      
+      // Mark message as failed in UI
+      setMessageStatuses(prev => new Map(prev).set(tempId, 'failed'));
+      setMessages(prev => 
+        prev.map(msg => msg.id === tempId ? { ...msg, status: 'failed' } : msg)
+      );
+      
+      // Don't restore to input - let user see the failed message in chat
+      // They can retry by typing again
     }
   };
 
@@ -1102,17 +1117,40 @@ const ChatWindow = ({
               <div
                 className={`d-inline-block p-2 rounded position-relative ${
                   isMine ? "my-message" : "receiver-message"
-                }`}
+                } ${status === 'failed' ? 'opacity-75' : ''}`}
+                style={status === 'failed' ? { border: '1px solid #dc3545' } : {}}
               >
                 {msg.message}
               </div>
-              <div className={`small text-muted mt-1 d-flex align-items-center gap-1 ${isMine ? 'justify-content-end' : 'justify-content-start'}`}>
-                {messageTime && <span>{messageTime}</span>}
+              <div className={`small mt-1 d-flex align-items-center gap-2 ${isMine ? 'justify-content-end' : 'justify-content-start'}`}>
+                {messageTime && <span className="text-muted">{messageTime}</span>}
                 {isMine && (
                   <span className="message-status-text" style={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
                     {status === 'pending' && <span className="text-secondary">Sending...</span>}
                     {status === 'delivered' && <span className="text-secondary">Unseen</span>}
                     {status === 'read' && <span className="text-info">Seen</span>}
+                    {status === 'failed' && (
+                      <span className="text-danger d-flex align-items-center gap-1">
+                        ❌ Failed to send
+                        <button
+                          className="btn btn-sm btn-link text-danger p-0 text-decoration-underline"
+                          style={{ fontSize: '0.7rem' }}
+                          onClick={() => {
+                            // Restore message to input for retry
+                            setNewMessage(msg.message);
+                            // Remove failed message from UI
+                            setMessages(prev => prev.filter(m => m.id !== msg.id));
+                            setMessageStatuses(prev => {
+                              const newMap = new Map(prev);
+                              newMap.delete(msg.id);
+                              return newMap;
+                            });
+                          }}
+                        >
+                          Retry
+                        </button>
+                      </span>
+                    )}
                   </span>
                 )}
               </div>
