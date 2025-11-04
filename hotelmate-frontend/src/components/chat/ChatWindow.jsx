@@ -66,23 +66,34 @@ const ChatWindow = ({
   // Guest session management
   const [guestSession, setGuestSession] = useState(null);
   const [currentStaff, setCurrentStaff] = useState(null);
-  // Guest Pusher channel name - compute it directly from props
-  const guestPusherChannel = isGuest && hotelSlug && roomNumber 
+  
+  // Guest Pusher channels - compute them directly from props
+  // According to backend docs: guests need TWO channels
+  // 1. Room channel: for new-staff-message, new-message, staff-assigned
+  // 2. Conversation channel: for messages-read-by-staff (read receipts)
+  const guestRoomChannel = isGuest && hotelSlug && roomNumber 
     ? `${hotelSlug}-room-${roomNumber}-chat` 
     : null;
   
-  // Debug log for guest Pusher channel
+  const guestConversationChannel = isGuest && hotelSlug && conversationId
+    ? `${hotelSlug}-conversation-${conversationId}-chat`
+    : null;
+  
+  // Debug log for guest Pusher channels
   useEffect(() => {
     if (isGuest) {
-      console.log('🔍 Guest Pusher Channel Debug:', {
+      console.log('🔍 Guest Pusher Channels Debug:', {
         isGuest,
         hotelSlug,
         roomNumber,
-        guestPusherChannel,
-        channelWillBeUsed: !!guestPusherChannel
+        conversationId,
+        guestRoomChannel,
+        guestConversationChannel,
+        roomChannelReady: !!guestRoomChannel,
+        conversationChannelReady: !!guestConversationChannel
       });
     }
-  }, [isGuest, hotelSlug, roomNumber, guestPusherChannel]);
+  }, [isGuest, hotelSlug, roomNumber, conversationId, guestRoomChannel, guestConversationChannel]);
   
   // Use conversation data from props (already fetched in ChatHomePage)
   const [conversationDetails, setConversationDetails] = useState(propConversationData || null);
@@ -242,19 +253,24 @@ const ChatWindow = ({
       if (!userId || isGuest || !hotelSlug) return;
       
       try {
-        console.log('👤 Assigning current staff to conversation:', conversationId);
+        console.log('👤 [STAFF ASSIGN] Assigning current staff to conversation:', conversationId);
         const response = await api.post(
           `/chat/${hotelSlug}/conversations/${conversationId}/assign-staff/`
         );
         
         if (response.data?.assigned_staff) {
-          console.log('✅ Staff assigned:', response.data.assigned_staff.name);
+          console.log('✅ [STAFF ASSIGN] Staff assigned:', response.data.assigned_staff.name);
           if (response.data?.messages_marked_read !== undefined) {
-            console.log('✅ Marked', response.data.messages_marked_read, 'guest messages as read');
+            console.log('✅ [STAFF ASSIGN] Marked', response.data.messages_marked_read, 'guest messages as read');
           }
         }
+        
+        // ADDITIONAL: Explicitly mark conversation as read to trigger Pusher event
+        console.log('📖 [STAFF ASSIGN] Explicitly marking conversation as read...');
+        await api.post(`/chat/conversations/${conversationId}/mark-read/`);
+        console.log('✅ [STAFF ASSIGN] Conversation marked as read - Pusher event should fire');
       } catch (error) {
-        console.error('❌ Failed to assign staff to conversation:', error);
+        console.error('❌ [STAFF ASSIGN] Failed to assign staff to conversation:', error);
         // Don't block conversation loading if assignment fails
       }
     };
@@ -541,59 +557,76 @@ const ChatWindow = ({
     console.log('✅ Updated staff handler to:', data.staff_name);
   }, [currentStaff, guestSession]);
 
-  // Use guest Pusher hook if this is a guest session
-  // Use the computed channel name instead of relying on session data
-  console.log('🔧 [CHATWINDOW] Setting up Pusher hook:', {
-    isGuest,
-    guestPusherChannel,
-    willSubscribe: !!guestPusherChannel
-  });
-  
   // Handle messages read by staff (for guest view)
   const handleMessagesReadByStaff = useCallback((data) => {
-    console.log('👁️ Messages read by staff event received:', data);
-    console.log('👁️ Event data keys:', Object.keys(data));
-    console.log('👁️ Message IDs to mark as read:', data.message_ids);
+    console.log('👁️ [SEEN STATUS] Messages read by staff event received:', data);
+    console.log('👁️ [SEEN STATUS] Event data:', JSON.stringify(data, null, 2));
+    console.log('👁️ [SEEN STATUS] Message IDs to mark as read:', data.message_ids);
+    console.log('👁️ [SEEN STATUS] Current messages in state:', messages.map(m => ({id: m.id, status: m.status})));
     
     const { message_ids } = data;
     if (message_ids && Array.isArray(message_ids)) {
-      console.log('👁️ Updating status for', message_ids.length, 'messages');
+      console.log('👁️ [SEEN STATUS] Updating status for', message_ids.length, 'messages');
       
       setMessageStatuses(prev => {
         const newMap = new Map(prev);
         message_ids.forEach(id => {
+          const oldStatus = newMap.get(id);
           newMap.set(id, 'read');
-          console.log('👁️ Set status to read for message:', id);
+          console.log(`👁️ [SEEN STATUS] Message ${id}: ${oldStatus} -> read`);
         });
         return newMap;
       });
       
       // Update messages array with read status
       setMessages(prevMessages => {
-        const updated = prevMessages.map(msg => 
-          message_ids.includes(msg.id)
-            ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_staff: true }
-            : msg
-        );
-        console.log('👁️ Messages updated:', updated.filter(m => message_ids.includes(m.id)).length);
+        const updated = prevMessages.map(msg => {
+          if (message_ids.includes(msg.id)) {
+            console.log(`👁️ [SEEN STATUS] Marking message ${msg.id} as read in state`);
+            return { ...msg, status: 'read', is_read_by_recipient: true, read_by_staff: true };
+          }
+          return msg;
+        });
+        console.log('👁️ [SEEN STATUS] Messages after update:', updated.filter(m => message_ids.includes(m.id)).map(m => ({id: m.id, status: m.status})));
         return updated;
       });
       
-      console.log('✅ Updated guest messages as read by staff');
+      console.log('✅ [SEEN STATUS] Updated guest messages as read by staff');
     } else {
-      console.warn('⚠️ No message_ids in event data or not an array:', message_ids);
+      console.warn('⚠️ [SEEN STATUS] No message_ids in event data or not an array:', message_ids);
     }
-  }, []);
+  }, [messages]);
 
-  useGuestPusher(
-    guestPusherChannel, // Direct channel name: {hotelSlug}-room-{roomNumber}-chat
-    {
-      'new-staff-message': handleNewStaffMessage,
-      'new-message': handleNewMessage,
-      'staff-assigned': handleStaffAssigned,
-      'messages-read-by-staff': handleMessagesReadByStaff,
-    }
-  );
+  // Use guest Pusher hook with MULTIPLE channels
+  // According to backend docs: guests subscribe to:
+  // 1. Room channel: for new-staff-message, new-message, staff-assigned
+  // 2. Conversation channel: for messages-read-by-staff (read receipts)
+  const guestPusherChannels = isGuest && guestRoomChannel && guestConversationChannel
+    ? [
+        {
+          name: guestRoomChannel,
+          events: {
+            'new-staff-message': handleNewStaffMessage,
+            'new-message': handleNewMessage,
+            'staff-assigned': handleStaffAssigned,
+          }
+        },
+        {
+          name: guestConversationChannel,
+          events: {
+            'messages-read-by-staff': handleMessagesReadByStaff,
+          }
+        }
+      ]
+    : [];
+
+  console.log('🔧 [CHATWINDOW] Setting up Pusher hook with channels:', {
+    isGuest,
+    channelCount: guestPusherChannels.length,
+    channels: guestPusherChannels.map(ch => ch.name)
+  });
+
+  useGuestPusher(guestPusherChannels);
 
   // FCM foreground message listener for guests
   useEffect(() => {
@@ -695,6 +728,49 @@ const ChatWindow = ({
 
     return () => clearTimeout(timer);
   }, [conversationId, userId, guestSession]);
+
+  // Ensure FCM token is saved for guest on chat open (even if already authenticated)
+  useEffect(() => {
+    if (!isGuest || !guestSession || !conversationId) return;
+
+    const ensureFCMToken = async () => {
+      try {
+        // Check if we already have FCM token saved in session
+        const hasTokenSaved = localStorage.getItem('guest_fcm_token_saved');
+        if (hasTokenSaved === 'true') {
+          console.log('✅ FCM token already saved for guest session');
+          return;
+        }
+
+        console.log('🔔 Ensuring FCM token is saved for guest...');
+        
+        // Request FCM permission (will return existing token if already granted)
+        const { requestFCMPermission } = await import('@/utils/fcm');
+        const fcmToken = await requestFCMPermission();
+        
+        if (fcmToken) {
+          // Save FCM token to backend via session endpoint
+          await api.post(
+            `/chat/${hotelSlug}/messages/room/${roomNumber}/save-fcm-token/`,
+            {
+              session_token: guestSession.getToken(),
+              fcm_token: fcmToken
+            }
+          );
+          console.log('✅ FCM token saved for guest session');
+          localStorage.setItem('guest_fcm_token_saved', 'true');
+        } else {
+          console.warn('⚠️ Could not obtain FCM token for guest');
+        }
+      } catch (error) {
+        console.error('❌ Failed to ensure FCM token for guest:', error);
+      }
+    };
+
+    // Run after a short delay to not block initial render
+    const timer = setTimeout(ensureFCMToken, 2000);
+    return () => clearTimeout(timer);
+  }, [isGuest, guestSession, conversationId, hotelSlug, roomNumber]);
 
   // Infinite scroll
   const handleScroll = () => {
@@ -1092,21 +1168,33 @@ const ChatWindow = ({
           onFocus={async () => {
             if (!conversationId) return;
             
+            console.log('📝 [INPUT FOCUS] User focused on message input');
+            
             try {
               // For staff: use the existing context method
               if (userId) {
                 markConversationRead(conversationId);
-                console.log('✅ Staff marked conversation as read (input focused)');
+                console.log('✅ [INPUT FOCUS] Staff marked conversation as read');
               } 
-              // For guests: use session token
+              // For guests: use session token and mark staff messages as read
               else if (guestSession) {
-                await api.post(`/chat/conversations/${conversationId}/mark-read/`, {
+                console.log('📝 [INPUT FOCUS] Guest focused - marking staff messages as read');
+                const response = await api.post(`/chat/conversations/${conversationId}/mark-read/`, {
                   session_token: guestSession.getToken()
                 });
-                console.log('✅ Guest marked conversation as read (input focused)');
+                console.log('✅ [INPUT FOCUS] Guest marked conversation as read:', response.data);
+                
+                // Optionally update local state to show all staff messages as read
+                setMessages(prevMessages => 
+                  prevMessages.map(msg => 
+                    msg.sender_type === 'staff'
+                      ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_guest: true }
+                      : msg
+                  )
+                );
               }
             } catch (error) {
-              console.error('Failed to mark conversation as read on focus:', error);
+              console.error('❌ [INPUT FOCUS] Failed to mark conversation as read:', error);
             }
           }}
           onKeyDown={(e) => {
