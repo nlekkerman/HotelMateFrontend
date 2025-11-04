@@ -742,36 +742,84 @@ const ChatWindow = ({
   // Handle message deleted event (for guest view)
   const handleMessageDeleted = useCallback((data) => {
     console.log('🗑️ [GUEST PUSHER] Message deleted event received:', data);
+    console.log('🗑️ [GUEST PUSHER] Full event data:', JSON.stringify(data, null, 2));
     const { message_id, hard_delete, message } = data;
     
+    console.log('🗑️ [GUEST PUSHER] Extracted values:', {
+      message_id,
+      hard_delete,
+      message,
+      has_message: !!message
+    });
+    
     if (message_id) {
+      console.log(`🗑️ [GUEST PUSHER] Processing deletion for message ID: ${message_id}`);
+      
       if (hard_delete) {
         // Hard delete - permanently remove message from UI
         console.log(`💥 [GUEST PUSHER] Hard deleting message ${message_id} - removing from UI`);
-        setMessages(prevMessages => prevMessages.filter(msg => msg.id !== message_id));
+        setMessages(prevMessages => {
+          console.log(`💥 [GUEST PUSHER] Before filter - message count: ${prevMessages.length}`);
+          const filtered = prevMessages.filter(msg => msg.id !== message_id);
+          console.log(`💥 [GUEST PUSHER] After filter - message count: ${filtered.length}`);
+          return filtered;
+        });
       } else {
         // Soft delete - update message with deletion text from backend
         console.log(`🗑️ [GUEST PUSHER] Soft deleting message ${message_id} - showing as deleted`);
-        setMessages(prevMessages => 
-          prevMessages.map(msg => 
-            msg.id === message_id 
-              ? { 
-                  ...msg, 
-                  ...message, // Use updated message data from backend with smart text
-                  is_deleted: true,
-                  attachments: [] // Clear attachments to hide images
-                }
-              : msg
-          )
-        );
+        setMessages(prevMessages => {
+          console.log(`🗑️ [GUEST PUSHER] Before update - message count: ${prevMessages.length}`);
+          
+          // Find the message to be deleted
+          const targetMessage = prevMessages.find(msg => msg.id === message_id);
+          if (targetMessage) {
+            console.log(`🗑️ [GUEST PUSHER] Found target message:`, {
+              id: targetMessage.id,
+              has_attachments: !!targetMessage.attachments,
+              attachment_count: targetMessage.attachments?.length,
+              message_text: targetMessage.message?.substring(0, 50)
+            });
+          } else {
+            console.warn(`⚠️ [GUEST PUSHER] Message ${message_id} NOT FOUND in current messages!`);
+          }
+          
+          const updated = prevMessages.map(msg => {
+            if (msg.id === message_id) {
+              const updatedMsg = { 
+                ...msg, 
+                ...message, // Use updated message data from backend with smart text
+                is_deleted: true,
+                attachments: [] // Clear attachments to hide images
+              };
+              console.log(`🗑️ [GUEST PUSHER] Updated message ${message_id}:`, {
+                old_message: msg.message?.substring(0, 50),
+                new_message: updatedMsg.message?.substring(0, 50),
+                old_attachments: msg.attachments?.length || 0,
+                new_attachments: updatedMsg.attachments?.length || 0,
+                is_deleted: updatedMsg.is_deleted
+              });
+              return updatedMsg;
+            }
+            return msg;
+          });
+          
+          console.log(`🗑️ [GUEST PUSHER] After update - message count: ${updated.length}`);
+          console.log(`✅ [GUEST PUSHER] Deletion update complete for message ${message_id}`);
+          return updated;
+        });
       }
       
       // Remove from message statuses
       setMessageStatuses(prev => {
         const newMap = new Map(prev);
         newMap.delete(message_id);
+        console.log(`🗑️ [GUEST PUSHER] Removed message ${message_id} from status map`);
         return newMap;
       });
+      
+      console.log(`✅ [GUEST PUSHER] Message deletion handled successfully for ID: ${message_id}`);
+    } else {
+      console.error('❌ [GUEST PUSHER] No message_id in deletion event!');
     }
   }, []);
 
@@ -802,7 +850,16 @@ const ChatWindow = ({
   console.log('🔧 [CHATWINDOW] Setting up Pusher hook with channels:', {
     isGuest,
     channelCount: guestPusherChannels.length,
-    channels: guestPusherChannels.map(ch => ch.name)
+    channels: guestPusherChannels.map(ch => ch.name),
+    roomChannel: guestRoomChannel,
+    conversationChannel: guestConversationChannel,
+    roomChannelEvents: guestPusherChannels[0]?.events ? Object.keys(guestPusherChannels[0].events) : [],
+    conversationChannelEvents: guestPusherChannels[1]?.events ? Object.keys(guestPusherChannels[1].events) : []
+  });
+
+  console.log('🔧 [GUEST PUSHER] message-deleted handler:', {
+    isDefined: !!handleMessageDeleted,
+    handlerType: typeof handleMessageDeleted
   });
 
   useGuestPusher(guestPusherChannels);
