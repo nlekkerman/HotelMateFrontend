@@ -1129,8 +1129,16 @@ const ChatWindow = ({
           console.log('👤 Staff upload with staff_id:', userId);
         } else if (guestSession) {
           // Guest - add session token (same as text messages)
-          formData.append('session_token', guestSession.getToken());
-          console.log('👤 Guest upload with session token');
+          const sessionToken = guestSession.getToken();
+          formData.append('session_token', sessionToken);
+          console.log('👤 Guest upload with session token:', sessionToken);
+          console.log('👤 Guest session data:', {
+            session_id: guestSession.getSessionId(),
+            room_number: guestSession.getRoomNumber(),
+            has_token: !!sessionToken
+          });
+        } else {
+          console.error('❌ No userId or guestSession - cannot upload file!');
         }
 
         console.log('📤 Uploading to Cloudinary via backend:', {
@@ -1144,31 +1152,37 @@ const ChatWindow = ({
           cloudinaryBase: CLOUDINARY_BASE
         });
 
-        // Get token and hotel info from localStorage (same as api.js interceptor)
-        const storedUser = localStorage.getItem("user");
-        const userData = storedUser ? JSON.parse(storedUser) : null;
-        const token = userData?.token || null;
-        const hotelId = userData?.hotel_id || null;
-        const hotelSlug_header = userData?.hotel_slug || null;
-
-        // Build headers object - MATCH api.js interceptors exactly
+        // Build headers object - ONLY for staff (guests authenticate via session_token in FormData)
         const headers = {};
-        if (token) {
-          headers['Authorization'] = `Token ${token}`;
-        }
-        if (hotelId) {
-          headers['X-Hotel-ID'] = hotelId.toString();
-        }
-        if (hotelSlug_header) {
-          headers['X-Hotel-Slug'] = hotelSlug_header;
+        
+        if (userId) {
+          // Staff authentication - get token and hotel info from localStorage
+          const storedUser = localStorage.getItem("user");
+          const userData = storedUser ? JSON.parse(storedUser) : null;
+          const token = userData?.token || null;
+          const hotelId = userData?.hotel_id || null;
+          const hotelSlug_header = userData?.hotel_slug || null;
+
+          if (token) {
+            headers['Authorization'] = `Token ${token}`;
+          }
+          if (hotelId) {
+            headers['X-Hotel-ID'] = hotelId.toString();
+          }
+          if (hotelSlug_header) {
+            headers['X-Hotel-Slug'] = hotelSlug_header;
+          }
+          
+          console.log('📤 Staff upload headers:', { 
+            hasAuth: !!headers['Authorization'],
+            hotelId: headers['X-Hotel-ID'],
+            hotelSlug: headers['X-Hotel-Slug']
+          });
+        } else {
+          // Guest authentication - NO headers, session_token is in FormData
+          console.log('📤 Guest upload - no auth headers (session_token in FormData)');
         }
         // DON'T set Content-Type - browser sets it with boundary
-
-        console.log('📤 Upload headers:', { 
-          hasAuth: !!headers['Authorization'],
-          hotelId: headers['X-Hotel-ID'],
-          hotelSlug: headers['X-Hotel-Slug']
-        });
 
         // Use fetch for file upload (not axios wrapper)
         response = await fetch(
@@ -1293,8 +1307,11 @@ const ChatWindow = ({
       
       // For file uploads, provide additional context
       if (filesToSend.length > 0) {
-        errorMessage += '\n\nTip: Files are uploaded to Cloudinary. Check file size (max 10MB) and type.';
+        errorMessage += '\n\nTip: Files are uploaded to Cloudinary. Check file size (max 50MB) and type.';
       }
+      
+      console.error('❌ [FILE UPLOAD ERROR] Full error details:', err);
+      console.error('❌ [FILE UPLOAD ERROR] Error response:', err.response?.data);
       
       alert(errorMessage);
       
@@ -1817,12 +1834,13 @@ const ChatWindow = ({
                     <div 
                       className="replied-message d-flex gap-2 p-2 mb-3 rounded"
                       style={{
-                        backgroundColor: isMine ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.05)',
-                        borderLeft: '3px solid #007bff',
+                        backgroundColor: isMine ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 123, 255, 0.15)',
+                        borderLeft: '4px solid #007bff',
                         fontSize: '0.8rem',
                         cursor: 'pointer',
                         maxHeight: '120px',
-                        overflowY: 'auto'
+                        overflowY: 'auto',
+                        border: '1px solid rgba(0, 123, 255, 0.3)'
                       }}
                       onClick={() => {
                         // Scroll to original message if it exists in view
@@ -1840,10 +1858,25 @@ const ChatWindow = ({
                     >
                       <span style={{ fontSize: '1rem', color: '#007bff', flexShrink: 0 }}>↩️</span>
                       <div className="flex-grow-1" style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, color: '#007bff', marginBottom: '6px', fontSize: '0.75rem' }}>
-                          {msg.reply_to_message.sender_type === 'staff' 
-                            ? (msg.reply_to_message.sender_name || msg.reply_to_message.staff_name || 'Staff')
-                            : (msg.reply_to_message.sender_name || msg.reply_to_message.guest_name || 'Guest')}
+                        <div style={{ fontWeight: 600, color: '#333', marginBottom: '6px', fontSize: '0.75rem' }}>
+                          {(() => {
+                            // For staff messages, show staff name
+                            if (msg.reply_to_message.sender_type === 'staff') {
+                              return msg.reply_to_message.sender_name || 
+                                     msg.reply_to_message.staff_name || 
+                                     'Staff';
+                            }
+                            // For guest messages, try to get guest name from original message or backend
+                            // Check if we can find the original message in our messages array
+                            const originalMsg = messages.find(m => m.id === msg.reply_to_message.id);
+                            if (originalMsg?.guest_name) {
+                              return originalMsg.guest_name;
+                            }
+                            // Fall back to backend data
+                            return msg.reply_to_message.sender_name || 
+                                   msg.reply_to_message.guest_name || 
+                                   'Guest';
+                          })()}
                         </div>
                         {/* Show full original message text */}
                         <div 
@@ -1992,24 +2025,28 @@ const ChatWindow = ({
                 </div>
               </div>
               {/* Footer with time, status, reply, and share */}
+              {console.log('🔍 [BUTTON DEBUG] Rendering buttons for message:', msg.id, 'isGuest:', isGuest, 'userId:', userId)}
               <div 
                 className={`small d-flex align-items-center gap-2 ${isMine ? 'justify-content-end' : 'justify-content-start'}`}
                 style={{
-                  width: '100%'
+                  width: '100%',
+                  marginTop: '8px'
                 }}
               >
                 <div
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '8px',
-                    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                    gap: '12px',
+                    backgroundColor: 'rgba(0, 123, 255, 0.08)',
                     backdropFilter: 'blur(4px)',
-                    padding: '6px 10px',
-                    borderRadius: '6px'
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(0, 123, 255, 0.2)'
                   }}
                 >
                 {/* Reply button */}
+                {console.log('✅ [BUTTON DEBUG] Reply button should render here')}
                 <button
                   className="btn btn-link p-0"
                   style={{ 
@@ -2132,12 +2169,13 @@ const ChatWindow = ({
           <div 
             className="reply-preview d-flex align-items-start gap-2 p-3 mb-2" 
             style={{ 
-              backgroundColor: '#f0f8ff', 
-              borderLeft: '3px solid #007bff',
-              borderRadius: '4px',
-              boxShadow: '0 2px 4px rgba(0,123,255,0.1)',
+              backgroundColor: '#e3f2fd', 
+              borderLeft: '4px solid #007bff',
+              borderRadius: '8px',
+              boxShadow: '0 2px 8px rgba(0,123,255,0.2)',
               maxHeight: '150px',
-              overflowY: 'auto'
+              overflowY: 'auto',
+              border: '1px solid rgba(0, 123, 255, 0.3)'
             }}
           >
             <span style={{ fontSize: '1.2rem', color: '#007bff', flexShrink: 0, marginTop: '2px' }}>↩️</span>
