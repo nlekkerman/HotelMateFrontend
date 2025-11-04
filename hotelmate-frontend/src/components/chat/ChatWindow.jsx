@@ -147,7 +147,12 @@ const ChatWindow = ({
   
   // Debug: Log messages state changes
   useEffect(() => {
-    console.log('💬 [MESSAGES STATE] Current messages:', messages.length, messages.map(m => ({id: m.id, msg: m.message?.substring(0, 20)})));
+    console.log('💬 [MESSAGES STATE] Current messages:', messages.length, messages.map(m => ({
+      id: m.id, 
+      msg: m.message?.substring(0, 20),
+      reply_to: m.reply_to,
+      has_reply_to_message: !!m.reply_to_message
+    })));
   }, [messages]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -393,7 +398,19 @@ const ChatWindow = ({
       
       // Listen for new messages
       channel.bind("new-message", (message) => {
-        console.log(`📨 [PUSHER] New message received:`, { id: message.id, sender: message.sender_type, text: message.message?.substring(0, 30) });
+        console.log(`📨 [PUSHER] New message received:`, { 
+          id: message.id, 
+          sender: message.sender_type, 
+          text: message.message?.substring(0, 30),
+          reply_to: message.reply_to,
+          reply_to_message: message.reply_to_message 
+        });
+        
+        // 🔍 DEBUG: Check if reply data is present
+        if (message.reply_to) {
+          console.log('🔍 [PUSHER REPLY] Message has reply_to:', message.reply_to);
+          console.log('🔍 [PUSHER REPLY] reply_to_message:', message.reply_to_message);
+        }
         
         setMessages((prev) => {
           // Check if this message already exists by ID
@@ -560,8 +577,16 @@ const ChatWindow = ({
       id: data.id,
       message: data.message,
       sender_type: data.sender_type,
-      sender_id: data.sender_id
+      sender_id: data.sender_id,
+      reply_to: data.reply_to,
+      reply_to_message: data.reply_to_message
     });
+    
+    // 🔍 DEBUG: Check reply data for guests
+    if (data.reply_to) {
+      console.log('🔍 [GUEST PUSHER REPLY] Staff replied to message:', data.reply_to);
+      console.log('🔍 [GUEST PUSHER REPLY] reply_to_message:', data.reply_to_message);
+    }
     
     // Add message to list (check for duplicates)
     setMessages(prev => {
@@ -1095,7 +1120,6 @@ const ChatWindow = ({
         // Add reply reference if replying
         if (replyToMessage) {
           formData.append('reply_to', replyToMessage.id);
-          console.log('📤 Replying to message:', replyToMessage.id);
         }
         
         // Add authentication - SAME AS TEXT MESSAGES
@@ -1199,7 +1223,6 @@ const ChatWindow = ({
         // Add reply reference if replying
         if (replyToMessage) {
           payload.reply_to = replyToMessage.id;
-          console.log('📤 Replying to message:', replyToMessage.id);
         }
 
         response = await api.post(
@@ -1208,22 +1231,8 @@ const ChatWindow = ({
         );
       }
 
-      console.log('✅ Message sent successfully - RAW response:', response.data);
-      
       // Extract the actual message object
       const messageData = response.data?.message || response.data;
-      
-      console.log('✅ Extracted message data:', {
-        messageId: messageData?.id,
-        sender_type: messageData?.sender_type,
-        sender_id: messageData?.staff || messageData?.guest_id,
-        message: messageData?.message,
-        has_attachments: messageData?.has_attachments,
-        attachments_count: messageData?.attachments?.length,
-        staff: messageData?.staff,
-        staff_name: messageData?.staff_name,
-        guest_name: messageData?.guest_name
-      });
       
       // 🔍 DEBUG: Check if backend returned wrong sender_type
       if (userId && messageData?.sender_type !== 'staff') {
@@ -1579,9 +1588,6 @@ const ChatWindow = ({
           </div>
         )}
 
-        {/* Debug: Log before rendering */}
-        {console.log('🎨 [RENDER] About to render messages:', messages.length)}
-        
         {messages.map((msg) => {
           // Handle system messages differently
           if (msg.is_system_message || msg.sender_type === 'system') {
@@ -1835,8 +1841,9 @@ const ChatWindow = ({
                       <span style={{ fontSize: '1rem', color: '#007bff', flexShrink: 0 }}>↩️</span>
                       <div className="flex-grow-1" style={{ minWidth: 0 }}>
                         <div style={{ fontWeight: 600, color: '#007bff', marginBottom: '6px', fontSize: '0.75rem' }}>
-                          {msg.reply_to_message.sender_name || 
-                           (msg.reply_to_message.sender_type === 'staff' ? 'Staff' : 'Guest')}
+                          {msg.reply_to_message.sender_type === 'staff' 
+                            ? (msg.reply_to_message.sender_name || msg.reply_to_message.staff_name || 'Staff')
+                            : (msg.reply_to_message.sender_name || msg.reply_to_message.guest_name || 'Guest')}
                         </div>
                         {/* Show full original message text */}
                         <div 
@@ -2006,17 +2013,29 @@ const ChatWindow = ({
                 <button
                   className="btn btn-link p-0"
                   style={{ 
-                    fontSize: '0.75rem',
+                    fontSize: '0.8rem',
                     textDecoration: 'none',
-                    color: 'inherit',
-                    opacity: 0.5,
+                    color: '#007bff',
+                    fontWeight: '500',
                     padding: '0',
                     border: 'none',
-                    background: 'none'
+                    background: 'none',
+                    cursor: 'pointer'
                   }}
                   onClick={() => {
-                    console.log('Reply to message:', msg.id);
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.log('� [REPLY BUTTON CLICKED]');
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.log('Setting replyingTo:', {
+                      id: msg.id,
+                      message: msg.message?.substring(0, 50) + '...',
+                      sender_type: msg.sender_type,
+                      sender_name: msg.sender_type === 'staff' ? msg.staff_name : msg.guest_name
+                    });
                     setReplyingTo(msg);
+                    console.log('✅ replyingTo state updated - reply preview should appear');
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    
                     // Focus on message input
                     if (messageInputRef.current) {
                       messageInputRef.current.focus();
