@@ -1316,13 +1316,17 @@ const ChatWindow = ({
                   )
                 );
                 
-                // Update message statuses map for all guest messages
+                // Update message statuses map for all guest messages - use functional update
                 setMessageStatuses(prev => {
                   const newMap = new Map(prev);
-                  messages.forEach(msg => {
-                    if (msg.sender_type === 'guest') {
-                      newMap.set(msg.id, 'read');
-                    }
+                  // Get fresh messages from state using the setter callback
+                  setMessages(currentMessages => {
+                    currentMessages.forEach(msg => {
+                      if (msg.sender_type === 'guest') {
+                        newMap.set(msg.id, 'read');
+                      }
+                    });
+                    return currentMessages; // Don't actually modify, just read
                   });
                   return newMap;
                 });
