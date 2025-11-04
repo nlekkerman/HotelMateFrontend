@@ -340,19 +340,26 @@ const ChatWindow = ({
       guestSession?.saveToLocalStorage({ current_staff_handler: data.staff_info });
     }
     
-    // Show notification if tab not focused
+    // Show notification if tab not focused using Service Worker
     if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-      const staffName = data.staff_info?.name || 'Hotel Staff';
-      const notification = new Notification(`Message from ${staffName}`, {
-        body: data.message?.substring(0, 100) || '',
-        icon: data.staff_info?.profile_image || '/hotel-icon.png',
-        tag: `chat-${data.id}`,
+      const staffName = data.staff_info?.name || data.staff_name || 'Hotel Staff';
+      const messageText = data.message?.substring(0, 100) || '';
+      
+      // Use Service Worker Registration to show notification
+      navigator.serviceWorker.ready.then(registration => {
+        registration.showNotification(`Message from ${staffName}`, {
+          body: messageText,
+          icon: data.staff_info?.profile_image || '/hotel-icon.png',
+          tag: `chat-${data.id}`,
+          badge: '/hotel-icon.png',
+          data: {
+            url: window.location.href,
+            messageId: data.id
+          }
+        });
+      }).catch(err => {
+        console.warn('⚠️ Could not show notification:', err);
       });
-
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
-      };
     }
     
     scrollToBottom();
@@ -402,35 +409,48 @@ const ChatWindow = ({
 
   // FCM foreground message listener for guests
   useEffect(() => {
-    if (!isGuest) return;
+    if (!isGuest) {
+      console.log('🔔 Skipping FCM setup - not a guest');
+      return;
+    }
 
     console.log('🔔 Setting up FCM foreground message listener for guest');
     
-    // Listen for foreground FCM messages (when tab is open)
-    const unsubscribe = onMessage(messaging, (payload) => {
-      console.log('🔔 FCM foreground message received:', payload);
-      
-      // Extract message data
-      const data = payload.data;
-      if (data && data.message_id) {
-        // Show toast notification
-        const staffName = data.staff_name || 'Hotel Staff';
-        const messageText = data.message || 'New message';
+    try {
+      // Listen for foreground FCM messages (when tab is open)
+      const unsubscribe = onMessage(messaging, (payload) => {
+        console.log('🔔 FCM foreground message received:', payload);
+        console.log('🔔 FCM payload.data:', payload.data);
+        console.log('🔔 FCM payload.notification:', payload.notification);
         
-        toast.info(`${staffName}: ${messageText.substring(0, 50)}${messageText.length > 50 ? '...' : ''}`, {
-          position: "top-right",
-          autoClose: 5000,
-        });
+        // Extract message data
+        const data = payload.data;
+        if (data && data.message_id) {
+          // Show toast notification
+          const staffName = data.staff_name || 'Hotel Staff';
+          const messageText = data.message || 'New message';
+          
+          toast.info(`${staffName}: ${messageText.substring(0, 50)}${messageText.length > 50 ? '...' : ''}`, {
+            position: "top-right",
+            autoClose: 5000,
+          });
 
-        // The Pusher event will handle adding the message to the UI
-        // This is just for the notification
-      }
-    });
+          console.log('✅ Toast notification shown for FCM message');
+          
+          // The Pusher event will handle adding the message to the UI
+          // This is just for the notification
+        } else {
+          console.warn('⚠️ FCM message received but no message_id in data');
+        }
+      });
 
-    return () => {
-      console.log('🔔 Cleaning up FCM listener');
-      unsubscribe();
-    };
+      return () => {
+        console.log('🔔 Cleaning up FCM listener');
+        unsubscribe();
+      };
+    } catch (error) {
+      console.error('❌ Error setting up FCM listener:', error);
+    }
   }, [isGuest]);
 
   // Set up intersection observer for message seen status (for staff only)
