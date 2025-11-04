@@ -38,31 +38,73 @@ messaging.onBackgroundMessage((payload) => {
 // Handle notification clicks
 self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Notification clicked:', event.notification.tag);
+  console.log('[SW] Notification data:', event.notification.data);
   event.notification.close();
 
   // Handle navigation based on notification type
   const notificationData = event.notification.data;
   let urlToOpen = '/';
 
-  if (notificationData.type === 'room_service' || notificationData.type === 'room_service_order') {
+  if (notificationData.type === 'new_chat_message') {
+    // Chat message notification (both guest→staff and staff→guest)
+    const hotelSlug = notificationData.hotel_slug;
+    const conversationId = notificationData.conversation_id;
+    const roomNumber = notificationData.room_number;
+    const senderType = notificationData.sender_type;
+    
+    if (senderType === 'guest') {
+      // Guest sent message → Staff receives notification
+      // Navigate staff to: /chat/{hotel}/conversations/{id}/messages
+      if (conversationId && hotelSlug) {
+        urlToOpen = `/chat/${hotelSlug}/conversations/${conversationId}/messages`;
+        console.log('[SW] Opening staff chat (guest sent message):', urlToOpen);
+      }
+    } else if (senderType === 'staff') {
+      // Staff sent message → Guest receives notification
+      // Navigate guest to: /chat/{hotel}/conversations/{id}/messages/send
+      if (conversationId && hotelSlug && roomNumber) {
+        urlToOpen = `/chat/${hotelSlug}/conversations/${conversationId}/messages/send`;
+        console.log('[SW] Opening guest chat (staff sent message):', urlToOpen);
+      }
+    } else {
+      console.warn('[SW] Unknown sender_type:', senderType);
+    }
+    
+    if (!conversationId || !hotelSlug) {
+      console.warn('[SW] Missing conversation data for chat notification:', notificationData);
+    }
+  } else if (notificationData.type === 'room_service' || notificationData.type === 'room_service_order') {
     urlToOpen = '/room-service';
   } else if (notificationData.type === 'breakfast') {
     urlToOpen = '/breakfast';
   } else if (notificationData.type === 'stock_movement') {
     urlToOpen = '/stock-tracker';
+  } else {
+    console.log('[SW] Unknown notification type:', notificationData.type);
   }
 
   // Open or focus the app window
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Check if there's already a window open
+      console.log('[SW] Found', clientList.length, 'open windows');
+      
+      // Try to find an existing window with the target URL
       for (const client of clientList) {
-        if (client.url === urlToOpen && 'focus' in client) {
+        if (client.url.includes(urlToOpen) && 'focus' in client) {
+          console.log('[SW] Found matching window, focusing:', client.url);
           return client.focus();
         }
       }
+      
+      // If no matching window, try to focus any open window and navigate
+      if (clientList.length > 0 && clientList[0].navigate) {
+        console.log('[SW] Navigating existing window to:', urlToOpen);
+        return clientList[0].navigate(urlToOpen).then(client => client.focus());
+      }
+      
       // If no window is open, open a new one
       if (clients.openWindow) {
+        console.log('[SW] Opening new window:', urlToOpen);
         return clients.openWindow(urlToOpen);
       }
     })

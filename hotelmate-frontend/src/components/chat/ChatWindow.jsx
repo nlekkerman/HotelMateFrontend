@@ -238,6 +238,12 @@ const ChatWindow = ({
   // Pusher real-time updates - reuse global instance for staff, separate for guests
   useEffect(() => {
     if (!conversationId || !hotelSlug) return;
+    
+    // IMPORTANT: Skip staff Pusher if this is a guest (guests use useGuestPusher hook)
+    if (isGuest) {
+      console.log('⏭️ Skipping staff Pusher - using guest Pusher hook instead');
+      return;
+    }
 
     // For authenticated staff, use the global Pusher instance from ChatContext
     if (userId && pusherInstance) {
@@ -335,7 +341,7 @@ const ChatWindow = ({
         }
       };
     }
-  }, [hotelSlug, conversationId, pusherInstance, userId]);
+  }, [hotelSlug, conversationId, pusherInstance, userId, isGuest]);
 
   // Guest Pusher setup - use useCallback to create stable event handlers
   const handleNewStaffMessage = useCallback((data) => {
