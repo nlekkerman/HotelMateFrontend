@@ -129,6 +129,39 @@ const ChatWindow = ({
 
   // Remove the unnecessary fetchConversationDetails function since we have data from props
 
+  // Function to add "staff joined" markers based on staff changes in message history
+  const addStaffJoinedMarkers = useCallback((messages) => {
+    if (!messages || messages.length === 0) return messages;
+    
+    let previousStaff = null;
+    const result = [];
+    
+    messages.forEach((message) => {
+      // Check if this is a staff message with staff_info
+      if (message.sender_type === 'staff' && message.staff_info) {
+        const currentStaffName = message.staff_info.name;
+        
+        // If staff changed from previous message, insert "joined" marker
+        if (previousStaff && previousStaff !== currentStaffName) {
+          result.push({
+            id: `system-join-${message.id}`,
+            message: `${message.staff_info.name} (${message.staff_info.role}) joined the chat`,
+            sender_type: 'system',
+            is_system_message: true,
+            created_at: message.created_at,
+            timestamp: message.timestamp
+          });
+        }
+        
+        previousStaff = currentStaffName;
+      }
+      
+      result.push(message);
+    });
+    
+    return result;
+  }, []);
+
   // Fetch messages
   const fetchMessages = async (beforeId = null) => {
     if (!hasMore && beforeId) return;
@@ -150,7 +183,11 @@ const ChatWindow = ({
         const scrollOffsetFromBottom =
           container.scrollHeight - container.scrollTop;
 
-        setMessages((prev) => [...newMessages, ...prev]);
+        setMessages((prev) => {
+          // Combine old and new messages, then add markers
+          const combined = [...newMessages, ...prev];
+          return addStaffJoinedMarkers(combined);
+        });
 
         // Wait for DOM to render before restoring scroll
         requestAnimationFrame(() => {
@@ -158,8 +195,9 @@ const ChatWindow = ({
           setLoadingMore(false);
         });
       } else {
-        // Initial load or switching conversation: replace messages
-        setMessages(newMessages);
+        // Initial load or switching conversation: replace messages with markers
+        const messagesWithMarkers = addStaffJoinedMarkers(newMessages);
+        setMessages(messagesWithMarkers);
         setLoading(false);
         scrollToBottom();
         
