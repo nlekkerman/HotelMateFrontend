@@ -17,7 +17,7 @@ import { RoomServiceNotificationProvider } from "@/context/RoomServiceNotificati
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate, matchPath } from "react-router-dom";
 import MobileNavbar from "@/components/layout/MobileNavbar";
 import DesktopSidebarNavbar from "@/components/layout/DesktopSidebarNavbar";
 import NetworkHandler from "@/components/offline/NetworkHandler";
@@ -99,6 +99,33 @@ const defaultAudioSettings = {
   bgMusic: true,
   effects: true,
 };
+
+// 🔓 Guest routes that don't require staff authentication (PIN-based auth instead)
+const GUEST_ROUTE_PATTERNS = [
+  // PIN Validation Routes
+  '/:hotelIdentifier/room/:roomNumber/validate-pin',
+  '/chat/:hotelSlug/messages/room/:room_number/validate-chat-pin',
+  '/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin',
+  
+  // Protected Guest Routes (use RequirePin/RequireChatPin/RequireDinnerPin)
+  '/room_services/:hotelIdentifier/room/:roomNumber/menu',
+  '/room_services/:hotelIdentifier/room/:roomNumber/breakfast',
+  '/chat/:hotelSlug/conversations/:conversationId/messages/send',
+  '/chat/:hotelSlug/conversations/:conversationId/messages',
+  '/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber',
+  '/guest-booking/:hotelSlug/restaurant/:restaurantSlug',
+  
+  // Good to Know (Public)
+  '/good_to_know/:hotel_slug/:slug',
+];
+
+// Helper function to check if current path is a guest route
+const isGuestRoute = (pathname) => {
+  return GUEST_ROUTE_PATTERNS.some(pattern => 
+    matchPath(pattern, pathname)
+  );
+};
+
 // 🔁 Inner layout that uses `useLocation()` safely
 function AppLayout({ collapsed, setCollapsed, isMobile }) {
   const [audioSettings, setAudioSettings] = useState(defaultAudioSettings);
@@ -110,6 +137,10 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                      location.pathname === "/forgot-password" ||
                      location.pathname === "/registration-success" ||
                      location.pathname.startsWith("/reset-password");
+  
+  // Check if current page is a guest route (should also hide sidebar/navbar)
+  const isGuestPage = isGuestRoute(location.pathname);
+  
   const { user } = useAuth();
 
   const [selectedRoom, setSelectedRoom] = useState(null);
@@ -118,11 +149,22 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
     setSelectedRoom(roomNumber);
   };
 
-  // Redirect home to login if not authenticated
+  // Redirect home to login if not authenticated AND not on a guest route
   const HomeRedirect = () => {
-    if (!user) {
+    // Check if user is coming from a guest route (might have been redirected here)
+    const fromGuestRoute = location.state?.from && isGuestRoute(location.state.from.pathname);
+    
+    if (!user && !fromGuestRoute) {
+      console.log('🔒 HomeRedirect: No user and not from guest route, redirecting to login');
       return <Navigate to="/login" replace />;
     }
+    
+    // If coming from guest route but no user, something is wrong - go to login
+    if (!user && fromGuestRoute) {
+      console.warn('⚠️ HomeRedirect: Coming from guest route but no user session');
+      return <Navigate to="/login" replace />;
+    }
+    
     return <Home />;
   };
 
@@ -140,7 +182,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
     return <Register />;
   };
 
-  const sidebar = !isMobile && !isClockInPage && !isAuthPage && (
+  const sidebar = !isMobile && !isClockInPage && !isAuthPage && !isGuestPage && (
     <div className={`sidebar-wrapper ${collapsed ? "collapsed" : ""}`}>
       <DesktopSidebarNavbar
         collapsed={collapsed}
@@ -155,12 +197,12 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
 
   return (
     <>
-      {isMobile && !isClockInPage && !isAuthPage && <MobileNavbar />}
+      {isMobile && !isClockInPage && !isAuthPage && !isGuestPage && <MobileNavbar />}
       <div className="d-flex min-vh-100 min-vw-100 app-container">
         {sidebar}
         <div className={layoutClass}>
           <div className="main-content-area d-flex flex-column">
-            {!isClockInPage && !isAuthPage && <LogoBanner />}
+            {!isClockInPage && !isAuthPage && !isGuestPage && <LogoBanner />}
             <Routes>
               {/* Public Routes - Always Accessible */}
               <Route path="/login" element={<Login />} />

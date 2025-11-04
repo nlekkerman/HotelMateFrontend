@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import api from "@/services/api";
 import { FaPaperPlane, FaTimes, FaArrowLeft, FaAngleDoubleDown, FaCheck, FaCheckDouble, FaSmile } from "react-icons/fa";
@@ -271,15 +271,17 @@ const ChatWindow = ({
     }
   }, [hotelSlug, conversationId, pusherInstance, userId]);
 
-  // Guest Pusher setup - separate hook for guests
-  const handleNewStaffMessage = (data) => {
+  // Guest Pusher setup - use useCallback to create stable event handlers
+  const handleNewStaffMessage = useCallback((data) => {
     console.log('📨 New staff message received by guest:', data);
     
     // Add message to list (check for duplicates)
     setMessages(prev => {
       if (prev.find(m => m.id === data.id)) {
+        console.log('⚠️ Duplicate message detected, skipping:', data.id);
         return prev;
       }
+      console.log('✅ Adding new staff message to UI:', data.id);
       return [...prev, data];
     });
     
@@ -305,21 +307,23 @@ const ChatWindow = ({
     }
     
     scrollToBottom();
-  };
+  }, [guestSession]); // Only recreate if guestSession changes
 
-  const handleNewMessage = (data) => {
-    console.log('💬 New message received by guest:', data);
+  const handleNewMessage = useCallback((data) => {
+    console.log('💬 New message received by guest (general event):', data);
     
     // Add message if not already present
     setMessages(prev => {
       if (prev.find(m => m.id === data.id)) {
+        console.log('⚠️ Duplicate message detected, skipping:', data.id);
         return prev;
       }
+      console.log('✅ Adding new message to UI:', data.id);
       return [...prev, data];
     });
     
     scrollToBottom();
-  };
+  }, []); // No dependencies needed
 
   // Use guest Pusher hook if this is a guest session
   useGuestPusher(
