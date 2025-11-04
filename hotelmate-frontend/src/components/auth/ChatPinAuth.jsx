@@ -81,37 +81,34 @@ export default function ChatPinAuth() {
     setSubmitting(true);
 
     try {
-      // Initialize new session with PIN using the backend API
-      const sessionData = await guestSession.initialize(pin);
+      // Request FCM permission first (optional - won't block if fails)
+      let fcmToken = null;
+      try {
+        fcmToken = await requestFCMPermission();
+        console.log('✅ FCM token obtained:', fcmToken ? 'Yes' : 'No');
+      } catch (fcmError) {
+        console.warn('⚠️ FCM permission denied or failed:', fcmError);
+      }
       
-      console.log('✅ Guest session initialized:', sessionData);
+      // Initialize new session with PIN and FCM token
+      // Backend now handles FCM token saving in the same request
+      const sessionData = await guestSession.initialize(pin, fcmToken);
+      
+      console.log('✅ Guest session initialized:', {
+        session_id: sessionData.session_id,
+        room_number: sessionData.room_number,
+        conversation_id: sessionData.conversation_id,
+        pusher_channel: sessionData.pusher_channel
+      });
       
       isNavigatingRef.current = true;
       
       // Set the flag that RequireChatPin checks
       sessionStorage.setItem(`chat_pin_ok_${room_number}`, 'true');
       
-      // Request FCM permission and save token for chat notifications
-      try {
-        const fcmToken = await requestFCMPermission();
-        
-        if (fcmToken) {
-          // Save FCM token to backend for guest chat notifications
-          await api.post(
-            `/chat/${hotelSlug}/room/${room_number}/save-fcm-token/`,
-            { fcm_token: fcmToken }
-          );
-          console.log('✅ FCM token saved successfully for guest chat');
-        }
-      } catch (fcmError) {
-        // FCM is optional - don't block navigation if it fails
-        console.warn('⚠️ FCM permission denied or failed:', fcmError);
-      }
-      
-      // Navigate to chat with conversation ID
-      const conversationId = sessionData.conversation_id;
+      // Navigate to chat with conversation ID and room_number in state
       navigate(
-        `/chat/${hotelSlug}/conversations/${conversationId}/messages/send`,
+        `/chat/${hotelSlug}/conversations/${sessionData.conversation_id}/messages/send`,
         { state: { room_number, isGuest: true }, replace: true }
       );
     } catch (err) {

@@ -10,18 +10,21 @@ export class GuestChatSession {
 
   /**
    * Initialize new session with PIN
+   * Uses the new backend endpoint that returns complete session_data
    */
-  async initialize(pin) {
+  async initialize(pin, fcmToken = null) {
     try {
+      const payload = { pin };
+      if (fcmToken) {
+        payload.fcm_token = fcmToken;
+      }
+
       const response = await fetch(
-        `${this.apiBase}/${this.hotelSlug}/guest-session/room/${this.roomNumber}/initialize/`,
+        `${this.apiBase}/${this.hotelSlug}/room/${this.roomNumber}/validate-chat-pin/`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            pin,
-            session_token: this.sessionData?.session_token // Send existing token if available
-          })
+          body: JSON.stringify(payload)
         }
       );
 
@@ -31,8 +34,25 @@ export class GuestChatSession {
       }
 
       const data = await response.json();
-      this.saveToLocalStorage(data);
-      return data;
+      
+      // Backend now returns: { valid: true/false, session_data: {...}, fcm_token_saved: true/false }
+      if (!data.valid) {
+        throw new Error('Invalid PIN');
+      }
+
+      // Extract and save the session_data
+      const sessionData = data.session_data;
+      this.saveToLocalStorage(sessionData);
+      
+      console.log('✅ Backend session data:', {
+        session_id: sessionData.session_id,
+        room_number: sessionData.room_number,
+        conversation_id: sessionData.conversation_id,
+        pusher_channel: sessionData.pusher_channel,
+        fcm_saved: data.fcm_token_saved
+      });
+      
+      return sessionData;
     } catch (error) {
       console.error('Session initialization failed:', error);
       throw error;
@@ -129,6 +149,10 @@ export class GuestChatSession {
   }
 
   // Getters
+  getSessionId() {
+    return this.sessionData?.session_id;
+  }
+
   getToken() {
     return this.sessionData?.session_token;
   }
@@ -151,5 +175,9 @@ export class GuestChatSession {
 
   getRoomNumber() {
     return this.sessionData?.room_number || this.roomNumber;
+  }
+  
+  getGuestName() {
+    return this.sessionData?.guest_name;
   }
 }

@@ -29,7 +29,6 @@ const ChatWindow = ({
   const location = useLocation();
   const hotelSlug = propHotelSlug || paramHotelSlug;
   const conversationId = propConversationId || paramConversationIdFromURL;
-  const roomNumber = propRoomNumber || location.state?.room_number;
   
   const storedUser = localStorage.getItem("user");
   const userId =
@@ -37,6 +36,23 @@ const ChatWindow = ({
   
   // Guest is someone WITHOUT a userId (not authenticated as staff)
   const isGuest = !userId;
+  
+  // Get room number from multiple sources
+  let roomNumber = propRoomNumber || location.state?.room_number;
+  
+  // If no room number but this is a guest, try to get it from stored session
+  if (!roomNumber && isGuest) {
+    try {
+      const storedSession = localStorage.getItem('hotelmate_guest_chat_session');
+      if (storedSession) {
+        const session = JSON.parse(storedSession);
+        roomNumber = session.room_number;
+        console.log('🔍 Retrieved room number from stored session:', roomNumber);
+      }
+    } catch (err) {
+      console.error('Failed to parse stored session:', err);
+    }
+  }
   
   console.log('🔍 [INIT] ChatWindow initialized:', {
     isGuest,
@@ -188,6 +204,17 @@ const ChatWindow = ({
       console.log('🔧 Initializing guest session:', { hotelSlug, roomNumber });
       const session = new GuestChatSession(hotelSlug, roomNumber);
       setGuestSession(session);
+      
+      // Log complete session data for debugging
+      console.log('📊 Guest Session Data:', {
+        session_id: session.getSessionId(),
+        room_number: session.getRoomNumber(),
+        hotel_slug: session.getHotelSlug(),
+        conversation_id: session.getConversationId(),
+        pusher_channel: session.getPusherChannel(),
+        guest_name: session.getGuestName(),
+        has_token: !!session.getToken()
+      });
       
       // Load saved staff handler if exists
       const savedStaff = session.getCurrentStaffHandler();

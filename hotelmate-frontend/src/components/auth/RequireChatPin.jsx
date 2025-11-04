@@ -1,9 +1,10 @@
 import { Navigate, useLocation, useParams } from "react-router-dom";
+import { cloneElement } from "react";
 
 export default function RequireChatPin({ children }) {
   const { hotelSlug, room_number: paramRoom, conversationId } = useParams();
   const location = useLocation();
-  const room_number = paramRoom || location.state?.room_number;
+  let room_number = paramRoom || location.state?.room_number;
 
   // For guest chat, we might not have room_number in URL but in state
   // If we have a conversationId, we're in a valid chat session
@@ -32,7 +33,7 @@ export default function RequireChatPin({ children }) {
           
           if (pinOk === "true") {
             console.log('✅ RequireChatPin: Valid session found for room', sessionRoomNumber);
-            return children;
+            room_number = sessionRoomNumber; // Set room_number so we can pass it down
           }
         }
       } catch (e) {
@@ -40,12 +41,14 @@ export default function RequireChatPin({ children }) {
       }
     }
     
-    // No valid session found, redirect back to validate
-    console.warn('⚠️ RequireChatPin: No valid PIN session found');
-    return <Navigate to={`/chat/${hotelSlug}/messages/room/unknown/validate-chat-pin`} replace />;
+    if (!room_number) {
+      // No valid session found, redirect back to validate
+      console.warn('⚠️ RequireChatPin: No valid PIN session found');
+      return <Navigate to={`/chat/${hotelSlug}/messages/room/unknown/validate-chat-pin`} replace />;
+    }
   }
 
-  // We have room_number, check the PIN
+  // We should have room_number by now, check the PIN
   const pinOk = sessionStorage.getItem(`chat_pin_ok_${room_number}`);
 
   if (pinOk !== "true") {
@@ -59,6 +62,12 @@ export default function RequireChatPin({ children }) {
   }
 
   console.log('✅ RequireChatPin: Access granted for room', room_number);
+  
+  // Pass room_number as prop to children so ChatWindow can access it
+  if (children && children.type) {
+    return cloneElement(children, { roomNumber: room_number });
+  }
+  
   return children;
 }
 

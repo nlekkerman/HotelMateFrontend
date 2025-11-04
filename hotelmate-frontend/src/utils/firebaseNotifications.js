@@ -7,26 +7,44 @@ export async function requestFirebaseNotificationPermission() {
   const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
   
   try {
+    console.log('🔔 Requesting notification permission for staff...');
+    
+    // First, request notification permission
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission();
+      console.log('🔔 Notification permission:', permission);
+      
+      if (permission !== 'granted') {
+        console.warn('⚠️ Notification permission denied');
+        return null;
+      }
+    }
+    
+    // Then get FCM token
+    console.log('🔔 Getting FCM token...');
     const currentToken = await getToken(messaging, { vapidKey });
+    
     if (currentToken) {
-      console.log("FCM Token:", currentToken);
+      console.log("✅ FCM Token obtained:", currentToken.substring(0, 20) + '...');
 
-      // Try to save FCM token to backend (don't fail if endpoint doesn't exist)
+      // Save FCM token to backend
       try {
         await api.post("staff/save-fcm-token/", { fcm_token: currentToken });
-        console.log("✅ FCM token saved to backend");
+        console.log("✅ FCM token saved to backend for staff");
       } catch (backendError) {
-        console.warn("⚠️ Could not save FCM token to backend (endpoint may not exist):", backendError.response?.data || backendError.message);
-        // Don't throw - just log the warning
+        console.error("❌ Could not save FCM token to backend:", backendError.response?.data || backendError.message);
+        // Don't throw - just log the error
       }
       
       return currentToken;
     } else {
-      console.warn("No registration token available.");
+      console.warn("⚠️ No registration token available.");
+      return null;
     }
   } catch (err) {
-    console.error("An error occurred while retrieving token. ", err);
+    console.error("❌ Error retrieving FCM token:", err);
     // Don't throw - allow login to continue
+    return null;
   }
 }
 
