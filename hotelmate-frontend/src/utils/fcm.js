@@ -27,8 +27,11 @@ export const requestFCMPermission = async () => {
       window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.')
         ? '/firebase-messaging-sw.js'
         : 'https://hotelsmates.com/firebase-messaging-sw.js';
+    console.log('🚀 Attempting to register Firebase SW at:', swPath);
     const registration = await navigator.serviceWorker.register(swPath);
     console.log('✅ Service worker registered:', registration);
+    console.log('✅ Service worker scriptURL:', registration.active?.scriptURL);
+    console.log('✅ Service worker scope:', registration.scope);
 
     // Request permission
     const permission = await Notification.requestPermission();

@@ -48,11 +48,21 @@ export function useGuestPusher(channelName, eventHandlers) {
     });
 
     // Bind event handlers using stable references
+    console.log('🎧 Binding event handlers:', Object.keys(eventHandlersRef.current));
     Object.entries(eventHandlersRef.current).forEach(([event, handler]) => {
+      console.log(`🎧 Binding event listener for: "${event}"`);
       channelRef.current.bind(event, (data) => {
-        console.log(`📨 Received event "${event}":`, data);
+        console.log(`📨 [PUSHER EVENT] Received "${event}" on channel "${channelName}":`, data);
+        console.log('📨 [PUSHER EVENT] Event data type:', typeof data);
+        console.log('📨 [PUSHER EVENT] Event data keys:', Object.keys(data || {}));
+        
         // Call the latest version of the handler
-        eventHandlersRef.current[event]?.(data);
+        if (eventHandlersRef.current[event]) {
+          console.log(`✅ [PUSHER EVENT] Calling handler for "${event}"`);
+          eventHandlersRef.current[event](data);
+        } else {
+          console.warn(`⚠️ [PUSHER EVENT] No handler found for "${event}"`);
+        }
       });
     });
 

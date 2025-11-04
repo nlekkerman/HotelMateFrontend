@@ -44,6 +44,19 @@ const ChatWindow = ({
     ? `${hotelSlug}-room-${roomNumber}-chat` 
     : null;
   
+  // Debug log for guest Pusher channel
+  useEffect(() => {
+    if (isGuest) {
+      console.log('🔍 Guest Pusher Channel Debug:', {
+        isGuest,
+        hotelSlug,
+        roomNumber,
+        guestPusherChannel,
+        channelWillBeUsed: !!guestPusherChannel
+      });
+    }
+  }, [isGuest, hotelSlug, roomNumber, guestPusherChannel]);
+  
   // Use conversation data from props (already fetched in ChatHomePage)
   const [conversationDetails, setConversationDetails] = useState(propConversationData || null);
   const {
@@ -284,15 +297,25 @@ const ChatWindow = ({
   // Guest Pusher setup - use useCallback to create stable event handlers
   const handleNewStaffMessage = useCallback((data) => {
     console.log('📨 New staff message received by guest:', data);
+    console.log('📨 Message details:', {
+      id: data.id,
+      message: data.message,
+      sender_type: data.sender_type,
+      sender_id: data.sender_id
+    });
     
     // Add message to list (check for duplicates)
     setMessages(prev => {
-      if (prev.find(m => m.id === data.id)) {
+      console.log('📨 Current messages count:', prev.length);
+      const isDuplicate = prev.find(m => m.id === data.id);
+      if (isDuplicate) {
         console.log('⚠️ Duplicate message detected, skipping:', data.id);
         return prev;
       }
       console.log('✅ Adding new staff message to UI:', data.id);
-      return [...prev, data];
+      const newMessages = [...prev, data];
+      console.log('✅ New messages count:', newMessages.length);
+      return newMessages;
     });
     
     // Update current staff handler
@@ -321,15 +344,25 @@ const ChatWindow = ({
 
   const handleNewMessage = useCallback((data) => {
     console.log('💬 New message received by guest (general event):', data);
+    console.log('💬 Message details:', {
+      id: data.id,
+      message: data.message,
+      sender_type: data.sender_type,
+      sender_id: data.sender_id
+    });
     
     // Add message if not already present
     setMessages(prev => {
-      if (prev.find(m => m.id === data.id)) {
+      console.log('💬 Current messages count:', prev.length);
+      const isDuplicate = prev.find(m => m.id === data.id);
+      if (isDuplicate) {
         console.log('⚠️ Duplicate message detected, skipping:', data.id);
         return prev;
       }
       console.log('✅ Adding new message to UI:', data.id);
-      return [...prev, data];
+      const newMessages = [...prev, data];
+      console.log('✅ New messages count:', newMessages.length);
+      return newMessages;
     });
     
     scrollToBottom();
@@ -484,10 +517,26 @@ const ChatWindow = ({
         payload.session_token = guestSession.getToken();
       }
 
+      console.log('📤 Sending message:', {
+        sender_type: payload.sender_type,
+        message: messageToSend,
+        conversationId,
+        hotelSlug,
+        isGuest,
+        hasSessionToken: !!payload.session_token,
+        hasStaffId: !!payload.staff_id
+      });
+
       const response = await api.post(
         `/chat/${hotelSlug}/conversations/${conversationId}/messages/send/`,
         payload
       );
+
+      console.log('✅ Message sent successfully:', {
+        messageId: response.data?.id,
+        sender_type: response.data?.sender_type,
+        responseData: response.data
+      });
 
       // Update staff handler if changed (for guests)
       if (!userId && response.data?.staff_info) {
