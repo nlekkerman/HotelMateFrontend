@@ -235,13 +235,8 @@ const ChatWindow = ({
         has_token: !!session.getToken()
       });
       
-      // Load saved staff handler if exists
-      const savedStaff = session.getCurrentStaffHandler();
-      if (savedStaff) {
-        setCurrentStaff(savedStaff);
-        console.log('👤 Loaded saved staff handler:', savedStaff);
-      }
-      
+      // Don't load saved staff handler - wait for staff to actively pick up the conversation
+      // Staff will be set via Pusher 'staff-assigned' event when they select the conversation
       console.log('📡 Guest Pusher channel will be:', `${hotelSlug}-room-${roomNumber}-chat`);
     }
 
@@ -482,10 +477,22 @@ const ChatWindow = ({
     // Save to guest session
     guestSession?.saveToLocalStorage({ current_staff_handler: newStaffInfo });
     
+    // Add a system message to the chat
+    const systemMessage = {
+      id: `system-${Date.now()}`,
+      message: `${data.staff_name} (${data.staff_role}) joined the chat`,
+      sender_type: 'system',
+      created_at: new Date().toISOString(),
+      is_system_message: true
+    };
+    
+    setMessages((prev) => [...prev, systemMessage]);
+    scrollToBottom();
+    
     // Show a toast notification to the guest
-    toast.info(`${data.staff_name} (${data.staff_role}) is now assisting you`, {
+    toast.info(`${data.staff_name} is now assisting you`, {
       position: "top-center",
-      autoClose: 4000,
+      autoClose: 3000,
     });
     
     console.log('✅ Updated staff handler to:', data.staff_name);
@@ -869,6 +876,28 @@ const ChatWindow = ({
         {console.log('🎨 [RENDER] About to render messages:', messages.length)}
         
         {messages.map((msg) => {
+          // Handle system messages differently
+          if (msg.is_system_message || msg.sender_type === 'system') {
+            return (
+              <div
+                key={msg.id}
+                className="text-center my-3"
+              >
+                <div 
+                  className="d-inline-block px-3 py-2 rounded-pill text-muted"
+                  style={{
+                    backgroundColor: 'rgba(108, 117, 125, 0.1)',
+                    fontSize: '0.85rem',
+                    fontStyle: 'italic',
+                    border: '1px solid rgba(108, 117, 125, 0.2)'
+                  }}
+                >
+                  {msg.message}
+                </div>
+              </div>
+            );
+          }
+          
           // For STAFF view: all staff messages on right, guest messages on left
           // For GUEST view: all guest messages on right, staff messages on left
           const isMine = userId 
