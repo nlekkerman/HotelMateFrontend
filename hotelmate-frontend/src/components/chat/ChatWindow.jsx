@@ -540,7 +540,8 @@ const ChatWindow = ({
                   ? { 
                       ...msg, 
                       ...message, // Use updated message data from backend with smart text
-                      is_deleted: true 
+                      is_deleted: true,
+                      attachments: [] // Clear attachments to hide images
                     }
                   : msg
               )
@@ -757,7 +758,8 @@ const ChatWindow = ({
               ? { 
                   ...msg, 
                   ...message, // Use updated message data from backend with smart text
-                  is_deleted: true 
+                  is_deleted: true,
+                  attachments: [] // Clear attachments to hide images
                 }
               : msg
           )
@@ -1387,7 +1389,8 @@ const ChatWindow = ({
             ? { 
                 ...msg, 
                 ...response.data.message,
-                is_deleted: true 
+                is_deleted: true,
+                attachments: [] // Clear attachments to hide images immediately
               }
             : msg
         ));
@@ -1418,7 +1421,7 @@ const ChatWindow = ({
         // Message already deleted, mark as deleted in UI
         setMessages(prev => prev.map(msg => 
           msg.id === messageToDelete.id 
-            ? { ...msg, is_deleted: true, message: '🗑️ Message deleted' }
+            ? { ...msg, is_deleted: true, message: '🗑️ Message deleted', attachments: [] }
             : msg
         ));
       }
