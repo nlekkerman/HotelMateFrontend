@@ -521,9 +521,9 @@ const ChatWindow = ({
         }
       });
 
-      // Listen for message deleted event
-      channel.bind("message-deleted", (data) => {
-        console.log('🗑️ [PUSHER] Message deleted event received:', data);
+      // Listen for message deleted event (backend sends both 'message-deleted' and 'message-removed')
+      const handleDeletion = (data) => {
+        console.log('🗑️ [PUSHER] Message deletion event received:', data);
         const { message_id, hard_delete, message } = data;
         
         if (message_id) {
@@ -555,7 +555,10 @@ const ChatWindow = ({
             return newMap;
           });
         }
-      });
+      };
+      
+      channel.bind("message-deleted", handleDeletion);
+      channel.bind("message-removed", handleDeletion); // Backend alias
 
       return () => {
         // Only unbind our handlers, don't unsubscribe the channel
@@ -565,7 +568,8 @@ const ChatWindow = ({
           channel.unbind("messages-read-by-staff");
           channel.unbind("messages-read-by-guest");
           channel.unbind("staff-assigned");
-          channel.unbind("message-deleted");
+          channel.unbind("message-deleted", handleDeletion);
+          channel.unbind("message-removed", handleDeletion);
         }
       };
     }
@@ -836,6 +840,7 @@ const ChatWindow = ({
             'new-message': handleNewMessage,
             'staff-assigned': handleStaffAssigned,
             'message-deleted': handleMessageDeleted,
+            'message-removed': handleMessageDeleted, // Backend sends both events as aliases
           }
         },
         {
