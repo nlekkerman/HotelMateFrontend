@@ -336,11 +336,30 @@ const ChatWindow = ({
       
       // Listen for new messages
       channel.bind("new-message", (message) => {
+        console.log(`📨 [PUSHER] New message received:`, { id: message.id, sender: message.sender_type, text: message.message?.substring(0, 30) });
+        
         setMessages((prev) => {
           // Check if this message already exists by ID
-          if (prev.some((m) => m.id === message.id)) {
+          const exists = prev.some((m) => m.id === message.id);
+          if (exists) {
+            console.log(`⚠️ [PUSHER] Message ${message.id} already exists, skipping`);
             return prev;
           }
+          
+          // Check if there's a temp message with the same content (race condition)
+          const tempMsg = prev.find(m => 
+            m.id?.toString().startsWith('temp-') && 
+            m.message === message.message &&
+            m.sender_type === message.sender_type
+          );
+          
+          if (tempMsg) {
+            console.log(`🔄 [PUSHER] Replacing temp message ${tempMsg.id} with real ${message.id}`);
+            // Replace temp with real message
+            return prev.map(m => m.id === tempMsg.id ? { ...message, status: 'delivered' } : m);
+          }
+          
+          console.log(`✅ [PUSHER] Adding new message ${message.id} to chat`);
           return [...prev, message];
         });
         scrollToBottom();
@@ -397,24 +416,34 @@ const ChatWindow = ({
 
       // Listen for messages read by guest (affects staff's messages)
       channel.bind("messages-read-by-guest", (data) => {
+        console.log('👁️ [STAFF SEES] Messages read by guest event received:', data);
         const { message_ids } = data;
         if (message_ids && Array.isArray(message_ids)) {
+          console.log(`👁️ [STAFF SEES] Updating ${message_ids.length} staff messages as read by guest`);
+          
           setMessageStatuses(prev => {
             const newMap = new Map(prev);
             message_ids.forEach(id => {
+              console.log(`👁️ [STAFF SEES] Marking message ${id} as read`);
               newMap.set(id, 'read');
             });
             return newMap;
           });
           
           // Also update the messages array with read status
-          setMessages(prevMessages => 
-            prevMessages.map(msg => 
+          setMessages(prevMessages => {
+            const updated = prevMessages.map(msg => 
               message_ids.includes(msg.id)
                 ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_guest: true }
                 : msg
-            )
-          );
+            );
+            console.log('👁️ [STAFF SEES] Updated messages:', updated.filter(m => message_ids.includes(m.id)).map(m => ({ id: m.id, status: m.status })));
+            return updated;
+          });
+          
+          console.log('✅ [STAFF SEES] Staff messages marked as read by guest');
+        } else {
+          console.warn('⚠️ [STAFF SEES] Invalid message_ids:', message_ids);
         }
       });
 
@@ -703,17 +732,27 @@ const ChatWindow = ({
         // For staff: use the existing endpoint
         if (userId) {
           await api.post(`/chat/conversations/${conversationId}/mark-read/`);
-          console.log('✅ Staff marked conversation as read');
+          console.log('✅ [AUTO-READ] Staff marked conversation as read');
         } 
         // For guests: use session token
         else if (guestSession) {
-          await api.post(`/chat/conversations/${conversationId}/mark-read/`, {
+          console.log('📝 [AUTO-READ] Guest marking conversation as read...');
+          const response = await api.post(`/chat/conversations/${conversationId}/mark-read/`, {
             session_token: guestSession.getToken()
           });
-          console.log('✅ Guest marked conversation as read');
+          console.log('✅ [AUTO-READ] Guest marked conversation as read:', response.data);
+          
+          // Update local UI immediately
+          setMessages(prevMessages => 
+            prevMessages.map(msg => 
+              msg.sender_type === 'staff'
+                ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_guest: true }
+                : msg
+            )
+          );
         }
       } catch (error) {
-        console.error('Failed to mark conversation as read:', error);
+        console.error('❌ [AUTO-READ] Failed to mark conversation as read:', error);
       }
     };
 
@@ -722,6 +761,73 @@ const ChatWindow = ({
 
     return () => clearTimeout(timer);
   }, [conversationId, userId, guestSession]);
+
+  // Auto-mark new messages as read when they arrive (if conversation is in view)
+  useEffect(() => {
+    if (!conversationId || messages.length === 0) return;
+    
+    // Count unread messages to avoid unnecessary API calls
+    let unreadCount = 0;
+    const unreadMessageIds = [];
+    
+    messages.forEach(msg => {
+      if (userId) {
+        // Staff view: check for unread guest messages
+        if (msg.sender_type === 'guest' && !msg.is_read_by_recipient && msg.status !== 'read') {
+          unreadCount++;
+          unreadMessageIds.push(msg.id);
+        }
+      } else {
+        // Guest view: check for unread staff messages
+        if (msg.sender_type === 'staff' && !msg.is_read_by_recipient && msg.status !== 'read') {
+          unreadCount++;
+          unreadMessageIds.push(msg.id);
+        }
+      }
+    });
+
+    if (unreadCount === 0) return;
+
+    const markNewMessagesAsRead = async () => {
+      try {
+        if (userId) {
+          console.log(`📝 [NEW-MSG-READ] Staff auto-marking ${unreadCount} guest messages as read:`, unreadMessageIds);
+          await api.post(`/chat/conversations/${conversationId}/mark-read/`);
+          
+          // Update local UI
+          setMessages(prevMessages => 
+            prevMessages.map(msg => 
+              msg.sender_type === 'guest' && unreadMessageIds.includes(msg.id)
+                ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_staff: true }
+                : msg
+            )
+          );
+        } else if (guestSession) {
+          console.log(`📝 [NEW-MSG-READ] Guest auto-marking ${unreadCount} staff messages as read:`, unreadMessageIds);
+          const response = await api.post(`/chat/conversations/${conversationId}/mark-read/`, {
+            session_token: guestSession.getToken()
+          });
+          console.log('✅ [NEW-MSG-READ] Response:', response.data);
+          
+          // Update local UI
+          setMessages(prevMessages => 
+            prevMessages.map(msg => 
+              msg.sender_type === 'staff' && unreadMessageIds.includes(msg.id)
+                ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_guest: true }
+                : msg
+            )
+          );
+        }
+      } catch (error) {
+        console.error('❌ [NEW-MSG-READ] Failed:', error);
+      }
+    };
+
+    // Mark as read after a short delay
+    const timer = setTimeout(markNewMessagesAsRead, 500);
+
+    return () => clearTimeout(timer);
+  }, [messages.length, conversationId, userId, guestSession]);
 
   // Ensure FCM token is saved for guest on chat open (even if already authenticated)
   useEffect(() => {
@@ -865,9 +971,22 @@ const ChatWindow = ({
 
       // Replace temp message with real message from backend
       if (messageData?.id) {
-        setMessages(prev => 
-          prev.map(msg => msg.id === tempId ? { ...messageData, status: 'delivered' } : msg)
-        );
+        console.log(`🔄 Replacing temp message ${tempId} with real message ${messageData.id}`);
+        setMessages(prev => {
+          // Check if the real message already exists (from Pusher)
+          const realMessageExists = prev.some(m => m.id === messageData.id);
+          
+          if (realMessageExists) {
+            console.log(`⚠️ Real message ${messageData.id} already exists, just removing temp`);
+            // Real message already added by Pusher, just remove temp
+            return prev.filter(msg => msg.id !== tempId);
+          } else {
+            console.log(`✅ Replacing temp ${tempId} with real ${messageData.id}`);
+            // Replace temp with real message
+            return prev.map(msg => msg.id === tempId ? { ...messageData, status: 'delivered' } : msg);
+          }
+        });
+        
         setMessageStatuses(prev => {
           const newMap = new Map(prev);
           newMap.delete(tempId);
@@ -1211,25 +1330,77 @@ const ChatWindow = ({
             try {
               // For staff: use the existing context method
               if (userId) {
-                markConversationRead(conversationId);
+                console.log('📝 [INPUT FOCUS] Staff marking guest messages as read');
+                
+                // Collect guest message IDs from current state
+                const guestMessageIds = [];
+                
+                // First, update local UI to show guest messages as read
+                setMessages(prevMessages => {
+                  const updated = prevMessages.map(msg => {
+                    if (msg.sender_type === 'guest' && !msg.is_read_by_recipient && msg.status !== 'read') {
+                      guestMessageIds.push(msg.id);
+                      console.log(`📝 [INPUT FOCUS] Marking guest message ${msg.id} as read`);
+                      return { ...msg, status: 'read', is_read_by_recipient: true, read_by_staff: true };
+                    }
+                    return msg;
+                  });
+                  return updated;
+                });
+                
+                // Update message statuses map using the collected IDs
+                if (guestMessageIds.length > 0) {
+                  console.log(`📝 [INPUT FOCUS] Updating status map for ${guestMessageIds.length} guest messages`);
+                  setMessageStatuses(prev => {
+                    const newMap = new Map(prev);
+                    guestMessageIds.forEach(id => {
+                      newMap.set(id, 'read');
+                    });
+                    return newMap;
+                  });
+                }
+                
+                // Then call backend to mark as read (will trigger Pusher event for guest)
+                await markConversationRead(conversationId);
                 console.log('✅ [INPUT FOCUS] Staff marked conversation as read');
               } 
               // For guests: use session token and mark staff messages as read
               else if (guestSession) {
-                console.log('📝 [INPUT FOCUS] Guest focused - marking staff messages as read');
+                console.log('📝 [INPUT FOCUS] Guest marking staff messages as read');
+                
+                // Collect staff message IDs from current state
+                const staffMessageIds = [];
+                
+                // First, update local UI to show staff messages as read
+                setMessages(prevMessages => {
+                  const updated = prevMessages.map(msg => {
+                    if (msg.sender_type === 'staff' && !msg.is_read_by_recipient && msg.status !== 'read') {
+                      staffMessageIds.push(msg.id);
+                      console.log(`📝 [INPUT FOCUS] Marking staff message ${msg.id} as read`);
+                      return { ...msg, status: 'read', is_read_by_recipient: true, read_by_guest: true };
+                    }
+                    return msg;
+                  });
+                  return updated;
+                });
+                
+                // Update message statuses map using the collected IDs
+                if (staffMessageIds.length > 0) {
+                  console.log(`📝 [INPUT FOCUS] Updating status map for ${staffMessageIds.length} staff messages`);
+                  setMessageStatuses(prev => {
+                    const newMap = new Map(prev);
+                    staffMessageIds.forEach(id => {
+                      newMap.set(id, 'read');
+                    });
+                    return newMap;
+                  });
+                }
+                
+                // Then call backend to mark as read (will trigger Pusher event for staff)
                 const response = await api.post(`/chat/conversations/${conversationId}/mark-read/`, {
                   session_token: guestSession.getToken()
                 });
                 console.log('✅ [INPUT FOCUS] Guest marked conversation as read:', response.data);
-                
-                // Optionally update local state to show all staff messages as read
-                setMessages(prevMessages => 
-                  prevMessages.map(msg => 
-                    msg.sender_type === 'staff'
-                      ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_guest: true }
-                      : msg
-                  )
-                );
               }
             } catch (error) {
               console.error('❌ [INPUT FOCUS] Failed to mark conversation as read:', error);
