@@ -260,7 +260,18 @@ const ChatWindow = ({
         { params: { limit: MESSAGE_LIMIT, before_id: beforeId } }
       );
 
-      const newMessages = res.data;
+      // Clean up deleted messages - remove attachments if is_deleted is true
+      const newMessages = res.data.map(msg => {
+        if (msg.is_deleted) {
+          console.log(`🗑️ [FETCH] Found deleted message ${msg.id} - clearing attachments`);
+          return {
+            ...msg,
+            attachments: [] // Clear attachments for deleted messages
+          };
+        }
+        return msg;
+      });
+      
       const container = messagesContainerRef.current;
 
       if (beforeId && container) {
