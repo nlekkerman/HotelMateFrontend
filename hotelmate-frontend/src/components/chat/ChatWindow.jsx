@@ -882,9 +882,18 @@ const ChatWindow = ({
           let senderName;
           if (msg.sender_type === "guest") {
             senderName = msg.guest_name || "Guest";
+            // Add "(You)" for guest's own messages when viewing as guest
+            if (isGuest && isMine) {
+              senderName += " (You)";
+            }
           } else {
-            // For staff messages, use staff_name if available, otherwise use currentStaff name for guests
+            // For staff messages
             senderName = msg.staff_name || (isGuest && currentStaff ? currentStaff.name : "Reception");
+            
+            // For staff view: add "(You)" only if this message is from the currently logged-in staff
+            if (!isGuest && msg.staff === userId) {
+              senderName += " (You)";
+            }
           }
 
           const messageTime = msg.timestamp
@@ -984,8 +993,25 @@ const ChatWindow = ({
           placeholder="Type a message..."
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
-          onFocus={() => {
-            if (conversationId) markConversationRead(conversationId);
+          onFocus={async () => {
+            if (!conversationId) return;
+            
+            try {
+              // For staff: use the existing context method
+              if (userId) {
+                markConversationRead(conversationId);
+                console.log('✅ Staff marked conversation as read (input focused)');
+              } 
+              // For guests: use session token
+              else if (guestSession) {
+                await api.post(`/chat/conversations/${conversationId}/mark-read/`, {
+                  session_token: guestSession.getToken()
+                });
+                console.log('✅ Guest marked conversation as read (input focused)');
+              }
+            } catch (error) {
+              console.error('Failed to mark conversation as read on focus:', error);
+            }
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSendMessage();
