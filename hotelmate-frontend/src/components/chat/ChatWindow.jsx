@@ -30,11 +30,22 @@ const ChatWindow = ({
   const hotelSlug = propHotelSlug || paramHotelSlug;
   const conversationId = propConversationId || paramConversationIdFromURL;
   const roomNumber = propRoomNumber || location.state?.room_number;
-  const isGuest = location.state?.isGuest || false;
-
+  
   const storedUser = localStorage.getItem("user");
   const userId =
     propUserId || (storedUser ? JSON.parse(storedUser).id : undefined);
+  
+  // Guest is someone WITHOUT a userId (not authenticated as staff)
+  const isGuest = !userId;
+  
+  console.log('🔍 [INIT] ChatWindow initialized:', {
+    isGuest,
+    hasUserId: !!userId,
+    hotelSlug,
+    roomNumber,
+    conversationId,
+    locationStateIsGuest: location.state?.isGuest
+  });
   
   // Guest session management
   const [guestSession, setGuestSession] = useState(null);
@@ -67,6 +78,11 @@ const ChatWindow = ({
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  
+  // Debug: Log messages state changes
+  useEffect(() => {
+    console.log('💬 [MESSAGES STATE] Current messages:', messages.length, messages.map(m => ({id: m.id, msg: m.message?.substring(0, 20)})));
+  }, [messages]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [seenMessages, setSeenMessages] = useState(new Set());
@@ -370,6 +386,12 @@ const ChatWindow = ({
 
   // Use guest Pusher hook if this is a guest session
   // Use the computed channel name instead of relying on session data
+  console.log('🔧 [CHATWINDOW] Setting up Pusher hook:', {
+    isGuest,
+    guestPusherChannel,
+    willSubscribe: !!guestPusherChannel
+  });
+  
   useGuestPusher(
     guestPusherChannel, // Direct channel name: {hotelSlug}-room-{roomNumber}-chat
     {
@@ -505,26 +527,31 @@ const ChatWindow = ({
     setMessageStatuses(prev => new Map(prev).set(tempId, 'pending'));
 
     try {
-      const payload = {
-        message: messageToSend,
-        sender_type: userId ? "staff" : "guest",
-      };
-
-      // Add staff_id for staff, or session_token for guests
+      // Simplified payload - backend determines sender_type from token presence
+      const payload = {};
+      
       if (userId) {
+        // Staff sends with staff_id
+        payload.message = messageToSend;
         payload.staff_id = userId;
       } else if (guestSession) {
+        // Guest sends with ONLY message and session_token
+        payload.message = messageToSend;
         payload.session_token = guestSession.getToken();
+      } else {
+        console.error('❌ Cannot send message: No userId or guestSession');
+        toast.error("Unable to send message. Please refresh and try again.");
+        return;
       }
 
       console.log('📤 Sending message:', {
-        sender_type: payload.sender_type,
-        message: messageToSend,
-        conversationId,
-        hotelSlug,
         isGuest,
+        hasUserId: !!userId,
         hasSessionToken: !!payload.session_token,
-        hasStaffId: !!payload.staff_id
+        hasStaffId: !!payload.staff_id,
+        payload,
+        conversationId,
+        hotelSlug
       });
 
       const response = await api.post(
@@ -532,24 +559,30 @@ const ChatWindow = ({
         payload
       );
 
-      console.log('✅ Message sent successfully:', {
-        messageId: response.data?.id,
-        sender_type: response.data?.sender_type,
-        responseData: response.data
+      console.log('✅ Message sent successfully - RAW response:', response.data);
+      
+      // Backend returns: {conversation_id: 37, message: {...}}
+      // Extract the actual message object
+      const messageData = response.data?.message || response.data;
+      
+      console.log('✅ Extracted message data:', {
+        messageId: messageData?.id,
+        sender_type: messageData?.sender_type,
+        message: messageData?.message
       });
 
       // Update staff handler if changed (for guests)
-      if (!userId && response.data?.staff_info) {
-        setCurrentStaff(response.data.staff_info);
-        guestSession?.saveToLocalStorage({ current_staff_handler: response.data.staff_info });
+      if (!userId && messageData?.staff_info) {
+        setCurrentStaff(messageData.staff_info);
+        guestSession?.saveToLocalStorage({ current_staff_handler: messageData.staff_info });
       }
 
       // When we get response, mark as delivered and map tempId to real ID
-      if (response.data?.id) {
+      if (messageData?.id) {
         setMessageStatuses(prev => {
           const newMap = new Map(prev);
           newMap.delete(tempId);
-          newMap.set(response.data.id, 'delivered');
+          newMap.set(messageData.id, 'delivered');
           return newMap;
         });
       }
@@ -714,6 +747,9 @@ const ChatWindow = ({
           </div>
         )}
 
+        {/* Debug: Log before rendering */}
+        {console.log('🎨 [RENDER] About to render messages:', messages.length)}
+        
         {messages.map((msg) => {
           const isMine =
             (msg.sender_type === "staff" && msg.staff === userId) ||
