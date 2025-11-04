@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import api from "@/services/api";
-import { FaPaperPlane, FaTimes, FaArrowLeft, FaAngleDoubleDown, FaCheck, FaCheckDouble, FaSmile, FaPaperclip } from "react-icons/fa";
+import { FaPaperPlane, FaTimes, FaArrowLeft, FaAngleDoubleDown, FaCheck, FaCheckDouble, FaSmile, FaPaperclip, FaDownload, FaTrash } from "react-icons/fa";
 import { useChat } from "@/context/ChatContext";
 import useHotelLogo from "@/hooks/useHotelLogo";
 import EmojiPicker from "emoji-picker-react";
@@ -9,6 +9,8 @@ import { GuestChatSession } from "@/utils/guestChatSession";
 import { useGuestPusher } from "@/hooks/useGuestPusher";
 import { messaging } from "@/firebase";
 import { onMessage } from "firebase/messaging";
+import ConfirmationModal from "@/components/modals/ConfirmationModal";
+import SuccessModal from "@/components/modals/SuccessModal";
 
 const MESSAGE_LIMIT = 10;
 
@@ -16,8 +18,8 @@ const MESSAGE_LIMIT = 10;
 const CLOUDINARY_BASE = import.meta.env.VITE_CLOUDINARY_BASE || "https://res.cloudinary.com/dg0ssec7u/";
 const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "dg0ssec7u";
 
-// File upload constraints (matching backend)
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+// File upload constraints (matching backend - updated to 50MB)
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB (backend max)
 const ALLOWED_FILE_TYPES = [
   'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp',
   'application/pdf',
@@ -155,6 +157,13 @@ const ChatWindow = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState(null);
+  const [messageToDownload, setMessageToDownload] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [replyingTo, setReplyingTo] = useState(null);
 
   const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -194,9 +203,16 @@ const ChatWindow = ({
         
         // If staff changed from previous message, insert "joined" marker
         if (previousStaff && previousStaff !== currentStaffName) {
+          // Extract only position from role (remove department)
+          let role = message.staff_info.role || "";
+          if (role) {
+            const match = role.match(/\(([^)]+)\)$/);
+            role = match ? match[1] : role.split(' - ').pop();
+          }
+          
           result.push({
             id: `system-join-${message.id}`,
-            message: `${message.staff_info.name} (${message.staff_info.role}) joined the chat`,
+            message: `${message.staff_info.name} (${role}) joined the chat`,
             sender_type: 'system',
             is_system_message: true,
             created_at: message.created_at,
@@ -488,6 +504,41 @@ const ChatWindow = ({
         }
       });
 
+      // Listen for message deleted event
+      channel.bind("message-deleted", (data) => {
+        console.log('🗑️ [PUSHER] Message deleted event received:', data);
+        const { message_id, hard_delete, message } = data;
+        
+        if (message_id) {
+          if (hard_delete) {
+            // Hard delete - permanently remove message from UI
+            console.log(`💥 [PUSHER] Hard deleting message ${message_id} - removing from UI`);
+            setMessages(prevMessages => prevMessages.filter(msg => msg.id !== message_id));
+          } else {
+            // Soft delete - update message with deletion text from backend
+            console.log(`🗑️ [PUSHER] Soft deleting message ${message_id} - showing as deleted`);
+            setMessages(prevMessages => 
+              prevMessages.map(msg => 
+                msg.id === message_id 
+                  ? { 
+                      ...msg, 
+                      ...message, // Use updated message data from backend with smart text
+                      is_deleted: true 
+                    }
+                  : msg
+              )
+            );
+          }
+          
+          // Remove from message statuses
+          setMessageStatuses(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(message_id);
+            return newMap;
+          });
+        }
+      });
+
       return () => {
         // Only unbind our handlers, don't unsubscribe the channel
         if (channel) {
@@ -496,6 +547,7 @@ const ChatWindow = ({
           channel.unbind("messages-read-by-staff");
           channel.unbind("messages-read-by-guest");
           channel.unbind("staff-assigned");
+          channel.unbind("message-deleted");
         }
       };
     }
@@ -661,9 +713,44 @@ const ChatWindow = ({
     }
   }, [messages]);
 
+  // Handle message deleted event (for guest view)
+  const handleMessageDeleted = useCallback((data) => {
+    console.log('🗑️ [GUEST PUSHER] Message deleted event received:', data);
+    const { message_id, hard_delete, message } = data;
+    
+    if (message_id) {
+      if (hard_delete) {
+        // Hard delete - permanently remove message from UI
+        console.log(`💥 [GUEST PUSHER] Hard deleting message ${message_id} - removing from UI`);
+        setMessages(prevMessages => prevMessages.filter(msg => msg.id !== message_id));
+      } else {
+        // Soft delete - update message with deletion text from backend
+        console.log(`🗑️ [GUEST PUSHER] Soft deleting message ${message_id} - showing as deleted`);
+        setMessages(prevMessages => 
+          prevMessages.map(msg => 
+            msg.id === message_id 
+              ? { 
+                  ...msg, 
+                  ...message, // Use updated message data from backend with smart text
+                  is_deleted: true 
+                }
+              : msg
+          )
+        );
+      }
+      
+      // Remove from message statuses
+      setMessageStatuses(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(message_id);
+        return newMap;
+      });
+    }
+  }, []);
+
   // Use guest Pusher hook with MULTIPLE channels
   // According to backend docs: guests subscribe to:
-  // 1. Room channel: for new-staff-message, new-message, staff-assigned
+  // 1. Room channel: for new-staff-message, new-message, staff-assigned, message-deleted
   // 2. Conversation channel: for messages-read-by-staff (read receipts)
   const guestPusherChannels = isGuest && guestRoomChannel && guestConversationChannel
     ? [
@@ -673,6 +760,7 @@ const ChatWindow = ({
             'new-staff-message': handleNewStaffMessage,
             'new-message': handleNewMessage,
             'staff-assigned': handleStaffAssigned,
+            'message-deleted': handleMessageDeleted,
           }
         },
         {
@@ -910,10 +998,10 @@ const ChatWindow = ({
     
     // Validate each file
     const validFiles = files.filter(file => {
-      // Check file size (10MB max)
+      // Check file size (50MB max per backend)
       if (file.size > MAX_FILE_SIZE) {
         const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-        errors.push(`${file.name}: Too large (${sizeMB}MB, max 10MB)`);
+        errors.push(`${file.name}: Too large (${sizeMB}MB, max 50MB)`);
         return false;
       }
       
@@ -950,10 +1038,12 @@ const ChatWindow = ({
 
     const messageToSend = newMessage;
     const filesToSend = [...selectedFiles];
+    const replyToMessage = replyingTo;
     const tempId = `temp-${Date.now()}`; // Temporary ID for tracking
     
     setNewMessage("");
     setSelectedFiles([]);
+    setReplyingTo(null);
     setUploading(true);
 
     // Add temporary message to UI with pending status
@@ -961,7 +1051,8 @@ const ChatWindow = ({
       id: tempId,
       message: messageToSend || (filesToSend.length > 0 ? `📎 ${filesToSend.length} file(s)` : ''),
       sender_type: userId ? 'staff' : 'guest',
-      staff: userId,
+      staff: userId || null,
+      guest_id: isGuest ? (guestSession?.getSessionId() || null) : null,
       guest_name: isGuest ? (guestSession?.getGuestName() || 'You') : null,
       staff_name: userId ? 'You' : null,
       timestamp: new Date().toISOString(),
@@ -969,6 +1060,15 @@ const ChatWindow = ({
       status: 'pending',
       has_attachments: filesToSend.length > 0
     };
+    
+    console.log('📤 Creating temp message:', {
+      tempId,
+      sender_type: tempMessage.sender_type,
+      userId,
+      isGuest,
+      staff: tempMessage.staff,
+      guest_name: tempMessage.guest_name
+    });
 
     setMessages(prev => [...prev, tempMessage]);
     setMessageStatuses(prev => new Map(prev).set(tempId, 'pending'));
@@ -992,13 +1092,19 @@ const ChatWindow = ({
           formData.append('message', messageToSend.trim());
         }
         
-        // Add authentication
-        const authToken = localStorage.getItem('authToken');
+        // Add reply reference if replying
+        if (replyToMessage) {
+          formData.append('reply_to', replyToMessage.id);
+          console.log('📤 Replying to message:', replyToMessage.id);
+        }
+        
+        // Add authentication - SAME AS TEXT MESSAGES
         if (userId) {
-          // Staff - token already in api headers
-          console.log('👤 Staff upload with auth token');
+          // Staff - add staff_id to FormData (same as text messages)
+          formData.append('staff_id', userId);
+          console.log('👤 Staff upload with staff_id:', userId);
         } else if (guestSession) {
-          // Guest - add session token
+          // Guest - add session token (same as text messages)
           formData.append('session_token', guestSession.getToken());
           console.log('👤 Guest upload with session token');
         }
@@ -1009,8 +1115,35 @@ const ChatWindow = ({
           totalSize: `${(filesToSend.reduce((sum, f) => sum + f.size, 0) / 1024).toFixed(1)}KB`,
           hasMessage: !!messageToSend.trim(),
           isGuest,
+          userId,
           conversationId,
           cloudinaryBase: CLOUDINARY_BASE
+        });
+
+        // Get token and hotel info from localStorage (same as api.js interceptor)
+        const storedUser = localStorage.getItem("user");
+        const userData = storedUser ? JSON.parse(storedUser) : null;
+        const token = userData?.token || null;
+        const hotelId = userData?.hotel_id || null;
+        const hotelSlug_header = userData?.hotel_slug || null;
+
+        // Build headers object - MATCH api.js interceptors exactly
+        const headers = {};
+        if (token) {
+          headers['Authorization'] = `Token ${token}`;
+        }
+        if (hotelId) {
+          headers['X-Hotel-ID'] = hotelId.toString();
+        }
+        if (hotelSlug_header) {
+          headers['X-Hotel-Slug'] = hotelSlug_header;
+        }
+        // DON'T set Content-Type - browser sets it with boundary
+
+        console.log('📤 Upload headers:', { 
+          hasAuth: !!headers['Authorization'],
+          hotelId: headers['X-Hotel-ID'],
+          hotelSlug: headers['X-Hotel-Slug']
         });
 
         // Use fetch for file upload (not axios wrapper)
@@ -1018,10 +1151,7 @@ const ChatWindow = ({
           `${import.meta.env.VITE_API_BASE_URL}/api/chat/${hotelSlug}/conversations/${conversationId}/upload-attachment/`,
           {
             method: 'POST',
-            headers: {
-              'Authorization': authToken ? `Token ${authToken}` : '',
-              // DON'T set Content-Type - browser sets it with boundary
-            },
+            headers: headers,
             body: formData
           }
         );
@@ -1065,6 +1195,12 @@ const ChatWindow = ({
           setUploading(false);
           return;
         }
+        
+        // Add reply reference if replying
+        if (replyToMessage) {
+          payload.reply_to = replyToMessage.id;
+          console.log('📤 Replying to message:', replyToMessage.id);
+        }
 
         response = await api.post(
           `/chat/${hotelSlug}/conversations/${conversationId}/messages/send/`,
@@ -1080,10 +1216,23 @@ const ChatWindow = ({
       console.log('✅ Extracted message data:', {
         messageId: messageData?.id,
         sender_type: messageData?.sender_type,
+        sender_id: messageData?.staff || messageData?.guest_id,
         message: messageData?.message,
         has_attachments: messageData?.has_attachments,
-        attachments_count: messageData?.attachments?.length
+        attachments_count: messageData?.attachments?.length,
+        staff: messageData?.staff,
+        staff_name: messageData?.staff_name,
+        guest_name: messageData?.guest_name
       });
+      
+      // 🔍 DEBUG: Check if backend returned wrong sender_type
+      if (userId && messageData?.sender_type !== 'staff') {
+        console.error('❌ BACKEND ERROR: Staff sent message but backend returned sender_type:', messageData?.sender_type);
+        console.error('❌ This is a BACKEND bug. Staff should always have sender_type="staff"');
+        // Fix it on frontend as workaround
+        messageData.sender_type = 'staff';
+        messageData.staff = userId;
+      }
 
       // Update staff handler if changed (for guests)
       if (!userId && messageData?.staff_info) {
@@ -1165,6 +1314,145 @@ const ChatWindow = ({
     setTimeout(() => {
       setShowEmojiPicker(!showEmojiPicker);
     }, 50);
+  };
+
+  // Handle delete message (soft delete by default)
+  const handleDeleteMessage = async () => {
+    if (!messageToDelete) return;
+    
+    try {
+      console.log('🗑️ Soft deleting message:', messageToDelete.id);
+      
+      // Call backend DELETE API - soft delete (default)
+      // Endpoint: /api/chat/messages/{message_id}/delete/
+      const response = await api.delete(
+        `/chat/messages/${messageToDelete.id}/delete/`
+      );
+      
+      console.log('✅ Delete response:', response.data);
+      
+      // Update message with smart deletion text from backend
+      // Backend returns: "[Message deleted]", "[File deleted]", or "[Message and file(s) deleted]"
+      if (response.data?.message) {
+        setMessages(prev => prev.map(msg => 
+          msg.id === messageToDelete.id 
+            ? { 
+                ...msg, 
+                ...response.data.message,
+                is_deleted: true 
+              }
+            : msg
+        ));
+      }
+      
+      // Show success modal
+      setSuccessMessage('Message deleted successfully');
+      setShowSuccessModal(true);
+      
+      console.log('✅ Message soft deleted successfully');
+      
+      // Note: Pusher will broadcast 'message-deleted' event to other users
+    } catch (error) {
+      console.error('❌ Failed to delete message:', error);
+      
+      // Show user-friendly error message
+      const errorMsg = error.response?.data?.error || 
+                      error.response?.data?.detail || 
+                      'Failed to delete message. Please try again.';
+      alert(errorMsg);
+      
+      // If 403 Forbidden
+      if (error.response?.status === 403) {
+        alert('You do not have permission to delete this message.');
+      }
+      // If 404 Not Found
+      else if (error.response?.status === 404) {
+        // Message already deleted, mark as deleted in UI
+        setMessages(prev => prev.map(msg => 
+          msg.id === messageToDelete.id 
+            ? { ...msg, is_deleted: true, message: '🗑️ Message deleted' }
+            : msg
+        ));
+      }
+    } finally {
+      setShowDeleteConfirm(false);
+      setMessageToDelete(null);
+    }
+  };
+
+  // Handle download message and attachments
+  const handleDownloadMessage = async () => {
+    if (!messageToDownload) return;
+    
+    try {
+      console.log('💾 Downloading attachments from message:', messageToDownload.id);
+      
+      // Download all attachments if present
+      if (messageToDownload.attachments && messageToDownload.attachments.length > 0) {
+        let downloadedCount = 0;
+        
+        for (const attachment of messageToDownload.attachments) {
+          try {
+            // Get full Cloudinary URL
+            const fullFileUrl = getCloudinaryUrl(attachment.file_url);
+            console.log(`⬇️ Downloading: ${attachment.file_name} from ${fullFileUrl}`);
+            
+            // Fetch file from Cloudinary
+            const response = await fetch(fullFileUrl);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const blob = await response.blob();
+            
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = attachment.file_name;
+            link.style.display = 'none';
+            
+            // Trigger download
+            document.body.appendChild(link);
+            link.click();
+            
+            // Cleanup
+            setTimeout(() => {
+              document.body.removeChild(link);
+              window.URL.revokeObjectURL(url);
+            }, 100);
+            
+            downloadedCount++;
+            
+            // Small delay between downloads if multiple files
+            if (messageToDownload.attachments.length > 1) {
+              await new Promise(resolve => setTimeout(resolve, 800));
+            }
+          } catch (fileError) {
+            console.error(`❌ Failed to download ${attachment.file_name}:`, fileError);
+            alert(`Failed to download ${attachment.file_name}. File may no longer exist.`);
+          }
+        }
+        
+        if (downloadedCount > 0) {
+          setSuccessMessage(`Downloaded ${downloadedCount} file(s) successfully`);
+          setShowSuccessModal(true);
+        }
+      } else if (messageToDownload.message) {
+        // If no attachments, copy message text to clipboard
+        await navigator.clipboard.writeText(messageToDownload.message);
+        setSuccessMessage('Message text copied to clipboard');
+        setShowSuccessModal(true);
+      } else {
+        alert('Nothing to download from this message.');
+      }
+      
+      console.log('✅ Download completed');
+    } catch (error) {
+      console.error('❌ Failed to download:', error);
+      alert('Failed to download. Please try again.');
+    } finally {
+      setShowDownloadConfirm(false);
+      setMessageToDownload(null);
+    }
   };
 
   // Close emoji picker when clicking outside
@@ -1323,6 +1611,36 @@ const ChatWindow = ({
             ? msg.sender_type === "staff"  // Staff view: all staff messages are "mine"
             : msg.sender_type === "guest"; // Guest view: all guest messages are "mine"
           
+          // Handle deleted messages - show in same position as original with smart text from backend
+          if (msg.is_deleted) {
+            // Backend provides smart deletion text:
+            // "[Message deleted]" for text-only
+            // "[File deleted]" for file-only
+            // "[Message and file(s) deleted]" for text + files
+            const deletionText = msg.message || '🗑️ Message deleted';
+            
+            return (
+              <div
+                key={msg.id}
+                className={`d-flex mb-3 ${isMine ? 'justify-content-end' : 'justify-content-start'}`}
+              >
+                <div 
+                  className="px-3 py-2 rounded text-muted"
+                  style={{
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    fontSize: '0.85rem',
+                    fontStyle: 'italic',
+                    border: '1px solid rgba(220, 53, 69, 0.2)',
+                    color: '#dc3545',
+                    maxWidth: '280px'
+                  }}
+                >
+                  {deletionText}
+                </div>
+              </div>
+            );
+          }
+          
           // Determine sender name
           let senderName;
           if (msg.sender_type === "guest") {
@@ -1332,10 +1650,36 @@ const ChatWindow = ({
               senderName += " (You)";
             }
           } else {
-            // For staff messages
-            senderName = msg.staff_name || (isGuest && currentStaff ? currentStaff.name : "Reception");
+            // For staff messages - extract clean name and role using regex
+            let baseName = msg.staff_name || (isGuest && currentStaff ? currentStaff.name : "Reception");
+            let role = msg.staff_info?.role || (isGuest && currentStaff ? currentStaff.role : "");
             
-            // For staff view: add "(You)" only if this message is from the currently logged-in staff
+            // Handle case where staff_name contains full string like "Nikola Simic - Front Office - Porter (Porter)"
+            // Extract just the name (before first dash) and role (in last parentheses)
+            if (baseName.includes(' - ')) {
+              const nameMatch = baseName.match(/^([^-]+?)(?:\s*-|$)/);
+              if (nameMatch) {
+                baseName = nameMatch[1].trim();
+              }
+            }
+            
+            // Extract position from role format like "Front Office - Porter (Porter)" -> "Porter"
+            // Or from staff_name if role is in the name string
+            if (role) {
+              const roleMatch = role.match(/\(([^)]+)\)$/);
+              role = roleMatch ? roleMatch[1] : role.split(' - ').pop().replace(/\([^)]*\)/, '').trim();
+            } else if (baseName.includes('(')) {
+              // Extract role from name if it's embedded there
+              const roleMatch = baseName.match(/\(([^)]+)\)$/);
+              if (roleMatch) {
+                role = roleMatch[1];
+                baseName = baseName.replace(/\s*-.*$/, '').trim();
+              }
+            }
+            
+            senderName = role ? `${baseName} (${role})` : baseName;
+            
+            // For staff view: add " (You)" only if this message is from the currently logged-in staff
             if (!isGuest && msg.staff === userId) {
               senderName += " (You)";
             }
@@ -1372,73 +1716,264 @@ const ChatWindow = ({
               <div className="small text-muted mb-1">
                 <strong>{senderName}</strong>
               </div>
+              {/* Message container with hover actions */}
               <div
-                className={`d-inline-block p-2 rounded position-relative ${
-                  isMine ? "my-message" : "receiver-message"
-                } ${status === 'failed' ? 'opacity-75' : ''}`}
-                style={status === 'failed' ? { border: '1px solid #dc3545' } : {}}
+                className="message-bubble-container"
+                style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}
+                onMouseEnter={(e) => {
+                  const actions = e.currentTarget.querySelector('.message-actions');
+                  if (actions) actions.style.opacity = '1';
+                }}
+                onMouseLeave={(e) => {
+                  const actions = e.currentTarget.querySelector('.message-actions');
+                  if (actions) actions.style.opacity = '0';
+                }}
               >
-                {msg.message && <div>{msg.message}</div>}
+                {/* Hover actions - Delete and Download - only show if message has attachments */}
+                {msg.attachments && msg.attachments.length > 0 && (
+                  <div 
+                    className="message-actions"
+                    style={{
+                      position: 'absolute',
+                      top: '0',
+                      left: '0',
+                      right: '0',
+                      width: '100%',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: '6px',
+                      opacity: '0',
+                      transition: 'opacity 0.2s',
+                      zIndex: 10,
+                      background: 'rgba(0, 0, 0, 0.85)',
+                      borderRadius: '8px 8px 0 0',
+                      padding: '8px 12px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                    }}
+                  >
+                    {/* Delete button with text */}
+                    <button
+                      className="btn btn-sm d-flex align-items-center gap-1"
+                      style={{ 
+                        fontSize: '0.85rem',
+                        background: 'none',
+                        border: 'none',
+                        color: '#ff4444',
+                        cursor: 'pointer',
+                        padding: '2px 6px',
+                        fontWeight: '500'
+                      }}
+                      onClick={() => {
+                        setMessageToDelete(msg);
+                        setShowDeleteConfirm(true);
+                      }}
+                      title="Delete message"
+                    >
+                      <FaTrash style={{ fontSize: '0.75rem' }} />
+                      <span>Delete</span>
+                    </button>
+                    {/* Download button with arrow */}
+                    <button
+                      className="btn btn-sm d-flex align-items-center gap-1"
+                      style={{ 
+                        fontSize: '0.85rem',
+                        background: 'none',
+                        border: 'none',
+                        color: '#4CAF50',
+                        cursor: 'pointer',
+                        padding: '2px 6px',
+                        fontWeight: '500'
+                      }}
+                      onClick={() => {
+                        setMessageToDownload(msg);
+                        setShowDownloadConfirm(true);
+                      }}
+                      title="Download attachments"
+                    >
+                      <FaDownload style={{ fontSize: '0.75rem' }} />
+                      <span>↓</span>
+                    </button>
+                  </div>
+                )}
+                <div
+                  className={`p-3 rounded position-relative ${
+                    isMine ? "my-message" : "receiver-message"
+                  } ${status === 'failed' ? 'opacity-75' : ''}`}
+                  style={{
+                    ...(status === 'failed' ? { border: '1px solid #dc3545' } : {}),
+                    maxWidth: '100%',
+                    wordWrap: 'break-word',
+                    paddingTop: msg.attachments && msg.attachments.length > 0 ? '3rem' : '1rem'
+                  }}
+                >
+                  {/* Show replied-to message */}
+                  {msg.reply_to_message && (
+                    <div 
+                      className="replied-message d-flex gap-2 p-2 mb-3 rounded"
+                      style={{
+                        backgroundColor: isMine ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.05)',
+                        borderLeft: '3px solid #007bff',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        maxHeight: '120px',
+                        overflowY: 'auto'
+                      }}
+                      onClick={() => {
+                        // Scroll to original message if it exists in view
+                        const originalElement = document.querySelector(`[data-message-id="${msg.reply_to_message.id}"]`);
+                        if (originalElement) {
+                          originalElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          // Briefly highlight the message
+                          originalElement.style.backgroundColor = 'rgba(255, 255, 0, 0.2)';
+                          setTimeout(() => {
+                            originalElement.style.backgroundColor = '';
+                          }, 1500);
+                        }
+                      }}
+                      title="Click to jump to original message"
+                    >
+                      <span style={{ fontSize: '1rem', color: '#007bff', flexShrink: 0 }}>↩️</span>
+                      <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, color: '#007bff', marginBottom: '6px', fontSize: '0.75rem' }}>
+                          {msg.reply_to_message.sender_name || 
+                           (msg.reply_to_message.sender_type === 'staff' ? 'Staff' : 'Guest')}
+                        </div>
+                        {/* Show full original message text */}
+                        <div 
+                          style={{ 
+                            fontSize: '0.8rem', 
+                            opacity: 0.95,
+                            maxWidth: '100%',
+                            wordBreak: 'break-word',
+                            whiteSpace: 'pre-wrap'
+                          }}
+                        >
+                          {msg.reply_to_message.message || '📎 Attachment'}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Only show message text if it exists and is not a placeholder */}
+                  {msg.message && 
+                   msg.message.trim() !== '' && 
+                   msg.message !== '[FILE SHARED]' && 
+                   msg.message !== '[File shared]' && 
+                   !msg.message.match(/^\[.*file.*shared.*\]$/i) && (
+                    <div style={{ marginBottom: msg.attachments && msg.attachments.length > 0 ? '0.5rem' : '0' }}>
+                      {msg.message}
+                    </div>
+                  )}
                 
                 {/* Render attachments */}
                 {msg.attachments && msg.attachments.length > 0 && (
-                  <div className="message-attachments mt-2">
-                    {msg.attachments.map(att => {
+                  <div className="message-attachments" style={{ marginTop: msg.message ? '0.5rem' : '0' }}>
+                    {msg.attachments.map((att, idx) => {
                       // Ensure we have full Cloudinary URL
                       const fullFileUrl = getCloudinaryUrl(att.file_url);
                       const fullThumbnailUrl = att.thumbnail_url ? getCloudinaryUrl(att.thumbnail_url) : null;
                       
                       return (
-                        <div key={att.id} className="attachment mb-2">
+                        <div 
+                          key={att.id} 
+                          className="attachment" 
+                          style={{ marginBottom: idx < msg.attachments.length - 1 ? '0.75rem' : '0' }}
+                        >
                           {att.file_type === 'image' ? (
-                            // Show images inline
-                            <img 
-                              src={fullThumbnailUrl || fullFileUrl} 
-                              alt={att.file_name}
-                              style={{ 
-                                maxWidth: '300px', 
-                                maxHeight: '300px',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                objectFit: 'cover'
-                              }}
-                              onClick={() => window.open(fullFileUrl, '_blank')}
-                              title="Click to open full size"
-                            />
+                            // Show images inline - improved layout
+                            <div className="image-attachment">
+                              <div 
+                                className="image-wrapper" 
+                                style={{ 
+                                  position: 'relative',
+                                  display: 'block',
+                                  width: '100%',
+                                  maxWidth: '280px'
+                                }}
+                              >
+                                <img 
+                                  src={fullThumbnailUrl || fullFileUrl} 
+                                  alt={att.file_name}
+                                  style={{ 
+                                    width: '100%',
+                                    height: 'auto',
+                                    maxHeight: '280px',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    objectFit: 'cover',
+                                    display: 'block'
+                                  }}
+                                  onClick={() => window.open(fullFileUrl, '_blank')}
+                                  title="Click to open full size"
+                                />
+                              </div>
+                              {/* File info below image - compact */}
+                              <div 
+                                className="image-info mt-1" 
+                                style={{ 
+                                  fontSize: '0.7rem', 
+                                  opacity: 0.7,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: '0.5rem',
+                                  maxWidth: '280px'
+                                }}
+                              >
+                                <span className="text-truncate flex-grow-1" title={att.file_name}>
+                                  {att.file_name}
+                                </span>
+                                <span style={{ fontSize: '0.65rem', whiteSpace: 'nowrap' }}>
+                                  {att.file_size_display || `${(att.file_size / 1024).toFixed(1)} KB`}
+                                </span>
+                              </div>
+                            </div>
                           ) : (
-                            // Show document with download button
+                            // Show document - improved compact layout
                             <div 
                               className="document d-flex align-items-center gap-2 p-2 rounded"
                               style={{ 
-                                backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                                maxWidth: '300px'
+                                backgroundColor: isMine ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+                                maxWidth: '280px',
+                                width: '100%'
                               }}
                             >
-                              <span style={{ fontSize: '1.5rem' }}>
-                                {att.file_type === 'pdf' ? '📄' : '📎'}
+                              <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>
+                                {att.file_type === 'pdf' ? '📄' : 
+                                 att.file_type === 'document' ? '📝' : '📎'}
                               </span>
-                              <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                              <div className="flex-grow-1" style={{ minWidth: 0, overflow: 'hidden' }}>
                                 <div 
                                   className="text-truncate" 
-                                  style={{ fontSize: '0.9rem', fontWeight: '500' }}
+                                  style={{ fontSize: '0.85rem', fontWeight: '500' }}
                                   title={att.file_name}
                                 >
                                   {att.file_name}
                                 </div>
-                                <small className="text-muted">{att.file_size_display || `${(att.file_size / 1024).toFixed(1)} KB`}</small>
+                                <small style={{ fontSize: '0.7rem', opacity: 0.7 }}>
+                                  {att.file_size_display || `${(att.file_size / 1024).toFixed(1)} KB`}
+                                </small>
                               </div>
                               <a 
                                 href={fullFileUrl} 
                                 download={att.file_name}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="btn btn-sm btn-primary"
-                                style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                                className="btn btn-sm"
+                                style={{ 
+                                  fontSize: '0.75rem',
+                                  padding: '0.25rem 0.5rem',
+                                  whiteSpace: 'nowrap',
+                                  flexShrink: 0,
+                                  backgroundColor: isMine ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                                  border: 'none',
+                                  color: 'inherit'
+                                }}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                 }}
                               >
-                                ⬇️ Download
+                                ⬇️
                               </a>
                             </div>
                           )}
@@ -1447,9 +1982,71 @@ const ChatWindow = ({
                     })}
                   </div>
                 )}
+                </div>
               </div>
-              <div className={`small mt-1 d-flex align-items-center gap-2 ${isMine ? 'justify-content-end' : 'justify-content-start'}`}>
-                {messageTime && <span className="text-muted">{messageTime}</span>}
+              {/* Footer with time, status, reply, and share */}
+              <div 
+                className={`small d-flex align-items-center gap-2 ${isMine ? 'justify-content-end' : 'justify-content-start'}`}
+                style={{
+                  width: '100%'
+                }}
+              >
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                    backdropFilter: 'blur(4px)',
+                    padding: '6px 10px',
+                    borderRadius: '6px'
+                  }}
+                >
+                {/* Reply button */}
+                <button
+                  className="btn btn-link p-0"
+                  style={{ 
+                    fontSize: '0.75rem',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    opacity: 0.5,
+                    padding: '0',
+                    border: 'none',
+                    background: 'none'
+                  }}
+                  onClick={() => {
+                    console.log('Reply to message:', msg.id);
+                    setReplyingTo(msg);
+                    // Focus on message input
+                    if (messageInputRef.current) {
+                      messageInputRef.current.focus();
+                    }
+                  }}
+                  title="Reply to this message"
+                >
+                  Reply
+                </button>
+                {/* Share button */}
+                <button
+                  className="btn btn-link p-0"
+                  style={{ 
+                    fontSize: '0.75rem',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    opacity: 0.5,
+                    padding: '0',
+                    border: 'none',
+                    background: 'none'
+                  }}
+                  onClick={() => {
+                    console.log('Share message:', msg.id);
+                    // TODO: Implement share functionality
+                  }}
+                  title="Share this message"
+                >
+                  Share
+                </button>
+                {messageTime && <span className="text-muted" style={{ fontSize: '0.75rem', fontStyle: 'italic' }}>{messageTime}</span>}
                 {isMine && (
                   <span className="message-status-text" style={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
                     {status === 'pending' && <span className="text-secondary">Sending...</span>}
@@ -1479,6 +2076,7 @@ const ChatWindow = ({
                     )}
                   </span>
                 )}
+                </div>
               </div>
             </div>
           );
@@ -1507,6 +2105,79 @@ const ChatWindow = ({
             className="emoji-picker-container"
           >
             <EmojiPicker onEmojiClick={handleEmojiClick} />
+          </div>
+        )}
+
+        {/* Reply Preview */}
+        {replyingTo && (
+          <div 
+            className="reply-preview d-flex align-items-start gap-2 p-3 mb-2" 
+            style={{ 
+              backgroundColor: '#f0f8ff', 
+              borderLeft: '3px solid #007bff',
+              borderRadius: '4px',
+              boxShadow: '0 2px 4px rgba(0,123,255,0.1)',
+              maxHeight: '150px',
+              overflowY: 'auto'
+            }}
+          >
+            <span style={{ fontSize: '1.2rem', color: '#007bff', flexShrink: 0, marginTop: '2px' }}>↩️</span>
+            <div className="flex-grow-1" style={{ minWidth: 0 }}>
+              <div className="d-flex justify-content-between align-items-center mb-2">
+                <span 
+                  style={{ 
+                    fontSize: '0.75rem', 
+                    fontWeight: 600, 
+                    color: '#007bff' 
+                  }}
+                >
+                  Replying to {replyingTo.sender_type === 'staff' 
+                    ? (replyingTo.staff_name || 'Staff') 
+                    : (replyingTo.guest_name || 'Guest')}
+                </span>
+                <button
+                  className="btn btn-sm p-0"
+                  onClick={() => setReplyingTo(null)}
+                  style={{ 
+                    background: 'none', 
+                    border: 'none', 
+                    fontSize: '1.2rem',
+                    color: '#6c757d',
+                    cursor: 'pointer',
+                    lineHeight: 1
+                  }}
+                  title="Cancel reply"
+                >
+                  ×
+                </button>
+              </div>
+              {/* Show full original message text */}
+              {replyingTo.message && (
+                <div 
+                  style={{ 
+                    fontSize: '0.85rem', 
+                    color: '#333',
+                    maxWidth: '100%',
+                    wordBreak: 'break-word',
+                    whiteSpace: 'pre-wrap',
+                    marginBottom: replyingTo.attachments?.length > 0 ? '8px' : '0'
+                  }}
+                >
+                  {replyingTo.message}
+                </div>
+              )}
+              {/* Show attachments if present */}
+              {replyingTo.attachments?.length > 0 && (
+                <div style={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic' }}>
+                  📎 {replyingTo.attachments.length} attachment{replyingTo.attachments.length > 1 ? 's' : ''}
+                  {replyingTo.attachments.map((att, idx) => (
+                    <span key={idx} style={{ display: 'block', marginLeft: '1.2rem', marginTop: '2px' }}>
+                      • {att.file_name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -1623,7 +2294,7 @@ const ChatWindow = ({
             ref={messageInputRef}
             type="text"
             className="message-form-control me-2"
-            placeholder="Type a message..."
+            placeholder={replyingTo ? "Type your reply..." : "Type a message..."}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
           onClick={async () => {
@@ -1730,6 +2401,42 @@ const ChatWindow = ({
           </button>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <ConfirmationModal
+          title="Delete Message"
+          message="Are you sure you want to delete this message? This action cannot be undone."
+          onConfirm={handleDeleteMessage}
+          onCancel={() => {
+            setShowDeleteConfirm(false);
+            setMessageToDelete(null);
+          }}
+        />
+      )}
+
+      {/* Download Confirmation Modal */}
+      {showDownloadConfirm && (
+        <ConfirmationModal
+          title="Download Attachments"
+          message={`Download ${messageToDownload?.attachments?.length || 0} file(s) from this message?`}
+          onConfirm={handleDownloadMessage}
+          onCancel={() => {
+            setShowDownloadConfirm(false);
+            setMessageToDownload(null);
+          }}
+        />
+      )}
+
+      {/* Success Modal */}
+      <SuccessModal
+        show={showSuccessModal}
+        message={successMessage}
+        onClose={() => {
+          setShowSuccessModal(false);
+          setSuccessMessage("");
+        }}
+      />
     </div>
   );
 };

@@ -544,14 +544,19 @@ body.terminal-mode,
 }
 
 .chat-window-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 1rem;
   padding: 0.75rem 1rem;
-  background-color: rgba(var(--main-color-rgb), 0.95);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: rgba(var(--main-color-rgb), 0.75);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   z-index: 1350;
-  grid-row: 1;
   flex-shrink: 0;
   min-height: 60px;
 }
@@ -699,7 +704,7 @@ body.terminal-mode,
   grid-row: 2;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 1rem;
+  padding: 70px 1rem 1rem 1rem;
   background-color: #f8f9fa;
   position: relative;
   height: 100%;

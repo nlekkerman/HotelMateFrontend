@@ -2,7 +2,7 @@ import React from "react";
 
 export default function ConfirmationModal({ title, message, onConfirm, onCancel }) {
   return (
-    <div className="modal show d-block" tabIndex="-1">
+    <div className="modal show d-block" tabIndex="-1" style={{ zIndex: 9999 }}>
       <div className="modal-dialog p-2 bg-warning">
         <div className="modal-content bg-dark text-white">
           <div className="modal-header">

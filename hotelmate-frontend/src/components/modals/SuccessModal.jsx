@@ -9,7 +9,7 @@ export default function SuccessModal({ show, message = "Success!", onClose }) {
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 1050,
+        zIndex: 9999,
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
