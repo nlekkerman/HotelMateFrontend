@@ -1301,47 +1301,37 @@ const ChatWindow = ({
             console.log('📝 [INPUT FOCUS] User focused on message input');
             
             try {
-              // For staff: use direct API call
+              // For staff: ALWAYS call backend regardless of local state
               if (userId) {
                 console.log('📝 [INPUT FOCUS] Staff marking guest messages as read');
                 console.log('📝 [INPUT FOCUS] Conversation ID:', conversationId);
                 console.log('📝 [INPUT FOCUS] User ID:', userId);
                 
-                // Collect guest message IDs from current state
-                const guestMessageIds = [];
+                // Update ALL guest messages in local UI (not just unread ones)
+                setMessages(prevMessages => 
+                  prevMessages.map(msg => 
+                    msg.sender_type === 'guest'
+                      ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_staff: true }
+                      : msg
+                  )
+                );
                 
-                // First, update local UI to show guest messages as read
-                setMessages(prevMessages => {
-                  const updated = prevMessages.map(msg => {
-                    if (msg.sender_type === 'guest' && !msg.is_read_by_recipient && msg.status !== 'read') {
-                      guestMessageIds.push(msg.id);
-                      console.log(`📝 [INPUT FOCUS] Marking guest message ${msg.id} as read`);
-                      return { ...msg, status: 'read', is_read_by_recipient: true, read_by_staff: true };
+                // Update message statuses map for all guest messages
+                setMessageStatuses(prev => {
+                  const newMap = new Map(prev);
+                  messages.forEach(msg => {
+                    if (msg.sender_type === 'guest') {
+                      newMap.set(msg.id, 'read');
                     }
-                    return msg;
                   });
-                  return updated;
+                  return newMap;
                 });
                 
-                // Update message statuses map using the collected IDs
-                if (guestMessageIds.length > 0) {
-                  console.log(`📝 [INPUT FOCUS] Updating status map for ${guestMessageIds.length} guest messages:`, guestMessageIds);
-                  setMessageStatuses(prev => {
-                    const newMap = new Map(prev);
-                    guestMessageIds.forEach(id => {
-                      newMap.set(id, 'read');
-                    });
-                    return newMap;
-                  });
-                } else {
-                  console.log('ℹ️ [INPUT FOCUS] No unread guest messages to mark');
-                }
-                
-                // Then call backend to mark as read (will trigger Pusher event for guest)
-                console.log('📤 [INPUT FOCUS] Calling backend to mark conversation as read...');
+                // ALWAYS call backend to mark as read (will trigger Pusher event for guest)
+                console.log('📤 [INPUT FOCUS] Calling backend to mark ALL guest messages as read...');
                 const response = await api.post(`/chat/conversations/${conversationId}/mark-read/`);
                 console.log('✅ [INPUT FOCUS] Backend response:', response.data);
-                console.log('✅ [INPUT FOCUS] Staff marked conversation as read - Pusher event should fire to guest');
+                console.log('✅ [INPUT FOCUS] Pusher event fired with message IDs:', response.data?.message_ids || 'N/A');
               } 
               // For guests: use session token and mark staff messages as read
               else if (guestSession) {
