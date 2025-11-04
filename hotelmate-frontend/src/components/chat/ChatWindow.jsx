@@ -150,9 +150,22 @@ const ChatWindow = ({
     console.log('💬 [MESSAGES STATE] Current messages:', messages.length, messages.map(m => ({
       id: m.id, 
       msg: m.message?.substring(0, 20),
+      is_deleted: m.is_deleted,
+      has_attachments: !!m.attachments?.length,
       reply_to: m.reply_to,
       has_reply_to_message: !!m.reply_to_message
     })));
+    
+    // Log deleted messages specifically
+    const deletedMessages = messages.filter(m => m.is_deleted);
+    if (deletedMessages.length > 0) {
+      console.log('🗑️ [DELETED MESSAGES] Found deleted messages:', deletedMessages.map(m => ({
+        id: m.id,
+        message: m.message,
+        attachments: m.attachments?.length || 0,
+        is_deleted: m.is_deleted
+      })));
+    }
   }, [messages]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -866,6 +879,8 @@ const ChatWindow = ({
     isDefined: !!handleMessageDeleted,
     handlerType: typeof handleMessageDeleted
   });
+  
+  console.log('🔔 [GUEST PUSHER] WAITING FOR DELETION EVENTS on channel:', guestRoomChannel);
 
   useGuestPusher(guestPusherChannels);
 
