@@ -8,6 +8,8 @@ import { toast } from "react-toastify";
 import EmojiPicker from "emoji-picker-react";
 import { GuestChatSession } from "@/utils/guestChatSession";
 import { useGuestPusher } from "@/hooks/useGuestPusher";
+import { messaging } from "@/firebase";
+import { onMessage } from "firebase/messaging";
 
 const MESSAGE_LIMIT = 10;
 
@@ -37,6 +39,10 @@ const ChatWindow = ({
   // Guest session management
   const [guestSession, setGuestSession] = useState(null);
   const [currentStaff, setCurrentStaff] = useState(null);
+  // Guest Pusher channel name - compute it directly from props
+  const guestPusherChannel = isGuest && hotelSlug && roomNumber 
+    ? `${hotelSlug}-room-${roomNumber}-chat` 
+    : null;
   
   // Use conversation data from props (already fetched in ChatHomePage)
   const [conversationDetails, setConversationDetails] = useState(propConversationData || null);
@@ -150,6 +156,7 @@ const ChatWindow = ({
 
     // Initialize guest session if this is a guest
     if (isGuest && hotelSlug && roomNumber) {
+      console.log('🔧 Initializing guest session:', { hotelSlug, roomNumber });
       const session = new GuestChatSession(hotelSlug, roomNumber);
       setGuestSession(session);
       
@@ -157,7 +164,10 @@ const ChatWindow = ({
       const savedStaff = session.getCurrentStaffHandler();
       if (savedStaff) {
         setCurrentStaff(savedStaff);
+        console.log('👤 Loaded saved staff handler:', savedStaff);
       }
+      
+      console.log('📡 Guest Pusher channel will be:', `${hotelSlug}-room-${roomNumber}-chat`);
     }
 
     fetchMessages();
@@ -326,13 +336,47 @@ const ChatWindow = ({
   }, []); // No dependencies needed
 
   // Use guest Pusher hook if this is a guest session
+  // Use the computed channel name instead of relying on session data
   useGuestPusher(
-    isGuest && guestSession ? guestSession.getPusherChannel() : null,
+    guestPusherChannel, // Direct channel name: {hotelSlug}-room-{roomNumber}-chat
     {
       'new-staff-message': handleNewStaffMessage,
       'new-message': handleNewMessage,
     }
   );
+
+  // FCM foreground message listener for guests
+  useEffect(() => {
+    if (!isGuest) return;
+
+    console.log('🔔 Setting up FCM foreground message listener for guest');
+    
+    // Listen for foreground FCM messages (when tab is open)
+    const unsubscribe = onMessage(messaging, (payload) => {
+      console.log('🔔 FCM foreground message received:', payload);
+      
+      // Extract message data
+      const data = payload.data;
+      if (data && data.message_id) {
+        // Show toast notification
+        const staffName = data.staff_name || 'Hotel Staff';
+        const messageText = data.message || 'New message';
+        
+        toast.info(`${staffName}: ${messageText.substring(0, 50)}${messageText.length > 50 ? '...' : ''}`, {
+          position: "top-right",
+          autoClose: 5000,
+        });
+
+        // The Pusher event will handle adding the message to the UI
+        // This is just for the notification
+      }
+    });
+
+    return () => {
+      console.log('🔔 Cleaning up FCM listener');
+      unsubscribe();
+    };
+  }, [isGuest]);
 
   // Set up intersection observer for message seen status (for staff only)
   useEffect(() => {
