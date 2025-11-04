@@ -489,12 +489,6 @@ const ChatWindow = ({
     setMessages((prev) => [...prev, systemMessage]);
     scrollToBottom();
     
-    // Show a toast notification to the guest
-    toast.info(`${data.staff_name} is now assisting you`, {
-      position: "top-center",
-      autoClose: 3000,
-    });
-    
     console.log('✅ Updated staff handler to:', data.staff_name);
   }, [guestSession]);
 
@@ -534,19 +528,9 @@ const ChatWindow = ({
         // Extract message data
         const data = payload.data;
         if (data && data.message_id) {
-          // Show toast notification
-          const staffName = data.staff_name || 'Hotel Staff';
-          const messageText = data.message || 'New message';
-          
-          toast.info(`${staffName}: ${messageText.substring(0, 50)}${messageText.length > 50 ? '...' : ''}`, {
-            position: "top-right",
-            autoClose: 5000,
-          });
-
-          console.log('✅ Toast notification shown for FCM message');
-          
-          // The Pusher event will handle adding the message to the UI
-          // This is just for the notification
+          // FCM notification already shown by service worker
+          // Pusher event will handle adding the message to the UI
+          console.log('✅ FCM message received, Pusher will handle UI update');
         } else {
           console.warn('⚠️ FCM message received but no message_id in data');
         }
