@@ -199,6 +199,25 @@ const ChatWindow = ({
       setCurrentConversationId(conversationId);
     }
 
+    // Assign staff to conversation when they open it (STAFF ONLY)
+    const assignStaffToConversation = async () => {
+      if (!userId || isGuest || !hotelSlug) return;
+      
+      try {
+        console.log('👤 Assigning current staff to conversation:', conversationId);
+        const response = await api.post(
+          `/chat/${hotelSlug}/conversations/${conversationId}/assign-staff/`
+        );
+        
+        if (response.data?.assigned_staff) {
+          console.log('✅ Staff assigned:', response.data.assigned_staff.name);
+        }
+      } catch (error) {
+        console.error('❌ Failed to assign staff to conversation:', error);
+        // Don't block conversation loading if assignment fails
+      }
+    };
+
     // Initialize guest session if this is a guest
     if (isGuest && hotelSlug && roomNumber) {
       console.log('🔧 Initializing guest session:', { hotelSlug, roomNumber });
@@ -226,7 +245,10 @@ const ChatWindow = ({
       console.log('📡 Guest Pusher channel will be:', `${hotelSlug}-room-${roomNumber}-chat`);
     }
 
-    fetchMessages();
+    // Assign staff first (if staff), then fetch messages
+    assignStaffToConversation().then(() => {
+      fetchMessages();
+    });
 
     return () => {
       if (userId) {
@@ -260,6 +282,7 @@ const ChatWindow = ({
       channel.unbind("message-delivered");
       channel.unbind("messages-read-by-staff");
       channel.unbind("messages-read-by-guest");
+      channel.unbind("staff-assigned");
       
       // Listen for new messages
       channel.bind("new-message", (message) => {
@@ -271,6 +294,24 @@ const ChatWindow = ({
           return [...prev, message];
         });
         scrollToBottom();
+      });
+
+      // Listen for staff assignment changes (for staff handoff notifications)
+      channel.bind("staff-assigned", (data) => {
+        console.log('👤 Staff assignment changed:', data);
+        
+        // Get current staff name from localStorage
+        const storedUser = localStorage.getItem("user");
+        const currentStaffName = storedUser ? JSON.parse(storedUser).first_name + ' ' + JSON.parse(storedUser).last_name : '';
+        
+        // Only show notification if another staff member took over
+        if (data.staff_name && data.staff_name !== currentStaffName) {
+          toast.info(`${data.staff_name} (${data.staff_role}) is now handling this conversation`, {
+            position: "top-right",
+            autoClose: 5000,
+          });
+          console.log('📢 Showing handoff notification:', data.staff_name);
+        }
       });
 
       // Listen for message delivered event (from backend)
@@ -338,6 +379,7 @@ const ChatWindow = ({
           channel.unbind("message-delivered");
           channel.unbind("messages-read-by-staff");
           channel.unbind("messages-read-by-guest");
+          channel.unbind("staff-assigned");
         }
       };
     }
@@ -424,6 +466,31 @@ const ChatWindow = ({
     scrollToBottom();
   }, []); // No dependencies needed
 
+  // Handle staff assignment changes (for guests)
+  const handleStaffAssigned = useCallback((data) => {
+    console.log('👤 Staff assigned event received:', data);
+    
+    const newStaffInfo = {
+      name: data.staff_name,
+      role: data.staff_role,
+      profile_image: data.staff_profile_image
+    };
+    
+    // Update current staff handler
+    setCurrentStaff(newStaffInfo);
+    
+    // Save to guest session
+    guestSession?.saveToLocalStorage({ current_staff_handler: newStaffInfo });
+    
+    // Show a toast notification to the guest
+    toast.info(`${data.staff_name} (${data.staff_role}) is now assisting you`, {
+      position: "top-center",
+      autoClose: 4000,
+    });
+    
+    console.log('✅ Updated staff handler to:', data.staff_name);
+  }, [guestSession]);
+
   // Use guest Pusher hook if this is a guest session
   // Use the computed channel name instead of relying on session data
   console.log('🔧 [CHATWINDOW] Setting up Pusher hook:', {
@@ -437,6 +504,7 @@ const ChatWindow = ({
     {
       'new-staff-message': handleNewStaffMessage,
       'new-message': handleNewMessage,
+      'staff-assigned': handleStaffAssigned,
     }
   );
 
@@ -804,9 +872,11 @@ const ChatWindow = ({
         {console.log('🎨 [RENDER] About to render messages:', messages.length)}
         
         {messages.map((msg) => {
-          const isMine =
-            (msg.sender_type === "staff" && msg.staff === userId) ||
-            (msg.sender_type === "guest" && !userId);
+          // For STAFF view: all staff messages on right, guest messages on left
+          // For GUEST view: all guest messages on right, staff messages on left
+          const isMine = userId 
+            ? msg.sender_type === "staff"  // Staff view: all staff messages are "mine"
+            : msg.sender_type === "guest"; // Guest view: all guest messages are "mine"
           
           // Determine sender name
           let senderName;
