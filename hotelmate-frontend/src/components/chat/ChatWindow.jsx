@@ -471,26 +471,34 @@ const ChatWindow = ({
       profile_image: data.staff_profile_image
     };
     
+    // Check if this is actually a new staff member (prevent duplicate "joined" messages)
+    const isNewStaff = !currentStaff || currentStaff.name !== newStaffInfo.name;
+    
     // Update current staff handler
     setCurrentStaff(newStaffInfo);
     
     // Save to guest session
     guestSession?.saveToLocalStorage({ current_staff_handler: newStaffInfo });
     
-    // Add a system message to the chat
-    const systemMessage = {
-      id: `system-${Date.now()}`,
-      message: `${data.staff_name} (${data.staff_role}) joined the chat`,
-      sender_type: 'system',
-      created_at: new Date().toISOString(),
-      is_system_message: true
-    };
-    
-    setMessages((prev) => [...prev, systemMessage]);
-    scrollToBottom();
+    // Only add system message if this is a new staff member joining
+    if (isNewStaff) {
+      const systemMessage = {
+        id: `system-${Date.now()}`,
+        message: `${data.staff_name} (${data.staff_role}) joined the chat`,
+        sender_type: 'system',
+        created_at: new Date().toISOString(),
+        is_system_message: true
+      };
+      
+      setMessages((prev) => [...prev, systemMessage]);
+      scrollToBottom();
+      console.log('✅ Added "joined chat" message for new staff:', data.staff_name);
+    } else {
+      console.log('ℹ️ Same staff member, skipping "joined chat" message');
+    }
     
     console.log('✅ Updated staff handler to:', data.staff_name);
-  }, [guestSession]);
+  }, [currentStaff, guestSession]);
 
   // Use guest Pusher hook if this is a guest session
   // Use the computed channel name instead of relying on session data
@@ -500,12 +508,38 @@ const ChatWindow = ({
     willSubscribe: !!guestPusherChannel
   });
   
+  // Handle messages read by staff (for guest view)
+  const handleMessagesReadByStaff = useCallback((data) => {
+    console.log('👁️ Messages read by staff event received:', data);
+    const { message_ids } = data;
+    if (message_ids && Array.isArray(message_ids)) {
+      setMessageStatuses(prev => {
+        const newMap = new Map(prev);
+        message_ids.forEach(id => {
+          newMap.set(id, 'read');
+        });
+        return newMap;
+      });
+      
+      // Update messages array with read status
+      setMessages(prevMessages => 
+        prevMessages.map(msg => 
+          message_ids.includes(msg.id)
+            ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_staff: true }
+            : msg
+        )
+      );
+      console.log('✅ Updated guest messages as read by staff');
+    }
+  }, []);
+
   useGuestPusher(
     guestPusherChannel, // Direct channel name: {hotelSlug}-room-{roomNumber}-chat
     {
       'new-staff-message': handleNewStaffMessage,
       'new-message': handleNewMessage,
       'staff-assigned': handleStaffAssigned,
+      'messages-read-by-staff': handleMessagesReadByStaff,
     }
   );
 
