@@ -722,7 +722,85 @@ const ChatWindow = ({
   }, [conversationId, userId]);
   // Removed seenMessages from deps to prevent re-subscription
 
-  // NOTE: Removed auto-mark effects - messages are only marked as read when user focuses input
+  // Auto-mark messages as read when viewing conversation - ONLY FOR GUESTS
+  // Staff must click input to mark as read
+  useEffect(() => {
+    if (!conversationId || userId) return; // Skip if staff (userId exists)
+    
+    // Only run for guests
+    if (!guestSession) return;
+
+    const markAsRead = async () => {
+      try {
+        console.log('📝 [AUTO-READ] Guest auto-marking staff messages as read...');
+        const response = await api.post(`/chat/conversations/${conversationId}/mark-read/`, {
+          session_token: guestSession.getToken()
+        });
+        console.log('✅ [AUTO-READ] Guest marked conversation as read:', response.data);
+        
+        // Update local UI immediately
+        setMessages(prevMessages => 
+          prevMessages.map(msg => 
+            msg.sender_type === 'staff'
+              ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_guest: true }
+              : msg
+          )
+        );
+      } catch (error) {
+        console.error('❌ [AUTO-READ] Failed to mark conversation as read:', error);
+      }
+    };
+
+    // Wait 1 second to ensure guest is actually viewing
+    const timer = setTimeout(markAsRead, 1000);
+
+    return () => clearTimeout(timer);
+  }, [conversationId, userId, guestSession]);
+
+  // Auto-mark new staff messages as read when they arrive - ONLY FOR GUESTS
+  useEffect(() => {
+    if (!conversationId || messages.length === 0 || userId) return; // Skip if staff
+    if (!guestSession) return;
+    
+    // Count unread staff messages
+    let unreadCount = 0;
+    const unreadMessageIds = [];
+    
+    messages.forEach(msg => {
+      if (msg.sender_type === 'staff' && !msg.is_read_by_recipient && msg.status !== 'read') {
+        unreadCount++;
+        unreadMessageIds.push(msg.id);
+      }
+    });
+
+    if (unreadCount === 0) return;
+
+    const markNewMessagesAsRead = async () => {
+      try {
+        console.log(`📝 [NEW-MSG-READ] Guest auto-marking ${unreadCount} staff messages as read:`, unreadMessageIds);
+        const response = await api.post(`/chat/conversations/${conversationId}/mark-read/`, {
+          session_token: guestSession.getToken()
+        });
+        console.log('✅ [NEW-MSG-READ] Response:', response.data);
+        
+        // Update local UI
+        setMessages(prevMessages => 
+          prevMessages.map(msg => 
+            msg.sender_type === 'staff' && unreadMessageIds.includes(msg.id)
+              ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_guest: true }
+              : msg
+          )
+        );
+      } catch (error) {
+        console.error('❌ [NEW-MSG-READ] Failed:', error);
+      }
+    };
+
+    // Mark as read after a short delay
+    const timer = setTimeout(markNewMessagesAsRead, 500);
+
+    return () => clearTimeout(timer);
+  }, [messages.length, conversationId, userId, guestSession]);
 
   // Ensure FCM token is saved for guest on chat open (even if already authenticated)
   useEffect(() => {
