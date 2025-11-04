@@ -249,6 +249,9 @@ const ChatWindow = ({
         
         if (response.data?.assigned_staff) {
           console.log('✅ Staff assigned:', response.data.assigned_staff.name);
+          if (response.data?.messages_marked_read !== undefined) {
+            console.log('✅ Marked', response.data.messages_marked_read, 'guest messages as read');
+          }
         }
       } catch (error) {
         console.error('❌ Failed to assign staff to conversation:', error);
@@ -549,25 +552,36 @@ const ChatWindow = ({
   // Handle messages read by staff (for guest view)
   const handleMessagesReadByStaff = useCallback((data) => {
     console.log('👁️ Messages read by staff event received:', data);
+    console.log('👁️ Event data keys:', Object.keys(data));
+    console.log('👁️ Message IDs to mark as read:', data.message_ids);
+    
     const { message_ids } = data;
     if (message_ids && Array.isArray(message_ids)) {
+      console.log('👁️ Updating status for', message_ids.length, 'messages');
+      
       setMessageStatuses(prev => {
         const newMap = new Map(prev);
         message_ids.forEach(id => {
           newMap.set(id, 'read');
+          console.log('👁️ Set status to read for message:', id);
         });
         return newMap;
       });
       
       // Update messages array with read status
-      setMessages(prevMessages => 
-        prevMessages.map(msg => 
+      setMessages(prevMessages => {
+        const updated = prevMessages.map(msg => 
           message_ids.includes(msg.id)
             ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_staff: true }
             : msg
-        )
-      );
+        );
+        console.log('👁️ Messages updated:', updated.filter(m => message_ids.includes(m.id)).length);
+        return updated;
+      });
+      
       console.log('✅ Updated guest messages as read by staff');
+    } else {
+      console.warn('⚠️ No message_ids in event data or not an array:', message_ids);
     }
   }, []);
 
