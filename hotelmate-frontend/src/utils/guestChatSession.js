@@ -99,9 +99,17 @@ export class GuestChatSession {
     this.sessionData = {
       ...this.sessionData,
       ...data,
+      // Ensure we always have hotelSlug and roomNumber in session
+      hotel_slug: data.hotel_slug || this.hotelSlug,
+      room_number: data.room_number || this.roomNumber,
       lastUpdated: new Date().toISOString()
     };
     localStorage.setItem(SESSION_KEY, JSON.stringify(this.sessionData));
+    console.log('💾 Guest session saved:', {
+      room_number: this.sessionData.room_number,
+      hotel_slug: this.sessionData.hotel_slug,
+      conversation_id: this.sessionData.conversation_id
+    });
   }
 
   /**
