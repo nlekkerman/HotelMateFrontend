@@ -45,7 +45,7 @@ const ChatSidebar = ({
               overflow: 'hidden'
             }}
           >
-            {/* ASESHeader at the very top - full width */}
+            {/* Conversation Header */}
             <div className="conversation-header" style={{
               backgroundColor: selectedRoom === conv.room_number 
                 ? 'rgba(var(--main-color-rgb), 0.95)' 
@@ -81,27 +81,33 @@ const ChatSidebar = ({
               </div>
             </div>
             
-            {/* Message content below header */}
+            {/* Message content with white background */}
             <div className="d-flex justify-content-between align-items-center" style={{
-              padding: '0.75rem 1rem'
+              padding: '0.75rem 1rem',
+              backgroundColor: '#fff'
             }}>
-              <div 
-                className="last-message" 
-                style={{ 
-                  wordBreak: "break-word", 
-                  overflowWrap: "break-word", 
-                  maxWidth: "75%",
-                  fontSize: isMobile ? '0.9rem' : '0.85rem',
-                  color: selectedRoom === conv.room_number ? "#fff" : "#6c757d"
-                }}
-              >
-                {conv.last_message || <em>No messages yet</em>}
+              <div style={{ maxWidth: "75%" }}>
+                <div 
+                  className="last-message" 
+                  style={{ 
+                    wordBreak: "break-word", 
+                    overflowWrap: "break-word",
+                    fontSize: isMobile ? '0.9rem' : '0.85rem',
+                    color: conv.unread_count > 0 ? '#dc3545' : '#28a745', // Red if unread, green if read
+                    fontWeight: conv.unread_count > 0 ? '600' : 'normal'
+                  }}
+                >
+                  {conv.last_message || <em>No messages yet</em>}
+                </div>
+                <small className="text-muted" style={{ fontSize: '0.7rem', fontStyle: 'italic' }}>
+                  {conv.unread_count > 0 ? 'Not seen' : 'Seen'}
+                </small>
               </div>
               {conv.last_message_time && (
                 <div
                   className="last-message-time small"
                   style={{
-                    color: selectedRoom === conv.room_number ? "#fff" : "#6c757d",
+                    color: '#6c757d',
                     fontSize: '0.75rem',
                     whiteSpace: 'nowrap'
                   }}

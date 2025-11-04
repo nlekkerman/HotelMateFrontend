@@ -727,10 +727,7 @@ const ChatWindow = ({
   const handleEmojiClick = (emojiData) => {
     setNewMessage(prev => prev + emojiData.emoji);
     setShowEmojiPicker(false);
-    // Return focus to input after selecting emoji (without triggering keyboard on mobile)
-    if (messageInputRef.current) {
-      messageInputRef.current.focus();
-    }
+    // Don't refocus input - keep keyboard hidden on mobile
   };
 
   const handleEmojiButtonClick = () => {
