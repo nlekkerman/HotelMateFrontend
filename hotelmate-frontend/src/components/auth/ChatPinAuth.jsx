@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { GuestChatSession } from "@/utils/guestChatSession";
 import useHotelLogo from "@/hooks/useHotelLogo";
+import { requestFCMPermission } from "@/utils/fcm";
+import api from "@/services/api";
 
 export default function ChatPinAuth() {
   const { hotelSlug, room_number } = useParams();
@@ -89,6 +91,23 @@ export default function ChatPinAuth() {
       // Set the flag that RequireChatPin checks
       sessionStorage.setItem(`chat_pin_ok_${room_number}`, 'true');
       
+      // Request FCM permission and save token for chat notifications
+      try {
+        const fcmToken = await requestFCMPermission();
+        
+        if (fcmToken) {
+          // Save FCM token to backend for guest chat notifications
+          await api.post(
+            `/chat/${hotelSlug}/room/${room_number}/save-fcm-token/`,
+            { fcm_token: fcmToken }
+          );
+          console.log('✅ FCM token saved successfully for guest chat');
+        }
+      } catch (fcmError) {
+        // FCM is optional - don't block navigation if it fails
+        console.warn('⚠️ FCM permission denied or failed:', fcmError);
+      }
+      
       // Navigate to chat with conversation ID
       const conversationId = sessionData.conversation_id;
       navigate(
@@ -134,6 +153,20 @@ export default function ChatPinAuth() {
         )}
 
         <h4 className="mb-4 text-center">Enter Chat PIN for Room {room_number}</h4>
+
+        {/* Notification Information */}
+        <div className="alert alert-info mb-3 w-100" role="alert">
+          <div className="d-flex align-items-start">
+            <span className="me-2" style={{ fontSize: '1.5rem' }}>🔔</span>
+            <div>
+              <strong>Stay Updated!</strong>
+              <p className="mb-0 mt-1" style={{ fontSize: '0.9rem' }}>
+                After verifying your PIN, please <strong>allow notifications</strong> to receive 
+                real-time updates when staff responds to your messages.
+              </p>
+            </div>
+          </div>
+        </div>
 
         <div className="mb-3 w-100">
           <input

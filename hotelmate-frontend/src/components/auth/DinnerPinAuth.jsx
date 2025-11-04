@@ -51,8 +51,8 @@ export default function DinnerPinAuth() {
           location.state?.next ||
           `/guest-booking/${hotelSlug}/restaurant/${restaurantSlug}/room/${roomNumber}/`;
 
-        navigate("/", { replace: true }); // Temporary route
-        setTimeout(() => navigate(target), 0); // Navigate to final target
+        // Navigate directly to target - no need for temporary route
+        navigate(target, { replace: true });
       } else {
         setError("Invalid PIN. Please try again.");
       }
