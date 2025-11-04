@@ -1301,9 +1301,11 @@ const ChatWindow = ({
             console.log('📝 [INPUT FOCUS] User focused on message input');
             
             try {
-              // For staff: use the existing context method
+              // For staff: use direct API call
               if (userId) {
                 console.log('📝 [INPUT FOCUS] Staff marking guest messages as read');
+                console.log('📝 [INPUT FOCUS] Conversation ID:', conversationId);
+                console.log('📝 [INPUT FOCUS] User ID:', userId);
                 
                 // Collect guest message IDs from current state
                 const guestMessageIds = [];
@@ -1323,7 +1325,7 @@ const ChatWindow = ({
                 
                 // Update message statuses map using the collected IDs
                 if (guestMessageIds.length > 0) {
-                  console.log(`📝 [INPUT FOCUS] Updating status map for ${guestMessageIds.length} guest messages`);
+                  console.log(`📝 [INPUT FOCUS] Updating status map for ${guestMessageIds.length} guest messages:`, guestMessageIds);
                   setMessageStatuses(prev => {
                     const newMap = new Map(prev);
                     guestMessageIds.forEach(id => {
@@ -1331,11 +1333,15 @@ const ChatWindow = ({
                     });
                     return newMap;
                   });
+                } else {
+                  console.log('ℹ️ [INPUT FOCUS] No unread guest messages to mark');
                 }
                 
                 // Then call backend to mark as read (will trigger Pusher event for guest)
-                await markConversationRead(conversationId);
-                console.log('✅ [INPUT FOCUS] Staff marked conversation as read');
+                console.log('📤 [INPUT FOCUS] Calling backend to mark conversation as read...');
+                const response = await api.post(`/chat/conversations/${conversationId}/mark-read/`);
+                console.log('✅ [INPUT FOCUS] Backend response:', response.data);
+                console.log('✅ [INPUT FOCUS] Staff marked conversation as read - Pusher event should fire to guest');
               } 
               // For guests: use session token and mark staff messages as read
               else if (guestSession) {
