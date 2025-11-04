@@ -93,13 +93,12 @@ const ChatSidebar = ({
                     wordBreak: "break-word", 
                     overflowWrap: "break-word",
                     fontSize: isMobile ? '0.9rem' : '0.85rem',
-                    color: conv.unread_count > 0 ? '#dc3545' : '#28a745', // Red if unread, green if read
-                    fontWeight: conv.unread_count > 0 ? '600' : 'normal'
+                    color: '#333'
                   }}
                 >
                   {conv.last_message || <em>No messages yet</em>}
                 </div>
-                <small className="text-muted" style={{ fontSize: '0.7rem', fontStyle: 'italic' }}>
+                <small style={{ fontSize: '0.7rem', fontStyle: 'italic', color: '#6c757d' }}>
                   {conv.unread_count > 0 ? 'Not seen' : 'Seen'}
                 </small>
               </div>

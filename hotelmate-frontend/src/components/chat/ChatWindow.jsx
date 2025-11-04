@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+﻿import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import api from "@/services/api";
 import { FaPaperPlane, FaTimes, FaArrowLeft, FaAngleDoubleDown, FaCheck, FaCheckDouble, FaSmile } from "react-icons/fa";
@@ -539,7 +539,7 @@ const ChatWindow = ({
     });
     
     scrollToBottom();
-  }, []); // No dependencies needed
+  }, [userId, conversationId, messageInputRef]); // Add dependencies
 
   // Handle staff assignment changes (for guests)
   const handleStaffAssigned = useCallback((data) => {
@@ -970,6 +970,11 @@ const ChatWindow = ({
 
       scrollToBottom();
       
+      // Blur input after sending (especially for staff using Enter key)
+      if (messageInputRef.current) {
+        messageInputRef.current.blur();
+      }
+      
     } catch (err) {
       console.error("Failed to send message:", err);
       
@@ -1295,7 +1300,7 @@ const ChatWindow = ({
           placeholder="Type a message..."
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
-          onFocus={async () => {
+          onClick={async () => {
             if (!conversationId) return;
             
             console.log('📝 [INPUT FOCUS] User focused on message input');
@@ -1304,10 +1309,14 @@ const ChatWindow = ({
               // For staff: ALWAYS call backend regardless of local state
               if (userId) {
                 console.log('📝 [INPUT FOCUS] Staff marking guest messages as read');
-                console.log('📝 [INPUT FOCUS] Conversation ID:', conversationId);
-                console.log('📝 [INPUT FOCUS] User ID:', userId);
                 
-                // Update ALL guest messages in local UI (not just unread ones)
+                // FIRST: Call backend immediately (don't wait for state updates)
+                console.log('� [INPUT FOCUS] Calling backend to mark ALL guest messages as read...');
+                const response = await api.post(`/chat/conversations/${conversationId}/mark-read/`);
+                console.log('✅ [INPUT FOCUS] Backend response:', response.data);
+                console.log('✅ [INPUT FOCUS] Backend should have fired Pusher event to guest');
+                
+                // THEN: Update local UI (won't cause re-initialization issues)
                 setMessages(prevMessages => 
                   prevMessages.map(msg => 
                     msg.sender_type === 'guest'
@@ -1316,26 +1325,23 @@ const ChatWindow = ({
                   )
                 );
                 
-                // Update message statuses map for all guest messages - use functional update
+                // Update message statuses map (simple, no nested setMessages)
                 setMessageStatuses(prev => {
                   const newMap = new Map(prev);
-                  // Get fresh messages from state using the setter callback
-                  setMessages(currentMessages => {
-                    currentMessages.forEach(msg => {
-                      if (msg.sender_type === 'guest') {
-                        newMap.set(msg.id, 'read');
-                      }
-                    });
-                    return currentMessages; // Don't actually modify, just read
+                  // Use messages from closure - it's okay here since we don't rely on it for backend call
+                  messages.forEach(msg => {
+                    if (msg.sender_type === 'guest') {
+                      newMap.set(msg.id, 'read');
+                    }
                   });
                   return newMap;
                 });
                 
-                // ALWAYS call backend to mark as read (will trigger Pusher event for guest)
-                console.log('📤 [INPUT FOCUS] Calling backend to mark ALL guest messages as read...');
-                const response = await api.post(`/chat/conversations/${conversationId}/mark-read/`);
-                console.log('✅ [INPUT FOCUS] Backend response:', response.data);
-                console.log('✅ [INPUT FOCUS] Pusher event fired with message IDs:', response.data?.message_ids || 'N/A');
+                console.log('✅ [INPUT FOCUS] Local UI updated');
+                
+                // Update conversation badge in sidebar (remove unread count)
+                markConversationRead(conversationId);
+                console.log('✅ [INPUT FOCUS] Conversation marked as read in sidebar');
               } 
               // For guests: use session token and mark staff messages as read
               else if (guestSession) {
