@@ -61,11 +61,26 @@ const ChatWindow = ({
   onNewMessage,
   onClose,
 }) => {
+  console.log('🔧 [CHATWINDOW PROPS] Received props:', {
+    propUserId,
+    propConversationId,
+    propHotelSlug,
+    propRoomNumber,
+    hasConversationData: !!propConversationData
+  });
+  
   const {
     hotelSlug: paramHotelSlug,
     conversationId: paramConversationIdFromURL,
   } = useParams();
   const location = useLocation();
+  
+  console.log('🔧 [CHATWINDOW PARAMS] URL params:', {
+    paramHotelSlug,
+    paramConversationIdFromURL
+  });
+  console.log('🔧 [CHATWINDOW STATE] Location state:', location.state);
+  
   const hotelSlug = propHotelSlug || paramHotelSlug;
   const conversationId = propConversationId || paramConversationIdFromURL;
   

@@ -62,12 +62,14 @@ export default function RequireChatPin({ children }) {
   }
 
   console.log('✅ RequireChatPin: Access granted for room', room_number);
+  console.log('🔧 RequireChatPin: Passing roomNumber prop to ChatWindow:', room_number);
   
   // Pass room_number as prop to children so ChatWindow can access it
   if (children && children.type) {
     return cloneElement(children, { roomNumber: room_number });
   }
   
+  console.warn('⚠️ RequireChatPin: Could not clone children, returning as-is');
   return children;
 }
 
