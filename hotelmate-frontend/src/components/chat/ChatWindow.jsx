@@ -616,12 +616,24 @@ const ChatWindow = ({
       // Listen for message deleted event (backend sends both 'message-deleted' and 'message-removed')
       const handleDeletion = (data) => {
         console.log('🗑️ [PUSHER] Message deletion event received:', data);
-        const { message_id, hard_delete, message } = data;
+        const { message_id, hard_delete, message, attachment_ids } = data;
         
         if (message_id) {
           if (hard_delete) {
             // Hard delete - permanently remove message from UI
             console.log(`💥 [PUSHER] Hard deleting message ${message_id} - removing from UI`);
+            
+            // Clean up attachments if present
+            if (attachment_ids && attachment_ids.length > 0) {
+              console.log(`🗑️ [PUSHER] Cleaning up ${attachment_ids.length} attachment(s)`);
+              attachment_ids.forEach(attachmentId => {
+                const attachmentElements = document.querySelectorAll(
+                  `[data-attachment-id="${attachmentId}"]`
+                );
+                attachmentElements.forEach(el => el.remove());
+              });
+            }
+            
             setMessages(prevMessages => prevMessages.filter(msg => msg.id !== message_id));
           } else {
             // Soft delete - update message with deletion text from backend
@@ -839,13 +851,15 @@ const ChatWindow = ({
   const handleMessageDeleted = useCallback((data) => {
     console.log('🗑️ [GUEST PUSHER] Message deleted event received:', data);
     console.log('🗑️ [GUEST PUSHER] Full event data:', JSON.stringify(data, null, 2));
-    const { message_id, hard_delete, message } = data;
+    const { message_id, hard_delete, message, attachment_ids } = data;
     
     console.log('🗑️ [GUEST PUSHER] Extracted values:', {
       message_id,
       hard_delete,
       message,
-      has_message: !!message
+      has_message: !!message,
+      attachment_ids: attachment_ids || [],
+      has_attachments: !!attachment_ids && attachment_ids.length > 0
     });
     
     if (message_id) {
@@ -854,6 +868,25 @@ const ChatWindow = ({
       if (hard_delete) {
         // Hard delete - permanently remove message from UI
         console.log(`💥 [GUEST PUSHER] Hard deleting message ${message_id} - removing from UI`);
+        
+        // Clean up attachments if present
+        if (attachment_ids && attachment_ids.length > 0) {
+          console.log(`🗑️ [GUEST PUSHER] Cleaning up ${attachment_ids.length} attachment(s)`);
+          
+          attachment_ids.forEach(attachmentId => {
+            // Remove any attachment DOM elements
+            const attachmentElements = document.querySelectorAll(
+              `[data-attachment-id="${attachmentId}"]`
+            );
+            attachmentElements.forEach(el => {
+              console.log(`🗑️ [GUEST PUSHER] Removing attachment element for ID ${attachmentId}`);
+              el.remove();
+            });
+          });
+          
+          console.log(`✅ [GUEST PUSHER] Cleaned up ${attachment_ids.length} attachment(s)`);
+        }
+        
         setMessages(prevMessages => {
           console.log(`💥 [GUEST PUSHER] Before filter - message count: ${prevMessages.length}`);
           const filtered = prevMessages.filter(msg => msg.id !== message_id);
