@@ -1963,6 +1963,30 @@ const ChatWindow = ({
                     </div>
                   )}
                 
+                {/* Reply button - positioned on inner side of message */}
+                <div 
+                  className={`mt-2 ${isMine ? 'text-start' : 'text-end'}`}
+                  style={{ opacity: 0.7 }}
+                >
+                  <button
+                    className="btn btn-link p-0"
+                    style={{ 
+                      fontSize: '0.7rem',
+                      textDecoration: 'none',
+                      color: 'inherit',
+                      fontWeight: '500',
+                      padding: '0',
+                      border: 'none',
+                      background: 'none',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => startReply(msg)}
+                    title="Reply to this message"
+                  >
+                    Reply
+                  </button>
+                </div>
+                
                 {/* Render attachments */}
                 {msg.attachments && msg.attachments.length > 0 && (
                   <div className="message-attachments" style={{ marginTop: msg.message ? '0.5rem' : '0' }}>
@@ -2082,107 +2106,98 @@ const ChatWindow = ({
                 )}
                 </div>
               </div>
-              {/* Footer with time, status, reply, and share */}
+              {/* Footer: Delete, Share, Seen on first row, Time below */}
               <div 
-                className={`small d-flex align-items-center gap-2 ${isMine ? 'justify-content-end' : 'justify-content-start'}`}
+                className={`small text-muted ${isMine ? 'text-end' : 'text-start'}`}
                 style={{
                   width: '100%',
-                  marginTop: '8px',
-                  position: 'relative',
-                  zIndex: 1
+                  marginTop: '4px',
+                  fontSize: '0.7rem'
                 }}
               >
-                <div
-                  className="message-action-buttons"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    backgroundColor: '#e3f2fd',
-                    padding: '10px 16px',
-                    borderRadius: '8px',
-                    border: '2px solid #007bff',
-                    minHeight: '40px'
-                  }}
-                >
-                {/* Reply button */}
-                <button
-                  className="btn btn-link p-0 reply-action-btn"
-                  style={{ 
-                    fontSize: '0.9rem',
-                    textDecoration: 'none',
-                    color: '#007bff',
-                    fontWeight: '600',
-                    padding: '4px 8px',
-                    border: '1px solid #007bff',
-                    background: 'white',
-                    cursor: 'pointer',
-                    borderRadius: '4px'
-                  }}
-                  onClick={() => startReply(msg)}
-                  title="Reply to this message"
-                >
-                  Reply
-                </button>
-                {/* Share button */}
-                <button
-                  className="btn btn-link p-0"
-                  style={{ 
-                    fontSize: '0.75rem',
-                    textDecoration: 'none',
-                    color: 'inherit',
-                    opacity: 0.5,
-                    padding: '0',
-                    border: 'none',
-                    background: 'none'
-                  }}
-                  onClick={() => {
-                    handleMessageShare(
-                      msg,
-                      (successMsg) => {
-                        setSuccessMessage(successMsg);
-                        setShowSuccessModal(true);
-                      },
-                      (errorMsg) => {
-                        alert(errorMsg);
-                      }
-                    );
-                  }}
-                  title="Share this message"
-                >
-                  Share
-                </button>
-                {messageTime && <span className="text-muted" style={{ fontSize: '0.75rem', fontStyle: 'italic' }}>{messageTime}</span>}
-                {isMine && (
-                  <span className="message-status-text" style={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
-                    {status === 'pending' && <span className="text-secondary">Sending...</span>}
-                    {status === 'delivered' && <span className="text-secondary">Unseen</span>}
-                    {status === 'read' && <span className="text-info">Seen</span>}
-                    {status === 'failed' && (
-                      <span className="text-danger d-flex align-items-center gap-1">
-                        ❌ Failed to send
-                        <button
-                          className="btn btn-sm btn-link text-danger p-0 text-decoration-underline"
-                          style={{ fontSize: '0.7rem' }}
-                          onClick={() => {
-                            // Restore message to input for retry
-                            setNewMessage(msg.message);
-                            // Remove failed message from UI
-                            setMessages(prev => prev.filter(m => m.id !== msg.id));
-                            setMessageStatuses(prev => {
-                              const newMap = new Map(prev);
-                              newMap.delete(msg.id);
-                              return newMap;
-                            });
-                          }}
-                        >
-                          Retry
-                        </button>
-                      </span>
-                    )}
-                  </span>
-                )}
+                {/* First row: Delete, Share, Seen */}
+                <div className="d-flex align-items-center gap-2" style={{ justifyContent: isMine ? 'flex-end' : 'flex-start' }}>
+                  {/* Delete button - only for own messages */}
+                  {isMine && (
+                    <button
+                      className="btn btn-link p-0 text-muted"
+                      style={{ 
+                        fontSize: '0.7rem',
+                        textDecoration: 'none',
+                        padding: '0',
+                        border: 'none',
+                        background: 'none',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => {
+                        setMessageToDelete(msg);
+                        setShowDeleteConfirm(true);
+                      }}
+                      title="Delete this message"
+                    >
+                      Delete
+                    </button>
+                  )}
+                  {/* Share button */}
+                  <button
+                    className="btn btn-link p-0 text-muted"
+                    style={{ 
+                      fontSize: '0.7rem',
+                      textDecoration: 'none',
+                      padding: '0',
+                      border: 'none',
+                      background: 'none',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => {
+                      handleMessageShare(
+                        msg,
+                        (successMsg) => {
+                          setSuccessMessage(successMsg);
+                          setShowSuccessModal(true);
+                        },
+                        (errorMsg) => {
+                          alert(errorMsg);
+                        }
+                      );
+                    }}
+                    title="Share this message"
+                  >
+                    Share
+                  </button>
+                  {/* Status for own messages */}
+                  {isMine && (
+                    <span style={{ fontStyle: 'italic' }}>
+                      {status === 'pending' && <span>Sending...</span>}
+                      {status === 'delivered' && <span>Unseen</span>}
+                      {status === 'read' && <span className="text-info">Seen</span>}
+                      {status === 'failed' && (
+                        <span className="text-danger d-flex align-items-center gap-1">
+                          Failed
+                          <button
+                            className="btn btn-sm btn-link text-danger p-0 text-decoration-underline"
+                            style={{ fontSize: '0.65rem' }}
+                            onClick={() => {
+                              // Restore message to input for retry
+                              setNewMessage(msg.message);
+                              // Remove failed message from UI
+                              setMessages(prev => prev.filter(m => m.id !== msg.id));
+                              setMessageStatuses(prev => {
+                                const newMap = new Map(prev);
+                                newMap.delete(msg.id);
+                                return newMap;
+                              });
+                            }}
+                          >
+                            Retry
+                          </button>
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </div>
+                {/* Second row: Time below */}
+                {messageTime && <div style={{ opacity: 0.7, marginTop: '2px' }}>{messageTime}</div>}
               </div>
             </div>
           );
