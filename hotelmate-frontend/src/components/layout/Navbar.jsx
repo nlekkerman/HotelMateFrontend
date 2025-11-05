@@ -6,6 +6,7 @@ import api from "@/services/api";
 import logo from "@/assets/hotel-mate.png";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useTheme } from "@/context/ThemeContext";
+import MessengerWidget from "@/staff_chat/components/MessengerWidget";
 
 
 const Navbar = () => {
@@ -21,6 +22,7 @@ const Navbar = () => {
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isChatExpanded, setIsChatExpanded] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -76,10 +78,7 @@ const Navbar = () => {
       style={mainColor ? { backgroundColor: mainColor } : {}}
     >
       <div className="container-fluid">
-        <Link
-          to="/"
-          className="flex items-center space-x-2 logo-container"
-        ></Link>
+        {/* Left side: Logo */}
         <Link to="/" className="flex items-center space-x-2 logo-container">
           <img
             src={logo}
@@ -87,19 +86,49 @@ const Navbar = () => {
             className="h-10 w-auto drop-shadow-md logo-image"
           />
         </Link>
-        <button
-          className="navbar-toggler bg-transparent border-0 shadow-lg"
-          type="button"
-          aria-controls="navbarSupportedContent"
-          aria-expanded={!collapsed}
-          aria-label="Toggle navigation"
-          onClick={toggleNavbar}
-        >
-          <span
-            className="navbar-toggler-icon"
-            style={{ filter: "invert(1)" }}
-          ></span>
-        </button>
+
+        {/* Right side: Chat button + Hamburger menu */}
+        <div className="d-flex align-items-center gap-2">
+          {/* Staff Chat Button - Only show for logged in users */}
+          {user && (
+            <button
+              className="btn btn-link text-white p-2"
+              onClick={() => setIsChatExpanded(!isChatExpanded)}
+              style={{ 
+                textDecoration: 'none',
+                fontSize: '24px',
+                lineHeight: 1
+              }}
+              aria-label="Toggle staff chat"
+              title="Staff Chat"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
+                  fill="currentColor"
+                />
+                <circle cx="12" cy="10" r="1.5" fill="currentColor" />
+                <circle cx="8" cy="10" r="1.5" fill="currentColor" />
+                <circle cx="16" cy="10" r="1.5" fill="currentColor" />
+              </svg>
+            </button>
+          )}
+
+          {/* Hamburger menu */}
+          <button
+            className="navbar-toggler bg-transparent border-0 shadow-lg"
+            type="button"
+            aria-controls="navbarSupportedContent"
+            aria-expanded={!collapsed}
+            aria-label="Toggle navigation"
+            onClick={toggleNavbar}
+          >
+            <span
+              className="navbar-toggler-icon"
+              style={{ filter: "invert(1)" }}
+            ></span>
+          </button>
+        </div>
 
         <div className={`collapse navbar-collapse ${!collapsed ? "show" : ""}`}>
           <ul className="navbar-nav ms-auto mb-2 mb-lg-0 gap-3 shadow-lg p-2 rounded m-2">
@@ -301,6 +330,15 @@ const Navbar = () => {
             setIsOnDuty(newStatus);
             setIsModalOpen(false);
           }}
+        />
+      )}
+
+      {/* Staff Chat Widget - Only render for logged in users */}
+      {user && (
+        <MessengerWidget 
+          position="bottom-right" 
+          isExpanded={isChatExpanded}
+          onExpandChange={setIsChatExpanded}
         />
       )}
     </nav>

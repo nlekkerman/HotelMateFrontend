@@ -1,0 +1,81 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
+import usePusher from '../hooks/usePusher';
+
+/**
+ * PusherContext - Provides Pusher instance and methods throughout the app
+ */
+const PusherContext = createContext(null);
+
+/**
+ * Custom hook to access Pusher context
+ * @returns {Object} Pusher context value
+ * @throws {Error} If used outside PusherProvider
+ */
+export const usePusherContext = () => {
+  const context = useContext(PusherContext);
+  if (!context) {
+    throw new Error('usePusherContext must be used within a PusherProvider');
+  }
+  return context;
+};
+
+/**
+ * PusherProvider Component
+ * Wraps the app with Pusher real-time functionality
+ * 
+ * Usage:
+ * ```jsx
+ * <PusherProvider appKey="your-app-key" cluster="mt1" enabled={true}>
+ *   <App />
+ * </PusherProvider>
+ * ```
+ */
+const PusherProvider = ({ 
+  children, 
+  appKey, 
+  cluster = 'mt1', 
+  enabled = true 
+}) => {
+  const [isReady, setIsReady] = useState(false);
+  const pusherMethods = usePusher({ appKey, cluster, enabled });
+
+  // Set ready state when Pusher is initialized
+  useEffect(() => {
+    if (enabled && appKey && pusherMethods.pusher) {
+      setIsReady(true);
+    } else {
+      setIsReady(false);
+    }
+  }, [enabled, appKey, pusherMethods.pusher]);
+
+  const contextValue = {
+    ...pusherMethods,
+    isReady,
+    enabled
+  };
+
+  return (
+    <PusherContext.Provider value={contextValue}>
+      {children}
+    </PusherContext.Provider>
+  );
+};
+
+PusherProvider.propTypes = {
+  /** Child components */
+  children: PropTypes.node.isRequired,
+  /** Pusher app key */
+  appKey: PropTypes.string.isRequired,
+  /** Pusher cluster (default: 'mt1') */
+  cluster: PropTypes.string,
+  /** Enable/disable Pusher */
+  enabled: PropTypes.bool
+};
+
+PusherProvider.defaultProps = {
+  cluster: 'mt1',
+  enabled: true
+};
+
+export default PusherProvider;

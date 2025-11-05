@@ -14,6 +14,10 @@ const ConversationView = ({ hotelSlug, conversation, staff }) => {
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
 
+  // Get current user ID from localStorage
+  const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUserId = currentUserData?.staff_id || currentUserData?.id || null;
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -102,22 +106,29 @@ const ConversationView = ({ hotelSlug, conversation, staff }) => {
           </div>
         ) : (
           <>
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`message ${message.is_own_message ? 'message--own' : 'message--other'}`}
-              >
-                <div className="message__content">
-                  <p className="message__text">{message.content}</p>
-                  <span className="message__time">
-                    {new Date(message.created_at).toLocaleTimeString([], { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </span>
+            {messages.map((message) => {
+              // Use 'sender' field (not 'sender_id') - convert to number for comparison
+              const senderId = Number(message.sender);
+              const userId = Number(currentUserId);
+              const isOwn = senderId === userId;
+              
+              return (
+                <div
+                  key={message.id}
+                  className={`message ${isOwn ? 'message--own' : 'message--other'}`}
+                >
+                  <div className="message__content">
+                    <p className="message__text">{message.content}</p>
+                    <span className="message__time">
+                      {new Date(message.created_at).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div ref={messagesEndRef} />
           </>
         )}

@@ -29,11 +29,28 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
   useEffect(() => {
     const loadConversations = async () => {
       try {
-        const conversations = await fetchConversations(hotelSlug);
-        setExistingConversations(Array.isArray(conversations) ? conversations : []);
-        console.log('📋 Loaded existing conversations:', conversations);
+        const response = await fetchConversations(hotelSlug);
+        console.log('📋 Raw backend response:', response);
+        
+        // Backend returns paginated response: { count, results: [...] }
+        const conversations = response?.results || response || [];
+        console.log('📋 Extracted conversations array:', conversations);
+        console.log('📋 Number of conversations:', conversations.length);
+        
+        // Log each conversation details
+        conversations.forEach((conv, index) => {
+          console.log(`📋 Conversation ${index + 1}:`, {
+            id: conv.id,
+            participants: conv.participants?.map(p => p.full_name),
+            lastMessage: conv.last_message?.message,
+            unreadCount: conv.unread_count,
+            timestamp: conv.updated_at
+          });
+        });
+        
+        setExistingConversations(conversations);
       } catch (error) {
-        console.error('Failed to load conversations:', error);
+        console.error('❌ Failed to load conversations:', error);
       }
     };
 
@@ -206,8 +223,8 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
           </div>
         ) : existingConversations.length > 0 ? (
           // Show Existing Conversations
-          <div className="p-2">
-            <div className="list-group list-group-flush">
+          <div className="border-bottom">
+            <div className="list-group list-group-flush gap-1">
               {existingConversations.map((conversation) => {
                 // Get the other participant (not current user)
                 const otherParticipant = conversation.participants?.[0];

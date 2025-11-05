@@ -1,6 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { fetchMessages, sendMessage } from '../services/staffChatApi';
+import MessageInput from './MessageInput';
+import MessageBubble from './MessageBubble';
+import MessageActions from './MessageActions';
+import ReactionPicker from './ReactionPicker';
+import ReactionsList from './ReactionsList';
+import ReadStatus from './ReadStatus';
+import useSendMessage from '../hooks/useSendMessage';
+import useReactions from '../hooks/useReactions';
+import useEditMessage from '../hooks/useEditMessage';
+import useDeleteMessage from '../hooks/useDeleteMessage';
+import useReadReceipts from '../hooks/useReadReceipts';
+import useMessagePagination from '../hooks/useMessagePagination';
 
 /**
  * ChatWindowPopup Component
@@ -15,100 +27,160 @@ const ChatWindowPopup = ({
   onMinimize, 
   onClose,
   position = 'bottom-right',
-  stackIndex = 0
+  stackIndex = 0,
+  isVisible = true
 }) => {
   console.log('💬 ChatWindowPopup rendering with:', {
     hotelSlug,
     conversationId: conversation?.id,
     staff: staff?.full_name,
     isMinimized,
-    stackIndex
+    stackIndex,
+    isVisible
   });
 
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [newMessage, setNewMessage] = useState('');
-  const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
-  const textareaRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const sentinelRef = useRef(null);
+  
+  // Get current user ID from localStorage or use a fallback
+  const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
+  // Try multiple possible fields for the current user ID
+  const currentUserId = currentUserData?.staff_id || currentUserData?.id || null;
+  
+  // Debug: Log current user info
+  console.log('Current User Data:', { 
+    currentUserData, 
+    currentUserId,
+    staff_id: currentUserData?.staff_id,
+    id: currentUserData?.id 
+  });
+
+  // Use pagination hook
+  const {
+    messages,
+    loading,
+    loadingMore,
+    hasMore,
+    setupInfiniteScroll,
+    addMessage: addPaginatedMessage,
+    updateMessage: updatePaginatedMessage,
+    removeMessage: removePaginatedMessage
+  } = useMessagePagination(hotelSlug, conversation?.id, 20);
+
+  // Use send message hook
+  const {
+    send: sendMsg,
+    sending,
+    error: sendError,
+    replyTo,
+    setReply,
+    cancelReply
+  } = useSendMessage(hotelSlug, conversation?.id);
+
+  // Use reactions hook
+  const {
+    toggleReaction,
+    groupReactions
+  } = useReactions(hotelSlug, conversation?.id, (messageId, data) => {
+    // Update message reactions in real-time
+    updatePaginatedMessage(messageId, { reactions: data.reactions });
+  });
+
+  // Use edit message hook
+  const {
+    startEdit,
+    cancelEdit,
+    saveEdit,
+    isEditing,
+    editingMessageId
+  } = useEditMessage(hotelSlug, conversation?.id, (messageId, updatedData) => {
+    updatePaginatedMessage(messageId, updatedData);
+  });
+
+  // Use delete message hook
+  const {
+    deleteMsg
+  } = useDeleteMessage(hotelSlug, conversation?.id, (messageId) => {
+    removePaginatedMessage(messageId);
+  });
+
+  // Use read receipts hook
+  const {
+    markAsRead,
+    getReadStatus,
+    isRead
+  } = useReadReceipts(conversation?.id, currentUserId);
+
+  const [showReactionPicker, setShowReactionPicker] = useState(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Setup infinite scroll
   useEffect(() => {
-    if (!isMinimized) {
-      loadMessages();
+    if (sentinelRef.current && !isMinimized) {
+      return setupInfiniteScroll(sentinelRef);
     }
-  }, [conversation?.id, isMinimized]);
+  }, [setupInfiniteScroll, isMinimized]);
 
   useEffect(() => {
-    if (!isMinimized) {
+    if (!isMinimized && messages.length > 0) {
       scrollToBottom();
     }
-  }, [messages, isMinimized]);
+  }, [messages.length, isMinimized]);
 
-  // Auto-resize textarea
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
-    }
-  }, [newMessage]);
-
-  const loadMessages = async () => {
-    if (!conversation?.id) return;
-
-    setLoading(true);
-
-    try {
-      const data = await fetchMessages(hotelSlug, conversation.id);
-      // Handle the response format: { messages: [], count: number, has_more: boolean }
-      setMessages(Array.isArray(data) ? data : (data.messages || data.results || []));
-    } catch (err) {
-      console.error('Error loading messages:', err);
-    } finally {
-      setLoading(false);
+  // Handle send message
+  const handleSendMessage = async (messageText, mentions) => {
+    const sentMessage = await sendMsg(messageText, replyTo, mentions);
+    if (sentMessage) {
+      addPaginatedMessage(sentMessage);
+      scrollToBottom();
     }
   };
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    
-    if (!newMessage.trim() || sending) return;
+  // Handle reply
+  const handleReply = (message) => {
+    setReply(message);
+  };
 
-    setSending(true);
-    
-    try {
-      const message = await sendMessage(hotelSlug, conversation.id, newMessage.trim());
-      setMessages(prev => [...prev, message]);
-      setNewMessage('');
-    } catch (err) {
-      console.error('Error sending message:', err);
-    } finally {
-      setSending(false);
+  // Handle edit
+  const handleEdit = (messageId, currentText) => {
+    startEdit(messageId, currentText);
+  };
+
+  // Handle delete
+  const handleDelete = async (messageId, permanent = false) => {
+    await deleteMsg(messageId, permanent);
+  };
+
+  // Handle reaction
+  const handleReaction = (messageId, emoji) => {
+    const message = messages.find(m => m.id === messageId);
+    if (message) {
+      toggleReaction(messageId, emoji, message.reactions || [], currentUserId);
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage(e);
-    }
+  // Handle reaction click from list
+  const handleReactionClick = (messageId, emoji, wasUserReaction) => {
+    handleReaction(messageId, emoji);
   };
 
   // Calculate position based on stack index
+  // Start from the messenger widget (340px + 24px gap = 364px), then add stacking
   const rightOffset = position === 'bottom-right' 
-    ? 24 + (stackIndex * 340) // 340px = chat width (320px) + gap (20px)
+    ? 388 + (stackIndex * 340) // 364px for widget + 24px gap, then 340px per chat
     : 'auto';
   
   const leftOffset = position === 'bottom-left'
-    ? 24 + (stackIndex * 340)
+    ? 388 + (stackIndex * 340)
     : 'auto';
 
   return (
     <div 
-      className={`chat-window-popup ${isMinimized ? 'chat-window-popup--minimized' : ''}`}
+      className={`chat-window-popup ${isMinimized ? 'chat-window-popup--minimized' : ''} ${isVisible ? 'chat-window-popup--visible' : 'chat-window-popup--hidden'}`}
       style={{
         right: rightOffset !== 'auto' ? `${rightOffset}px` : 'auto',
         left: leftOffset !== 'auto' ? `${leftOffset}px` : 'auto'
@@ -183,69 +255,145 @@ const ChatWindowPopup = ({
       {/* Messages (only show when not minimized) */}
       {!isMinimized && (
         <>
-          <div className="chat-window-popup__messages">
+          <div className="chat-window-popup__messages" ref={messagesContainerRef}>
             {loading ? (
               <div className="chat-window-popup__loading">
                 <div className="spinner-small" />
               </div>
-            ) : messages.length === 0 ? (
-              <div className="chat-window-popup__empty">
-                <p>No messages yet</p>
-                <p className="text-muted-small">Start the conversation!</p>
-              </div>
             ) : (
               <>
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`chat-message ${message.is_own_message ? 'chat-message--own' : 'chat-message--other'}`}
-                  >
-                    <div className="chat-message__bubble">
-                      <p className="chat-message__text">{message.content}</p>
-                      <span className="chat-message__time">
-                        {new Date(message.created_at).toLocaleTimeString([], { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
-                      </span>
-                    </div>
+                {/* Sentinel for infinite scroll */}
+                {hasMore && (
+                  <div ref={sentinelRef} className="pagination-sentinel">
+                    {loadingMore && (
+                      <div className="pagination-loading">
+                        <span className="pagination-loading__spinner" />
+                        <span className="pagination-loading__text">Loading older messages...</span>
+                      </div>
+                    )}
                   </div>
-                ))}
-                <div ref={messagesEndRef} />
+                )}
+
+                {messages.length === 0 ? (
+                  <div className="chat-window-popup__empty">
+                    <p>No messages yet</p>
+                    <p className="text-muted-small">Start the conversation!</p>
+                  </div>
+                ) : (
+                  <>
+                    {messages.map((message) => {
+                      const messageText = message.message || message.content || '';
+                      const messageTime = message.timestamp || message.created_at;
+                      
+                      // Use 'sender' field (not 'sender_id') - convert to number for comparison
+                      const senderId = Number(message.sender);
+                      const userId = Number(currentUserId);
+                      const isOwn = senderId === userId;
+                      
+                      const senderName = message.sender_name || message.sender_info?.full_name || 'Unknown';
+                      const readStatus = getReadStatus(message.id);
+                      
+                      return (
+                        <div
+                          key={message.id}
+                          className={`staff-chat-message ${isOwn ? 'staff-chat-message--own' : 'staff-chat-message--other'}`}
+                        >
+                          {/* Message Actions Dropdown */}
+                          <MessageActions
+                            message={message}
+                            isOwn={isOwn}
+                            canEdit={isOwn}
+                            canDelete={isOwn}
+                            canHardDelete={false} // Set based on user permissions
+                            onReply={() => handleReply(message)}
+                            onEdit={() => handleEdit(message.id, messageText)}
+                            onDelete={(msgId, permanent) => handleDelete(msgId, permanent)}
+                            onHardDelete={(msgId, permanent) => handleDelete(msgId, permanent)}
+                          />
+
+                          <div style={{ position: 'relative' }}>
+                            <MessageBubble
+                              message={messageText}
+                              timestamp={messageTime}
+                              isOwn={isOwn}
+                              senderName={senderName}
+                              replyTo={message.reply_to}
+                              isEdited={message.is_edited}
+                              attachments={message.attachments}
+                              isEditing={isEditing(message.id)}
+                              onSaveEdit={(newText) => saveEdit(newText)}
+                              onCancelEdit={cancelEdit}
+                            />
+
+                            {/* Add Reaction Button */}
+                            <button
+                              onClick={() => setShowReactionPicker(
+                                showReactionPicker === message.id ? null : message.id
+                              )}
+                              className="staff-chat-message__action-btn"
+                              style={{
+                                position: 'absolute',
+                                bottom: '-10px',
+                                right: isOwn ? 'auto' : '8px',
+                                left: isOwn ? '8px' : 'auto'
+                              }}
+                              title="Add reaction"
+                            >
+                              <i className="bi bi-emoji-smile"></i>
+                            </button>
+
+                            {/* Reaction Picker */}
+                            {showReactionPicker === message.id && (
+                              <ReactionPicker
+                                show={true}
+                                onSelectEmoji={(emoji) => {
+                                  handleReaction(message.id, emoji);
+                                  setShowReactionPicker(null);
+                                }}
+                                onClose={() => setShowReactionPicker(null)}
+                                position="top"
+                              />
+                            )}
+
+                            {/* Reactions List */}
+                            <ReactionsList
+                              reactions={message.reactions || []}
+                              currentUserId={currentUserId}
+                              onReactionClick={(emoji, wasUserReaction) => 
+                                handleReactionClick(message.id, emoji, wasUserReaction)
+                              }
+                            />
+                          </div>
+
+                          {/* Read Status for own messages */}
+                          {isOwn && (
+                            <ReadStatus
+                              isRead={isRead(message.id)}
+                              readBy={readStatus.read_by || []}
+                              showDetails={true}
+                              size="small"
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                    <div ref={messagesEndRef} />
+                  </>
+                )}
               </>
             )}
           </div>
 
-          {/* Input */}
-          <form onSubmit={handleSendMessage} className="chat-window-popup__input-form">
-            <textarea
-              ref={textareaRef}
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type a message..."
-              className="chat-window-popup__input"
-              rows="1"
+          {/* Input with new MessageInput component */}
+          <div className="chat-window-popup__input-form">
+            <MessageInput
+              onSend={handleSendMessage}
+              replyTo={replyTo}
+              onCancelReply={cancelReply}
               disabled={sending}
+              placeholder="Type a message..."
             />
-            <button
-              type="submit"
-              className="chat-window-popup__send-btn"
-              disabled={!newMessage.trim() || sending}
-              aria-label="Send"
-            >
-              {sending ? (
-                <span className="spinner-tiny" />
-              ) : (
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <path
-                    d="M1 9l15-7-7 15-2-6-6-2z"
-                    fill="currentColor"
-                  />
-                </svg>
-              )}
-            </button>
-          </form>
+          </div>
         </>
       )}
     </div>
@@ -269,7 +417,8 @@ ChatWindowPopup.propTypes = {
   onMinimize: PropTypes.func.isRequired,
   onClose: PropTypes.func.isRequired,
   position: PropTypes.oneOf(['bottom-right', 'bottom-left']),
-  stackIndex: PropTypes.number
+  stackIndex: PropTypes.number,
+  isVisible: PropTypes.bool
 };
 
 export default ChatWindowPopup;
