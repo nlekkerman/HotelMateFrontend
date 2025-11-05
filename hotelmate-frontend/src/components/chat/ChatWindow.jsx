@@ -371,7 +371,11 @@ const ChatWindow = ({
         const messagesWithMarkers = addStaffJoinedMarkers(newMessages);
         setMessages(messagesWithMarkers);
         setLoading(false);
-        scrollToBottom();
+        
+        // Scroll to bottom after DOM renders
+        setTimeout(() => {
+          scrollToBottom();
+        }, 100);
         
         // Extract guest name from first guest message if conversation details not available
         if (!conversationDetails?.guest_name && newMessages.length > 0) {
@@ -704,7 +708,10 @@ const ChatWindow = ({
       });
     }
     
-    scrollToBottom();
+    // Scroll after message is rendered
+    setTimeout(() => {
+      scrollToBottom();
+    }, 50);
   }, [guestSession]); // Only recreate if guestSession changes
 
   const handleNewMessage = useCallback((data) => {
@@ -730,7 +737,10 @@ const ChatWindow = ({
       return newMessages;
     });
     
-    scrollToBottom();
+    // Scroll after message is rendered
+    setTimeout(() => {
+      scrollToBottom();
+    }, 50);
   }, [userId, conversationId, messageInputRef]); // Add dependencies
 
   // Handle staff assignment changes (for guests)
@@ -1707,6 +1717,7 @@ const ChatWindow = ({
         className="chat-messages"
         ref={messagesContainerRef}
         onScroll={handleScroll}
+        style={{ paddingTop: '1rem' }}
       >
         {loading && (
           <div className="loading text-center">
@@ -2203,7 +2214,7 @@ const ChatWindow = ({
           );
         })}
 
-        <div ref={messagesEndRef} style={{ minHeight: '60px' }} />
+        <div ref={messagesEndRef} style={{ minHeight: '10px' }} />
       </div>
 
       {/* Scroll to Bottom Button */}
