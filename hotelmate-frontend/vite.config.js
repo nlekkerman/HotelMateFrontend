@@ -11,6 +11,8 @@ export default defineConfig({
   },
   assetsInclude: ["**/*.lottie"],
   server: {
+    port: 5173,
+    strictPort: false,
     proxy: {
       "/api": "http://localhost:8000",
       "/ws": {

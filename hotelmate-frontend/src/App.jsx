@@ -23,6 +23,7 @@ import DesktopSidebarNavbar from "@/components/layout/DesktopSidebarNavbar";
 import NetworkHandler from "@/components/offline/NetworkHandler";
 import LogoBanner from "./components/layout/LogoBanner";
 import PusherDebugger from "@/components/utils/PusherDebugger";
+import MessengerWidget from "@/staff_chat/components/MessengerWidget";
 
 // Pages + Components
 import Home from "@/pages/home/Home";
@@ -82,6 +83,7 @@ import NotFound from "@/components/offline/NotFound";
 
 import ChatHomePage from "@/pages/chat/ChatHomePage";
 import ChatWindow from "@/components/chat/ChatWindow";
+import StaffChatPage from "@/pages/chat/StaffChatPage";
 
 //Games
 import GamesDashboard from "@/games/GamesDashboard";
@@ -195,6 +197,10 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
     isMobile ? "mt-0" : ""
   }`;
 
+  // Show floating button - position based on screen size and not on staff chat page
+  const isStaffChatPage = location.pathname.includes('/staff-chat');
+  const showFloatingButton = user && !isClockInPage && !isAuthPage && !isGuestPage && !isStaffChatPage;
+
   return (
     <>
       {isMobile && !isClockInPage && !isAuthPage && !isGuestPage && <MobileNavbar />}
@@ -307,6 +313,13 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 </RequireChatPin>
               } />
               <Route path="/chat/:hotelSlug/conversations/:conversationId/messages" element={<ChatWindow />} />
+              
+              {/* Staff Chat Route */}
+              <Route path="/:hotelSlug/staff-chat" element={
+                <ProtectedRoute>
+                  <StaffChatPage />
+                </ProtectedRoute>
+              } />
 
               {/* Games - Protected */}
               <Route path="/games" element={<ProtectedRoute><GamesDashboard /></ProtectedRoute>} />
@@ -332,6 +345,11 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
           </div>
         </div>
       </div>
+      
+      {/* Messenger Widget */}
+      {showFloatingButton && (
+        <MessengerWidget position={isMobile ? 'bottom-left' : 'bottom-right'} />
+      )}
     </>
   );
 }
