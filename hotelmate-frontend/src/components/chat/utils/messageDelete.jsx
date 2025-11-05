@@ -14,17 +14,25 @@ import api from "@/services/api";
 /**
  * Deletes a message (soft delete by default)
  * @param {number} messageId - The ID of the message to delete
+ * @param {Object} guestSession - Optional guest session for authentication
  * @returns {Promise<Object>} - The response data from backend
  */
-export const deleteMessage = async (messageId) => {
+export const deleteMessage = async (messageId, guestSession = null) => {
   try {
     console.log('🗑️ Soft deleting message:', messageId);
+    console.log('🗑️ Guest session provided:', !!guestSession);
+    
+    // Build URL with session token for guests
+    let url = `/chat/messages/${messageId}/delete/`;
+    
+    if (guestSession) {
+      const sessionToken = guestSession.getToken();
+      url += `?session_token=${sessionToken}`;
+      console.log('🗑️ Using guest session token for deletion');
+    }
     
     // Call backend DELETE API - soft delete (default)
-    // Endpoint: /api/chat/messages/{message_id}/delete/
-    const response = await api.delete(
-      `/chat/messages/${messageId}/delete/`
-    );
+    const response = await api.delete(url);
     
     console.log('✅ Delete response:', response.data);
     
@@ -71,16 +79,18 @@ export const updateMessagesAfterDeletion = (messages, messageId, updatedMessage,
  * @param {Function} setMessageStatuses - State setter for message statuses map
  * @param {Function} onSuccess - Callback on successful deletion
  * @param {Function} onError - Callback on error
+ * @param {Object} guestSession - Optional guest session for authentication
  */
 export const handleMessageDeletion = async (
   messageId,
   setMessages,
   setMessageStatuses,
   onSuccess,
-  onError
+  onError,
+  guestSession = null
 ) => {
   try {
-    const result = await deleteMessage(messageId);
+    const result = await deleteMessage(messageId, guestSession);
     
     // Update message in local state
     if (result?.message) {
@@ -134,11 +144,16 @@ export const handlePusherDeletion = (data, setMessages, setMessageStatuses, isGu
   console.log('🗑️ [PUSHER] Message deletion event received:', data);
   console.log('🗑️ [PUSHER] Full event data:', JSON.stringify(data, null, 2));
   
-  const { message_id, hard_delete, message, deleted_by, original_sender, staff_name } = data;
+  const { message_id, soft_delete, hard_delete, message, deleted_by, original_sender, staff_name } = data;
+  
+  // Prefer soft_delete (new field), fallback to !hard_delete for backward compatibility
+  const isSoftDelete = soft_delete !== undefined ? soft_delete : !hard_delete;
   
   console.log('🗑️ [PUSHER] Extracted values:', {
     message_id,
+    soft_delete,
     hard_delete,
+    isSoftDelete,
     message,
     has_message: !!message,
     deleted_by,
@@ -154,7 +169,7 @@ export const handlePusherDeletion = (data, setMessages, setMessageStatuses, isGu
 
   console.log(`🗑️ [PUSHER] Processing deletion for message ID: ${message_id}`);
   
-  if (hard_delete) {
+  if (!isSoftDelete) {
     // Hard delete - permanently remove message from UI
     console.log(`💥 [PUSHER] Hard deleting message ${message_id} - removing from UI`);
     setMessages(prevMessages => {

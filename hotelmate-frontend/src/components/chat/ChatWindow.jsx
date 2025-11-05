@@ -814,23 +814,33 @@ const ChatWindow = ({
 
   // Handle message deleted event (for guest view) - using utility
   const handleMessageDeleted = useCallback((data) => {
+    console.log('🗑️ [GUEST] handleMessageDeleted called with data:', data);
+    console.log('🗑️ [GUEST] Current isGuest value:', isGuest);
+    console.log('🗑️ [GUEST] Current messages count:', messages.length);
     handlePusherDeletion(data, setMessages, setMessageStatuses, isGuest);
-  }, [isGuest]);
+  }, [isGuest, messages.length]);
 
   // NEW: Handle content-deleted event from dedicated deletion channel
   const handleContentDeleted = useCallback((data) => {
-    console.log('🗑️ [DELETION CHANNEL] content-deleted event received:', data);
-    console.log('🗑️ [DELETION CHANNEL] Event context:', {
+    console.log('🗑️🔴 [DELETION CHANNEL] ==================== START ====================');
+    console.log('🗑️🔴 [DELETION CHANNEL] content-deleted event received!');
+    console.log('🗑️🔴 [DELETION CHANNEL] Raw data:', JSON.stringify(data, null, 2));
+    console.log('🗑️🔴 [DELETION CHANNEL] Event context:', {
       message_id: data.message_id,
       deleted_by: data.deleted_by,
       original_sender: data.original_sender,
       staff_name: data.staff_name,
       hard_delete: data.hard_delete
     });
+    console.log('🗑️🔴 [DELETION CHANNEL] Current isGuest:', isGuest);
+    console.log('🗑️🔴 [DELETION CHANNEL] Current messages count:', messages.length);
+    console.log('🗑️🔴 [DELETION CHANNEL] Current message IDs:', messages.map(m => m.id));
     
     // Use the same handler with isGuest flag for contextual messages
     handlePusherDeletion(data, setMessages, setMessageStatuses, isGuest);
-  }, [isGuest]);
+    
+    console.log('🗑️🔴 [DELETION CHANNEL] ==================== END ====================');
+  }, [isGuest, messages.length]);
 
   // NEW: Handle attachment-deleted event from deletion channel
   const handleAttachmentDeleted = useCallback((data) => {
@@ -925,9 +935,28 @@ const ChatWindow = ({
     guestPusherChannels.forEach((ch, idx) => {
       console.log(`🔍 [DEBUG] Channel ${idx + 1}:`, {
         name: ch.name,
-        events: Object.keys(ch.events)
+        events: Object.keys(ch.events),
+        eventHandlers: Object.entries(ch.events).map(([event, handler]) => ({
+          event,
+          handlerType: typeof handler,
+          handlerName: handler.name || 'anonymous'
+        }))
       });
     });
+  }
+  
+  // CRITICAL DEBUG: Verify deletion channel configuration before passing to hook
+  const deletionChannelConfig = guestPusherChannels.find(ch => ch.name && ch.name.includes('-deletions'));
+  if (deletionChannelConfig) {
+    console.log('🚨 [DELETION CHANNEL CONFIG]', {
+      channelName: deletionChannelConfig.name,
+      hasContentDeletedHandler: !!deletionChannelConfig.events['content-deleted'],
+      hasAttachmentDeletedHandler: !!deletionChannelConfig.events['attachment-deleted'],
+      contentDeletedType: typeof deletionChannelConfig.events['content-deleted'],
+      attachmentDeletedType: typeof deletionChannelConfig.events['attachment-deleted']
+    });
+  } else {
+    console.warn('⚠️ [DELETION CHANNEL] No deletion channel found in guestPusherChannels!');
   }
 
   useGuestPusher(guestPusherChannels);
@@ -1507,7 +1536,8 @@ const ChatWindow = ({
       },
       (errorMsg) => {
         alert(errorMsg);
-      }
+      },
+      isGuest ? guestSession : null // Pass guest session for authentication
     );
     
     setShowDeleteConfirm(false);

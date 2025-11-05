@@ -13,7 +13,7 @@ export {
   formatReplyData,
   scrollToOriginalMessage,
   getReplySenderName
-} from './messageReply';
+} from './messageReply.jsx';
 
 // Delete utilities
 export {
@@ -22,8 +22,9 @@ export {
   handleMessageDeletion,
   handlePusherDeletion,
   getDeletionText,
-  DeletedMessageDisplay
-} from './messageDelete';
+  DeletedMessageDisplay,
+  getContextualDeletionText
+} from './messageDelete.jsx';
 
 // Share utilities
 export {
@@ -33,7 +34,7 @@ export {
   handleMessageShare,
   createShareableLink,
   exportMessageAsFile
-} from './messageShare';
+} from './messageShare.js';
 
 // Download utilities
 export {
@@ -44,4 +45,4 @@ export {
   exportMessageAsJSON,
   batchDownloadMessages,
   DownloadButton
-} from './messageDownload';
+} from './messageDownload.jsx';
