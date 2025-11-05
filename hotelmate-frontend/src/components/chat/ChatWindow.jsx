@@ -12,6 +12,27 @@ import { onMessage } from "firebase/messaging";
 import ConfirmationModal from "@/components/modals/ConfirmationModal";
 import SuccessModal from "@/components/modals/SuccessModal";
 
+// Import message action utilities
+import {
+  createReplyHandlers,
+  ReplyPreview,
+  ReplyInputPreview,
+  formatReplyData,
+  scrollToOriginalMessage
+} from "./utils/messageReply";
+import {
+  handleMessageDeletion,
+  handlePusherDeletion,
+  DeletedMessageDisplay
+} from "./utils/messageDelete";
+import {
+  handleMessageShare
+} from "./utils/messageShare";
+import {
+  handleMessageDownload,
+  getCloudinaryUrl
+} from "./utils/messageDownload";
+
 const MESSAGE_LIMIT = 10;
 
 // Cloudinary configuration from environment
@@ -27,30 +48,6 @@ const ALLOWED_FILE_TYPES = [
   'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'text/plain', 'text/csv'
 ];
-
-// Helper: Build full Cloudinary URL if needed
-const getCloudinaryUrl = (url) => {
-  if (!url) return '';
-  
-  // If already a Cloudinary URL, return as-is
-  if (url.includes('res.cloudinary.com')) {
-    return url;
-  }
-  
-  // If it's a backend URL (not Cloudinary), we need to fix it
-  // Backend should return Cloudinary URLs, but if it returns local paths...
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    console.warn('⚠️ Backend returned non-Cloudinary URL:', url);
-    console.warn('⚠️ Backend needs CLOUDINARY_URL configured in .env');
-    // Return as-is and let it fail so user knows backend is misconfigured
-    return url;
-  }
-  
-  // If it's a relative path, prefix with Cloudinary base
-  // Remove leading slash if present
-  const cleanPath = url.startsWith('/') ? url.slice(1) : url;
-  return `${CLOUDINARY_BASE}${cleanPath}`;
-};
 
 const ChatWindow = ({
   userId: propUserId,
@@ -133,15 +130,21 @@ const ChatWindow = ({
   const [currentStaff, setCurrentStaff] = useState(null);
   
   // Guest Pusher channels - compute them directly from props
-  // According to backend docs: guests need TWO channels
+  // According to backend docs: guests need THREE channels
   // 1. Room channel: for new-staff-message, new-message, staff-assigned
   // 2. Conversation channel: for messages-read-by-staff (read receipts)
+  // 3. Deletion channel: for content-deleted, attachment-deleted (NEW - dedicated for deletions)
   const guestRoomChannel = isGuest && hotelSlug && roomNumber 
     ? `${hotelSlug}-room-${roomNumber}-chat` 
     : null;
   
   const guestConversationChannel = isGuest && hotelSlug && conversationId
     ? `${hotelSlug}-conversation-${conversationId}-chat`
+    : null;
+  
+  // NEW: Dedicated deletion channel for reliable deletion sync
+  const guestDeletionChannel = isGuest && hotelSlug && roomNumber
+    ? `${hotelSlug}-room-${roomNumber}-deletions`
     : null;
   
   // Debug log for guest Pusher channels
@@ -154,11 +157,13 @@ const ChatWindow = ({
         conversationId,
         guestRoomChannel,
         guestConversationChannel,
+        guestDeletionChannel,
         roomChannelReady: !!guestRoomChannel,
-        conversationChannelReady: !!guestConversationChannel
+        conversationChannelReady: !!guestConversationChannel,
+        deletionChannelReady: !!guestDeletionChannel
       });
     }
-  }, [isGuest, hotelSlug, roomNumber, conversationId, guestRoomChannel, guestConversationChannel]);
+  }, [isGuest, hotelSlug, roomNumber, conversationId, guestRoomChannel, guestConversationChannel, guestDeletionChannel]);
   
   // Use conversation data from props (already fetched in ChatHomePage)
   const [conversationDetails, setConversationDetails] = useState(propConversationData || null);
@@ -259,6 +264,9 @@ const ChatWindow = ({
   const messageInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const { markConversationRead, pusherInstance, setCurrentConversationId } = useChat();
+
+  // Initialize reply handlers from utility
+  const { startReply, cancelReply, clearReplyAfterSend } = createReplyHandlers(setReplyingTo, messageInputRef);
 
   // Scroll to bottom only on initial load or when sending a new message
   const scrollToBottom = () => {
@@ -615,50 +623,7 @@ const ChatWindow = ({
 
       // Listen for message deleted event (backend sends both 'message-deleted' and 'message-removed')
       const handleDeletion = (data) => {
-        console.log('🗑️ [PUSHER] Message deletion event received:', data);
-        const { message_id, hard_delete, message, attachment_ids } = data;
-        
-        if (message_id) {
-          if (hard_delete) {
-            // Hard delete - permanently remove message from UI
-            console.log(`💥 [PUSHER] Hard deleting message ${message_id} - removing from UI`);
-            
-            // Clean up attachments if present
-            if (attachment_ids && attachment_ids.length > 0) {
-              console.log(`🗑️ [PUSHER] Cleaning up ${attachment_ids.length} attachment(s)`);
-              attachment_ids.forEach(attachmentId => {
-                const attachmentElements = document.querySelectorAll(
-                  `[data-attachment-id="${attachmentId}"]`
-                );
-                attachmentElements.forEach(el => el.remove());
-              });
-            }
-            
-            setMessages(prevMessages => prevMessages.filter(msg => msg.id !== message_id));
-          } else {
-            // Soft delete - update message with deletion text from backend
-            console.log(`🗑️ [PUSHER] Soft deleting message ${message_id} - showing as deleted`);
-            setMessages(prevMessages => 
-              prevMessages.map(msg => 
-                msg.id === message_id 
-                  ? { 
-                      ...msg, 
-                      ...message, // Use updated message data from backend with smart text
-                      is_deleted: true,
-                      attachments: [] // Clear attachments to hide images
-                    }
-                  : msg
-              )
-            );
-          }
-          
-          // Remove from message statuses
-          setMessageStatuses(prev => {
-            const newMap = new Map(prev);
-            newMap.delete(message_id);
-            return newMap;
-          });
-        }
+        handlePusherDeletion(data, setMessages, setMessageStatuses, false); // isGuest = false for staff
       };
       
       channel.bind("message-deleted", handleDeletion);
@@ -847,127 +812,71 @@ const ChatWindow = ({
     }
   }, [messages]);
 
-  // Handle message deleted event (for guest view)
+  // Handle message deleted event (for guest view) - using utility
   const handleMessageDeleted = useCallback((data) => {
-    console.log('🗑️ [GUEST PUSHER] Message deleted event received:', data);
-    console.log('🗑️ [GUEST PUSHER] Full event data:', JSON.stringify(data, null, 2));
-    const { message_id, hard_delete, message, attachment_ids } = data;
-    
-    console.log('🗑️ [GUEST PUSHER] Extracted values:', {
-      message_id,
-      hard_delete,
-      message,
-      has_message: !!message,
-      attachment_ids: attachment_ids || [],
-      has_attachments: !!attachment_ids && attachment_ids.length > 0
+    handlePusherDeletion(data, setMessages, setMessageStatuses, isGuest);
+  }, [isGuest]);
+
+  // NEW: Handle content-deleted event from dedicated deletion channel
+  const handleContentDeleted = useCallback((data) => {
+    console.log('🗑️ [DELETION CHANNEL] content-deleted event received:', data);
+    console.log('🗑️ [DELETION CHANNEL] Event context:', {
+      message_id: data.message_id,
+      deleted_by: data.deleted_by,
+      original_sender: data.original_sender,
+      staff_name: data.staff_name,
+      hard_delete: data.hard_delete
     });
     
-    if (message_id) {
-      console.log(`🗑️ [GUEST PUSHER] Processing deletion for message ID: ${message_id}`);
+    // Use the same handler with isGuest flag for contextual messages
+    handlePusherDeletion(data, setMessages, setMessageStatuses, isGuest);
+  }, [isGuest]);
+
+  // NEW: Handle attachment-deleted event from deletion channel
+  const handleAttachmentDeleted = useCallback((data) => {
+    console.log('📎 [DELETION CHANNEL] attachment-deleted event received:', data);
+    const { attachment_id, message_id } = data;
+    
+    if (message_id && attachment_id) {
+      console.log(`📎 Removing attachment ${attachment_id} from message ${message_id}`);
       
-      if (hard_delete) {
-        // Hard delete - permanently remove message from UI
-        console.log(`💥 [GUEST PUSHER] Hard deleting message ${message_id} - removing from UI`);
-        
-        // Clean up attachments if present
-        if (attachment_ids && attachment_ids.length > 0) {
-          console.log(`🗑️ [GUEST PUSHER] Cleaning up ${attachment_ids.length} attachment(s)`);
-          
-          attachment_ids.forEach(attachmentId => {
-            // Remove any attachment DOM elements
-            const attachmentElements = document.querySelectorAll(
-              `[data-attachment-id="${attachmentId}"]`
-            );
-            attachmentElements.forEach(el => {
-              console.log(`🗑️ [GUEST PUSHER] Removing attachment element for ID ${attachmentId}`);
-              el.remove();
-            });
-          });
-          
-          console.log(`✅ [GUEST PUSHER] Cleaned up ${attachment_ids.length} attachment(s)`);
-        }
-        
-        setMessages(prevMessages => {
-          console.log(`💥 [GUEST PUSHER] Before filter - message count: ${prevMessages.length}`);
-          const filtered = prevMessages.filter(msg => msg.id !== message_id);
-          console.log(`💥 [GUEST PUSHER] After filter - message count: ${filtered.length}`);
-          return filtered;
-        });
-      } else {
-        // Soft delete - update message with deletion text from backend
-        console.log(`🗑️ [GUEST PUSHER] Soft deleting message ${message_id} - showing as deleted`);
-        setMessages(prevMessages => {
-          console.log(`🗑️ [GUEST PUSHER] Before update - message count: ${prevMessages.length}`);
-          
-          // Find the message to be deleted
-          const targetMessage = prevMessages.find(msg => msg.id === message_id);
-          if (targetMessage) {
-            console.log(`🗑️ [GUEST PUSHER] Found target message:`, {
-              id: targetMessage.id,
-              has_attachments: !!targetMessage.attachments,
-              attachment_count: targetMessage.attachments?.length,
-              message_text: targetMessage.message?.substring(0, 50)
-            });
-          } else {
-            console.warn(`⚠️ [GUEST PUSHER] Message ${message_id} NOT FOUND in current messages!`);
+      setMessages(prevMessages => 
+        prevMessages.map(msg => {
+          if (msg.id === message_id && msg.attachments) {
+            const updatedAttachments = msg.attachments.filter(att => att.id !== attachment_id);
+            console.log(`📎 Attachments: ${msg.attachments.length} → ${updatedAttachments.length}`);
+            
+            return {
+              ...msg,
+              attachments: updatedAttachments
+            };
           }
-          
-          const updated = prevMessages.map(msg => {
-            if (msg.id === message_id) {
-              const updatedMsg = { 
-                ...msg, 
-                ...message, // Use updated message data from backend with smart text
-                is_deleted: true,
-                attachments: [] // Clear attachments to hide images
-              };
-              console.log(`🗑️ [GUEST PUSHER] Updated message ${message_id}:`, {
-                old_message: msg.message?.substring(0, 50),
-                new_message: updatedMsg.message?.substring(0, 50),
-                old_attachments: msg.attachments?.length || 0,
-                new_attachments: updatedMsg.attachments?.length || 0,
-                is_deleted: updatedMsg.is_deleted
-              });
-              return updatedMsg;
-            }
-            return msg;
-          });
-          
-          console.log(`🗑️ [GUEST PUSHER] After update - message count: ${updated.length}`);
-          console.log(`✅ [GUEST PUSHER] Deletion update complete for message ${message_id}`);
-          return updated;
-        });
-      }
+          return msg;
+        })
+      );
       
-      // Remove from message statuses
-      setMessageStatuses(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(message_id);
-        console.log(`🗑️ [GUEST PUSHER] Removed message ${message_id} from status map`);
-        return newMap;
-      });
-      
-      console.log(`✅ [GUEST PUSHER] Message deletion handled successfully for ID: ${message_id}`);
-    } else {
-      console.error('❌ [GUEST PUSHER] No message_id in deletion event!');
+      console.log(`✅ Attachment ${attachment_id} removed from UI`);
     }
   }, []);
 
   // Use guest Pusher hook with MULTIPLE channels
   // According to backend docs: guests subscribe to:
-  // 1. Room channel: for new-staff-message, new-message, staff-assigned, message-deleted
+  // 1. Room channel: for new-staff-message, new-message, staff-assigned
   // 2. Conversation channel: for messages-read-by-staff (read receipts)
+  // 3. Deletion channel: for content-deleted, attachment-deleted (NEW - dedicated for deletions)
   // Build channels array conditionally - each channel subscribes independently
   const guestPusherChannels = isGuest 
     ? [
-        // Room channel - CRITICAL for receiving staff messages and deletions
+        // Room channel - for receiving staff messages
         ...(guestRoomChannel ? [{
           name: guestRoomChannel,
           events: {
             'new-staff-message': handleNewStaffMessage,
             'new-message': handleNewMessage,
             'staff-assigned': handleStaffAssigned,
+            // Legacy deletion events - kept for backward compatibility
             'message-deleted': handleMessageDeleted,
-            'message-removed': handleMessageDeleted, // Backend sends both events as aliases
+            'message-removed': handleMessageDeleted,
           }
         }] : []),
         // Conversation channel - for read receipts only
@@ -975,6 +884,14 @@ const ChatWindow = ({
           name: guestConversationChannel,
           events: {
             'messages-read-by-staff': handleMessagesReadByStaff,
+          }
+        }] : []),
+        // NEW: Dedicated deletion channel - ensures deletions always reach guest UI
+        ...(guestDeletionChannel ? [{
+          name: guestDeletionChannel,
+          events: {
+            'content-deleted': handleContentDeleted,
+            'attachment-deleted': handleAttachmentDeleted,
           }
         }] : [])
       ]
@@ -986,24 +903,30 @@ const ChatWindow = ({
     channels: guestPusherChannels.map(ch => ch.name),
     roomChannel: guestRoomChannel,
     conversationChannel: guestConversationChannel,
+    deletionChannel: guestDeletionChannel,
     roomChannelEvents: guestPusherChannels[0]?.events ? Object.keys(guestPusherChannels[0].events) : [],
-    conversationChannelEvents: guestPusherChannels[1]?.events ? Object.keys(guestPusherChannels[1].events) : []
+    conversationChannelEvents: guestPusherChannels[1]?.events ? Object.keys(guestPusherChannels[1].events) : [],
+    deletionChannelEvents: guestPusherChannels[2]?.events ? Object.keys(guestPusherChannels[2].events) : []
   });
 
-  console.log('🔧 [GUEST PUSHER] message-deleted handler:', {
-    isDefined: !!handleMessageDeleted,
-    handlerType: typeof handleMessageDeleted
+  console.log('🔧 [GUEST PUSHER] Deletion handlers:', {
+    handleMessageDeleted: !!handleMessageDeleted,
+    handleContentDeleted: !!handleContentDeleted,
+    handleAttachmentDeleted: !!handleAttachmentDeleted
   });
   
-  console.log('🔔 [GUEST PUSHER] WAITING FOR DELETION EVENTS on channel:', guestRoomChannel);
+  console.log('🔔 [GUEST PUSHER] Waiting for deletion events on channels:', {
+    roomChannel: guestRoomChannel,
+    deletionChannel: guestDeletionChannel
+  });
   
   // Detailed event handler check
-  if (guestPusherChannels.length > 0 && guestPusherChannels[0]?.events) {
-    console.log('🔍 [DEBUG] Room channel events being passed to Pusher:', {
-      channel: guestPusherChannels[0].name,
-      events: Object.keys(guestPusherChannels[0].events),
-      messageDeletedHandler: guestPusherChannels[0].events['message-deleted']?.name || 'anonymous',
-      messageRemovedHandler: guestPusherChannels[0].events['message-removed']?.name || 'anonymous'
+  if (guestPusherChannels.length > 0) {
+    guestPusherChannels.forEach((ch, idx) => {
+      console.log(`🔍 [DEBUG] Channel ${idx + 1}:`, {
+        name: ch.name,
+        events: Object.keys(ch.events)
+      });
     });
   }
 
@@ -1272,7 +1195,7 @@ const ChatWindow = ({
     
     setNewMessage("");
     setSelectedFiles([]);
-    setReplyingTo(null);
+    clearReplyAfterSend(); // Use utility to clear reply
     setUploading(true);
 
     // Add temporary message to UI with pending status
@@ -1321,9 +1244,10 @@ const ChatWindow = ({
           formData.append('message', messageToSend.trim());
         }
         
-        // Add reply reference if replying
-        if (replyToMessage) {
-          formData.append('reply_to', replyToMessage.id);
+        // Add reply reference if replying (using utility)
+        const replyId = formatReplyData(replyToMessage);
+        if (replyId) {
+          formData.append('reply_to', replyId);
         }
         
         // Add authentication - SAME AS TEXT MESSAGES
@@ -1460,9 +1384,10 @@ const ChatWindow = ({
           return;
         }
         
-        // Add reply reference if replying
-        if (replyToMessage) {
-          payload.reply_to = replyToMessage.id;
+        // Add reply reference if replying (using utility)
+        const replyId = formatReplyData(replyToMessage);
+        if (replyId) {
+          payload.reply_to = replyId;
         }
 
         response = await api.post(
@@ -1568,144 +1493,45 @@ const ChatWindow = ({
     }, 50);
   };
 
-  // Handle delete message (soft delete by default)
+  // Handle delete message (using utility)
   const handleDeleteMessage = async () => {
     if (!messageToDelete) return;
     
-    try {
-      console.log('🗑️ Soft deleting message:', messageToDelete.id);
-      
-      // Call backend DELETE API - soft delete (default)
-      // Endpoint: /api/chat/messages/{message_id}/delete/
-      const response = await api.delete(
-        `/chat/messages/${messageToDelete.id}/delete/`
-      );
-      
-      console.log('✅ Delete response:', response.data);
-      
-      // Update message with smart deletion text from backend
-      // Backend returns: "[Message deleted]", "[File deleted]", or "[Message and file(s) deleted]"
-      if (response.data?.message) {
-        setMessages(prev => prev.map(msg => 
-          msg.id === messageToDelete.id 
-            ? { 
-                ...msg, 
-                ...response.data.message,
-                is_deleted: true,
-                attachments: [] // Clear attachments to hide images immediately
-              }
-            : msg
-        ));
+    await handleMessageDeletion(
+      messageToDelete.id,
+      setMessages,
+      setMessageStatuses,
+      (successMsg) => {
+        setSuccessMessage(successMsg);
+        setShowSuccessModal(true);
+      },
+      (errorMsg) => {
+        alert(errorMsg);
       }
-      
-      // Show success modal
-      setSuccessMessage('Message deleted successfully');
-      setShowSuccessModal(true);
-      
-      console.log('✅ Message soft deleted successfully');
-      
-      // Note: Pusher will broadcast 'message-deleted' event to other users
-    } catch (error) {
-      console.error('❌ Failed to delete message:', error);
-      
-      // Show user-friendly error message
-      const errorMsg = error.response?.data?.error || 
-                      error.response?.data?.detail || 
-                      'Failed to delete message. Please try again.';
-      alert(errorMsg);
-      
-      // If 403 Forbidden
-      if (error.response?.status === 403) {
-        alert('You do not have permission to delete this message.');
-      }
-      // If 404 Not Found
-      else if (error.response?.status === 404) {
-        // Message already deleted, mark as deleted in UI
-        setMessages(prev => prev.map(msg => 
-          msg.id === messageToDelete.id 
-            ? { ...msg, is_deleted: true, message: '🗑️ Message deleted', attachments: [] }
-            : msg
-        ));
-      }
-    } finally {
-      setShowDeleteConfirm(false);
-      setMessageToDelete(null);
-    }
+    );
+    
+    setShowDeleteConfirm(false);
+    setMessageToDelete(null);
   };
 
-  // Handle download message and attachments
-  const handleDownloadMessage = async () => {
+  // Handle download message and attachments (using utility)
+  const handleDownloadMessageAction = async () => {
     if (!messageToDownload) return;
     
-    try {
-      console.log('💾 Downloading attachments from message:', messageToDownload.id);
-      
-      // Download all attachments if present
-      if (messageToDownload.attachments && messageToDownload.attachments.length > 0) {
-        let downloadedCount = 0;
-        
-        for (const attachment of messageToDownload.attachments) {
-          try {
-            // Get full Cloudinary URL
-            const fullFileUrl = getCloudinaryUrl(attachment.file_url);
-            console.log(`⬇️ Downloading: ${attachment.file_name} from ${fullFileUrl}`);
-            
-            // Fetch file from Cloudinary
-            const response = await fetch(fullFileUrl);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            
-            const blob = await response.blob();
-            
-            // Create download link
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = attachment.file_name;
-            link.style.display = 'none';
-            
-            // Trigger download
-            document.body.appendChild(link);
-            link.click();
-            
-            // Cleanup
-            setTimeout(() => {
-              document.body.removeChild(link);
-              window.URL.revokeObjectURL(url);
-            }, 100);
-            
-            downloadedCount++;
-            
-            // Small delay between downloads if multiple files
-            if (messageToDownload.attachments.length > 1) {
-              await new Promise(resolve => setTimeout(resolve, 800));
-            }
-          } catch (fileError) {
-            console.error(`❌ Failed to download ${attachment.file_name}:`, fileError);
-            alert(`Failed to download ${attachment.file_name}. File may no longer exist.`);
-          }
-        }
-        
-        if (downloadedCount > 0) {
-          setSuccessMessage(`Downloaded ${downloadedCount} file(s) successfully`);
-          setShowSuccessModal(true);
-        }
-      } else if (messageToDownload.message) {
-        // If no attachments, copy message text to clipboard
-        await navigator.clipboard.writeText(messageToDownload.message);
-        setSuccessMessage('Message text copied to clipboard');
+    await handleMessageDownload(
+      messageToDownload,
+      CLOUDINARY_BASE,
+      (successMsg) => {
+        setSuccessMessage(successMsg);
         setShowSuccessModal(true);
-      } else {
-        alert('Nothing to download from this message.');
+      },
+      (errorMsg) => {
+        alert(errorMsg);
       }
-      
-      console.log('✅ Download completed');
-    } catch (error) {
-      console.error('❌ Failed to download:', error);
-      alert('Failed to download. Please try again.');
-    } finally {
-      setShowDownloadConfirm(false);
-      setMessageToDownload(null);
-    }
+    );
+    
+    setShowDownloadConfirm(false);
+    setMessageToDownload(null);
   };
 
   // Close emoji picker when clicking outside
@@ -2056,70 +1882,13 @@ const ChatWindow = ({
                     paddingTop: msg.attachments && msg.attachments.length > 0 ? '3rem' : '1rem'
                   }}
                 >
-                  {/* Show replied-to message */}
-                  {msg.reply_to_message && (
-                    <div 
-                      className="replied-message d-flex gap-2 p-2 mb-3 rounded"
-                      style={{
-                        backgroundColor: isMine ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 123, 255, 0.15)',
-                        borderLeft: '4px solid #007bff',
-                        fontSize: '0.8rem',
-                        cursor: 'pointer',
-                        maxHeight: '120px',
-                        overflowY: 'auto',
-                        border: '1px solid rgba(0, 123, 255, 0.3)'
-                      }}
-                      onClick={() => {
-                        // Scroll to original message if it exists in view
-                        const originalElement = document.querySelector(`[data-message-id="${msg.reply_to_message.id}"]`);
-                        if (originalElement) {
-                          originalElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                          // Briefly highlight the message
-                          originalElement.style.backgroundColor = 'rgba(255, 255, 0, 0.2)';
-                          setTimeout(() => {
-                            originalElement.style.backgroundColor = '';
-                          }, 1500);
-                        }
-                      }}
-                      title="Click to jump to original message"
-                    >
-                      <span style={{ fontSize: '1rem', color: '#007bff', flexShrink: 0 }}>↩️</span>
-                      <div className="flex-grow-1" style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, color: '#333', marginBottom: '6px', fontSize: '0.75rem' }}>
-                          {(() => {
-                            // For staff messages, show staff name
-                            if (msg.reply_to_message.sender_type === 'staff') {
-                              return msg.reply_to_message.sender_name || 
-                                     msg.reply_to_message.staff_name || 
-                                     'Staff';
-                            }
-                            // For guest messages, try to get guest name from original message or backend
-                            // Check if we can find the original message in our messages array
-                            const originalMsg = messages.find(m => m.id === msg.reply_to_message.id);
-                            if (originalMsg?.guest_name) {
-                              return originalMsg.guest_name;
-                            }
-                            // Fall back to backend data
-                            return msg.reply_to_message.sender_name || 
-                                   msg.reply_to_message.guest_name || 
-                                   'Guest';
-                          })()}
-                        </div>
-                        {/* Show full original message text */}
-                        <div 
-                          style={{ 
-                            fontSize: '0.8rem', 
-                            opacity: 0.95,
-                            maxWidth: '100%',
-                            wordBreak: 'break-word',
-                            whiteSpace: 'pre-wrap'
-                          }}
-                        >
-                          {msg.reply_to_message.message || '📎 Attachment'}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {/* Show replied-to message - using utility component */}
+                  <ReplyPreview 
+                    replyToMessage={msg.reply_to_message}
+                    messages={messages}
+                    isMine={isMine}
+                    onClickReply={scrollToOriginalMessage}
+                  />
                   
                   {/* Only show message text if it exists and is not a placeholder */}
                   {msg.message && 
@@ -2136,9 +1905,9 @@ const ChatWindow = ({
                 {msg.attachments && msg.attachments.length > 0 && (
                   <div className="message-attachments" style={{ marginTop: msg.message ? '0.5rem' : '0' }}>
                     {msg.attachments.map((att, idx) => {
-                      // Ensure we have full Cloudinary URL
-                      const fullFileUrl = getCloudinaryUrl(att.file_url);
-                      const fullThumbnailUrl = att.thumbnail_url ? getCloudinaryUrl(att.thumbnail_url) : null;
+                      // Ensure we have full Cloudinary URL (using utility)
+                      const fullFileUrl = getCloudinaryUrl(att.file_url, CLOUDINARY_BASE);
+                      const fullThumbnailUrl = att.thumbnail_url ? getCloudinaryUrl(att.thumbnail_url, CLOUDINARY_BASE) : null;
                       
                       return (
                         <div 
@@ -2288,25 +2057,7 @@ const ChatWindow = ({
                     cursor: 'pointer',
                     borderRadius: '4px'
                   }}
-                  onClick={() => {
-                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    console.log('� [REPLY BUTTON CLICKED]');
-                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    console.log('Setting replyingTo:', {
-                      id: msg.id,
-                      message: msg.message?.substring(0, 50) + '...',
-                      sender_type: msg.sender_type,
-                      sender_name: msg.sender_type === 'staff' ? msg.staff_name : msg.guest_name
-                    });
-                    setReplyingTo(msg);
-                    console.log('✅ replyingTo state updated - reply preview should appear');
-                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    
-                    // Focus on message input
-                    if (messageInputRef.current) {
-                      messageInputRef.current.focus();
-                    }
-                  }}
+                  onClick={() => startReply(msg)}
                   title="Reply to this message"
                 >
                   Reply
@@ -2324,8 +2075,16 @@ const ChatWindow = ({
                     background: 'none'
                   }}
                   onClick={() => {
-                    console.log('Share message:', msg.id);
-                    // TODO: Implement share functionality
+                    handleMessageShare(
+                      msg,
+                      (successMsg) => {
+                        setSuccessMessage(successMsg);
+                        setShowSuccessModal(true);
+                      },
+                      (errorMsg) => {
+                        alert(errorMsg);
+                      }
+                    );
                   }}
                   title="Share this message"
                 >
@@ -2393,79 +2152,8 @@ const ChatWindow = ({
           </div>
         )}
 
-        {/* Reply Preview */}
-        {replyingTo && (
-          <div 
-            className="reply-preview d-flex align-items-start gap-2 p-3 mb-2" 
-            style={{ 
-              backgroundColor: '#e3f2fd', 
-              borderLeft: '4px solid #007bff',
-              borderRadius: '8px',
-              boxShadow: '0 2px 8px rgba(0,123,255,0.2)',
-              maxHeight: '150px',
-              overflowY: 'auto',
-              border: '1px solid rgba(0, 123, 255, 0.3)'
-            }}
-          >
-            <span style={{ fontSize: '1.2rem', color: '#007bff', flexShrink: 0, marginTop: '2px' }}>↩️</span>
-            <div className="flex-grow-1" style={{ minWidth: 0 }}>
-              <div className="d-flex justify-content-between align-items-center mb-2">
-                <span 
-                  style={{ 
-                    fontSize: '0.75rem', 
-                    fontWeight: 600, 
-                    color: '#007bff' 
-                  }}
-                >
-                  Replying to {replyingTo.sender_type === 'staff' 
-                    ? (replyingTo.staff_name || 'Staff') 
-                    : (replyingTo.guest_name || 'Guest')}
-                </span>
-                <button
-                  className="btn btn-sm p-0"
-                  onClick={() => setReplyingTo(null)}
-                  style={{ 
-                    background: 'none', 
-                    border: 'none', 
-                    fontSize: '1.2rem',
-                    color: '#6c757d',
-                    cursor: 'pointer',
-                    lineHeight: 1
-                  }}
-                  title="Cancel reply"
-                >
-                  ×
-                </button>
-              </div>
-              {/* Show full original message text */}
-              {replyingTo.message && (
-                <div 
-                  style={{ 
-                    fontSize: '0.85rem', 
-                    color: '#333',
-                    maxWidth: '100%',
-                    wordBreak: 'break-word',
-                    whiteSpace: 'pre-wrap',
-                    marginBottom: replyingTo.attachments?.length > 0 ? '8px' : '0'
-                  }}
-                >
-                  {replyingTo.message}
-                </div>
-              )}
-              {/* Show attachments if present */}
-              {replyingTo.attachments?.length > 0 && (
-                <div style={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic' }}>
-                  📎 {replyingTo.attachments.length} attachment{replyingTo.attachments.length > 1 ? 's' : ''}
-                  {replyingTo.attachments.map((att, idx) => (
-                    <span key={idx} style={{ display: 'block', marginLeft: '1.2rem', marginTop: '2px' }}>
-                      • {att.file_name}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        {/* Reply Preview - using utility component */}
+        <ReplyInputPreview replyingTo={replyingTo} onCancel={cancelReply} />
 
         {/* File Previews */}
         {selectedFiles.length > 0 && (
@@ -2706,7 +2394,7 @@ const ChatWindow = ({
         <ConfirmationModal
           title="Download Attachments"
           message={`Download ${messageToDownload?.attachments?.length || 0} file(s) from this message?`}
-          onConfirm={handleDownloadMessage}
+          onConfirm={handleDownloadMessageAction}
           onCancel={() => {
             setShowDownloadConfirm(false);
             setMessageToDownload(null);
