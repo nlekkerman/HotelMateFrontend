@@ -112,8 +112,15 @@ export const ReplyPreview = ({ replyToMessage, messages, isMine, onClickReply })
 export const ReplyInputPreview = ({ replyingTo, onCancel }) => {
   if (!replyingTo) return null;
 
+  // Determine original sender name
   const senderName = replyingTo.sender_type === 'staff' 
     ? (replyingTo.staff_name || 'Staff') 
+    : (replyingTo.guest_name || 'Guest');
+
+  // Determine recipient (who will receive this reply)
+  // If replying to staff, reply goes to staff; if replying to guest, reply goes to guest
+  const recipientName = replyingTo.sender_type === 'staff'
+    ? (replyingTo.staff_name || 'Staff')
     : (replyingTo.guest_name || 'Guest');
 
   return (
@@ -132,15 +139,27 @@ export const ReplyInputPreview = ({ replyingTo, onCancel }) => {
       <span style={{ fontSize: '1.2rem', color: '#007bff', flexShrink: 0, marginTop: '2px' }}>↩️</span>
       <div className="flex-grow-1" style={{ minWidth: 0 }}>
         <div className="d-flex justify-content-between align-items-center mb-2">
-          <span 
-            style={{ 
-              fontSize: '0.75rem', 
-              fontWeight: 600, 
-              color: '#007bff' 
-            }}
-          >
-            Replying to {senderName}
-          </span>
+          <div className="d-flex flex-column" style={{ gap: '4px' }}>
+            <span 
+              style={{ 
+                fontSize: '0.75rem', 
+                fontWeight: 600, 
+                color: '#007bff' 
+              }}
+            >
+              Replying to {senderName}
+            </span>
+            <span 
+              style={{ 
+                fontSize: '0.7rem', 
+                fontWeight: 500, 
+                color: '#28a745',
+                fontStyle: 'italic'
+              }}
+            >
+              → Sending to {recipientName}
+            </span>
+          </div>
           <button
             className="btn btn-sm p-0"
             onClick={onCancel}

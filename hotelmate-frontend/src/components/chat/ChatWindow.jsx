@@ -1277,6 +1277,11 @@ const ChatWindow = ({
         const replyId = formatReplyData(replyToMessage);
         if (replyId) {
           formData.append('reply_to', replyId);
+          console.log('📤 [SEND REPLY WITH FILE] Adding reply_to to FormData:', {
+            reply_to: replyId,
+            replying_to_message: replyToMessage?.message?.substring(0, 50),
+            replying_to_sender: replyToMessage?.sender_type
+          });
         }
         
         // Add authentication - SAME AS TEXT MESSAGES
@@ -1417,16 +1422,43 @@ const ChatWindow = ({
         const replyId = formatReplyData(replyToMessage);
         if (replyId) {
           payload.reply_to = replyId;
+          console.log('📤 [SEND REPLY] Adding reply_to to payload:', {
+            reply_to: replyId,
+            replying_to_message: replyToMessage?.message?.substring(0, 50),
+            replying_to_sender: replyToMessage?.sender_type
+          });
         }
+
+        console.log('📤 [SEND MESSAGE] Sending payload:', {
+          hasMessage: !!payload.message,
+          hasReply: !!payload.reply_to,
+          staff_id: payload.staff_id,
+          hasSessionToken: !!payload.session_token
+        });
 
         response = await api.post(
           `/chat/${hotelSlug}/conversations/${conversationId}/messages/send/`,
           payload
         );
+        
+        console.log('✅ [SEND MESSAGE] Response received:', {
+          message_id: response.data?.message?.id || response.data?.id,
+          has_reply_to: !!(response.data?.message?.reply_to || response.data?.reply_to),
+          has_reply_to_message: !!(response.data?.message?.reply_to_message || response.data?.reply_to_message),
+          reply_data: response.data?.message?.reply_to_message || response.data?.reply_to_message
+        });
       }
 
       // Extract the actual message object
       const messageData = response.data?.message || response.data;
+      
+      console.log('📨 [MESSAGE RECEIVED] Backend returned message:', {
+        id: messageData?.id,
+        has_reply_to: !!messageData?.reply_to,
+        reply_to_value: messageData?.reply_to,
+        has_reply_to_message: !!messageData?.reply_to_message,
+        reply_to_message_data: messageData?.reply_to_message
+      });
       
       // 🔍 DEBUG: Check if backend returned wrong sender_type
       if (userId && messageData?.sender_type !== 'staff') {
