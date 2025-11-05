@@ -55,22 +55,47 @@ X-Hotel-Slug: {hotel_slug}
 1. Verify user has permission to delete the message (message author or admin)
 2. Delete message record from database
 3. Delete all associated attachments from Cloudinary
-4. Broadcast Pusher event to all participants: `message-deleted` with `message_id`
+4. **CRITICAL**: Broadcast Pusher event to **BOTH channels** (see below)
 5. Update conversation's last message if this was the last message
 6. Return success response
 
-**Pusher Event**:
+**Pusher Events** (MUST broadcast to BOTH channels):
 ```javascript
-// Channel: {hotel_slug}-conversation-{conversation_id}-chat
+// Channel 1: Conversation channel (for staff viewing the conversation)
+// {hotel_slug}-conversation-{conversation_id}-chat
 {
   event: "message-deleted",
   data: {
     message_id: 123,
-    deleted_by_user_id: 456,
-    deleted_at: "2025-11-04T12:30:00Z"
+    hard_delete: false,
+    message: {
+      id: 123,
+      message: "[Message deleted]", // or "[File deleted]" or "[Message and file(s) deleted]"
+      is_deleted: true
+    }
+  }
+}
+
+// Channel 2: Room channel (for guests in the room)
+// {hotel_slug}-room-{room_number}-chat
+{
+  event: "message-deleted",
+  data: {
+    message_id: 123,
+    hard_delete: false,
+    message: {
+      id: 123,
+      message: "[Message deleted]", // or "[File deleted]" or "[Message and file(s) deleted]"
+      is_deleted: true
+    }
   }
 }
 ```
+
+**Why both channels?**
+- Staff UI listens on conversation channel
+- Guest UI listens on room channel
+- Both need to see deletions in real-time
 
 ---
 

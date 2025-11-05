@@ -76,22 +76,33 @@ const ChatWindow = ({
   // Guest is someone WITHOUT a userId (not authenticated as staff)
   const isGuest = !userId;
   
-  // Get room number from multiple sources
-  let roomNumber = propRoomNumber || location.state?.room_number;
-  
-  // If no room number but this is a guest, try to get it from stored session
-  if (!roomNumber && isGuest) {
-    try {
-      const storedSession = localStorage.getItem('hotelmate_guest_chat_session');
-      if (storedSession) {
-        const session = JSON.parse(storedSession);
-        roomNumber = session.room_number;
-        console.log('🔍 Retrieved room number from stored session:', roomNumber);
+  // Get room number from multiple sources - use state for dynamic updates
+  const [roomNumber, setRoomNumber] = useState(() => {
+    // Try multiple sources in order of priority
+    let initialRoomNumber = propRoomNumber || location.state?.room_number;
+    
+    // If no room number but this is a guest, try to get it from stored session
+    if (!initialRoomNumber && isGuest) {
+      try {
+        const storedSession = localStorage.getItem('hotelmate_guest_chat_session');
+        if (storedSession) {
+          const session = JSON.parse(storedSession);
+          initialRoomNumber = session.room_number;
+          console.log('🔍 Retrieved room number from stored session:', initialRoomNumber);
+        }
+      } catch (err) {
+        console.error('Failed to parse stored session:', err);
       }
-    } catch (err) {
-      console.error('Failed to parse stored session:', err);
     }
-  }
+    
+    // If still no room number, try conversation data prop
+    if (!initialRoomNumber && isGuest && propConversationData?.room_number) {
+      initialRoomNumber = propConversationData.room_number;
+      console.log('🔍 Retrieved room number from conversation data:', initialRoomNumber);
+    }
+    
+    return initialRoomNumber;
+  });
   
   console.log('🔍 [INIT] ChatWindow initialized:', {
     isGuest,
@@ -136,6 +147,48 @@ const ChatWindow = ({
   
   // Use conversation data from props (already fetched in ChatHomePage)
   const [conversationDetails, setConversationDetails] = useState(propConversationData || null);
+  
+  // Fetch room number from conversation if not available (critical for guests)
+  useEffect(() => {
+    if (!roomNumber && conversationId && hotelSlug && isGuest) {
+      console.log('🔍 [ROOM NUMBER] Missing room number for guest, fetching from conversation...');
+      
+      const fetchRoomNumber = async () => {
+        try {
+          const response = await api.get(`/chat/${hotelSlug}/conversations/${conversationId}/`);
+          if (response.data?.room_number) {
+            // Update room number state
+            setRoomNumber(response.data.room_number);
+            console.log('✅ [ROOM NUMBER] Fetched room number from backend:', response.data.room_number);
+            
+            // Update conversation details
+            setConversationDetails(prev => ({
+              ...prev,
+              ...response.data,
+              room_number: response.data.room_number
+            }));
+            
+            // Also save to localStorage for future use
+            try {
+              const storedSession = localStorage.getItem('hotelmate_guest_chat_session');
+              if (storedSession) {
+                const session = JSON.parse(storedSession);
+                session.room_number = response.data.room_number;
+                localStorage.setItem('hotelmate_guest_chat_session', JSON.stringify(session));
+              }
+            } catch (err) {
+              console.error('Failed to update stored session:', err);
+            }
+          }
+        } catch (error) {
+          console.error('❌ [ROOM NUMBER] Failed to fetch conversation details:', error);
+        }
+      };
+      
+      fetchRoomNumber();
+    }
+  }, [roomNumber, conversationId, hotelSlug, isGuest]);
+  
   const {
     logoUrl: hotelLogo,
     loading: logoLoading,
@@ -855,9 +908,11 @@ const ChatWindow = ({
   // According to backend docs: guests subscribe to:
   // 1. Room channel: for new-staff-message, new-message, staff-assigned, message-deleted
   // 2. Conversation channel: for messages-read-by-staff (read receipts)
-  const guestPusherChannels = isGuest && guestRoomChannel && guestConversationChannel
+  // Build channels array conditionally - each channel subscribes independently
+  const guestPusherChannels = isGuest 
     ? [
-        {
+        // Room channel - CRITICAL for receiving staff messages and deletions
+        ...(guestRoomChannel ? [{
           name: guestRoomChannel,
           events: {
             'new-staff-message': handleNewStaffMessage,
@@ -866,13 +921,14 @@ const ChatWindow = ({
             'message-deleted': handleMessageDeleted,
             'message-removed': handleMessageDeleted, // Backend sends both events as aliases
           }
-        },
-        {
+        }] : []),
+        // Conversation channel - for read receipts only
+        ...(guestConversationChannel ? [{
           name: guestConversationChannel,
           events: {
             'messages-read-by-staff': handleMessagesReadByStaff,
           }
-        }
+        }] : [])
       ]
     : [];
 
@@ -892,6 +948,16 @@ const ChatWindow = ({
   });
   
   console.log('🔔 [GUEST PUSHER] WAITING FOR DELETION EVENTS on channel:', guestRoomChannel);
+  
+  // Detailed event handler check
+  if (guestPusherChannels.length > 0 && guestPusherChannels[0]?.events) {
+    console.log('🔍 [DEBUG] Room channel events being passed to Pusher:', {
+      channel: guestPusherChannels[0].name,
+      events: Object.keys(guestPusherChannels[0].events),
+      messageDeletedHandler: guestPusherChannels[0].events['message-deleted']?.name || 'anonymous',
+      messageRemovedHandler: guestPusherChannels[0].events['message-removed']?.name || 'anonymous'
+    });
+  }
 
   useGuestPusher(guestPusherChannels);
 
