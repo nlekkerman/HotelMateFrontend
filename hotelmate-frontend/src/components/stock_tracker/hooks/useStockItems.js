@@ -43,11 +43,19 @@ export const useStockItems = (hotelSlug) => {
   // Create item
   const createItem = async (itemData) => {
     try {
+      console.log('useStockItems - createItem called');
+      console.log('Hotel slug:', hotelSlug);
+      console.log('URL:', `/stock_tracker/${hotelSlug}/items/`);
+      console.log('Data being sent to server:', itemData);
+      
       const res = await api.post(`/stock_tracker/${hotelSlug}/items/`, itemData);
+      
+      console.log('Server response:', res.data);
       setItems([...items, res.data]);
       return res.data;
     } catch (err) {
       console.error("Error creating item:", err);
+      console.error("Error response:", err.response?.data);
       throw err;
     }
   };

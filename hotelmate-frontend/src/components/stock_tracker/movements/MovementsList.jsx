@@ -10,6 +10,9 @@ export const MovementsList = () => {
   const { movements, loading, error, createMovement } = useMovements(hotel_slug);
   const { items } = useStockItems(hotel_slug);
   
+  // Get user data from localStorage
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  
   const [modalOpen, setModalOpen] = useState(false);
   const [filters, setFilters] = useState({
     movementType: "",
@@ -19,7 +22,16 @@ export const MovementsList = () => {
 
   const handleCreateMovement = async (movementData) => {
     try {
-      await createMovement(movementData);
+      console.log('User from localStorage:', user);
+      // Add hotel and staff fields from localStorage
+      const dataWithHotel = {
+        ...movementData,
+        hotel: user?.hotel_id,
+        staff: user?.id,
+        staff_name: user?.username || 'Unknown'
+      };
+      console.log('Creating movement with data:', dataWithHotel);
+      await createMovement(dataWithHotel);
       setModalOpen(false);
     } catch (err) {
       alert("Failed to create movement");
@@ -119,6 +131,7 @@ export const MovementsList = () => {
                     <th>Quantity</th>
                     <th>Unit Cost</th>
                     <th>Total Value</th>
+                    <th>Staff</th>
                     <th>Reference</th>
                     <th>Notes</th>
                   </tr>
@@ -126,7 +139,7 @@ export const MovementsList = () => {
                 <tbody>
                   {filteredMovements.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="text-center text-muted py-4">
+                      <td colSpan="9" className="text-center text-muted py-4">
                         No movements found. Click "Record Movement" to add one.
                       </td>
                     </tr>
@@ -143,12 +156,13 @@ export const MovementsList = () => {
                             </span>
                           </td>
                           <td>
-                            <strong>{item?.code}</strong><br />
-                            <small className="text-muted">{item?.description}</small>
+                            <strong>{item?.sku || item?.code || '-'}</strong><br />
+                            <small className="text-muted">{item?.name || item?.description || '-'}</small>
                           </td>
                           <td>{parseFloat(movement.quantity).toFixed(2)}</td>
                           <td>€{parseFloat(movement.unit_cost || 0).toFixed(2)}</td>
                           <td>€{(parseFloat(movement.quantity) * parseFloat(movement.unit_cost || 0)).toFixed(2)}</td>
+                          <td><span>{movement.staff_name || 'Unknown'}</span></td>
                           <td>{movement.reference || "-"}</td>
                           <td><small>{movement.notes || "-"}</small></td>
                         </tr>

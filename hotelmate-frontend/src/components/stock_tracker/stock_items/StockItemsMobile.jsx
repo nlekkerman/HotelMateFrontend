@@ -10,6 +10,9 @@ const StockItemsMobile = () => {
   const { hotel_slug } = useParams();
   const { items, categories, loading, error, fetchItems, createItem, updateItem, deleteItem } = useStockItems(hotel_slug);
   
+  // Get user data from localStorage
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [showBelowPar, setShowBelowPar] = useState(false);
@@ -17,6 +20,11 @@ const StockItemsMobile = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [filteredItems, setFilteredItems] = useState([]);
+
+  // Monitor modal state
+  useEffect(() => {
+    console.log('showModal changed to:', showModal);
+  }, [showModal]);
 
   // Filter items
   useEffect(() => {
@@ -62,21 +70,40 @@ const StockItemsMobile = () => {
 
   const handleSave = async (itemData) => {
     try {
+      console.log('handleSave called in StockItemsMobile');
+      console.log('Item data received:', itemData);
+      console.log('Is editing:', !!editingItem);
+      
+      // Add hotel field from localStorage
+      const dataWithHotel = {
+        ...itemData,
+        hotel: user?.hotel_id
+      };
+      console.log('Data with hotel field:', dataWithHotel);
+      
       if (editingItem) {
-        await updateItem(editingItem.id, itemData);
+        console.log('Updating item ID:', editingItem.id);
+        await updateItem(editingItem.id, dataWithHotel);
+        console.log('Item updated successfully');
       } else {
-        await createItem(itemData);
+        console.log('Creating new item');
+        const result = await createItem(dataWithHotel);
+        console.log('Item created successfully:', result);
       }
       setShowModal(false);
       setEditingItem(null);
     } catch (err) {
+      console.error('Error saving item:', err);
       throw err;
     }
   };
 
   const handleAddNew = () => {
+    console.log('handleAddNew called');
+    console.log('Current showModal:', showModal);
     setEditingItem(null);
     setShowModal(true);
+    console.log('Setting showModal to true');
   };
 
   const clearFilters = () => {
@@ -110,7 +137,18 @@ const StockItemsMobile = () => {
       {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h4 className="mb-0">Stock Items</h4>
-        <Button variant="primary" size="sm" onClick={handleAddNew}>
+        <Button 
+          variant="primary" 
+          size="sm" 
+          onClick={handleAddNew}
+          style={{ 
+            backgroundColor: 'red',
+            color: 'white',
+            border: 'none',
+            touchAction: 'manipulation',
+            WebkitTapHighlightColor: 'transparent'
+          }}
+        >
           <FaPlus /> Add
         </Button>
       </div>
@@ -198,8 +236,8 @@ const StockItemsMobile = () => {
 
       {/* Modal */}
       <StockItemModal
-        show={showModal}
-        onHide={() => {
+        isOpen={showModal}
+        onClose={() => {
           setShowModal(false);
           setEditingItem(null);
         }}

@@ -8,6 +8,9 @@ export const StockItemsList = () => {
   const navigate = useNavigate();
   const { items, categories, loading, error, createItem, updateItem, deleteItem } = useStockItems(hotel_slug);
   
+  // Get user data from localStorage
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -15,10 +18,16 @@ export const StockItemsList = () => {
 
   const handleSaveItem = async (itemData) => {
     try {
+      // Add hotel field from localStorage
+      const dataWithHotel = {
+        ...itemData,
+        hotel: user?.hotel_id
+      };
+      
       if (editingItem) {
-        await updateItem(editingItem.id, itemData);
+        await updateItem(editingItem.id, dataWithHotel);
       } else {
-        await createItem(itemData);
+        await createItem(dataWithHotel);
       }
       setModalOpen(false);
       setEditingItem(null);

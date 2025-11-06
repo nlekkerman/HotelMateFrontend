@@ -19,6 +19,10 @@ export const useMovements = (hotelSlug) => {
 
       const url = `/stock_tracker/${hotelSlug}/movements/?${params.toString()}`;
       const res = await api.get(url);
+      console.log('Movements API response:', res.data);
+      if (res.data.length > 0) {
+        console.log('Sample movement object:', res.data[0]);
+      }
       // Backend returns plain array (no pagination)
       setMovements(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
@@ -32,7 +36,9 @@ export const useMovements = (hotelSlug) => {
   // Create movement
   const createMovement = async (movementData) => {
     try {
+      console.log('Sending movement data to API:', movementData);
       const res = await api.post(`/stock_tracker/${hotelSlug}/movements/`, movementData);
+      console.log('Movement created, server response:', res.data);
       setMovements([res.data, ...movements]);
       return res.data;
     } catch (err) {
