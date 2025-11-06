@@ -15,7 +15,7 @@ export const IngredientModal = ({ isOpen, onClose, onSubmit }) => {
 
     setLoading(true);
     try {
-      const res = await api.post("/stock_tracker/ingredients/", {
+      const res = await api.post(`/stock_tracker/${user.hotel_slug}/ingredients/`, {
         name: name.trim(),
         unit: unit.trim(),
         hotel_id: user.hotel_id, // <<< crucial

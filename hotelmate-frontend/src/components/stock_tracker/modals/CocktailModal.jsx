@@ -15,14 +15,16 @@ export const CocktailModal = ({ isOpen, onClose, onSubmit }) => {
  useEffect(() => {
   const fetchIngredients = async () => {
     try {
-      const res = await api.get("/stock_tracker/ingredients/");
+      const res = await api.get(`/stock_tracker/${user?.hotel_slug}/ingredients/`);
       setAvailableIngredients(Array.isArray(res.data) ? res.data : res.data.results || []);
     } catch (err) {
       console.error("Error fetching ingredients:", err);
     }
   };
-  fetchIngredients();
-}, []);
+  if (user?.hotel_slug) {
+    fetchIngredients();
+  }
+}, [user?.hotel_slug]);
 
 
   if (!isOpen) return null;

@@ -7,11 +7,15 @@ export const useCocktailCalculator = () => {
   const [loading, setLoading] = useState(false);
 
   // Fetch all cocktails
-  const fetchCocktails = async () => {
+  const fetchCocktails = async (hotelSlug) => {
+  if (!hotelSlug) return;
   setLoading(true);
   try {
-    const res = await api.get("/stock_tracker/cocktails/");
-    setCocktails(res.data.results || []); // <--- grab results array
+    const res = await api.get(`/stock_tracker/${hotelSlug}/cocktails/`);
+    // Handle both paginated (res.data.results) and direct array (res.data) responses
+    const cocktailsData = Array.isArray(res.data) ? res.data : (res.data.results || []);
+    console.log("Fetched cocktails:", cocktailsData);
+    setCocktails(cocktailsData);
   } catch (err) {
     console.error("Error fetching cocktails:", err);
   } finally {
@@ -21,9 +25,10 @@ export const useCocktailCalculator = () => {
 
 
   // Create a new cocktail (recipe)
-  const createCocktail = async (cocktail) => {
+  const createCocktail = async (cocktail, hotelSlug) => {
+  if (!hotelSlug) throw new Error("Hotel slug is required");
   try {
-    const res = await api.post("/stock_tracker/cocktails/", cocktail);
+    const res = await api.post(`/stock_tracker/${hotelSlug}/cocktails/`, cocktail);
     setCocktails([...cocktails, res.data]); // res.data should be the new cocktail object
     return res.data;
   } catch (err) {
@@ -33,9 +38,10 @@ export const useCocktailCalculator = () => {
 };
 
   // Log how many cocktails were made
-  const logConsumption = async (cocktailId, quantity) => {
+  const logConsumption = async (cocktailId, quantity, hotelSlug) => {
+    if (!hotelSlug) throw new Error("Hotel slug is required");
     try {
-      const res = await api.post("/stock_tracker/consumptions/", {
+      const res = await api.post(`/stock_tracker/${hotelSlug}/consumptions/`, {
         cocktail: cocktailId,
         quantity_made: quantity,
       });
@@ -58,10 +64,6 @@ export const useCocktailCalculator = () => {
     });
     return totals;
   };
-
-  useEffect(() => {
-    fetchCocktails();
-  }, []);
 
   return {
     cocktails,
