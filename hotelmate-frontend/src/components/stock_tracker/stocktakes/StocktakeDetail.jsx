@@ -236,8 +236,13 @@ export const StocktakeDetail = () => {
                     <tbody>
                       {categoryLines.map(line => (
                         <tr key={line.id}>
-                          <td><strong>{line.item_code}</strong></td>
-                          <td><small>{line.item_description}</small></td>
+                          <td><strong>{line.item_sku || 'N/A'}</strong></td>
+                          <td>
+                            <strong>{line.item_name || 'N/A'}</strong>
+                            {line.item_description && (
+                              <><br /><small className="text-muted">{line.item_description}</small></>
+                            )}
+                          </td>
                           <td className="text-end">{parseFloat(line.expected_qty || 0).toFixed(2)}</td>
                           <td className="text-center">
                             {editingLine === line.id && isDraft ? (
