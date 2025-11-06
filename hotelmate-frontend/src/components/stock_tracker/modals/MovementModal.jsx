@@ -29,9 +29,14 @@ export const MovementModal = ({ isOpen, onClose, onSave, items }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Don't send staff or hotel - backend handles these automatically
     onSave({
-      ...formData,
-      staff: user?.id
+      item: formData.item,
+      movement_type: formData.movement_type,
+      quantity: formData.quantity,
+      unit_cost: formData.unit_cost || undefined,
+      reference: formData.reference || undefined,
+      notes: formData.notes || undefined
     });
     setFormData({
       item: "",
@@ -41,6 +46,7 @@ export const MovementModal = ({ isOpen, onClose, onSave, items }) => {
       reference: "",
       notes: ""
     });
+    setSearchTerm("");
   };
 
   if (!isOpen) return null;
