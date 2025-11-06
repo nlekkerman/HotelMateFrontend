@@ -918,10 +918,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 10px 5px;
   border-top-left-radius: 20px;
   border-bottom: 1px solid var(--bs-border-color, rgba(255, 255, 255, 0.1));
-  min-height: 60px;
+
 }
 
 .messenger-widget__title {

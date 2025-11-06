@@ -48,6 +48,10 @@ export function ThemeProvider({ children }) {
     },
     enabled: !!hotelSlug,
     refetchOnWindowFocus: false,
+    retry: 1, // Only retry once
+    onError: (error) => {
+      console.warn('Theme fetch failed, using defaults:', error);
+    }
   });
 
   // 2️⃣ Apply CSS variables

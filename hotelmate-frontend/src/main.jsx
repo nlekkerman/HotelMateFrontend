@@ -35,6 +35,7 @@ async function applySavedTheme() {
       secondary_color
     );
   } catch (e) {
+    console.warn('Theme fetch failed, using defaults');
   }
 }
 
