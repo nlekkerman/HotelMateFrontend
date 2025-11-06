@@ -1,8 +1,8 @@
 import React from 'react';
-import { Badge, Button } from 'react-bootstrap';
-import { FaEdit, FaTrash, FaExclamationTriangle } from 'react-icons/fa';
+import { Badge } from 'react-bootstrap';
+import { FaExclamationTriangle } from 'react-icons/fa';
 
-const StockItemCard = ({ item, onEdit, onDelete }) => {
+const StockItemCard = ({ item, onClick }) => {
   // Calculate bottle quantity if applicable
   const getBottleQuantity = () => {
     if (!item.size_value || !item.size_unit) return null;
@@ -33,88 +33,69 @@ const StockItemCard = ({ item, onEdit, onDelete }) => {
   return (
     <div 
       className={`p-3 mb-2 bg-white rounded shadow-sm ${item.is_below_par ? 'border-start border-warning border-4' : ''}`}
-      style={{ borderLeft: item.is_below_par ? '4px solid #ffc107' : 'none' }}
+      style={{ 
+        borderLeft: item.is_below_par ? '4px solid #ffc107' : 'none',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+      }}
+      onClick={() => onClick(item)}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'scale(1.01)';
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'scale(1)';
+        e.currentTarget.style.boxShadow = '';
+      }}
     >
-      {/* Header Row */}
-      <div className="d-flex justify-content-between align-items-start mb-2">
-        <div className="flex-grow-1">
-          <h6 className="mb-0 fw-bold">{item.name}</h6>
-          <small className="text-muted">{item.sku}</small>
-        </div>
-        <div className="d-flex gap-1">
-          <Button 
-            variant="outline-primary" 
-            size="sm"
-            onClick={() => onEdit(item)}
-            style={{ padding: '4px 8px' }}
-          >
-            <FaEdit />
-          </Button>
-          <Button 
-            variant="outline-danger" 
-            size="sm"
-            onClick={() => onDelete(item.id)}
-            style={{ padding: '4px 8px' }}
-          >
-            <FaTrash />
-          </Button>
-        </div>
+      {/* Header Row - Name and SKU side by side */}
+      <div className="d-flex justify-content-between align-items-center mb-2">
+        <h6 className="mb-0 fw-bold">{item.name}</h6>
+        <small className="text-muted ms-2">
+          <span className="text-muted">SKU:</span> {item.sku}
+        </small>
       </div>
 
-      {/* Badges for Category and Type */}
-      <div className="mb-2">
+      {/* Badges for Category, Size, and Unit Cost */}
+      <div className="mb-2 d-flex flex-wrap gap-1" style={{ fontSize: '0.75rem' }}>
         {item.category_name && (
-          <Badge bg="secondary" className="me-2">
-            {item.category_name}
+          <Badge bg="dark">
+            Cat: {item.category_name}
           </Badge>
         )}
-        {item.product_type && (
-          <Badge bg="info">
-            {item.product_type}
-            {item.subtype && ` - ${item.subtype}`}
+        {item.size_value && item.size_unit && (
+          <Badge bg="secondary">
+            Size: {item.size_value}{item.size_unit}
           </Badge>
         )}
+        <Badge bg="success">
+          Unit Cost: €{parseFloat(item.unit_cost || 0).toFixed(2)}
+        </Badge>
       </div>
 
-      {/* Info Grid - Matching PC table columns */}
+      {/* Card Body - Current Qty and Par Level */}
       <div className="row g-2 small">
-        <div className="col-4">
-          <div className="text-muted">Size</div>
-          <div>{item.size}</div>
-        </div>
-        <div className="col-4">
-          <div className="text-muted">UOM</div>
-          <div>{item.uom}</div>
-        </div>
-        <div className="col-4">
-          <div className="text-muted">Cost</div>
-          <div>€{parseFloat(item.unit_cost || 0).toFixed(2)}</div>
-        </div>
-        <div className="col-6">
-          <div className="text-muted">GP %</div>
-          <div className="fw-bold text-success">{item.gp_percentage ? `${parseFloat(item.gp_percentage).toFixed(1)}%` : 'N/A'}</div>
-        </div>
         <div className="col-6">
           <div className="text-muted">Current Qty</div>
-          <div>
+          <div className="fw-bold">
             {bottleQty ? (
               <>
-                <strong>{bottleQty.fullBottles} btl</strong>
-                {bottleQty.remainingMl > 0 && <small className="text-muted"> +{bottleQty.remainingMl.toFixed(0)}ml</small>}
+                {bottleQty.fullBottles} btl
+                {bottleQty.remainingMl > 0 && <small className="text-muted d-block"> +{bottleQty.remainingMl.toFixed(0)}ml</small>}
               </>
             ) : (
-              <strong>{parseFloat(item.current_qty || 0).toFixed(2)} {item.base_unit}</strong>
+              <>{parseFloat(item.current_qty || 0).toFixed(2)}</>
             )}
             {item.is_below_par && <FaExclamationTriangle className="text-warning ms-1" />}
           </div>
         </div>
         <div className="col-6">
           <div className="text-muted">Par Level</div>
-          <div>
+          <div className="fw-bold">
             {bottleQty ? (
               `${Math.floor(item.par_level / bottleQty.bottleSizeInMl)} btl`
             ) : (
-              `${parseFloat(item.par_level || 0).toFixed(2)} ${item.base_unit}`
+              `${parseFloat(item.par_level || 0).toFixed(2)}`
             )}
           </div>
         </div>

@@ -4,6 +4,7 @@ import { FaPlus, FaFilter, FaTimes } from 'react-icons/fa';
 import { useParams } from 'react-router-dom';
 import { useStockItems } from '../hooks/useStockItems';
 import StockItemCard from './StockItemCard';
+import StockItemDetail from './StockItemDetail';
 import { StockItemModal } from '../modals/StockItemModal';
 
 const StockItemsMobile = () => {
@@ -20,6 +21,7 @@ const StockItemsMobile = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [filteredItems, setFilteredItems] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null); // For detail view
 
   // Monitor modal state
   useEffect(() => {
@@ -53,19 +55,12 @@ const StockItemsMobile = () => {
     setFilteredItems(result);
   }, [items, selectedCategory, searchTerm, showBelowPar]);
 
-  const handleEdit = (item) => {
-    setEditingItem(item);
-    setShowModal(true);
+  const handleItemClick = (item) => {
+    setSelectedItem(item);
   };
 
-  const handleDelete = async (itemId) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      try {
-        await deleteItem(itemId);
-      } catch (err) {
-        alert('Error deleting item: ' + err.message);
-      }
-    }
+  const handleBackToList = () => {
+    setSelectedItem(null);
   };
 
   const handleSave = async (itemData) => {
@@ -113,6 +108,19 @@ const StockItemsMobile = () => {
   };
 
   const activeFiltersCount = [selectedCategory, searchTerm, showBelowPar].filter(Boolean).length;
+
+  // If an item is selected, show the detail view
+  if (selectedItem) {
+    return (
+      <StockItemDetail
+        item={selectedItem}
+        categories={categories}
+        onBack={handleBackToList}
+        onUpdate={updateItem}
+        onDelete={deleteItem}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -227,8 +235,7 @@ const StockItemsMobile = () => {
             <StockItemCard
               key={item.id}
               item={item}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
+              onClick={handleItemClick}
             />
           ))}
         </div>

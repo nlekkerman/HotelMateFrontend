@@ -9,6 +9,7 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
     size: "",
     size_value: "",
     size_unit: "",
+    serving_size: "",
     uom: "",
     unit_cost: "",
     selling_price: "",
@@ -27,6 +28,7 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
         size: item.size || "",
         size_value: item.size_value || "",
         size_unit: item.size_unit || "",
+        serving_size: item.serving_size || "",
         uom: item.uom || "",
         unit_cost: item.unit_cost || "",
         selling_price: item.selling_price || "",
@@ -43,6 +45,7 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
         size: "",
         size_value: "",
         size_unit: "",
+        serving_size: "",
         uom: "",
         unit_cost: "",
         selling_price: "",
@@ -57,6 +60,55 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+  
+  // Helper to get serving size placeholder/help text based on product type
+  const getServingSizeHelp = () => {
+    switch (formData.product_type) {
+      case 'Draught':
+        return 'Pint = 568ml, Half-pint = 284ml';
+      case 'Spirit':
+      case 'Liqueur':
+        return 'Standard shot = 25ml or 35ml';
+      case 'Beer':
+        return 'Full bottle (e.g., 330ml)';
+      case 'Wine':
+        return 'Glass size (e.g., 175ml, 250ml)';
+      default:
+        return 'Serving size in ml';
+    }
+  };
+  
+  // Calculate yield preview
+  const getYieldPreview = () => {
+    const sizeValue = parseFloat(formData.size_value);
+    const servingSize = parseFloat(formData.serving_size);
+    
+    if (!sizeValue || !servingSize) return null;
+    
+    // Convert size to ml
+    let sizeInMl = sizeValue;
+    if (formData.size_unit === 'cl' || formData.size_unit === 'CL') {
+      sizeInMl = sizeValue * 10;
+    } else if (formData.size_unit === 'L' || formData.size_unit === 'l') {
+      sizeInMl = sizeValue * 1000;
+    }
+    
+    const servings = (sizeInMl / servingSize).toFixed(1);
+    
+    if (formData.product_type === 'Draught') {
+      if (servingSize === 568) {
+        const halfPints = (servings * 2).toFixed(1);
+        return `${servings} pints (${halfPints} half-pints)`;
+      }
+      return `${servings} servings`;
+    } else if (formData.product_type === 'Spirit' || formData.product_type === 'Liqueur') {
+      return `${Math.floor(servings)} shots per bottle`;
+    } else {
+      return `${servings} servings`;
+    }
+  };
+  
+  const yieldPreview = getYieldPreview();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -120,10 +172,11 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
                     onChange={handleChange}
                     required
                   >
-                    <option value="Wine">Wine</option>
-                    <option value="Beer">Beer</option>
+                    <option value="Draught">Draught Beer (Keg)</option>
+                    <option value="Beer">Bottled Beer</option>
                     <option value="Spirit">Spirit</option>
                     <option value="Liqueur">Liqueur</option>
+                    <option value="Wine">Wine</option>
                     <option value="Soft Drink">Soft Drink</option>
                     <option value="Mixer">Mixer</option>
                     <option value="Garnish">Garnish</option>
@@ -184,15 +237,48 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
 
                 <div className="col-md-4">
                   <label className="form-label">Size Unit</label>
-                  <input
-                    type="text"
-                    className="form-control"
+                  <select
+                    className="form-select"
                     name="size_unit"
                     value={formData.size_unit}
                     onChange={handleChange}
-                    placeholder="ml, L, g, kg"
-                  />
+                  >
+                    <option value="">Select unit</option>
+                    <option value="ml">ml (milliliters)</option>
+                    <option value="cl">cl (centiliters)</option>
+                    <option value="L">L (liters)</option>
+                    <option value="g">g (grams)</option>
+                    <option value="kg">kg (kilograms)</option>
+                  </select>
                 </div>
+
+                <div className="col-md-4">
+                  <label className="form-label">Serving Size</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="form-control"
+                    name="serving_size"
+                    value={formData.serving_size}
+                    onChange={handleChange}
+                    placeholder={
+                      formData.product_type === 'Draught' ? '568 (pint)' :
+                      (formData.product_type === 'Spirit' || formData.product_type === 'Liqueur') ? '25 (shot)' :
+                      formData.product_type === 'Beer' ? '330 (bottle)' :
+                      'e.g., 175'
+                    }
+                  />
+                  <small className="form-text text-muted">{getServingSizeHelp()}</small>
+                </div>
+                
+                {/* Yield Preview */}
+                {yieldPreview && (
+                  <div className="col-12">
+                    <div className="alert alert-info mb-0 py-2">
+                      <strong>📊 Yield Preview:</strong> {yieldPreview}
+                    </div>
+                  </div>
+                )}
 
                 <div className="col-md-4">
                   <label className="form-label">UOM *</label>

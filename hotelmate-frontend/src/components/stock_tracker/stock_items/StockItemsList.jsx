@@ -1,54 +1,54 @@
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useStockItems } from "../hooks/useStockItems";
-import { StockItemModal } from "../modals/StockItemModal";
+import StockItemDetail from "./StockItemDetail";
 
 export const StockItemsList = () => {
   const { hotel_slug } = useParams();
   const navigate = useNavigate();
   const { items, categories, loading, error, createItem, updateItem, deleteItem } = useStockItems(hotel_slug);
   
-  // Get user data from localStorage
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  // Debug: Log the first item to see what data we're getting
+  React.useEffect(() => {
+    if (items.length > 0) {
+      console.log('📊 First stock item data:', items[0]);
+      console.log('📊 serving_size value:', items[0].serving_size, '(type:', typeof items[0].serving_size, ')');
+      console.log('📊 gp_percentage value:', items[0].gp_percentage, '(type:', typeof items[0].gp_percentage, ')');
+      console.log('📊 All item keys:', Object.keys(items[0]));
+      
+      // Check for null/undefined values in first item
+      const nullFields = [];
+      Object.entries(items[0]).forEach(([key, value]) => {
+        if (value === null || value === undefined || value === '') {
+          nullFields.push(`${key}=${value}`);
+        }
+      });
+      if (nullFields.length > 0) {
+        console.log('⚠️ Null/undefined/empty fields in first item:', nullFields);
+      }
+      
+      // Log all items with their serving_size and gp_percentage
+      console.log('📊 All items overview:');
+      items.slice(0, 10).forEach((item, index) => {
+        console.log(`  Item ${index + 1} [${item.sku}]: serving_size=${item.serving_size} (${typeof item.serving_size}), gp_percentage=${item.gp_percentage} (${typeof item.gp_percentage})`);
+      });
+      
+      if (items.length > 10) {
+        console.log(`  ... and ${items.length - 10} more items`);
+      }
+    }
+  }, [items]);
   
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
+  const [selectedItem, setSelectedItem] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const handleSaveItem = async (itemData) => {
-    try {
-      // Add hotel field from localStorage
-      const dataWithHotel = {
-        ...itemData,
-        hotel: user?.hotel_id
-      };
-      
-      if (editingItem) {
-        await updateItem(editingItem.id, dataWithHotel);
-      } else {
-        await createItem(dataWithHotel);
-      }
-      setModalOpen(false);
-      setEditingItem(null);
-    } catch (err) {
-      alert("Failed to save item");
-    }
+  const handleRowClick = (item) => {
+    setSelectedItem(item);
   };
 
-  const handleEdit = (item) => {
-    setEditingItem(item);
-    setModalOpen(true);
-  };
-
-  const handleDelete = async (itemId) => {
-    if (window.confirm("Are you sure you want to delete this item?")) {
-      try {
-        await deleteItem(itemId);
-      } catch (err) {
-        alert("Failed to delete item");
-      }
-    }
+  const handleBackToList = () => {
+    setSelectedItem(null);
   };
 
   const filteredItems = items.filter(item => {
@@ -57,6 +57,19 @@ export const StockItemsList = () => {
                          item.name?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  // If an item is selected, show the detail view
+  if (selectedItem) {
+    return (
+      <StockItemDetail
+        item={selectedItem}
+        categories={categories}
+        onBack={handleBackToList}
+        onUpdate={updateItem}
+        onDelete={deleteItem}
+      />
+    );
+  }
 
   return (
     <div className="container mt-4">
@@ -68,9 +81,6 @@ export const StockItemsList = () => {
           </button>
           <h2 className="d-inline">Stock Items</h2>
         </div>
-        <button className="btn btn-primary" onClick={() => { setEditingItem(null); setModalOpen(true); }}>
-          <i className="bi bi-plus-circle me-2"></i>Add New Item
-        </button>
       </div>
 
       {/* Filters */}
@@ -120,33 +130,65 @@ export const StockItemsList = () => {
                     <th>Category</th>
                     <th>Type</th>
                     <th>Size</th>
-                    <th>UOM</th>
+                    <th>Size Value</th>
+                    <th>Size Unit</th>
+                    <th>Serving Size</th>
+                    <th>Base Unit</th>
                     <th>Unit Cost</th>
                     <th>Current Qty</th>
                     <th>Par Level</th>
+                    <th>Bin/Location</th>
                     <th>GP %</th>
-                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan="11" className="text-center text-muted py-4">
-                        No items found. Click "Add New Item" to get started.
+                      <td colSpan="14" className="text-center text-muted py-4">
+                        No items found. Click on an item to view details.
                       </td>
                     </tr>
                   ) : (
                     filteredItems.map(item => (
-                      <tr key={item.id} className={item.is_below_par ? 'table-warning' : ''}>
+                      <tr 
+                        key={item.id} 
+                        className={item.is_below_par ? 'table-warning' : ''}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => handleRowClick(item)}
+                      >
                         <td><code className="text-primary">{item.sku}</code></td>
                         <td><strong>{item.name}</strong></td>
                         <td>{item.category_name || 'N/A'}</td>
-                        <td>
-                          {item.product_type}
+                        <td>{item.product_type}
                           {item.subtype && <><br/><small className="text-muted">{item.subtype}</small></>}
                         </td>
                         <td>{item.size}</td>
-                        <td>{item.uom}</td>
+                        <td>{item.size_value || 'N/A'}</td>
+                        <td>{item.size_unit || 'N/A'}</td>
+                        <td>
+                          {item.serving_size !== null && item.serving_size !== undefined && item.serving_size > 0 ? (
+                            <>
+                              <strong>{item.serving_size}{item.base_unit || 'ml'}</strong>
+                              {item.product_type === 'Draught' && item.serving_size === 568 && (
+                                <><br/><small className="text-muted">(pint)</small></>
+                              )}
+                              {item.product_type === 'Draught' && item.serving_size === 284 && (
+                                <><br/><small className="text-muted">(half-pint)</small></>
+                              )}
+                              {(item.product_type === 'Vodka' || item.product_type === 'Gin' || item.product_type === 'Rum' || 
+                                item.product_type === 'Whiskey' || item.product_type === 'Tequila' || 
+                                item.product_type === 'Brandy' || item.product_type === 'Spirit' || 
+                                item.category_name === 'Spirits' || item.category_name === 'Liqueurs') && (
+                                <><br/><small className="text-muted">(shot)</small></>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-muted" title={`Debug: serving_size=${item.serving_size}, type=${typeof item.serving_size}`}>
+                              N/A
+                            </span>
+                          )}
+                        </td>
+                        <td>{item.base_unit || 'N/A'}</td>
                         <td>€{parseFloat(item.unit_cost || 0).toFixed(2)}</td>
                         <td>
                           <span className={`badge ${item.is_below_par ? 'bg-danger' : 'bg-success'}`}>
@@ -155,17 +197,8 @@ export const StockItemsList = () => {
                           {item.is_below_par && <span className="ms-1">⚠️</span>}
                         </td>
                         <td>{parseFloat(item.par_level || 0).toFixed(2)}</td>
+                        <td>{item.bin_name || item.bin || 'N/A'}</td>
                         <td>{item.gp_percentage ? `${parseFloat(item.gp_percentage).toFixed(1)}%` : 'N/A'}</td>
-                        <td>
-                          <div className="btn-group btn-group-sm">
-                            <button className="btn btn-outline-primary" onClick={() => handleEdit(item)}>
-                              <i className="bi bi-pencil"></i>
-                            </button>
-                            <button className="btn btn-outline-danger" onClick={() => handleDelete(item.id)}>
-                              <i className="bi bi-trash"></i>
-                            </button>
-                          </div>
-                        </td>
                       </tr>
                     ))
                   )}
@@ -178,15 +211,6 @@ export const StockItemsList = () => {
           </div>
         </div>
       )}
-
-      {/* Modal */}
-      <StockItemModal
-        isOpen={modalOpen}
-        onClose={() => { setModalOpen(false); setEditingItem(null); }}
-        onSave={handleSaveItem}
-        item={editingItem}
-        categories={categories}
-      />
     </div>
   );
 };

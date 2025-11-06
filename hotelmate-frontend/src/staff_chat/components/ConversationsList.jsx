@@ -13,6 +13,10 @@ import { fetchConversations } from '../services/staffChatApi';
 const ConversationsList = ({ hotelSlug, onOpenChat }) => {
   const [startingChatWithId, setStartingChatWithId] = useState(null);
   const [existingConversations, setExistingConversations] = useState([]);
+  
+  // Get current user ID from localStorage
+  const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUserId = currentUserData?.staff_id || currentUserData?.id || null;
 
   // Search functionality
   const { searchTerm, debouncedSearchTerm, handleSearchChange, clearSearch } = useStaffSearch();
@@ -229,7 +233,10 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
             <div className="list-group list-group-flush gap-1">
               {existingConversations.map((conversation) => {
                 // Get the other participant (not current user)
-                const otherParticipant = conversation.participants?.[0];
+                // Filter out the current user from participants to show the OTHER person
+                const otherParticipant = conversation.participants?.find(
+                  p => p.id !== currentUserId
+                );
                 
                 return (
                   <button

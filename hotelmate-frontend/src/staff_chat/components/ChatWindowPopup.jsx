@@ -59,6 +59,24 @@ const ChatWindowPopup = ({
     staff_id: currentUserData?.staff_id,
     id: currentUserData?.id 
   });
+  
+  // For 1-on-1 chats, if staff prop is not provided or is the current user,
+  // find the other participant from the conversation
+  let displayStaff = staff;
+  if (!conversation?.is_group && conversation?.participants) {
+    // Find the participant who is NOT the current user
+    const otherParticipant = conversation.participants.find(
+      p => p.id !== currentUserId
+    );
+    
+    // If we found a different participant and either:
+    // 1. No staff prop was provided, OR
+    // 2. The staff prop is actually the current user (wrong!)
+    if (otherParticipant && (!staff || staff.id === currentUserId)) {
+      console.log('🔄 Correcting staff display - using other participant:', otherParticipant.full_name);
+      displayStaff = otherParticipant;
+    }
+  }
 
   // Use pagination hook
   const {
@@ -345,21 +363,21 @@ const ChatWindowPopup = ({
       <div className="chat-window-popup__header" onClick={onMinimize}>
         <div className="chat-window-popup__header-content">
           <div className="chat-window-popup__avatar">
-            {staff?.profile_image_url ? (
-              <img src={staff.profile_image_url} alt={staff.full_name} />
+            {displayStaff?.profile_image_url ? (
+              <img src={displayStaff.profile_image_url} alt={displayStaff.full_name} />
             ) : (
               <div className="chat-window-popup__avatar-placeholder">
-                {staff?.full_name?.charAt(0)?.toUpperCase() || '?'}
+                {displayStaff?.full_name?.charAt(0)?.toUpperCase() || conversation?.title?.charAt(0)?.toUpperCase() || '?'}
               </div>
             )}
-            {staff?.is_on_duty && (
+            {displayStaff?.is_on_duty && (
               <span className="chat-window-popup__online-dot" />
             )}
           </div>
           
           <div className="chat-window-popup__staff-info">
             <h4 className="chat-window-popup__staff-name">
-              {conversation?.title || staff?.full_name || 'Chat'}
+              {conversation?.title || displayStaff?.full_name || 'Chat'}
             </h4>
             {conversation?.is_group ? (
               <p className="chat-window-popup__staff-role">
@@ -375,9 +393,9 @@ const ChatWindowPopup = ({
                 </button>
               </p>
             ) : (
-              staff?.role && (
+              displayStaff?.role && (
                 <p className="chat-window-popup__staff-role">
-                  {staff.role.name}
+                  {displayStaff.role.name}
                 </p>
               )
             )}

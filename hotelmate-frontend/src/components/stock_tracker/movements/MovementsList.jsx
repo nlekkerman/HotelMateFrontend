@@ -159,7 +159,7 @@ export const MovementsList = () => {
                             <strong>{item?.sku || item?.code || '-'}</strong><br />
                             <small className="text-muted">{item?.name || item?.description || '-'}</small>
                           </td>
-                          <td>{parseFloat(movement.quantity).toFixed(2)}</td>
+                          <td>{parseFloat(movement.quantity).toString().replace(/\.0+$/, '')}</td>
                           <td>€{parseFloat(movement.unit_cost || 0).toFixed(2)}</td>
                           <td>€{(parseFloat(movement.quantity) * parseFloat(movement.unit_cost || 0)).toFixed(2)}</td>
                           <td><span>{movement.staff_name || 'Unknown'}</span></td>
