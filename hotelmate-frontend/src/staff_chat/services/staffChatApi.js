@@ -358,3 +358,42 @@ export const forwardMessage = async (hotelSlug, messageId, conversationIds = [],
     throw error;
   }
 };
+
+/**
+ * Remove a participant from a group conversation
+ * @param {string} hotelSlug - The hotel's slug identifier
+ * @param {number} conversationId - The conversation ID
+ * @param {number} participantId - The participant ID to remove
+ * @returns {Promise<Object>} Updated conversation object
+ */
+export const removeParticipant = async (hotelSlug, conversationId, participantId) => {
+  try {
+    const response = await api.delete(
+      `/staff_chat/${hotelSlug}/conversations/${conversationId}/participants/${participantId}/`
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error removing participant:', error);
+    throw error;
+  }
+};
+
+/**
+ * Leave a group conversation
+ * @param {string} hotelSlug - The hotel's slug identifier
+ * @param {number} conversationId - The conversation ID
+ * @returns {Promise<Object>} Response object
+ */
+export const leaveConversation = async (hotelSlug, conversationId) => {
+  try {
+    const response = await api.post(
+      `/staff_chat/${hotelSlug}/conversations/${conversationId}/leave/`
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error leaving conversation:', error);
+    throw error;
+  }
+};

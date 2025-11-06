@@ -10,6 +10,7 @@ import ReadStatus from './ReadStatus';
 import ShareMessageModal from './ShareMessageModal';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 import SuccessModal from './SuccessModal';
+import ParticipantsModal from './ParticipantsModal';
 import useSendMessage from '../hooks/useSendMessage';
 import useReactions from '../hooks/useReactions';
 import useEditMessage from '../hooks/useEditMessage';
@@ -154,6 +155,7 @@ const ChatWindowPopup = ({
   const [deleteHard, setDeleteHard] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showParticipantsModal, setShowParticipantsModal] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -357,12 +359,27 @@ const ChatWindowPopup = ({
           
           <div className="chat-window-popup__staff-info">
             <h4 className="chat-window-popup__staff-name">
-              {staff?.full_name || 'Chat'}
+              {conversation?.title || staff?.full_name || 'Chat'}
             </h4>
-            {staff?.role && (
+            {conversation?.is_group ? (
               <p className="chat-window-popup__staff-role">
-                {staff.role.name}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowParticipantsModal(true);
+                  }}
+                  className="chat-window-popup__participants-btn"
+                >
+                  <i className="bi bi-people-fill me-1"></i>
+                  {conversation.participants?.length || 0} participants
+                </button>
               </p>
+            ) : (
+              staff?.role && (
+                <p className="chat-window-popup__staff-role">
+                  {staff.role.name}
+                </p>
+              )
             )}
           </div>
         </div>
@@ -480,7 +497,7 @@ const ChatWindowPopup = ({
                               timestamp={messageTime}
                               isOwn={isOwn}
                               senderName={senderName}
-                              replyTo={message.reply_to}
+                              replyTo={message.reply_to_message || message.reply_to}
                               isEdited={message.is_edited}
                               isDeleted={message.is_deleted}
                               attachments={message.attachments}
@@ -599,6 +616,27 @@ const ChatWindowPopup = ({
         icon="check-circle"
         autoCloseDelay={2000}
       />
+
+      {/* Participants Modal */}
+      <ParticipantsModal
+        show={showParticipantsModal}
+        onHide={() => setShowParticipantsModal(false)}
+        participants={conversation?.participants || []}
+        currentUserId={currentUserId}
+        groupTitle={conversation?.title}
+        conversationId={conversation?.id}
+        hotelSlug={hotelSlug}
+        canManageParticipants={true}
+        onParticipantRemoved={(participantId) => {
+          console.log('✅ Participant removed:', participantId);
+          // The conversation will be updated via Pusher
+        }}
+        onLeaveGroup={(convId) => {
+          console.log('✅ Left group:', convId);
+          // Close the chat window
+          onClose();
+        }}
+      />
     </div>
   );
 };
@@ -607,6 +645,9 @@ ChatWindowPopup.propTypes = {
   hotelSlug: PropTypes.string.isRequired,
   conversation: PropTypes.shape({
     id: PropTypes.number.isRequired,
+    title: PropTypes.string,
+    is_group: PropTypes.bool,
+    participants: PropTypes.array,
   }).isRequired,
   staff: PropTypes.shape({
     full_name: PropTypes.string,

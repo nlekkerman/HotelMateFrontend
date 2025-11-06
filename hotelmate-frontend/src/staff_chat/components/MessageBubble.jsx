@@ -110,18 +110,17 @@ const MessageBubble = ({
           {/* Reply Preview (if replying to another message) */}
           {replyTo && (
             <div className="staff-chat-message__reply-preview">
-              <i className="bi bi-reply me-1"></i>
               <div className="staff-chat-message__reply-content">
-                <span className="staff-chat-message__reply-sender">
-                  {replyTo.sender_name || replyTo.sender_info?.full_name || 'User'}
-                </span>
-                <span className={`staff-chat-message__reply-text ${replyTo.is_deleted ? 'text-muted fst-italic' : ''}`}>
+                <div className="staff-chat-message__reply-label">
+                  Replied to {replyTo.sender_name || replyTo.sender_info?.full_name || 'User'}
+                </div>
+                <div className={`staff-chat-message__reply-text ${replyTo.is_deleted ? 'text-muted fst-italic' : ''}`}>
                   {replyTo.is_deleted 
                     ? '[Message deleted]'
-                    : (replyTo.message || replyTo.content || '').substring(0, 30)
+                    : (replyTo.message || replyTo.content || '').substring(0, 50)
                   }
-                  {!replyTo.is_deleted && (replyTo.message || replyTo.content || '').length > 30 ? '...' : ''}
-                </span>
+                  {!replyTo.is_deleted && (replyTo.message || replyTo.content || '').length > 50 ? '...' : ''}
+                </div>
               </div>
             </div>
           )}

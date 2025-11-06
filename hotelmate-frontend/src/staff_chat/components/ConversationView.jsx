@@ -7,6 +7,7 @@ import MessageActions from './MessageActions';
 import ShareMessageModal from './ShareMessageModal';
 import ReactionPicker from './ReactionPicker';
 import ReactionsList from './ReactionsList';
+import ParticipantsModal from './ParticipantsModal';
 
 /**
  * ConversationView Component
@@ -24,6 +25,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [showReactionPicker, setShowReactionPicker] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const messagesEndRef = useRef(null);
 
   // Get current user ID from localStorage or props
@@ -116,11 +118,28 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     console.log('========================================');
     console.log('🔄🔄🔄 HANDLE REPLY CALLED IN CONVERSATIONVIEW 🔄🔄🔄');
     console.log('🔄 Reply button clicked, message object:', message);
+    console.log('🔄 Message type:', typeof message);
     console.log('🔄 Message ID:', message?.id);
     console.log('🔄 Message text:', message?.message || message?.content);
-    console.log('🔄 Setting replyTo state to:', message);
+    console.log('🔄 Sender info:', message?.sender, message?.sender_info);
+    console.log('🔄 Sender name:', message?.sender_name);
+    
+    // Ensure message has proper structure for MessageInput
+    const replyMessage = {
+      id: message.id,
+      message: message.message || message.content,
+      content: message.content || message.message,
+      sender_name: message.sender?.first_name || 
+                   message.sender?.full_name || 
+                   message.sender_info?.full_name ||
+                   message.sender_name ||
+                   'User',
+      sender_info: message.sender_info || message.sender,
+    };
+    
+    console.log('🔄 Setting replyTo state to:', replyMessage);
     console.log('========================================');
-    setReplyTo(message);
+    setReplyTo(replyMessage);
   };
 
   const handleCancelReply = () => {
@@ -232,6 +251,24 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
 
   return (
     <div className="conversation-view__content">
+      {/* Header for group chats */}
+      {conversation?.is_group && (
+        <div className="conversation-view__header">
+          <div className="conversation-view__header-info">
+            <h3 className="conversation-view__title">
+              {conversation.title || 'Group Chat'}
+            </h3>
+            <button
+              onClick={() => setShowParticipantsModal(true)}
+              className="conversation-view__participants-btn"
+            >
+              <i className="bi bi-people-fill me-1"></i>
+              {conversation.participants?.length || 0} participants
+            </button>
+          </div>
+        </div>
+      )}
+      
       <div className="conversation-view__messages">
         {messages.length === 0 ? (
           <div className="conversation-view__empty">
@@ -253,12 +290,6 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
                                message.sender_info?.full_name ||
                                'User';
               
-              // Create the reply handler for this specific message
-              const replyHandler = () => {
-                console.log('📣 onReply handler called for message ID:', message.id);
-                handleReply(message);
-              };
-              
               return (
                 <div
                   key={message.id}
@@ -279,7 +310,12 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
                       setEditingMessageId(null);
                     }}
                     onCancelEdit={() => setEditingMessageId(null)}
-                    onReply={replyHandler}
+                    onReply={() => {
+                      console.log('📣📣📣 INLINE REPLY HANDLER CALLED 📣📣📣');
+                      console.log('📣 Message ID:', message.id);
+                      console.log('📣 Full message object:', message);
+                      handleReply(message);
+                    }}
                     onReaction={() => setShowReactionPicker(message.id)}
                     onShare={() => handleShare(message)}
                     onDelete={isOwn || isManagerOrAdmin ? () => handleDelete(message.id, false) : null}
@@ -307,7 +343,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
                       onEdit={() => setEditingMessageId(message.id)}
                       onDelete={() => handleDelete(message.id, false)}
                       onHardDelete={() => handleDelete(message.id, true)}
-                      onReply={() => handleReply(message)}
+                      onReply={handleReply}
                       onShare={() => handleShare(message)}
                       deleting={deleting}
                     />
@@ -362,6 +398,28 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
           }}
         />
       )}
+
+      {/* Participants Modal */}
+      <ParticipantsModal
+        show={showParticipantsModal}
+        onHide={() => setShowParticipantsModal(false)}
+        participants={conversation?.participants || []}
+        currentUserId={currentUserId}
+        groupTitle={conversation?.title}
+        conversationId={conversation?.id}
+        hotelSlug={hotelSlug}
+        canManageParticipants={true}
+        onParticipantRemoved={(participantId) => {
+          console.log('✅ Participant removed:', participantId);
+          // Reload messages to reflect changes
+          loadMessages();
+        }}
+        onLeaveGroup={(convId) => {
+          console.log('✅ Left group:', convId);
+          // You may want to navigate away or show a message
+          alert('You have left the group');
+        }}
+      />
     </div>
   );
 };
@@ -370,6 +428,8 @@ ConversationView.propTypes = {
   hotelSlug: PropTypes.string.isRequired,
   conversation: PropTypes.shape({
     id: PropTypes.number.isRequired,
+    title: PropTypes.string,
+    is_group: PropTypes.bool,
     participants: PropTypes.array
   }).isRequired,
   staff: PropTypes.shape({

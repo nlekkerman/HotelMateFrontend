@@ -34,9 +34,7 @@ const MessageInput = ({
 
   // Focus on mount or when reply is set
   useEffect(() => {
-    console.log('📨 MessageInput - replyTo prop changed:', replyTo);
     if (replyTo && textareaRef.current) {
-      console.log('📨 MessageInput - Focusing textarea for reply');
       textareaRef.current.focus();
     }
   }, [replyTo]);
@@ -143,10 +141,9 @@ const MessageInput = ({
       {replyTo && (
         <div className="message-input__reply-preview">
           <div className="message-input__reply-content">
-            <i className="bi bi-reply me-2"></i>
             <div>
-              <div className="message-input__reply-sender">
-                {replyTo.sender_name || replyTo.sender_info?.full_name || 'User'}
+              <div className="message-input__reply-label text-muted">
+                Replied to {replyTo.sender_name || replyTo.sender_info?.full_name || 'User'}
               </div>
               <div className="message-input__reply-text">
                 {(replyTo.message || replyTo.content || '').substring(0, 50)}
