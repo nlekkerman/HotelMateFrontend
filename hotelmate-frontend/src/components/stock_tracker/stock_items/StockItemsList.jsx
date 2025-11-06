@@ -166,7 +166,29 @@ export const StockItemsList = () => {
                         <td>{item.size_value || 'N/A'}</td>
                         <td>{item.size_unit || 'N/A'}</td>
                         <td>
-                          {item.serving_size !== null && item.serving_size !== undefined && item.serving_size > 0 ? (
+                          {/* Bottled Beer, Cider, Soft Drinks, RTDs, Mixers - show 1 unit = 1 serving */}
+                          {((item.product_type === 'Beer' || 
+                             item.product_type?.toLowerCase() === 'cider' ||
+                             item.product_type === 'Soft Drink' || 
+                             item.product_type?.toLowerCase() === 'soft drinks' ||
+                             item.product_type?.toLowerCase() === 'mineral' ||
+                             item.product_type?.toLowerCase() === 'minerals' ||
+                             item.product_type?.toLowerCase() === 'rtd' ||
+                             item.product_type?.toLowerCase() === 'rtds' ||
+                             item.product_type === 'Mixer' ||
+                             item.category_name?.toLowerCase() === 'cider' ||
+                             item.category_name?.toLowerCase() === 'ciders' ||
+                             item.category_name?.toLowerCase() === 'soft drinks' ||
+                             item.category_name?.toLowerCase() === 'minerals' ||
+                             item.category_name?.toLowerCase() === 'rtd' ||
+                             item.category_name?.toLowerCase() === 'rtds' ||
+                             item.category_name?.toLowerCase() === 'mixers') && 
+                           !item.size?.toLowerCase().includes('keg')) ? (
+                            <>
+                              <strong>1 unit</strong>
+                              <br/><small className="text-muted">(1 serving)</small>
+                            </>
+                          ) : item.serving_size !== null && item.serving_size !== undefined && item.serving_size > 0 ? (
                             <>
                               <strong>{item.serving_size}{item.base_unit || 'ml'}</strong>
                               {item.product_type === 'Draught' && item.serving_size === 568 && (
@@ -183,9 +205,7 @@ export const StockItemsList = () => {
                               )}
                             </>
                           ) : (
-                            <span className="text-muted" title={`Debug: serving_size=${item.serving_size}, type=${typeof item.serving_size}`}>
-                              N/A
-                            </span>
+                            <span className="text-muted">N/A</span>
                           )}
                         </td>
                         <td>{item.base_unit || 'N/A'}</td>

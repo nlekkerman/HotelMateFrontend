@@ -101,11 +101,36 @@ const StockItemDetail = ({ item, categories, onBack, onUpdate, onDelete }) => {
   };
 
   const isSoftDrink = () => {
-    return formData.product_type === 'Soft Drink' || formData.product_type === 'soft drink';
+    const productType = (formData.product_type || '').toLowerCase();
+    const categoryName = (formData.category_name || '').toLowerCase();
+    return productType === 'soft drink' || 
+           productType === 'soft drinks' || 
+           productType === 'mineral' ||
+           productType === 'minerals' ||
+           productType === 'rtd' ||
+           productType === 'rtds' ||
+           categoryName === 'soft drinks' ||
+           categoryName === 'minerals' ||
+           categoryName === 'rtd' ||
+           categoryName === 'rtds';
   };
 
   const isMixer = () => {
-    return formData.product_type === 'Mixer' || formData.product_type === 'mixer';
+    const productType = (formData.product_type || '').toLowerCase();
+    const categoryName = (formData.category_name || '').toLowerCase();
+    return productType === 'mixer' || 
+           productType === 'mixers' ||
+           categoryName === 'mixers';
+  };
+
+  const isCider = () => {
+    const productType = (formData.product_type || '').toLowerCase();
+    const categoryName = (formData.category_name || '').toLowerCase();
+    const name = (formData.name || '').toLowerCase();
+    return productType === 'cider' || 
+           categoryName === 'cider' ||
+           categoryName === 'ciders' ||
+           name.includes('cider');
   };
 
   const isGarnish = () => {
@@ -348,12 +373,27 @@ const StockItemDetail = ({ item, categories, onBack, onUpdate, onDelete }) => {
           </small>
         </h6>
         
-        {/* Always show serving size */}
-        <EditableField 
-          label={isGarnish() ? "Serving Size (pieces)" : isDraught() ? "Serving Size (568=pint, 284=half)" : "Serving Size (ml)"} 
-          field="serving_size" 
-          type="number" 
-        />
+        {/* Bottled Beer, Cider, Soft Drinks, RTDs, Mixers - Show message that bottle IS the serving */}
+        {((isBeer() && !isDraught()) || isCider() || isSoftDrink() || isMixer()) && (
+          <div className="d-flex align-items-center justify-content-between mb-2 py-1" style={{ fontSize: '0.9rem' }}>
+            <div className="text-muted" style={{ minWidth: '140px', maxWidth: '140px' }}>Servings per Unit</div>
+            <div className="flex-grow-1">
+              <div className="bg-light px-2 py-1 rounded">
+                <strong>1</strong>
+                <small className="text-muted ms-1">bottle/can = 1 serving</small>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* For products that need serving size (Spirits, Wine, Draught, Garnish, Other) */}
+        {!((isBeer() && !isDraught()) || isCider() || isSoftDrink() || isMixer()) && (
+          <EditableField 
+            label={isGarnish() ? "Serving Size (pieces)" : isDraught() ? "Serving Size (568=pint, 284=half)" : "Serving Size (ml)"} 
+            field="serving_size" 
+            type="number" 
+          />
+        )}
         
         {/* Draught - show Pints and Half Pints Per Keg (CALCULATED LOCALLY) */}
         {isDraught() && (
@@ -410,12 +450,12 @@ const StockItemDetail = ({ item, categories, onBack, onUpdate, onDelete }) => {
           <EditableField label="Servings Per Unit (pieces)" field="servings_per_unit" type="number" />
         )}
         
-        {/* Soft Drinks, Mixers, Other - optionally show Servings Per Unit */}
-        {(isSoftDrink() || isMixer() || isOther()) && (
+        {/* Other - optionally show Servings Per Unit */}
+        {isOther() && (
           <EditableField label="Servings Per Unit (optional)" field="servings_per_unit" type="number" />
         )}
         
-        {/* Bottled Beer - serving size only (bottle itself) - no additional fields */}
+        {/* Bottled Beer, Soft Drinks, Mixers - no additional fields, already shown above */}
       </div>
 
       {/* Location */}

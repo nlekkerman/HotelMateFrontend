@@ -56,7 +56,7 @@ const StockItemCard = ({ item, onClick }) => {
         </small>
       </div>
 
-      {/* Badges for Category, Size, and Unit Cost */}
+      {/* Badges for Category, Size, Unit Cost, and Serving Info */}
       <div className="mb-2 d-flex flex-wrap gap-1" style={{ fontSize: '0.75rem' }}>
         {item.category_name && (
           <Badge bg="dark">
@@ -71,6 +71,29 @@ const StockItemCard = ({ item, onClick }) => {
         <Badge bg="success">
           Unit Cost: €{parseFloat(item.unit_cost || 0).toFixed(2)}
         </Badge>
+        
+        {/* Serving Info Badge - for bottled products */}
+        {((item.product_type === 'Beer' || 
+           item.product_type?.toLowerCase() === 'cider' ||
+           item.product_type === 'Soft Drink' || 
+           item.product_type?.toLowerCase() === 'soft drinks' ||
+           item.product_type?.toLowerCase() === 'mineral' ||
+           item.product_type?.toLowerCase() === 'minerals' ||
+           item.product_type?.toLowerCase() === 'rtd' ||
+           item.product_type?.toLowerCase() === 'rtds' ||
+           item.product_type === 'Mixer' ||
+           item.category_name?.toLowerCase() === 'cider' ||
+           item.category_name?.toLowerCase() === 'ciders' ||
+           item.category_name?.toLowerCase() === 'soft drinks' ||
+           item.category_name?.toLowerCase() === 'minerals' ||
+           item.category_name?.toLowerCase() === 'rtd' ||
+           item.category_name?.toLowerCase() === 'rtds' ||
+           item.category_name?.toLowerCase() === 'mixers') && 
+          !item.size?.toLowerCase().includes('keg')) && (
+          <Badge bg="info">
+            1 unit = 1 serving
+          </Badge>
+        )}
       </div>
 
       {/* Card Body - Current Qty and Par Level */}
