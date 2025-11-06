@@ -125,18 +125,7 @@ const MobileNavbar = () => {
               </li>
             )}
 
-            {canAccess([
-              "receptionist",
-              "porter",
-              "waiter",
-              "manager",
-              "chef",
-              "staff_admin",
-              "super_staff_admin",
-              "concierge",
-              "maintenance_staff",
-              "housekeeping_attendant",
-            ]) && (
+            {staffProfile && (
               <li className="nav-item">
                 <Link
                   className={`nav-link text-white ${
