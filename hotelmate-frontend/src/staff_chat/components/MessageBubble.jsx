@@ -14,10 +14,16 @@ const MessageBubble = ({
   senderName = null,
   replyTo = null,
   isEdited = false,
+  isDeleted = false,
   attachments = [],
   isEditing = false,
   onSaveEdit = null,
   onCancelEdit = null,
+  onReply = null,
+  onReaction = null,
+  onShare = null,
+  onDelete = null,
+  reactions = null,
 }) => {
   const messageText = message || '';
   const messageTime = timestamp;
@@ -34,59 +40,231 @@ const MessageBubble = ({
     );
   }
 
+  // Determine deleted message display text
+  const getDeletedText = () => {
+    if (!isDeleted) return null;
+    
+    const hasAttachments = attachments && attachments.length > 0;
+    const hasText = messageText && 
+                    messageText !== '[File shared]' && 
+                    !messageText.includes('[Message deleted]') &&
+                    !messageText.includes('[File deleted]');
+    
+    if (hasText && hasAttachments) {
+      return 'Message and file(s) deleted';
+    } else if (hasAttachments) {
+      return 'File deleted';
+    } else {
+      return 'Message deleted';
+    }
+  };
+
+  const deletedText = getDeletedText();
+
+  // Debug logging for deleted messages
+  if (isDeleted) {
+    console.log('🗑️ MessageBubble - Rendering deleted message:', {
+      isDeleted,
+      deletedText,
+      messageText,
+      hasAttachments: attachments?.length > 0
+    });
+  }
+
   return (
     <>
-      {/* Reply Preview (if replying to another message) */}
-      {replyTo && (
-        <div className="staff-chat-message__reply-preview">
-          <i className="bi bi-reply me-1"></i>
-          <div className="staff-chat-message__reply-content">
-            <span className="staff-chat-message__reply-sender">
-              {replyTo.sender_name || replyTo.sender_info?.full_name || 'User'}
-            </span>
-            <span className="staff-chat-message__reply-text">
-              {(replyTo.message || replyTo.content || '').substring(0, 30)}
-              {(replyTo.message || replyTo.content || '').length > 30 ? '...' : ''}
-            </span>
-          </div>
+      {/* Sender Name ABOVE Bubble */}
+      {displayName && (
+        <div className="staff-chat-message__sender-name">
+          {displayName}
         </div>
       )}
 
-      {/* Message Bubble */}
-      <div className="staff-chat-message__bubble">
-        {/* Sender Name */}
-        {displayName && (
-          <div className="staff-chat-message__sender-name">
-            {displayName}
-          </div>
-        )}
-        
-        {/* Message Text */}
-        <p className="staff-chat-message__text">
-          {messageText}
-          {isEdited && (
-            <span className="staff-chat-message__edited-badge"> (edited)</span>
+      {/* Bubble Container with Reply Button */}
+      <div className="staff-chat-message__bubble-container">
+        {/* Reply Button (outside bubble) */}
+        <button 
+          className="staff-chat-message__reply-btn"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔘 Reply button clicked in MessageBubble');
+            console.log('🔘 onReply function:', onReply);
+            console.log('🔘 onReply toString:', onReply.toString());
+            if (onReply) {
+              console.log('🔘 Calling onReply now...');
+              onReply();
+              console.log('🔘 onReply called successfully');
+            } else {
+              console.error('❌ onReply is not defined!');
+            }
+          }}
+          title="Reply"
+          type="button"
+        >
+          <i className="bi bi-reply"></i>
+        </button>
+
+        {/* Message Bubble */}
+        <div className={`staff-chat-message__bubble ${isDeleted ? 'staff-chat-message__bubble--deleted' : ''}`}>
+          {/* Reply Preview (if replying to another message) */}
+          {replyTo && (
+            <div className="staff-chat-message__reply-preview">
+              <i className="bi bi-reply me-1"></i>
+              <div className="staff-chat-message__reply-content">
+                <span className="staff-chat-message__reply-sender">
+                  {replyTo.sender_name || replyTo.sender_info?.full_name || 'User'}
+                </span>
+                <span className={`staff-chat-message__reply-text ${replyTo.is_deleted ? 'text-muted fst-italic' : ''}`}>
+                  {replyTo.is_deleted 
+                    ? '[Message deleted]'
+                    : (replyTo.message || replyTo.content || '').substring(0, 30)
+                  }
+                  {!replyTo.is_deleted && (replyTo.message || replyTo.content || '').length > 30 ? '...' : ''}
+                </span>
+              </div>
+            </div>
           )}
-        </p>
+          
+          {/* Deleted Message Display - Nice Rounded Badge */}
+          {isDeleted ? (
+            <div className="staff-chat-message__deleted-badge">
+              <i className="bi bi-trash"></i>
+              <span>{deletedText}</span>
+            </div>
+          ) : (
+            <>
+              {/* Message Text (only show if there's text and it's not just "[File shared]") */}
+              {messageText && messageText !== '[File shared]' && (
+                <div>
+                  {/* Show "Forwarded" badge if message starts with forwarding indicator */}
+                  {messageText.startsWith('📤 Forwarded') && (
+                    <div className="text-white mb-2" style={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+                      <i className="bi bi-arrow-right-circle me-1"></i>
+                      Forwarded
+                    </div>
+                  )}
+                  <p className="staff-chat-message__text">
+                    {/* Remove the "📤 Forwarded" prefix from display if present */}
+                    {messageText.startsWith('📤 Forwarded') 
+                      ? messageText.replace('📤 Forwarded', '').trim()
+                      : messageText
+                    }
+                    {isEdited && (
+                      <span className="staff-chat-message__edited-badge"> (edited)</span>
+                    )}
+                  </p>
+                </div>
+              )}
 
-        {/* Attachments */}
-        {attachments && attachments.length > 0 && (
-          <MessageAttachments
-            attachments={attachments}
-            canDelete={isOwn}
-          />
-        )}
+              {/* Attachments */}
+              {attachments && attachments.length > 0 && (
+                <MessageAttachments
+                  attachments={attachments}
+                  canDelete={isOwn}
+                />
+              )}
+            </>
+          )}
 
-        {/* Timestamp */}
-        {messageTime && (
-          <span className="staff-chat-message__time">
-            {new Date(messageTime).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </span>
-        )}
+          {/* Timestamp inside bubble */}
+          <div className="staff-chat-message__bubble-footer">
+            {/* Timestamp */}
+            {messageTime && (
+              <span className="staff-chat-message__time">
+                {new Date(messageTime).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Reactions UNDER Bubble, ABOVE Footer */}
+      {reactions && (
+        <div className="staff-chat-message__reactions-wrapper">
+          {reactions}
+        </div>
+      )}
+
+      {/* Message Footer BELOW Reactions - Don't show actions for deleted messages */}
+      {!isDeleted && (
+        <div className="staff-chat-message__footer">
+          {/* Footer Actions - Order differs for own vs other messages */}
+          <div className="staff-chat-message__footer-actions">
+            {isOwn ? (
+              // Own messages: Reaction, Share, Delete
+              <>
+                {/* Reaction Button */}
+                {onReaction && (
+                  <button 
+                    className="staff-chat-message__reaction-btn"
+                    onClick={onReaction}
+                    title="React"
+                  >
+                    <i className="bi bi-emoji-smile"></i>
+                  </button>
+                )}
+                {/* Forward */}
+                {onShare && (
+                  <a 
+                    href="#" 
+                    className="staff-chat-message__action-link"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onShare();
+                    }}
+                  >
+                    Forward
+                  </a>
+                )}
+                {/* Delete */}
+                {onDelete && (
+                  <a 
+                    href="#" 
+                    className="staff-chat-message__action-link"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onDelete();
+                    }}
+                  >
+                    Delete
+                  </a>
+                )}
+              </>
+            ) : (
+              // Other people's messages: Forward, Reaction ONLY (NO DELETE)
+              <>
+                {/* Forward */}
+                {onShare && (
+                  <a 
+                    href="#" 
+                    className="staff-chat-message__action-link"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onShare();
+                    }}
+                  >
+                    Forward
+                  </a>
+                )}
+                {/* Reaction Button */}
+                {onReaction && (
+                  <button 
+                    className="staff-chat-message__reaction-btn"
+                    onClick={onReaction}
+                    title="React"
+                  >
+                    <i className="bi bi-emoji-smile"></i>
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 };
@@ -108,10 +286,13 @@ MessageBubble.propTypes = {
     sender_name: PropTypes.string,
     sender_info: PropTypes.shape({
       full_name: PropTypes.string
-    })
+    }),
+    is_deleted: PropTypes.bool
   }),
   /** Whether the message has been edited */
   isEdited: PropTypes.bool,
+  /** Whether the message has been deleted */
+  isDeleted: PropTypes.bool,
   /** Array of file attachments */
   attachments: PropTypes.array,
   /** Whether currently editing this message */
@@ -119,7 +300,17 @@ MessageBubble.propTypes = {
   /** Callback to save edited message */
   onSaveEdit: PropTypes.func,
   /** Callback to cancel editing */
-  onCancelEdit: PropTypes.func
+  onCancelEdit: PropTypes.func,
+  /** Callback to reply to message */
+  onReply: PropTypes.func,
+  /** Callback to add reaction */
+  onReaction: PropTypes.func,
+  /** Callback to share message */
+  onShare: PropTypes.func,
+  /** Callback to delete message */
+  onDelete: PropTypes.func,
+  /** Reactions component to render inside bubble */
+  reactions: PropTypes.node
 };
 
 export default MessageBubble;

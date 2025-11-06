@@ -11,9 +11,10 @@ import api from '@/services/api';
  * @param {string} hotelSlug - The hotel's slug identifier
  * @param {string} searchTerm - Optional search term
  * @param {string} ordering - Optional ordering field (e.g., 'first_name', '-last_name')
- * @returns {Promise<Array>} Array of staff members
+ * @param {number} pageSize - Number of results per page (default: 50)
+ * @returns {Promise<Object>} Paginated response with results, count, next, previous
  */
-export const fetchStaffList = async (hotelSlug, searchTerm = '', ordering = '') => {
+export const fetchStaffList = async (hotelSlug, searchTerm = '', ordering = '', pageSize = 50) => {
   try {
     const params = new URLSearchParams();
     
@@ -25,13 +26,14 @@ export const fetchStaffList = async (hotelSlug, searchTerm = '', ordering = '') 
       params.append('ordering', ordering);
     }
     
+    // Add pagination
+    params.append('page_size', pageSize.toString());
+    
     const queryString = params.toString() ? `?${params.toString()}` : '';
     const response = await api.get(`/staff_chat/${hotelSlug}/staff-list/${queryString}`);
     
-    // Handle both paginated and non-paginated responses
-    // If response has a 'results' array (paginated), return that
-    // Otherwise return the data directly (assuming it's an array)
-    return response.data?.results || response.data || [];
+    // Return full paginated response (includes count, next, previous, results)
+    return response.data;
   } catch (error) {
     console.error('Error fetching staff list:', error);
     throw error;
@@ -54,7 +56,19 @@ export const createConversation = async (hotelSlug, participantIds, title = null
     
     const response = await api.post(`/staff_chat/${hotelSlug}/conversations/`, payload);
     
-    return response.data;
+    // Log whether backend returned existing or created new
+    if (response.status === 200) {
+      console.log('✅ Backend returned EXISTING conversation:', response.data.id);
+    } else if (response.status === 201) {
+      console.log('🆕 Backend CREATED NEW conversation:', response.data.id);
+    }
+    
+    // Return conversation data with status code
+    return {
+      ...response.data,
+      _wasCreated: response.status === 201,
+      _wasExisting: response.status === 200
+    };
   } catch (error) {
     console.error('Error creating conversation:', error);
     throw error;
@@ -232,9 +246,10 @@ export const removeReaction = async (hotelSlug, messageId, emoji) => {
  * @param {Array<File>} files - Array of files to upload (max 10, 50MB each)
  * @param {string} message - Optional message text
  * @param {number} replyToId - Optional ID of message to reply to
+ * @param {number} messageId - Optional ID of existing message to add files to
  * @returns {Promise<Object>} Upload result with message and attachments
  */
-export const uploadFiles = async (hotelSlug, conversationId, files, message = null, replyToId = null) => {
+export const uploadFiles = async (hotelSlug, conversationId, files, message = null, replyToId = null, messageId = null) => {
   try {
     const formData = new FormData();
     
@@ -251,6 +266,11 @@ export const uploadFiles = async (hotelSlug, conversationId, files, message = nu
     // Optional reply to
     if (replyToId) {
       formData.append('reply_to', replyToId);
+    }
+    
+    // Optional existing message ID (to add files to existing message)
+    if (messageId) {
+      formData.append('message_id', messageId);
     }
     
     const response = await api.post(
@@ -285,6 +305,56 @@ export const deleteAttachment = async (hotelSlug, attachmentId) => {
     return response.data;
   } catch (error) {
     console.error('Error deleting attachment:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get conversations for forwarding (simplified list optimized for forwarding UI)
+ * @param {string} hotelSlug - The hotel's slug identifier
+ * @param {string} searchQuery - Optional search query to filter conversations
+ * @returns {Promise<Object>} Object with count and conversations array
+ */
+export const getConversationsForForwarding = async (hotelSlug, searchQuery = '') => {
+  try {
+    const params = searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : '';
+    const response = await api.get(`/staff_chat/${hotelSlug}/conversations/for-forwarding/${params}`);
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching conversations for forwarding:', error);
+    throw error;
+  }
+};
+
+/**
+ * Forward a message to multiple conversations (existing or new)
+ * @param {string} hotelSlug - The hotel's slug identifier
+ * @param {number} messageId - The message ID to forward
+ * @param {Array<number>} conversationIds - Array of existing conversation IDs (optional)
+ * @param {Array<number>} newParticipantIds - Array of staff IDs to create new conversations with (optional)
+ * @returns {Promise<Object>} Forward result with success/failure details
+ */
+export const forwardMessage = async (hotelSlug, messageId, conversationIds = [], newParticipantIds = []) => {
+  try {
+    const payload = {};
+    
+    if (conversationIds.length > 0) {
+      payload.conversation_ids = conversationIds;
+    }
+    
+    if (newParticipantIds.length > 0) {
+      payload.new_participant_ids = newParticipantIds;
+    }
+    
+    const response = await api.post(
+      `/staff_chat/${hotelSlug}/messages/${messageId}/forward/`,
+      payload
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error forwarding message:', error);
     throw error;
   }
 };

@@ -82,6 +82,7 @@ const useReactions = (hotelSlug, conversationId, onReactionUpdate) => {
 
   /**
    * Toggle a reaction (add if not present, remove if present)
+   * One reaction per user - if user clicks different emoji, replace previous one
    * @param {number} messageId - The message ID
    * @param {string} emoji - The emoji to toggle
    * @param {Array} currentReactions - Current reactions on the message
@@ -93,17 +94,51 @@ const useReactions = (hotelSlug, conversationId, onReactionUpdate) => {
       return;
     }
 
-    // Check if user already reacted with this emoji
-    const userReaction = currentReactions.find(
-      r => r.emoji === emoji && r.staff_id === currentUserId
+    // Find user's existing reaction (any emoji)
+    const userExistingReaction = currentReactions.find(
+      r => r.staff_id === currentUserId
     );
 
-    if (userReaction) {
+    // Check if user already reacted with THIS specific emoji
+    const userReactedWithThisEmoji = userExistingReaction && userExistingReaction.emoji === emoji;
+
+    // Optimistic update - immediately update UI
+    if (onReactionUpdate) {
+      let optimisticReactions;
+      
+      if (userReactedWithThisEmoji) {
+        // Remove reaction if clicking same emoji
+        optimisticReactions = currentReactions.filter(
+          r => r.staff_id !== currentUserId
+        );
+      } else {
+        // Remove any previous reaction from this user and add new one
+        optimisticReactions = [
+          ...currentReactions.filter(r => r.staff_id !== currentUserId),
+          {
+            emoji,
+            staff_id: currentUserId,
+            staff_name: 'You'
+          }
+        ];
+      }
+      onReactionUpdate(messageId, { reactions: optimisticReactions });
+    }
+
+    // Then perform the actual API call
+    // If user had a different reaction, remove it first
+    if (userExistingReaction && !userReactedWithThisEmoji) {
+      await removeReactionFromMessage(messageId, userExistingReaction.emoji);
+    }
+    
+    if (userReactedWithThisEmoji) {
+      // Remove if clicking same emoji
       await removeReactionFromMessage(messageId, emoji);
     } else {
+      // Add new reaction
       await addReactionToMessage(messageId, emoji);
     }
-  }, [addReactionToMessage, removeReactionFromMessage]);
+  }, [addReactionToMessage, removeReactionFromMessage, onReactionUpdate]);
 
   /**
    * Group reactions by emoji

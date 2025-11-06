@@ -45,9 +45,10 @@ const ReactionsList = ({
 
   const reactionGroups = Object.values(groupedReactions);
 
-  // Limit displayed reactions
-  const displayedReactions = reactionGroups.slice(0, maxDisplay);
-  const remainingCount = reactionGroups.length - maxDisplay;
+  // Sort by count (most popular first) and limit to 2
+  const sortedReactions = reactionGroups.sort((a, b) => b.count - a.count);
+  const displayedReactions = sortedReactions.slice(0, 2);
+  const remainingCount = sortedReactions.length - 2;
 
   // Generate tooltip content showing who reacted
   const getTooltipContent = (reactionGroup) => {
@@ -55,23 +56,29 @@ const ReactionsList = ({
     
     if (staff.length === 0) return 'No reactions';
     
-    if (staff.length === 1) {
-      return staff[0].name;
+    // Replace current user's name with "You"
+    const staffWithYou = staff.map(s => ({
+      ...s,
+      name: s.id === currentUserId ? 'You' : s.name
+    }));
+    
+    if (staffWithYou.length === 1) {
+      return staffWithYou[0].name;
     }
     
-    if (staff.length === 2) {
-      return `${staff[0].name} and ${staff[1].name}`;
+    if (staffWithYou.length === 2) {
+      return `${staffWithYou[0].name} and ${staffWithYou[1].name}`;
     }
     
-    if (staff.length <= 5) {
-      const names = staff.slice(0, -1).map(s => s.name).join(', ');
-      const lastName = staff[staff.length - 1].name;
+    if (staffWithYou.length <= 5) {
+      const names = staffWithYou.slice(0, -1).map(s => s.name).join(', ');
+      const lastName = staffWithYou[staffWithYou.length - 1].name;
       return `${names}, and ${lastName}`;
     }
     
     // More than 5 people
-    const displayNames = staff.slice(0, 3).map(s => s.name).join(', ');
-    const othersCount = staff.length - 3;
+    const displayNames = staffWithYou.slice(0, 3).map(s => s.name).join(', ');
+    const othersCount = staffWithYou.length - 3;
     return `${displayNames}, and ${othersCount} others`;
   };
 

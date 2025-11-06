@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { fetchMessages, sendMessage } from '../services/staffChatApi';
+import { fetchMessages, sendMessage, uploadFiles } from '../services/staffChatApi';
 import MessageInput from './MessageInput';
 import MessageBubble from './MessageBubble';
 import MessageActions from './MessageActions';
 import ReactionPicker from './ReactionPicker';
 import ReactionsList from './ReactionsList';
 import ReadStatus from './ReadStatus';
+import ShareMessageModal from './ShareMessageModal';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
+import SuccessModal from './SuccessModal';
 import useSendMessage from '../hooks/useSendMessage';
 import useReactions from '../hooks/useReactions';
 import useEditMessage from '../hooks/useEditMessage';
@@ -98,11 +101,40 @@ const ChatWindowPopup = ({
     updatePaginatedMessage(messageId, updatedData);
   });
 
-  // Use delete message hook
+  // Use delete message hook with proper callback
   const {
-    deleteMsg
-  } = useDeleteMessage(hotelSlug, conversation?.id, (messageId) => {
-    removePaginatedMessage(messageId);
+    deleteMsg,
+    deleting: isDeletingMessage
+  } = useDeleteMessage(hotelSlug, conversation?.id, (messageId, hardDelete, result) => {
+    console.log('🗑️ Message deleted callback:', { messageId, hardDelete, result });
+    
+    if (hardDelete) {
+      // Hard delete - remove from UI
+      console.log('🗑️ Hard delete - removing message from UI');
+      removePaginatedMessage(messageId);
+    } else {
+      // Soft delete - update message to show deleted state
+      const deletedMessage = result?.message?.message || 'Message deleted';
+      console.log('🗑️ Soft delete - updating message to deleted state:', {
+        messageId,
+        deletedMessage,
+        updates: {
+          is_deleted: true,
+          message: deletedMessage
+        }
+      });
+      
+      updatePaginatedMessage(messageId, {
+        is_deleted: true,
+        message: deletedMessage
+      });
+      
+      // Verify the update
+      setTimeout(() => {
+        const updatedMessages = messages.find(m => m.id === messageId);
+        console.log('🗑️ Message after update:', updatedMessages);
+      }, 100);
+    }
   });
 
   // Use read receipts hook
@@ -113,6 +145,15 @@ const ChatWindowPopup = ({
   } = useReadReceipts(conversation?.id, currentUserId);
 
   const [showReactionPicker, setShowReactionPicker] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [messageToShare, setMessageToShare] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState(null);
+  const [deleteHard, setDeleteHard] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -133,11 +174,84 @@ const ChatWindowPopup = ({
 
   // Handle send message
   const handleSendMessage = async (messageText, mentions) => {
+    // If files are selected, upload them instead
+    if (selectedFiles.length > 0) {
+      await handleUploadFiles(messageText);
+      return;
+    }
+
     const sentMessage = await sendMsg(messageText, replyTo, mentions);
     if (sentMessage) {
       addPaginatedMessage(sentMessage);
       scrollToBottom();
     }
+  };
+
+  // Handle file upload
+  const handleUploadFiles = async (messageText = '') => {
+    if (selectedFiles.length === 0) return;
+
+    console.log('📤 Starting file upload:', {
+      hotelSlug,
+      conversationId: conversation.id,
+      fileCount: selectedFiles.length,
+      files: selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })),
+      messageText: messageText || '(no text)',
+      replyToId: replyTo?.id
+    });
+
+    setUploading(true);
+    try {
+      const result = await uploadFiles(
+        hotelSlug,
+        conversation.id,
+        selectedFiles,
+        messageText.trim() || undefined,
+        replyTo?.id
+      );
+
+      console.log('✅ Upload successful:', result);
+
+      if (result.success && result.message) {
+        console.log('📨 Adding message to UI:', result.message);
+        addPaginatedMessage(result.message);
+        setSelectedFiles([]);
+        if (replyTo) cancelReply();
+        scrollToBottom();
+      } else {
+        console.warn('⚠️ Upload result missing success or message:', result);
+      }
+    } catch (error) {
+      console.error('❌ Failed to upload files:', error);
+      console.error('Error details:', error.response?.data || error.message);
+      alert('Failed to upload files. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Handle file selection
+  const handleFileSelect = (files) => {
+    // Validate file count
+    if (files.length > 10) {
+      alert('Maximum 10 files per upload');
+      return;
+    }
+
+    // Validate file sizes
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    const oversized = files.filter(f => f.size > maxSize);
+    if (oversized.length > 0) {
+      alert(`File too large: ${oversized[0].name} (max 50MB)`);
+      return;
+    }
+
+    setSelectedFiles(files);
+  };
+
+  // Handle file removal
+  const handleRemoveFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   // Handle reply
@@ -150,13 +264,52 @@ const ChatWindowPopup = ({
     startEdit(messageId, currentText);
   };
 
-  // Handle delete
-  const handleDelete = async (messageId, permanent = false) => {
-    await deleteMsg(messageId, permanent);
+  // Handle delete - show confirmation modal
+  const handleDelete = (messageId, permanent = false) => {
+    console.log('🗑️ handleDelete called:', { messageId, permanent });
+    const message = messages.find(m => m.id === messageId);
+    console.log('🗑️ Found message:', message);
+    
+    setMessageToDelete(message);
+    setDeleteHard(permanent);
+    setShowDeleteConfirm(true);
+  };
+
+  // Confirm delete
+  const confirmDelete = async () => {
+    if (!messageToDelete) {
+      console.error('❌ No message to delete');
+      return;
+    }
+
+    console.log('🗑️ Confirming delete:', { 
+      messageId: messageToDelete.id, 
+      hardDelete: deleteHard 
+    });
+
+    const result = await deleteMsg(messageToDelete.id, deleteHard);
+    console.log('🗑️ Delete result:', result);
+
+    if (result.success) {
+      setShowDeleteConfirm(false);
+      setMessageToDelete(null);
+      setSuccessMessage(deleteHard ? 'Message permanently deleted' : 'Message deleted');
+      setShowSuccessModal(true);
+    } else {
+      alert(result.error || 'Failed to delete message');
+    }
+  };
+
+  // Handle share
+  const handleShare = (message) => {
+    console.log('📤 Share message:', message);
+    setMessageToShare(message);
+    setShowShareModal(true);
   };
 
   // Handle reaction
   const handleReaction = (messageId, emoji) => {
+    console.log('👍 Handle reaction:', { messageId, emoji });
     const message = messages.find(m => m.id === messageId);
     if (message) {
       toggleReaction(messageId, emoji, message.reactions || [], currentUserId);
@@ -293,6 +446,14 @@ const ChatWindowPopup = ({
                       const senderName = message.sender_name || message.sender_info?.full_name || 'Unknown';
                       const readStatus = getReadStatus(message.id);
                       
+                      // Log message state including deletion status
+                      console.log('💬 Rendering message:', {
+                        id: message.id,
+                        isDeleted: message.is_deleted,
+                        messageText: messageText.substring(0, 30),
+                        isOwn
+                      });
+                      
                       return (
                         <div
                           key={message.id}
@@ -306,9 +467,11 @@ const ChatWindowPopup = ({
                             canDelete={isOwn}
                             canHardDelete={false} // Set based on user permissions
                             onReply={() => handleReply(message)}
+                            onShare={() => handleShare(message)}
                             onEdit={() => handleEdit(message.id, messageText)}
                             onDelete={(msgId, permanent) => handleDelete(msgId, permanent)}
                             onHardDelete={(msgId, permanent) => handleDelete(msgId, permanent)}
+                            deleting={isDeletingMessage}
                           />
 
                           <div style={{ position: 'relative' }}>
@@ -319,28 +482,27 @@ const ChatWindowPopup = ({
                               senderName={senderName}
                               replyTo={message.reply_to}
                               isEdited={message.is_edited}
+                              isDeleted={message.is_deleted}
                               attachments={message.attachments}
                               isEditing={isEditing(message.id)}
                               onSaveEdit={(newText) => saveEdit(newText)}
                               onCancelEdit={cancelEdit}
-                            />
-
-                            {/* Add Reaction Button */}
-                            <button
-                              onClick={() => setShowReactionPicker(
+                              onReply={() => handleReply(message)}
+                              onReaction={() => setShowReactionPicker(
                                 showReactionPicker === message.id ? null : message.id
                               )}
-                              className="staff-chat-message__action-btn"
-                              style={{
-                                position: 'absolute',
-                                bottom: '-10px',
-                                right: isOwn ? 'auto' : '8px',
-                                left: isOwn ? '8px' : 'auto'
-                              }}
-                              title="Add reaction"
-                            >
-                              <i className="bi bi-emoji-smile"></i>
-                            </button>
+                              onShare={() => handleShare(message)}
+                              onDelete={isOwn ? () => handleDelete(message.id, false) : null}
+                              reactions={
+                                <ReactionsList
+                                  reactions={message.reactions || []}
+                                  currentUserId={currentUserId}
+                                  onReactionClick={(emoji, wasUserReaction) => 
+                                    handleReactionClick(message.id, emoji, wasUserReaction)
+                                  }
+                                />
+                              }
+                            />
 
                             {/* Reaction Picker */}
                             {showReactionPicker === message.id && (
@@ -354,15 +516,6 @@ const ChatWindowPopup = ({
                                 position="top"
                               />
                             )}
-
-                            {/* Reactions List */}
-                            <ReactionsList
-                              reactions={message.reactions || []}
-                              currentUserId={currentUserId}
-                              onReactionClick={(emoji, wasUserReaction) => 
-                                handleReactionClick(message.id, emoji, wasUserReaction)
-                              }
-                            />
                           </div>
 
                           {/* Read Status for own messages */}
@@ -390,12 +543,62 @@ const ChatWindowPopup = ({
               onSend={handleSendMessage}
               replyTo={replyTo}
               onCancelReply={cancelReply}
-              disabled={sending}
+              disabled={sending || uploading}
               placeholder="Type a message..."
+              onFileSelect={handleFileSelect}
+              selectedFiles={selectedFiles}
+              onRemoveFile={handleRemoveFile}
             />
           </div>
         </>
       )}
+
+      {/* Share Message Modal */}
+      {messageToShare && (
+        <ShareMessageModal
+          show={showShareModal}
+          onHide={() => {
+            console.log('📤 Closing share modal');
+            setShowShareModal(false);
+            setMessageToShare(null);
+          }}
+          message={messageToShare}
+          hotelSlug={hotelSlug}
+          currentUserId={currentUserId}
+          onMessageForwarded={(conversation, newMessage) => {
+            console.log('✅ Message forwarded in popup');
+            // Pusher will automatically update all participants in real-time
+            // The new message will appear via Pusher event
+          }}
+        />
+      )}
+
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        show={showDeleteConfirm}
+        onHide={() => {
+          console.log('🗑️ Closing delete confirmation');
+          setShowDeleteConfirm(false);
+          setMessageToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        hardDelete={deleteHard}
+        deleting={isDeletingMessage}
+        messagePreview={messageToDelete?.message || messageToDelete?.content || ''}
+      />
+
+      {/* Success Modal */}
+      <SuccessModal
+        show={showSuccessModal}
+        onHide={() => {
+          console.log('✅ Closing success modal');
+          setShowSuccessModal(false);
+          setSuccessMessage('');
+        }}
+        message={successMessage}
+        icon="check-circle"
+        autoCloseDelay={2000}
+      />
     </div>
   );
 };

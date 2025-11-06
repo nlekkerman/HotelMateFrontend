@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import EmojiPicker from 'emoji-picker-react';
 
 /**
  * MessageInput Component
- * Input field for sending messages with reply support and @mentions
+ * Input field for sending messages with reply support, @mentions, emoji picker, and file attachments
  */
 const MessageInput = ({
   onSend,
@@ -12,9 +13,16 @@ const MessageInput = ({
   replyTo = null,
   onCancelReply = null,
   showMentionSuggestions = false,
+  onFileSelect = null,
+  selectedFiles = [],
+  onRemoveFile = null,
 }) => {
   const [value, setValue] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef(null);
+  const emojiPickerRef = useRef(null);
+  const emojiButtonRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -26,7 +34,9 @@ const MessageInput = ({
 
   // Focus on mount or when reply is set
   useEffect(() => {
+    console.log('📨 MessageInput - replyTo prop changed:', replyTo);
     if (replyTo && textareaRef.current) {
+      console.log('📨 MessageInput - Focusing textarea for reply');
       textareaRef.current.focus();
     }
   }, [replyTo]);
@@ -38,7 +48,8 @@ const MessageInput = ({
   const handleSend = (e) => {
     if (e) e.preventDefault();
     
-    if (!value.trim() || disabled) return;
+    // Allow sending if there's text OR files
+    if ((!value.trim() && selectedFiles.length === 0) || disabled) return;
     
     // Extract @mentions
     const mentions = extractMentions(value);
@@ -71,11 +82,60 @@ const MessageInput = ({
     return mentions;
   };
 
-  // Detect @mentions
-  const highlightMentions = (text) => {
-    const mentionRegex = /@(\w+)/g;
-    return text.replace(mentionRegex, '<span class="mention">@$1</span>');
+  // Get file icon based on file type
+  const getFileIcon = (fileType, fileName) => {
+    const ext = fileName.split('.').pop().toLowerCase();
+    
+    if (fileType.startsWith('image/')) return 'bi-file-image';
+    if (ext === 'pdf') return 'bi-file-pdf';
+    if (['doc', 'docx'].includes(ext)) return 'bi-file-word';
+    if (['xls', 'xlsx'].includes(ext)) return 'bi-file-excel';
+    if (ext === 'txt') return 'bi-file-text';
+    if (ext === 'csv') return 'bi-file-spreadsheet';
+    return 'bi-file-earmark';
   };
+
+  // Format file size for display
+  const formatFileSize = (bytes) => {
+    if (!bytes || bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  // Handle emoji selection
+  const handleEmojiClick = (emojiData) => {
+    setValue(prevValue => prevValue + emojiData.emoji);
+    setShowEmojiPicker(false);
+    textareaRef.current?.focus();
+  };
+
+  // Handle file selection
+  const handleFileChange = (e) => {
+    if (onFileSelect && e.target.files.length > 0) {
+      onFileSelect(Array.from(e.target.files));
+    }
+  };
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        emojiPickerRef.current && 
+        !emojiPickerRef.current.contains(event.target) &&
+        emojiButtonRef.current &&
+        !emojiButtonRef.current.contains(event.target)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showEmojiPicker]);
 
   return (
     <div className="message-input-wrapper">
@@ -109,17 +169,131 @@ const MessageInput = ({
 
       {/* Input Area */}
       <div className="message-input__input-area">
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={handleChange}
-          onKeyPress={handleKeyPress}
-          placeholder={placeholder}
-          className="message-input__textarea"
-          rows="1"
-          disabled={disabled}
-          maxLength={5000}
+        {/* Hidden File Input */}
+        <input
+          type="file"
+          multiple
+          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+          onChange={handleFileChange}
+          ref={fileInputRef}
+          style={{ display: 'none' }}
         />
+
+        {/* Attach Button */}
+        {onFileSelect && (
+          <button
+            type="button"
+            className="message-input__attach-btn"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled}
+            title="Attach files"
+          >
+            <i className="bi bi-paperclip"></i>
+          </button>
+        )}
+
+        {/* Textarea with Emoji Button Inside */}
+        <div className="message-input__textarea-wrapper">
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={handleChange}
+            onKeyPress={handleKeyPress}
+            placeholder={placeholder}
+            className="message-input__textarea"
+            rows="1"
+            disabled={disabled}
+            maxLength={5000}
+          />
+          
+          {/* Emoji Button with Picker Inside Textarea */}
+          <div className="message-input__emoji-container">
+            <button
+              ref={emojiButtonRef}
+              type="button"
+              className="message-input__emoji-btn"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              disabled={disabled}
+              title="Add emoji"
+            >
+              <i className="bi bi-emoji-smile"></i>
+            </button>
+            
+            {/* Emoji Picker */}
+            {showEmojiPicker && (
+              <div ref={emojiPickerRef} className="message-input__emoji-picker">
+                <EmojiPicker onEmojiClick={handleEmojiClick} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Send Button */}
+        <button
+          type="button"
+          className="message-input__send-btn"
+          onClick={handleSend}
+          disabled={disabled || (!value.trim() && selectedFiles.length === 0)}
+          title="Send message"
+        >
+          <i className="bi bi-send-fill"></i>
+        </button>
+
+        {/* File Preview */}
+        {selectedFiles.length > 0 && (
+          <div className="chat-window-popup__file-previews">
+            {selectedFiles.map((file, index) => {
+              const isImage = file.type.startsWith('image/');
+              const fileIcon = getFileIcon(file.type, file.name);
+              
+              return (
+                <div key={index} className="file-preview-item">
+                  {isImage ? (
+                    <>
+                      <img 
+                        src={URL.createObjectURL(file)} 
+                        alt={file.name}
+                        className="file-preview-thumbnail"
+                      />
+                      {onRemoveFile && (
+                        <button
+                          type="button"
+                          className="file-preview-remove"
+                          onClick={() => onRemoveFile(index)}
+                          title="Remove file"
+                        >
+                          <i className="bi bi-x"></i>
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="file-preview-file">
+                        <i className={`bi ${fileIcon} file-preview-icon`}></i>
+                        <div className="file-preview-info">
+                          <div className="file-preview-name">{file.name}</div>
+                          <div className="file-preview-size">
+                            {formatFileSize(file.size)}
+                          </div>
+                        </div>
+                      </div>
+                      {onRemoveFile && (
+                        <button
+                          type="button"
+                          className="file-preview-remove"
+                          onClick={() => onRemoveFile(index)}
+                          title="Remove file"
+                        >
+                          <i className="bi bi-x"></i>
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
         
         {/* Character Counter (optional, show when close to limit) */}
         {value.length > 4500 && (
@@ -160,7 +334,13 @@ MessageInput.propTypes = {
   /** Callback to cancel reply */
   onCancelReply: PropTypes.func,
   /** Show @mention suggestions */
-  showMentionSuggestions: PropTypes.bool
+  showMentionSuggestions: PropTypes.bool,
+  /** Callback when files are selected */
+  onFileSelect: PropTypes.func,
+  /** Selected files array */
+  selectedFiles: PropTypes.array,
+  /** Callback to remove a file */
+  onRemoveFile: PropTypes.func
 };
 
 export default MessageInput;

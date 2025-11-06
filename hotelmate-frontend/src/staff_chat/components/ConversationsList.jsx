@@ -43,6 +43,8 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
             id: conv.id,
             participants: conv.participants?.map(p => p.full_name),
             lastMessage: conv.last_message?.message,
+            hasAttachments: conv.last_message?.has_attachments,
+            attachments: conv.last_message?.attachments,
             unreadCount: conv.unread_count,
             timestamp: conv.updated_at
           });
@@ -279,7 +281,59 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
                         {/* Last Message Preview */}
                         {conversation.last_message && (
                           <small className="text-muted text-truncate d-block" style={{ maxWidth: '250px' }}>
-                            {conversation.last_message.message || 'Attachment'}
+                            {(() => {
+                              const msg = conversation.last_message;
+                              
+                              // Check if backend sent has_attachments flag
+                              const hasAttachments = msg.has_attachments || (msg.attachments && msg.attachments.length > 0);
+                              
+                              // If message is "[File shared]" or has attachments, show icon
+                              if (hasAttachments || msg.message === '[File shared]') {
+                                // Try to determine if it's an image from attachments array
+                                if (msg.attachments && msg.attachments.length > 0) {
+                                  const hasImage = msg.attachments.some(att => {
+                                    const type = att.file_type?.toLowerCase() || '';
+                                    const ext = att.file_name?.split('.').pop().toLowerCase() || '';
+                                    return type === 'image' || 
+                                           type.startsWith('image/') || 
+                                           ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(type) ||
+                                           ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext) ||
+                                           att.mime_type?.startsWith('image/');
+                                  });
+                                  
+                                  if (hasImage) {
+                                    return (
+                                      <>
+                                        <i className="bi bi-image me-1"></i>
+                                        {msg.attachments.length > 1 ? `${msg.attachments.length} Photos` : 'Photo'}
+                                      </>
+                                    );
+                                  } else {
+                                    return (
+                                      <>
+                                        <i className="bi bi-paperclip me-1"></i>
+                                        {msg.attachments.length > 1 ? `${msg.attachments.length} Files` : 'File'}
+                                      </>
+                                    );
+                                  }
+                                } else {
+                                  // No attachment details, just show generic attachment icon
+                                  return (
+                                    <>
+                                      <i className="bi bi-paperclip me-1"></i>
+                                      Attachment
+                                    </>
+                                  );
+                                }
+                              }
+                              
+                              // Show text message
+                              if (msg.message) {
+                                return msg.message;
+                              }
+                              
+                              return 'Message';
+                            })()}
                           </small>
                         )}
                         

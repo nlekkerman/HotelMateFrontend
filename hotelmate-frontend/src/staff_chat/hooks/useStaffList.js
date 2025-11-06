@@ -25,10 +25,13 @@ const useStaffList = (hotelSlug, searchTerm = '', ordering = '') => {
 
     try {
       const data = await fetchStaffList(hotelSlug, searchTerm, ordering);
-      setStaffList(data);
+      // Handle paginated response: { count, results: [...] } or direct array
+      const staffArray = data?.results || data || [];
+      setStaffList(staffArray);
     } catch (err) {
       setError(err.message);
       console.error('Error loading staff list:', err);
+      setStaffList([]); // Ensure staffList is always an array even on error
     } finally {
       setLoading(false);
     }

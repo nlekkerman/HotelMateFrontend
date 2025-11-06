@@ -11,7 +11,7 @@ const ReactionPicker = ({ onSelectEmoji, show, onClose, position = 'top' }) => {
   const [isVisible, setIsVisible] = useState(show);
   const pickerRef = useRef(null);
 
-  // Available emoji reactions
+  // Available emoji reactions (displayed in rows of 3)
   const emojis = [
     { emoji: '👍', label: 'Thumbs Up' },
     { emoji: '❤️', label: 'Heart' },
@@ -20,9 +20,7 @@ const ReactionPicker = ({ onSelectEmoji, show, onClose, position = 'top' }) => {
     { emoji: '😢', label: 'Sad' },
     { emoji: '🙏', label: 'Thank You' },
     { emoji: '🎉', label: 'Celebration' },
-    { emoji: '👏', label: 'Clapping' },
-    { emoji: '🔥', label: 'Fire' },
-    { emoji: '✅', label: 'Check Mark' }
+    { emoji: '🔥', label: 'Fire' }
   ];
 
   useEffect(() => {

@@ -16,6 +16,7 @@ const MessageActions = ({
   onDelete = null,
   onHardDelete = null,
   onReply = null,
+  onShare = null,
   deleting = false,
 }) => {
   const isDeleted = message.is_deleted || false;
@@ -29,7 +30,8 @@ const MessageActions = ({
     (isOwn && canEdit && onEdit) ||
     (isOwn && canDelete && onDelete) ||
     (canHardDelete && onHardDelete) ||
-    onReply;
+    onReply ||
+    onShare;
 
   if (!hasActions) {
     return null;
@@ -52,6 +54,14 @@ const MessageActions = ({
             <Dropdown.Item onClick={() => onReply(message)}>
               <i className="bi bi-reply me-2"></i>
               Reply
+            </Dropdown.Item>
+          )}
+
+          {/* Share (available for all messages) */}
+          {onShare && (
+            <Dropdown.Item onClick={() => onShare(message)}>
+              <i className="bi bi-share me-2"></i>
+              Share
             </Dropdown.Item>
           )}
 
@@ -106,6 +116,7 @@ MessageActions.propTypes = {
   onDelete: PropTypes.func,
   onHardDelete: PropTypes.func,
   onReply: PropTypes.func,
+  onShare: PropTypes.func,
   deleting: PropTypes.bool,
 };
 

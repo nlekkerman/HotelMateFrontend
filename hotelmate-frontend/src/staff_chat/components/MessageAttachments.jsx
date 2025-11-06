@@ -44,15 +44,36 @@ const MessageAttachments = ({
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const isImage = (fileType) => {
-    const type = fileType?.toLowerCase() || '';
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(type);
+  const isImage = (attachment) => {
+    // Check file_type field
+    const type = attachment.file_type?.toLowerCase() || '';
+    if (type === 'image' || type.startsWith('image/')) {
+      return true;
+    }
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(type)) {
+      return true;
+    }
+    
+    // Check file extension from file_name
+    if (attachment.file_name) {
+      const ext = attachment.file_name.split('.').pop().toLowerCase();
+      if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) {
+        return true;
+      }
+    }
+    
+    // Check mime_type if available
+    if (attachment.mime_type?.startsWith('image/')) {
+      return true;
+    }
+    
+    return false;
   };
 
   return (
     <div className="message-attachments">
       {attachments.map((attachment) => {
-        const isImg = isImage(attachment.file_type);
+        const isImg = isImage(attachment);
 
         return (
           <div key={attachment.id} className="message-attachments__item">
