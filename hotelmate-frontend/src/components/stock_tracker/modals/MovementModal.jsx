@@ -11,6 +11,8 @@ export const MovementModal = ({ isOpen, onClose, onSave, items }) => {
     reference: "",
     notes: ""
   });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -53,6 +55,24 @@ export const MovementModal = ({ isOpen, onClose, onSave, items }) => {
   ];
 
   const selectedItem = items.find(i => i.id === parseInt(formData.item));
+  
+  // Filter items based on search term
+  const filteredItems = items.filter(item => {
+    const searchLower = searchTerm.toLowerCase();
+    const itemSku = (item.sku || item.code || '').toLowerCase();
+    const itemName = (item.name || item.description || '').toLowerCase();
+    return itemSku.includes(searchLower) || itemName.includes(searchLower);
+  });
+
+  const handleItemSelect = (itemId) => {
+    setFormData(prev => ({ ...prev, item: itemId }));
+    const selectedItem = items.find(i => i.id === itemId);
+    if (selectedItem && !formData.unit_cost) {
+      setFormData(prev => ({ ...prev, unit_cost: selectedItem.unit_cost }));
+    }
+    setIsDropdownOpen(false);
+    setSearchTerm("");
+  };
 
   return (
     <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
@@ -85,23 +105,54 @@ export const MovementModal = ({ isOpen, onClose, onSave, items }) => {
 
                 <div className="col-12">
                   <label className="form-label">Item *</label>
-                  <select
-                    className="form-select"
-                    name="item"
-                    value={formData.item}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">Select item...</option>
-                    {items.map(item => (
-                      <option key={item.id} value={item.id}>
-                        {item.code} - {item.description} ({item.size})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="position-relative">
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Search by name or SKU..."
+                      value={selectedItem ? `${selectedItem.sku || selectedItem.code || 'N/A'} - ${selectedItem.name || selectedItem.description || 'Unnamed'}` : searchTerm}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setIsDropdownOpen(true);
+                        if (!e.target.value) {
+                          setFormData(prev => ({ ...prev, item: "" }));
+                        }
+                      }}
+                      onFocus={() => setIsDropdownOpen(true)}
+                      required
+                    />
+                    {isDropdownOpen && (
+                      <div 
+                        className="position-absolute w-100 bg-white border rounded shadow-lg mt-1" 
+                        style={{ maxHeight: '300px', overflowY: 'auto', zIndex: 1000 }}
+                      >
+                        {filteredItems.length > 0 ? (
+                          filteredItems.map(item => (
+                            <div
+                              key={item.id}
+                              className="p-2 border-bottom cursor-pointer"
+                              style={{ cursor: 'pointer' }}
+                              onMouseDown={() => handleItemSelect(item.id)}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                            >
+                              <strong>{item.sku || item.code || 'N/A'}</strong> - {item.name || item.description || 'Unnamed'}
+                              {(item.size || item.base_unit) && (
+                                <span className="text-muted"> ({item.size || item.base_unit})</span>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-3 text-muted text-center">
+                            No items found
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                   {selectedItem && (
                     <small className="form-text text-muted">
-                      Current stock: {parseFloat(selectedItem.current_qty || 0).toFixed(2)} {selectedItem.base_unit}
+                      Current stock: {parseFloat(selectedItem.current_qty || 0).toFixed(2)} {selectedItem.base_unit || ''}
                     </small>
                   )}
                 </div>

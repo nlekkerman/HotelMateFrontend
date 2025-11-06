@@ -1,8 +1,10 @@
 import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import useHotel from "@/hooks/useHotel";
 
 export default function HotelLogo({ className = "", style = {} }) {
   const { hotelLogo, hotelName } = useHotel();
+  const navigate = useNavigate();
 
   // Optional: log for debugging
   useEffect(() => {
@@ -19,11 +21,13 @@ export default function HotelLogo({ className = "", style = {} }) {
       src={hotelLogo}
       alt={`${hotelName || "Hotel"} logo`}
       onError={handleImgError}
+      onClick={() => navigate("/")}
       className={`hotel-logo ${className} main-bg rounded-pill p-2`}
-      style={{ maxHeight: "60px", objectFit: "contain", ...style }}
+      style={{ maxHeight: "60px", objectFit: "contain", cursor: "pointer", ...style }}
     />
   ) : (
     <div
+      onClick={() => navigate("/")}
       className={`hotel-logo-placeholder ${className}`}
       style={{
         display: "inline-block",
@@ -35,6 +39,7 @@ export default function HotelLogo({ className = "", style = {} }) {
         borderRadius: "8px",
         fontSize: "0.9rem",
         color: "#555",
+        cursor: "pointer",
         ...style,
       }}
     >
