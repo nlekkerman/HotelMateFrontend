@@ -4,18 +4,15 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
   const [formData, setFormData] = useState({
     sku: "",
     name: "",
-    product_type: "Wine",
-    subtype: "",
+    category: "",
     size: "",
     size_value: "",
     size_unit: "",
-    serving_size: "",
     uom: "",
     unit_cost: "",
-    selling_price: "",
-    base_unit: "",
-    par_level: "",
-    category: ""
+    current_full_units: 0,
+    current_partial_units: 0,
+    menu_price: ""
   });
 
   useEffect(() => {
@@ -23,35 +20,29 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
       setFormData({
         sku: item.sku || "",
         name: item.name || "",
-        product_type: item.product_type || "Wine",
-        subtype: item.subtype || "",
+        category: item.category || "",
         size: item.size || "",
         size_value: item.size_value || "",
         size_unit: item.size_unit || "",
-        serving_size: item.serving_size || "",
         uom: item.uom || "",
         unit_cost: item.unit_cost || "",
-        selling_price: item.selling_price || "",
-        base_unit: item.base_unit || "",
-        par_level: item.par_level || "",
-        category: item.category || ""
+        current_full_units: item.current_full_units || 0,
+        current_partial_units: item.current_partial_units || 0,
+        menu_price: item.menu_price || ""
       });
     } else {
       setFormData({
         sku: "",
         name: "",
-        product_type: "Wine",
-        subtype: "",
+        category: categories[0]?.code || "",
         size: "",
         size_value: "",
         size_unit: "",
-        serving_size: "",
         uom: "",
         unit_cost: "",
-        selling_price: "",
-        base_unit: "",
-        par_level: "",
-        category: categories[0]?.id || ""
+        current_full_units: 0,
+        current_partial_units: 0,
+        menu_price: ""
       });
     }
   }, [item, categories, isOpen]);
@@ -60,55 +51,6 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
-  
-  // Helper to get serving size placeholder/help text based on product type
-  const getServingSizeHelp = () => {
-    switch (formData.product_type) {
-      case 'Draught':
-        return 'Pint = 568ml, Half-pint = 284ml';
-      case 'Spirit':
-      case 'Liqueur':
-        return 'Standard shot = 25ml or 35ml';
-      case 'Beer':
-        return 'Full bottle (e.g., 330ml)';
-      case 'Wine':
-        return 'Glass size (e.g., 175ml, 250ml)';
-      default:
-        return 'Serving size in ml';
-    }
-  };
-  
-  // Calculate yield preview
-  const getYieldPreview = () => {
-    const sizeValue = parseFloat(formData.size_value);
-    const servingSize = parseFloat(formData.serving_size);
-    
-    if (!sizeValue || !servingSize) return null;
-    
-    // Convert size to ml
-    let sizeInMl = sizeValue;
-    if (formData.size_unit === 'cl' || formData.size_unit === 'CL') {
-      sizeInMl = sizeValue * 10;
-    } else if (formData.size_unit === 'L' || formData.size_unit === 'l') {
-      sizeInMl = sizeValue * 1000;
-    }
-    
-    const servings = (sizeInMl / servingSize).toFixed(1);
-    
-    if (formData.product_type === 'Draught') {
-      if (servingSize === 568) {
-        const halfPints = (servings * 2).toFixed(1);
-        return `${servings} pints (${halfPints} half-pints)`;
-      }
-      return `${servings} servings`;
-    } else if (formData.product_type === 'Spirit' || formData.product_type === 'Liqueur') {
-      return `${Math.floor(servings)} shots per bottle`;
-    } else {
-      return `${servings} servings`;
-    }
-  };
-  
-  const yieldPreview = getYieldPreview();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -134,7 +76,7 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
           <form onSubmit={handleSubmit}>
             <div className="modal-body">
               <div className="row g-3">
-                <div className="col-md-4">
+                <div className="col-md-6">
                   <label className="form-label">SKU *</label>
                   <input
                     type="text"
@@ -143,11 +85,11 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
                     value={formData.sku}
                     onChange={handleChange}
                     required
-                    placeholder="e.g., WIN001"
+                    placeholder="e.g., D0005, B0001, S0380"
                   />
                 </div>
                 
-                <div className="col-md-4">
+                <div className="col-md-6">
                   <label className="form-label">Category *</label>
                   <select
                     className="form-select"
@@ -158,33 +100,12 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
                   >
                     <option value="">Select category</option>
                     {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      <option key={cat.code} value={cat.code}>{cat.name}</option>
                     ))}
                   </select>
                 </div>
 
-                <div className="col-md-4">
-                  <label className="form-label">Product Type *</label>
-                  <select
-                    className="form-select"
-                    name="product_type"
-                    value={formData.product_type}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="Draught">Draught Beer (Keg)</option>
-                    <option value="Beer">Bottled Beer</option>
-                    <option value="Spirit">Spirit</option>
-                    <option value="Liqueur">Liqueur</option>
-                    <option value="Wine">Wine</option>
-                    <option value="Soft Drink">Soft Drink</option>
-                    <option value="Mixer">Mixer</option>
-                    <option value="Garnish">Garnish</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-
-                <div className="col-md-8">
+                <div className="col-md-12">
                   <label className="form-label">Name *</label>
                   <input
                     type="text"
@@ -193,19 +114,7 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    placeholder="e.g., Pinot Grigio"
-                  />
-                </div>
-
-                <div className="col-md-4">
-                  <label className="form-label">Subtype</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="subtype"
-                    value={formData.subtype}
-                    onChange={handleChange}
-                    placeholder="e.g., White Wine, IPA"
+                    placeholder="e.g., 50 Guinness, Jack Daniels, Pinot Grigio"
                   />
                 </div>
 
@@ -218,12 +127,12 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
                     value={formData.size}
                     onChange={handleChange}
                     required
-                    placeholder="e.g., 70cl, 30Lt"
+                    placeholder="e.g., 70cl, 50Lt, Doz"
                   />
                 </div>
 
                 <div className="col-md-4">
-                  <label className="form-label">Size Value</label>
+                  <label className="form-label">Size Value *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -231,17 +140,19 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
                     name="size_value"
                     value={formData.size_value}
                     onChange={handleChange}
-                    placeholder="e.g., 700"
+                    required
+                    placeholder="e.g., 70, 50, 12"
                   />
                 </div>
 
                 <div className="col-md-4">
-                  <label className="form-label">Size Unit</label>
+                  <label className="form-label">Size Unit *</label>
                   <select
                     className="form-select"
                     name="size_unit"
                     value={formData.size_unit}
                     onChange={handleChange}
+                    required
                   >
                     <option value="">Select unit</option>
                     <option value="ml">ml (milliliters)</option>
@@ -249,39 +160,12 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
                     <option value="L">L (liters)</option>
                     <option value="g">g (grams)</option>
                     <option value="kg">kg (kilograms)</option>
+                    <option value="unit">unit (pieces)</option>
                   </select>
                 </div>
 
-                <div className="col-md-4">
-                  <label className="form-label">Serving Size</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="form-control"
-                    name="serving_size"
-                    value={formData.serving_size}
-                    onChange={handleChange}
-                    placeholder={
-                      formData.product_type === 'Draught' ? '568 (pint)' :
-                      (formData.product_type === 'Spirit' || formData.product_type === 'Liqueur') ? '25 (shot)' :
-                      formData.product_type === 'Beer' ? '330 (bottle)' :
-                      'e.g., 175'
-                    }
-                  />
-                  <small className="form-text text-muted">{getServingSizeHelp()}</small>
-                </div>
-                
-                {/* Yield Preview */}
-                {yieldPreview && (
-                  <div className="col-12">
-                    <div className="alert alert-info mb-0 py-2">
-                      <strong>📊 Yield Preview:</strong> {yieldPreview}
-                    </div>
-                  </div>
-                )}
-
-                <div className="col-md-4">
-                  <label className="form-label">UOM *</label>
+                <div className="col-md-12">
+                  <label className="form-label">UOM (Units of Measure) *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -290,42 +174,46 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
                     value={formData.uom}
                     onChange={handleChange}
                     required
-                    placeholder="Units per case"
+                    placeholder="e.g., 88.03 pints per keg, 28 shots per bottle, 12 bottles per case"
                   />
-                  <small className="form-text text-muted">Units of measure (e.g., 12 bottles per case)</small>
+                  <small className="form-text text-muted">
+                    For Draught: pints per keg | For Spirits: shots per bottle | For Beer: bottles per case
+                  </small>
                 </div>
 
-                <div className="col-md-4">
-                  <label className="form-label">Base Unit *</label>
+                <div className="col-md-6">
+                  <label className="form-label">Full Units</label>
                   <input
-                    type="text"
+                    type="number"
+                    step="1"
                     className="form-control"
-                    name="base_unit"
-                    value={formData.base_unit}
+                    name="current_full_units"
+                    value={formData.current_full_units}
                     onChange={handleChange}
-                    required
-                    placeholder="ml, bottles, g"
+                    placeholder="0"
                   />
+                  <small className="form-text text-muted">Full kegs/cases/bottles</small>
                 </div>
 
-                <div className="col-md-4">
-                  <label className="form-label">Par Level</label>
+                <div className="col-md-6">
+                  <label className="form-label">Partial Units</label>
                   <input
                     type="number"
                     step="0.01"
                     className="form-control"
-                    name="par_level"
-                    value={formData.par_level}
+                    name="current_partial_units"
+                    value={formData.current_partial_units}
                     onChange={handleChange}
-                    placeholder="Minimum stock level"
+                    placeholder="0"
                   />
+                  <small className="form-text text-muted">Pints/shots/individual bottles</small>
                 </div>
 
                 <div className="col-md-6">
                   <label className="form-label">Unit Cost (€) *</label>
                   <input
                     type="number"
-                    step="0.0001"
+                    step="0.01"
                     className="form-control"
                     name="unit_cost"
                     value={formData.unit_cost}
@@ -333,21 +221,21 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
                     required
                     placeholder="0.00"
                   />
-                  <small className="form-text text-muted">Cost per full unit</small>
+                  <small className="form-text text-muted">Cost per full unit (keg/case/bottle)</small>
                 </div>
 
                 <div className="col-md-6">
-                  <label className="form-label">Selling Price (€)</label>
+                  <label className="form-label">Menu Price (€)</label>
                   <input
                     type="number"
                     step="0.01"
                     className="form-control"
-                    name="selling_price"
-                    value={formData.selling_price}
+                    name="menu_price"
+                    value={formData.menu_price}
                     onChange={handleChange}
                     placeholder="0.00"
                   />
-                  <small className="form-text text-muted">Price per serving</small>
+                  <small className="form-text text-muted">Price per serving (pint/shot/glass)</small>
                 </div>
               </div>
             </div>

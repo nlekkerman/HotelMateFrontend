@@ -3,38 +3,10 @@ import { Badge } from 'react-bootstrap';
 import { FaExclamationTriangle } from 'react-icons/fa';
 
 const StockItemCard = ({ item, onClick }) => {
-  // Calculate bottle quantity if applicable
-  const getBottleQuantity = () => {
-    if (!item.size_value || !item.size_unit) return null;
-    
-    let bottleSizeInMl;
-    switch (item.size_unit.toLowerCase()) {
-      case 'cl':
-        bottleSizeInMl = item.size_value * 10;
-        break;
-      case 'l':
-        bottleSizeInMl = item.size_value * 1000;
-        break;
-      case 'ml':
-        bottleSizeInMl = item.size_value;
-        break;
-      default:
-        return null;
-    }
-    
-    const fullBottles = Math.floor(item.current_qty / bottleSizeInMl);
-    const remainingMl = item.current_qty % bottleSizeInMl;
-    
-    return { fullBottles, remainingMl, bottleSizeInMl };
-  };
-
-  const bottleQty = getBottleQuantity();
-
   return (
     <div 
-      className={`p-3 mb-2 bg-white rounded shadow-sm ${item.is_below_par ? 'border-start border-warning border-4' : ''}`}
+      className="p-3 mb-2 bg-white rounded shadow-sm"
       style={{ 
-        borderLeft: item.is_below_par ? '4px solid #ffc107' : 'none',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
       }}
@@ -56,72 +28,71 @@ const StockItemCard = ({ item, onClick }) => {
         </small>
       </div>
 
-      {/* Badges for Category, Size, Unit Cost, and Serving Info */}
+      {/* Badges for Category, Size, Unit Cost, and UOM */}
       <div className="mb-2 d-flex flex-wrap gap-1" style={{ fontSize: '0.75rem' }}>
-        {item.category_name && (
-          <Badge bg="dark">
-            Cat: {item.category_name}
-          </Badge>
-        )}
-        {item.size_value && item.size_unit && (
+        <Badge bg="dark">
+          {item.category} - {item.category_name || 'N/A'}
+        </Badge>
+        {item.size && (
           <Badge bg="secondary">
-            Size: {item.size_value}{item.size_unit}
+            Size: {item.size}
           </Badge>
         )}
         <Badge bg="success">
           Unit Cost: €{parseFloat(item.unit_cost || 0).toFixed(2)}
         </Badge>
-        
-        {/* Serving Info Badge - for bottled products */}
-        {((item.product_type === 'Beer' || 
-           item.product_type?.toLowerCase() === 'cider' ||
-           item.product_type === 'Soft Drink' || 
-           item.product_type?.toLowerCase() === 'soft drinks' ||
-           item.product_type?.toLowerCase() === 'mineral' ||
-           item.product_type?.toLowerCase() === 'minerals' ||
-           item.product_type?.toLowerCase() === 'rtd' ||
-           item.product_type?.toLowerCase() === 'rtds' ||
-           item.product_type === 'Mixer' ||
-           item.category_name?.toLowerCase() === 'cider' ||
-           item.category_name?.toLowerCase() === 'ciders' ||
-           item.category_name?.toLowerCase() === 'soft drinks' ||
-           item.category_name?.toLowerCase() === 'minerals' ||
-           item.category_name?.toLowerCase() === 'rtd' ||
-           item.category_name?.toLowerCase() === 'rtds' ||
-           item.category_name?.toLowerCase() === 'mixers') && 
-          !item.size?.toLowerCase().includes('keg')) && (
+        {item.uom && (
           <Badge bg="info">
-            1 unit = 1 serving
+            UOM: {parseFloat(item.uom).toFixed(2)}
           </Badge>
         )}
       </div>
 
-      {/* Card Body - Current Qty and Par Level */}
+      {/* Card Body - Stock Levels */}
       <div className="row g-2 small">
-        <div className="col-6">
-          <div className="text-muted">Current Qty</div>
+        <div className="col-4">
+          <div className="text-muted">Full Units</div>
           <div className="fw-bold">
-            {bottleQty ? (
-              <>
-                {bottleQty.fullBottles} btl
-                {bottleQty.remainingMl > 0 && <small className="text-muted d-block"> +{bottleQty.remainingMl.toFixed(0)}ml</small>}
-              </>
-            ) : (
-              <>{parseFloat(item.current_qty || 0).toFixed(2)}</>
-            )}
-            {item.is_below_par && <FaExclamationTriangle className="text-warning ms-1" />}
+            {parseFloat(item.current_full_units || 0).toFixed(0)}
           </div>
         </div>
-        <div className="col-6">
-          <div className="text-muted">Par Level</div>
+        <div className="col-4">
+          <div className="text-muted">Partial</div>
           <div className="fw-bold">
-            {bottleQty ? (
-              `${Math.floor(item.par_level / bottleQty.bottleSizeInMl)} btl`
-            ) : (
-              `${parseFloat(item.par_level || 0).toFixed(2)}`
-            )}
+            {parseFloat(item.current_partial_units || 0).toFixed(2)}
           </div>
         </div>
+        <div className="col-4">
+          <div className="text-muted">Total Units</div>
+          <div className="fw-bold text-primary">
+            {parseFloat(item.total_units || 0).toFixed(2)}
+          </div>
+        </div>
+      </div>
+
+      {/* Stock Value and GP */}
+      <div className="row g-2 small mt-2">
+        <div className="col-6">
+          <div className="text-muted">Stock Value</div>
+          <div className="fw-bold text-success">
+            €{parseFloat(item.total_stock_value || 0).toFixed(2)}
+          </div>
+        </div>
+        {item.gross_profit_percentage && (
+          <div className="col-6">
+            <div className="text-muted">GP %</div>
+            <div className="fw-bold">
+              <span className={`badge ${
+                item.gross_profit_percentage >= 70 ? 'bg-success' :
+                item.gross_profit_percentage >= 60 ? 'bg-info' :
+                item.gross_profit_percentage >= 50 ? 'bg-warning' :
+                'bg-danger'
+              }`}>
+                {parseFloat(item.gross_profit_percentage).toFixed(1)}%
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
