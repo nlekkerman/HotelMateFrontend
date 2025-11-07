@@ -1,41 +1,75 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useStocktakes } from "../hooks/useStocktakes";
+import { Button, Badge, Alert, Spinner } from "react-bootstrap";
+import api from "@/services/api";
 
 export const StocktakesList = () => {
   const { hotel_slug } = useParams();
   const navigate = useNavigate();
-  const { stocktakes, loading, error, createStocktake } = useStocktakes(hotel_slug);
   
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [formData, setFormData] = useState({
-    period_start: "",
-    period_end: "",
-    notes: ""
-  });
+  const [stocktakes, setStocktakes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [creating, setCreating] = useState(false);
 
-  const handleCreate = async (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    fetchStocktakes();
+  }, [hotel_slug]);
+
+  const fetchStocktakes = async () => {
     try {
-      const result = await createStocktake(formData);
-      setShowCreateModal(false);
-      setFormData({ period_start: "", period_end: "", notes: "" });
-      navigate(`/stock_tracker/${hotel_slug}/stocktakes/${result.id}`);
+      setLoading(true);
+      const response = await api.get(`/stock_tracker/${hotel_slug}/stocktakes/`);
+      setStocktakes(response.data.results || response.data);
+      setError(null);
     } catch (err) {
-      alert("Failed to create stocktake");
+      console.error('Error fetching stocktakes:', err);
+      setError(err.response?.data?.detail || "Failed to fetch stocktakes");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getStatusBadge = (status) => {
-    return status === "APPROVED" 
-      ? <span className="badge bg-success">✓ Approved</span>
-      : <span className="badge bg-warning text-dark">📝 Draft</span>;
+  const handleCreateNew = async () => {
+    try {
+      setCreating(true);
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      
+      const response = await api.post(`/stock_tracker/${hotel_slug}/stocktakes/`, {
+        period_start: firstDay.toISOString().split('T')[0],
+        period_end: lastDay.toISOString().split('T')[0],
+        notes: `Stocktake created on ${today.toLocaleDateString()}`
+      });
+      
+      // Navigate to the new stocktake detail
+      navigate(`/stock_tracker/${hotel_slug}/stocktakes/${response.data.id}`);
+    } catch (err) {
+      console.error('Error creating stocktake:', err);
+      setError(err.response?.data?.detail || "Failed to create stocktake");
+    } finally {
+      setCreating(false);
+    }
   };
 
-  const filteredStocktakes = stocktakes.filter(st => 
-    statusFilter === "all" || st.status === statusFilter
-  );
+  const getStatusBadge = (stocktake) => {
+    return stocktake.status === 'APPROVED'
+      ? <Badge bg="secondary">Approved</Badge>
+      : <Badge bg="warning">Draft</Badge>;
+  };
+
+  const filteredStocktakes = stocktakes.filter(st => {
+    if (statusFilter === "all") return true;
+    if (statusFilter === "draft") return st.status === 'DRAFT';
+    if (statusFilter === "approved") return st.status === 'APPROVED';
+    return true;
+  });
+
+  const handleStocktakeClick = (stocktakeId) => {
+    navigate(`/stock_tracker/${hotel_slug}/stocktakes/${stocktakeId}`);
+  };
 
   return (
     <div className="container mt-4">
@@ -47,10 +81,16 @@ export const StocktakesList = () => {
           </button>
           <h2 className="d-inline">Stocktakes</h2>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-          <i className="bi bi-plus-circle me-2"></i>New Stocktake
-        </button>
+        <Button 
+          variant="primary" 
+          onClick={handleCreateNew}
+          disabled={creating}
+        >
+          {creating ? 'Creating...' : '+ New Stocktake'}
+        </Button>
       </div>
+
+      {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
 
       {/* Filter */}
       <div className="card mb-4">
@@ -64,8 +104,8 @@ export const StocktakesList = () => {
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
                 <option value="all">All Stocktakes</option>
-                <option value="DRAFT">Draft Only</option>
-                <option value="APPROVED">Approved Only</option>
+                <option value="draft">Draft (In Progress)</option>
+                <option value="approved">Approved (Locked)</option>
               </select>
             </div>
           </div>
@@ -73,25 +113,32 @@ export const StocktakesList = () => {
       </div>
 
       {/* Stocktakes List */}
-      {loading && <div className="text-center"><div className="spinner-border" role="status"></div></div>}
-      {error && <div className="alert alert-danger">{error}</div>}
+      {loading && (
+        <div className="text-center">
+          <Spinner animation="border" role="status" />
+        </div>
+      )}
       
       {!loading && !error && (
         <div className="row g-3">
           {filteredStocktakes.length === 0 ? (
             <div className="col-12">
               <div className="alert alert-info text-center">
-                No stocktakes found. Click "New Stocktake" to create one.
+                <h5>No stocktakes found</h5>
+                <p>Click "New Stocktake" to create one</p>
               </div>
             </div>
           ) : (
             filteredStocktakes.map(stocktake => (
               <div key={stocktake.id} className="col-12 col-md-6 col-lg-4">
-                <div className="card h-100 shadow-sm hover-shadow" style={{ cursor: "pointer" }}
-                     onClick={() => navigate(`/stock_tracker/${hotel_slug}/stocktakes/${stocktake.id}`)}>
+                <div 
+                  className="card h-100 shadow-sm hover-shadow" 
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleStocktakeClick(stocktake.id)}
+                >
                   <div className="card-header d-flex justify-content-between align-items-center">
                     <strong>Stocktake #{stocktake.id}</strong>
-                    {getStatusBadge(stocktake.status)}
+                    {getStatusBadge(stocktake)}
                   </div>
                   <div className="card-body">
                     <div className="mb-2">
@@ -100,87 +147,35 @@ export const StocktakesList = () => {
                       <strong>{new Date(stocktake.period_end).toLocaleDateString()}</strong>
                     </div>
                     <div className="mb-2">
-                      <small className="text-muted">Created:</small><br />
-                      {new Date(stocktake.created_at).toLocaleDateString()}
+                      <small className="text-muted">Created:</small>{" "}
+                      <strong>{new Date(stocktake.created_at).toLocaleDateString()}</strong>
                     </div>
                     {stocktake.approved_at && (
                       <div className="mb-2">
-                        <small className="text-muted">Approved:</small><br />
-                        {new Date(stocktake.approved_at).toLocaleDateString()}
+                        <small className="text-muted">Approved:</small>{" "}
+                        <strong>{new Date(stocktake.approved_at).toLocaleDateString()}</strong>
                       </div>
                     )}
+                    <div className="mb-2">
+                      <small className="text-muted">Lines:</small>{" "}
+                      <span className="badge bg-primary">{stocktake.total_lines || 0}</span>
+                    </div>
                     {stocktake.notes && (
-                      <div>
-                        <small className="text-muted">Notes:</small><br />
-                        <small>{stocktake.notes}</small>
+                      <div className="mt-2">
+                        <small className="text-muted">{stocktake.notes}</small>
                       </div>
                     )}
                   </div>
                   <div className="card-footer bg-transparent">
                     <button className="btn btn-sm btn-outline-primary w-100">
-                      View Details <i className="bi bi-arrow-right ms-1"></i>
+                      {stocktake.status === 'DRAFT' ? 'Continue Counting' : 'View Results'}
+                      {' '}<i className="bi bi-arrow-right ms-1"></i>
                     </button>
                   </div>
                 </div>
               </div>
             ))
           )}
-        </div>
-      )}
-
-      {/* Create Modal */}
-      {showCreateModal && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header bg-primary text-white">
-                <h5 className="modal-title">Create New Stocktake</h5>
-                <button type="button" className="btn-close btn-close-white" onClick={() => setShowCreateModal(false)}></button>
-              </div>
-              <form onSubmit={handleCreate}>
-                <div className="modal-body">
-                  <div className="mb-3">
-                    <label className="form-label">Period Start *</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={formData.period_start}
-                      onChange={(e) => setFormData({...formData, period_start: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Period End *</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={formData.period_end}
-                      onChange={(e) => setFormData({...formData, period_end: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Notes</label>
-                    <textarea
-                      className="form-control"
-                      value={formData.notes}
-                      onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                      rows="3"
-                      placeholder="e.g., Monthly stocktake November 2025"
-                    />
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn btn-primary">
-                    Create Stocktake
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
         </div>
       )}
     </div>

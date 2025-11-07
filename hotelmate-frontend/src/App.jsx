@@ -76,9 +76,13 @@ import GoodToKnowConsole from "@/components/hotel_info/GoodToKnowConsole";
 import StockDashboard from "@/pages/stock_tracker/StockDashboard";
 import { StockItemsList } from "@/components/stock_tracker/stock_items/StockItemsList";
 import StockItemsResponsive from "@/components/stock_tracker/stock_items/StockItemsResponsive";
+import StockItemProfitability from "@/components/stock_tracker/stock_items/StockItemProfitability";
 import { MovementsList } from "@/components/stock_tracker/movements/MovementsList";
 import { StocktakesList } from "@/components/stock_tracker/stocktakes/StocktakesList";
 import { StocktakeDetail } from "@/components/stock_tracker/stocktakes/StocktakeDetail";
+import { PeriodSnapshots } from "@/components/stock_tracker/periods/PeriodSnapshots";
+import { PeriodSnapshotDetail } from "@/components/stock_tracker/periods/PeriodSnapshotDetail";
+import { PeriodsComparison } from "@/components/stock_tracker/periods/PeriodsComparison";
 import { CocktailsPage } from "@/pages/stock_tracker/CocktailsPage";
 
 import Settings from "@/components/utils/Settings";
@@ -304,9 +308,13 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               {/* Stock Tracker Routes */}
               <Route path="/stock_tracker/:hotel_slug" element={<ProtectedRoute><StockDashboard /></ProtectedRoute>} />
               <Route path="/stock_tracker/:hotel_slug/items" element={<ProtectedRoute><StockItemsResponsive /></ProtectedRoute>} />
+              <Route path="/stock_tracker/:hotel_slug/profitability" element={<ProtectedRoute><StockItemProfitability /></ProtectedRoute>} />
               <Route path="/stock_tracker/:hotel_slug/movements" element={<ProtectedRoute><MovementsList /></ProtectedRoute>} />
               <Route path="/stock_tracker/:hotel_slug/stocktakes" element={<ProtectedRoute><StocktakesList /></ProtectedRoute>} />
               <Route path="/stock_tracker/:hotel_slug/stocktakes/:id" element={<ProtectedRoute><StocktakeDetail /></ProtectedRoute>} />
+              <Route path="/stock_tracker/:hotel_slug/periods" element={<ProtectedRoute><PeriodSnapshots /></ProtectedRoute>} />
+              <Route path="/stock_tracker/:hotel_slug/periods/:id" element={<ProtectedRoute><PeriodSnapshotDetail /></ProtectedRoute>} />
+              <Route path="/stock_tracker/:hotel_slug/comparison" element={<ProtectedRoute><PeriodsComparison /></ProtectedRoute>} />
               <Route path="/stock_tracker/:hotel_slug/cocktails" element={<ProtectedRoute><CocktailsPage /></ProtectedRoute>} />
 
               {/* Chat Routes */}

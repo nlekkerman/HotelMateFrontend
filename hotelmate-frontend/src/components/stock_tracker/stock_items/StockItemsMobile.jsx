@@ -16,7 +16,7 @@ const StockItemsMobile = () => {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [showBelowPar, setShowBelowPar] = useState(false);
+  const [showLowStock, setShowLowStock] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -47,13 +47,13 @@ const StockItemsMobile = () => {
       );
     }
 
-    // Filter below par
-    if (showBelowPar) {
-      result = result.filter(item => item.is_below_par);
+    // Filter low stock (items with full_units <= 2)
+    if (showLowStock) {
+      result = result.filter(item => parseFloat(item.current_full_units || 0) <= 2);
     }
 
     setFilteredItems(result);
-  }, [items, selectedCategory, searchTerm, showBelowPar]);
+  }, [items, selectedCategory, searchTerm, showLowStock]);
 
   const handleItemClick = (item) => {
     setSelectedItem(item);
@@ -104,10 +104,10 @@ const StockItemsMobile = () => {
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedCategory('');
-    setShowBelowPar(false);
+    setShowLowStock(false);
   };
 
-  const activeFiltersCount = [selectedCategory, searchTerm, showBelowPar].filter(Boolean).length;
+  const activeFiltersCount = [selectedCategory, searchTerm, showLowStock].filter(Boolean).length;
 
   // If an item is selected, show the detail view
   if (selectedItem) {
@@ -217,9 +217,9 @@ const StockItemsMobile = () => {
 
           <Form.Check
             type="checkbox"
-            label="Show only items below par level"
-            checked={showBelowPar}
-            onChange={(e) => setShowBelowPar(e.target.checked)}
+            label="Show only low stock items (≤ 2 full units)"
+            checked={showLowStock}
+            onChange={(e) => setShowLowStock(e.target.checked)}
           />
         </div>
       )}

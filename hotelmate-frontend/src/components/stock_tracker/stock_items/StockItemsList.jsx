@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useStockItems } from "../hooks/useStockItems";
 import StockItemDetail from "./StockItemDetail";
+import { FaExclamationTriangle } from 'react-icons/fa';
 
 export const StockItemsList = () => {
   const { hotel_slug } = useParams();
@@ -11,6 +12,7 @@ export const StockItemsList = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [showLowStock, setShowLowStock] = useState(false);
 
   const handleRowClick = (item) => {
     setSelectedItem(item);
@@ -24,7 +26,8 @@ export const StockItemsList = () => {
     const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
     const matchesSearch = item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          item.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const matchesLowStock = !showLowStock || parseFloat(item.current_full_units || 0) <= 2;
+    return matchesCategory && matchesSearch && matchesLowStock;
   });
 
   // If an item is selected, show the detail view
@@ -56,7 +59,7 @@ export const StockItemsList = () => {
       <div className="card mb-4">
         <div className="card-body">
           <div className="row g-3">
-            <div className="col-md-4">
+            <div className="col-md-3">
               <label className="form-label">Category</label>
               <select 
                 className="form-select" 
@@ -69,7 +72,7 @@ export const StockItemsList = () => {
                 ))}
               </select>
             </div>
-            <div className="col-md-8">
+            <div className="col-md-6">
               <label className="form-label">Search</label>
               <input
                 type="text"
@@ -78,6 +81,22 @@ export const StockItemsList = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+            </div>
+            <div className="col-md-3">
+              <label className="form-label d-block">&nbsp;</label>
+              <div className="form-check">
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  id="lowStockFilter"
+                  checked={showLowStock}
+                  onChange={(e) => setShowLowStock(e.target.checked)}
+                />
+                <label className="form-check-label" htmlFor="lowStockFilter">
+                  <FaExclamationTriangle className="text-warning me-1" />
+                  Low Stock Only
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -94,35 +113,42 @@ export const StockItemsList = () => {
               <table className="table table-hover">
                 <thead className="table-light">
                   <tr>
-                    <th>SKU</th>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Size</th>
-                    <th>UOM</th>
-                    <th>Unit Cost</th>
-                    <th>Full Units</th>
-                    <th>Partial Units</th>
-                    <th>Total Units</th>
-                    <th>Stock Value</th>
-                    <th>Menu Price</th>
-                    <th>GP %</th>
+                    <th rowSpan="2" style={{ verticalAlign: 'middle' }}>SKU</th>
+                    <th rowSpan="2" style={{ verticalAlign: 'middle' }}>Name</th>
+                    <th rowSpan="2" style={{ verticalAlign: 'middle' }}>Category</th>
+                    <th rowSpan="2" style={{ verticalAlign: 'middle' }}>Size</th>
+                    <th rowSpan="2" style={{ verticalAlign: 'middle' }}>UOM</th>
+                    <th rowSpan="2" style={{ verticalAlign: 'middle' }}>Unit Cost</th>
+                    <th colSpan="4" className="text-center bg-info text-white">Previously Closed Period Stock Data</th>
+                    <th rowSpan="2" style={{ verticalAlign: 'middle' }}>Menu Price</th>
+                  </tr>
+                  <tr>
+                    <th className="bg-info-subtle">Full Units</th>
+                    <th className="bg-info-subtle">Partial Units</th>
+                    <th className="bg-info-subtle">Total Servings</th>
+                    <th className="bg-info-subtle">Stock Value</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan="12" className="text-center text-muted py-4">
+                      <td colSpan="11" className="text-center text-muted py-4">
                         No items found. Click on an item to view details.
                       </td>
                     </tr>
                   ) : (
-                    filteredItems.map(item => (
+                    filteredItems.map(item => {
+                      const isLowStock = parseFloat(item.current_full_units || 0) <= 2;
+                      return (
                       <tr 
                         key={item.id} 
-                        style={{ cursor: 'pointer' }}
+                        style={{ cursor: 'pointer', backgroundColor: isLowStock ? '#fff3cd' : 'transparent' }}
                         onClick={() => handleRowClick(item)}
                       >
-                        <td><code className="text-primary">{item.sku}</code></td>
+                        <td>
+                          {isLowStock && <FaExclamationTriangle className="text-warning me-1" />}
+                          <code className="text-primary">{item.sku}</code>
+                        </td>
                         <td><strong>{item.name}</strong></td>
                         <td>
                           <span className="badge bg-secondary">{item.category}</span>
@@ -132,20 +158,43 @@ export const StockItemsList = () => {
                         <td>{item.size || 'N/A'}</td>
                         <td>{item.uom ? parseFloat(item.uom).toFixed(2) : 'N/A'}</td>
                         <td>€{parseFloat(item.unit_cost || 0).toFixed(2)}</td>
-                        <td>
-                          <span className="badge bg-info">
-                            {parseFloat(item.current_full_units || 0).toFixed(0)}
-                          </span>
+                        {/* Display logic for "Doz" items (cases + bottles) */}
+                        {item.size && item.size.includes('Doz') ? (
+                          <>
+                            <td className="bg-info-subtle">
+                              <span className="badge bg-info">
+                                {parseFloat(item.display_full_units || 0).toFixed(0)} cases
+                              </span>
+                            </td>
+                            <td className="bg-info-subtle">
+                              <span className="badge bg-light text-dark">
+                                {parseFloat(item.display_partial_units || 0).toFixed(0)} bottles
+                              </span>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="bg-info-subtle">
+                              <span className="badge bg-info">
+                                {parseFloat(item.current_full_units || 0).toFixed(0)}
+                              </span>
+                            </td>
+                            <td className="bg-info-subtle">
+                              <span className="badge bg-light text-dark">
+                                {parseFloat(item.current_partial_units || 0).toFixed(2)}
+                              </span>
+                            </td>
+                          </>
+                        )}
+                        <td className="bg-info-subtle">
+                          <strong>
+                            {item.size && item.size.includes('Doz') 
+                              ? parseFloat(item.total_stock_in_servings || 0).toFixed(0) + ' bottles'
+                              : parseFloat(item.total_stock_in_servings || 0).toFixed(2)
+                            }
+                          </strong>
                         </td>
-                        <td>
-                          <span className="badge bg-light text-dark">
-                            {parseFloat(item.current_partial_units || 0).toFixed(2)}
-                          </span>
-                        </td>
-                        <td>
-                          <strong>{parseFloat(item.total_units || 0).toFixed(2)}</strong>
-                        </td>
-                        <td>
+                        <td className="bg-info-subtle">
                           <strong className="text-success">
                             €{parseFloat(item.total_stock_value || 0).toFixed(2)}
                           </strong>
@@ -153,20 +202,9 @@ export const StockItemsList = () => {
                         <td>
                           {item.menu_price ? `€${parseFloat(item.menu_price).toFixed(2)}` : 'N/A'}
                         </td>
-                        <td>
-                          {item.gross_profit_percentage ? (
-                            <span className={`badge ${
-                              item.gross_profit_percentage >= 70 ? 'bg-success' :
-                              item.gross_profit_percentage >= 60 ? 'bg-info' :
-                              item.gross_profit_percentage >= 50 ? 'bg-warning' :
-                              'bg-danger'
-                            }`}>
-                              {parseFloat(item.gross_profit_percentage).toFixed(1)}%
-                            </span>
-                          ) : 'N/A'}
-                        </td>
                       </tr>
-                    ))
+                    );
+                    })
                   )}
                 </tbody>
               </table>

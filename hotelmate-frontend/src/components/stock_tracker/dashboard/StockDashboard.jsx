@@ -1,11 +1,10 @@
-// src/pages/stock_tracker/StockDashboard.jsx
 import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Badge, Spinner, Alert, Button } from 'react-bootstrap';
-import { FaBoxes, FaChartLine, FaExclamationTriangle, FaClipboardList, FaExchangeAlt, FaCocktail } from 'react-icons/fa';
-import { useStockItems } from '@/components/stock_tracker/hooks/useStockItems';
+import { FaBoxes, FaChartLine, FaExclamationTriangle, FaClipboardList } from 'react-icons/fa';
+import { useStockItems } from '../hooks/useStockItems';
 
-export default function StockDashboard() {
+export const StockDashboard = () => {
   const { hotel_slug } = useParams();
   const navigate = useNavigate();
   const { items, loading, error } = useStockItems(hotel_slug);
@@ -102,8 +101,24 @@ export default function StockDashboard() {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>
           <FaBoxes className="me-2" />
-          Stock Tracker
+          Stock Overview
         </h2>
+        <div>
+          <Button 
+            variant="primary" 
+            className="me-2"
+            onClick={() => navigate(`/stock_tracker/${hotel_slug}/items`)}
+          >
+            View All Items
+          </Button>
+          <Button 
+            variant="success"
+            onClick={() => navigate(`/stock_tracker/${hotel_slug}/profitability`)}
+          >
+            <FaChartLine className="me-1" />
+            Profitability
+          </Button>
+        </div>
       </div>
 
       {/* Top Summary Cards */}
@@ -227,84 +242,44 @@ export default function StockDashboard() {
         </Card.Header>
         <Card.Body>
           <Row>
-            <Col md={3} className="mb-2">
+            <Col md={3}>
               <Button 
                 variant="outline-primary" 
-                className="w-100"
+                className="w-100 mb-2"
                 onClick={() => navigate(`/stock_tracker/${hotel_slug}/items`)}
               >
                 <FaClipboardList className="me-2" />
                 View All Items
               </Button>
             </Col>
-            <Col md={3} className="mb-2">
+            <Col md={3}>
               <Button 
                 variant="outline-success" 
-                className="w-100"
+                className="w-100 mb-2"
                 onClick={() => navigate(`/stock_tracker/${hotel_slug}/profitability`)}
               >
                 <FaChartLine className="me-2" />
-                Profitability
+                Profitability Analysis
               </Button>
             </Col>
-            <Col md={3} className="mb-2">
+            <Col md={3}>
               <Button 
                 variant="outline-warning" 
-                className="w-100"
+                className="w-100 mb-2"
                 onClick={() => navigate(`/stock_tracker/${hotel_slug}/items?lowStock=true`)}
               >
                 <FaExclamationTriangle className="me-2" />
-                Low Stock
+                Low Stock Items
               </Button>
             </Col>
-            <Col md={3} className="mb-2">
+            <Col md={3}>
               <Button 
                 variant="outline-info" 
-                className="w-100"
+                className="w-100 mb-2"
                 onClick={() => navigate(`/stock_tracker/${hotel_slug}/stocktakes`)}
               >
                 <FaBoxes className="me-2" />
                 Stocktakes
-              </Button>
-            </Col>
-            <Col md={3} className="mb-2">
-              <Button 
-                variant="outline-secondary" 
-                className="w-100"
-                onClick={() => navigate(`/stock_tracker/${hotel_slug}/movements`)}
-              >
-                <FaExchangeAlt className="me-2" />
-                Movements
-              </Button>
-            </Col>
-            <Col md={3} className="mb-2">
-              <Button 
-                variant="outline-dark" 
-                className="w-100"
-                onClick={() => navigate(`/stock_tracker/${hotel_slug}/periods`)}
-              >
-                <FaClipboardList className="me-2" />
-                Period Snapshots
-              </Button>
-            </Col>
-            <Col md={3} className="mb-2">
-              <Button 
-                variant="outline-primary" 
-                className="w-100"
-                onClick={() => navigate(`/stock_tracker/${hotel_slug}/comparison`)}
-              >
-                <FaChartLine className="me-2" />
-                Compare Periods
-              </Button>
-            </Col>
-            <Col md={3} className="mb-2">
-              <Button 
-                variant="outline-info" 
-                className="w-100"
-                onClick={() => navigate(`/stock_tracker/${hotel_slug}/cocktails`)}
-              >
-                <FaCocktail className="me-2" />
-                Cocktails
               </Button>
             </Col>
           </Row>
@@ -312,4 +287,4 @@ export default function StockDashboard() {
       </Card>
     </Container>
   );
-}
+};

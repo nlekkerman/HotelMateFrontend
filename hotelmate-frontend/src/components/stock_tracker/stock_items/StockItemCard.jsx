@@ -3,12 +3,15 @@ import { Badge } from 'react-bootstrap';
 import { FaExclamationTriangle } from 'react-icons/fa';
 
 const StockItemCard = ({ item, onClick }) => {
+  const isLowStock = parseFloat(item.current_full_units || 0) <= 2;
+
   return (
     <div 
       className="p-3 mb-2 bg-white rounded shadow-sm"
       style={{ 
         cursor: 'pointer',
         transition: 'all 0.2s ease',
+        border: isLowStock ? '2px solid #ffc107' : 'none',
       }}
       onClick={() => onClick(item)}
       onMouseEnter={(e) => {
@@ -22,7 +25,12 @@ const StockItemCard = ({ item, onClick }) => {
     >
       {/* Header Row - Name and SKU side by side */}
       <div className="d-flex justify-content-between align-items-center mb-2">
-        <h6 className="mb-0 fw-bold">{item.name}</h6>
+        <div className="d-flex align-items-center gap-2">
+          {isLowStock && (
+            <FaExclamationTriangle className="text-warning" title="Low Stock" />
+          )}
+          <h6 className="mb-0 fw-bold">{item.name}</h6>
+        </div>
         <small className="text-muted ms-2">
           <span className="text-muted">SKU:</span> {item.sku}
         </small>
@@ -50,24 +58,50 @@ const StockItemCard = ({ item, onClick }) => {
 
       {/* Card Body - Stock Levels */}
       <div className="row g-2 small">
-        <div className="col-4">
-          <div className="text-muted">Full Units</div>
-          <div className="fw-bold">
-            {parseFloat(item.current_full_units || 0).toFixed(0)}
-          </div>
-        </div>
-        <div className="col-4">
-          <div className="text-muted">Partial</div>
-          <div className="fw-bold">
-            {parseFloat(item.current_partial_units || 0).toFixed(2)}
-          </div>
-        </div>
-        <div className="col-4">
-          <div className="text-muted">Total Units</div>
-          <div className="fw-bold text-primary">
-            {parseFloat(item.total_units || 0).toFixed(2)}
-          </div>
-        </div>
+        {/* Display logic for "Doz" items (cases + bottles) */}
+        {item.size && item.size.includes('Doz') ? (
+          <>
+            <div className="col-4">
+              <div className="text-muted">Cases</div>
+              <div className="fw-bold">
+                {parseFloat(item.display_full_units || 0).toFixed(0)}
+              </div>
+            </div>
+            <div className="col-4">
+              <div className="text-muted">Loose Bottles</div>
+              <div className="fw-bold">
+                {parseFloat(item.display_partial_units || 0).toFixed(0)}
+              </div>
+            </div>
+            <div className="col-4">
+              <div className="text-muted">Total Bottles</div>
+              <div className="fw-bold text-primary">
+                {parseFloat(item.total_stock_in_servings || 0).toFixed(0)}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="col-4">
+              <div className="text-muted">Full Units</div>
+              <div className="fw-bold">
+                {parseFloat(item.current_full_units || 0).toFixed(0)}
+              </div>
+            </div>
+            <div className="col-4">
+              <div className="text-muted">Partial</div>
+              <div className="fw-bold">
+                {parseFloat(item.current_partial_units || 0).toFixed(2)}
+              </div>
+            </div>
+            <div className="col-4">
+              <div className="text-muted">Total Servings</div>
+              <div className="fw-bold text-primary">
+                {parseFloat(item.total_stock_in_servings || 0).toFixed(2)}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Stock Value and GP */}

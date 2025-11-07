@@ -14,7 +14,14 @@ const StockItemDetail = ({ item, categories, onBack, onUpdate, onDelete }) => {
     unit_cost: item.unit_cost || '',
     current_full_units: item.current_full_units || 0,
     current_partial_units: item.current_partial_units || 0,
+    display_full_units: item.display_full_units || 0,
+    display_partial_units: item.display_partial_units || 0,
     menu_price: item.menu_price || '',
+    menu_price_large: item.menu_price_large || '',
+    bottle_price: item.bottle_price || '',
+    promo_price: item.promo_price || '',
+    available_on_menu: item.available_on_menu || false,
+    available_by_bottle: item.available_by_bottle || false,
   });
 
   const [saving, setSaving] = useState(false);
@@ -209,43 +216,104 @@ const StockItemDetail = ({ item, categories, onBack, onUpdate, onDelete }) => {
       <Card className="mb-3">
         <Card.Header><strong>Stock Levels</strong></Card.Header>
         <Card.Body>
-          <Row className="g-3">
-            <Col md={4}>
-              <Form.Group>
-                <Form.Label>Full Units</Form.Label>
-                <Form.Control
-                  type="number"
-                  step="1"
-                  name="current_full_units"
-                  value={formData.current_full_units}
-                  onChange={handleChange}
-                  disabled={!isEditing}
-                />
-                <Form.Text className="text-muted">Kegs/cases/bottles</Form.Text>
-              </Form.Group>
-            </Col>
-            <Col md={4}>
-              <Form.Group>
-                <Form.Label>Partial Units</Form.Label>
-                <Form.Control
-                  type="number"
-                  step="0.01"
-                  name="current_partial_units"
-                  value={formData.current_partial_units}
-                  onChange={handleChange}
-                  disabled={!isEditing}
-                />
-                <Form.Text className="text-muted">Pints/shots/individual</Form.Text>
-              </Form.Group>
-            </Col>
-            <Col md={4}>
-              <Form.Label>Total Units</Form.Label>
-              <div className="pt-2">
-                <h5 className="text-primary">{parseFloat(item.total_units || 0).toFixed(2)}</h5>
-                <small className="text-muted">Backend calculated</small>
-              </div>
-            </Col>
-          </Row>
+          {/* Display logic for "Doz" items (cases + bottles) */}
+          {item.size && item.size.includes('Doz') ? (
+            <Row className="g-3">
+              <Col md={4}>
+                <Form.Group>
+                  <Form.Label>Cases (Doz)</Form.Label>
+                  <Form.Control
+                    type="number"
+                    step="1"
+                    name="display_full_units"
+                    value={formData.display_full_units || Math.floor(parseFloat(formData.current_partial_units || 0) / 12)}
+                    onChange={(e) => {
+                      const cases = parseFloat(e.target.value) || 0;
+                      const looseBottles = parseFloat(formData.display_partial_units || 0);
+                      const totalBottles = (cases * 12) + looseBottles;
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        current_partial_units: totalBottles,
+                        display_full_units: cases
+                      }));
+                    }}
+                    disabled={!isEditing}
+                  />
+                  <Form.Text className="text-muted">Full cases</Form.Text>
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group>
+                  <Form.Label>Loose Bottles</Form.Label>
+                  <Form.Control
+                    type="number"
+                    step="1"
+                    min="0"
+                    max="11"
+                    name="display_partial_units"
+                    value={formData.display_partial_units || (parseFloat(formData.current_partial_units || 0) % 12)}
+                    onChange={(e) => {
+                      const looseBottles = parseFloat(e.target.value) || 0;
+                      const cases = parseFloat(formData.display_full_units || 0) || Math.floor(parseFloat(formData.current_partial_units || 0) / 12);
+                      const totalBottles = (cases * 12) + looseBottles;
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        current_partial_units: totalBottles,
+                        display_partial_units: looseBottles
+                      }));
+                    }}
+                    disabled={!isEditing}
+                  />
+                  <Form.Text className="text-muted">Individual bottles (0-11)</Form.Text>
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Label>Total Bottles</Form.Label>
+                <div className="pt-2">
+                  <h5 className="text-primary">{parseFloat(item.total_stock_in_servings || 0).toFixed(0)}</h5>
+                  <small className="text-muted">Backend calculated</small>
+                </div>
+              </Col>
+            </Row>
+          ) : (
+            <Row className="g-3">
+              <Col md={4}>
+                <Form.Group>
+                  <Form.Label>Full Units</Form.Label>
+                  <Form.Control
+                    type="number"
+                    step="1"
+                    name="current_full_units"
+                    value={formData.current_full_units}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                  />
+                  <Form.Text className="text-muted">Kegs/cases/bottles</Form.Text>
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group>
+                  <Form.Label>Partial Units</Form.Label>
+                  <Form.Control
+                    type="number"
+                    step="0.01"
+                    name="current_partial_units"
+                    value={formData.current_partial_units}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                  />
+                  <Form.Text className="text-muted">Pints/shots/individual</Form.Text>
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Label>Total Servings</Form.Label>
+                <div className="pt-2">
+                  <h5 className="text-primary">{parseFloat(item.total_stock_in_servings || 0).toFixed(2)}</h5>
+                  <small className="text-muted">Backend calculated</small>
+                </div>
+              </Col>
+            </Row>
+          )}
         </Card.Body>
       </Card>
 
@@ -282,10 +350,74 @@ const StockItemDetail = ({ item, categories, onBack, onUpdate, onDelete }) => {
                 <Form.Text className="text-muted">Price per serving</Form.Text>
               </Form.Group>
             </Col>
+            <Col md={6}>
+              <Form.Group>
+                <Form.Label>Large Serving Price (€)</Form.Label>
+                <Form.Control
+                  type="number"
+                  step="0.01"
+                  name="menu_price_large"
+                  value={formData.menu_price_large}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                />
+                <Form.Text className="text-muted">Price for large serving</Form.Text>
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group>
+                <Form.Label>Bottle Price (€)</Form.Label>
+                <Form.Control
+                  type="number"
+                  step="0.01"
+                  name="bottle_price"
+                  value={formData.bottle_price}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                />
+                <Form.Text className="text-muted">Price for whole bottle</Form.Text>
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group>
+                <Form.Label>Promotional Price (€)</Form.Label>
+                <Form.Control
+                  type="number"
+                  step="0.01"
+                  name="promo_price"
+                  value={formData.promo_price}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                />
+                <Form.Text className="text-muted">Special/promo price</Form.Text>
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Check
+                type="checkbox"
+                name="available_on_menu"
+                label="Available on Menu"
+                checked={formData.available_on_menu}
+                onChange={(e) => setFormData(prev => ({ ...prev, available_on_menu: e.target.checked }))}
+                disabled={!isEditing}
+                className="mt-4"
+              />
+              <Form.Check
+                type="checkbox"
+                name="available_by_bottle"
+                label="Available by Bottle"
+                checked={formData.available_by_bottle}
+                onChange={(e) => setFormData(prev => ({ ...prev, available_by_bottle: e.target.checked }))}
+                disabled={!isEditing}
+              />
+            </Col>
           </Row>
 
           {/* Backend Calculated Values */}
-          <Row className="mt-3">
+          <Row className="mt-4">
+            <Col md={12}>
+              <h6 className="mb-3">Profitability Metrics</h6>
+            </Col>
             <Col md={3}>
               <div className="text-muted">Stock Value</div>
               <h5 className="text-success">€{parseFloat(item.total_stock_value || 0).toFixed(2)}</h5>
@@ -305,14 +437,34 @@ const StockItemDetail = ({ item, categories, onBack, onUpdate, onDelete }) => {
                   {parseFloat(item.gross_profit_percentage || 0).toFixed(1)}%
                 </Badge>
               </h5>
+              <small className="text-muted">Target: 70-85%</small>
             </Col>
             <Col md={2}>
               <div className="text-muted">Markup %</div>
               <h5>{parseFloat(item.markup_percentage || 0).toFixed(1)}%</h5>
+              <small className="text-muted">Target: 300-500%</small>
             </Col>
             <Col md={2}>
               <div className="text-muted">Pour Cost %</div>
-              <h5>{parseFloat(item.pour_cost_percentage || 0).toFixed(1)}%</h5>
+              <h5>
+                <Badge bg={
+                  // Spirits: 15-20%, Beer: 20-25%, Wine: 25-35%
+                  (item.category === 'S' && item.pour_cost_percentage >= 15 && item.pour_cost_percentage <= 20) ? 'success' :
+                  (item.category === 'B' && item.pour_cost_percentage >= 20 && item.pour_cost_percentage <= 25) ? 'success' :
+                  (item.category === 'W' && item.pour_cost_percentage >= 25 && item.pour_cost_percentage <= 35) ? 'success' :
+                  (item.category === 'D' && item.pour_cost_percentage >= 20 && item.pour_cost_percentage <= 25) ? 'success' :
+                  'warning'
+                }>
+                  {parseFloat(item.pour_cost_percentage || 0).toFixed(1)}%
+                </Badge>
+              </h5>
+              <small className="text-muted">
+                {item.category === 'S' && 'Target: 15-20%'}
+                {item.category === 'B' && 'Target: 20-25%'}
+                {item.category === 'D' && 'Target: 20-25%'}
+                {item.category === 'W' && 'Target: 25-35%'}
+                {item.category === 'M' && 'Target: varies'}
+              </small>
             </Col>
           </Row>
         </Card.Body>
