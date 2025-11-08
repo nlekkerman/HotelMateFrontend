@@ -87,13 +87,15 @@ export const useStocktakes = (hotelSlug) => {
     }
   };
 
-  // Get category totals
-  const getCategoryTotals = async (stocktakeId) => {
+  // Get period summary (using new API endpoint)
+  const getCategoryTotals = async (periodId) => {
     try {
-      const res = await api.get(`/stock_tracker/${hotelSlug}/stocktakes/${stocktakeId}/category-totals/`);
+      const res = await api.get(`/stock-tracker/${hotelSlug}/periods/${periodId}/summary/`);
+      // API returns full summary object with categories array and totals
+      // { period_id, period_name, total_items, total_stock_value, total_sales_value, categories: [...] }
       return res.data;
     } catch (err) {
-      console.error("Error fetching category totals:", err);
+      console.error("Error fetching period summary:", err);
       throw err;
     }
   };

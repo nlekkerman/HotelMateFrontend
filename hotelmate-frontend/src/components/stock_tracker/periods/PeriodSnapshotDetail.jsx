@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/services/api";
+import { 
+  getUnitLabels, 
+  formatStockDisplay, 
+  formatCurrency, 
+  getGPBadgeVariant,
+  getCategoryDisplay 
+} from '../utils/stockDisplayUtils';
 
 export const PeriodSnapshotDetail = () => {
   const { hotel_slug, id } = useParams();
@@ -48,8 +55,11 @@ export const PeriodSnapshotDetail = () => {
     return acc;
   }, {});
 
-  // Calculate totals
-  const totalValue = snapshots.reduce((sum, snap) => sum + parseFloat(snap.closing_stock_value || 0), 0);
+  // Calculate totals (use total_value from period if available, otherwise calculate)
+  const totalValue = periodData.total_value 
+    ? parseFloat(periodData.total_value) 
+    : snapshots.reduce((sum, snap) => sum + parseFloat(snap.closing_stock_value || 0), 0);
+  
   const categoryTotals = Object.entries(groupedSnapshots).map(([categoryName, items]) => ({
     categoryName,
     totalValue: items.reduce((sum, item) => sum + parseFloat(item.closing_stock_value || 0), 0),
@@ -94,13 +104,37 @@ export const PeriodSnapshotDetail = () => {
                 </div>
                 <div className="col-6 col-md-2">
                   <strong>Items:</strong><br />
-                  <span className="badge bg-primary">{snapshots.length}</span>
+                  <span className="badge bg-primary">{periodData.total_items || snapshots.length}</span>
                 </div>
                 <div className="col-12 col-md-3">
                   <strong>Total Value:</strong><br />
-                  <span className="text-success fs-5">€{totalValue.toFixed(2)}</span>
+                  <span className="text-success fs-5">{formatCurrency(totalValue)}</span>
                 </div>
               </div>
+              
+              {/* Stocktake Info - if exists */}
+              {periodData.stocktake_id && (
+                <div className="row mt-3 pt-3 border-top">
+                  <div className="col-12">
+                    <div className="d-flex align-items-center">
+                      <i className="bi bi-clipboard-check me-2"></i>
+                      <strong>Stocktake:</strong>
+                      <span className="ms-2">
+                        ID #{periodData.stocktake_id}
+                      </span>
+                      <span className={`badge ms-2 ${periodData.stocktake_status === 'APPROVED' ? 'bg-success' : 'bg-warning'}`}>
+                        {periodData.stocktake_status}
+                      </span>
+                      <button 
+                        className="btn btn-sm btn-outline-primary ms-auto"
+                        onClick={() => navigate(`/stock_tracker/${hotel_slug}/stocktakes/${periodData.stocktake_id}`)}
+                      >
+                        View Stocktake <i className="bi bi-arrow-right ms-1"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -127,13 +161,13 @@ export const PeriodSnapshotDetail = () => {
                     <tr key={idx}>
                       <td><strong>{cat.categoryName}</strong></td>
                       <td className="text-end d-none d-md-table-cell">{cat.itemCount}</td>
-                      <td className="text-end">€{cat.totalValue.toFixed(2)}</td>
+                      <td className="text-end">{formatCurrency(cat.totalValue)}</td>
                     </tr>
                   ))}
                   <tr className="table-light">
                     <td><strong>Total</strong></td>
                     <td className="text-end d-none d-md-table-cell"><strong>{snapshots.length}</strong></td>
-                    <td className="text-end"><strong>€{totalValue.toFixed(2)}</strong></td>
+                    <td className="text-end"><strong>{formatCurrency(totalValue)}</strong></td>
                   </tr>
                 </tbody>
               </table>
@@ -182,37 +216,46 @@ export const PeriodSnapshotDetail = () => {
                     <thead className="table-light">
                       <tr>
                         <th style={{ width: "10%" }}>SKU</th>
-                        <th style={{ width: "25%" }}>Item</th>
-                        <th className="text-center">Full Units</th>
-                        <th className="text-center">Partial</th>
-                        <th className="text-end">Total Qty</th>
+                        <th style={{ width: "20%" }}>Item</th>
+                        <th className="text-center">Opening Stock</th>
+                        <th className="text-center">Closing Stock</th>
                         <th className="text-end">Value €</th>
+                        <th className="text-end">Cost/Serving</th>
                         <th className="text-end">GP %</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {categorySnapshots.map(snap => (
-                        <tr key={snap.id}>
-                          <td><strong>{snap.item.sku}</strong></td>
-                          <td>
-                            <strong>{snap.item.name}</strong>
-                            {snap.item.size && (
-                              <><br /><small className="text-muted">{snap.item.size}</small></>
-                            )}
-                          </td>
-                          <td className="text-center">{parseFloat(snap.closing_full_units || 0).toFixed(2)}</td>
-                          <td className="text-center">{parseFloat(snap.closing_partial_units || 0).toFixed(2)}</td>
-                          <td className="text-end">
-                            <span className="badge bg-info">{parseFloat(snap.total_quantity || 0).toFixed(2)}</span>
-                          </td>
-                          <td className="text-end">
-                            <strong>€{parseFloat(snap.closing_stock_value || 0).toFixed(2)}</strong>
-                          </td>
-                          <td className="text-end">
-                            <span className="badge bg-success">{parseFloat(snap.gp_percentage || 0).toFixed(1)}%</span>
-                          </td>
-                        </tr>
-                      ))}
+                      {categorySnapshots.map(snap => {
+                        const labels = getUnitLabels(snap.item);
+                        return (
+                          <tr key={snap.id}>
+                            <td><strong>{snap.item.sku}</strong></td>
+                            <td>
+                              <strong>{snap.item.name}</strong>
+                              {snap.item.size && (
+                                <><br /><small className="text-muted">{snap.item.size}</small></>
+                              )}
+                            </td>
+                            <td className="text-center">
+                              <small>{formatStockDisplay(snap, 'opening')}</small>
+                            </td>
+                            <td className="text-center">
+                              <small>{formatStockDisplay(snap, 'closing')}</small>
+                            </td>
+                            <td className="text-end">
+                              <strong>{formatCurrency(snap.closing_stock_value)}</strong>
+                            </td>
+                            <td className="text-end">
+                              <small>{formatCurrency(snap.cost_per_serving)}</small>
+                            </td>
+                            <td className="text-end">
+                              <span className={`badge bg-${getGPBadgeVariant(snap.gp_percentage)}`}>
+                                {parseFloat(snap.gp_percentage || 0).toFixed(1)}%
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -227,24 +270,26 @@ export const PeriodSnapshotDetail = () => {
                           <small className="text-muted">SKU: {snap.item.sku}</small>
                           {snap.item.size && <small className="text-muted"> • {snap.item.size}</small>}
                         </div>
-                        <span className="badge bg-success">{parseFloat(snap.gp_percentage || 0).toFixed(1)}%</span>
+                        <span className={`badge bg-${getGPBadgeVariant(snap.gp_percentage)}`}>
+                          {parseFloat(snap.gp_percentage || 0).toFixed(1)}%
+                        </span>
                       </div>
                       <div className="row g-2">
-                        <div className="col-6">
-                          <small className="text-muted">Full Units:</small><br />
-                          <strong>{parseFloat(snap.closing_full_units || 0).toFixed(2)}</strong>
+                        <div className="col-12">
+                          <small className="text-muted">Opening Stock:</small><br />
+                          <strong>{formatStockDisplay(snap, 'opening')}</strong>
                         </div>
-                        <div className="col-6">
-                          <small className="text-muted">Partial:</small><br />
-                          <strong>{parseFloat(snap.closing_partial_units || 0).toFixed(2)}</strong>
-                        </div>
-                        <div className="col-6">
-                          <small className="text-muted">Total Qty:</small><br />
-                          <span className="badge bg-info">{parseFloat(snap.total_quantity || 0).toFixed(2)}</span>
+                        <div className="col-12">
+                          <small className="text-muted">Closing Stock:</small><br />
+                          <strong>{formatStockDisplay(snap, 'closing')}</strong>
                         </div>
                         <div className="col-6">
                           <small className="text-muted">Value:</small><br />
-                          <strong className="text-success">€{parseFloat(snap.closing_stock_value || 0).toFixed(2)}</strong>
+                          <strong className="text-success">{formatCurrency(snap.closing_stock_value)}</strong>
+                        </div>
+                        <div className="col-6">
+                          <small className="text-muted">Cost/Serving:</small><br />
+                          <strong>{formatCurrency(snap.cost_per_serving)}</strong>
                         </div>
                       </div>
                     </div>

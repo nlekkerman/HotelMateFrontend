@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Container, Card, Row, Col, Form, Table, Badge, Spinner, Alert } from 'react-bootstrap';
 import { FaArrowUp, FaArrowDown, FaEquals, FaCalendarAlt } from 'react-icons/fa';
 import api from '../../../services/api';
+import { formatCurrency as formatCurrencyUtil } from '../utils/stockDisplayUtils';
 
 export const PeriodsComparison = () => {
   const { hotel_slug } = useParams();
@@ -77,12 +78,7 @@ export const PeriodsComparison = () => {
     );
   };
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-IE', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencyUtil;
 
   // Filter and group data
   const filteredItems = comparisonData?.items.filter(item => 

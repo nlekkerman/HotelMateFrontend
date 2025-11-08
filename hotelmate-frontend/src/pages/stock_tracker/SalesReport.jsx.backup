@@ -1,0 +1,613 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Container, Row, Col, Card, Badge, Spinner, Alert, Button, Table } from 'react-bootstrap';
+import { FaChartLine, FaArrowLeft, FaCalendarAlt, FaBoxes } from 'react-icons/fa';
+import api from '@/services/api';
+
+export default function SalesReport() {
+  const { hotel_slug } = useParams();
+  const navigate = useNavigate();
+  
+  const [periods, setPeriods] = useState([]);
+  const [selectedPeriod, setSelectedPeriod] = useState(null);
+  const [snapshots, setSnapshots] = useState([]);
+  const [purchases, setPurchases] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Category definitions
+  const categories = {
+    'D': { name: 'Draught Beers', code: 'D' },
+    'B': { name: 'Bottled Beers', code: 'B' },
+    'S': { name: 'Spirits', code: 'S' },
+    'M': { name: 'Minerals/Syrups', code: 'M' },
+    'W': { name: 'Wine', code: 'W' }
+  };
+
+  // Fetch periods on mount
+  useEffect(() => {
+    fetchPeriods();
+  }, [hotel_slug]);
+
+  // Fetch data when period is selected
+  useEffect(() => {
+    if (selectedPeriod) {
+      fetchStockData();
+    }
+  }, [selectedPeriod]);
+
+  const fetchPeriods = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/stock_tracker/${hotel_slug}/periods/`);
+      const allPeriods = response.data.results || response.data;
+      
+      // Filter closed periods
+      const closedPeriods = allPeriods.filter(p => p.is_closed);
+      setPeriods(closedPeriods);
+
+      // Auto-select latest closed period
+      if (closedPeriods.length >= 1) {
+        const latest = closedPeriods[closedPeriods.length - 1];
+        setSelectedPeriod(latest);
+      } else {
+        setError('No closed periods found');
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error('Error fetching periods:', err);
+      setError(err.response?.data?.detail || 'Failed to fetch periods');
+      setLoading(false);
+    }
+  };
+
+  const fetchStockData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch snapshots and purchases for selected period
+      const [snapshotsData, purchasesData] = await Promise.all([
+        api.get(`/stock_tracker/${hotel_slug}/snapshots/?period=${selectedPeriod.id}`),
+        api.get(`/stock_tracker/${hotel_slug}/movements/?period=${selectedPeriod.id}&movement_type=PURCHASE`)
+      ]);
+
+      setSnapshots(snapshotsData.data.results || snapshotsData.data);
+      setPurchases(purchasesData.data.results || purchasesData.data);
+    } catch (err) {
+      console.error('Error fetching stock data:', err);
+      setError(err.response?.data?.detail || 'Failed to fetch stock data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Group snapshots by category (NO CALCULATIONS - just display backend data)
+  const groupedData = () => {
+    if (!snapshots.length) {
+      return null;
+    }
+
+    // Initialize category data
+    const salesByCategory = {};
+    Object.keys(categories).forEach(code => {
+      salesByCategory[code] = {
+        name: categories[code].name,
+        code: code,
+        openingValue: 0,
+        purchaseValue: 0,
+        closingValue: 0,
+        consumptionCost: 0,
+        servingsSold: 0,
+        revenue: 0,
+        items: []
+      };
+    });
+
+    // Calculate opening values (previous period closing)
+    previousSnapshots.forEach(snapshot => {
+      const category = snapshot.item.category;
+      if (salesByCategory[category]) {
+        salesByCategory[category].openingValue += parseFloat(snapshot.closing_stock_value || 0);
+      }
+    });
+
+    // Calculate closing values (current period closing)
+    const currentLookup = {};
+    currentSnapshots.forEach(snapshot => {
+      const category = snapshot.item.category;
+      if (salesByCategory[category]) {
+        salesByCategory[category].closingValue += parseFloat(snapshot.closing_stock_value || 0);
+        currentLookup[snapshot.item.id] = snapshot;
+      }
+    });
+
+    // Calculate purchase values
+    const purchasesByItem = {};
+    purchases.forEach(purchase => {
+      const itemId = purchase.item.id;
+      const category = purchase.item.sku[0]; // Category from SKU prefix
+      
+      if (salesByCategory[category]) {
+        const purchaseValue = parseFloat(purchase.quantity || 0) * parseFloat(purchase.unit_cost || 0);
+        salesByCategory[category].purchaseValue += purchaseValue;
+        
+        // Track purchases per item for consumption calculation
+        if (!purchasesByItem[itemId]) {
+          purchasesByItem[itemId] = 0;
+        }
+        purchasesByItem[itemId] += parseFloat(purchase.quantity || 0);
+      }
+    });
+
+    // Calculate item-level consumption and revenue
+    previousSnapshots.forEach(prevSnapshot => {
+      const currSnapshot = currentLookup[prevSnapshot.item.id];
+      if (!currSnapshot) return;
+
+      const item = prevSnapshot.item;
+      const category = item.category;
+      if (!salesByCategory[category]) return;
+
+      const uom = parseFloat(item.uom || 1);
+      const purchasedServings = purchasesByItem[item.id] || 0;
+
+      // Calculate servings based on category
+      let prevServings, currServings;
+      
+      if (['D', 'B', 'M'].includes(category)) {
+        // Full units converted + partial units
+        prevServings = (parseFloat(prevSnapshot.closing_full_units || 0) * uom) + 
+                       parseFloat(prevSnapshot.closing_partial_units || 0);
+        currServings = (parseFloat(currSnapshot.closing_full_units || 0) * uom) + 
+                       parseFloat(currSnapshot.closing_partial_units || 0);
+      } else {
+        // S, W: Bottles + percentage converted to servings
+        prevServings = (parseFloat(prevSnapshot.closing_full_units || 0) * uom) + 
+                       (parseFloat(prevSnapshot.closing_partial_units || 0) * uom);
+        currServings = (parseFloat(currSnapshot.closing_full_units || 0) * uom) + 
+                       (parseFloat(currSnapshot.closing_partial_units || 0) * uom);
+      }
+
+      // Consumption = Opening + Purchases - Closing
+      const consumption = prevServings + purchasedServings - currServings;
+
+      if (consumption > 0) {
+        salesByCategory[category].servingsSold += consumption;
+
+        // Calculate revenue
+        let itemRevenue = 0;
+        if (category === 'W' && item.bottle_price) {
+          // Wine sold by bottle
+          const bottlesSold = consumption / uom;
+          itemRevenue = bottlesSold * parseFloat(item.bottle_price || 0);
+        } else if (item.menu_price) {
+          // Sold by serving
+          itemRevenue = consumption * parseFloat(item.menu_price || 0);
+        }
+
+        salesByCategory[category].revenue += itemRevenue;
+
+        // Store item details
+        if (itemRevenue > 0) {
+          salesByCategory[category].items.push({
+            sku: item.sku,
+            name: item.name,
+            servingsSold: consumption,
+            revenue: itemRevenue,
+            menuPrice: item.menu_price,
+            category: categories[category].name
+          });
+        }
+      }
+    });
+
+    // Calculate consumption cost for each category
+    Object.keys(salesByCategory).forEach(code => {
+      const cat = salesByCategory[code];
+      cat.consumptionCost = cat.openingValue + cat.purchaseValue - cat.closingValue;
+    });
+
+    // Calculate totals
+    const totals = {
+      openingValue: 0,
+      purchaseValue: 0,
+      closingValue: 0,
+      consumptionCost: 0,
+      servingsSold: 0,
+      revenue: 0
+    };
+
+    Object.values(salesByCategory).forEach(category => {
+      totals.openingValue += category.openingValue;
+      totals.purchaseValue += category.purchaseValue;
+      totals.closingValue += category.closingValue;
+      totals.consumptionCost += category.consumptionCost;
+      totals.servingsSold += category.servingsSold;
+      totals.revenue += category.revenue;
+    });
+
+    const grossProfit = totals.revenue - totals.consumptionCost;
+    const grossProfitPercentage = totals.revenue > 0 ? (grossProfit / totals.revenue) * 100 : 0;
+
+    // Prepare chart data
+    const chartData = Object.values(salesByCategory)
+      .filter(cat => cat.revenue > 0 || cat.consumptionCost > 0)
+      .map(cat => ({
+        category: cat.name,
+        revenue: cat.revenue,
+        cost: cat.consumptionCost
+      }));
+
+    // Get top selling items
+    const allItems = [];
+    Object.values(salesByCategory).forEach(category => {
+      allItems.push(...category.items);
+    });
+    const topItems = allItems
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10);
+
+    return {
+      salesByCategory,
+      totals,
+      grossProfit,
+      grossProfitPercentage,
+      chartData,
+      topItems
+    };
+  }, [currentSnapshots, previousSnapshots, purchases, categories]);
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('en-IE', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 2
+    }).format(value);
+  };
+
+  const handlePeriodChange = (e) => {
+    const periodId = parseInt(e.target.value);
+    const selected = periods.find(p => p.id === periodId);
+    if (selected) {
+      const selectedIndex = periods.findIndex(p => p.id === periodId);
+      if (selectedIndex > 0) {
+        setSelectedPeriod(selected);
+        setPreviousPeriod(periods[selectedIndex - 1]);
+      } else {
+        setError('No previous period available for comparison');
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <Container className="mt-4 text-center">
+        <Spinner animation="border" />
+        <p className="mt-2">Loading sales data...</p>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container className="mt-4">
+        <Alert variant="danger">
+          <Alert.Heading>Error</Alert.Heading>
+          {error}
+        </Alert>
+        <Button variant="secondary" onClick={() => navigate(`/stock_tracker/${hotel_slug}`)}>
+          <FaArrowLeft className="me-2" />
+          Back to Dashboard
+        </Button>
+      </Container>
+    );
+  }
+
+  if (!salesData) {
+    return (
+      <Container className="mt-4">
+        <Alert variant="info">No sales data available</Alert>
+      </Container>
+    );
+  }
+
+  return (
+    <Container fluid className="mt-4">
+      {/* Header */}
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <Button 
+            variant="outline-secondary" 
+            size="sm"
+            className="me-3"
+            onClick={() => navigate(`/stock_tracker/${hotel_slug}`)}
+          >
+            <FaArrowLeft className="me-2" />
+            Back
+          </Button>
+          <h2 className="d-inline">
+            <FaChartLine className="me-2" />
+            Sales Report
+          </h2>
+        </div>
+      </div>
+
+      {/* Period Selector */}
+      <Card className="mb-4">
+        <Card.Body>
+          <Row className="align-items-center">
+            <Col md={4}>
+              <label className="form-label">
+                <FaCalendarAlt className="me-2" />
+                Select Period
+              </label>
+              <select 
+                className="form-select"
+                value={selectedPeriod?.id || ''}
+                onChange={handlePeriodChange}
+              >
+                {periods.map(period => (
+                  <option key={period.id} value={period.id}>
+                    {period.period_name}
+                  </option>
+                ))}
+              </select>
+            </Col>
+            <Col md={8}>
+              <div className="text-muted small">
+                Analyzing sales for <strong>{selectedPeriod?.period_name}</strong> using opening stock from{' '}
+                <strong>{previousPeriod?.period_name}</strong>
+              </div>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
+
+      {/* Mock Data Warning */}
+      <Alert variant="warning" className="mb-4">
+        <Alert.Heading>⚠️ Mock Purchase Data</Alert.Heading>
+        This report contains mock purchase data for demonstration purposes. Replace with actual POS figures for accurate revenue calculations.
+      </Alert>
+
+      {/* Summary Cards */}
+      <Row className="mb-4">
+        <Col md={3}>
+          <Card className="h-100 border-success">
+            <Card.Body>
+              <p className="text-muted mb-1 small">Total Revenue</p>
+              <h3 className="text-success mb-0">{formatCurrency(salesData.totals.revenue)}</h3>
+            </Card.Body>
+          </Card>
+        </Col>
+        
+        <Col md={3}>
+          <Card className="h-100 border-warning">
+            <Card.Body>
+              <p className="text-muted mb-1 small">Cost of Sales</p>
+              <h3 className="text-warning mb-0">{formatCurrency(salesData.totals.consumptionCost)}</h3>
+            </Card.Body>
+          </Card>
+        </Col>
+        
+        <Col md={3}>
+          <Card className="h-100 border-primary">
+            <Card.Body>
+              <p className="text-muted mb-1 small">Gross Profit</p>
+              <h3 className="text-primary mb-0">{formatCurrency(salesData.grossProfit)}</h3>
+              <Badge bg={salesData.grossProfitPercentage >= 60 ? 'success' : 'warning'} className="mt-2">
+                {salesData.grossProfitPercentage.toFixed(1)}%
+              </Badge>
+            </Card.Body>
+          </Card>
+        </Col>
+        
+        <Col md={3}>
+          <Card className="h-100 border-info">
+            <Card.Body>
+              <p className="text-muted mb-1 small">Servings Sold</p>
+              <h3 className="text-info mb-0">
+                {salesData.totals.servingsSold.toLocaleString('en-IE', {maximumFractionDigits: 0})}
+              </h3>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Revenue Chart */}
+      <Card className="mb-4">
+        <Card.Header className="bg-primary text-white">
+          <h5 className="mb-0">Revenue vs Cost by Category</h5>
+        </Card.Header>
+        <Card.Body>
+          <ResponsiveContainer width="100%" height={400}>
+            <BarChart data={salesData.chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="category" />
+              <YAxis />
+              <Tooltip 
+                formatter={(value) => formatCurrency(value)}
+                contentStyle={{ backgroundColor: '#fff', border: '1px solid #ccc' }}
+              />
+              <Legend />
+              <Bar dataKey="revenue" fill="#28a745" name="Revenue" />
+              <Bar dataKey="cost" fill="#ffc107" name="Cost" />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card.Body>
+      </Card>
+
+      {/* Category Breakdown Table */}
+      <Card className="mb-4">
+        <Card.Header className="bg-secondary text-white">
+          <h5 className="mb-0">Category Breakdown</h5>
+        </Card.Header>
+        <Card.Body className="p-0">
+          <Table responsive hover className="mb-0">
+            <thead className="table-light">
+              <tr>
+                <th>Category</th>
+                <th className="text-end">Opening Stock</th>
+                <th className="text-end">Purchases</th>
+                <th className="text-end">Closing Stock</th>
+                <th className="text-end">Consumed</th>
+                <th className="text-end">Revenue</th>
+                <th className="text-end">GP%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.values(salesData.salesByCategory).map(category => {
+                const categoryGP = category.revenue > 0 
+                  ? ((category.revenue - category.consumptionCost) / category.revenue) * 100 
+                  : 0;
+                
+                return (
+                  <tr key={category.code}>
+                    <td>
+                      <strong>{category.name}</strong>
+                      <Badge bg="secondary" className="ms-2">{category.code}</Badge>
+                    </td>
+                    <td className="text-end">{formatCurrency(category.openingValue)}</td>
+                    <td className="text-end">{formatCurrency(category.purchaseValue)}</td>
+                    <td className="text-end">{formatCurrency(category.closingValue)}</td>
+                    <td className="text-end">{formatCurrency(category.consumptionCost)}</td>
+                    <td className="text-end">{formatCurrency(category.revenue)}</td>
+                    <td className="text-end">
+                      <Badge bg={
+                        categoryGP >= 70 ? 'success' :
+                        categoryGP >= 60 ? 'info' :
+                        categoryGP >= 50 ? 'warning' :
+                        'danger'
+                      }>
+                        {categoryGP.toFixed(1)}%
+                      </Badge>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot className="table-secondary">
+              <tr>
+                <th>TOTAL</th>
+                <th className="text-end">{formatCurrency(salesData.totals.openingValue)}</th>
+                <th className="text-end">{formatCurrency(salesData.totals.purchaseValue)}</th>
+                <th className="text-end">{formatCurrency(salesData.totals.closingValue)}</th>
+                <th className="text-end">{formatCurrency(salesData.totals.consumptionCost)}</th>
+                <th className="text-end">{formatCurrency(salesData.totals.revenue)}</th>
+                <th className="text-end">
+                  <Badge bg={salesData.grossProfitPercentage >= 60 ? 'success' : 'warning'}>
+                    {salesData.grossProfitPercentage.toFixed(1)}%
+                  </Badge>
+                </th>
+              </tr>
+            </tfoot>
+          </Table>
+        </Card.Body>
+      </Card>
+
+      {/* Top Selling Items */}
+      {salesData.topItems.length > 0 && (
+        <Card className="mb-4">
+          <Card.Header className="bg-info text-white">
+            <h5 className="mb-0">
+              <FaTrophy className="me-2" />
+              Top 10 Selling Items
+            </h5>
+          </Card.Header>
+          <Card.Body className="p-0">
+            <Table responsive hover className="mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th style={{ width: '50px' }}>Rank</th>
+                  <th>SKU</th>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th className="text-end">Servings Sold</th>
+                  <th className="text-end">Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {salesData.topItems.map((item, index) => (
+                  <tr key={item.sku}>
+                    <td className="text-center">
+                      <Badge bg={index === 0 ? 'warning' : index < 3 ? 'secondary' : 'light'} text={index >= 3 ? 'dark' : 'white'}>
+                        {index + 1}
+                      </Badge>
+                    </td>
+                    <td><code>{item.sku}</code></td>
+                    <td>{item.name}</td>
+                    <td>{item.category}</td>
+                    <td className="text-end">{item.servingsSold.toFixed(0)}</td>
+                    <td className="text-end"><strong>{formatCurrency(item.revenue)}</strong></td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </Card.Body>
+        </Card>
+      )}
+
+      {/* Performance Indicators */}
+      <Card className="mb-4">
+        <Card.Header className="bg-dark text-white">
+          <h5 className="mb-0">Performance Indicators</h5>
+        </Card.Header>
+        <Card.Body>
+          <Row>
+            <Col md={12} className="mb-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 className="mb-1">Overall Gross Profit %</h6>
+                  <small className="text-muted">Target: 50-60%</small>
+                </div>
+                <div>
+                  <h3 className={`mb-0 ${salesData.grossProfitPercentage >= 50 ? 'text-success' : 'text-danger'}`}>
+                    {salesData.grossProfitPercentage.toFixed(1)}%
+                  </h3>
+                </div>
+              </div>
+            </Col>
+
+            {Object.values(salesData.salesByCategory)
+              .filter(cat => cat.revenue > 0)
+              .map(category => {
+                const categoryGP = ((category.revenue - category.consumptionCost) / category.revenue) * 100;
+                const percentOfTotal = (category.revenue / salesData.totals.revenue) * 100;
+                
+                return (
+                  <Col md={6} lg={4} key={category.code} className="mb-3">
+                    <Card className="h-100 border">
+                      <Card.Body>
+                        <h6 className="mb-2">{category.name}</h6>
+                        <div className="small">
+                          <div className="d-flex justify-content-between mb-1">
+                            <span>Revenue:</span>
+                            <strong>{formatCurrency(category.revenue)}</strong>
+                          </div>
+                          <div className="d-flex justify-content-between mb-1">
+                            <span>GP%:</span>
+                            <Badge bg={
+                              categoryGP >= 70 ? 'success' :
+                              categoryGP >= 60 ? 'info' :
+                              categoryGP >= 50 ? 'warning' :
+                              'danger'
+                            }>
+                              {categoryGP.toFixed(1)}%
+                            </Badge>
+                          </div>
+                          <div className="d-flex justify-content-between">
+                            <span>% of Total:</span>
+                            <strong>{percentOfTotal.toFixed(1)}%</strong>
+                          </div>
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                );
+              })}
+          </Row>
+        </Card.Body>
+      </Card>
+    </Container>
+  );
+}

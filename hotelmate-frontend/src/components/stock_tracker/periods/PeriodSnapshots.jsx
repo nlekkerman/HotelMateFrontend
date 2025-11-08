@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/services/api";
+import { formatCurrency } from '../utils/stockDisplayUtils';
 
 export const PeriodSnapshots = () => {
   const { hotel_slug } = useParams();
@@ -19,7 +20,12 @@ export const PeriodSnapshots = () => {
     try {
       setLoading(true);
       const response = await api.get(`/stock_tracker/${hotel_slug}/periods/`);
-      setPeriods(response.data.results || response.data);
+      const periodsData = response.data.results || response.data;
+      
+      // Period serializer now includes stocktake_id and stocktake_status
+      // No need to fetch stocktakes separately - relationship is in the period data!
+      
+      setPeriods(periodsData);
       setError(null);
     } catch (err) {
       console.error('Error fetching periods:', err);
@@ -42,8 +48,18 @@ export const PeriodSnapshots = () => {
     return true;
   });
 
-  const handlePeriodClick = (periodId) => {
-    navigate(`/stock_tracker/${hotel_slug}/periods/${periodId}`);
+  const handlePeriodClick = (period) => {
+    // If period is closed, view the snapshot detail page
+    // If period has a stocktake, go to that stocktake (use stocktake_id, NOT period id!)
+    if (period.is_closed) {
+      navigate(`/stock_tracker/${hotel_slug}/periods/${period.id}`);
+    } else if (period.stocktake_id) {
+      // Navigate to stocktake page using the STOCKTAKE ID from the period
+      navigate(`/stock_tracker/${hotel_slug}/stocktakes/${period.stocktake_id}`);
+    } else {
+      // No stocktake exists yet - should create one or show message
+      navigate(`/stock_tracker/${hotel_slug}/stocktakes`);
+    }
   };
 
   return (
@@ -54,7 +70,7 @@ export const PeriodSnapshots = () => {
           <button className="btn btn-outline-secondary me-2" onClick={() => navigate(`/stock_tracker/${hotel_slug}`)}>
             <i className="bi bi-arrow-left"></i> Back
           </button>
-          <h2 className="d-inline">Period Snapshots</h2>
+          <h2 className="d-inline">Closed Stocktakes</h2>
         </div>
       </div>
 
@@ -94,7 +110,7 @@ export const PeriodSnapshots = () => {
             filteredPeriods.map(period => (
               <div key={period.id} className="col-12 col-md-6 col-lg-4">
                 <div className="card h-100 shadow-sm hover-shadow" style={{ cursor: "pointer" }}
-                     onClick={() => handlePeriodClick(period.id)}>
+                     onClick={() => handlePeriodClick(period)}>
                   <div className="card-header d-flex justify-content-between align-items-center">
                     <strong>{period.period_name}</strong>
                     {getPeriodBadge(period)}
@@ -111,12 +127,29 @@ export const PeriodSnapshots = () => {
                     </div>
                     <div className="mb-2">
                       <small className="text-muted">Items:</small>{" "}
-                      <span className="badge bg-primary">{period.snapshots?.length || 0}</span>
+                      <span className="badge bg-primary">{period.total_items || period.snapshots?.length || 0}</span>
                     </div>
+                    {period.total_value && (
+                      <div className="mb-2">
+                        <small className="text-muted">Total Value:</small>{" "}
+                        <strong className="text-success">{formatCurrency(period.total_value)}</strong>
+                      </div>
+                    )}
+                    {period.stocktake_id && (
+                      <div className="mb-2">
+                        <small className="text-muted">Stocktake:</small>{" "}
+                        <span className="badge bg-info">ID #{period.stocktake_id}</span>
+                        {period.stocktake_status && (
+                          <span className={`badge ms-1 ${period.stocktake_status === 'APPROVED' ? 'bg-success' : 'bg-warning'}`}>
+                            {period.stocktake_status}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="card-footer bg-transparent">
                     <button className="btn btn-sm btn-outline-primary w-100">
-                      View Snapshot <i className="bi bi-arrow-right ms-1"></i>
+                      {period.is_closed ? 'View Snapshot' : period.stocktake_id ? 'Continue Counting' : 'View Period'} <i className="bi bi-arrow-right ms-1"></i>
                     </button>
                   </div>
                 </div>
