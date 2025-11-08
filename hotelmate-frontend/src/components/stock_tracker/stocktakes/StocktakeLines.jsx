@@ -293,12 +293,11 @@ export const StocktakeLines = ({ lines, isLocked, onUpdateLine }) => {
                       Expected Stock<br />
                       <small>(After Movements)</small>
                     </th>
-                    <th rowSpan="2" className="text-end bg-success-subtle">Counted Full</th>
-                    <th rowSpan="2" className="text-end bg-success-subtle">Counted Partial</th>
-                    <th rowSpan="2" className="text-end bg-success-subtle">Sales Qty</th>
+                    <th rowSpan="2" className="text-start bg-success-subtle"><small>Counted<br />Full</small></th>
+                    <th rowSpan="2" className="text-start bg-success-subtle"><small>Counted<br />Partial</small></th>
+                    <th rowSpan="2" className="text-start bg-success-subtle"><small>Sales<br />Qty</small></th>
                     <th rowSpan="2" className="text-center bg-info-subtle">
-                      Expected Sales<br />
-                      <small>(in €)</small>
+                      <small>Expected<br />Sales<br />(€)</small>
                     </th>
                     <th rowSpan="2" className="text-center bg-danger-subtle">
                       Variance<br />
@@ -476,7 +475,7 @@ export const StocktakeLines = ({ lines, isLocked, onUpdateLine }) => {
                         </td>
                         
                         {/* Counted Stock Section */}
-                        <td className="text-end">
+                        <td className="text-start">
                           {(() => {
                             const labels = getCountingLabels(line.category_code, line.item_size);
                             const inputs = getLineInputs(line.id, line);
@@ -490,8 +489,17 @@ export const StocktakeLines = ({ lines, isLocked, onUpdateLine }) => {
                                   size="sm"
                                   value={inputs.fullUnits}
                                   onChange={(e) => updateLineInput(line.id, 'fullUnits', e.target.value)}
+                                  onFocus={(e) => {
+                                    e.target.classList.add('bg-info-subtle');
+                                    if (e.target.value === '0') e.target.value = '';
+                                  }}
+                                  onBlur={(e) => {
+                                    e.target.classList.remove('bg-info-subtle');
+                                    if (e.target.value === '') updateLineInput(line.id, 'fullUnits', '0');
+                                  }}
+                                  className="bg-light"
                                   style={{ width: '80px' }}
-                                  placeholder={labels.fullPlaceholder}
+                                  placeholder="0.00"
                                   isInvalid={!!lineErrors.fullUnits}
                                   disabled={isLocked}
                                 />
@@ -502,7 +510,7 @@ export const StocktakeLines = ({ lines, isLocked, onUpdateLine }) => {
                             );
                           })()}
                         </td>
-                        <td className="text-end">
+                        <td className="text-start">
                           {(() => {
                             const labels = getCountingLabels(line.category_code, line.item_size);
                             const inputs = getLineInputs(line.id, line);
@@ -516,8 +524,17 @@ export const StocktakeLines = ({ lines, isLocked, onUpdateLine }) => {
                                   size="sm"
                                   value={inputs.partialUnits}
                                   onChange={(e) => updateLineInput(line.id, 'partialUnits', e.target.value)}
+                                  onFocus={(e) => {
+                                    e.target.classList.add('bg-info-subtle');
+                                    if (e.target.value === '0' || e.target.value === '0.00') e.target.value = '';
+                                  }}
+                                  onBlur={(e) => {
+                                    e.target.classList.remove('bg-info-subtle');
+                                    if (e.target.value === '') updateLineInput(line.id, 'partialUnits', '0');
+                                  }}
+                                  className="bg-light"
                                   style={{ width: '80px' }}
-                                  placeholder={labels.partialPlaceholder}
+                                  placeholder="0.00"
                                   isInvalid={!!lineErrors.partialUnits}
                                   disabled={isLocked}
                                 />
@@ -528,7 +545,7 @@ export const StocktakeLines = ({ lines, isLocked, onUpdateLine }) => {
                             );
                           })()}
                         </td>
-                        <td className="text-end">
+                        <td className="text-start">
                           {(() => {
                             const inputs = getLineInputs(line.id, line);
                             const lineErrors = validationErrors[line.id] || {};
@@ -541,8 +558,17 @@ export const StocktakeLines = ({ lines, isLocked, onUpdateLine }) => {
                                   size="sm"
                                   value={inputs.salesQuantity}
                                   onChange={(e) => updateLineInput(line.id, 'salesQuantity', e.target.value)}
+                                  onFocus={(e) => {
+                                    e.target.classList.add('bg-info-subtle');
+                                    if (e.target.value === '0' || e.target.value === '0.00') e.target.value = '';
+                                  }}
+                                  onBlur={(e) => {
+                                    e.target.classList.remove('bg-info-subtle');
+                                    if (e.target.value === '') updateLineInput(line.id, 'salesQuantity', '0');
+                                  }}
+                                  className="bg-light"
                                   style={{ width: '80px' }}
-                                  placeholder="0"
+                                  placeholder="0.00"
                                   isInvalid={!!lineErrors.salesQuantity}
                                   disabled={isLocked}
                                 />
