@@ -3,10 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button, Badge, Alert, Spinner, Card, Modal } from "react-bootstrap";
 import { FaArrowLeft, FaLock, FaCheckCircle, FaExclamationTriangle } from "react-icons/fa";
 import { toast } from "react-toastify";
+import Pusher from "pusher-js";
 import api from "@/services/api";
 import { StocktakeLines } from './StocktakeLines';
 import { StocktakeManualValues } from './StocktakeManualValues';
-import { usePusherContext } from '@/staff_chat/context/PusherProvider';
 import { useStocktakeRealtime } from '../hooks/useStocktakeRealtime';
 // import { CategoryTotalsSummary } from './CategoryTotalsSummary'; // TODO: Enable when summary endpoint exists
 
@@ -21,9 +21,48 @@ export const StocktakeDetail = () => {
   const [populating, setPopulating] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [approving, setApproving] = useState(false);
+  const [pusher, setPusher] = useState(null);
+  const [pusherReady, setPusherReady] = useState(false);
 
-  // Get Pusher instance for real-time updates
-  const { pusher, isReady } = usePusherContext();
+  // Initialize Pusher instance for real-time updates
+  useEffect(() => {
+    const pusherKey = import.meta.env.VITE_PUSHER_KEY;
+    const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER || 'mt1';
+
+    if (!pusherKey) {
+      console.warn('⚠️ Pusher key not found in environment variables');
+      return;
+    }
+
+    console.log('🔌 Initializing Pusher for stocktake...');
+    
+    const pusherInstance = new Pusher(pusherKey, {
+      cluster: pusherCluster,
+      encrypted: true
+    });
+
+    pusherInstance.connection.bind('connected', () => {
+      console.log('✅ Pusher connected');
+      setPusherReady(true);
+    });
+
+    pusherInstance.connection.bind('disconnected', () => {
+      console.log('❌ Pusher disconnected');
+      setPusherReady(false);
+    });
+
+    pusherInstance.connection.bind('error', (err) => {
+      console.error('❌ Pusher error:', err);
+    });
+
+    setPusher(pusherInstance);
+
+    // Cleanup on unmount
+    return () => {
+      console.log('🔌 Disconnecting Pusher...');
+      pusherInstance.disconnect();
+    };
+  }, []);
 
   // Pusher callbacks
   const handleLineUpdatedFromPusher = useCallback((updatedLine) => {
@@ -33,10 +72,7 @@ export const StocktakeDetail = () => {
         line.id === updatedLine.id ? updatedLine : line
       )
     );
-    toast.info(`${updatedLine.item_sku} updated by another user`, {
-      autoClose: 2000,
-      position: 'bottom-right'
-    });
+    // Silent update - no toast notification
   }, []);
 
   const handleStocktakeUpdatedFromPusher = useCallback((updatedStocktake) => {
@@ -67,7 +103,7 @@ export const StocktakeDetail = () => {
     handleLineUpdatedFromPusher,
     handleStocktakeUpdatedFromPusher,
     handleStocktakePopulatedFromPusher,
-    isReady && !!id // Only enable when Pusher is ready and we have a stocktake ID
+    pusherReady && !!id // Only enable when Pusher is ready and we have a stocktake ID
   );
 
   useEffect(() => {
@@ -318,7 +354,7 @@ export const StocktakeDetail = () => {
           </Button>
           <h4 className="d-inline">Stocktake #{stocktake.id}</h4>
           {isLocked ? <Badge bg="secondary" className="ms-2"><FaLock /> Approved</Badge> : <Badge bg="warning" className="ms-2">Draft</Badge>}
-          {isReady && (
+          {pusherReady && (
             <Badge bg="success" className="ms-2" title="Real-time updates active">
               <span style={{ fontSize: '0.8em' }}>● Live</span>
             </Badge>
@@ -394,11 +430,28 @@ export const StocktakeDetail = () => {
             onUpdateLine={handleUpdateLine}
             onLineUpdated={(updatedLine) => {
               // Direct line update callback - replaces line in state
-              setLines(prevLines => 
-                prevLines.map(line => 
-                  line.id === updatedLine.id ? updatedLine : line
-                )
-              );
+              console.log('📥 PARENT: onLineUpdated received:', {
+                id: updatedLine.id,
+                sku: updatedLine.item_sku,
+                purchases: updatedLine.purchases,
+                waste: updatedLine.waste,
+                expected_qty: updatedLine.expected_qty,
+                variance_qty: updatedLine.variance_qty
+              });
+              
+              setLines(prevLines => {
+                const newLines = prevLines.map(line => {
+                  if (line.id === updatedLine.id) {
+                    console.log('🔄 PARENT: Replacing line in state:', {
+                      old_purchases: line.purchases,
+                      new_purchases: updatedLine.purchases
+                    });
+                    return updatedLine;
+                  }
+                  return line;
+                });
+                return newLines;
+              });
             }}
             hotelSlug={hotel_slug}
             stocktakeId={id}

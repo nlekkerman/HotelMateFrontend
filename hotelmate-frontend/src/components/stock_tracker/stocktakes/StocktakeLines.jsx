@@ -29,6 +29,7 @@ import { FaCheck } from 'react-icons/fa';
 import { getCountingLabels } from '../utils/categoryHelpers';
 import { CategoryTotalsRow } from './CategoryTotalsRow';
 import { useCategoryTotals } from '../hooks/useCategoryTotals';
+import { MovementsList } from './MovementsList';
 import api from '@/services/api';
 import {
   calculateCountedQty,
@@ -195,6 +196,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
   /**
    * Handles saving counted quantities (cases and bottles).
    * Backend expects: { counted_full_units, counted_partial_units }
+   * NO optimistic updates - update from backend response only
    */
   const handleSaveCount = async (lineId, line) => {
     console.log('💾 SAVE COUNT - Line:', lineId);
@@ -220,17 +222,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     // Apply category-specific rounding
     partialUnits = validatePartialUnits(partialUnits, line.category_code, line.item_size);
 
-    // Store original for rollback
-    const originalLine = { ...line };
-
-    // Optimistic UI update using calculation functions
-    const optimisticLine = optimisticUpdateCount(line, fullUnits, partialUnits);
-
-    // Apply optimistic update through parent
-    if (typeof onUpdateLine === 'function') {
-      onUpdateLine(optimisticLine);
-    }
-
     try {
       const payload = {
         counted_full_units: fullUnits,
@@ -252,9 +243,9 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         variance_qty: response.data?.variance_qty
       });
 
-      // Update with authoritative backend data
-      if (response.data && typeof onUpdateLine === 'function') {
-        onUpdateLine(response.data);
+      // Update with authoritative backend data (no optimistic update)
+      if (response.data && typeof onLineUpdated === 'function') {
+        onLineUpdated(response.data);
       }
       
       // Refetch totals to update category summaries
@@ -262,11 +253,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     } catch (err) {
       console.error('❌ Save count failed:', err);
       console.error('Error details:', err.response?.data);
-      
-      // Revert optimistic update
-      if (typeof onUpdateLine === 'function') {
-        onUpdateLine(originalLine);
-      }
       
       setValidationErrors({
         [lineId]: { general: `Failed to save count: ${err.response?.data?.message || err.message}` }
@@ -316,15 +302,22 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
       // Backend returns updated line in response.data.line
       const updatedLine = response.data.line || response.data;
       
-      console.log('✅ Purchases saved - Updating UI from backend:', {
+      console.log('✅ Purchases saved - Full backend response:', response.data);
+      console.log('✅ Updated line from backend:', {
+        id: updatedLine?.id,
         purchases: updatedLine?.purchases,
         expected_qty: updatedLine?.expected_qty,
-        variance_qty: updatedLine?.variance_qty
+        variance_qty: updatedLine?.variance_qty,
+        all_line_keys: Object.keys(updatedLine || {}),
+        full_line: updatedLine
       });
       
       // Update UI silently with backend data (no optimistic update)
       if (updatedLine && typeof onLineUpdated === 'function') {
+        console.log('🔄 Calling onLineUpdated with updated line');
         onLineUpdated(updatedLine);
+      } else {
+        console.warn('⚠️ No updatedLine or onLineUpdated callback missing');
       }
 
       // Clear input after successful save
@@ -433,30 +426,13 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     // Get input configuration for this category
     const inputConfig = getInputConfig({ category_code: line.category_code, item_size: line.item_size });
 
-    // Calculate variance preview using proper calculation functions
-    const countedFull = parseFloat(inputs.fullUnits) || 0;
-    const countedPartial = parseFloat(inputs.partialUnits) || 0;
+    // NO OPTIMISTIC UPDATES - Only use backend values for variance display
+    // Use the saved values from backend, not input values
+    const varianceQty = parseFloat(line.variance_qty) || 0;
+    const varianceValue = parseFloat(line.variance_value) || 0;
     
-    // Create a temporary line object for calculations
-    const tempLine = {
-      ...line,
-      counted_full_units: countedFull,
-      counted_partial_units: countedPartial
-    };
-    
-    // Use calculation functions for accurate preview
-    const countedQty = calculateCountedQty(tempLine);
-    const expectedQty = calculateExpectedQty(line);
-    const varianceQty = countedQty - expectedQty;
-    
-    // Convert to display units
-    const countedDisplay = convertToDisplayUnits(countedQty, line);
-    const expectedDisplay = convertToDisplayUnits(expectedQty, line);
+    // Convert to display units for saved variance
     const varianceDisplay = convertToDisplayUnits(Math.abs(varianceQty), line);
-    
-    // Calculate variance value
-    const cost = parseFloat(line.valuation_cost) || 0;
-    const varianceValue = varianceQty * cost;
     
     const isShortage = varianceValue < 0;
     const isSurplus = varianceValue > 0;
@@ -467,33 +443,33 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
 
     return (
       <tr key={line.id}>
-        <td>
+        <td className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>
           <code className="small">{line.item_sku}</code>
         </td>
-        <td>
+        <td style={{ borderRight: '1px solid #dee2e6' }}>
           <strong>{line.item_name}</strong>
         </td>
-        <td>
+        <td className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>
           <Badge bg="secondary" className="small">
             {line.category_name || 'Uncategorized'}
           </Badge>
         </td>
-        <td>
+        <td className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>
           {line.item_size ? (
             <small className="text-muted">{line.item_size}</small>
           ) : (
             <small className="text-muted">-</small>
           )}
         </td>
-        <td className="text-center">
+        <td className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>
           <Badge bg="light" text="dark" className="small">
             {uom.toFixed(0)}
           </Badge>
         </td>
 
         {/* Opening */}
-        <td className="text-end bg-info-subtle">
-          <div className="d-flex flex-column align-items-end gap-1">
+        <td className="text-center bg-info-subtle" style={{ borderRight: '1px solid #dee2e6' }}>
+          <div className="d-flex flex-column align-items-center gap-1">
             <div>
               <strong className="text-primary">{line.opening_display_full_units || '0'}</strong>
               <small className="text-muted ms-1">{labels.unit}</small>
@@ -509,22 +485,39 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         </td>
 
         {/* Purchases */}
-        <td className="text-center bg-success-subtle" style={{ verticalAlign: 'middle' }}>
-          <div className="d-flex flex-column align-items-center gap-1" style={{ width: '100%' }}>
-            <div className="d-flex align-items-center justify-content-center w-100 mb-1">
-              <div
-                className={`fw-bold ${
-                  cumulativePurchases > 0 ? 'text-success' : 'text-muted'
-                }`}
-                style={{ fontSize: '0.95rem', minWidth: 50, textAlign: 'center' }}
-              >
-                {cumulativePurchases.toFixed(2)}
-              </div>
-            </div>
-            <div
-              className="border rounded bg-light p-2 w-100 d-flex flex-column align-items-center"
-              style={{ maxWidth: 160 }}
+        <td className="text-center bg-white" style={{ verticalAlign: 'middle', borderRight: '1px solid #dee2e6' }}>
+          <div className="d-flex flex-column align-items-center gap-2 p-2" style={{ width: '100%' }}>
+            <div 
+              className="border rounded bg-white shadow-sm p-2 w-100 d-flex flex-column align-items-center gap-2"
+              style={{ maxWidth: 180 }}
             >
+              <div className="d-flex align-items-center justify-content-center w-100">
+                <div
+                  className={`fw-bold ${
+                    cumulativePurchases > 0 ? 'text-success' : 'text-muted'
+                  }`}
+                  style={{ fontSize: '0.95rem', minWidth: 50, textAlign: 'center' }}
+                  title="Total purchases"
+                >
+                  {cumulativePurchases.toFixed(2)}
+                </div>
+              </div>
+              
+              {/* Movement History Button */}
+              <div className="mb-1" style={{ width: '100%' }}>
+                <MovementsList
+                  lineId={line.id}
+                  hotelSlug={hotelSlug}
+                  isLocked={isLocked}
+                  onMovementDeleted={onLineUpdated}
+                  itemName={line.item_name}
+                  itemSku={line.item_sku}
+                />
+              </div>
+              
+              <small className="text-muted" style={{ fontSize: '0.7rem' }}>
+                Add Purchase ({labels.servingUnit})
+              </small>
               <Form.Control
                 type="number"
                 step="0.01"
@@ -541,7 +534,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                 }}
                 className="bg-light text-center mb-2"
                 style={{ width: '100%' }}
-                placeholder="Add qty"
+                placeholder="0.00"
                 isInvalid={!!lineErrors.purchasesQty}
                 disabled={isLocked}
               />
@@ -563,58 +556,77 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         </td>
 
         {/* Waste */}
-        <td className="text-center" style={{ verticalAlign: 'middle' }}>
-          <div className="d-flex flex-column align-items-center gap-1" style={{ width: '100%' }}>
-            <div className="text-center">
-              <div
-                className={`fw-bold ${cumulativeWaste > 0 ? 'text-danger' : 'text-muted'}`}
-                style={{ fontSize: '0.9rem' }}
-              >
-                {cumulativeWaste.toFixed(2)}
-              </div>
-            </div>
-            <small className="text-muted" style={{ fontSize: '0.7rem' }}>
-              Add Waste ({labels.servingUnit})
-            </small>
-            <Form.Control
-              type="number"
-              step="0.01"
-              size="sm"
-              value={inputs.wasteQuantity}
-              onChange={(e) => updateLineInput(line.id, 'wasteQuantity', e.target.value)}
-              onFocus={(e) => {
-                e.target.classList.add('bg-info-subtle');
-                if (e.target.value === '0' || e.target.value === '0.00') e.target.value = '';
-              }}
-              onBlur={(e) => {
-                e.target.classList.remove('bg-info-subtle');
-                if (e.target.value === '') updateLineInput(line.id, 'wasteQuantity', '0');
-              }}
-              className="bg-light text-center"
-              style={{ width: 100 }}
-              placeholder="0.00"
-              isInvalid={!!lineErrors.wasteQuantity}
-              disabled={isLocked}
-            />
-            {lineErrors.wasteQuantity && (
-              <small className="text-danger d-block">{lineErrors.wasteQuantity}</small>
-            )}
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => handleSaveWaste(line.id, line)}
-              title="Save Waste"
-              style={{ fontSize: '0.7rem', padding: '2px 8px' }}
-              disabled={isLocked}
+        <td className="text-center" style={{ verticalAlign: 'middle', borderRight: '1px solid #dee2e6' }}>
+          <div className="d-flex flex-column align-items-center gap-2 p-2" style={{ width: '100%' }}>
+            <div 
+              className="border rounded bg-white shadow-sm p-2 w-100 d-flex flex-column align-items-center gap-2"
+              style={{ maxWidth: 180 }}
             >
-              💾 Save
-            </Button>
+              <div className="text-center">
+                <div
+                  className={`fw-bold ${cumulativeWaste > 0 ? 'text-danger' : 'text-muted'}`}
+                  style={{ fontSize: '0.95rem' }}
+                  title="Total waste"
+                >
+                  {cumulativeWaste.toFixed(2)}
+                </div>
+              </div>
+              
+              {/* Movement History Button */}
+              <div className="mb-1" style={{ width: '100%' }}>
+                <MovementsList
+                  lineId={line.id}
+                  hotelSlug={hotelSlug}
+                  isLocked={isLocked}
+                  onMovementDeleted={onLineUpdated}
+                  itemName={line.item_name}
+                  itemSku={line.item_sku}
+                />
+              </div>
+              
+              <small className="text-muted" style={{ fontSize: '0.7rem' }}>
+                Add Waste ({labels.servingUnit})
+              </small>
+              <Form.Control
+                type="number"
+                step="0.01"
+                size="sm"
+                value={inputs.wasteQuantity}
+                onChange={(e) => updateLineInput(line.id, 'wasteQuantity', e.target.value)}
+                onFocus={(e) => {
+                  e.target.classList.add('bg-info-subtle');
+                  if (e.target.value === '0' || e.target.value === '0.00') e.target.value = '';
+                }}
+                onBlur={(e) => {
+                  e.target.classList.remove('bg-info-subtle');
+                  if (e.target.value === '') updateLineInput(line.id, 'wasteQuantity', '0');
+                }}
+                className="bg-light text-center mb-2"
+                style={{ width: '100%' }}
+                placeholder="0.00"
+                isInvalid={!!lineErrors.wasteQuantity}
+                disabled={isLocked}
+              />
+              {lineErrors.wasteQuantity && (
+                <small className="text-danger d-block mb-1">{lineErrors.wasteQuantity}</small>
+              )}
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => handleSaveWaste(line.id, line)}
+                title="Save Waste"
+                style={{ fontSize: '0.8rem', padding: '2px 10px', width: '100%' }}
+                disabled={isLocked}
+              >
+                💾 Save
+              </Button>
+            </div>
           </div>
         </td>
 
         {/* Expected */}
-        <td className="text-end bg-warning-subtle">
-          <div className="d-flex flex-column align-items-end gap-1">
+        <td className="text-center bg-warning-subtle" style={{ borderRight: '1px solid #dee2e6' }}>
+          <div className="d-flex flex-column align-items-center gap-1">
             <div>
               <strong className="text-warning">{line.expected_display_full_units || '0'}</strong>
               <small className="text-muted ms-1">{labels.unit}</small>
@@ -628,81 +640,113 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         </td>
 
         {/* Cases (full units) */}
-        <td className="text-center">
-          <div className="d-flex flex-row align-items-center gap-1">
-            <Form.Control
-              type="number"
-              step="1"
-              min="0"
-              size="sm"
-              value={inputs.fullUnits}
-              onChange={(e) => updateLineInput(line.id, 'fullUnits', e.target.value)}
-              onFocus={(e) => {
-                e.target.classList.add('bg-info-subtle');
-                if (e.target.value === '0') e.target.value = '';
-              }}
-              onBlur={(e) => {
-                e.target.classList.remove('bg-info-subtle');
-                if (e.target.value === '') updateLineInput(line.id, 'fullUnits', '0');
-              }}
-              className="bg-light text-center"
-              style={{ width: 60 }}
-              placeholder={labels.unit}
-              isInvalid={!!lineErrors.fullUnits}
-              disabled={isLocked}
-            />
-            <small className="text-muted ms-1">{labels.unit}</small>
+        <td className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>
+          <div className="d-flex flex-column align-items-center gap-2 p-2" style={{ width: '100%' }}>
+            <div 
+              className="border rounded bg-white shadow-sm p-2 w-100 d-flex flex-column align-items-center gap-2"
+              style={{ maxWidth: 120 }}
+            >
+              <small className="text-muted" style={{ fontSize: '0.75rem' }}>Counted {labels.unit}</small>
+              <Form.Control
+                type="number"
+                step="1"
+                min="0"
+                size="sm"
+                value={inputs.fullUnits}
+                onChange={(e) => {
+                  // Only allow integers for cases - block decimal input
+                  const value = e.target.value;
+                  if (value === '' || /^\d+$/.test(value)) {
+                    updateLineInput(line.id, 'fullUnits', value);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  // Prevent decimal point, comma, and minus sign
+                  if (e.key === '.' || e.key === ',' || e.key === '-' || e.key === 'e' || e.key === 'E') {
+                    e.preventDefault();
+                  }
+                }}
+                onFocus={(e) => {
+                  e.target.classList.add('bg-info-subtle');
+                  // Clear the input field visually - store original value
+                  e.target.dataset.originalValue = e.target.value;
+                  e.target.value = '';
+                }}
+                onBlur={(e) => {
+                  e.target.classList.remove('bg-info-subtle');
+                  // If field is empty (user didn't type anything), restore original value
+                  if (e.target.value === '') {
+                    const originalValue = e.target.dataset.originalValue || '0';
+                    updateLineInput(line.id, 'fullUnits', originalValue);
+                  }
+                }}
+                className="bg-light text-center"
+                style={{ width: '100%' }}
+                placeholder={labels.unit}
+                isInvalid={!!lineErrors.fullUnits}
+                disabled={isLocked}
+              />
+              {lineErrors.fullUnits && (
+                <small className="text-danger d-block">{lineErrors.fullUnits}</small>
+              )}
+            </div>
           </div>
-          {lineErrors.fullUnits && (
-            <small className="text-danger d-block">{lineErrors.fullUnits}</small>
-          )}
         </td>
 
         {/* Bottles (partial units) - category-specific formatting */}
-        <td className="text-center">
-          <div className="d-flex flex-row align-items-center gap-1">
-            <Form.Control
-              type="number"
-              step={inputConfig.step}
-              min="0"
-              size="sm"
-              value={inputs.partialUnits}
-              onChange={(e) => updateLineInput(line.id, 'partialUnits', e.target.value)}
-              onFocus={(e) => {
-                e.target.classList.add('bg-info-subtle');
-                if (e.target.value === '0' || e.target.value === '0.00') e.target.value = '';
-              }}
-              onBlur={(e) => {
-                e.target.classList.remove('bg-info-subtle');
-                // Format based on category when user leaves field
-                if (e.target.value && e.target.value !== '') {
-                  const formatted = formatUserInput(e.target.value, line.category_code, line.item_size);
-                  updateLineInput(line.id, 'partialUnits', formatted);
-                } else {
-                  updateLineInput(line.id, 'partialUnits', '0');
-                }
-              }}
-              className="bg-light text-center"
-              style={{ width: 60 }}
-              placeholder={labels.servingUnit}
-              isInvalid={!!lineErrors.partialUnits}
-              disabled={isLocked}
-            />
-            <small className="text-muted ms-1">{labels.servingUnit}</small>
+        <td className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>
+          <div className="d-flex flex-column align-items-center gap-2 p-2" style={{ width: '100%' }}>
+            <div 
+              className="border rounded bg-white shadow-sm p-2 w-100 d-flex flex-column align-items-center gap-2"
+              style={{ maxWidth: 120 }}
+            >
+              <small className="text-muted" style={{ fontSize: '0.75rem' }}>Counted {labels.servingUnit}</small>
+              <Form.Control
+                type="number"
+                step={inputConfig.step}
+                min="0"
+                size="sm"
+                value={inputs.partialUnits}
+                onChange={(e) => updateLineInput(line.id, 'partialUnits', e.target.value)}
+                onFocus={(e) => {
+                  e.target.classList.add('bg-info-subtle');
+                  // Clear the input field visually - store original value
+                  e.target.dataset.originalValue = e.target.value;
+                  e.target.value = '';
+                }}
+                onBlur={(e) => {
+                  e.target.classList.remove('bg-info-subtle');
+                  // If field is empty (user didn't type anything), restore original value
+                  if (e.target.value === '') {
+                    const originalValue = e.target.dataset.originalValue || '0';
+                    updateLineInput(line.id, 'partialUnits', originalValue);
+                  } else {
+                    // Format based on category when user leaves field
+                    const formatted = formatUserInput(e.target.value, line.category_code, line.item_size);
+                    updateLineInput(line.id, 'partialUnits', formatted);
+                  }
+                }}
+                className="bg-light text-center"
+                style={{ width: '100%' }}
+                placeholder={labels.servingUnit}
+                isInvalid={!!lineErrors.partialUnits}
+                disabled={isLocked}
+              />
+              {lineErrors.partialUnits && (
+                <small className="text-danger d-block">{lineErrors.partialUnits}</small>
+              )}
+            </div>
           </div>
-          {lineErrors.partialUnits && (
-            <small className="text-danger d-block">{lineErrors.partialUnits}</small>
-          )}
         </td>
 
-        {/* Variance (optimistic preview) */}
-        <td className="text-end">
-          {inputs.fullUnits === '' && inputs.partialUnits === '' ? (
-            <div className="d-flex flex-column align-items-end gap-1 p-2">
+        {/* Variance - Backend values only, NO optimistic preview */}
+        <td className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>
+          {!line.counted_full_units && !line.counted_partial_units ? (
+            <div className="d-flex flex-column align-items-center gap-1 p-2">
               <span className="text-muted">-</span>
             </div>
           ) : (
-            <div className={`d-flex flex-column align-items-end gap-1 p-2 rounded ${bgClass}`}>
+            <div className={`d-flex flex-column align-items-center gap-1 p-2 rounded ${bgClass}`}>
               <div>
                 <strong className={`${textClass} ${strongClass}`}>
                   {isShortage ? '-' : '+'}
@@ -766,18 +810,18 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                 <Table hover size="sm" className="mb-0 align-middle">
                   <thead>
                     <tr>
-                      <th>SKU</th>
-                      <th>Name</th>
-                      <th>Cat</th>
-                      <th>Size</th>
-                      <th className="text-center">UOM</th>
-                      <th className="text-end">Opening</th>
-                      <th className="text-center">Purchases</th>
-                      <th className="text-center">Waste</th>
-                      <th className="text-end">Expected</th>
-                      <th className="text-center">Cases</th>
-                      <th className="text-center">Bottles</th>
-                      <th className="text-end">Variance</th>
+                      <th style={{ borderRight: '1px solid #dee2e6' }}>SKU</th>
+                      <th style={{ borderRight: '1px solid #dee2e6' }}>Name</th>
+                      <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Cat</th>
+                      <th style={{ borderRight: '1px solid #dee2e6' }}>Size</th>
+                      <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>UOM</th>
+                      <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Opening</th>
+                      <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Purchases</th>
+                      <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Waste</th>
+                      <th className="text-end" style={{ borderRight: '1px solid #dee2e6' }}>Expected</th>
+                      <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Counted Cases</th>
+                      <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Counted Bottles</th>
+                      <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Variance</th>
                       {!isLocked && <th>Actions</th>}
                     </tr>
                   </thead>
