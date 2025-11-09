@@ -1,10 +1,13 @@
-﻿import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button, Badge, Alert, Spinner, Card, Modal } from "react-bootstrap";
 import { FaArrowLeft, FaLock, FaCheckCircle, FaExclamationTriangle } from "react-icons/fa";
+import { toast } from "react-toastify";
 import api from "@/services/api";
 import { StocktakeLines } from './StocktakeLines';
 import { StocktakeManualValues } from './StocktakeManualValues';
+import { usePusherContext } from '@/staff_chat/context/PusherProvider';
+import { useStocktakeRealtime } from '../hooks/useStocktakeRealtime';
 // import { CategoryTotalsSummary } from './CategoryTotalsSummary'; // TODO: Enable when summary endpoint exists
 
 export const StocktakeDetail = () => {
@@ -18,6 +21,54 @@ export const StocktakeDetail = () => {
   const [populating, setPopulating] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [approving, setApproving] = useState(false);
+
+  // Get Pusher instance for real-time updates
+  const { pusher, isReady } = usePusherContext();
+
+  // Pusher callbacks
+  const handleLineUpdatedFromPusher = useCallback((updatedLine) => {
+    console.log('📡 Real-time line update received:', updatedLine.item_sku);
+    setLines(prevLines =>
+      prevLines.map(line =>
+        line.id === updatedLine.id ? updatedLine : line
+      )
+    );
+    toast.info(`${updatedLine.item_sku} updated by another user`, {
+      autoClose: 2000,
+      position: 'bottom-right'
+    });
+  }, []);
+
+  const handleStocktakeUpdatedFromPusher = useCallback((updatedStocktake) => {
+    console.log('📡 Real-time stocktake status change:', updatedStocktake.status);
+    setStocktake(updatedStocktake);
+    
+    if (updatedStocktake.status === 'APPROVED') {
+      toast.success('Stocktake has been approved and locked', {
+        autoClose: 5000
+      });
+    }
+  }, []);
+
+  const handleStocktakePopulatedFromPusher = useCallback((data) => {
+    console.log('📡 Real-time stocktake populated:', data.lines_created);
+    toast.success(`${data.lines_created} items loaded into stocktake`, {
+      autoClose: 3000
+    });
+    // Refresh the full stocktake to get all lines
+    fetchStocktake();
+  }, []);
+
+  // Subscribe to real-time updates
+  useStocktakeRealtime(
+    pusher,
+    hotel_slug,
+    id ? parseInt(id) : null,
+    handleLineUpdatedFromPusher,
+    handleStocktakeUpdatedFromPusher,
+    handleStocktakePopulatedFromPusher,
+    isReady && !!id // Only enable when Pusher is ready and we have a stocktake ID
+  );
 
   useEffect(() => {
     if (id) fetchStocktake();
@@ -267,6 +318,11 @@ export const StocktakeDetail = () => {
           </Button>
           <h4 className="d-inline">Stocktake #{stocktake.id}</h4>
           {isLocked ? <Badge bg="secondary" className="ms-2"><FaLock /> Approved</Badge> : <Badge bg="warning" className="ms-2">Draft</Badge>}
+          {isReady && (
+            <Badge bg="success" className="ms-2" title="Real-time updates active">
+              <span style={{ fontSize: '0.8em' }}>● Live</span>
+            </Badge>
+          )}
         </div>
         <div>
           {!isLocked && lines.length === 0 && (
@@ -336,6 +392,14 @@ export const StocktakeDetail = () => {
             lines={lines} 
             isLocked={isLocked} 
             onUpdateLine={handleUpdateLine}
+            onLineUpdated={(updatedLine) => {
+              // Direct line update callback - replaces line in state
+              setLines(prevLines => 
+                prevLines.map(line => 
+                  line.id === updatedLine.id ? updatedLine : line
+                )
+              );
+            }}
             hotelSlug={hotel_slug}
             stocktakeId={id}
           />

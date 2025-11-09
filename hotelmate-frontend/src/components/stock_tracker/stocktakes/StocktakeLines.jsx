@@ -39,12 +39,10 @@ import {
   validatePartialUnits,
   formatUserInput,
   getInputConfig,
-  optimisticUpdateMovement,
-  optimisticUpdateCount,
-  testCalculations
+  optimisticUpdateCount
 } from '../utils/stocktakeCalculations';
 
-export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, hotelSlug, stocktakeId }) => {
+export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdated, hotelSlug, stocktakeId }) => {
   const [lineInputs, setLineInputs] = useState({});
   const [validationErrors, setValidationErrors] = useState({});
   const [showPurchases, setShowPurchases] = useState({});
@@ -247,13 +245,19 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, hotelSlug, 
         payload
       );
 
+      console.log('✅ Count saved - Updating UI from backend:', {
+        counted_full_units: response.data?.counted_full_units,
+        counted_partial_units: response.data?.counted_partial_units,
+        counted_qty: response.data?.counted_qty,
+        variance_qty: response.data?.variance_qty
+      });
+
+      // Update with authoritative backend data
       if (response.data && typeof onUpdateLine === 'function') {
         onUpdateLine(response.data);
-        
-        // Test calculations match
-        testCalculations(optimisticLine, response.data);
       }
       
+      // Refetch totals to update category summaries
       refetchTotals?.();
     } catch (err) {
       console.error('❌ Save count failed:', err);
@@ -294,15 +298,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, hotelSlug, 
       return rest;
     });
 
-    const originalLine = { ...line };
-
-    // Optimistic UI update using calculation functions
-    const optimisticLine = optimisticUpdateMovement(line, 'PURCHASE', purchasesQty);
-
-    if (typeof onUpdateLine === 'function') {
-      onUpdateLine(optimisticLine);
-    }
-
     try {
       const payload = {
         movement_type: 'PURCHASE',
@@ -312,20 +307,24 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, hotelSlug, 
       
       console.log('🧮 Purchases Payload:', payload);
 
-      // ✅ CORRECT ENDPOINT: /api/stock_tracker/{hotel_identifier}/stocktake-lines/{id}/add_movement/
+      // ✅ CORRECT ENDPOINT: /api/stock_tracker/{hotel_identifier}/stocktake-lines/{id}/add-movement/
       const response = await api.post(
-        `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/add_movement/`,
+        `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/add-movement/`,
         payload
       );
 
       // Backend returns updated line in response.data.line
       const updatedLine = response.data.line || response.data;
       
-      if (updatedLine && typeof onUpdateLine === 'function') {
-        onUpdateLine(updatedLine);
-        
-        // Test calculations match
-        testCalculations(optimisticLine, updatedLine);
+      console.log('✅ Purchases saved - Updating UI from backend:', {
+        purchases: updatedLine?.purchases,
+        expected_qty: updatedLine?.expected_qty,
+        variance_qty: updatedLine?.variance_qty
+      });
+      
+      // Update UI silently with backend data (no optimistic update)
+      if (updatedLine && typeof onLineUpdated === 'function') {
+        onLineUpdated(updatedLine);
       }
 
       // Clear input after successful save
@@ -337,14 +336,11 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, hotelSlug, 
         },
       }));
       
+      // Refetch totals to update category summaries
       refetchTotals?.();
     } catch (err) {
       console.error('❌ Save purchases failed:', err);
       console.error('Error details:', err.response?.data);
-      
-      if (typeof onUpdateLine === 'function') {
-        onUpdateLine(originalLine);
-      }
       
       setValidationErrors({
         [lineId]: { purchasesQty: `Failed to save: ${err.response?.data?.message || err.message}` }
@@ -376,15 +372,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, hotelSlug, 
       return rest;
     });
 
-    const originalLine = { ...line };
-
-    // Optimistic UI update using calculation functions
-    const optimisticLine = optimisticUpdateMovement(line, 'WASTE', wasteQty);
-
-    if (typeof onUpdateLine === 'function') {
-      onUpdateLine(optimisticLine);
-    }
-
     try {
       const payload = {
         movement_type: 'WASTE',
@@ -394,20 +381,24 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, hotelSlug, 
       
       console.log('🧮 Waste Payload:', payload);
 
-      // ✅ CORRECT ENDPOINT: /api/stock_tracker/{hotel_identifier}/stocktake-lines/{id}/add_movement/
+      // ✅ CORRECT ENDPOINT: /api/stock_tracker/{hotel_identifier}/stocktake-lines/{id}/add-movement/
       const response = await api.post(
-        `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/add_movement/`,
+        `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/add-movement/`,
         payload
       );
 
       // Backend returns updated line in response.data.line
       const updatedLine = response.data.line || response.data;
       
-      if (updatedLine && typeof onUpdateLine === 'function') {
-        onUpdateLine(updatedLine);
-        
-        // Test calculations match
-        testCalculations(optimisticLine, updatedLine);
+      console.log('✅ Waste saved - Updating UI from backend:', {
+        waste: updatedLine?.waste,
+        expected_qty: updatedLine?.expected_qty,
+        variance_qty: updatedLine?.variance_qty
+      });
+      
+      // Update UI silently with backend data (no optimistic update)
+      if (updatedLine && typeof onLineUpdated === 'function') {
+        onLineUpdated(updatedLine);
       }
 
       // Clear input after successful save
@@ -419,14 +410,11 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, hotelSlug, 
         },
       }));
       
+      // Refetch totals to update category summaries
       refetchTotals?.();
     } catch (err) {
       console.error('❌ Save waste failed:', err);
       console.error('Error details:', err.response?.data);
-      
-      if (typeof onUpdateLine === 'function') {
-        onUpdateLine(originalLine);
-      }
       
       setValidationErrors({
         [lineId]: { wasteQuantity: `Failed to save: ${err.response?.data?.message || err.message}` }
