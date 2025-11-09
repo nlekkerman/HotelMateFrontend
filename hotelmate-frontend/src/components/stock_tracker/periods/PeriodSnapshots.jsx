@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import api from "@/services/api";
 import { formatCurrency } from '../utils/stockDisplayUtils';
+import { ReopenPeriodModal } from '../modals/ReopenPeriodModal';
 
 export const PeriodSnapshots = () => {
   const { hotel_slug } = useParams();
@@ -12,6 +13,23 @@ export const PeriodSnapshots = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [reopening, setReopening] = useState(null);
+  const [showReopenModal, setShowReopenModal] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState(null);
+  
+  // Check if user is superuser from localStorage
+  const getUserFromLocalStorage = () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      return userStr ? JSON.parse(userStr) : null;
+    } catch (err) {
+      console.error('Error reading user from localStorage:', err);
+      return null;
+    }
+  };
+  
+  const user = getUserFromLocalStorage();
+  const isSuperuser = user?.is_superuser === true;
 
   useEffect(() => {
     fetchPeriods();
@@ -31,6 +49,10 @@ export const PeriodSnapshots = () => {
           year: periodsData[0].year,
           month: periodsData[0].month,
           is_closed: periodsData[0].is_closed,
+          closed_at: periodsData[0].closed_at,
+          closed_by: periodsData[0].closed_by,
+          reopened_at: periodsData[0].reopened_at,
+          reopened_by: periodsData[0].reopened_by,
           has_stocktake: !!periodsData[0].stocktake,
           stocktake_object: periodsData[0].stocktake,
           all_keys: Object.keys(periodsData[0])
@@ -78,6 +100,17 @@ export const PeriodSnapshots = () => {
     if (statusFilter === "closed") return period.is_closed;
     return true;
   });
+
+  const handleReopenClick = (e, period) => {
+    e.stopPropagation(); // Prevent card click
+    setSelectedPeriod(period);
+    setShowReopenModal(true);
+  };
+
+  const handleModalSuccess = async () => {
+    // Refresh periods data after reopening
+    await fetchPeriods();
+  };
 
   const handlePeriodClick = async (period) => {
     // FLOW:
@@ -240,11 +273,33 @@ export const PeriodSnapshots = () => {
                     {/* Stocktake Information */}
                     {period.stocktake ? (
                       <div className="mb-2">
-                        {/* Status Badge - FIRST */}
-                        <div className="mb-2">
-                          <span className={`badge ${period.stocktake.status === 'APPROVED' ? 'bg-success' : 'bg-warning text-dark'}`}>
-                            {period.stocktake.status}
-                          </span>
+                        {/* Status Badge + Reopen Button */}
+                        <div className="mb-2 d-flex align-items-center justify-content-between">
+                          <div className="d-flex align-items-center gap-1">
+                            <span className={`badge ${period.stocktake.status === 'APPROVED' ? 'bg-success' : 'bg-warning text-dark'}`}>
+                              {period.stocktake.status}
+                            </span>
+                            {/* Reopened indicator badge */}
+                            {period.reopened_at && (
+                              <span 
+                                className="badge bg-info" 
+                                title={`Reopened on ${new Date(period.reopened_at).toLocaleString('en-IE')}`}
+                              >
+                                <i className="bi bi-arrow-counterclockwise"></i> Reopened
+                              </span>
+                            )}
+                          </div>
+                          
+                          {/* Reopen Button - Superusers OR staff with permission, when closed */}
+                          {period.is_closed && (isSuperuser || period.can_reopen) && (
+                            <button 
+                              className="btn btn-sm btn-danger"
+                              onClick={(e) => handleReopenClick(e, period)}
+                              title="Reopen this period and manage permissions"
+                            >
+                              <i className="bi bi-unlock"></i> Reopen
+                            </button>
+                          )}
                         </div>
                         
                         {/* Stocktake Month */}
@@ -265,6 +320,31 @@ export const PeriodSnapshots = () => {
                             </span>
                           )}
                         </div>
+
+                        {/* Audit Trail - Show who closed/reopened and when */}
+                        {(period.closed_at || period.reopened_at) && (
+                          <div className="mt-3 pt-2 border-top">
+                            <small className="text-muted d-block mb-1"><strong>History:</strong></small>
+                            {period.closed_at && (
+                              <small className="text-muted d-block">
+                                🔒 Closed: {new Date(period.closed_at).toLocaleString('en-IE', { 
+                                  dateStyle: 'short', 
+                                  timeStyle: 'short' 
+                                })}
+                                {period.closed_by && ` by Staff #${period.closed_by}`}
+                              </small>
+                            )}
+                            {period.reopened_at && (
+                              <small className="text-success d-block">
+                                🔓 Reopened: {new Date(period.reopened_at).toLocaleString('en-IE', { 
+                                  dateStyle: 'short', 
+                                  timeStyle: 'short' 
+                                })}
+                                {period.reopened_by && ` by Staff #${period.reopened_by}`}
+                              </small>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="mb-2">
@@ -292,6 +372,17 @@ export const PeriodSnapshots = () => {
             ))
           )}
         </div>
+      )}
+
+      {/* Reopen Period Modal */}
+      {selectedPeriod && (
+        <ReopenPeriodModal
+          show={showReopenModal}
+          onHide={() => setShowReopenModal(false)}
+          period={selectedPeriod}
+          hotelSlug={hotel_slug}
+          onSuccess={handleModalSuccess}
+        />
       )}
     </div>
   );
