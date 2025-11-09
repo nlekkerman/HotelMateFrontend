@@ -62,7 +62,8 @@ export const PeriodSnapshotDetail = () => {
   
   const categoryTotals = Object.entries(groupedSnapshots).map(([categoryName, items]) => ({
     categoryName,
-    totalValue: items.reduce((sum, item) => sum + parseFloat(item.closing_stock_value || 0), 0),
+    openingValue: items.reduce((sum, item) => sum + parseFloat(item.opening_stock_value || 0), 0),
+    closingValue: items.reduce((sum, item) => sum + parseFloat(item.closing_stock_value || 0), 0),
     itemCount: items.length
   }));
 
@@ -142,32 +143,53 @@ export const PeriodSnapshotDetail = () => {
 
       {/* Category Summary */}
       {categoryTotals.length > 0 && (
-        <div className="card mb-4">
-          <div className="card-header bg-light">
-            <h5 className="mb-0">Category Summary</h5>
+        <div className="card mb-4 shadow-sm">
+          <div className="card-header bg-primary bg-gradient text-white">
+            <h5 className="mb-0"><i className="bi bi-bar-chart-fill me-2"></i>Category Summary</h5>
           </div>
           <div className="card-body">
             <div className="table-responsive">
-              <table className="table table-sm">
-                <thead>
+              <style>{`
+                .pastel-blue { background-color: #E3F2FD !important; }
+                .pastel-green { background-color: #E8F5E9 !important; }
+                .text-pastel-blue { color: #1976D2 !important; }
+                .text-pastel-green { color: #388E3C !important; }
+              `}</style>
+              <table className="table table-hover table-sm mb-0">
+                <thead className="table-light">
                   <tr>
                     <th>Category</th>
                     <th className="text-end d-none d-md-table-cell">Items</th>
-                    <th className="text-end">Closing Stock Value</th>
+                    <th className="text-end pastel-blue text-pastel-blue">Opening Stock Value</th>
+                    <th className="text-end pastel-green text-pastel-green">Closing Stock Value</th>
                   </tr>
                 </thead>
                 <tbody>
                   {categoryTotals.map((cat, idx) => (
                     <tr key={idx}>
                       <td><strong>{cat.categoryName}</strong></td>
-                      <td className="text-end d-none d-md-table-cell">{cat.itemCount}</td>
-                      <td className="text-end">{formatCurrency(cat.totalValue)}</td>
+                      <td className="text-end d-none d-md-table-cell">
+                        <span className="badge bg-secondary">{cat.itemCount}</span>
+                      </td>
+                      <td className="text-end pastel-blue">
+                        <strong className="text-pastel-blue">{formatCurrency(cat.openingValue)}</strong>
+                      </td>
+                      <td className="text-end pastel-green">
+                        <strong className="text-pastel-green">{formatCurrency(cat.closingValue)}</strong>
+                      </td>
                     </tr>
                   ))}
-                  <tr className="table-light">
-                    <td><strong>Total</strong></td>
-                    <td className="text-end d-none d-md-table-cell"><strong>{snapshots.length}</strong></td>
-                    <td className="text-end"><strong>{formatCurrency(totalValue)}</strong></td>
+                  <tr className="table-active border-top border-2">
+                    <td><strong className="fs-6">TOTAL</strong></td>
+                    <td className="text-end d-none d-md-table-cell">
+                      <strong><span className="badge bg-dark">{snapshots.length}</span></strong>
+                    </td>
+                    <td className="text-end pastel-blue">
+                      <strong className="fs-6 text-pastel-blue">{formatCurrency(snapshots.reduce((sum, snap) => sum + parseFloat(snap.opening_stock_value || 0), 0))}</strong>
+                    </td>
+                    <td className="text-end pastel-green">
+                      <strong className="fs-6 text-pastel-green">{formatCurrency(totalValue)}</strong>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -205,21 +227,25 @@ export const PeriodSnapshotDetail = () => {
       ) : (
         <>
           {Object.entries(groupedSnapshots).map(([categoryName, categorySnapshots]) => (
-            <div key={categoryName} className="card mb-4">
-              <div className="card-header bg-primary text-white">
-                <h5 className="mb-0">{categoryName}</h5>
+            <div key={categoryName} className="card mb-4 shadow-sm">
+              <div className="card-header bg-dark bg-gradient text-white">
+                <div className="d-flex justify-content-between align-items-center">
+                  <h5 className="mb-0"><i className="bi bi-box-seam me-2"></i>{categoryName}</h5>
+                  <span className="badge bg-light text-dark">{categorySnapshots.length} items</span>
+                </div>
               </div>
               <div className="card-body p-0">
                 {/* Desktop Table */}
                 <div className="table-responsive d-none d-md-block">
-                  <table className="table table-hover mb-0">
+                  <table className="table table-hover table-striped mb-0">
                     <thead className="table-light">
                       <tr>
-                        <th style={{ width: "10%" }}>SKU</th>
-                        <th style={{ width: "20%" }}>Item</th>
-                        <th className="text-center">Opening Stock</th>
-                        <th className="text-center">Closing Stock</th>
-                        <th className="text-end">Value €</th>
+                        <th style={{ width: "8%" }}>SKU</th>
+                        <th style={{ width: "18%" }}>Item</th>
+                        <th className="text-center pastel-blue">Opening Stock</th>
+                        <th className="text-center pastel-green">Closing Stock</th>
+                        <th className="text-end pastel-blue text-pastel-blue">Opening Value €</th>
+                        <th className="text-end pastel-green text-pastel-green">Closing Value €</th>
                         <th className="text-end">Cost/Serving</th>
                         <th className="text-end">GP %</th>
                       </tr>
@@ -236,14 +262,17 @@ export const PeriodSnapshotDetail = () => {
                                 <><br /><small className="text-muted">{snap.item.size}</small></>
                               )}
                             </td>
-                            <td className="text-center">
-                              <small>{formatStockDisplay(snap, 'opening')}</small>
+                            <td className="text-center pastel-blue">
+                              <small className="text-pastel-blue"><strong>{formatStockDisplay(snap, 'opening')}</strong></small>
                             </td>
-                            <td className="text-center">
-                              <small>{formatStockDisplay(snap, 'closing')}</small>
+                            <td className="text-center pastel-green">
+                              <small className="text-pastel-green"><strong>{formatStockDisplay(snap, 'closing')}</strong></small>
                             </td>
-                            <td className="text-end">
-                              <strong>{formatCurrency(snap.closing_stock_value)}</strong>
+                            <td className="text-end pastel-blue">
+                              <strong className="text-pastel-blue">{formatCurrency(snap.opening_stock_value)}</strong>
+                            </td>
+                            <td className="text-end pastel-green">
+                              <strong className="text-pastel-green">{formatCurrency(snap.closing_stock_value)}</strong>
                             </td>
                             <td className="text-end">
                               <small>{formatCurrency(snap.cost_per_serving)}</small>
@@ -284,7 +313,11 @@ export const PeriodSnapshotDetail = () => {
                           <strong>{formatStockDisplay(snap, 'closing')}</strong>
                         </div>
                         <div className="col-6">
-                          <small className="text-muted">Value:</small><br />
+                          <small className="text-muted">Opening Value:</small><br />
+                          <strong className="text-primary">{formatCurrency(snap.opening_stock_value)}</strong>
+                        </div>
+                        <div className="col-6">
+                          <small className="text-muted">Closing Value:</small><br />
                           <strong className="text-success">{formatCurrency(snap.closing_stock_value)}</strong>
                         </div>
                         <div className="col-6">
