@@ -273,12 +273,13 @@ export const PeriodSnapshots = () => {
                     {/* Stocktake Information */}
                     {period.stocktake ? (
                       <div className="mb-2">
-                        {/* Status Badge + Reopen Button */}
+                        {/* Status Badge + Reopen Badge + Reopen Button */}
                         <div className="mb-2 d-flex align-items-center justify-content-between">
+                          <span className={`badge ${period.stocktake.status === 'APPROVED' ? 'bg-success' : 'bg-warning text-dark'}`}>
+                            {period.stocktake.status}
+                          </span>
+                          
                           <div className="d-flex align-items-center gap-1">
-                            <span className={`badge ${period.stocktake.status === 'APPROVED' ? 'bg-success' : 'bg-warning text-dark'}`}>
-                              {period.stocktake.status}
-                            </span>
                             {/* Reopened indicator badge */}
                             {period.reopened_at && (
                               <span 
@@ -288,18 +289,18 @@ export const PeriodSnapshots = () => {
                                 <i className="bi bi-arrow-counterclockwise"></i> Reopened
                               </span>
                             )}
+                            
+                            {/* Reopen Button - Superusers OR staff with permission, when closed */}
+                            {period.is_closed && (isSuperuser || period.can_reopen) && (
+                              <button 
+                                className="btn btn-sm btn-danger"
+                                onClick={(e) => handleReopenClick(e, period)}
+                                title="Reopen this period and manage permissions"
+                              >
+                                <i className="bi bi-unlock"></i> Reopen
+                              </button>
+                            )}
                           </div>
-                          
-                          {/* Reopen Button - Superusers OR staff with permission, when closed */}
-                          {period.is_closed && (isSuperuser || period.can_reopen) && (
-                            <button 
-                              className="btn btn-sm btn-danger"
-                              onClick={(e) => handleReopenClick(e, period)}
-                              title="Reopen this period and manage permissions"
-                            >
-                              <i className="bi bi-unlock"></i> Reopen
-                            </button>
-                          )}
                         </div>
                         
                         {/* Stocktake Month */}
