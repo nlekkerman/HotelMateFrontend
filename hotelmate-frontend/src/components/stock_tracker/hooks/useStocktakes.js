@@ -92,7 +92,7 @@ export const useStocktakes = (hotelSlug) => {
     try {
       const res = await api.get(`/stock-tracker/${hotelSlug}/periods/${periodId}/summary/`);
       // API returns full summary object with categories array and totals
-      // { period_id, period_name, total_items, total_stock_value, total_sales_value, categories: [...] }
+      // { period_id, period_name, total_items, total_stock_value, categories: [...] }
       return res.data;
     } catch (err) {
       console.error("Error fetching period summary:", err);

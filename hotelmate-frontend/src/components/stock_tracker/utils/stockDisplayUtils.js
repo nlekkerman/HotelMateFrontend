@@ -268,7 +268,6 @@ export const formatVarianceDisplay = (line, labels) => {
  * Returns movement values with proper formatting:
  * {
  *   purchases: number,
- *   sales: number,
  *   waste: number,
  *   transfersIn: number,
  *   transfersOut: number,
@@ -279,7 +278,6 @@ export const formatMovementDisplay = (line) => {
   if (!line) {
     return {
       purchases: 0,
-      sales: 0,
       waste: 0,
       transfersIn: 0,
       transfersOut: 0,
@@ -289,7 +287,6 @@ export const formatMovementDisplay = (line) => {
 
   return {
     purchases: parseFloat(line.purchases || 0),
-    sales: parseFloat(line.sales || 0),
     waste: parseFloat(line.waste || 0),
     transfersIn: parseFloat(line.transfers_in || 0),
     transfersOut: parseFloat(line.transfers_out || 0),
@@ -301,7 +298,7 @@ export const formatMovementDisplay = (line) => {
  * Get badge properties for movement display
  * 
  * @param {number} value - Movement value
- * @param {string} type - Movement type ('purchases', 'sales', 'waste', 'transfers_in', 'transfers_out', 'adjustments')
+ * @param {string} type - Movement type ('purchases', 'waste', 'transfers_in', 'transfers_out', 'adjustments')
  * @returns {Object} - { bg: string, text: string, prefix: string }
  */
 export const getMovementBadgeProps = (value, type) => {
@@ -312,11 +309,6 @@ export const getMovementBadgeProps = (value, type) => {
       bg: hasValue ? 'success' : 'light', 
       text: hasValue ? 'light' : 'muted', 
       prefix: '+' 
-    },
-    sales: { 
-      bg: hasValue ? 'danger' : 'light', 
-      text: hasValue ? 'light' : 'muted', 
-      prefix: '-' 
     },
     waste: { 
       bg: hasValue ? 'danger' : 'light', 

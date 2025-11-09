@@ -67,7 +67,6 @@ export const CategoryTotalsSummary = ({ stocktakeId, hotelSlug }) => {
             <tr>
               <th>Category</th>
               <th className="text-end">Stock Value</th>
-              <th className="text-end">Sales Value</th>
               <th className="text-end">Items</th>
             </tr>
           </thead>
@@ -82,9 +81,6 @@ export const CategoryTotalsSummary = ({ stocktakeId, hotelSlug }) => {
                   <strong className="text-primary">€{parseFloat(cat.stock_value || 0).toFixed(2)}</strong>
                 </td>
                 <td className="text-end">
-                  <strong className="text-success">€{parseFloat(cat.sales_value || 0).toFixed(2)}</strong>
-                </td>
-                <td className="text-end">
                   <Badge bg="secondary">{cat.item_count}</Badge>
                 </td>
               </tr>
@@ -95,9 +91,6 @@ export const CategoryTotalsSummary = ({ stocktakeId, hotelSlug }) => {
               <td>TOTAL</td>
               <td className="text-end">
                 <strong className="text-primary">€{parseFloat(summary.total_stock_value || 0).toFixed(2)}</strong>
-              </td>
-              <td className="text-end">
-                <strong className="text-success">€{parseFloat(summary.total_sales_value || 0).toFixed(2)}</strong>
               </td>
               <td className="text-end">
                 <Badge bg="primary">{summary.total_items || 0}</Badge>

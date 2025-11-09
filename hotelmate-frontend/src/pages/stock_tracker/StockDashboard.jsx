@@ -12,7 +12,6 @@ export default function StockDashboard() {
   const [periods, setPeriods] = useState([]);
   const [selectedPeriod, setSelectedPeriod] = useState(null);
   const [stockValueReport, setStockValueReport] = useState(null);
-  const [salesReport, setSalesReport] = useState(null);
   const [reportsLoading, setReportsLoading] = useState(true);
   const [reportsError, setReportsError] = useState(null);
   
@@ -72,40 +71,17 @@ export default function StockDashboard() {
       console.log('==========================================');
       
       const stockValueUrl = `/stock_tracker/${hotel_slug}/reports/stock-value/?period=${periodId}`;
-      const salesUrl = `/stock_tracker/${hotel_slug}/reports/sales/?period=${periodId}`;
       
       console.log('📡 Stock Value URL:', stockValueUrl);
-      console.log('📡 Sales URL:', salesUrl);
       
-      // Fetch stock value report (always works)
+      // Fetch stock value report
       const stockValueResp = await api.get(stockValueUrl);
       
       console.log('✅ Stock Value Report Response:', stockValueResp.data);
       console.log('   - Period:', stockValueResp.data.period.period_name);
       console.log('   - Cost Value:', stockValueResp.data.totals.cost_value);
-      console.log('   - Sales Value:', stockValueResp.data.totals.sales_value);
       
       setStockValueReport(stockValueResp.data);
-      
-      // Try to fetch sales report (may fail if no previous period)
-      try {
-        const salesResp = await api.get(salesUrl);
-        
-        console.log('✅ Sales Report Response:', salesResp.data);
-        console.log('   - Period:', salesResp.data.period.period_name);
-        console.log('   - Revenue:', salesResp.data.totals.revenue);
-        console.log('   - GP%:', salesResp.data.totals.gross_profit_percentage);
-        
-        setSalesReport(salesResp.data);
-        console.log('✅ Both reports loaded successfully!');
-      } catch (salesErr) {
-        console.warn('⚠️ Sales report not available:', salesErr.response?.data?.error || salesErr.message);
-        setSalesReport(null);
-        
-        if (salesErr.response?.data?.error?.includes('Previous period')) {
-          console.log('ℹ️ This is the first period - no previous period for sales calculation');
-        }
-      }
       
     } catch (err) {
       console.error('❌ Error fetching backend reports:', err);
@@ -235,28 +211,21 @@ export default function StockDashboard() {
             </Card.Header>
             <Card.Body>
               <Row className="mb-3">
-                <Col md={3}>
+                <Col md={4}>
                   <div className="p-3 bg-light rounded text-center">
                     <p className="text-muted mb-1 small">Cost Value</p>
                     <h4 className="text-primary mb-0">{formatCurrency(stockValueReport.totals.cost_value)}</h4>
                     <small className="text-muted">What you paid</small>
                   </div>
                 </Col>
-                <Col md={3}>
-                  <div className="p-3 bg-light rounded text-center">
-                    <p className="text-muted mb-1 small">Sales Value</p>
-                    <h4 className="text-success mb-0">{formatCurrency(stockValueReport.totals.sales_value)}</h4>
-                    <small className="text-muted">Potential revenue</small>
-                  </div>
-                </Col>
-                <Col md={3}>
+                <Col md={4}>
                   <div className="p-3 bg-light rounded text-center">
                     <p className="text-muted mb-1 small">Potential Profit</p>
                     <h4 className="text-success mb-0">{formatCurrency(stockValueReport.totals.potential_profit)}</h4>
                     <small className="text-muted">Your markup</small>
                   </div>
                 </Col>
-                <Col md={3}>
+                <Col md={4}>
                   <div className="p-3 bg-light rounded text-center">
                     <p className="text-muted mb-1 small">Markup %</p>
                     <h4 className="text-info mb-0">{stockValueReport.totals.markup_percentage.toFixed(1)}%</h4>
@@ -270,7 +239,6 @@ export default function StockDashboard() {
                   <tr>
                     <th>Category</th>
                     <th className="text-end">Cost Value</th>
-                    <th className="text-end">Sales Value</th>
                     <th className="text-end">Potential Profit</th>
                     <th className="text-end">Markup %</th>
                   </tr>
@@ -283,7 +251,6 @@ export default function StockDashboard() {
                         <Badge bg="secondary" className="ms-2">{cat.category}</Badge>
                       </td>
                       <td className="text-end">{formatCurrency(cat.cost_value)}</td>
-                      <td className="text-end text-success">{formatCurrency(cat.sales_value)}</td>
                       <td className="text-end text-success"><strong>{formatCurrency(cat.potential_profit)}</strong></td>
                       <td className="text-end">
                         <Badge bg={cat.markup_percentage >= 200 ? 'success' : cat.markup_percentage >= 150 ? 'info' : 'warning'}>
@@ -297,7 +264,6 @@ export default function StockDashboard() {
                   <tr>
                     <th>TOTAL</th>
                     <th className="text-end">{formatCurrency(stockValueReport.totals.cost_value)}</th>
-                    <th className="text-end">{formatCurrency(stockValueReport.totals.sales_value)}</th>
                     <th className="text-end">{formatCurrency(stockValueReport.totals.potential_profit)}</th>
                     <th className="text-end">{stockValueReport.totals.markup_percentage.toFixed(1)}%</th>
                   </tr>
@@ -305,147 +271,6 @@ export default function StockDashboard() {
               </Table>
             </Card.Body>
           </Card>
-
-          {/* Sales Report Card - Only show if available */}
-          {salesReport ? (
-          <Card className="mb-4 border-success">
-            <Card.Header className="bg-success text-white">
-              <div className="d-flex justify-content-between align-items-center">
-                <h5 className="mb-0">
-                  <FaMoneyBillWave className="me-2" />
-                  {salesReport.period.period_name} - Sales Performance
-                  <small className="ms-2">(Period ID: {salesReport.period.id})</small>
-                </h5>
-                <Badge bg="light" text="dark">
-                  Previous: {salesReport.period.previous_period}
-                </Badge>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              {salesReport.data_quality.has_mock_data && (
-                <Alert variant="warning" className="mb-3">
-                  <strong>⚠️ {salesReport.data_quality.warning}</strong>
-                  <div className="small mt-1">
-                    Mock purchases: {salesReport.data_quality.mock_purchase_count} of {salesReport.data_quality.total_purchase_count} 
-                    ({formatCurrency(salesReport.data_quality.mock_purchase_value)})
-                  </div>
-                </Alert>
-              )}
-              
-              <Row className="mb-3">
-                <Col md={2}>
-                  <div className="p-3 bg-light rounded text-center">
-                    <p className="text-muted mb-1 small">Revenue</p>
-                    <h4 className="text-success mb-0">{formatCurrency(salesReport.totals.revenue)}</h4>
-                  </div>
-                </Col>
-                <Col md={2}>
-                  <div className="p-3 bg-light rounded text-center">
-                    <p className="text-muted mb-1 small">Cost of Sales</p>
-                    <h4 className="text-danger mb-0">{formatCurrency(salesReport.totals.cost_of_sales)}</h4>
-                  </div>
-                </Col>
-                <Col md={2}>
-                  <div className="p-3 bg-light rounded text-center">
-                    <p className="text-muted mb-1 small">Gross Profit</p>
-                    <h4 className="text-success mb-0">{formatCurrency(salesReport.totals.gross_profit)}</h4>
-                  </div>
-                </Col>
-                <Col md={2}>
-                  <div className="p-3 bg-light rounded text-center">
-                    <p className="text-muted mb-1 small">GP %</p>
-                    <h4 className="text-info mb-0">{salesReport.totals.gross_profit_percentage.toFixed(1)}%</h4>
-                  </div>
-                </Col>
-                <Col md={2}>
-                  <div className="p-3 bg-light rounded text-center">
-                    <p className="text-muted mb-1 small">Servings Sold</p>
-                    <h4 className="text-primary mb-0">{salesReport.totals.servings_sold.toLocaleString()}</h4>
-                  </div>
-                </Col>
-              </Row>
-
-              <h6 className="mb-2">Stock Movement</h6>
-              <Row className="mb-3">
-                <Col md={3}>
-                  <div className="small">
-                    <span className="text-muted">Opening Stock:</span>
-                    <strong className="ms-2">{formatCurrency(salesReport.stock_movement.sept_opening)}</strong>
-                  </div>
-                </Col>
-                <Col md={3}>
-                  <div className="small">
-                    <span className="text-muted">+ Purchases:</span>
-                    <strong className="ms-2">{formatCurrency(salesReport.stock_movement.oct_purchases)}</strong>
-                  </div>
-                </Col>
-                <Col md={3}>
-                  <div className="small">
-                    <span className="text-muted">- Closing Stock:</span>
-                    <strong className="ms-2">{formatCurrency(salesReport.stock_movement.oct_closing)}</strong>
-                  </div>
-                </Col>
-                <Col md={3}>
-                  <div className="small">
-                    <span className="text-muted">= Consumed:</span>
-                    <strong className="ms-2">{formatCurrency(salesReport.stock_movement.consumed)}</strong>
-                  </div>
-                </Col>
-              </Row>
-              
-              <Table responsive hover size="sm">
-                <thead className="table-light">
-                  <tr>
-                    <th>Category</th>
-                    <th className="text-end">Revenue</th>
-                    <th className="text-end">Cost</th>
-                    <th className="text-end">Gross Profit</th>
-                    <th className="text-end">GP %</th>
-                    <th className="text-end">Servings Sold</th>
-                    <th className="text-end">% of Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {salesReport.categories.map(cat => (
-                    <tr key={cat.category}>
-                      <td>
-                        <strong>{cat.name}</strong>
-                        <Badge bg="secondary" className="ms-2">{cat.category}</Badge>
-                      </td>
-                      <td className="text-end text-success">{formatCurrency(cat.revenue)}</td>
-                      <td className="text-end text-danger">{formatCurrency(cat.cost_of_sales)}</td>
-                      <td className="text-end"><strong>{formatCurrency(cat.gross_profit)}</strong></td>
-                      <td className="text-end">
-                        <Badge bg={cat.gross_profit_percentage >= 70 ? 'success' : cat.gross_profit_percentage >= 60 ? 'info' : 'warning'}>
-                          {cat.gross_profit_percentage.toFixed(1)}%
-                        </Badge>
-                      </td>
-                      <td className="text-end">{cat.servings_sold.toLocaleString()}</td>
-                      <td className="text-end">{cat.percent_of_total.toFixed(1)}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="table-secondary">
-                  <tr>
-                    <th>TOTAL</th>
-                    <th className="text-end">{formatCurrency(salesReport.totals.revenue)}</th>
-                    <th className="text-end">{formatCurrency(salesReport.totals.cost_of_sales)}</th>
-                    <th className="text-end">{formatCurrency(salesReport.totals.gross_profit)}</th>
-                    <th className="text-end">{salesReport.totals.gross_profit_percentage.toFixed(1)}%</th>
-                    <th className="text-end">{salesReport.totals.servings_sold.toLocaleString()}</th>
-                    <th className="text-end">100%</th>
-                  </tr>
-                </tfoot>
-              </Table>
-            </Card.Body>
-          </Card>
-          ) : (
-            <Alert variant="info" className="mb-4">
-              <h5>📊 Sales Report Not Available</h5>
-              <p>Sales data cannot be calculated for <strong>{stockValueReport.period.period_name}</strong> because there is no previous period available.</p>
-              <small>Sales reports require a previous period's closing stock to calculate consumption and revenue.</small>
-            </Alert>
-          )}
         </>
       ) : reportsError ? (
         <Alert variant="danger" className="mb-4">
@@ -522,7 +347,7 @@ export default function StockDashboard() {
                 Closed Stocktakes
               </Button>
             </Col>
-            <Col md={3} className="mb-2">
+            <Col md={4} className="mb-2">
               <Button 
                 variant="outline-primary" 
                 className="w-100"
@@ -532,17 +357,7 @@ export default function StockDashboard() {
                 Compare Periods
               </Button>
             </Col>
-            <Col md={3} className="mb-2">
-              <Button 
-                variant="outline-success" 
-                className="w-100"
-                onClick={() => navigate(`/stock_tracker/${hotel_slug}/sales-report`)}
-              >
-                <FaMoneyBillWave className="me-2" />
-                Sales Report
-              </Button>
-            </Col>
-            <Col md={3} className="mb-2">
+            <Col md={4} className="mb-2">
               <Button 
                 variant="outline-info" 
                 className="w-100"

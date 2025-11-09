@@ -16,8 +16,7 @@ Complete inventory management system with stocktake functionality and cocktail c
 - **Location**: `/stock_tracker/:hotel_slug/movements`
 - Record all inventory transactions:
   - 📦 **Purchases** - Stock received (increases qty)
-  - 💰 **Sales** - Stock consumed (decreases qty)
-  - 🗑️ **Waste** - Breakage/spoilage (decreases qty)
+  - ️ **Waste** - Breakage/spoilage (decreases qty)
   - ⬅️ **Transfer In** - Received from another location
   - ➡️ **Transfer Out** - Sent to another location
   - ⚙️ **Adjustment** - Manual corrections
@@ -31,7 +30,7 @@ Complete inventory management system with stocktake functionality and cocktail c
 1. **Create Stocktake** - Define period dates (e.g., Nov 1-30)
 2. **Populate** - Auto-generate lines for all items with:
    - Opening quantities
-   - Period movements (purchases, sales, waste, transfers)
+   - Period movements (purchases, waste, transfers)
    - Expected quantities (calculated)
 3. **Count Physical Stock**:
    - Input full units (e.g., 13 cases)
@@ -125,7 +124,7 @@ src/components/stock_tracker/
 
 ### Expected Quantity
 ```
-expected_qty = opening + purchases - sales - waste + transfers_in - transfers_out + adjustments
+expected_qty = opening + purchases - waste + transfers_in - transfers_out + adjustments
 ```
 
 ### Counted Quantity
@@ -143,7 +142,7 @@ variance_value = variance_qty × valuation_cost
 
 1. Navigate to Stock Tracker dashboard
 2. Add stock items (or import from backend)
-3. Record movements as they occur (purchases, sales, waste)
+3. Record movements as they occur (purchases, waste)
 4. At month-end, create a new stocktake
 5. Populate it to generate lines with expected quantities
 6. Perform physical count and input quantities
