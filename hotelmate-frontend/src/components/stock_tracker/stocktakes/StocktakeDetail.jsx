@@ -1,12 +1,12 @@
 ﻿import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Button, Badge, Alert, Spinner, Card, Modal } from "react-bootstrap";
-import { FaArrowLeft, FaLock, FaCheckCircle, FaExclamationTriangle } from "react-icons/fa";
+import { Button, Badge, Alert, Spinner, Card, Modal, Row, Col } from "react-bootstrap";
+import { FaArrowLeft, FaLock, FaCheckCircle, FaExclamationTriangle, FaMoneyBillWave } from "react-icons/fa";
 import { toast } from "react-toastify";
 import Pusher from "pusher-js";
 import api from "@/services/api";
 import { StocktakeLines } from './StocktakeLines';
-import { StocktakeManualValues } from './StocktakeManualValues';
+import { StocktakeCloseModal } from './StocktakeCloseModal';
 import { useStocktakeRealtime } from '../hooks/useStocktakeRealtime';
 // import { CategoryTotalsSummary } from './CategoryTotalsSummary'; // TODO: Enable when summary endpoint exists
 
@@ -20,7 +20,6 @@ export const StocktakeDetail = () => {
   const [error, setError] = useState(null);
   const [populating, setPopulating] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
-  const [approving, setApproving] = useState(false);
   const [pusher, setPusher] = useState(null);
   const [pusherReady, setPusherReady] = useState(false);
 
@@ -325,17 +324,13 @@ export const StocktakeDetail = () => {
     }
   };
 
-  const handleApprove = async () => {
-    try {
-      setApproving(true);
-      await api.post(`/stock_tracker/${hotel_slug}/stocktakes/${id}/approve/`);
-      await fetchStocktake();
-      setShowApproveModal(false);
-    } catch (err) {
-      setError(err.response?.data?.detail || "Failed to approve stocktake");
-    } finally {
-      setApproving(false);
-    }
+  const handleApproveSuccess = async () => {
+    // Called after successful approval from modal
+    // Refresh stocktake to get calculated metrics
+    await fetchStocktake();
+    toast.success('Stocktake closed successfully! 🎉', {
+      autoClose: 5000
+    });
   };
 
   if (loading) return <div className="container mt-4 text-center"><Spinner animation="border" /></div>;
@@ -426,6 +421,77 @@ export const StocktakeDetail = () => {
           </div>
         </Card.Body>
       </Card>
+
+      {/* Financial Results - Only show for approved/locked stocktakes */}
+      {isLocked && (stocktake.total_cogs || stocktake.total_revenue) && (
+        <Card className="mb-4 border-success">
+          <Card.Header className="bg-success text-white">
+            <h5 className="mb-0">
+              <FaMoneyBillWave className="me-2" />
+              Financial Results
+            </h5>
+          </Card.Header>
+          <Card.Body>
+            <Row className="g-3">
+              <Col md={6} lg={3}>
+                <Card className="text-center border-0 bg-light">
+                  <Card.Body>
+                    <small className="text-muted d-block mb-1">Total COGS</small>
+                    <h4 className="mb-0 text-danger">
+                      {stocktake.total_cogs ? `€${parseFloat(stocktake.total_cogs).toFixed(2)}` : '—'}
+                    </h4>
+                    <small className="text-muted d-block mt-1">
+                      Cost of Goods Sold
+                    </small>
+                  </Card.Body>
+                </Card>
+              </Col>
+              <Col md={6} lg={3}>
+                <Card className="text-center border-0 bg-light">
+                  <Card.Body>
+                    <small className="text-muted d-block mb-1">Total Revenue</small>
+                    <h4 className="mb-0 text-success">
+                      {stocktake.total_revenue ? `€${parseFloat(stocktake.total_revenue).toFixed(2)}` : '—'}
+                    </h4>
+                  </Card.Body>
+                </Card>
+              </Col>
+              <Col md={6} lg={3}>
+                <Card className="text-center border-0 bg-light">
+                  <Card.Body>
+                    <small className="text-muted d-block mb-1">Gross Profit €</small>
+                    <h4 className="mb-0 text-primary">
+                      {(stocktake.total_revenue && stocktake.total_cogs) 
+                        ? `€${(parseFloat(stocktake.total_revenue) - parseFloat(stocktake.total_cogs)).toFixed(2)}`
+                        : '—'}
+                    </h4>
+                    <small className="text-success d-block mt-1 fw-semibold">
+                      GP: {stocktake.gross_profit_percentage 
+                        ? `${parseFloat(stocktake.gross_profit_percentage).toFixed(2)}%`
+                        : '—'}
+                    </small>
+                  </Card.Body>
+                </Card>
+              </Col>
+              <Col md={6} lg={3}>
+                <Card className="text-center border-0 bg-warning bg-opacity-25 border-warning">
+                  <Card.Body>
+                    <small className="text-muted d-block mb-1">Pour Cost %</small>
+                    <h4 className="mb-0 text-warning fw-bold">
+                      {stocktake.pour_cost_percentage 
+                        ? `${parseFloat(stocktake.pour_cost_percentage).toFixed(2)}%`
+                        : '—'}
+                    </h4>
+                    <small className="text-muted d-block mt-1">
+                      COGS / Revenue
+                    </small>
+                  </Card.Body>
+                </Card>
+              </Col>
+            </Row>
+          </Card.Body>
+        </Card>
+      )}
       
       {lines.length === 0 ? (
         <Alert variant="info">Click Populate Lines to begin</Alert>
@@ -435,22 +501,6 @@ export const StocktakeDetail = () => {
             <Alert variant="warning">
               <FaExclamationTriangle /> Please count all items before approving ({countedLines}/{lines.length} counted)
             </Alert>
-          )}
-          
-          {/* Stocktake-Level Manual Financial Values */}
-          {!isLocked && (
-            <Card className="mb-4 border-success">
-              <Card.Header className="bg-success text-white">
-                <h5 className="mb-0">💰 Stocktake Total Manual Financial Values</h5>
-              </Card.Header>
-              <Card.Body>
-                <StocktakeManualValues 
-                  stocktakeId={id}
-                  hotelSlug={hotel_slug}
-                  stocktake={stocktake}
-                />
-              </Card.Body>
-            </Card>
           )}
           
           {/* Stocktake Lines */}
@@ -489,32 +539,14 @@ export const StocktakeDetail = () => {
         </>
       )}
 
-      <Modal show={showApproveModal} onHide={() => setShowApproveModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Approve Stocktake</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Alert variant="warning">
-            <FaExclamationTriangle className="me-2" />
-            <strong>Warning:</strong> Approving this stocktake will:
-          </Alert>
-          <ul>
-            <li>Lock the stocktake - no further edits allowed</li>
-            <li>Create stock adjustments for all variances</li>
-            <li>Update current stock levels in the system</li>
-            <li>Close the current stock period</li>
-          </ul>
-          <p className="mb-0"><strong>Are you sure you want to proceed?</strong></p>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowApproveModal(false)}>
-            Cancel
-          </Button>
-          <Button variant="success" onClick={handleApprove} disabled={approving}>
-            {approving ? 'Approving...' : 'Yes, Approve'}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      {/* New Stocktake Close Modal with Manual Values */}
+      <StocktakeCloseModal
+        show={showApproveModal}
+        onHide={() => setShowApproveModal(false)}
+        stocktake={stocktake}
+        hotelSlug={hotel_slug}
+        onSuccess={handleApproveSuccess}
+      />
     </div>
   );
 };

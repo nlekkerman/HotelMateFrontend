@@ -74,6 +74,8 @@ import GoodToKnow from "@/components/hotel_info/GoodToKnow";
 import GoodToKnowConsole from "@/components/hotel_info/GoodToKnowConsole";
 
 import StockDashboard from "@/pages/stock_tracker/StockDashboard";
+import Analytics from "@/pages/stock_tracker/Analytics";
+import StockOperations from "@/pages/stock_tracker/StockOperations";
 import { StockItemsList } from "@/components/stock_tracker/stock_items/StockItemsList";
 import StockItemsResponsive from "@/components/stock_tracker/stock_items/StockItemsResponsive";
 import StockItemProfitability from "@/components/stock_tracker/stock_items/StockItemProfitability";
@@ -308,6 +310,8 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
 
               {/* Stock Tracker Routes */}
               <Route path="/stock_tracker/:hotel_slug" element={<ProtectedRoute><StockDashboard /></ProtectedRoute>} />
+              <Route path="/stock_tracker/:hotel_slug/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+              <Route path="/stock_tracker/:hotel_slug/operations" element={<ProtectedRoute><StockOperations /></ProtectedRoute>} />
               <Route path="/stock_tracker/:hotel_slug/items" element={<ProtectedRoute><StockItemsResponsive /></ProtectedRoute>} />
               <Route path="/stock_tracker/:hotel_slug/profitability" element={<ProtectedRoute><StockItemProfitability /></ProtectedRoute>} />
               <Route path="/stock_tracker/:hotel_slug/movements" element={<ProtectedRoute><MovementsList /></ProtectedRoute>} />

@@ -128,243 +128,44 @@ export default function StockDashboard() {
         </h2>
       </div>
 
-      {/* Period Selector */}
-      {periods.length > 0 && (
-        <Card className="mb-4 border-primary">
-          <Card.Header className="bg-primary text-white">
-            <h6 className="mb-0">
-              <FaCalendarAlt className="me-2" />
-              Period Selection
-            </h6>
-          </Card.Header>
-          <Card.Body>
-            <Row className="align-items-center">
-              <Col md={5}>
-                <Form.Group>
-                  <Form.Label className="fw-bold">Choose Period to View:</Form.Label>
-                  <Form.Select 
-                    value={selectedPeriod?.id || ''} 
-                    onChange={handlePeriodChange}
-                    size="lg"
-                    disabled={reportsLoading}
-                  >
-                    {periods.map(period => (
-                      <option key={period.id} value={period.id}>
-                        {period.period_name} ({new Date(period.start_date).toLocaleDateString('en-IE')} - {new Date(period.end_date).toLocaleDateString('en-IE')})
-                      </option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={7}>
-                <Alert variant="info" className="mb-0">
-                  <div className="d-flex align-items-center">
-                    <div className="flex-grow-1">
-                      <strong>Currently Viewing:</strong> {selectedPeriod?.period_name}
-                      <Badge bg="success" className="ms-2">Closed Period</Badge>
-                    </div>
-                    {reportsLoading && (
-                      <Spinner animation="border" size="sm" />
-                    )}
-                  </div>
-                  <small className="d-block mt-1">
-                    Period End: {selectedPeriod && new Date(selectedPeriod.end_date).toLocaleDateString('en-IE', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}
-                  </small>
-                </Alert>
-              </Col>
-            </Row>
-          </Card.Body>
-        </Card>
-      )}
-
-      {/* Loading State */}
-      {reportsLoading && (
-        <Card className="mb-4">
-          <Card.Body className="text-center py-5">
-            <Spinner animation="border" variant="primary" />
-            <p className="mt-3 mb-0">Loading reports for {selectedPeriod?.period_name}...</p>
-          </Card.Body>
-        </Card>
-      )}
-
-      {/* Backend Reports Section */}
-      {!reportsLoading && stockValueReport ? (
-        <>
-          {/* Stock Value Report Card */}
-          <Card className="mb-4 border-info">
-            <Card.Header className="bg-info text-white">
-              <div className="d-flex justify-content-between align-items-center">
-                <h5 className="mb-0">
-                  <FaDollarSign className="me-2" />
-                  {stockValueReport.period.period_name} - Stock Value Analysis
-                  <small className="ms-2">(Period ID: {stockValueReport.period.id})</small>
-                </h5>
-                <Badge bg="light" text="dark">
-                  Closed: {new Date(stockValueReport.period.end_date).toLocaleDateString('en-IE')}
-                </Badge>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              <Row className="mb-3">
-                <Col md={4}>
-                  <div className="p-3 bg-light rounded text-center">
-                    <p className="text-muted mb-1 small">Cost Value</p>
-                    <h4 className="text-primary mb-0">{formatCurrency(stockValueReport.totals.cost_value)}</h4>
-                    <small className="text-muted">What you paid</small>
-                  </div>
-                </Col>
-                <Col md={4}>
-                  <div className="p-3 bg-light rounded text-center">
-                    <p className="text-muted mb-1 small">Potential Profit</p>
-                    <h4 className="text-success mb-0">{formatCurrency(stockValueReport.totals.potential_profit)}</h4>
-                    <small className="text-muted">Your markup</small>
-                  </div>
-                </Col>
-                <Col md={4}>
-                  <div className="p-3 bg-light rounded text-center">
-                    <p className="text-muted mb-1 small">Markup %</p>
-                    <h4 className="text-info mb-0">{stockValueReport.totals.markup_percentage.toFixed(1)}%</h4>
-                    <small className="text-muted">Profit margin</small>
-                  </div>
-                </Col>
-              </Row>
-              
-              <Table responsive hover size="sm">
-                <thead className="table-light">
-                  <tr>
-                    <th>Category</th>
-                    <th className="text-end">Cost Value</th>
-                    <th className="text-end">Potential Profit</th>
-                    <th className="text-end">Markup %</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stockValueReport.categories.map(cat => (
-                    <tr key={cat.category}>
-                      <td>
-                        <strong>{cat.name}</strong>
-                        <Badge bg="secondary" className="ms-2">{cat.category}</Badge>
-                      </td>
-                      <td className="text-end">{formatCurrency(cat.cost_value)}</td>
-                      <td className="text-end text-success"><strong>{formatCurrency(cat.potential_profit)}</strong></td>
-                      <td className="text-end">
-                        <Badge bg={cat.markup_percentage >= 200 ? 'success' : cat.markup_percentage >= 150 ? 'info' : 'warning'}>
-                          {cat.markup_percentage.toFixed(1)}%
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="table-secondary">
-                  <tr>
-                    <th>TOTAL</th>
-                    <th className="text-end">{formatCurrency(stockValueReport.totals.cost_value)}</th>
-                    <th className="text-end">{formatCurrency(stockValueReport.totals.potential_profit)}</th>
-                    <th className="text-end">{stockValueReport.totals.markup_percentage.toFixed(1)}%</th>
-                  </tr>
-                </tfoot>
-              </Table>
-            </Card.Body>
-          </Card>
-        </>
-      ) : reportsError ? (
-        <Alert variant="danger" className="mb-4">
-          <h5>Unable to Load Reports</h5>
-          <p>{reportsError}</p>
-          <small>Check console for details or contact support.</small>
-        </Alert>
-      ) : null}
-
       {/* Quick Actions */}
       <Card>
         <Card.Header>
           <h5 className="mb-0">Quick Actions</h5>
         </Card.Header>
         <Card.Body>
-          <Row>
-            <Col md={3} className="mb-2">
+          <Row className="g-4">
+            <Col xs={6} md={4} lg={4}>
               <Button 
                 variant="outline-primary" 
-                className="w-100"
+                className="w-100 d-flex flex-column align-items-center justify-content-center"
+                style={{ height: '150px', fontSize: '1.1rem' }}
                 onClick={() => navigate(`/stock_tracker/${hotel_slug}/items`)}
               >
-                <FaClipboardList className="me-2" />
-                View All Items
+                <FaClipboardList size={40} className="mb-3" />
+                <span>View All Items</span>
               </Button>
             </Col>
-            <Col md={3} className="mb-2">
+            <Col xs={6} md={4} lg={4}>
               <Button 
                 variant="outline-success" 
-                className="w-100"
-                onClick={() => navigate(`/stock_tracker/${hotel_slug}/profitability`)}
+                className="w-100 d-flex flex-column align-items-center justify-content-center"
+                style={{ height: '150px', fontSize: '1.1rem' }}
+                onClick={() => navigate(`/stock_tracker/${hotel_slug}/analytics`)}
               >
-                <FaChartLine className="me-2" />
-                Profitability
+                <FaChartLine size={40} className="mb-3" />
+                <span>Analytics</span>
               </Button>
             </Col>
-            <Col md={3} className="mb-2">
-              <Button 
-                variant="outline-warning" 
-                className="w-100"
-                onClick={() => navigate(`/stock_tracker/${hotel_slug}/items?lowStock=true`)}
-              >
-                <FaExclamationTriangle className="me-2" />
-                Low Stock
-              </Button>
-            </Col>
-            <Col md={3} className="mb-2">
+            <Col xs={6} md={4} lg={4}>
               <Button 
                 variant="outline-info" 
-                className="w-100"
-                onClick={() => navigate(`/stock_tracker/${hotel_slug}/stocktakes`)}
+                className="w-100 d-flex flex-column align-items-center justify-content-center"
+                style={{ height: '150px', fontSize: '1.1rem' }}
+                onClick={() => navigate(`/stock_tracker/${hotel_slug}/operations`)}
               >
-                <FaBoxes className="me-2" />
-                Stocktakes
-              </Button>
-            </Col>
-            <Col md={3} className="mb-2">
-              <Button 
-                variant="outline-secondary" 
-                className="w-100"
-                onClick={() => navigate(`/stock_tracker/${hotel_slug}/movements`)}
-              >
-                <FaExchangeAlt className="me-2" />
-                Movements
-              </Button>
-            </Col>
-            <Col md={3} className="mb-2">
-              <Button 
-                variant="outline-dark" 
-                className="w-100"
-                onClick={() => navigate(`/stock_tracker/${hotel_slug}/periods`)}
-              >
-                <FaClipboardList className="me-2" />
-                Closed Stocktakes
-              </Button>
-            </Col>
-            <Col md={4} className="mb-2">
-              <Button 
-                variant="outline-primary" 
-                className="w-100"
-                onClick={() => navigate(`/stock_tracker/${hotel_slug}/comparison`)}
-              >
-                <FaChartLine className="me-2" />
-                Compare Periods
-              </Button>
-            </Col>
-            <Col md={4} className="mb-2">
-              <Button 
-                variant="outline-info" 
-                className="w-100"
-                onClick={() => navigate(`/stock_tracker/${hotel_slug}/cocktails`)}
-              >
-                <FaCocktail className="me-2" />
-                Cocktails
+                <FaBoxes size={40} className="mb-3" />
+                <span>Stock Operations</span>
               </Button>
             </Col>
           </Row>

@@ -175,6 +175,24 @@ export const PeriodSnapshots = () => {
                         )}
                       </div>
                     )}
+                    {/* Manual Financial Values - Show if entered */}
+                    {(period.manual_purchases_amount || period.manual_sales_amount) && (
+                      <div className="mb-2 mt-3 pt-2 border-top">
+                        <small className="text-muted fw-bold d-block mb-1">💰 Manual Values:</small>
+                        {period.manual_purchases_amount && (
+                          <div>
+                            <small className="text-muted">Purchases:</small>{" "}
+                            <strong className="text-danger">{formatCurrency(period.manual_purchases_amount)}</strong>
+                          </div>
+                        )}
+                        {period.manual_sales_amount && (
+                          <div>
+                            <small className="text-muted">Sales:</small>{" "}
+                            <strong className="text-success">{formatCurrency(period.manual_sales_amount)}</strong>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="card-footer bg-transparent">
                     <button className="btn btn-sm btn-outline-primary w-100">

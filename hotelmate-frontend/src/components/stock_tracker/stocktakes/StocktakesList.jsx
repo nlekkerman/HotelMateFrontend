@@ -110,13 +110,21 @@ export const StocktakesList = () => {
         <div>
           <h2 className="d-inline">Stocktakes</h2>
         </div>
-        <Button 
-          variant="primary" 
-          onClick={handleCreateNew}
-          disabled={creating}
-        >
-          {creating ? 'Creating...' : '+ New Stocktake'}
-        </Button>
+        <div className="d-flex gap-2">
+          <Button 
+            variant="outline-info" 
+            onClick={() => navigate(`/stock_tracker/${hotel_slug}/periods`)}
+          >
+            Periods
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={handleCreateNew}
+            disabled={creating}
+          >
+            {creating ? 'Creating...' : '+ New Stocktake'}
+          </Button>
+        </div>
       </div>
 
       {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
