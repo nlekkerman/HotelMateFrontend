@@ -1189,7 +1189,11 @@ body.terminal-mode,
   max-width: 100% !important;
   box-sizing: border-box !important;
 }
-
+.modal-footer{
+  display: flex;
+  justify-content: space-evenly;
+  
+}
 /* Ensure emoji picker content doesn't overflow */
 .emoji-picker-container aside.EmojiPickerReact * {
   box-sizing: border-box !important;

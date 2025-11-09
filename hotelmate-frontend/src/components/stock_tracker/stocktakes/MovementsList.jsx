@@ -10,6 +10,7 @@ import { FaTrash, FaHistory, FaEdit } from 'react-icons/fa';
 import api from '@/services/api';
 import DeletionModal from '@/components/modals/DeletionModal';
 import ConfirmationModal from '@/components/modals/ConfirmationModal';
+import SuccessModal from '@/components/modals/SuccessModal';
 
 export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, itemName, itemSku }) => {
   const [movements, setMovements] = useState([]);
@@ -21,6 +22,10 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
   // Delete confirmation modal state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [movementToDelete, setMovementToDelete] = useState(null);
+  
+  // Success modal state
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -71,6 +76,7 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
   };
 
   const handleDeleteClick = (movement) => {
+    // Keep history modal open, just show delete confirmation
     setMovementToDelete(movement);
     setShowDeleteConfirm(true);
   };
@@ -80,7 +86,6 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
 
     try {
       setDeleting(movementToDelete.id);
-      setShowDeleteConfirm(false);
       
       // ✅ CORRECT ENDPOINT: /api/stock_tracker/{hotel}/stocktake-lines/{lineId}/delete-movement/{movementId}/
       const response = await api.delete(
@@ -88,6 +93,11 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
       );
 
       console.log('✅ Movement deleted:', response.data);
+      
+      // Close ALL modals before showing success
+      setShowDeleteConfirm(false);
+      setShowModal(false);
+      setMovementToDelete(null);
       
       // Remove from local list
       setMovements(prev => prev.filter(m => m.id !== movementToDelete.id));
@@ -97,10 +107,16 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
         onMovementDeleted(response.data.line);
       }
       
-      setMovementToDelete(null);
+      // Show success message after all modals are closed
+      setTimeout(() => {
+        setSuccessMessage(`Movement deleted successfully!`);
+        setShowSuccess(true);
+      }, 100);
+      
     } catch (err) {
       console.error('Failed to delete movement:', err);
       setError(err.response?.data?.detail || 'Failed to delete movement');
+      setShowDeleteConfirm(false);
     } finally {
       setDeleting(null);
     }
@@ -127,7 +143,6 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
   };
 
   const handleUpdateConfirm = async () => {
-    setShowEditConfirm(false);
     
     try {
       setUpdating(true);
@@ -166,13 +181,22 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
         onMovementDeleted(response.data.line);
       }
 
-      // Close edit modal
+      // Close ALL modals before showing success
+      setShowEditConfirm(false);
       setShowEditModal(false);
+      setShowModal(false);
       setEditingMovement(null);
+      
+      // Show success message after all modals are closed
+      setTimeout(() => {
+        setSuccessMessage('Movement updated successfully!');
+        setShowSuccess(true);
+      }, 100);
       
     } catch (err) {
       console.error('❌ Failed to update movement:', err);
-      alert(err.response?.data?.detail || 'Failed to update movement');
+      setError(err.response?.data?.detail || 'Failed to update movement');
+      setShowEditConfirm(false);
     } finally {
       setUpdating(false);
     }
@@ -248,12 +272,14 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
                     </td>
                     <td>
                       {!isLocked && (
-                        <div className="d-flex gap-2">
+                        <div className="d-flex gap-2 justify-content-center align-items-center">
                           <Button
                             variant="outline-primary"
                             size="sm"
                             onClick={() => handleEditMovement(movement)}
                             title="Edit movement"
+                            className="d-flex align-items-center justify-content-center"
+                            style={{ minWidth: 36, minHeight: 36 }}
                           >
                             <FaEdit />
                           </Button>
@@ -263,6 +289,8 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
                             onClick={() => handleDeleteClick(movement)}
                             disabled={deleting === movement.id}
                             title="Delete movement"
+                            className="d-flex align-items-center justify-content-center"
+                            style={{ minWidth: 36, minHeight: 36 }}
                           >
                             {deleting === movement.id ? (
                               <Spinner animation="border" size="sm" />
@@ -273,7 +301,9 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
                         </div>
                       )}
                       {isLocked && (
-                        <Badge bg="secondary">Locked</Badge>
+                        <div className="d-flex justify-content-center">
+                          <Badge bg="secondary">Locked</Badge>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -290,7 +320,7 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
       </Modal>
 
       {/* Edit Movement Modal */}
-      <Modal show={showEditModal} onHide={() => setShowEditModal(false)}>
+      <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title>Edit Movement</Modal.Title>
         </Modal.Header>
@@ -417,6 +447,16 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
           onCancel={() => setShowEditConfirm(false)}
         />
       )}
+
+      {/* Success Modal */}
+      <SuccessModal
+        show={showSuccess}
+        message={successMessage}
+        onClose={() => {
+          setShowSuccess(false);
+          setSuccessMessage('');
+        }}
+      />
     </>
   );
 };

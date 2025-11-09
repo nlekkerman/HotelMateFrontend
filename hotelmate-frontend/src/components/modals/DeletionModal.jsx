@@ -14,12 +14,11 @@ export default function DeletionModal({
 
   return (
     <div
-      className="deletion-modal-backdrop"
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.3)",
-        zIndex: 1050,
+        backgroundColor: "rgba(0,0,0,0.6)",
+        zIndex: 9999,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -27,42 +26,48 @@ export default function DeletionModal({
       onClick={onClose}
     >
       <div
-        className="deletion-modal-content bg-white p-4 rounded shadow"
-        style={{ minWidth: 320, maxWidth: 400 }}
+        className="modal-dialog modal-dialog-centered"
+        style={{ zIndex: 10000, maxWidth: 450, position: "relative" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h5 className="mb-0">{title}</h5>
-          <button
-            type="button"
-            className="btn-close"
-            aria-label="Close"
-            onClick={onClose}
-          />
-        </div>
+        <div className="modal-content shadow-lg" style={{ backgroundColor: "white" }}>
+          {/* Header */}
+          <div className="modal-header bg-danger text-white">
+            <h5 className="modal-title">
+              <i className="bi bi-exclamation-triangle-fill me-2"></i>
+              {title}
+            </h5>
+            <button
+              type="button"
+              className="btn-close btn-close-white"
+              aria-label="Close"
+              onClick={onClose}
+            />
+          </div>
 
-        {/* Body */}
-        <div className="mb-4">
-          {children}
-        </div>
+          {/* Body */}
+          <div className="modal-body">
+            {children}
+          </div>
 
-        {/* Footer */}
-        <div className="d-flex justify-content-end">
-          <button
-            type="button"
-            className="btn btn-secondary me-2"
-            onClick={onClose}
-          >
-            {cancelText}
-          </button>
-          <button
-            type="button"
-            className="btn btn-danger"
-            onClick={onConfirm}
-          >
-            {confirmText}
-          </button>
+          {/* Footer */}
+          <div className="modal-footer d-flex justify-content-evenly">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={onClose}
+            >
+              {cancelText}
+            </button>
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={onConfirm}
+            >
+              <i className="bi bi-trash me-1"></i>
+              {confirmText}
+            </button>
+          </div>
         </div>
       </div>
     </div>

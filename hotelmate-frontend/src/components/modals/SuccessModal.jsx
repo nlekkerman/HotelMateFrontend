@@ -1,38 +1,74 @@
-import React from "react";
+import React, { useEffect } from "react";
 
 export default function SuccessModal({ show, message = "Success!", onClose }) {
+  // Auto-close after 2 seconds
+  useEffect(() => {
+    if (show) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [show, onClose]);
+
   if (!show) return null;
 
   return (
-    <div
-      className="modal-backdrop main-bg"
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 9999,
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-      onClick={onClose}
-    >
+    <>
       <div
-        className="modal-content bg-white p-4 rounded shadow custom-main-bg-outline"
-        style={{ minWidth: 300, maxWidth: 400 }}
-        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: "fixed",
+          inset: 0,
+          backgroundColor: "rgba(0,0,0,0.6)",
+          zIndex: 9999,
+        }}
+        onClick={onClose}
+      />
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 10000,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          pointerEvents: "none"
+        }}
       >
-        <h5 className="mb-3 main-text">Success</h5>
-        <div className="mb-4 custom-main-text">{message}</div>
-        <div className="d-flex justify-content-end">
-          <button
-            className="custom-button"
-            onClick={onClose}
-            type="button"
-          >
-            Close
-          </button>
+        <div
+          className="modal-dialog"
+          style={{ position: "relative", margin: 0, maxWidth: 450, pointerEvents: "auto" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="modal-content shadow-lg" style={{ backgroundColor: "white" }}>
+            <div className="modal-header bg-success text-white">
+              <h5 className="modal-title">
+                <i className="bi bi-check-circle-fill me-2"></i>
+                Success
+              </h5>
+              <button
+                type="button"
+                className="btn-close btn-close-white"
+                aria-label="Close"
+                onClick={onClose}
+              />
+            </div>
+            <div className="modal-body text-center">
+              <p className="mb-0">{message}</p>
+            </div>
+            <div className="modal-footer d-flex justify-content-center">
+              <button
+                type="button"
+                className="btn btn-success"
+                onClick={onClose}
+              >
+                OK
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -52,6 +52,20 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
   const { categoryTotals, loading: totalsLoading, refetch: refetchTotals } =
     useCategoryTotals(hotelSlug, stocktakeId);
 
+  // Clear ALL validation errors when clicking anywhere
+  React.useEffect(() => {
+    const handleClickAnywhere = (e) => {
+      // Check if click is on a Save button (don't clear errors when clicking Save)
+      const isSaveButton = e.target.closest('button')?.textContent?.includes('Save');
+      if (!isSaveButton && Object.keys(validationErrors).length > 0) {
+        setValidationErrors({});
+      }
+    };
+
+    document.addEventListener('click', handleClickAnywhere);
+    return () => document.removeEventListener('click', handleClickAnywhere);
+  }, [validationErrors]);
+
   // Group lines by category name
   const groupedLines = lines.reduce((acc, line) => {
     const cat = line.category_name || 'Uncategorized';
@@ -279,6 +293,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
       return;
     }
 
+    // Clear error only if validation passes
     setValidationErrors((prev) => {
       const { [lineId]: _, ...rest } = prev;
       return rest;
@@ -360,6 +375,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
       return;
     }
 
+    // Clear error only if validation passes
     setValidationErrors((prev) => {
       const { [lineId]: _, ...rest } = prev;
       return rest;
@@ -523,10 +539,25 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                 step="0.01"
                 size="sm"
                 value={inputs.purchasesQty}
-                onChange={(e) => updateLineInput(line.id, 'purchasesQty', e.target.value)}
+                onChange={(e) => {
+                  updateLineInput(line.id, 'purchasesQty', e.target.value);
+                }}
                 onFocus={(e) => {
                   e.target.classList.add('bg-info-subtle');
                   if (e.target.value === '0' || e.target.value === '0.00') e.target.value = '';
+                  // Clear error when clicking anywhere (focusing another field)
+                  if (lineErrors.purchasesQty) {
+                    setValidationErrors((prev) => {
+                      const { [line.id]: lineErr, ...rest } = prev;
+                      if (lineErr) {
+                        const { purchasesQty, ...otherErrors } = lineErr;
+                        return Object.keys(otherErrors).length > 0 
+                          ? { ...rest, [line.id]: otherErrors }
+                          : rest;
+                      }
+                      return prev;
+                    });
+                  }
                 }}
                 onBlur={(e) => {
                   e.target.classList.remove('bg-info-subtle');
@@ -592,10 +623,25 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                 step="0.01"
                 size="sm"
                 value={inputs.wasteQuantity}
-                onChange={(e) => updateLineInput(line.id, 'wasteQuantity', e.target.value)}
+                onChange={(e) => {
+                  updateLineInput(line.id, 'wasteQuantity', e.target.value);
+                }}
                 onFocus={(e) => {
                   e.target.classList.add('bg-info-subtle');
                   if (e.target.value === '0' || e.target.value === '0.00') e.target.value = '';
+                  // Clear error when clicking anywhere (focusing another field)
+                  if (lineErrors.wasteQuantity) {
+                    setValidationErrors((prev) => {
+                      const { [line.id]: lineErr, ...rest } = prev;
+                      if (lineErr) {
+                        const { wasteQuantity, ...otherErrors } = lineErr;
+                        return Object.keys(otherErrors).length > 0 
+                          ? { ...rest, [line.id]: otherErrors }
+                          : rest;
+                      }
+                      return prev;
+                    });
+                  }
                 }}
                 onBlur={(e) => {
                   e.target.classList.remove('bg-info-subtle');
@@ -671,6 +717,13 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                   // Clear the input field visually - store original value
                   e.target.dataset.originalValue = e.target.value;
                   e.target.value = '';
+                  // Clear ALL errors for this line when focusing any input
+                  if (validationErrors[line.id]) {
+                    setValidationErrors((prev) => {
+                      const { [line.id]: _, ...rest } = prev;
+                      return rest;
+                    });
+                  }
                 }}
                 onBlur={(e) => {
                   e.target.classList.remove('bg-info-subtle');
@@ -713,6 +766,13 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                   // Clear the input field visually - store original value
                   e.target.dataset.originalValue = e.target.value;
                   e.target.value = '';
+                  // Clear ALL errors for this line when focusing any input
+                  if (validationErrors[line.id]) {
+                    setValidationErrors((prev) => {
+                      const { [line.id]: _, ...rest } = prev;
+                      return rest;
+                    });
+                  }
                 }}
                 onBlur={(e) => {
                   e.target.classList.remove('bg-info-subtle');
