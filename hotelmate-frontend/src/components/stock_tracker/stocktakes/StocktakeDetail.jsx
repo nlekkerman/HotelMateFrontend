@@ -1,19 +1,34 @@
 ﻿import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Button, Badge, Alert, Spinner, Card, Modal, Row, Col } from "react-bootstrap";
-import { FaArrowLeft, FaLock, FaCheckCircle, FaExclamationTriangle, FaMoneyBillWave } from "react-icons/fa";
+import {
+  Button,
+  Badge,
+  Alert,
+  Spinner,
+  Card,
+  Modal,
+  Row,
+  Col,
+} from "react-bootstrap";
+import {
+  FaArrowLeft,
+  FaLock,
+  FaCheckCircle,
+  FaExclamationTriangle,
+  FaMoneyBillWave,
+} from "react-icons/fa";
 import { toast } from "react-toastify";
 import Pusher from "pusher-js";
 import api from "@/services/api";
-import { StocktakeLines } from './StocktakeLines';
-import { StocktakeCloseModal } from './StocktakeCloseModal';
-import { useStocktakeRealtime } from '../hooks/useStocktakeRealtime';
+import { StocktakeLines } from "./StocktakeLines";
+import { StocktakeCloseModal } from "./StocktakeCloseModal";
+import { useStocktakeRealtime } from "../hooks/useStocktakeRealtime";
 // import { CategoryTotalsSummary } from './CategoryTotalsSummary'; // TODO: Enable when summary endpoint exists
 
 export const StocktakeDetail = () => {
   const { hotel_slug, id } = useParams();
   const navigate = useNavigate();
-  
+
   const [stocktake, setStocktake] = useState(null);
   const [lines, setLines] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,69 +41,70 @@ export const StocktakeDetail = () => {
   // Initialize Pusher instance for real-time updates
   useEffect(() => {
     const pusherKey = import.meta.env.VITE_PUSHER_KEY;
-    const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER || 'mt1';
+    const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER || "mt1";
 
     if (!pusherKey) {
-      console.warn('⚠️ Pusher key not found in environment variables');
+      console.warn("⚠️ Pusher key not found in environment variables");
       return;
     }
 
-    console.log('🔌 Initializing Pusher for stocktake...');
-    
+    console.log("🔌 Initializing Pusher for stocktake...");
+
     const pusherInstance = new Pusher(pusherKey, {
       cluster: pusherCluster,
-      encrypted: true
+      encrypted: true,
     });
 
-    pusherInstance.connection.bind('connected', () => {
-      console.log('✅ Pusher connected');
+    pusherInstance.connection.bind("connected", () => {
+      console.log("✅ Pusher connected");
       setPusherReady(true);
     });
 
-    pusherInstance.connection.bind('disconnected', () => {
-      console.log('❌ Pusher disconnected');
+    pusherInstance.connection.bind("disconnected", () => {
+      console.log("❌ Pusher disconnected");
       setPusherReady(false);
     });
 
-    pusherInstance.connection.bind('error', (err) => {
-      console.error('❌ Pusher error:', err);
+    pusherInstance.connection.bind("error", (err) => {
+      console.error("❌ Pusher error:", err);
     });
 
     setPusher(pusherInstance);
 
     // Cleanup on unmount
     return () => {
-      console.log('🔌 Disconnecting Pusher...');
+      console.log("🔌 Disconnecting Pusher...");
       pusherInstance.disconnect();
     };
   }, []);
 
   // Pusher callbacks
   const handleLineUpdatedFromPusher = useCallback((updatedLine) => {
-    console.log('📡 Real-time line update received:', updatedLine.item_sku);
-    setLines(prevLines =>
-      prevLines.map(line =>
-        line.id === updatedLine.id ? updatedLine : line
-      )
+    console.log("📡 Real-time line update received:", updatedLine.item_sku);
+    setLines((prevLines) =>
+      prevLines.map((line) => (line.id === updatedLine.id ? updatedLine : line))
     );
     // Silent update - no toast notification
   }, []);
 
   const handleStocktakeUpdatedFromPusher = useCallback((updatedStocktake) => {
-    console.log('📡 Real-time stocktake status change:', updatedStocktake.status);
+    console.log(
+      "📡 Real-time stocktake status change:",
+      updatedStocktake.status
+    );
     setStocktake(updatedStocktake);
-    
-    if (updatedStocktake.status === 'APPROVED') {
-      toast.success('Stocktake has been approved and locked', {
-        autoClose: 5000
+
+    if (updatedStocktake.status === "APPROVED") {
+      toast.success("Stocktake has been approved and locked", {
+        autoClose: 5000,
       });
     }
   }, []);
 
   const handleStocktakePopulatedFromPusher = useCallback((data) => {
-    console.log('📡 Real-time stocktake populated:', data.lines_created);
+    console.log("📡 Real-time stocktake populated:", data.lines_created);
     toast.success(`${data.lines_created} items loaded into stocktake`, {
-      autoClose: 3000
+      autoClose: 3000,
     });
     // Refresh the full stocktake to get all lines
     fetchStocktake();
@@ -112,7 +128,9 @@ export const StocktakeDetail = () => {
   const fetchStocktake = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/stock_tracker/${hotel_slug}/stocktakes/${id}/`);
+      const response = await api.get(
+        `/stock_tracker/${hotel_slug}/stocktakes/${id}/`
+      );
       setStocktake(response.data);
       setLines(response.data.lines || []);
       setError(null);
@@ -128,16 +146,22 @@ export const StocktakeDetail = () => {
       // Fetch all periods and find the previous closed one
       const response = await api.get(`/stock_tracker/${hotel_slug}/periods/`);
       const periods = response.data;
-      
+
       // Sort by start_date descending to get most recent first
-      const sortedPeriods = periods.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
-      
+      const sortedPeriods = periods.sort(
+        (a, b) => new Date(b.start_date) - new Date(a.start_date)
+      );
+
       // Find the most recent closed/approved period
-      const closedPeriod = sortedPeriods.find(p => p.is_closed || p.status === 'APPROVED');
-      
+      const closedPeriod = sortedPeriods.find(
+        (p) => p.is_closed || p.status === "APPROVED"
+      );
+
       if (closedPeriod) {
         // Fetch summary for that period
-        const summaryResponse = await api.get(`/stock-tracker/${hotel_slug}/periods/${closedPeriod.id}/summary/`);
+        const summaryResponse = await api.get(
+          `/stock-tracker/${hotel_slug}/periods/${closedPeriod.id}/summary/`
+        );
         setPreviousPeriod(summaryResponse.data);
       }
     } catch (err) {
@@ -158,168 +182,259 @@ export const StocktakeDetail = () => {
     }
   };
 
-  const handleUpdateLine = async (lineId, fullUnits, partialUnits, wasteQuantity = null, purchases = null, transfersIn = null, transfersOut = null, adjustments = null) => {
-    console.log('\n🔵 ========================================');
-    console.log('🔵 PARENT HANDLER - handleUpdateLine CALLED');
-    console.log('🔵 ========================================');
-    
+  const handleUpdateLine = async (
+    lineId,
+    fullUnits,
+    partialUnits,
+    wasteQuantity = null,
+    purchases = null,
+    transfersIn = null,
+    transfersOut = null,
+    adjustments = null
+  ) => {
+    console.log("\n🔵 ========================================");
+    console.log("🔵 PARENT HANDLER - handleUpdateLine CALLED");
+    console.log("🔵 ========================================");
+
     try {
       // Find the line being updated
-      const currentLine = lines.find(l => l.id === lineId);
+      const currentLine = lines.find((l) => l.id === lineId);
       if (!currentLine) {
-        console.error('❌ Line not found:', lineId);
+        console.error("❌ Line not found:", lineId);
         return;
       }
-      
-      console.log('📋 Target Line:', {
+
+      console.log("📋 Target Line:", {
         id: lineId,
         name: currentLine.item_name,
         sku: currentLine.item_sku,
-        category: currentLine.category_code
+        category: currentLine.category_code,
       });
-      
+
       // Handle movements through add_movement endpoint (purchases and waste are read-only in serializer)
       let movementsAdded = false;
-      
-      if (purchases !== null && purchases !== undefined && purchases !== '') {
+
+      if (purchases !== null && purchases !== undefined && purchases !== "") {
         const purchasePayload = {
-          movement_type: 'PURCHASE',
+          movement_type: "PURCHASE",
           quantity: parseFloat(purchases),
-          notes: 'Purchases recorded during stocktake'
+          notes: "Purchases recorded during stocktake",
         };
-        console.log('🛒 SENDING PURCHASE:', purchasePayload);
-        const purchaseResponse = await api.post(`/stock_tracker/${hotel_slug}/stocktake-lines/${lineId}/add-movement/`, purchasePayload);
-        console.log('✅ PURCHASE RESPONSE:', purchaseResponse.data);
+        console.log("🛒 SENDING PURCHASE:", purchasePayload);
+        const purchaseResponse = await api.post(
+          `/stock_tracker/${hotel_slug}/stocktake-lines/${lineId}/add-movement/`,
+          purchasePayload
+        );
+        console.log("✅ PURCHASE RESPONSE:", purchaseResponse.data);
         movementsAdded = true;
       }
-      
-      if (wasteQuantity !== null && wasteQuantity !== undefined && wasteQuantity !== '') {
+
+      if (
+        wasteQuantity !== null &&
+        wasteQuantity !== undefined &&
+        wasteQuantity !== ""
+      ) {
         const wastePayload = {
-          movement_type: 'WASTE',
+          movement_type: "WASTE",
           quantity: parseFloat(wasteQuantity),
-          notes: 'Waste recorded during stocktake'
+          notes: "Waste recorded during stocktake",
         };
-        console.log('💥 SENDING WASTE:', wastePayload);
-        const wasteResponse = await api.post(`/stock_tracker/${hotel_slug}/stocktake-lines/${lineId}/add-movement/`, wastePayload);
-        console.log('✅ WASTE RESPONSE:', wasteResponse.data);
+        console.log("💥 SENDING WASTE:", wastePayload);
+        const wasteResponse = await api.post(
+          `/stock_tracker/${hotel_slug}/stocktake-lines/${lineId}/add-movement/`,
+          wastePayload
+        );
+        console.log("✅ WASTE RESPONSE:", wasteResponse.data);
         movementsAdded = true;
       }
-      
+
       const payload = {
         counted_full_units: fullUnits,
-        counted_partial_units: partialUnits
+        counted_partial_units: partialUnits,
       };
 
-      if (transfersIn !== null && transfersIn !== undefined && transfersIn !== '') {
+      if (
+        transfersIn !== null &&
+        transfersIn !== undefined &&
+        transfersIn !== ""
+      ) {
         payload.transfers_in = transfersIn;
       }
 
-      if (transfersOut !== null && transfersOut !== undefined && transfersOut !== '') {
+      if (
+        transfersOut !== null &&
+        transfersOut !== undefined &&
+        transfersOut !== ""
+      ) {
         payload.transfers_out = transfersOut;
       }
 
-      if (adjustments !== null && adjustments !== undefined && adjustments !== '') {
+      if (
+        adjustments !== null &&
+        adjustments !== undefined &&
+        adjustments !== ""
+      ) {
         payload.adjustments = adjustments;
       }
-      
-      console.log('\n📦 Final Payload to API:', JSON.stringify(payload, null, 2));
-      
+
+      console.log(
+        "\n📦 Final Payload to API:",
+        JSON.stringify(payload, null, 2)
+      );
+
       // Update the line with counted values and purchases
-      console.log('\n🌐 SENDING PATCH TO UPDATE LINE');
-      console.log('─────────────────────────────────────────');
-      const response = await api.patch(`/stock_tracker/${hotel_slug}/stocktake-lines/${lineId}/`, payload);
-      
-      console.log('\n✅ DATABASE RESPONSE RECEIVED');
-      console.log('─────────────────────────────────────────');
-      console.log('Full Response:', JSON.stringify(response.data, null, 2));
-      
-      console.log('\n� CHECKING WHAT DB RETURNED:');
-      console.log('─────────────────────────────────────────');
-      
-      console.log('\n📊 Movement Values from DB:');
-      console.log('  🛒 Purchases (DB):', response.data.purchases, '← DID THIS UPDATE?');
-      console.log('  💥 Waste (DB):', response.data.waste, '← DID THIS UPDATE?');
-      
-      console.log('\n📊 Stock Calculations from DB:');
-      console.log('  Opening Qty (DB):', response.data.opening_qty);
-      console.log('  Expected Qty (DB):', response.data.expected_qty, '← Should be: opening + purchases - waste');
-      console.log('  Expected Value (DB):', response.data.expected_value);
-      console.log('  Counted Qty (DB):', response.data.counted_qty);
-      console.log('  Variance Qty (DB):', response.data.variance_qty);
-      console.log('  Variance Value (DB):', response.data.variance_value);
-      
-      console.log('\n🧮 VERIFY BACKEND FORMULA:');
+      console.log("\n🌐 SENDING PATCH TO UPDATE LINE");
+      console.log("─────────────────────────────────────────");
+      const response = await api.patch(
+        `/stock_tracker/${hotel_slug}/stocktake-lines/${lineId}/`,
+        payload
+      );
+
+      console.log("\n✅ DATABASE RESPONSE RECEIVED");
+      console.log("─────────────────────────────────────────");
+      console.log("Full Response:", JSON.stringify(response.data, null, 2));
+
+      console.log("\n� CHECKING WHAT DB RETURNED:");
+      console.log("─────────────────────────────────────────");
+
+      console.log("\n📊 Movement Values from DB:");
+      console.log(
+        "  🛒 Purchases (DB):",
+        response.data.purchases,
+        "← DID THIS UPDATE?"
+      );
+      console.log(
+        "  💥 Waste (DB):",
+        response.data.waste,
+        "← DID THIS UPDATE?"
+      );
+
+      console.log("\n📊 Stock Calculations from DB:");
+      console.log("  Opening Qty (DB):", response.data.opening_qty);
+      console.log(
+        "  Expected Qty (DB):",
+        response.data.expected_qty,
+        "← Should be: opening + purchases - waste"
+      );
+      console.log("  Expected Value (DB):", response.data.expected_value);
+      console.log("  Counted Qty (DB):", response.data.counted_qty);
+      console.log("  Variance Qty (DB):", response.data.variance_qty);
+      console.log("  Variance Value (DB):", response.data.variance_value);
+
+      console.log("\n🧮 VERIFY BACKEND FORMULA:");
       const db_opening = parseFloat(response.data.opening_qty) || 0;
       const db_purchases = parseFloat(response.data.purchases) || 0;
       const db_waste = parseFloat(response.data.waste) || 0;
       const db_expected = parseFloat(response.data.expected_qty) || 0;
       const calculated_expected = db_opening + db_purchases - db_waste;
-      console.log(`  Formula: ${db_opening} + ${db_purchases} - ${db_waste} = ${calculated_expected.toFixed(4)}`);
+      console.log(
+        `  Formula: ${db_opening} + ${db_purchases} - ${db_waste} = ${calculated_expected.toFixed(
+          4
+        )}`
+      );
       console.log(`  DB Expected: ${db_expected.toFixed(4)}`);
-      console.log(`  Match: ${Math.abs(calculated_expected - db_expected) < 0.01 ? '✅' : '❌ MISMATCH!'}`);
-      
-      console.log('\n🔍 Input Fields Sent vs Returned:');
-      console.log('  SENT purchases:', payload.purchases ?? 'not sent');
-      console.log('  RETURNED purchases:', response.data.purchases);
-      console.log('  ⚠️ Match:', payload.purchases == response.data.purchases ? '✅' : '❌ VALUES DIFFERENT!');
-      
-      console.log('  SENT waste_quantity:', payload.waste_quantity ?? 'not sent');
-      console.log('  RETURNED waste:', response.data.waste);
-      console.log('  ⚠️ Match:', payload.waste_quantity == response.data.waste ? '✅' : '❌ VALUES DIFFERENT!');
-      
-      console.log('\n🔍 Display Values (DB):');
-      console.log('  Expected Full:', response.data.expected_display_full_units);
-      console.log('  Expected Partial:', response.data.expected_display_partial_units);
-      console.log('  Counted Full:', response.data.counted_display_full_units);
-      console.log('  Counted Partial:', response.data.counted_display_partial_units);
-      console.log('  Variance Full:', response.data.variance_display_full_units);
-      console.log('  Variance Partial:', response.data.variance_display_partial_units);
-      
+      console.log(
+        `  Match: ${
+          Math.abs(calculated_expected - db_expected) < 0.01
+            ? "✅"
+            : "❌ MISMATCH!"
+        }`
+      );
+
+      console.log("\n🔍 Input Fields Sent vs Returned:");
+      console.log("  SENT purchases:", payload.purchases ?? "not sent");
+      console.log("  RETURNED purchases:", response.data.purchases);
+      console.log(
+        "  ⚠️ Match:",
+        payload.purchases == response.data.purchases
+          ? "✅"
+          : "❌ VALUES DIFFERENT!"
+      );
+
+      console.log(
+        "  SENT waste_quantity:",
+        payload.waste_quantity ?? "not sent"
+      );
+      console.log("  RETURNED waste:", response.data.waste);
+      console.log(
+        "  ⚠️ Match:",
+        payload.waste_quantity == response.data.waste
+          ? "✅"
+          : "❌ VALUES DIFFERENT!"
+      );
+
+      console.log("\n🔍 Display Values (DB):");
+      console.log(
+        "  Expected Full:",
+        response.data.expected_display_full_units
+      );
+      console.log(
+        "  Expected Partial:",
+        response.data.expected_display_partial_units
+      );
+      console.log("  Counted Full:", response.data.counted_display_full_units);
+      console.log(
+        "  Counted Partial:",
+        response.data.counted_display_partial_units
+      );
+      console.log(
+        "  Variance Full:",
+        response.data.variance_display_full_units
+      );
+      console.log(
+        "  Variance Partial:",
+        response.data.variance_display_partial_units
+      );
+
       // Step 3: Replace optimistic data with backend's authoritative calculations
-      console.log('\n🔄 STEP 3: REPLACING OPTIMISTIC WITH DB VALUES');
-      console.log('─────────────────────────────────────────');
-      
+      console.log("\n🔄 STEP 3: REPLACING OPTIMISTIC WITH DB VALUES");
+      console.log("─────────────────────────────────────────");
+
       // If we added any movements (purchases or waste), refetch just this line to get fresh data
       // Movement POSTs happen separately, so PATCH response has stale movement data
       if (movementsAdded) {
-        console.log('\n🔄 Movements were added - refetching single line to get fresh data...');
-        const freshLine = await api.get(`/stock_tracker/${hotel_slug}/stocktake-lines/${lineId}/`);
-        console.log('✅ Fresh line data received:', freshLine.data);
-        
-        setLines(prevLines => 
-          prevLines.map(line => 
-            line.id === lineId ? freshLine.data : line
-          )
+        console.log(
+          "\n🔄 Movements were added - refetching single line to get fresh data..."
+        );
+        const freshLine = await api.get(
+          `/stock_tracker/${hotel_slug}/stocktake-lines/${lineId}/`
+        );
+        console.log("✅ Fresh line data received:", freshLine.data);
+
+        setLines((prevLines) =>
+          prevLines.map((line) => (line.id === lineId ? freshLine.data : line))
         );
       } else {
         // No movements - just use the PATCH response
-        setLines(prevLines => 
-          prevLines.map(line => {
+        setLines((prevLines) =>
+          prevLines.map((line) => {
             if (line.id === lineId) {
-              console.log('✅ Replacing line', lineId, 'with DB data');
-              console.log('  Old line.expected_qty:', line.expected_qty);
-              console.log('  New line.expected_qty:', response.data.expected_qty);
+              console.log("✅ Replacing line", lineId, "with DB data");
+              console.log("  Old line.expected_qty:", line.expected_qty);
+              console.log(
+                "  New line.expected_qty:",
+                response.data.expected_qty
+              );
               return response.data;
             }
             return line;
           })
         );
       }
-      
-      console.log('\n✅ ========================================');
-      console.log('✅ UPDATE COMPLETE - UI NOW SHOWS DB VALUES');
-      console.log('✅ ========================================\n');
-      
+
+      console.log("\n✅ ========================================");
+      console.log("✅ UPDATE COMPLETE - UI NOW SHOWS DB VALUES");
+      console.log("✅ ========================================\n");
     } catch (err) {
-      console.error('\n❌ ========================================');
-      console.error('❌ ERROR IN handleUpdateLine');
-      console.error('❌ ========================================');
-      console.error('Error:', err);
-      console.error('Response:', err.response?.data);
-      
+      console.error("\n❌ ========================================");
+      console.error("❌ ERROR IN handleUpdateLine");
+      console.error("❌ ========================================");
+      console.error("Error:", err);
+      console.error("Response:", err.response?.data);
+
       setError(err.response?.data?.detail || "Failed to update line");
       // Revert optimistic update on error by refetching
-      console.log('🔄 Reverting optimistic update by refetching from DB...');
+      console.log("🔄 Reverting optimistic update by refetching from DB...");
       await fetchStocktake();
     }
   };
@@ -328,47 +443,70 @@ export const StocktakeDetail = () => {
     // Called after successful approval from modal
     // Refresh stocktake to get calculated metrics
     await fetchStocktake();
-    toast.success('Stocktake closed successfully! 🎉', {
-      autoClose: 5000
+    toast.success("Stocktake closed successfully! 🎉", {
+      autoClose: 5000,
     });
   };
 
-  if (loading) return <div className="container mt-4 text-center"><Spinner animation="border" /></div>;
-  if (!stocktake) return <div className="container mt-4"><Alert variant="warning">Not found</Alert></div>;
+  if (loading)
+    return (
+      <div className="container mt-4 text-center">
+        <Spinner animation="border" />
+      </div>
+    );
+  if (!stocktake)
+    return (
+      <div className="container mt-4">
+        <Alert variant="warning">Not found</Alert>
+      </div>
+    );
 
-  const isLocked = stocktake.status === 'APPROVED';
-  const countedLines = lines.filter(l => l.counted_full_units !== null && l.counted_full_units !== undefined).length;
-  const canApprove = !isLocked && lines.length > 0 && countedLines === lines.length;
+  const isLocked = stocktake.status === "APPROVED";
+  const countedLines = lines.filter(
+    (l) => l.counted_full_units !== null && l.counted_full_units !== undefined
+  ).length;
+  const canApprove =
+    !isLocked && lines.length > 0 && countedLines === lines.length;
 
   return (
-  <div className="container-fluid mt-4 px-3" style={{ width: '100%', maxWidth: '100%', overflowX: 'auto', margin: '0 auto', paddingTop: '12px', paddingBottom: '12px' }}>
+    <div
+      className="container-fluid mt-4 px-3"
+      style={{
+        width: "100%",
+        maxWidth: "100%",
+        overflowX: "auto",
+        margin: "0 auto",
+        paddingTop: "12px",
+        paddingBottom: "12px",
+      }}
+    >
       {/* Sticky Back Button - Top Left */}
-      <Button 
+      <Button
         variant="outline-secondary"
         className="shadow"
         onClick={() => navigate(`/stock_tracker/${hotel_slug}/stocktakes`)}
         style={{
-          position: 'fixed',
-          top: '80px',
-          left: '120px',
+          position: "fixed",
+          top: "80px",
+          left: "120px",
           zIndex: 1050,
-          borderRadius: '8px',
-          padding: '8px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          fontSize: '1rem',
-          backgroundColor: 'rgba(255, 255, 255, 0.7)',
-          backdropFilter: 'blur(8px)',
-          transition: 'all 0.3s ease'
+          borderRadius: "8px",
+          padding: "8px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          fontSize: "1rem",
+          backgroundColor: "rgba(255, 255, 255, 0.7)",
+          backdropFilter: "blur(8px)",
+          transition: "all 0.3s ease",
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
-          e.currentTarget.style.color = '#212529';
+          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 1)";
+          e.currentTarget.style.color = "#212529";
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
-          e.currentTarget.style.color = '';
+          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.7)";
+          e.currentTarget.style.color = "";
         }}
         title="Back to Stocktakes"
       >
@@ -378,21 +516,41 @@ export const StocktakeDetail = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h4 className="d-inline">Stocktake #{stocktake.id}</h4>
-          {isLocked ? <Badge bg="secondary" className="ms-2"><FaLock /> Approved</Badge> : <Badge bg="warning" className="ms-2">Draft</Badge>}
+          {isLocked ? (
+            <Badge bg="secondary" className="ms-2">
+              <FaLock /> Approved
+            </Badge>
+          ) : (
+            <Badge bg="warning" className="ms-2">
+              Draft
+            </Badge>
+          )}
           {pusherReady && (
-            <Badge bg="success" className="ms-2" title="Real-time updates active">
-              <span style={{ fontSize: '0.8em' }}>● Live</span>
+            <Badge
+              bg="success"
+              className="ms-2"
+              title="Real-time updates active"
+            >
+              <span style={{ fontSize: "0.8em" }}>● Live</span>
             </Badge>
           )}
         </div>
         <div>
           {!isLocked && lines.length === 0 && (
-            <Button variant="primary" onClick={handlePopulate} disabled={populating}>
-              {populating ? 'Populating...' : 'Populate Lines'}
+            <Button
+              variant="primary"
+              onClick={handlePopulate}
+              disabled={populating}
+            >
+              {populating ? "Populating..." : "Populate Lines"}
             </Button>
           )}
           {canApprove && (
-            <Button variant="success" onClick={() => setShowApproveModal(true)} className="ms-2">
+            <Button
+              variant="success"
+              onClick={() => setShowApproveModal(true)}
+              className="ms-2"
+            >
               <FaCheckCircle /> Approve Stocktake
             </Button>
           )}
@@ -403,19 +561,25 @@ export const StocktakeDetail = () => {
         <Card.Body>
           <div className="row">
             <div className="col-md-3">
-              <strong>Period:</strong> {new Date(stocktake.period_start).toLocaleDateString()} - {new Date(stocktake.period_end).toLocaleDateString()}
+              <strong>Period:</strong>{" "}
+              {new Date(stocktake.period_start).toLocaleDateString()} -{" "}
+              {new Date(stocktake.period_end).toLocaleDateString()}
             </div>
             <div className="col-md-3">
               <strong>Lines:</strong> <Badge bg="primary">{lines.length}</Badge>
             </div>
             <div className="col-md-3">
-              <strong>Counted:</strong> <Badge bg={countedLines === lines.length ? "success" : "warning"}>
+              <strong>Counted:</strong>{" "}
+              <Badge bg={countedLines === lines.length ? "success" : "warning"}>
                 {countedLines} / {lines.length}
               </Badge>
             </div>
             <div className="col-md-3">
               {stocktake.approved_at && (
-                <div><strong>Approved:</strong> {new Date(stocktake.approved_at).toLocaleString()}</div>
+                <div>
+                  <strong>Approved:</strong>{" "}
+                  {new Date(stocktake.approved_at).toLocaleString()}
+                </div>
               )}
             </div>
           </div>
@@ -434,57 +598,93 @@ export const StocktakeDetail = () => {
           <Card.Body>
             <Row className="g-3">
               <Col md={6} lg={3}>
-                <Card className="text-center border-0 bg-light">
+                <Card className="text-center border-0 bg-danger text-white">
                   <Card.Body>
-                    <small className="text-muted d-block mb-1">Total COGS</small>
-                    <h4 className="mb-0 text-danger">
-                      {stocktake.total_cogs ? `€${parseFloat(stocktake.total_cogs).toFixed(2)}` : '—'}
-                    </h4>
-                    <small className="text-muted d-block mt-1">
-                      Cost of Goods Sold
+                    <small className="d-block mb-1 opacity-75">
+                      Total COGS
                     </small>
+                    <small
+                      className="d-block mb-2 opacity-75"
+                      style={{ fontSize: "0.75rem" }}
+                    >
+                      (Cost of Goods Sold)
+                    </small>
+                    <h2 className="mb-0 fw-bold">
+                      {stocktake.total_cogs
+                        ? `€${parseFloat(stocktake.total_cogs).toFixed(2)}`
+                        : "—"}
+                    </h2>
                   </Card.Body>
                 </Card>
               </Col>
               <Col md={6} lg={3}>
-                <Card className="text-center border-0 bg-light">
+                <Card className="text-center border-0 bg-success text-white">
                   <Card.Body>
-                    <small className="text-muted d-block mb-1">Total Revenue</small>
-                    <h4 className="mb-0 text-success">
-                      {stocktake.total_revenue ? `€${parseFloat(stocktake.total_revenue).toFixed(2)}` : '—'}
-                    </h4>
+                    <small className="d-block mb-1 opacity-75">
+                      Total Revenue
+                    </small>
+                    <small
+                      className="d-block mb-2 opacity-75"
+                      style={{ fontSize: "0.75rem" }}
+                    >
+                      &nbsp;
+                    </small>
+                    <h2 className="mb-0 fw-bold">
+                      {stocktake.total_revenue
+                        ? `€${parseFloat(stocktake.total_revenue).toFixed(2)}`
+                        : "—"}
+                    </h2>
                   </Card.Body>
                 </Card>
               </Col>
               <Col md={6} lg={3}>
-                <Card className="text-center border-0 bg-light">
+                <Card className="text-center border-0 bg-primary text-white">
                   <Card.Body>
-                    <small className="text-muted d-block mb-1">Gross Profit €</small>
-                    <h4 className="mb-0 text-primary">
-                      {(stocktake.total_revenue && stocktake.total_cogs) 
-                        ? `€${(parseFloat(stocktake.total_revenue) - parseFloat(stocktake.total_cogs)).toFixed(2)}`
-                        : '—'}
-                    </h4>
-                    <small className="text-success d-block mt-1 fw-semibold">
-                      GP: {stocktake.gross_profit_percentage 
-                        ? `${parseFloat(stocktake.gross_profit_percentage).toFixed(2)}%`
-                        : '—'}
+                    <small className="d-block mb-1 opacity-75">
+                      Gross Profit €
                     </small>
+                    <small
+                      className="d-block mb-2 opacity-75"
+                      style={{ fontSize: "0.75rem" }}
+                    >
+                      (GP:{" "}
+                      {stocktake.gross_profit_percentage
+                        ? `${parseFloat(
+                            stocktake.gross_profit_percentage
+                          ).toFixed(2)}%`
+                        : "—"}
+                      )
+                    </small>
+                    <h2 className="mb-0 fw-bold">
+                      {stocktake.total_revenue && stocktake.total_cogs
+                        ? `€${(
+                            parseFloat(stocktake.total_revenue) -
+                            parseFloat(stocktake.total_cogs)
+                          ).toFixed(2)}`
+                        : "—"}
+                    </h2>
                   </Card.Body>
                 </Card>
               </Col>
               <Col md={6} lg={3}>
-                <Card className="text-center border-0 bg-warning bg-opacity-25 border-warning">
+                <Card className="text-center border-0 bg-dark text-white">
                   <Card.Body>
-                    <small className="text-muted d-block mb-1">Pour Cost %</small>
-                    <h4 className="mb-0 text-warning fw-bold">
-                      {stocktake.pour_cost_percentage 
-                        ? `${parseFloat(stocktake.pour_cost_percentage).toFixed(2)}%`
-                        : '—'}
-                    </h4>
-                    <small className="text-muted d-block mt-1">
-                      COGS / Revenue
+                    <small className="d-block mb-1 opacity-75">
+                      Pour Cost %
                     </small>
+                    <small
+                      className="d-block mb-2 opacity-75"
+                      style={{ fontSize: "0.75rem" }}
+                    >
+                      (COGS / Revenue)
+                    </small>
+                    <h2 className="mb-0 fw-bold text-warning">
+                      {stocktake.pour_cost_percentage
+                        ? `${parseFloat(stocktake.pour_cost_percentage).toFixed(
+                            2
+                          )}%`
+                        : "—"}
+                    </h2>
                   </Card.Body>
                 </Card>
               </Col>
@@ -492,39 +692,40 @@ export const StocktakeDetail = () => {
           </Card.Body>
         </Card>
       )}
-      
+
       {lines.length === 0 ? (
         <Alert variant="info">Click Populate Lines to begin</Alert>
       ) : (
         <>
           {!isLocked && countedLines < lines.length && (
             <Alert variant="warning">
-              <FaExclamationTriangle /> Please count all items before approving ({countedLines}/{lines.length} counted)
+              <FaExclamationTriangle /> Please count all items before approving
+              ({countedLines}/{lines.length} counted)
             </Alert>
           )}
-          
+
           {/* Stocktake Lines */}
-          <StocktakeLines 
-            lines={lines} 
-            isLocked={isLocked} 
+          <StocktakeLines
+            lines={lines}
+            isLocked={isLocked}
             onUpdateLine={handleUpdateLine}
             onLineUpdated={(updatedLine) => {
               // Direct line update callback - replaces line in state
-              console.log('📥 PARENT: onLineUpdated received:', {
+              console.log("📥 PARENT: onLineUpdated received:", {
                 id: updatedLine.id,
                 sku: updatedLine.item_sku,
                 purchases: updatedLine.purchases,
                 waste: updatedLine.waste,
                 expected_qty: updatedLine.expected_qty,
-                variance_qty: updatedLine.variance_qty
+                variance_qty: updatedLine.variance_qty,
               });
-              
-              setLines(prevLines => {
-                const newLines = prevLines.map(line => {
+
+              setLines((prevLines) => {
+                const newLines = prevLines.map((line) => {
                   if (line.id === updatedLine.id) {
-                    console.log('🔄 PARENT: Replacing line in state:', {
+                    console.log("🔄 PARENT: Replacing line in state:", {
                       old_purchases: line.purchases,
-                      new_purchases: updatedLine.purchases
+                      new_purchases: updatedLine.purchases,
                     });
                     return updatedLine;
                   }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import api from "@/services/api";
 import { formatCurrency } from '../utils/stockDisplayUtils';
 
@@ -22,8 +23,24 @@ export const PeriodSnapshots = () => {
       const response = await api.get(`/stock_tracker/${hotel_slug}/periods/`);
       const periodsData = response.data.results || response.data;
       
-      // Period serializer now includes stocktake_id and stocktake_status
-      // No need to fetch stocktakes separately - relationship is in the period data!
+      console.log('📊 Periods (MONTHS) data received:', periodsData);
+      if (periodsData.length > 0) {
+        console.log('📋 Sample PERIOD structure:', {
+          period_id: periodsData[0].id,
+          period_name: periodsData[0].period_name,
+          year: periodsData[0].year,
+          month: periodsData[0].month,
+          is_closed: periodsData[0].is_closed,
+          has_stocktake: !!periodsData[0].stocktake,
+          stocktake_object: periodsData[0].stocktake,
+          all_keys: Object.keys(periodsData[0])
+        });
+        console.log('💡 RELATIONSHIP: Period = Month, Stocktake = belongs to that month');
+        
+        if (periodsData[0].stocktake) {
+          console.log('✅ Stocktake data:', periodsData[0].stocktake);
+        }
+      }
       
       setPeriods(periodsData);
       setError(null);
@@ -35,10 +52,24 @@ export const PeriodSnapshots = () => {
     }
   };
 
-  const getPeriodBadge = (period) => {
-    return period.is_closed
-      ? <span className="badge bg-secondary">Closed</span>
-      : <span className="badge bg-success">Current Period</span>;
+  const getPeriodBadge = (period, allPeriods) => {
+    if (period.is_closed) {
+      return <span className="badge bg-secondary">{period.period_name}</span>;
+    }
+    
+    // For open periods, check if this is the most recent one
+    const openPeriods = allPeriods.filter(p => !p.is_closed);
+    const mostRecentOpen = openPeriods.sort((a, b) => 
+      new Date(b.start_date) - new Date(a.start_date)
+    )[0];
+    
+    // Only the most recent open period is "Current Period"
+    if (mostRecentOpen?.id === period.id) {
+      return <span className="badge bg-success">Current Period</span>;
+    }
+    
+    // Older open periods show "Open"
+    return <span className="badge bg-info">Open</span>;
   };
 
   const filteredPeriods = periods.filter(period => {
@@ -48,17 +79,75 @@ export const PeriodSnapshots = () => {
     return true;
   });
 
-  const handlePeriodClick = (period) => {
-    // If period is closed, view the snapshot detail page
-    // If period has a stocktake, go to that stocktake (use stocktake_id, NOT period id!)
-    if (period.is_closed) {
-      navigate(`/stock_tracker/${hotel_slug}/periods/${period.id}`);
-    } else if (period.stocktake_id) {
-      // Navigate to stocktake page using the STOCKTAKE ID from the period
-      navigate(`/stock_tracker/${hotel_slug}/stocktakes/${period.stocktake_id}`);
-    } else {
-      // No stocktake exists yet - should create one or show message
-      navigate(`/stock_tracker/${hotel_slug}/stocktakes`);
+  const handlePeriodClick = async (period) => {
+    // FLOW:
+    // 1. If period has stocktake → Go to stocktake details
+    // 2. If period has NO stocktake → CREATE stocktake for that period → Go to new stocktake details
+    
+    if (period.stocktake?.id) {
+      // Has stocktake - go directly to stocktake details
+      console.log('✅ Period has stocktake ID:', period.stocktake.id);
+      navigate(`/stock_tracker/${hotel_slug}/stocktakes/${period.stocktake.id}`);
+      return;
+    }
+    
+    // No stocktake - search for existing stocktake first
+    console.warn('⚠️ Period missing stocktake, searching for existing stocktake...');
+    try {
+      const response = await api.get(`/stock_tracker/${hotel_slug}/stocktakes/`);
+      const stocktakes = response.data.results || response.data;
+      
+      // Find stocktake that matches this period's dates
+      // Use date-only string comparison to avoid timezone issues
+      const periodStartDate = period.start_date.split('T')[0]; // Get YYYY-MM-DD
+      const periodEndDate = period.end_date.split('T')[0]; // Get YYYY-MM-DD
+      
+      const matchingStocktake = stocktakes.find(st => {
+        const stStartDate = st.period_start.split('T')[0];
+        const stEndDate = st.period_end.split('T')[0];
+        return stStartDate === periodStartDate && stEndDate === periodEndDate;
+      });
+      
+      if (matchingStocktake) {
+        console.log('✅ Found existing stocktake:', matchingStocktake.id, 'for period', period.period_name);
+        navigate(`/stock_tracker/${hotel_slug}/stocktakes/${matchingStocktake.id}`);
+        return;
+      }
+      
+      // No stocktake exists - CREATE ONE for this period
+      console.log('📝 Creating new stocktake for period:', period.period_name);
+      toast.info(`Creating stocktake for ${period.period_name}...`);
+      
+      const createPayload = {
+        period_start: period.start_date,
+        period_end: period.end_date,
+        status: 'DRAFT'
+      };
+      
+      const createResponse = await api.post(`/stock_tracker/${hotel_slug}/stocktakes/`, createPayload);
+      const newStocktake = createResponse.data;
+      
+      console.log('✅ Stocktake created:', newStocktake.id);
+      
+      // POPULATE the stocktake with inventory items
+      console.log('📦 Populating stocktake with items...');
+      toast.info('Loading inventory items...');
+      
+      try {
+        await api.post(`/stock_tracker/${hotel_slug}/stocktakes/${newStocktake.id}/populate/`);
+        console.log('✅ Stocktake populated successfully');
+        toast.success(`Stocktake created and populated for ${period.period_name}! 🎉`);
+      } catch (populateErr) {
+        console.warn('⚠️ Failed to populate stocktake:', populateErr);
+        toast.warning('Stocktake created but failed to populate. Click "Populate Lines" button.');
+      }
+      
+      // Navigate to the new stocktake
+      navigate(`/stock_tracker/${hotel_slug}/stocktakes/${newStocktake.id}`);
+      
+    } catch (err) {
+      console.error('❌ Error with stocktake:', err);
+      toast.error(err.response?.data?.detail || 'Failed to create stocktake');
     }
   };
 
@@ -99,7 +188,8 @@ export const PeriodSnapshots = () => {
       {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h2 className="d-inline">Closed Stocktakes</h2>
+          <h2 className="d-inline">Period History</h2>
+          <small className="text-muted ms-2">View all accounting periods and their stocktakes</small>
         </div>
       </div>
 
@@ -140,63 +230,61 @@ export const PeriodSnapshots = () => {
               <div key={period.id} className="col-12 col-md-6 col-lg-4">
                 <div className="card h-100 shadow-sm hover-shadow" style={{ cursor: "pointer" }}
                      onClick={() => handlePeriodClick(period)}>
+                  {/* Period Header */}
                   <div className="card-header d-flex justify-content-between align-items-center">
                     <strong>{period.period_name}</strong>
-                    {getPeriodBadge(period)}
+                    {getPeriodBadge(period, periods)}
                   </div>
+                  
                   <div className="card-body">
-                    <div className="mb-2">
-                      <small className="text-muted">Period:</small><br />
-                      <strong>{new Date(period.start_date).toLocaleDateString()}</strong> to{" "}
-                      <strong>{new Date(period.end_date).toLocaleDateString()}</strong>
-                    </div>
-                    <div className="mb-2">
-                      <small className="text-muted">Year:</small> <strong>{period.year}</strong>
-                      {" "}<small className="text-muted">Month:</small> <strong>{period.month}</strong>
-                    </div>
-                    <div className="mb-2">
-                      <small className="text-muted">Items:</small>{" "}
-                      <span className="badge bg-primary">{period.total_items || period.snapshots?.length || 0}</span>
-                    </div>
-                    {period.total_value && (
+                    {/* Stocktake Information */}
+                    {period.stocktake ? (
                       <div className="mb-2">
-                        <small className="text-muted">Total Value:</small>{" "}
-                        <strong className="text-success">{formatCurrency(period.total_value)}</strong>
-                      </div>
-                    )}
-                    {period.stocktake_id && (
-                      <div className="mb-2">
-                        <small className="text-muted">Stocktake:</small>{" "}
-                        <span className="badge bg-info">ID #{period.stocktake_id}</span>
-                        {period.stocktake_status && (
-                          <span className={`badge ms-1 ${period.stocktake_status === 'APPROVED' ? 'bg-success' : 'bg-warning'}`}>
-                            {period.stocktake_status}
+                        {/* Status Badge - FIRST */}
+                        <div className="mb-2">
+                          <span className={`badge ${period.stocktake.status === 'APPROVED' ? 'bg-success' : 'bg-warning text-dark'}`}>
+                            {period.stocktake.status}
                           </span>
-                        )}
+                        </div>
+                        
+                        {/* Stocktake Month */}
+                        <div className="mb-3">
+                          <small className="text-muted">Stocktake for:</small>{" "}
+                          <strong>{period.period_name}</strong>
+                        </div>
+                        
+                        {/* Items Summary */}
+                        <div className="mb-2">
+                          <small className="text-muted d-block mb-1">Items Counted:</small>
+                          <span className="badge bg-primary">
+                            {period.stocktake.lines_counted || 0} / {period.stocktake.total_lines || 0}
+                          </span>
+                          {period.stocktake.lines_at_zero > 0 && (
+                            <span className="badge bg-secondary ms-1">
+                              {period.stocktake.lines_at_zero} at zero
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    )}
-                    {/* Manual Financial Values - Show if entered */}
-                    {(period.manual_purchases_amount || period.manual_sales_amount) && (
-                      <div className="mb-2 mt-3 pt-2 border-top">
-                        <small className="text-muted fw-bold d-block mb-1">💰 Manual Values:</small>
-                        {period.manual_purchases_amount && (
-                          <div>
-                            <small className="text-muted">Purchases:</small>{" "}
-                            <strong className="text-danger">{formatCurrency(period.manual_purchases_amount)}</strong>
-                          </div>
-                        )}
-                        {period.manual_sales_amount && (
-                          <div>
-                            <small className="text-muted">Sales:</small>{" "}
-                            <strong className="text-success">{formatCurrency(period.manual_sales_amount)}</strong>
-                          </div>
-                        )}
+                    ) : (
+                      <div className="mb-2">
+                        <span className="badge bg-secondary">No Stocktake</span>
+                        <div className="mt-2">
+                          <small className="text-muted">⚠️ No stocktake created for this period</small>
+                        </div>
                       </div>
                     )}
                   </div>
+                  
+                  {/* Action Button */}
                   <div className="card-footer bg-transparent">
                     <button className="btn btn-sm btn-outline-primary w-100">
-                      {period.is_closed ? 'View Snapshot' : period.stocktake_id ? 'Continue Counting' : 'View Period'} <i className="bi bi-arrow-right ms-1"></i>
+                      {period.stocktake 
+                        ? (period.is_closed && period.stocktake.status === 'APPROVED' 
+                            ? 'View Stocktake Lines (Locked)' 
+                            : 'Continue Counting') 
+                        : 'Create Stocktake'
+                      } <i className="bi bi-arrow-right ms-1"></i>
                     </button>
                   </div>
                 </div>

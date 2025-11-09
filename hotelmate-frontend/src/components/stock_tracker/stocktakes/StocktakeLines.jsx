@@ -849,6 +849,164 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     );
   };
 
+  // Simplified render for LOCKED stocktakes - Clean, stylish, NO inputs
+  const renderLockedLineRow = (line) => {
+    const labels = getCountingLabels(line.category_code, line.item_size);
+    const uom = parseFloat(line.item_uom || line.uom || 1);
+    const cumulativePurchases = parseFloat(line.purchases || 0);
+    const cumulativeWaste = parseFloat(line.waste || 0);
+    const varianceQty = parseFloat(line.variance_qty) || 0;
+    const varianceValue = parseFloat(line.variance_value) || 0;
+    const varianceDisplay = convertToDisplayUnits(Math.abs(varianceQty), line);
+    
+    const isShortage = varianceValue < 0;
+    const isSurplus = varianceValue > 0;
+    const isSignificant = Math.abs(varianceValue) > 10;
+    const bgClass = isShortage ? 'bg-danger-subtle' : isSurplus ? 'bg-success-subtle' : '';
+    const textClass = isShortage ? 'text-danger' : isSurplus ? 'text-success' : 'text-muted';
+    const strongClass = isSignificant ? 'fw-bold' : '';
+
+    return (
+      <tr key={line.id}>
+        {/* SKU */}
+        <td className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>
+          <code className="small">{line.item_sku}</code>
+        </td>
+        
+        {/* Name */}
+        <td style={{ borderRight: '1px solid #dee2e6' }}>
+          <strong>{line.item_name}</strong>
+        </td>
+        
+        {/* Category */}
+        <td className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>
+          <Badge bg="secondary" className="small">{line.category_name || 'N/A'}</Badge>
+        </td>
+        
+        {/* Size */}
+        <td className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>
+          {line.item_size ? <small className="text-muted">{line.item_size}</small> : <small className="text-muted">-</small>}
+        </td>
+        
+        {/* UOM */}
+        <td className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>
+          <Badge bg="light" text="dark" className="small">{uom.toFixed(0)}</Badge>
+        </td>
+        
+        {/* Opening */}
+        <td className="text-center bg-info-subtle" style={{ borderRight: '1px solid #dee2e6', padding: '12px' }}>
+          <div className="d-flex flex-column align-items-center gap-1">
+            <div>
+              <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#0d6efd' }}>
+                {line.opening_display_full_units || '0'}
+              </span>
+              <small className="text-muted ms-1">{labels.unit}</small>
+            </div>
+            <div>
+              <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#0dcaf0' }}>
+                {line.opening_display_partial_units || '0'}
+              </span>
+              <small className="text-muted ms-1">{labels.servingUnit}</small>
+            </div>
+            <small className="text-muted">{parseFloat(line.opening_qty || 0).toFixed(2)} servings</small>
+          </div>
+        </td>
+        
+        {/* Purchases - NO HISTORY BUTTON, just styled number */}
+        <td className="text-center" style={{ borderRight: '1px solid #dee2e6', padding: '12px' }}>
+          <div className="d-flex flex-column align-items-center">
+            <small className="text-muted mb-1" style={{ fontSize: '0.7rem' }}>Purchases</small>
+            <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: cumulativePurchases > 0 ? '#198754' : '#6c757d' }}>
+              {cumulativePurchases.toFixed(2)}
+            </div>
+            <small className="text-muted">{labels.servingUnit}</small>
+          </div>
+        </td>
+        
+        {/* Waste - NO HISTORY BUTTON, just styled number */}
+        <td className="text-center" style={{ borderRight: '1px solid #dee2e6', padding: '12px' }}>
+          <div className="d-flex flex-column align-items-center">
+            <small className="text-muted mb-1" style={{ fontSize: '0.7rem' }}>Waste</small>
+            <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: cumulativeWaste > 0 ? '#dc3545' : '#6c757d' }}>
+              {cumulativeWaste.toFixed(2)}
+            </div>
+            <small className="text-muted">{labels.servingUnit}</small>
+          </div>
+        </td>
+        
+        {/* Expected */}
+        <td className="text-center bg-warning-subtle" style={{ borderRight: '1px solid #dee2e6', padding: '12px' }}>
+          <div className="d-flex flex-column align-items-center gap-1">
+            <div>
+              <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#dc3545' }}>
+                {line.expected_display_full_units || '0'}
+              </span>
+              <small className="text-muted ms-1">{labels.unit}</small>
+            </div>
+            <div>
+              <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#dc3545' }}>
+                {line.expected_display_partial_units || '0'}
+              </span>
+              <small className="text-muted ms-1">{labels.servingUnit}</small>
+            </div>
+            <small className="text-muted">€{parseFloat(line.expected_value || 0).toFixed(2)}</small>
+          </div>
+        </td>
+        
+        {/* Counted Cases */}
+        <td className="text-center" style={{ borderRight: '1px solid #dee2e6', padding: '12px' }}>
+          <div className="d-flex flex-column align-items-center">
+            <small className="text-muted mb-1" style={{ fontSize: '0.7rem' }}>Counted {labels.unit}</small>
+            <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#212529' }}>
+              {line.counted_full_units !== null ? line.counted_full_units : '-'}
+            </div>
+          </div>
+        </td>
+        
+        {/* Counted Bottles */}
+        <td className="text-center" style={{ borderRight: '1px solid #dee2e6', padding: '12px' }}>
+          <div className="d-flex flex-column align-items-center">
+            <small className="text-muted mb-1" style={{ fontSize: '0.7rem' }}>Counted {labels.servingUnit}</small>
+            <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#212529' }}>
+              {line.counted_partial_units !== null ? parseFloat(line.counted_partial_units).toFixed(2) : '-'}
+            </div>
+          </div>
+        </td>
+        
+        {/* Variance */}
+        <td className={`text-center ${bgClass}`} style={{ borderRight: '1px solid #dee2e6', padding: '12px' }}>
+          {!line.counted_full_units && !line.counted_partial_units ? (
+            <span className="text-muted">-</span>
+          ) : (
+            <div className="d-flex flex-column align-items-center gap-1">
+              <div>
+                <span className={`${textClass} ${strongClass}`} style={{ fontSize: '1.1rem', fontWeight: '700' }}>
+                  {isShortage ? '-' : '+'}
+                  {Math.abs(varianceDisplay.full)}
+                </span>
+                <small className="text-muted ms-1">{labels.unit}</small>
+              </div>
+              <div>
+                <span className={`${textClass} ${strongClass}`} style={{ fontSize: '1.1rem', fontWeight: '700' }}>
+                  {isShortage ? '-' : '+'}
+                  {varianceDisplay.partial.toFixed(varianceDisplay.decimals)}
+                </span>
+                <small className="text-muted ms-1">{labels.servingUnit}</small>
+              </div>
+              <div className={`${textClass} ${strongClass}`} style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
+                {varianceValue >= 0 ? '+' : ''}€{varianceValue.toFixed(2)}
+                {isSignificant && <span className="ms-1">⚠️</span>}
+              </div>
+              <small className="text-muted" style={{ fontSize: '0.7rem' }}>
+                ({varianceQty >= 0 ? '+' : ''}{varianceQty.toFixed(2)} servings)
+              </small>
+            </div>
+          )}
+        </td>
+      </tr>
+    );
+  };
+
   return (
     <>
       {Object.entries(groupedLines).map(([categoryName, catLines]) => {
@@ -867,44 +1025,85 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
             </Card.Header>
             <Card.Body className="p-0">
               <div className="table-responsive">
-                <Table hover size="sm" className="mb-0 align-middle">
-                  <thead>
-                    <tr>
-                      <th style={{ borderRight: '1px solid #dee2e6' }}>SKU</th>
-                      <th style={{ borderRight: '1px solid #dee2e6' }}>Name</th>
-                      <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Cat</th>
-                      <th style={{ borderRight: '1px solid #dee2e6' }}>Size</th>
-                      <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>UOM</th>
-                      <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Opening</th>
-                      <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Purchases</th>
-                      <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Waste</th>
-                      <th className="text-end" style={{ borderRight: '1px solid #dee2e6' }}>Expected</th>
-                      <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Counted Cases</th>
-                      <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Counted Bottles</th>
-                      <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Variance</th>
-                      {!isLocked && <th>Actions</th>}
-                    </tr>
-                  </thead>
-                  <tbody>{catLines.map((line) => renderLineRow(line))}</tbody>
-
-                  <tfoot>
-                    {totalsLoading ? (
+                {isLocked ? (
+                  /* LOCKED/CLOSED: Clean, stylish view with NO inputs */
+                  <Table hover size="sm" className="mb-0 align-middle">
+                    <thead>
                       <tr>
-                        <td colSpan={!isLocked ? 12 : 11} className="text-center text-muted py-3">
-                          <small>Loading category totals...</small>
-                        </td>
+                        <th style={{ borderRight: '1px solid #dee2e6' }}>SKU</th>
+                        <th style={{ borderRight: '1px solid #dee2e6' }}>Name</th>
+                        <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Cat</th>
+                        <th style={{ borderRight: '1px solid #dee2e6' }}>Size</th>
+                        <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>UOM</th>
+                        <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Opening</th>
+                        <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Purchases</th>
+                        <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Waste</th>
+                        <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Expected</th>
+                        <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Counted Cases</th>
+                        <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Counted Bottles</th>
+                        <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Variance</th>
                       </tr>
-                    ) : totals ? (
-                      <CategoryTotalsRow
-                        categoryCode={categoryCode}
-                        categoryName={categoryName}
-                        totals={totals}
-                        isLocked={isLocked}
-                        onSaveManualValues={() => {}}
-                      />
-                    ) : null}
-                  </tfoot>
-                </Table>
+                    </thead>
+                    <tbody>{catLines.map((line) => renderLockedLineRow(line))}</tbody>
+                    <tfoot>
+                      {totalsLoading ? (
+                        <tr>
+                          <td colSpan="12" className="text-center text-muted py-3">
+                            <small>Loading category totals...</small>
+                          </td>
+                        </tr>
+                      ) : totals ? (
+                        <CategoryTotalsRow
+                          categoryCode={categoryCode}
+                          categoryName={categoryName}
+                          totals={totals}
+                          isLocked={isLocked}
+                          onSaveManualValues={() => {}}
+                        />
+                      ) : null}
+                    </tfoot>
+                  </Table>
+                ) : (
+                  /* ACTIVE/DRAFT: Full interactive view with all inputs */
+                  <Table hover size="sm" className="mb-0 align-middle">
+                    <thead>
+                      <tr>
+                        <th style={{ borderRight: '1px solid #dee2e6' }}>SKU</th>
+                        <th style={{ borderRight: '1px solid #dee2e6' }}>Name</th>
+                        <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Cat</th>
+                        <th style={{ borderRight: '1px solid #dee2e6' }}>Size</th>
+                        <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>UOM</th>
+                        <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Opening</th>
+                        <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Purchases</th>
+                        <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Waste</th>
+                        <th className="text-end" style={{ borderRight: '1px solid #dee2e6' }}>Expected</th>
+                        <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Counted Cases</th>
+                        <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Counted Bottles</th>
+                        <th className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>Variance</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>{catLines.map((line) => renderLineRow(line))}</tbody>
+
+                    <tfoot>
+                      {totalsLoading ? (
+                        <tr>
+                          <td colSpan="13" className="text-center text-muted py-3">
+                            <small>Loading category totals...</small>
+                          </td>
+                        </tr>
+                      ) : totals ? (
+                        <CategoryTotalsRow
+                          categoryCode={categoryCode}
+                          categoryName={categoryName}
+                          totals={totals}
+                          isLocked={isLocked}
+                          onSaveManualValues={() => {}}
+                        />
+                      ) : null}
+                    </tfoot>
+                  </Table>
+                )}
               </div>
             </Card.Body>
           </Card>
