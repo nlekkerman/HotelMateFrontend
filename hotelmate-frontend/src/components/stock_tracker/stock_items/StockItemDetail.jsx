@@ -59,12 +59,42 @@ const StockItemDetail = ({ item, categories, onBack, onUpdate, onDelete }) => {
 
   return (
     <Container fluid className="py-3 px-2">
+      {/* Sticky Back Button - Top Left */}
+      <Button 
+        variant="outline-secondary"
+        className="shadow"
+        onClick={onBack}
+        style={{
+          position: 'fixed',
+          top: '80px',
+          left: '120px',
+          zIndex: 1050,
+          borderRadius: '8px',
+          padding: '8px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '1rem',
+          backgroundColor: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(8px)',
+          transition: 'all 0.3s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+          e.currentTarget.style.color = '#212529';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
+          e.currentTarget.style.color = '';
+        }}
+        title="Back"
+      >
+        <FaArrowLeft /> Back
+      </Button>
+
       {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <div className="d-flex align-items-center gap-2">
-          <Button variant="outline-secondary" size="sm" onClick={onBack}>
-            <FaArrowLeft /> Back
-          </Button>
           <h4 className="mb-0">{item.name}</h4>
         </div>
         <div className="d-flex gap-2">

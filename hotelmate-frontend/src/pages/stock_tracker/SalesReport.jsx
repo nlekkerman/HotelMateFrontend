@@ -186,18 +186,42 @@ export default function SalesReport() {
 
   return (
     <Container fluid className="mt-4">
+      {/* Sticky Back Button - Top Left */}
+      <Button 
+        variant="outline-secondary"
+        className="shadow"
+        onClick={() => navigate(`/stock_tracker/${hotel_slug}`)}
+        style={{
+          position: 'fixed',
+          top: '80px',
+          left: '120px',
+          zIndex: 1050,
+          borderRadius: '8px',
+          padding: '8px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '1rem',
+          backgroundColor: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(8px)',
+          transition: 'all 0.3s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+          e.currentTarget.style.color = '#212529';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
+          e.currentTarget.style.color = '';
+        }}
+        title="Back to Stock Tracker"
+      >
+        <FaArrowLeft /> Back
+      </Button>
+
       {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <Button 
-            variant="outline-secondary" 
-            size="sm"
-            className="me-3"
-            onClick={() => navigate(`/stock_tracker/${hotel_slug}`)}
-          >
-            <FaArrowLeft className="me-2" />
-            Back
-          </Button>
           <h2 className="d-inline">
             <FaBoxes className="me-2" />
             Stock Value Report
