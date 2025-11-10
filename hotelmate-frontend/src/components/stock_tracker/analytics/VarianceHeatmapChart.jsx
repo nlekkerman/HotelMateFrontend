@@ -62,12 +62,29 @@ const VarianceHeatmapChart = ({
   };
 
   /**
+   * Map category codes to full names
+   */
+  const getCategoryName = (categoryCode) => {
+    const categoryMap = {
+      'S': 'Spirits',
+      'W': 'Wine',
+      'B': 'Bottled Beer',
+      'D': 'Draught Beer',
+      'M': 'Minerals & Syrups'
+    };
+    return categoryMap[categoryCode] || categoryCode;
+  };
+
+  /**
    * Generate ECharts heatmap option
    */
   const getHeatmapOption = () => {
     if (!chartData || !chartData.heatmap_data) return null;
 
     const { heatmap_data, categories, periods } = chartData;
+    
+    // Map category codes to full names
+    const categoryNames = categories.map(cat => getCategoryName(cat));
 
     // Validate data structure
     if (!Array.isArray(heatmap_data) || !Array.isArray(categories) || !Array.isArray(periods)) {
@@ -130,7 +147,7 @@ const VarianceHeatmapChart = ({
       tooltip: {
         position: 'top',
         formatter: function(params) {
-          const categoryName = categories[params.value[1]];
+          const categoryName = categoryNames[params.value[1]];
           const periodName = periods[params.value[0]];
           const variance = params.value[2];
           
@@ -140,9 +157,10 @@ const VarianceHeatmapChart = ({
         }
       },
       grid: {
-        height: '70%',
+        height: '60%',
         top: '15%',
-        left: '15%'
+        left: '15%',
+        bottom: '20%'
       },
       xAxis: {
         type: 'category',
@@ -157,7 +175,7 @@ const VarianceHeatmapChart = ({
       },
       yAxis: {
         type: 'category',
-        data: categories,
+        data: categoryNames,
         splitArea: {
           show: true
         },
@@ -171,7 +189,7 @@ const VarianceHeatmapChart = ({
         calculable: true,
         orient: 'horizontal',
         left: 'center',
-        bottom: '5%',
+        bottom: '2%',
         inRange: {
           color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
         },
@@ -203,7 +221,8 @@ const VarianceHeatmapChart = ({
   // Handle chart click
   const onChartClick = (params) => {
     if (onCellClick && chartData) {
-      const categoryName = chartData.categories[params.value[1]];
+      const categoryCode = chartData.categories[params.value[1]];
+      const categoryName = getCategoryName(categoryCode);
       const periodName = chartData.periods[params.value[0]];
       const variance = params.value[2];
       

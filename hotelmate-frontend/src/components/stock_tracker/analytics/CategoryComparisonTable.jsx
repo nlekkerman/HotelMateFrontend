@@ -51,17 +51,29 @@ const CategoryComparisonTable = ({
     }
   };
 
+  const getCategoryName = (categoryCode) => {
+    const categoryMap = {
+      'S': 'Spirits',
+      'W': 'Wine',
+      'B': 'Bottled Beer',
+      'D': 'Draught Beer',
+      'M': 'Minerals & Syrups'
+    };
+    return categoryMap[categoryCode] || categoryCode;
+  };
+
   const processSnapshotsToCategories = (snapshots) => {
     const categoryMap = new Map();
 
     snapshots.forEach(snapshot => {
-      const category = snapshot.item?.category || 'Unknown';
+      const categoryCode = snapshot.item?.category || 'Unknown';
+      const categoryName = snapshot.item?.category_name || getCategoryName(categoryCode);
       const value = parseFloat(snapshot.closing_stock_value || 0);
 
-      if (categoryMap.has(category)) {
-        categoryMap.set(category, categoryMap.get(category) + value);
+      if (categoryMap.has(categoryName)) {
+        categoryMap.set(categoryName, categoryMap.get(categoryName) + value);
       } else {
-        categoryMap.set(category, value);
+        categoryMap.set(categoryName, value);
       }
     });
 

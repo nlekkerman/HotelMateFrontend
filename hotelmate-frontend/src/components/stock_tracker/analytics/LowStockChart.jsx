@@ -26,10 +26,10 @@ const LowStockChart = ({
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
-    if (hotelSlug && period) {
+    if (hotelSlug) {
       fetchData();
     }
-  }, [hotelSlug, period]);
+  }, [hotelSlug]);
 
   useEffect(() => {
     if (items.length > 0) {
@@ -43,22 +43,41 @@ const LowStockChart = ({
       setLoading(true);
       setError(null);
 
-      const data = await getLowStockItems(hotelSlug, period);
+      const data = await getLowStockItems(hotelSlug);
+      console.log('Low Stock API Response:', data);
+      console.log('Is Array?', Array.isArray(data));
+      console.log('Data type:', typeof data);
       
       // API returns array of items, not {items: [...]}
       const itemsList = Array.isArray(data) ? data : (data.items || []);
+      console.log('Items List:', itemsList);
+      console.log('Items List Length:', itemsList.length);
       
       // Filter for low stock items (items below par level)
       const lowStockItems = itemsList.filter(item => {
         const currentStock = parseFloat(item.current_full_units || 0) + parseFloat(item.current_partial_units || 0);
         const parLevel = parseFloat(item.par_level || 0);
-        return parLevel > 0 && currentStock < parLevel;
+        const isBelowPar = parLevel > 0 && currentStock < parLevel;
+        
+        // Log first few items to see par levels
+        if (itemsList.indexOf(item) < 5) {
+          console.log(`Item: ${item.name}, Current: ${currentStock}, Par: ${parLevel}, Below Par: ${isBelowPar}`);
+        }
+        
+        return isBelowPar;
       });
       
+      const itemsWithParLevels = itemsList.filter(i => parseFloat(i.par_level || 0) > 0).length;
+      console.log('Total items with par levels:', itemsWithParLevels);
+      console.log('Items below par level:', lowStockItems.length);
       
       if (lowStockItems.length === 0) {
         setChartData(null);
         setItems([]);
+        // Set appropriate error message based on whether par levels are configured
+        if (itemsWithParLevels === 0) {
+          setError('No par levels configured. Please set par levels for your items to track low stock.');
+        }
         return;
       }
 
@@ -209,7 +228,7 @@ const LowStockChart = ({
     );
   }
 
-  if (items.length === 0) {
+  if (items.length === 0 && !error) {
     return (
       <Card className="shadow-sm">
         <Card.Header className="bg-warning text-dark d-flex align-items-center">
