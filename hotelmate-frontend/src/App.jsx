@@ -16,6 +16,7 @@ import { BookingNotificationProvider } from "@/context/BookingNotificationContex
 import { RoomServiceNotificationProvider } from "@/context/RoomServiceNotificationContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { ChartPreferencesProvider } from "@/context/ChartPreferencesContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, Navigate, matchPath } from "react-router-dom";
 import MobileNavbar from "@/components/layout/MobileNavbar";
@@ -396,20 +397,22 @@ export default function App() {
       <UIProvider>
         <AuthProvider>
           <ThemeProvider>
-            <ChatProvider>
-              <BookingNotificationProvider>
-                <RoomServiceNotificationProvider>
-                  <BrowserRouter>
-                    <NetworkHandler />
-                    <AppLayout
-                      collapsed={collapsed}
-                      setCollapsed={setCollapsed}
-                      isMobile={isMobile}
-                    />
-                  </BrowserRouter>
-                </RoomServiceNotificationProvider>
-              </BookingNotificationProvider>
-            </ChatProvider>
+            <ChartPreferencesProvider>
+              <ChatProvider>
+                <BookingNotificationProvider>
+                  <RoomServiceNotificationProvider>
+                    <BrowserRouter>
+                      <NetworkHandler />
+                      <AppLayout
+                        collapsed={collapsed}
+                        setCollapsed={setCollapsed}
+                        isMobile={isMobile}
+                      />
+                    </BrowserRouter>
+                  </RoomServiceNotificationProvider>
+                </BookingNotificationProvider>
+              </ChatProvider>
+            </ChartPreferencesProvider>
           </ThemeProvider>
         </AuthProvider>
       </UIProvider>
