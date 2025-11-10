@@ -10,9 +10,12 @@ import {
   FaTimes
 } from 'react-icons/fa';
 import { useMediaQuery } from 'react-responsive';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 // Import Analytics Components
 import AnalyticsFilters from '@/components/stock_tracker/analytics/AnalyticsFilters';
+import ExportSelectionModal from '@/components/stock_tracker/analytics/ExportSelectionModal';
 import CategoryComparisonChart from '@/components/stock_tracker/analytics/CategoryComparisonChart';
 import TopMoversChart from '@/components/stock_tracker/analytics/TopMoversChart';
 import WaterfallCostChart from '@/components/stock_tracker/analytics/WaterfallCostChart';
@@ -72,6 +75,12 @@ export default function Analytics() {
   // Track order of opened sections (newest first)
   const [sectionOrder, setSectionOrder] = useState([]);
 
+  // Export modal state
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [selectedChartsToExport, setSelectedChartsToExport] = useState([]);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+
   // Toggle section visibility
   const toggleSection = (section) => {
     const isCurrentlyVisible = visibleSections[section];
@@ -128,6 +137,230 @@ export default function Analytics() {
   // Get chart height based on screen size
   const chartHeight = isMobile ? 300 : 400;
 
+  // Handle export from modal
+  const handleExportSelected = async (selectedChartIds) => {
+    if (!selectedChartIds || selectedChartIds.length === 0) {
+      alert('Please select at least one chart to export');
+      return;
+    }
+
+    setIsExporting(true);
+    setExportProgress(0);
+
+    // Track which charts we opened temporarily (to close them after export)
+    const chartsToCloseAfter = [];
+
+    try {
+      console.log('🚀 Starting export for charts:', selectedChartIds);
+      
+      // First, ensure all selected charts are open
+      console.log('📂 Opening selected charts...');
+      for (const chartId of selectedChartIds) {
+        if (!visibleSections[chartId]) {
+          console.log(`Opening chart: ${chartId}`);
+          chartsToCloseAfter.push(chartId);
+          toggleSection(chartId);
+        }
+      }
+
+      // Wait for all charts to open and render
+      if (chartsToCloseAfter.length > 0) {
+        console.log(`⏳ Waiting for ${chartsToCloseAfter.length} charts to render...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      
+      // Create a new jsPDF instance
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      let exportedCount = 0;
+
+      // Process each selected chart
+      for (let i = 0; i < selectedChartIds.length; i++) {
+        const chartId = selectedChartIds[i];
+        console.log(`\n📊 Processing chart ${i + 1}/${selectedChartIds.length}: ${chartId}`);
+        setExportProgress(Math.round(((i + 1) / selectedChartIds.length) * 100));
+
+        // Find the chart element using data attribute
+        const chartElement = document.querySelector(`[data-chart-section="${chartId}"]`);
+
+        if (!chartElement) {
+          console.warn(`❌ Chart ${chartId} not found or not visible. Skipping...`);
+          continue;
+        }
+
+        console.log(`✅ Chart element found:`, {
+          width: chartElement.offsetWidth,
+          height: chartElement.offsetHeight,
+          scrollWidth: chartElement.scrollWidth,
+          scrollHeight: chartElement.scrollHeight
+        });
+
+        // Wait for charts to load - check for SVG or canvas elements
+        let attempts = 0;
+        const maxAttempts = 20; // 10 seconds max wait
+        
+        while (attempts < maxAttempts) {
+          const hasContent = chartElement.querySelector('svg, canvas, .recharts-wrapper, .card-body');
+          const hasMinHeight = chartElement.offsetHeight > 100;
+          
+          if (hasContent && hasMinHeight) {
+            console.log(`✅ Chart content loaded (attempt ${attempts + 1})`);
+            break;
+          }
+          
+          console.log(`⏳ Waiting for chart content... (attempt ${attempts + 1}/${maxAttempts})`);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          attempts++;
+        }
+
+        if (attempts >= maxAttempts) {
+          console.warn(`⚠️ Chart ${chartId} did not fully load after ${maxAttempts} attempts`);
+        }
+
+        // Additional wait for animations
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        console.log('📸 Capturing chart with html2canvas...');
+
+        // Capture the chart as canvas with improved settings
+        const canvas = await html2canvas(chartElement, {
+          scale: 2,
+          useCORS: true,
+          logging: true, // Enable logging for debugging
+          backgroundColor: '#ffffff',
+          windowWidth: chartElement.scrollWidth,
+          windowHeight: chartElement.scrollHeight,
+          allowTaint: true,
+          foreignObjectRendering: false,
+          onclone: (clonedDoc) => {
+            console.log('🔄 Document cloned for capture');
+          }
+        });
+
+        console.log(`📐 Canvas created:`, {
+          width: canvas.width,
+          height: canvas.height
+        });
+
+        // Check if canvas is empty
+        if (canvas.width === 0 || canvas.height === 0) {
+          console.error(`❌ Canvas is empty for chart ${chartId}. Skipping...`);
+          continue;
+        }
+
+        // Calculate dimensions to fit on A4 page
+        const pageWidth = 190; // A4 width in mm minus margins
+        const pageHeight = 277; // A4 height in mm minus margins
+        const margin = 10;
+        const spacing = 5; // Space between charts
+        
+        // Calculate chart dimensions maintaining aspect ratio
+        let chartWidth = pageWidth;
+        let chartHeight = (canvas.height * pageWidth) / canvas.width;
+        
+        // If chart is too tall for half page, scale it down
+        const maxChartHeight = (pageHeight - spacing) / 2; // Allow 2 charts per page
+        if (chartHeight > maxChartHeight) {
+          chartHeight = maxChartHeight;
+          chartWidth = (canvas.width * maxChartHeight) / canvas.height;
+        }
+        
+        console.log(`📄 Chart dimensions:`, {
+          chartWidth,
+          chartHeight,
+          currentY: exportedCount === 0 ? margin : undefined
+        });
+        
+        // Track Y position for current page
+        if (exportedCount === 0) {
+          // First chart - start new page
+          var currentY = margin;
+          var currentPageCharts = 0;
+        } else {
+          // Check if chart fits on current page
+          const remainingSpace = pageHeight - currentY;
+          
+          if (chartHeight + spacing > remainingSpace) {
+            // Chart doesn't fit, start new page
+            console.log(`📄 Starting new page (remaining space: ${remainingSpace}mm, needed: ${chartHeight}mm)`);
+            pdf.addPage();
+            currentY = margin;
+            currentPageCharts = 0;
+          } else {
+            // Add spacing between charts on same page
+            currentY += spacing;
+          }
+        }
+        
+        console.log(`📍 Placing chart at Y: ${currentY}mm`);
+        
+        // Add image to PDF at calculated position
+        const imgData = canvas.toDataURL('image/png');
+        const xPosition = margin + (pageWidth - chartWidth) / 2; // Center horizontally
+        pdf.addImage(imgData, 'PNG', xPosition, currentY, chartWidth, chartHeight);
+        
+        // Update Y position for next chart
+        currentY += chartHeight;
+        currentPageCharts++;
+
+        exportedCount++;
+        console.log(`✅ Chart ${chartId} exported successfully (${exportedCount} total, ${currentPageCharts} on current page)`);
+
+        // Small delay between charts
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
+      if (exportedCount === 0) {
+        alert('No charts were successfully exported. Please make sure the selected charts are open and fully loaded.');
+        setIsExporting(false);
+        setExportProgress(0);
+        return;
+      }
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `${hotel_slug}_analytics_${timestamp}.pdf`;
+
+      console.log(`💾 Saving PDF as: ${filename}`);
+      console.log(`✅ Total charts exported: ${exportedCount}`);
+
+      // Save the PDF
+      pdf.save(filename);
+
+      // Close temporarily opened charts
+      if (chartsToCloseAfter.length > 0) {
+        console.log(`🧹 Closing ${chartsToCloseAfter.length} temporarily opened charts...`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        chartsToCloseAfter.forEach(chartId => {
+          closeSection(chartId);
+        });
+      }
+
+      // Close modal and reset progress
+      setShowExportModal(false);
+      setIsExporting(false);
+      setExportProgress(0);
+    } catch (error) {
+      console.error('❌ Error exporting charts:', error);
+      alert(`Failed to export charts: ${error.message}`);
+      
+      // Clean up: close temporarily opened charts even if export failed
+      if (chartsToCloseAfter.length > 0) {
+        console.log(`🧹 Cleaning up: closing temporarily opened charts...`);
+        chartsToCloseAfter.forEach(chartId => {
+          closeSection(chartId);
+        });
+      }
+      
+      setIsExporting(false);
+      setExportProgress(0);
+    }
+  };
+
   return (
     <Container fluid className="mt-4 pb-5">
       {/* Header */}
@@ -169,7 +402,9 @@ export default function Analytics() {
           variant="outline-secondary"
           size="sm"
           className="stock-analytics-control-btn"
-          onClick={() => {/* TODO: Export functionality */}}
+          onClick={() => setShowExportModal(true)}
+          disabled={!period1}
+          title="Select and export charts as PDF"
         >
           <FaDownload className="me-1" />
           Export PDF
@@ -757,7 +992,7 @@ export default function Analytics() {
           if (!chartComponent) return null;
 
           return (
-            <div key={section} className="position-relative mb-4">
+            <div key={section} className="position-relative mb-4" data-chart-section={section}>
               <Button
                 variant="light"
                 size="sm"
@@ -772,6 +1007,68 @@ export default function Analytics() {
           );
         })}
       </div>
+
+      {/* Export Selection Modal */}
+      <ExportSelectionModal
+        show={showExportModal}
+        onHide={() => setShowExportModal(false)}
+        onExport={handleExportSelected}
+        isExporting={isExporting}
+      />
+
+      {/* Export Progress Overlay */}
+      {isExporting && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <div 
+            style={{
+              backgroundColor: 'white',
+              padding: '2rem',
+              borderRadius: '12px',
+              textAlign: 'center',
+              minWidth: '300px',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+            }}
+          >
+            <div style={{ marginBottom: '1rem' }}>
+              <FaDownload size={48} style={{ color: '#0d6efd' }} />
+            </div>
+            <h5 style={{ marginBottom: '1rem' }}>Exporting Charts...</h5>
+            <div 
+              style={{
+                width: '100%',
+                height: '8px',
+                backgroundColor: '#e9ecef',
+                borderRadius: '4px',
+                overflow: 'hidden',
+                marginBottom: '0.5rem'
+              }}
+            >
+              <div 
+                style={{
+                  width: `${exportProgress}%`,
+                  height: '100%',
+                  backgroundColor: '#0d6efd',
+                  transition: 'width 0.3s ease'
+                }}
+              />
+            </div>
+            <p style={{ margin: 0, color: '#6c757d' }}>{exportProgress}% Complete</p>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="text-center text-muted small mt-5 pb-3">
