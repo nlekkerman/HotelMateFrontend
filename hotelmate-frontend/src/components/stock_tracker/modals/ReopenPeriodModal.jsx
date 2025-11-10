@@ -4,16 +4,23 @@ import { FaUnlock, FaUserPlus, FaTrash } from 'react-icons/fa';
 import api from '@/services/api';
 import { toast } from 'react-toastify';
 import ConfirmationModal from '@/components/modals/ConfirmationModal';
+import { useAuth } from '@/context/AuthContext';
 
 export const ReopenPeriodModal = ({ show, onHide, period, hotelSlug, onSuccess }) => {
+  const { user } = useAuth();
+  const isSuperuser = user?.is_superuser === true;
+  
   const [loading, setLoading] = useState(false);
   const [allStaff, setAllStaff] = useState([]);
   const [permissions, setPermissions] = useState([]);
   const [selectedStaff, setSelectedStaff] = useState('');
   const [notes, setNotes] = useState('');
+  const [canGrantToOthers, setCanGrantToOthers] = useState(false);
   const [loadingStaff, setLoadingStaff] = useState(true);
   const [loadingPermissions, setLoadingPermissions] = useState(true);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showRevokeModal, setShowRevokeModal] = useState(false);
+  const [staffToRevoke, setStaffToRevoke] = useState(null);
 
   useEffect(() => {
     if (show) {
@@ -102,6 +109,7 @@ export const ReopenPeriodModal = ({ show, onHide, period, hotelSlug, onSuccess }
         `/stock_tracker/${hotelSlug}/periods/grant_reopen_permission/`,
         {
           staff_id: staffId,
+          can_grant_to_others: isSuperuser ? canGrantToOthers : false,
           notes: notes || undefined
         }
       );
@@ -110,6 +118,7 @@ export const ReopenPeriodModal = ({ show, onHide, period, hotelSlug, onSuccess }
         toast.success(response.data.message || 'Permission granted successfully! ✅');
         setSelectedStaff('');
         setNotes('');
+        setCanGrantToOthers(false);
         fetchPermissions(); // Refresh list
       }
     } catch (err) {
@@ -119,17 +128,51 @@ export const ReopenPeriodModal = ({ show, onHide, period, hotelSlug, onSuccess }
     }
   };
 
-  const handleRevokePermission = async (staffId, staffName) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to revoke reopen permission for ${staffName}?`
-    );
+  const handleToggleManager = async (permission) => {
+    if (!isSuperuser) {
+      toast.error('Only superusers can grant manager-level permissions');
+      return;
+    }
 
-    if (!confirmed) return;
+    try {
+      const response = await api.post(
+        `/stock_tracker/${hotelSlug}/periods/grant_reopen_permission/`,
+        {
+          staff_id: permission.staff_id,
+          can_grant_to_others: !permission.can_grant_to_others,
+          notes: permission.notes
+        }
+      );
+
+      if (response.data.success) {
+        toast.success(
+          permission.can_grant_to_others 
+            ? 'Manager status removed' 
+            : 'Manager status granted'
+        );
+        fetchPermissions(); // Refresh list
+      }
+    } catch (err) {
+      console.error('Error toggling manager status:', err);
+      const errorMsg = err.response?.data?.error || err.response?.data?.detail || 'Failed to update manager status';
+      toast.error(errorMsg);
+    }
+  };
+
+  const handleRevokeClick = (staffId, staffName) => {
+    setStaffToRevoke({ staffId, staffName });
+    setShowRevokeModal(true);
+  };
+
+  const handleConfirmRevoke = async () => {
+    setShowRevokeModal(false);
+    
+    if (!staffToRevoke) return;
 
     try {
       const response = await api.post(
         `/stock_tracker/${hotelSlug}/periods/revoke_reopen_permission/`,
-        { staff_id: staffId }
+        { staff_id: staffToRevoke.staffId }
       );
 
       if (response.data.success) {
@@ -140,13 +183,15 @@ export const ReopenPeriodModal = ({ show, onHide, period, hotelSlug, onSuccess }
       console.error('Error revoking permission:', err);
       const errorMsg = err.response?.data?.error || err.response?.data?.detail || 'Failed to revoke permission';
       toast.error(errorMsg);
+    } finally {
+      setStaffToRevoke(null);
     }
   };
 
   return (
     <>
     <Modal show={show} onHide={onHide} size="lg" backdrop="static">
-      <Modal.Header closeButton className="bg-danger text-white">
+      <Modal.Header closeButton closeVariant="white" className="bg-danger text-white">
         <Modal.Title className="w-100 text-center">
           Reopening Period for {period?.period_name}
         </Modal.Title>
@@ -211,6 +256,19 @@ export const ReopenPeriodModal = ({ show, onHide, period, hotelSlug, onSuccess }
                 )}
               </Form.Group>
 
+              {/* Manager Level Checkbox - Only for Superusers */}
+              {isSuperuser && (
+                <Form.Group className="mb-3">
+                  <Form.Check 
+                    type="checkbox"
+                    id="can-grant-to-others"
+                    checked={canGrantToOthers}
+                    onChange={(e) => setCanGrantToOthers(e.target.checked)}
+                    label="Manager Level"
+                  />
+                </Form.Group>
+              )}
+
               <Form.Group className="mb-3">
                 <Form.Label>Notes (Optional)</Form.Label>
                 <Form.Control
@@ -252,28 +310,61 @@ export const ReopenPeriodModal = ({ show, onHide, period, hotelSlug, onSuccess }
                   {permissions
                     .filter(p => p.is_active)
                     .map(permission => (
-                      <div key={permission.id} className="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                          <strong>{permission.staff_name}</strong>
-                          <br />
-                          <small className="text-muted">
-                            {permission.staff_email}
+                      <div key={permission.id} className="list-group-item">
+                        <div className="d-flex justify-content-between align-items-start">
+                          <div className="flex-grow-1">
+                            <div className="d-flex align-items-center gap-2 mb-1">
+                              <strong>{permission.staff_name}</strong>
+                              {/* Manager Badge - Visible to Everyone */}
+                              {permission.can_grant_to_others && (
+                                <span className="badge bg-primary">
+                                  👔 Manager
+                                </span>
+                              )}
+                            </div>
                             {permission.notes && (
-                              <>
-                                <br />
+                              <small className="text-muted d-block">
                                 <em>Note: {permission.notes}</em>
-                              </>
+                              </small>
                             )}
-                          </small>
+                            
+                            {/* Manager Level Checkbox - Only Superusers See This */}
+                            {isSuperuser && (
+                              <div className="mt-2">
+                                <Form.Check 
+                                  type="checkbox"
+                                  id={`manager-${permission.id}`}
+                                  checked={permission.can_grant_to_others || false}
+                                  onChange={() => handleToggleManager(permission)}
+                                  label={
+                                    <small className="text-muted">
+                                      Can grant permissions to others
+                                    </small>
+                                  }
+                                />
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="text-end">
+                            <Button 
+                              variant="outline-danger" 
+                              size="sm"
+                              onClick={() => handleRevokeClick(permission.staff_id, permission.staff_name)}
+                              className="mb-2"
+                            >
+                              <FaTrash className="me-1" />
+                              Revoke
+                            </Button>
+                            {permission.granted_by_name && (
+                              <div>
+                                <small className="text-muted">
+                                  Granted by: {permission.granted_by_name}
+                                </small>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <Button 
-                          variant="outline-danger" 
-                          size="sm"
-                          onClick={() => handleRevokePermission(permission.staff_id, permission.staff_name)}
-                        >
-                          <FaTrash className="me-1" />
-                          Revoke
-                        </Button>
                       </div>
                     ))}
                 </div>
@@ -290,13 +381,26 @@ export const ReopenPeriodModal = ({ show, onHide, period, hotelSlug, onSuccess }
       </Modal.Footer>
     </Modal>
 
-      {/* Confirmation Modal */}
+      {/* Confirmation Modal for Reopening */}
       {showConfirmModal && (
         <ConfirmationModal
           title="Confirm Reopen Period"
           message={`Are you sure you want to reopen "${period?.period_name}"? This will change the period status to OPEN and the stocktake status to DRAFT, allowing editing of stocktake data.`}
           onConfirm={handleConfirmReopen}
           onCancel={() => setShowConfirmModal(false)}
+        />
+      )}
+
+      {/* Confirmation Modal for Revoking Permission */}
+      {showRevokeModal && staffToRevoke && (
+        <ConfirmationModal
+          title="Confirm Revoke Permission"
+          message={`Are you sure you want to revoke reopen permission for ${staffToRevoke.staffName}?`}
+          onConfirm={handleConfirmRevoke}
+          onCancel={() => {
+            setShowRevokeModal(false);
+            setStaffToRevoke(null);
+          }}
         />
       )}
     </>
