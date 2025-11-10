@@ -551,7 +551,7 @@ export const StocktakeDetail = () => {
               onClick={() => setShowApproveModal(true)}
               className="ms-2"
             >
-              <FaCheckCircle /> Approve Stocktake
+              <FaCheckCircle /> Approve & Close Period
             </Button>
           )}
         </div>

@@ -84,11 +84,24 @@ export const ReopenPeriodModal = ({ show, onHide, period, hotelSlug, onSuccess }
       return;
     }
 
+    // Check if staff already has permission
+    const staffId = parseInt(selectedStaff);
+    const alreadyHasPermission = permissions.some(
+      p => p.is_active && p.staff_id === staffId
+    );
+
+    if (alreadyHasPermission) {
+      const staffMember = allStaff.find(s => s.id === staffId);
+      const staffName = staffMember ? `${staffMember.first_name} ${staffMember.last_name}` : 'This staff member';
+      toast.warning(`${staffName} already has permission to reopen periods`);
+      return;
+    }
+
     try {
       const response = await api.post(
         `/stock_tracker/${hotelSlug}/periods/grant_reopen_permission/`,
         {
-          staff_id: parseInt(selectedStaff),
+          staff_id: staffId,
           notes: notes || undefined
         }
       );
@@ -133,20 +146,15 @@ export const ReopenPeriodModal = ({ show, onHide, period, hotelSlug, onSuccess }
   return (
     <>
     <Modal show={show} onHide={onHide} size="lg" backdrop="static">
-      <Modal.Header closeButton>
-        <Modal.Title>
-          <FaUnlock className="me-2 text-danger" />
-          Reopen Period: {period?.period_name}
+      <Modal.Header closeButton className="bg-danger text-white">
+        <Modal.Title className="w-100 text-center">
+          Reopening Period for {period?.period_name}
         </Modal.Title>
       </Modal.Header>
 
       <Modal.Body>
         {/* Reopen Period Section */}
         <div className="mb-4 pb-4 border-bottom">
-          <h5 className="mb-3">
-            <FaUnlock className="me-2 text-danger" />
-            Reopen This Period
-          </h5>
           <Alert variant="warning">
             <strong>⚠️ Warning:</strong> Reopening this period will change the stocktake status to DRAFT and allow editing.
           </Alert>

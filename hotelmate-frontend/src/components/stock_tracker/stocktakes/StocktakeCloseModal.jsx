@@ -91,7 +91,6 @@ export const StocktakeCloseModal = ({
 
     try {
       // Step 1: Find the period for this stocktake
-      // We need period_id to update manual values
       const periodsResponse = await api.get(`/stock_tracker/${hotelSlug}/periods/`);
       const periods = periodsResponse.data.results || periodsResponse.data;
       
@@ -129,17 +128,19 @@ export const StocktakeCloseModal = ({
         console.log('✅ Period updated with manual values');
       }
 
-      // Step 3: Approve the stocktake
-      console.log('🔒 Approving stocktake:', stocktake.id);
+      // Step 3: Use combined approve-and-close endpoint
+      // This approves the stocktake AND closes the period in one atomic operation
+      // Order of operations: 1. Approve stocktake (DRAFT → APPROVED), 2. Close period (OPEN → CLOSED)
+      console.log('🔒 Approving stocktake and closing period:', period.id);
       
-      const approvePayload = notes ? { notes } : {};
+      const payload = notes ? { notes } : {};
       
-      await api.post(
-        `/stock_tracker/${hotelSlug}/stocktakes/${stocktake.id}/approve/`,
-        approvePayload
+      const response = await api.post(
+        `/stock_tracker/${hotelSlug}/periods/${period.id}/approve-and-close/`,
+        payload
       );
 
-      console.log('✅ Stocktake approved successfully');
+      console.log('✅ Stocktake approved and period closed successfully:', response.data);
 
       // Step 4: Notify parent component of success
       if (onSuccess) {
@@ -149,8 +150,9 @@ export const StocktakeCloseModal = ({
       onHide();
 
     } catch (err) {
-      console.error('❌ Error closing stocktake:', err);
-      setError(err.response?.data?.detail || err.message || 'Failed to close stocktake');
+      console.error('❌ Error approving and closing:', err);
+      const errorMsg = err.response?.data?.error || err.response?.data?.detail || err.message || 'Failed to approve and close';
+      setError(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -164,7 +166,7 @@ export const StocktakeCloseModal = ({
       <Modal.Header closeButton>
         <Modal.Title>
           <FaCheckCircle className="me-2 text-success" />
-          Close Stocktake #{stocktake?.id}
+          Approve & Close Period - Stocktake #{stocktake?.id}
         </Modal.Title>
       </Modal.Header>
 
@@ -172,12 +174,13 @@ export const StocktakeCloseModal = ({
         {/* Warning Message */}
         <Alert variant="warning">
           <FaExclamationTriangle className="me-2" />
-          <strong>Important:</strong> Closing this stocktake will:
+          <strong>Important:</strong> This action will perform the following steps in order:
           <ul className="mb-0 mt-2">
+            <li><strong>Step 1:</strong> Approve the stocktake (status: DRAFT → APPROVED)</li>
+            <li><strong>Step 2:</strong> Close the period (status: OPEN → CLOSED)</li>
             <li>Lock the stocktake - no further edits allowed</li>
             <li>Create stock adjustments for all variances</li>
             <li>Update current stock levels in the system</li>
-            <li>Close the current stock period</li>
           </ul>
         </Alert>
 
@@ -311,7 +314,7 @@ export const StocktakeCloseModal = ({
           disabled={saving}
         >
           <FaCheckCircle className="me-2" />
-          {saving ? 'Closing Stocktake...' : 'Yes, Close Stocktake'}
+          {saving ? 'Approving & Closing...' : 'Yes, Approve & Close Period'}
         </Button>
       </Modal.Footer>
     </Modal>

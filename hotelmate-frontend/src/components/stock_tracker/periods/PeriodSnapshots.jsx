@@ -283,10 +283,10 @@ export const PeriodSnapshots = () => {
                             {/* Reopened indicator badge */}
                             {period.reopened_at && (
                               <span 
-                                className="badge bg-info" 
+                                className={`badge ${period.is_closed ? 'bg-secondary' : 'bg-info'}`}
                                 title={`Reopened on ${new Date(period.reopened_at).toLocaleString('en-IE')}`}
                               >
-                                <i className="bi bi-arrow-counterclockwise"></i> Reopened
+                                <i className="bi bi-arrow-counterclockwise"></i> {period.is_closed ? 'Was Reopened' : 'Reopened'}
                               </span>
                             )}
                             
@@ -332,7 +332,7 @@ export const PeriodSnapshots = () => {
                                   dateStyle: 'short', 
                                   timeStyle: 'short' 
                                 })}
-                                {period.closed_by && ` by Staff #${period.closed_by}`}
+                                {period.closed_by_name && ` by ${period.closed_by_name}`}
                               </small>
                             )}
                             {period.reopened_at && (
@@ -341,7 +341,7 @@ export const PeriodSnapshots = () => {
                                   dateStyle: 'short', 
                                   timeStyle: 'short' 
                                 })}
-                                {period.reopened_by && ` by Staff #${period.reopened_by}`}
+                                {period.reopened_by_name && ` by ${period.reopened_by_name}`}
                               </small>
                             )}
                           </div>
