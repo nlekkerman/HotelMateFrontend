@@ -11,6 +11,34 @@ import api from './api';
 // ============================================================================
 
 /**
+ * Get comprehensive KPI summary across multiple periods
+ * Backend calculates ALL metrics - frontend just displays them
+ * 
+ * @param {string} hotelSlug - Hotel identifier (slug)
+ * @param {array} periodIds - Array of period IDs [1, 2, 3, ...]
+ * @returns {Promise} API response with complete KPI data:
+ *   - stock_value_metrics: total value, trends, historical values
+ *   - profitability_metrics: GP%, pour cost, trends
+ *   - category_performance: top categories, distribution
+ *   - inventory_health: low stock, out of stock, health score
+ *   - period_comparison: top movers, variance (if 2+ periods)
+ *   - performance_score: overall score, rating, breakdown
+ *   - additional_metrics: item counts, averages
+ */
+export const getKPISummary = async (hotelSlug, periodIds) => {
+  try {
+    const periods = Array.isArray(periodIds) ? periodIds.join(',') : periodIds;
+    const response = await api.get(`stock_tracker/${hotelSlug}/kpi-summary/`, {
+      params: { period_ids: periods }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching KPI summary:', error);
+    throw error;
+  }
+};
+
+/**
  * Compare category data across multiple periods
  * @param {string} hotelSlug - Hotel identifier
  * @param {array} periodIds - Array of period IDs [1, 2, 3, ...]

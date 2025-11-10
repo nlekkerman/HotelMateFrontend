@@ -9,10 +9,7 @@ import {
   FaBox
 } from 'react-icons/fa';
 import { 
-  getPeriodSnapshot, 
-  getProfitabilityData, 
-  getLowStockItems,
-  getTopMovers,
+  getKPISummary,
   formatCurrency 
 } from '@/services/stockAnalytics';
 
@@ -20,136 +17,121 @@ const KPISummaryCards = ({
   hotelSlug, 
   period1, // Current period
   period2 = null, // Previous period for comparison (optional)
-  selectedPeriods = [], // All selected periods for average calculations
+  selectedPeriods = [], // All selected periods for KPI calculations
   onCardClick = null
 }) => {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [kpis, setKpis] = useState({
     totalStockValue: 0,
+    currentPeriodName: null,
+    valueChange: null,
+    previousPeriodName: null,
     averageGP: 0,
     highestGPPeriod: null,
     lowestGPPeriod: null,
     topCategory: { name: '', value: 0 },
     lowStockCount: 0,
     topMoversCount: 0,
-    efficiencyScore: 0
+    performanceScore: 0,
+    performanceRating: ''
   });
 
   useEffect(() => {
-    if (hotelSlug && period1) {
-      fetchAllData();
+    if (hotelSlug && (selectedPeriods.length > 0 || period1)) {
+      fetchKPIData();
     }
   }, [hotelSlug, period1, period2, selectedPeriods]);
 
-  const getCategoryName = (categoryCode) => {
-    const categoryMap = {
-      'S': 'Spirits',
-      'W': 'Wine',
-      'B': 'Bottled Beer',
-      'D': 'Draught Beer',
-      'M': 'Minerals & Syrups'
-    };
-    return categoryMap[categoryCode] || categoryCode;
-  };
-
-  const fetchAllData = async () => {
+  const fetchKPIData = async () => {
     try {
       setLoading(true);
+      setError(null);
 
-      // Fetch current period data
-      const [periodData, profitabilityData, lowStockData] = await Promise.all([
-        getPeriodSnapshot(hotelSlug, period1),
-        getProfitabilityData(hotelSlug).catch(() => null),
-        getLowStockItems(hotelSlug).catch(() => [])
-      ]);
-      
-      console.log('=== KPI DATA SOURCES ===');
-      console.log('Period Data:', periodData);
-      console.log('Profitability Data:', profitabilityData);
-      console.log('Low Stock Data:', lowStockData);
-      console.log('========================');
-
-      // Fetch top movers only if period2 is provided
-      let topMoversData = null;
-      if (period2) {
-        topMoversData = await getTopMovers(hotelSlug, period1, period2, 10).catch(() => null);
+      // Determine which periods to use for the KPI endpoint
+      let periodIds = [];
+      if (selectedPeriods && selectedPeriods.length > 0) {
+        periodIds = selectedPeriods;
+      } else if (period2) {
+        periodIds = [period1, period2];
+      } else {
+        periodIds = [period1];
       }
 
-      // Calculate KPIs
-      const totalStockValue = parseFloat(periodData.total_value || periodData.total_stock_value || 0);
-      console.log('KPI Total Stock Value:', totalStockValue, 'from period:', period1);
-      
-      // Use profitability data for GP (don't calculate from snapshots - too slow)
-      const averageGP = profitabilityData 
-        ? parseFloat(profitabilityData.summary?.average_gp_percentage || 0)
-        : 0;
-      
-      // TODO: Get highest/lowest GP from backend API instead of calculating
-      const highestGPPeriod = null;
-      const lowestGPPeriod = null;
+      console.log('Fetching KPI data for periods:', periodIds);
 
-      // Find top category from snapshots
-      const snapshots = periodData.snapshots || [];
-      const categoryMap = new Map();
-      
-      snapshots.forEach(snapshot => {
-        const categoryCode = snapshot.item?.category || 'Unknown';
-        const category = snapshot.item?.category_name || getCategoryName(categoryCode);
-        const value = parseFloat(snapshot.closing_stock_value || 0);
-        
-        if (categoryMap.has(category)) {
-          categoryMap.set(category, categoryMap.get(category) + value);
-        } else {
-          categoryMap.set(category, value);
-        }
-      });
-      
-      const categories = Array.from(categoryMap.entries()).map(([category, value]) => ({
-        category,
-        total_value: value
-      }));
-      
-      const topCat = categories.length > 0
-        ? categories.reduce((max, cat) => 
-            parseFloat(cat.total_value) > parseFloat(max.total_value) ? cat : max
-          )
-        : { category: 'N/A', total_value: 0 };
+      // Single API call - backend calculates EVERYTHING
+      const response = await getKPISummary(hotelSlug, periodIds);
+      const data = response.data;
 
-      const lowStockItems = Array.isArray(lowStockData) ? lowStockData : (lowStockData.items || []);
-      const lowStockCount = lowStockItems.filter(item => {
-        const parLevel = parseFloat(item.par_level || 0);
-        return parLevel > 0;
-      }).length;
+      console.log('=== KPI BACKEND RESPONSE ===');
+      console.log('Stock Value Metrics:', data.stock_value_metrics);
+      console.log('Period Values (as received):', data.stock_value_metrics?.period_values);
+      console.log('Profitability Metrics:', data.profitability_metrics);
+      console.log('Category Performance:', data.category_performance);
+      console.log('Inventory Health:', data.inventory_health);
+      console.log('Period Comparison:', data.period_comparison);
+      console.log('Performance Score:', data.performance_score);
+      console.log('===========================');
 
-      const topMoversCount = topMoversData
-        ? (topMoversData.biggest_increases?.length || 0) + 
-          (topMoversData.biggest_decreases?.length || 0)
-        : 0;
+      // Sort period_values by date to ensure chronological order
+      const sortedPeriods = data.stock_value_metrics?.period_values 
+        ? [...data.stock_value_metrics.period_values].sort((a, b) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            return dateA - dateB;
+          })
+        : [];
 
-      // Calculate efficiency score (0-100)
-      // Based on: GP% (40%), Low Stock % (30%), Stock Turnover proxy (30%)
-      const gpScore = Math.min(averageGP, 100) * 0.4;
-      const lowStockScore = Math.max(0, (1 - (lowStockCount / Math.max(periodData.items_count || 1, 1))) * 100) * 0.3;
-      const turnoverScore = 70 * 0.3; // Placeholder - would need actual turnover data
-      const efficiencyScore = Math.round(gpScore + lowStockScore + turnoverScore);
+      console.log('Sorted Periods (by date):', sortedPeriods);
 
+      // Map backend response to component state - NO CALCULATIONS
       setKpis({
-        totalStockValue,
-        averageGP,
-        highestGPPeriod,
-        lowestGPPeriod,
+        // Stock Value
+        totalStockValue: data.stock_value_metrics?.total_current_value || 0,
+        // Current period is the LAST one after sorting by date (most recent)
+        currentPeriodName: sortedPeriods.length > 0 
+                           ? sortedPeriods[sortedPeriods.length - 1]?.period_name 
+                           : null,
+        valueChange: data.stock_value_metrics?.trend || null,
+        // Previous period is the SECOND TO LAST after sorting by date
+        previousPeriodName: sortedPeriods.length > 1 
+                            ? sortedPeriods[sortedPeriods.length - 2]?.period_name 
+                            : null,
+        
+        // Profitability
+        averageGP: data.profitability_metrics?.average_gp_percentage || 0,
+        highestGPPeriod: data.profitability_metrics?.highest_gp_period ? {
+          gp: data.profitability_metrics.highest_gp_period.gp_percentage,
+          periodName: data.profitability_metrics.highest_gp_period.period_name
+        } : null,
+        lowestGPPeriod: data.profitability_metrics?.lowest_gp_period ? {
+          gp: data.profitability_metrics.lowest_gp_period.gp_percentage,
+          periodName: data.profitability_metrics.lowest_gp_period.period_name
+        } : null,
+        
+        // Category Performance
         topCategory: {
-          name: topCat.category,
-          value: parseFloat(topCat.total_value || 0),
-          percentage: parseFloat(topCat.percentage || 0)
+          name: data.category_performance?.top_by_value?.category_name || 'N/A',
+          value: data.category_performance?.top_by_value?.total_value || 0,
+          percentage: data.category_performance?.top_by_value?.percentage_of_total || 0
         },
-        lowStockCount,
-        topMoversCount,
-        efficiencyScore
+        
+        // Inventory Health
+        lowStockCount: (data.inventory_health?.low_stock_count || 0) + 
+                       (data.inventory_health?.out_of_stock_count || 0),
+        
+        // Period Comparison (only if 2+ periods)
+        topMoversCount: data.period_comparison?.total_movers_count || 0,
+        
+        // Performance Score
+        performanceScore: data.performance_score?.overall_score || 0,
+        performanceRating: data.performance_score?.rating || 'N/A'
       });
 
     } catch (err) {
-      console.error('Failed to fetch KPI data:', err);
+      console.error('Failed to fetch KPI data from backend:', err);
+      setError(err.message || 'Failed to load KPI data');
     } finally {
       setLoading(false);
     }
@@ -161,11 +143,57 @@ const KPISummaryCards = ({
     }
   };
 
-  const getEfficiencyBadge = (score) => {
-    if (score >= 80) return <Badge bg="success">Excellent</Badge>;
-    if (score >= 60) return <Badge bg="info">Good</Badge>;
-    if (score >= 40) return <Badge bg="warning">Fair</Badge>;
-    return <Badge bg="danger">Needs Improvement</Badge>;
+  const getPerformanceBadge = (rating) => {
+    const ratingUpper = rating?.toUpperCase() || '';
+    if (ratingUpper === 'EXCELLENT') return <Badge bg="success">Excellent</Badge>;
+    if (ratingUpper === 'GOOD') return <Badge bg="info">Good</Badge>;
+    if (ratingUpper === 'FAIR') return <Badge bg="warning">Fair</Badge>;
+    if (ratingUpper === 'POOR') return <Badge bg="danger">Poor</Badge>;
+    return <Badge bg="secondary">{rating || 'N/A'}</Badge>;
+  };
+
+  const getTrendIcon = (trend, periodName = null) => {
+    if (!trend) return null;
+    const direction = trend.direction?.toLowerCase();
+    const percentage = Math.abs(trend.percentage || 0);
+    
+    if (direction === 'increasing') {
+      return (
+        <div className="mt-1">
+          <span className="text-success">
+            <FaArrowUp size={12} /> +{percentage.toFixed(1)}%
+          </span>
+          {periodName && (
+            <div className="text-muted" style={{ fontSize: '0.65rem', marginTop: '2px' }}>
+              vs {periodName}
+            </div>
+          )}
+        </div>
+      );
+    } else if (direction === 'decreasing') {
+      return (
+        <div className="mt-1">
+          <span className="text-danger">
+            <FaArrowUp size={12} style={{ transform: 'rotate(180deg)' }} /> -{percentage.toFixed(1)}%
+          </span>
+          {periodName && (
+            <div className="text-muted" style={{ fontSize: '0.65rem', marginTop: '2px' }}>
+              vs {periodName}
+            </div>
+          )}
+        </div>
+      );
+    }
+    return (
+      <div className="mt-1">
+        <span className="text-muted">→ Stable</span>
+        {periodName && (
+          <div className="text-muted" style={{ fontSize: '0.65rem', marginTop: '2px' }}>
+            vs {periodName}
+          </div>
+        )}
+      </div>
+    );
   };
 
   if (loading) {
@@ -192,11 +220,18 @@ const KPISummaryCards = ({
           className="shadow-sm h-100 hover-card"
           style={{ cursor: onCardClick ? 'pointer' : 'default' }}
           onClick={() => handleCardClick('totalStockValue')}
+          title="Current total value of all stock on hand"
         >
           <Card.Body className="text-center">
             <FaMoneyBillWave size={32} className="text-success mb-2" />
-            <div className="small text-muted mb-1">Total Stock Value</div>
+            <div className="small text-muted mb-1">Current Stock Value</div>
             <h4 className="mb-0">{formatCurrency(kpis.totalStockValue)}</h4>
+            {kpis.currentPeriodName && (
+              <div className="text-muted" style={{ fontSize: '0.7rem', marginTop: '2px' }}>
+                {kpis.currentPeriodName}
+              </div>
+            )}
+            {kpis.valueChange && getTrendIcon(kpis.valueChange, kpis.previousPeriodName)}
           </Card.Body>
         </Card>
       </Col>
@@ -214,16 +249,19 @@ const KPISummaryCards = ({
             <h4 className="mb-0">{kpis.averageGP.toFixed(1)}%</h4>
             {kpis.highestGPPeriod && kpis.lowestGPPeriod && (
               <div className="mt-2">
-                <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '0.7rem' }}>
-                  <span className="text-success">
-                    <FaArrowUp size={10} /> {kpis.highestGPPeriod.gp.toFixed(1)}%
-                  </span>
-                  <span className="text-danger">
-                    <FaArrowUp size={10} style={{ transform: 'rotate(180deg)' }} /> {kpis.lowestGPPeriod.gp.toFixed(1)}%
-                  </span>
-                </div>
-                <div className="text-muted" style={{ fontSize: '0.65rem' }}>
-                  {kpis.highestGPPeriod.periodName?.substring(0, 8)} / {kpis.lowestGPPeriod.periodName?.substring(0, 8)}
+                <div className="d-flex justify-content-between align-items-center gap-2" style={{ fontSize: '0.7rem' }}>
+                  <div className="text-center flex-fill">
+                    <div className="text-success"><FaArrowUp size={10} /> {kpis.highestGPPeriod.gp.toFixed(1)}%</div>
+                    <div className="text-muted" style={{ fontSize: '0.6rem', marginTop: '2px' }}>
+                      {kpis.highestGPPeriod.periodName}
+                    </div>
+                  </div>
+                  <div className="text-center flex-fill">
+                    <div className="text-danger"><FaArrowUp size={10} style={{ transform: 'rotate(180deg)' }} /> {kpis.lowestGPPeriod.gp.toFixed(1)}%</div>
+                    <div className="text-muted" style={{ fontSize: '0.6rem', marginTop: '2px' }}>
+                      {kpis.lowestGPPeriod.periodName}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -237,12 +275,16 @@ const KPISummaryCards = ({
           className="shadow-sm h-100 hover-card"
           style={{ cursor: onCardClick ? 'pointer' : 'default' }}
           onClick={() => handleCardClick('topCategory')}
+          title="Category with highest total stock value"
         >
           <Card.Body className="text-center">
             <FaChartLine size={32} className="text-info mb-2" />
-            <div className="small text-muted mb-1">Top Category</div>
+            <div className="small text-muted mb-1">Top Category by Value</div>
             <h6 className="mb-0 text-truncate">{kpis.topCategory.name}</h6>
             <small className="text-muted">{formatCurrency(kpis.topCategory.value)}</small>
+            <div className="mt-1" style={{ fontSize: '0.65rem', color: '#6c757d' }}>
+              Highest total value
+            </div>
           </Card.Body>
         </Card>
       </Col>
@@ -253,6 +295,7 @@ const KPISummaryCards = ({
           className="shadow-sm h-100 hover-card"
           style={{ cursor: onCardClick ? 'pointer' : 'default' }}
           onClick={() => handleCardClick('lowStockCount')}
+          title="Items below par level or out of stock"
         >
           <Card.Body className="text-center">
             <FaExclamationTriangle size={32} className="text-warning mb-2" />
@@ -263,6 +306,9 @@ const KPISummaryCards = ({
                 <Badge bg="danger" className="ms-2">!</Badge>
               )}
             </h4>
+            <div className="mt-1" style={{ fontSize: '0.65rem', color: '#6c757d' }}>
+              Need attention
+            </div>
           </Card.Body>
         </Card>
       </Col>
@@ -274,31 +320,39 @@ const KPISummaryCards = ({
             className="shadow-sm h-100 hover-card"
             style={{ cursor: onCardClick ? 'pointer' : 'default' }}
             onClick={() => handleCardClick('topMoversCount')}
+            title="Items with big stock level changes between periods"
           >
             <Card.Body className="text-center">
               <FaChartLine size={32} className="text-success mb-2" />
-              <div className="small text-muted mb-1">Top Movers</div>
+              <div className="small text-muted mb-1">Stock Level Changes</div>
               <h4 className="mb-0">{kpis.topMoversCount}</h4>
+              <div className="mt-1" style={{ fontSize: '0.65rem', color: '#6c757d' }}>
+                Items with &gt;10% change
+              </div>
             </Card.Body>
           </Card>
         </Col>
       )}
 
-      {/* Efficiency Score */}
+      {/* Performance Score */}
       <Col xs={12} sm={6} md={4} lg={2}>
         <Card 
           className="shadow-sm h-100 hover-card"
           style={{ cursor: onCardClick ? 'pointer' : 'default' }}
-          onClick={() => handleCardClick('efficiencyScore')}
+          onClick={() => handleCardClick('performanceScore')}
+          title="Overall performance: profitability, stock health, turnover & variance"
         >
           <Card.Body className="text-center">
             <FaBox size={32} className="text-secondary mb-2" />
-            <div className="small text-muted mb-1">Efficiency Score</div>
+            <div className="small text-muted mb-1">Performance Score</div>
             <h4 className="mb-0">
-              {kpis.efficiencyScore}
+              {kpis.performanceScore}
               <span className="fs-6 text-muted">/100</span>
             </h4>
-            <div className="mt-1">{getEfficiencyBadge(kpis.efficiencyScore)}</div>
+            <div className="mt-1">{getPerformanceBadge(kpis.performanceRating)}</div>
+            <div className="mt-1" style={{ fontSize: '0.65rem', color: '#6c757d' }}>
+              Overall rating
+            </div>
           </Card.Body>
         </Card>
       </Col>

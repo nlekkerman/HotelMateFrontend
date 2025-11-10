@@ -2,7 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Button, Alert } from 'react-bootstrap';
-import { FaChartLine, FaArrowLeft, FaCog, FaDownload } from 'react-icons/fa';
+import { 
+  FaChartLine, 
+  FaArrowLeft, 
+  FaCog, 
+  FaDownload, 
+  FaTimes
+} from 'react-icons/fa';
 import { useMediaQuery } from 'react-responsive';
 
 // Import Analytics Components
@@ -35,6 +41,54 @@ export default function Analytics() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
+
+  // Visibility state for analytics sections
+  const [visibleSections, setVisibleSections] = useState({
+    categoryComparison: false,
+    topMovers: false,
+    waterfallCost: false,
+    itemTrends: false,
+    varianceHeatmap: false,
+    performanceRadar: false,
+    stockValueTrends: false,
+    lowStock: false,
+    profitability: false,
+    categoryBreakdown: false,
+    categoryComparisonSideBySide: false,
+    categoryComparisonTable: false
+  });
+
+  // Track order of opened sections (newest first)
+  const [sectionOrder, setSectionOrder] = useState([]);
+
+  // Toggle section visibility
+  const toggleSection = (section) => {
+    const isCurrentlyVisible = visibleSections[section];
+    
+    setVisibleSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+
+    // Update section order - add to top if opening, remove if closing
+    if (!isCurrentlyVisible) {
+      // Opening: add to the beginning (top)
+      setSectionOrder(prev => [section, ...prev.filter(s => s !== section)]);
+    } else {
+      // Closing: remove from order
+      setSectionOrder(prev => prev.filter(s => s !== section));
+    }
+  };
+
+  // Close a specific section
+  const closeSection = (section) => {
+    setVisibleSections(prev => ({
+      ...prev,
+      [section]: false
+    }));
+    // Remove from order
+    setSectionOrder(prev => prev.filter(s => s !== section));
+  };
 
   // Refresh handler
   const handleRefresh = () => {
@@ -144,147 +198,385 @@ export default function Analytics() {
         </div>
       )}
 
-      {/* Main Analytics Charts Grid */}
-      <Row className="g-4 mb-4">
-        {/* Category Comparison - Full width on mobile, half on desktop */}
-        <Col xs={12} lg={6}>
-          <CategoryComparisonChart
-            hotelSlug={hotel_slug}
-            selectedPeriods={selectedPeriods}
-            height={chartHeight}
-          />
-        </Col>
-
-        {/* Top Movers */}
-        <Col xs={12} lg={6}>
-          <TopMoversChart
-            hotelSlug={hotel_slug}
-            period1={period1}
-            period2={period2}
-            limit={10}
-            height={chartHeight}
-          />
-        </Col>
-      </Row>
-
-      <Row className="g-4 mb-4">
-        {/* Waterfall Cost Analysis */}
-        <Col xs={12} lg={6}>
-          <WaterfallCostChart
-            hotelSlug={hotel_slug}
-            period1={period1}
-            period2={period2}
-            height={chartHeight + 50}
-          />
-        </Col>
-
-        {/* Item Trends */}
-        <Col xs={12} lg={6}>
-          <ItemTrendsChart
-            hotelSlug={hotel_slug}
-            selectedPeriods={selectedPeriods}
-            categories={categories}
-            height={chartHeight}
-          />
-        </Col>
-      </Row>
-
-      {/* Advanced Analytics Section */}
-      <div className="mt-4 mb-3">
-        <h4 className="text-muted">Advanced Analytics</h4>
-      </div>
-
-      <Row className="g-4 mb-4">
-        {/* Variance Heatmap */}
-        <Col xs={12} lg={6}>
-          <VarianceHeatmapChart
-            hotelSlug={hotel_slug}
-            selectedPeriods={selectedPeriods}
-            height={chartHeight + 50}
-          />
-        </Col>
-
-        {/* Performance Radar */}
-        <Col xs={12} lg={6}>
-          <PerformanceRadarChart
-            hotelSlug={hotel_slug}
-            period1={period1}
-            period2={period2}
-            height={chartHeight + 50}
-          />
-        </Col>
-      </Row>
-
-      {/* Operational Analytics Section */}
+      {/* Big Square Toggle Buttons */}
       {period1 && (
-        <>
-          <div className="mt-5 mb-3">
-            <h4 className="text-muted">Operational Analytics</h4>
-          </div>
+        <div className="mb-4">
+          <h5 className="mb-3 text-muted">Analytics Sections</h5>
+          <Row className="g-3">
+            {/* Category Comparison Button */}
+            <Col xs={6} sm={4} md={3} lg={2}>
+              <Button
+                variant={visibleSections.categoryComparison ? "primary" : "outline-primary"}
+                className="w-100 stock-analytics-toggle-btn"
+                onClick={() => toggleSection('categoryComparison')}
+                style={{ 
+                  height: '120px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: '600'
+                }}
+              >
+                <div className="stock-analytics-icon-placeholder mb-2"></div>
+                <div className="text-center">Category Comparison</div>
+              </Button>
+            </Col>
 
-          <Row className="g-4 mb-4">
-            {/* Stock Value Trends */}
-            <Col xs={12} lg={6}>
+            {/* Top Movers Button */}
+            <Col xs={6} sm={4} md={3} lg={2}>
+              <Button
+                variant={visibleSections.topMovers ? "success" : "outline-success"}
+                className="w-100 stock-analytics-toggle-btn"
+                onClick={() => toggleSection('topMovers')}
+                style={{ 
+                  height: '120px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: '600'
+                }}
+              >
+                <div className="stock-analytics-icon-placeholder mb-2"></div>
+                <div className="text-center">Top Movers</div>
+              </Button>
+            </Col>
+
+            {/* Waterfall Cost Button */}
+            <Col xs={6} sm={4} md={3} lg={2}>
+              <Button
+                variant={visibleSections.waterfallCost ? "info" : "outline-info"}
+                className="w-100 stock-analytics-toggle-btn"
+                onClick={() => toggleSection('waterfallCost')}
+                style={{ 
+                  height: '120px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: '600'
+                }}
+              >
+                <div className="stock-analytics-icon-placeholder mb-2"></div>
+                <div className="text-center">Cost Waterfall</div>
+              </Button>
+            </Col>
+
+            {/* Item Trends Button */}
+            <Col xs={6} sm={4} md={3} lg={2}>
+              <Button
+                variant={visibleSections.itemTrends ? "warning" : "outline-warning"}
+                className="w-100 stock-analytics-toggle-btn"
+                onClick={() => toggleSection('itemTrends')}
+                style={{ 
+                  height: '120px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: '600'
+                }}
+              >
+                <div className="stock-analytics-icon-placeholder mb-2"></div>
+                <div className="text-center">Item Trends</div>
+              </Button>
+            </Col>
+
+            {/* Variance Heatmap Button */}
+            <Col xs={6} sm={4} md={3} lg={2}>
+              <Button
+                variant={visibleSections.varianceHeatmap ? "danger" : "outline-danger"}
+                className="w-100 stock-analytics-toggle-btn"
+                onClick={() => toggleSection('varianceHeatmap')}
+                style={{ 
+                  height: '120px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: '600'
+                }}
+              >
+                <div className="stock-analytics-icon-placeholder mb-2"></div>
+                <div className="text-center">Variance Heatmap</div>
+              </Button>
+            </Col>
+
+            {/* Performance Radar Button */}
+            <Col xs={6} sm={4} md={3} lg={2}>
+              <Button
+                variant={visibleSections.performanceRadar ? "secondary" : "outline-secondary"}
+                className="w-100 stock-analytics-toggle-btn"
+                onClick={() => toggleSection('performanceRadar')}
+                style={{ 
+                  height: '120px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: '600'
+                }}
+              >
+                <div className="stock-analytics-icon-placeholder mb-2"></div>
+                <div className="text-center">Performance Radar</div>
+              </Button>
+            </Col>
+
+            {/* Stock Value Trends Button */}
+            <Col xs={6} sm={4} md={3} lg={2}>
+              <Button
+                variant={visibleSections.stockValueTrends ? "primary" : "outline-primary"}
+                className="w-100 stock-analytics-toggle-btn"
+                onClick={() => toggleSection('stockValueTrends')}
+                style={{ 
+                  height: '120px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: '600'
+                }}
+              >
+                <div className="stock-analytics-icon-placeholder mb-2"></div>
+                <div className="text-center">Stock Trends</div>
+              </Button>
+            </Col>
+
+            {/* Low Stock Button */}
+            <Col xs={6} sm={4} md={3} lg={2}>
+              <Button
+                variant={visibleSections.lowStock ? "warning" : "outline-warning"}
+                className="w-100 stock-analytics-toggle-btn"
+                onClick={() => toggleSection('lowStock')}
+                style={{ 
+                  height: '120px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: '600'
+                }}
+              >
+                <div className="stock-analytics-icon-placeholder mb-2"></div>
+                <div className="text-center">Low Stock</div>
+              </Button>
+            </Col>
+
+            {/* Profitability Button */}
+            <Col xs={6} sm={4} md={3} lg={2}>
+              <Button
+                variant={visibleSections.profitability ? "success" : "outline-success"}
+                className="w-100 stock-analytics-toggle-btn"
+                onClick={() => toggleSection('profitability')}
+                style={{ 
+                  height: '120px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: '600'
+                }}
+              >
+                <div className="stock-analytics-icon-placeholder mb-2"></div>
+                <div className="text-center">Profitability</div>
+              </Button>
+            </Col>
+
+            {/* Category Breakdown Button */}
+            <Col xs={6} sm={4} md={3} lg={2}>
+              <Button
+                variant={visibleSections.categoryBreakdown ? "info" : "outline-info"}
+                className="w-100 stock-analytics-toggle-btn"
+                onClick={() => toggleSection('categoryBreakdown')}
+                style={{ 
+                  height: '120px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: '600'
+                }}
+              >
+                <div className="stock-analytics-icon-placeholder mb-2"></div>
+                <div className="text-center">Category Breakdown</div>
+              </Button>
+            </Col>
+
+            {/* Side by Side Comparison Button */}
+            <Col xs={6} sm={4} md={3} lg={2}>
+              <Button
+                variant={visibleSections.categoryComparisonSideBySide ? "secondary" : "outline-secondary"}
+                className="w-100 stock-analytics-toggle-btn"
+                onClick={() => toggleSection('categoryComparisonSideBySide')}
+                style={{ 
+                  height: '120px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: '600'
+                }}
+              >
+                <div className="stock-analytics-icon-placeholder mb-2"></div>
+                <div className="text-center">Side by Side</div>
+              </Button>
+            </Col>
+
+            {/* Comparison Table Button */}
+            <Col xs={6} sm={4} md={3} lg={2}>
+              <Button
+                variant={visibleSections.categoryComparisonTable ? "dark" : "outline-dark"}
+                className="w-100 stock-analytics-toggle-btn"
+                onClick={() => toggleSection('categoryComparisonTable')}
+                style={{ 
+                  height: '120px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: '600'
+                }}
+              >
+                <div className="stock-analytics-icon-placeholder mb-2"></div>
+                <div className="text-center">Comparison Table</div>
+              </Button>
+            </Col>
+          </Row>
+        </div>
+      )}
+
+      {/* Analytics Charts - Vertically Stacked (One Below Another) */}
+      <div className="stock-analytics-sections-container">
+        {/* Render charts in order - newest at top */}
+        {sectionOrder.map(section => {
+          if (!visibleSections[section]) return null;
+          
+          // Chart component mapping
+          const chartComponents = {
+            categoryComparison: (
+              <CategoryComparisonChart
+                hotelSlug={hotel_slug}
+                selectedPeriods={selectedPeriods}
+                height={chartHeight}
+              />
+            ),
+            topMovers: (
+              <TopMoversChart
+                hotelSlug={hotel_slug}
+                period1={period1}
+                period2={period2}
+                limit={10}
+                height={chartHeight}
+              />
+            ),
+            waterfallCost: (
+              <WaterfallCostChart
+                hotelSlug={hotel_slug}
+                period1={period1}
+                period2={period2}
+                height={chartHeight + 50}
+              />
+            ),
+            itemTrends: (
+              <ItemTrendsChart
+                hotelSlug={hotel_slug}
+                selectedPeriods={selectedPeriods}
+                categories={categories}
+                height={chartHeight}
+              />
+            ),
+            varianceHeatmap: (
+              <VarianceHeatmapChart
+                hotelSlug={hotel_slug}
+                selectedPeriods={selectedPeriods}
+                height={chartHeight + 50}
+              />
+            ),
+            performanceRadar: (
+              <PerformanceRadarChart
+                hotelSlug={hotel_slug}
+                period1={period1}
+                period2={period2}
+                height={chartHeight + 50}
+              />
+            ),
+            stockValueTrends: period1 ? (
               <StockValueTrendsChart
                 hotelSlug={hotel_slug}
                 height={chartHeight}
                 periodCount={12}
               />
-            </Col>
-
-            {/* Low Stock Alert */}
-            <Col xs={12} lg={6}>
+            ) : null,
+            lowStock: period1 ? (
               <LowStockChart
                 hotelSlug={hotel_slug}
                 period={period1}
                 height={chartHeight}
               />
-            </Col>
-          </Row>
-
-          <Row className="g-4 mb-4">
-            {/* Profitability Analysis */}
-            <Col xs={12} lg={6}>
+            ) : null,
+            profitability: period1 ? (
               <ProfitabilityChart
                 hotelSlug={hotel_slug}
                 period={period1}
                 height={chartHeight}
                 defaultView="category"
               />
-            </Col>
-
-            {/* Category Breakdown */}
-            <Col xs={12} lg={6}>
+            ) : null,
+            categoryBreakdown: period1 ? (
               <CategoryBreakdownChart
                 hotelSlug={hotel_slug}
                 period={period1}
                 height={chartHeight}
                 defaultChartType="pie"
               />
-            </Col>
-          </Row>
-
-          {/* Category Comparison Section */}
-          <Row className="g-4 mt-4">
-            {/* Side by Side Comparison */}
-            <Col xs={12}>
+            ) : null,
+            categoryComparisonSideBySide: (
               <CategoryComparisonSideBySide
                 hotelSlug={hotel_slug}
                 periods={selectedPeriods}
                 height={chartHeight}
               />
-            </Col>
-
-            {/* Detailed Comparison Table */}
-            <Col xs={12}>
+            ),
+            categoryComparisonTable: (
               <CategoryComparisonTable
                 hotelSlug={hotel_slug}
                 periods={selectedPeriods}
               />
-            </Col>
-          </Row>
-        </>
-      )}
+            )
+          };
+
+          const chartComponent = chartComponents[section];
+          if (!chartComponent) return null;
+
+          return (
+            <div key={section} className="position-relative mb-4">
+              <Button
+                variant="light"
+                size="sm"
+                className="position-absolute top-0 end-0 m-2 stock-analytics-chart-close-btn"
+                style={{ zIndex: 10 }}
+                onClick={() => closeSection(section)}
+              >
+                <FaTimes />
+              </Button>
+              {chartComponent}
+            </div>
+          );
+        })}
+      </div>
 
       {/* Footer */}
       <div className="text-center text-muted small mt-5 pb-3">
@@ -293,6 +585,54 @@ export default function Analytics() {
           Using <strong>NEW</strong> comparison analytics endpoints • Auto-refreshes every 5 minutes
         </div>
       </div>
+
+      {/* Styles for Analytics Dashboard Components */}
+      <style>{`
+        .stock-analytics-toggle-btn {
+          transition: all 0.3s ease;
+          border-radius: 12px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stock-analytics-toggle-btn:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .stock-analytics-toggle-btn:active {
+          transform: translateY(-1px);
+        }
+
+        .stock-analytics-sections-container .card {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          border-radius: 12px;
+        }
+
+        .stock-analytics-chart-close-btn {
+          border-radius: 50%;
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+          transition: all 0.2s ease;
+        }
+
+        .stock-analytics-chart-close-btn:hover {
+          background-color: #f8f9fa;
+          transform: scale(1.1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .stock-analytics-icon-placeholder {
+          width: 32px;
+          height: 32px;
+          background-color: #ddd;
+          border-radius: 4px;
+        }
+      `}</style>
     </Container>
   );
 }
