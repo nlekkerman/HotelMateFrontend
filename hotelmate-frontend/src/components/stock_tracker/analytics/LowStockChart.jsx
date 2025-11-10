@@ -11,10 +11,11 @@ const LowStockChart = ({
   period,
   height = 400,
   onItemClick = null,
+  servingsThreshold = 50, // Alert when servings below this number
   thresholds = {
-    critical: 50,    // < 50% = red
-    warning: 80,     // 50-80% = orange
-    caution: 100     // 80-100% = yellow
+    critical: 20,    // < 20 servings = red
+    warning: 35,     // 20-35 servings = orange
+    caution: 50      // 35-50 servings = yellow
   }
 }) => {
   const [chartData, setChartData] = useState(null);
@@ -43,59 +44,36 @@ const LowStockChart = ({
       setLoading(true);
       setError(null);
 
-      const data = await getLowStockItems(hotelSlug);
+      const data = await getLowStockItems(hotelSlug, servingsThreshold);
       console.log('Low Stock API Response:', data);
-      console.log('Is Array?', Array.isArray(data));
-      console.log('Data type:', typeof data);
       
-      // API returns array of items, not {items: [...]}
-      const itemsList = Array.isArray(data) ? data : (data.items || []);
-      console.log('Items List:', itemsList);
-      console.log('Items List Length:', itemsList.length);
-      
-      // Filter for low stock items (items below par level)
-      const lowStockItems = itemsList.filter(item => {
-        const currentStock = parseFloat(item.current_full_units || 0) + parseFloat(item.current_partial_units || 0);
-        const parLevel = parseFloat(item.par_level || 0);
-        const isBelowPar = parLevel > 0 && currentStock < parLevel;
-        
-        // Log first few items to see par levels
-        if (itemsList.indexOf(item) < 5) {
-          console.log(`Item: ${item.name}, Current: ${currentStock}, Par: ${parLevel}, Below Par: ${isBelowPar}`);
-        }
-        
-        return isBelowPar;
-      });
-      
-      const itemsWithParLevels = itemsList.filter(i => parseFloat(i.par_level || 0) > 0).length;
-      console.log('Total items with par levels:', itemsWithParLevels);
-      console.log('Items below par level:', lowStockItems.length);
+      // API returns array of low stock items directly
+      const lowStockItems = Array.isArray(data) ? data : [];
+      console.log('Low Stock Items Count:', lowStockItems.length);
       
       if (lowStockItems.length === 0) {
         setChartData(null);
         setItems([]);
-        // Set appropriate error message based on whether par levels are configured
-        if (itemsWithParLevels === 0) {
-          setError('No par levels configured. Please set par levels for your items to track low stock.');
-        }
+        setError('Great news! All items have sufficient stock levels.');
         return;
       }
 
-      // Add severity level to each item and calculate stock percentage
+      // Add severity level to each item based on servings remaining
       const itemsWithSeverity = lowStockItems.map(item => {
-        const currentStock = parseFloat(item.current_full_units || 0) + parseFloat(item.current_partial_units || 0);
-        const parLevel = parseFloat(item.par_level || 0);
-        const stockPercentage = parLevel > 0 ? (currentStock / parLevel) * 100 : 0;
+        const servingsRemaining = parseFloat(item.total_stock_in_servings || 0);
+        const parLevel = parseFloat(item.par_level || servingsThreshold);
+        const stockPercentage = parLevel > 0 ? (servingsRemaining / parLevel) * 100 : 0;
         
         return {
           ...item,
-          current_stock: currentStock,
+          current_stock: servingsRemaining,
           par_level: parLevel,
+          servings_remaining: servingsRemaining,
           stock_percentage: stockPercentage,
           item_name: item.name,
-          category: item.category_name || item.category,
-          severity: getSeverity(stockPercentage),
-          color: getSeverityColor(stockPercentage)
+          category: item.category_name || getCategoryName(item.category),
+          severity: getSeverity(servingsRemaining),
+          color: getSeverityColor(servingsRemaining)
         };
       });
 
@@ -113,17 +91,28 @@ const LowStockChart = ({
     }
   };
 
-  const getSeverity = (percentage) => {
-    if (percentage < thresholds.critical) return 'critical';
-    if (percentage < thresholds.warning) return 'warning';
-    if (percentage < thresholds.caution) return 'caution';
+  const getCategoryName = (categoryCode) => {
+    const categoryMap = {
+      'S': 'Spirits',
+      'W': 'Wine',
+      'B': 'Bottled Beer',
+      'D': 'Draught Beer',
+      'M': 'Minerals & Syrups'
+    };
+    return categoryMap[categoryCode] || categoryCode;
+  };
+
+  const getSeverity = (servings) => {
+    if (servings < thresholds.critical) return 'critical';
+    if (servings < thresholds.warning) return 'warning';
+    if (servings < thresholds.caution) return 'caution';
     return 'ok';
   };
 
-  const getSeverityColor = (percentage) => {
-    if (percentage < thresholds.critical) return 'rgba(255, 99, 132, 0.7)'; // Red
-    if (percentage < thresholds.warning) return 'rgba(255, 159, 64, 0.7)'; // Orange
-    if (percentage < thresholds.caution) return 'rgba(255, 206, 86, 0.7)'; // Yellow
+  const getSeverityColor = (servings) => {
+    if (servings < thresholds.critical) return 'rgba(255, 99, 132, 0.7)'; // Red
+    if (servings < thresholds.warning) return 'rgba(255, 159, 64, 0.7)'; // Orange
+    if (servings < thresholds.caution) return 'rgba(255, 206, 86, 0.7)'; // Yellow
     return 'rgba(75, 192, 192, 0.7)'; // Green
   };
 
@@ -144,8 +133,8 @@ const LowStockChart = ({
       return null;
     }
 
-    // Sort by stock percentage (lowest first)
-    filteredItems.sort((a, b) => a.stock_percentage - b.stock_percentage);
+    // Sort by servings remaining (lowest first)
+    filteredItems.sort((a, b) => a.servings_remaining - b.servings_remaining);
 
     // Limit to top 15 for readability
     const topItems = filteredItems.slice(0, 15);
@@ -163,8 +152,8 @@ const LowStockChart = ({
         borderColor: colors.map(c => c.replace('0.7', '1')),
         borderWidth: 2,
         // Store metadata
-        currentStock: topItems.map(item => item.current_stock || 0),
-        parLevel: topItems.map(item => item.par_level || 0),
+        servingsRemaining: topItems.map(item => item.servings_remaining || 0),
+        parLevel: topItems.map(item => item.par_level || servingsThreshold),
         categories: topItems.map(item => item.category),
         severities: topItems.map(item => item.severity)
       }]
@@ -280,17 +269,17 @@ const LowStockChart = ({
               <Col xs={6} md={3}>
                 <Badge bg="danger" className="me-1">{counts.critical}</Badge>
                 <strong>Critical</strong><br />
-                <small>{'<'}50% stock</small>
+                <small>{'<'}{thresholds.critical} servings</small>
               </Col>
               <Col xs={6} md={3}>
                 <Badge bg="warning" text="dark" className="me-1">{counts.warning}</Badge>
                 <strong>Warning</strong><br />
-                <small>50-80% stock</small>
+                <small>{thresholds.critical}-{thresholds.warning} servings</small>
               </Col>
               <Col xs={6} md={3}>
                 <Badge bg="info" className="me-1">{counts.caution}</Badge>
                 <strong>Caution</strong><br />
-                <small>80-100% stock</small>
+                <small>{thresholds.warning}-{thresholds.caution} servings</small>
               </Col>
               <Col xs={6} md={3}>
                 <FaBox className="me-1" />
@@ -334,35 +323,62 @@ const LowStockChart = ({
             </Col>
           </Row>
 
-          {/* Chart */}
-          <UniversalChart
-            type="bar"
-            data={chartData}
-            config={{
-              indexAxis: 'y', // Horizontal bars
-              xKey: 'item',
-              bars: [{
-                dataKey: 'percentage',
-                name: 'Stock Level %',
-                fill: 'rgba(255, 159, 64, 0.7)'
-              }],
-              showLegend: false,
-              tooltipFormatter: (value, name, props) => {
-                const dataset = chartData.datasets[0];
-                const index = props.index;
-                return [
-                  `${chartData.labels[index]}`,
-                  `Stock Level: ${value.toFixed(1)}%`,
-                  `Current: ${dataset.currentStock[index]}`,
-                  `Par Level: ${dataset.parLevel[index]}`,
-                  `Category: ${dataset.categories[index]}`,
-                  `Status: ${dataset.severities[index].toUpperCase()}`
-                ].join('\n');
-              }
-            }}
-            height={height}
-            onDataClick={handleChartClick}
-          />
+          {/* Low Stock Items List with Progress Bars */}
+          <div className="border rounded p-2" style={{ maxHeight: height, overflowY: 'auto' }}>
+            {chartData.labels.map((itemName, index) => {
+              const servings = chartData.datasets[0].data[index];
+              const threshold = chartData.datasets[0].parLevel[index];
+              const percentage = parseFloat(((servings / threshold) * 100).toFixed(1));
+              const severity = chartData.datasets[0].severities[index];
+              const color = chartData.datasets[0].backgroundColor[index];
+              
+              // Determine bar variant based on severity
+              const barVariant = 
+                severity === 'critical' ? 'danger' : 
+                severity === 'warning' ? 'warning' : 
+                severity === 'caution' ? 'info' : 'success';
+              
+              return (
+                <div 
+                  key={index} 
+                  className="p-2 border-bottom"
+                  style={{ cursor: onItemClick ? 'pointer' : 'default' }}
+                  onClick={() => handleChartClick(index)}
+                >
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <strong>{itemName}</strong>
+                    <span style={{ color: color.replace('0.7', '1'), fontWeight: 'bold' }}>
+                      {percentage}%
+                    </span>
+                  </div>
+                  <div className="progress mb-1" style={{ height: '20px' }}>
+                    <div 
+                      className={`progress-bar bg-${barVariant}`}
+                      role="progressbar" 
+                      style={{ width: `${Math.min(percentage, 100)}%` }}
+                      aria-valuenow={percentage} 
+                      aria-valuemin="0" 
+                      aria-valuemax="100"
+                    >
+                      {percentage > 10 && `${percentage}%`}
+                    </div>
+                  </div>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <small className="text-muted">
+                      {servings.toFixed(1)} / {threshold} servings
+                    </small>
+                    <small className={
+                      severity === 'critical' ? 'text-danger' : 
+                      severity === 'warning' ? 'text-warning' : 
+                      severity === 'caution' ? 'text-info' : 'text-muted'
+                    }>
+                      {severity.toUpperCase()}
+                    </small>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
           {/* Detailed Table */}
           <div className="mt-3" style={{ maxHeight: '250px', overflowY: 'auto' }}>
@@ -371,9 +387,8 @@ const LowStockChart = ({
                 <tr>
                   <th>Item</th>
                   <th>Category</th>
-                  <th className="text-end">Current</th>
-                  <th className="text-end">Par Level</th>
-                  <th className="text-end">%</th>
+                  <th className="text-end">Servings</th>
+                  <th className="text-end">Threshold</th>
                   <th className="text-center">Status</th>
                 </tr>
               </thead>
@@ -384,7 +399,7 @@ const LowStockChart = ({
                     if (severityFilter !== 'all' && item.severity !== severityFilter) return false;
                     return true;
                   })
-                  .sort((a, b) => a.stock_percentage - b.stock_percentage)
+                  .sort((a, b) => a.servings_remaining - b.servings_remaining)
                   .map((item, idx) => (
                     <tr 
                       key={idx}
@@ -393,9 +408,8 @@ const LowStockChart = ({
                     >
                       <td>{item.item_name}</td>
                       <td>{item.category}</td>
-                      <td className="text-end">{item.current_stock || 0}</td>
-                      <td className="text-end">{item.par_level || 0}</td>
-                      <td className="text-end">{item.stock_percentage.toFixed(1)}%</td>
+                      <td className="text-end">{item.servings_remaining?.toFixed(1) || 0}</td>
+                      <td className="text-end">{item.par_level || servingsThreshold}</td>
                       <td className="text-center">{getSeverityBadge(item.severity)}</td>
                     </tr>
                   ))}
@@ -406,7 +420,7 @@ const LowStockChart = ({
           {/* Info Footer */}
           <div className="mt-3 text-center">
             <small className="text-muted">
-              Stock Level % = (Current Stock / Par Level) × 100
+              Showing items with less than {servingsThreshold} servings remaining. Servings = total stock that can be served to customers.
             </small>
           </div>
         </Card.Body>

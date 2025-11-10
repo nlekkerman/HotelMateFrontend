@@ -139,6 +139,7 @@ export default function Analytics() {
             hotelSlug={hotel_slug}
             period1={period1}
             period2={period2}
+            selectedPeriods={selectedPeriods}
           />
         </div>
       )}

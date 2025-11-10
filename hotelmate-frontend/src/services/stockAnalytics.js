@@ -233,10 +233,16 @@ export const getPeriodSnapshot = async (hotelSlug, periodId) => {
  * @param {string} hotelSlug - Hotel identifier
  * @returns {Promise} API response with low stock items
  */
-export const getLowStockItems = async (hotelSlug) => {
+/**
+ * Get low stock items (items below threshold in servings)
+ * @param {string} hotelSlug - Hotel identifier
+ * @param {number} threshold - Minimum servings threshold (default: 50)
+ * @returns {Promise} API response with low stock items
+ */
+export const getLowStockItems = async (hotelSlug, threshold = 50) => {
   try {
-    const response = await api.get(`stock_tracker/${hotelSlug}/items/`, {
-      params: { lowStock: true }
+    const response = await api.get(`stock_tracker/${hotelSlug}/items/low-stock/`, {
+      params: { threshold }
     });
     return response.data;
   } catch (error) {

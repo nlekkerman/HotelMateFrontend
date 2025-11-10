@@ -20,12 +20,15 @@ const KPISummaryCards = ({
   hotelSlug, 
   period1, // Current period
   period2 = null, // Previous period for comparison (optional)
+  selectedPeriods = [], // All selected periods for average calculations
   onCardClick = null
 }) => {
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState({
     totalStockValue: 0,
     averageGP: 0,
+    highestGPPeriod: null,
+    lowestGPPeriod: null,
     topCategory: { name: '', value: 0 },
     lowStockCount: 0,
     topMoversCount: 0,
@@ -36,18 +39,35 @@ const KPISummaryCards = ({
     if (hotelSlug && period1) {
       fetchAllData();
     }
-  }, [hotelSlug, period1, period2]);
+  }, [hotelSlug, period1, period2, selectedPeriods]);
+
+  const getCategoryName = (categoryCode) => {
+    const categoryMap = {
+      'S': 'Spirits',
+      'W': 'Wine',
+      'B': 'Bottled Beer',
+      'D': 'Draught Beer',
+      'M': 'Minerals & Syrups'
+    };
+    return categoryMap[categoryCode] || categoryCode;
+  };
 
   const fetchAllData = async () => {
     try {
       setLoading(true);
 
-      // Fetch data in parallel
+      // Fetch current period data
       const [periodData, profitabilityData, lowStockData] = await Promise.all([
         getPeriodSnapshot(hotelSlug, period1),
-        getProfitabilityData(hotelSlug, period1).catch(() => null),
-        getLowStockItems(hotelSlug, period1).catch(() => ({ items: [] }))
+        getProfitabilityData(hotelSlug).catch(() => null),
+        getLowStockItems(hotelSlug).catch(() => [])
       ]);
+      
+      console.log('=== KPI DATA SOURCES ===');
+      console.log('Period Data:', periodData);
+      console.log('Profitability Data:', profitabilityData);
+      console.log('Low Stock Data:', lowStockData);
+      console.log('========================');
 
       // Fetch top movers only if period2 is provided
       let topMoversData = null;
@@ -56,20 +76,50 @@ const KPISummaryCards = ({
       }
 
       // Calculate KPIs
-      const totalStockValue = parseFloat(periodData.total_stock_value || 0);
+      const totalStockValue = parseFloat(periodData.total_value || periodData.total_stock_value || 0);
+      console.log('KPI Total Stock Value:', totalStockValue, 'from period:', period1);
+      
+      // Use profitability data for GP (don't calculate from snapshots - too slow)
       const averageGP = profitabilityData 
         ? parseFloat(profitabilityData.summary?.average_gp_percentage || 0)
         : 0;
+      
+      // TODO: Get highest/lowest GP from backend API instead of calculating
+      const highestGPPeriod = null;
+      const lowestGPPeriod = null;
 
-      // Find top category
-      const categories = periodData.by_category || [];
+      // Find top category from snapshots
+      const snapshots = periodData.snapshots || [];
+      const categoryMap = new Map();
+      
+      snapshots.forEach(snapshot => {
+        const categoryCode = snapshot.item?.category || 'Unknown';
+        const category = snapshot.item?.category_name || getCategoryName(categoryCode);
+        const value = parseFloat(snapshot.closing_stock_value || 0);
+        
+        if (categoryMap.has(category)) {
+          categoryMap.set(category, categoryMap.get(category) + value);
+        } else {
+          categoryMap.set(category, value);
+        }
+      });
+      
+      const categories = Array.from(categoryMap.entries()).map(([category, value]) => ({
+        category,
+        total_value: value
+      }));
+      
       const topCat = categories.length > 0
         ? categories.reduce((max, cat) => 
             parseFloat(cat.total_value) > parseFloat(max.total_value) ? cat : max
           )
         : { category: 'N/A', total_value: 0 };
 
-      const lowStockCount = lowStockData.items?.length || 0;
+      const lowStockItems = Array.isArray(lowStockData) ? lowStockData : (lowStockData.items || []);
+      const lowStockCount = lowStockItems.filter(item => {
+        const parLevel = parseFloat(item.par_level || 0);
+        return parLevel > 0;
+      }).length;
 
       const topMoversCount = topMoversData
         ? (topMoversData.biggest_increases?.length || 0) + 
@@ -86,6 +136,8 @@ const KPISummaryCards = ({
       setKpis({
         totalStockValue,
         averageGP,
+        highestGPPeriod,
+        lowestGPPeriod,
         topCategory: {
           name: topCat.category,
           value: parseFloat(topCat.total_value || 0),
@@ -160,6 +212,21 @@ const KPISummaryCards = ({
             <FaPercentage size={32} className="text-primary mb-2" />
             <div className="small text-muted mb-1">Average GP%</div>
             <h4 className="mb-0">{kpis.averageGP.toFixed(1)}%</h4>
+            {kpis.highestGPPeriod && kpis.lowestGPPeriod && (
+              <div className="mt-2">
+                <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '0.7rem' }}>
+                  <span className="text-success">
+                    <FaArrowUp size={10} /> {kpis.highestGPPeriod.gp.toFixed(1)}%
+                  </span>
+                  <span className="text-danger">
+                    <FaArrowUp size={10} style={{ transform: 'rotate(180deg)' }} /> {kpis.lowestGPPeriod.gp.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="text-muted" style={{ fontSize: '0.65rem' }}>
+                  {kpis.highestGPPeriod.periodName?.substring(0, 8)} / {kpis.lowestGPPeriod.periodName?.substring(0, 8)}
+                </div>
+              </div>
+            )}
           </Card.Body>
         </Card>
       </Col>
