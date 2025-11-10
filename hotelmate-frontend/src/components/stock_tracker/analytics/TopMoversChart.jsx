@@ -64,49 +64,51 @@ const TopMoversChart = ({
    * Transform data for chart display based on active tab
    */
   const getChartDataForTab = () => {
-    if (!chartData) return null;
+    if (!chartData || typeof chartData !== 'object') return null;
 
     let items = [];
     let title = '';
     
     switch (activeTab) {
       case 'increases':
-        items = chartData.biggest_increases || [];
+        items = Array.isArray(chartData.biggest_increases) ? chartData.biggest_increases : [];
         title = 'Top Increases';
         break;
       case 'decreases':
-        items = chartData.biggest_decreases || [];
+        items = Array.isArray(chartData.biggest_decreases) ? chartData.biggest_decreases : [];
         title = 'Top Decreases';
         break;
       case 'new':
-        items = chartData.new_items || [];
+        items = Array.isArray(chartData.new_items) ? chartData.new_items : [];
         title = 'New Items';
         break;
       case 'discontinued':
-        items = chartData.discontinued_items || [];
+        items = Array.isArray(chartData.discontinued_items) ? chartData.discontinued_items : [];
         title = 'Discontinued Items';
         break;
       default:
         // Combine increases and decreases for 'all'
+        const increases = Array.isArray(chartData.biggest_increases) ? chartData.biggest_increases : [];
+        const decreases = Array.isArray(chartData.biggest_decreases) ? chartData.biggest_decreases : [];
         items = [
-          ...(chartData.biggest_increases || []).slice(0, 5),
-          ...(chartData.biggest_decreases || []).slice(0, 5)
+          ...increases.slice(0, 5),
+          ...decreases.slice(0, 5)
         ];
         title = 'Top Movers (All)';
     }
 
-    if (items.length === 0) {
+    if (!Array.isArray(items) || items.length === 0) {
       return null;
     }
 
     // Transform to horizontal bar chart format
-    const labels = items.map(item => item.item_name);
-    const values = items.map(item => item.value_change || item.value);
+    const labels = items.map(item => item.name || item.item_name);
+    const values = items.map(item => item.absolute_change || item.value_change || item.value);
     const percentages = items.map(item => item.percentage_change || 0);
     
     // Color coding: green for positive, red for negative
     const colors = items.map(item => {
-      const change = item.value_change || 0;
+      const change = item.absolute_change || item.value_change || 0;
       if (activeTab === 'new') return 'rgba(54, 162, 235, 0.6)'; // blue for new
       if (activeTab === 'discontinued') return 'rgba(153, 102, 255, 0.6)'; // purple for discontinued
       return change >= 0 ? 'rgba(75, 192, 192, 0.6)' : 'rgba(255, 99, 132, 0.6)';
@@ -238,32 +240,36 @@ const TopMoversChart = ({
             <Nav.Link 
               active={activeTab === 'increases'} 
               onClick={() => setActiveTab('increases')}
+              className="text-dark"
             >
-              Increases <Badge bg="success">{getTabCount('increases')}</Badge>
+              <span className="text-dark">Increases</span> <Badge bg="success" text="white">{getTabCount('increases')}</Badge>
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
             <Nav.Link 
               active={activeTab === 'decreases'} 
               onClick={() => setActiveTab('decreases')}
+              className="text-dark"
             >
-              Decreases <Badge bg="danger">{getTabCount('decreases')}</Badge>
+              <span className="text-dark">Decreases</span> <Badge bg="danger" text="white">{getTabCount('decreases')}</Badge>
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
             <Nav.Link 
               active={activeTab === 'new'} 
               onClick={() => setActiveTab('new')}
+              className="text-dark"
             >
-              New <Badge bg="info">{getTabCount('new')}</Badge>
+              <span className="text-dark">New</span> <Badge bg="info" text="white">{getTabCount('new')}</Badge>
             </Nav.Link>
           </Nav.Item>
           <Nav.Item>
             <Nav.Link 
               active={activeTab === 'discontinued'} 
               onClick={() => setActiveTab('discontinued')}
+              className="text-dark"
             >
-              Discontinued <Badge bg="secondary">{getTabCount('discontinued')}</Badge>
+              <span className="text-dark">Discontinued</span> <Badge bg="secondary" text="white">{getTabCount('discontinued')}</Badge>
             </Nav.Link>
           </Nav.Item>
         </Nav>

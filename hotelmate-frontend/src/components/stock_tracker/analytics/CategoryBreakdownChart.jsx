@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Form, Row, Col, Alert, Table, Spinner } from 'react-bootstrap';
-import { FaPieChart } from 'react-icons/fa';
+import { FaChartPie } from 'react-icons/fa';
 import UniversalChart from '../charts/UniversalChart';
 import ChartErrorBoundary from '../charts/ChartErrorBoundary';
 import ChartEmptyState from '../charts/ChartEmptyState';
@@ -13,6 +13,7 @@ const CategoryBreakdownChart = ({
   onCategoryClick = null,
   defaultChartType = 'pie' // 'pie' or 'donut'
 }) => {
+  
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -23,6 +24,7 @@ const CategoryBreakdownChart = ({
   useEffect(() => {
     if (hotelSlug && period) {
       fetchData();
+    } else {
     }
   }, [hotelSlug, period]);
 
@@ -32,22 +34,64 @@ const CategoryBreakdownChart = ({
       setError(null);
 
       const data = await getPeriodSnapshot(hotelSlug, period);
-      setPeriodInfo({
+      
+      const periodInfoObj = {
         name: data.period_name,
         start_date: data.start_date,
         end_date: data.end_date,
-        total_value: data.total_stock_value
-      });
+        total_value: data.total_value
+      };
+      setPeriodInfo(periodInfoObj);
       
-      const transformedData = transformToChartData(data.by_category || []);
+      // Process snapshots to group by category
+      const categoryBreakdown = processSnapshotsToCategories(data.snapshots || []);
+      
+      const transformedData = transformToChartData(categoryBreakdown);
       setChartData(transformedData);
-      setCategoryDetails(data.by_category || []);
+      setCategoryDetails(categoryBreakdown);
     } catch (err) {
       console.error('Failed to fetch category breakdown:', err);
       setError(err.message || 'Failed to load category breakdown');
     } finally {
       setLoading(false);
     }
+  };
+
+  const processSnapshotsToCategories = (snapshots) => {
+    if (!snapshots || snapshots.length === 0) {
+      return [];
+    }
+    
+    const categoryMap = {};
+    let totalValue = 0;
+    
+    snapshots.forEach((snapshot, idx) => {
+      const category = snapshot.item?.category_display || snapshot.item?.category || 'Unknown';
+      const value = parseFloat(snapshot.closing_stock_value || 0);
+      
+      if (!categoryMap[category]) {
+        categoryMap[category] = {
+          category: category,
+          total_value: 0,
+          items_count: 0
+        };
+      }
+      
+      categoryMap[category].total_value += value;
+      categoryMap[category].items_count += 1;
+      totalValue += value;
+    });
+    
+    
+    // Convert to array and calculate percentages
+    // Round values to 2 decimal places to avoid floating point errors
+    const result = Object.values(categoryMap).map(cat => ({
+      ...cat,
+      total_value: Math.round(cat.total_value * 100) / 100,
+      percentage: totalValue > 0 ? (cat.total_value / totalValue) * 100 : 0
+    }));
+    
+    return result;
   };
 
   const transformToChartData = (categories) => {
@@ -100,7 +144,7 @@ const CategoryBreakdownChart = ({
     return (
       <Card className="shadow-sm">
         <Card.Header className="bg-info text-white d-flex align-items-center">
-          <FaPieChart className="me-2" />
+          <FaChartPie className="me-2" />
           <span>Category Breakdown</span>
         </Card.Header>
         <Card.Body className="d-flex justify-content-center align-items-center" style={{ height }}>
@@ -114,7 +158,7 @@ const CategoryBreakdownChart = ({
     return (
       <Card className="shadow-sm">
         <Card.Header className="bg-info text-white d-flex align-items-center">
-          <FaPieChart className="me-2" />
+          <FaChartPie className="me-2" />
           <span>Category Breakdown</span>
         </Card.Header>
         <Card.Body>
@@ -128,7 +172,7 @@ const CategoryBreakdownChart = ({
     return (
       <Card className="shadow-sm">
         <Card.Header className="bg-info text-white d-flex align-items-center">
-          <FaPieChart className="me-2" />
+          <FaChartPie className="me-2" />
           <span>Category Breakdown</span>
         </Card.Header>
         <Card.Body>
@@ -138,13 +182,14 @@ const CategoryBreakdownChart = ({
     );
   }
 
+
   return (
     <ChartErrorBoundary onRetry={fetchData}>
       <Card className="shadow-sm">
         <Card.Header className="bg-info text-white">
           <Row className="align-items-center">
             <Col>
-              <FaPieChart className="me-2" />
+              <FaChartPie className="me-2" />
               <span>Category Breakdown</span>
               {periodInfo && <span className="ms-2 small">({periodInfo.name})</span>}
             </Col>
@@ -184,13 +229,24 @@ const CategoryBreakdownChart = ({
               config={{
                 showLegend: true,
                 legendPosition: 'right',
+                showLabels: true,
+                labelFormatter: (value, context) => {
+                  // Format labels on chart slices to 2 decimals
+                  const dataset = chartData.datasets[0];
+                  const index = context?.dataIndex;
+                  if (index !== undefined && dataset.percentages[index]) {
+                    return parseFloat(dataset.percentages[index]).toFixed(2) + '%';
+                  }
+                  return value;
+                },
                 tooltipFormatter: (value, name, props) => {
                   const dataset = chartData.datasets[0];
                   const index = props.index;
+                  const percentage = parseFloat(dataset.percentages[index] || 0).toFixed(2);
                   return [
                     `${name}`,
                     `Value: ${formatCurrency(value)}`,
-                    `Percentage: ${dataset.percentages[index].toFixed(2)}%`,
+                    `Percentage: ${percentage}%`,
                     `Items: ${dataset.itemCounts[index]}`
                   ].join('\n');
                 }

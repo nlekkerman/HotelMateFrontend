@@ -48,7 +48,8 @@ const PerformanceRadarChart = ({
 
       // Transform API response to chart data
       const transformedData = transformToRadarData(response);
-      setChartData({ ...response, radarData: transformedData });
+      const finalData = { ...response, radarData: transformedData };
+      setChartData(finalData);
     } catch (err) {
       console.error('Error fetching performance scorecard:', err);
       setError(err.message || 'Failed to load performance scorecard');
@@ -64,25 +65,25 @@ const PerformanceRadarChart = ({
    * API Response Format:
    * {
    *   radar_chart_data: {
-   *     metrics: ["Value Management", "Waste Control", "Turnover", "Variance Control"],
-   *     period1_values: [85, 70, 60, 75],
-   *     period2_values: [90, 75, 65, 80],
-   *     period1_name: "Jan 2024",
-   *     period2_name: "Feb 2024"
+   *     labels: ["Value Management", "Waste Control", "Turnover", "Variance Control"],
+   *     period1: [85, 70, 60, 75],
+   *     period2: [90, 75, 65, 80]
    *   },
+   *   period1: { id: 8, name: "September 2025" },
+   *   period2: { id: 7, name: "October 2025" },
    *   overall_score: { period1: 72.5, period2: 77.5, improvement: 5.0 },
-   *   breakdown: { ... }
+   *   metrics: [ ... ]
    * }
    */
   const transformToRadarData = (apiResponse) => {
-    const { radar_chart_data } = apiResponse;
+    const { radar_chart_data, period1, period2 } = apiResponse;
 
     return {
-      labels: radar_chart_data.metrics,
+      labels: radar_chart_data.labels,
       datasets: [
         {
-          label: radar_chart_data.period1_name || 'Period 1',
-          data: radar_chart_data.period1_values,
+          label: period1?.name || 'Period 1',
+          data: radar_chart_data.period1,
           borderColor: 'rgb(54, 162, 235)',
           backgroundColor: 'rgba(54, 162, 235, 0.2)',
           pointBackgroundColor: 'rgb(54, 162, 235)',
@@ -91,8 +92,8 @@ const PerformanceRadarChart = ({
           pointHoverBorderColor: 'rgb(54, 162, 235)'
         },
         {
-          label: radar_chart_data.period2_name || 'Period 2',
-          data: radar_chart_data.period2_values,
+          label: period2?.name || 'Period 2',
+          data: radar_chart_data.period2,
           borderColor: 'rgb(75, 192, 192)',
           backgroundColor: 'rgba(75, 192, 192, 0.2)',
           pointBackgroundColor: 'rgb(75, 192, 192)',
@@ -237,43 +238,53 @@ const PerformanceRadarChart = ({
         )}
 
         {/* Metrics Breakdown */}
-        {chartData?.breakdown && (
+        {chartData?.metrics && Array.isArray(chartData.metrics) && (
           <div className="mt-3 pt-3 border-top">
             <h6 className="mb-3">Performance Metrics Breakdown</h6>
             <div className="row">
-              {Object.entries(chartData.breakdown).map(([metric, data]) => {
-                const change = data.period2 - data.period1;
-                const changePercent = ((change / data.period1) * 100).toFixed(1);
+              {chartData.metrics.map((metric) => {
+                const change = metric.period2_score - metric.period1_score;
+                const changePercent = metric.period1_score > 0 
+                  ? ((change / metric.period1_score) * 100).toFixed(1)
+                  : '0.0';
                 const isImproved = change > 0;
+                const isUnchanged = change === 0;
                 
                 return (
-                  <div key={metric} className="col-md-6 mb-3">
+                  <div key={metric.name} className="col-md-6 mb-3">
                     <Card className="h-100">
                       <Card.Body className="p-2">
                         <div className="d-flex justify-content-between align-items-start">
                           <div>
-                            <div className="small text-muted">{metric}</div>
+                            <div className="small text-muted">{metric.name}</div>
                             <div className="d-flex align-items-baseline gap-2">
-                              <span className="h6 mb-0">{data.period2.toFixed(1)}</span>
-                              <Badge 
-                                bg={isImproved ? 'success' : 'danger'} 
-                                className="small"
-                              >
-                                {isImproved ? '↑' : '↓'} {Math.abs(parseFloat(changePercent))}%
-                              </Badge>
+                              <span className="h6 mb-0">{metric.period2_score.toFixed(1)}</span>
+                              {!isUnchanged && (
+                                <Badge 
+                                  bg={isImproved ? 'success' : 'danger'} 
+                                  className="small"
+                                >
+                                  {isImproved ? '↑' : '↓'} {Math.abs(parseFloat(changePercent))}%
+                                </Badge>
+                              )}
+                              {isUnchanged && (
+                                <Badge bg="secondary" className="small">
+                                  No Change
+                                </Badge>
+                              )}
                             </div>
                           </div>
                           <div className="text-end">
                             <div className="small text-muted">Previous</div>
-                            <div className="small">{data.period1.toFixed(1)}</div>
+                            <div className="small">{metric.period1_score.toFixed(1)}</div>
                           </div>
                         </div>
                         
                         {/* Progress Bar */}
                         <div className="progress mt-2" style={{ height: '6px' }}>
                           <div 
-                            className={`progress-bar ${isImproved ? 'bg-success' : 'bg-danger'}`}
-                            style={{ width: `${data.period2}%` }}
+                            className={`progress-bar ${isImproved ? 'bg-success' : isUnchanged ? 'bg-secondary' : 'bg-danger'}`}
+                            style={{ width: `${metric.period2_score}%` }}
                           ></div>
                         </div>
                       </Card.Body>

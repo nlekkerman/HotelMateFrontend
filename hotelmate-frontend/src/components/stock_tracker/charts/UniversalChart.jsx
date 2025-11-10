@@ -38,7 +38,12 @@ const UniversalChart = ({
   const { chartLibrary } = useChartPreferences();
 
   // Validate data
-  if (!data || data.length === 0) {
+  // Handle both array format and Chart.js format {labels, datasets}
+  const hasData = Array.isArray(data) 
+    ? data.length > 0 
+    : (data && data.labels && data.datasets && data.labels.length > 0);
+
+  if (!data || !hasData) {
     return (
       <div 
         className={`universal-chart-empty ${className}`}

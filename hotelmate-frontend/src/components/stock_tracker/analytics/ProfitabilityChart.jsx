@@ -32,10 +32,17 @@ const ProfitabilityChart = ({
       setLoading(true);
       setError(null);
 
-      const data = await getProfitabilityData(hotelSlug, period);
-      setSummary(data.summary);
+      // Note: getProfitabilityData doesn't accept period parameter - uses current data
+      const data = await getProfitabilityData(hotelSlug, selectedCategory !== 'all' ? selectedCategory : undefined);
       
-      const transformedData = transformToChartData(data, view, selectedCategory, metricType);
+      // API returns array of items directly
+      const itemsList = Array.isArray(data) ? data : [];
+      
+      // Group by category for summary
+      const summary = calculateSummary(itemsList);
+      setSummary(summary);
+      
+      const transformedData = transformToChartData({ by_category: summary?.by_category || [], by_item: itemsList }, view, selectedCategory, metricType);
       setChartData(transformedData);
     } catch (err) {
       console.error('Failed to fetch profitability data:', err);
@@ -43,6 +50,55 @@ const ProfitabilityChart = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateSummary = (items) => {
+    if (!items || items.length === 0) return null;
+    
+    let totalGP = 0;
+    let totalMarkup = 0;
+    let totalGrossProfit = 0;
+    let count = 0;
+    
+    items.forEach(item => {
+      totalGP += parseFloat(item.gross_profit_percentage || 0);
+      totalMarkup += parseFloat(item.markup_percentage || 0);
+      totalGrossProfit += parseFloat(item.total_stock_value || 0) * (parseFloat(item.gross_profit_percentage || 0) / 100);
+      count++;
+    });
+    
+    return {
+      average_gp_percentage: count > 0 ? (totalGP / count).toFixed(2) : 0,
+      average_markup_percentage: count > 0 ? (totalMarkup / count).toFixed(2) : 0,
+      total_gross_profit: totalGrossProfit.toFixed(2),
+      by_category: groupItemsByCategory(items)
+    };
+  };
+  
+  const groupItemsByCategory = (items) => {
+    const categoryMap = {};
+    
+    items.forEach(item => {
+      const cat = item.category_name || item.category || 'Unknown';
+      if (!categoryMap[cat]) {
+        categoryMap[cat] = {
+          category: cat,
+          items: [],
+          total_gp: 0,
+          count: 0
+        };
+      }
+      categoryMap[cat].items.push(item);
+      categoryMap[cat].total_gp += parseFloat(item.gross_profit_percentage || 0);
+      categoryMap[cat].count++;
+    });
+    
+    return Object.values(categoryMap).map(cat => ({
+      category: cat.category,
+      gp_percentage: (cat.total_gp / cat.count).toFixed(2),
+      markup_percentage: (cat.items.reduce((sum, item) => sum + parseFloat(item.markup_percentage || 0), 0) / cat.count).toFixed(2),
+      pour_cost: (100 - (cat.total_gp / cat.count)).toFixed(2)
+    }));
   };
 
   const transformToChartData = (data, currentView, category, metric) => {
@@ -54,7 +110,7 @@ const ProfitabilityChart = ({
       // Filter items by category if selected
       sourceData = data.by_item || [];
       if (category && category !== 'all') {
-        sourceData = sourceData.filter(item => item.category === category);
+        sourceData = sourceData.filter(item => item.category === category || item.category_name === category);
       }
     }
 
@@ -63,17 +119,17 @@ const ProfitabilityChart = ({
     }
 
     const labels = sourceData.map(item => 
-      currentView === 'category' ? item.category : item.item_name
+      currentView === 'category' ? item.category : (item.item_name || item.name)
     );
 
     const metricData = sourceData.map(item => {
       switch(metric) {
         case 'gp_percentage':
-          return parseFloat(item.gp_percentage || 0);
+          return parseFloat(item.gp_percentage || item.gross_profit_percentage || 0);
         case 'markup_percentage':
           return parseFloat(item.markup_percentage || 0);
         case 'pour_cost':
-          return parseFloat(item.pour_cost || 0);
+          return parseFloat(item.pour_cost || (100 - parseFloat(item.gp_percentage || item.gross_profit_percentage || 0)) || 0);
         default:
           return 0;
       }
@@ -267,24 +323,8 @@ const ProfitabilityChart = ({
             type="bar"
             data={chartData}
             config={{
-              xKey: 'label',
-              bars: [{
-                dataKey: 'value',
-                name: getMetricLabel(metricType),
-                fill: getMetricColor(metricType)
-              }],
-              colors: [getMetricColor(metricType)],
               showLegend: false,
-              tooltipFormatter: (value, name, props) => {
-                const dataset = chartData.datasets[0];
-                const index = props.index;
-                return [
-                  `${getMetricLabel(metricType)}: ${value.toFixed(2)}%`,
-                  `Cost: ${formatCurrency(dataset.costValues[index])}`,
-                  `Selling Price: ${formatCurrency(dataset.sellingPrices[index])}`,
-                  `Gross Profit: ${formatCurrency(dataset.grossProfits[index])}`
-                ].join('\n');
-              }
+              showGrid: true
             }}
             height={height}
             onDataClick={handleChartClick}

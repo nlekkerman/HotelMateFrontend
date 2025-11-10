@@ -17,6 +17,8 @@ import PerformanceRadarChart from '@/components/stock_tracker/analytics/Performa
 import KPISummaryCards from '@/components/stock_tracker/analytics/KPISummaryCards';
 import ProfitabilityChart from '@/components/stock_tracker/analytics/ProfitabilityChart';
 import CategoryBreakdownChart from '@/components/stock_tracker/analytics/CategoryBreakdownChart';
+import CategoryComparisonSideBySide from '@/components/stock_tracker/analytics/CategoryComparisonSideBySide';
+import CategoryComparisonTable from '@/components/stock_tracker/analytics/CategoryComparisonTable';
 import StockValueTrendsChart from '@/components/stock_tracker/analytics/StockValueTrendsChart';
 import LowStockChart from '@/components/stock_tracker/analytics/LowStockChart';
 
@@ -257,6 +259,26 @@ export default function Analytics() {
                 period={period1}
                 height={chartHeight}
                 defaultChartType="pie"
+              />
+            </Col>
+          </Row>
+
+          {/* Category Comparison Section */}
+          <Row className="g-4 mt-4">
+            {/* Side by Side Comparison */}
+            <Col xs={12}>
+              <CategoryComparisonSideBySide
+                hotelSlug={hotel_slug}
+                periods={selectedPeriods}
+                height={chartHeight}
+              />
+            </Col>
+
+            {/* Detailed Comparison Table */}
+            <Col xs={12}>
+              <CategoryComparisonTable
+                hotelSlug={hotel_slug}
+                periods={selectedPeriods}
               />
             </Col>
           </Row>

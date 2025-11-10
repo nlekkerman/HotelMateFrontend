@@ -5,7 +5,7 @@ import {
   FaPercentage, 
   FaChartLine, 
   FaExclamationTriangle,
-  FaTrendingUp,
+  FaArrowUp,
   FaBox
 } from 'react-icons/fa';
 import { 
@@ -209,7 +209,7 @@ const KPISummaryCards = ({
             onClick={() => handleCardClick('topMoversCount')}
           >
             <Card.Body className="text-center">
-              <FaTrendingUp size={32} className="text-success mb-2" />
+              <FaChartLine size={32} className="text-success mb-2" />
               <div className="small text-muted mb-1">Top Movers</div>
               <h4 className="mb-0">{kpis.topMoversCount}</h4>
             </Card.Body>
@@ -237,7 +237,7 @@ const KPISummaryCards = ({
       </Col>
 
       {/* Add hover effect styles */}
-      <style jsx>{`
+      <style>{`
         .hover-card {
           transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
         }

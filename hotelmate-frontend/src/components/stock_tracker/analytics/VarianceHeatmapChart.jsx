@@ -25,8 +25,13 @@ const VarianceHeatmapChart = ({
   // Fetch data when periods change
   useEffect(() => {
     if (!hotelSlug || !selectedPeriods || selectedPeriods.length < 2) {
-      setError('Please select at least 2 periods to view variance heatmap');
+      if (selectedPeriods && selectedPeriods.length > 0 && selectedPeriods.length < 2) {
+        setError('Please select at least 2 periods to view variance heatmap');
+      } else {
+        setError(null);
+      }
       setChartData(null);
+      setLoading(false);
       return;
     }
 
@@ -64,17 +69,50 @@ const VarianceHeatmapChart = ({
 
     const { heatmap_data, categories, periods } = chartData;
 
+    // Validate data structure
+    if (!Array.isArray(heatmap_data) || !Array.isArray(categories) || !Array.isArray(periods)) {
+      console.error('Invalid heatmap data structure:', chartData);
+      return null;
+    }
+
     // Transform heatmap data for ECharts format
     // ECharts heatmap expects data as: [[x, y, value], ...]
     const data = [];
     const values = []; // For color scale calculation
     
-    heatmap_data.forEach((row, categoryIdx) => {
-      row.values.forEach((cell, periodIdx) => {
-        data.push([periodIdx, categoryIdx, cell.variance_percentage]);
-        values.push(cell.variance_percentage);
+    // Check if data is already in flat array format [x, y, value, severity]
+    if (Array.isArray(heatmap_data) && heatmap_data.length > 0 && Array.isArray(heatmap_data[0])) {
+      // Data is in flat format: [[x, y, value, severity], ...]
+      heatmap_data.forEach((row) => {
+        if (Array.isArray(row) && row.length >= 3) {
+          // ECharts needs only [x, y, value], ignore the 4th element (severity)
+          const [x, y, value] = row;
+          if (typeof value === 'number' && !isNaN(value)) {
+            data.push([x, y, value]);
+            values.push(value);
+          }
+        }
       });
-    });
+    } else if (Array.isArray(heatmap_data)) {
+      // Data might be in nested object format
+      heatmap_data.forEach((row, categoryIdx) => {
+        // Validate row has values array
+        if (row && Array.isArray(row.values)) {
+          row.values.forEach((cell, periodIdx) => {
+            if (cell && typeof cell.variance_percentage === 'number') {
+              data.push([periodIdx, categoryIdx, cell.variance_percentage]);
+              values.push(cell.variance_percentage);
+            }
+          });
+        }
+      });
+    }
+
+    // Validate we have data
+    if (data.length === 0 || values.length === 0) {
+      console.warn('No valid heatmap data to display after transformation');
+      return null;
+    }
 
     // Calculate min/max for color scale
     const minValue = Math.min(...values);

@@ -28,8 +28,13 @@ const CategoryComparisonChart = ({
   // Fetch data when periods change
   useEffect(() => {
     if (!hotelSlug || !selectedPeriods || selectedPeriods.length < 2) {
-      setError('Please select at least 2 periods to compare');
+      if (selectedPeriods && selectedPeriods.length > 0 && selectedPeriods.length < 2) {
+        setError('Please select at least 2 periods to compare');
+      } else {
+        setError(null);
+      }
       setChartData(null);
+      setLoading(false);
       return;
     }
 
@@ -43,7 +48,30 @@ const CategoryComparisonChart = ({
     try {
       const response = await getCompareCategories(hotelSlug, selectedPeriods);
       
-      if (!response || !response.categories || response.categories.length === 0) {
+      // Comprehensive data validation
+      if (!response) {
+        console.warn('CategoryComparisonChart: No response from API');
+        setError('No response from server');
+        setChartData(null);
+        return;
+      }
+
+      if (!response.categories) {
+        console.warn('CategoryComparisonChart: Response missing categories property');
+        setError('Invalid data format received');
+        setChartData(null);
+        return;
+      }
+
+      if (!Array.isArray(response.categories)) {
+        console.warn('CategoryComparisonChart: Categories is not an array:', typeof response.categories);
+        setError('Invalid data format received');
+        setChartData(null);
+        return;
+      }
+
+      if (response.categories.length === 0) {
+        console.warn('CategoryComparisonChart: Categories array is empty');
         setError('No category data available for selected periods');
         setChartData(null);
         return;
@@ -51,9 +79,17 @@ const CategoryComparisonChart = ({
 
       // Transform API response to chart data format
       const transformedData = transformToChartData(response);
+      
+      if (!transformedData) {
+        console.warn('CategoryComparisonChart: Transformation returned null');
+        setError('Invalid or empty category data received');
+        setChartData(null);
+        return;
+      }
+      
       setChartData(transformedData);
     } catch (err) {
-      console.error('Error fetching category comparison:', err);
+      console.error('CategoryComparisonChart: Error fetching category comparison:', err);
       setError(err.message || 'Failed to load category comparison data');
       setChartData(null);
     } finally {
@@ -79,10 +115,29 @@ const CategoryComparisonChart = ({
    * }
    */
   const transformToChartData = (apiResponse) => {
-    const { categories } = apiResponse;
+    const { categories, periods } = apiResponse;
+
+    // Validate categories data
+    if (!Array.isArray(categories) || categories.length === 0) {
+      console.warn('CategoryComparisonChart: Invalid or empty categories array');
+      return null;
+    }
 
     // Extract unique period names for labels
-    const periodLabels = categories[0]?.periods.map(p => p.period_name) || [];
+    // Try to get from top-level periods array first, then fall back to nested structure
+    let periodLabels = [];
+    if (Array.isArray(periods) && periods.length > 0) {
+      periodLabels = periods.map(p => p.period_name || p.name || p);
+    } else if (categories[0]?.periods) {
+      periodLabels = categories[0].periods.map(p => p.period_name || p.name || p);
+    } else {
+    }
+
+    // Validate that we have periods data
+    if (periodLabels.length === 0) {
+      console.warn('CategoryComparisonChart: No period labels found');
+      return null;
+    }
 
     // Create datasets - one per category
     const datasets = categories.map((category, idx) => {
@@ -95,12 +150,32 @@ const CategoryComparisonChart = ({
         'rgba(255, 159, 64, 0.6)'
       ];
 
+      // Handle different data structures
+      let dataValues = [];
+      let itemsCounts = [];
+
+      if (Array.isArray(category.periods_data)) {
+        // Backend returns periods_data array
+        dataValues = category.periods_data.map(p => p.total_value || 0);
+        itemsCounts = category.periods_data.map(p => p.item_count || 0);
+      } else if (Array.isArray(category.periods)) {
+        // Alternative: category has periods array
+        dataValues = category.periods.map(p => p.total_value || 0);
+        itemsCounts = category.periods.map(p => p.items_count || p.item_count || 0);
+      } else if (Array.isArray(category.values)) {
+        // Flat structure: category has values array matching period order
+        dataValues = category.values.map(v => v.total_value || v || 0);
+        itemsCounts = category.values.map(v => v.items_count || v.item_count || 0);
+      }
+
+      console.log(`CategoryComparisonChart: Dataset for ${category.name || category.code}:`, dataValues);
+
       return {
-        label: category.category,
-        data: category.periods.map(p => p.total_value),
+        label: category.name || category.code || 'Unknown',
+        data: dataValues,
         backgroundColor: colors[idx % colors.length],
         borderColor: colors[idx % colors.length].replace('0.6', '1'),
-        itemsCount: category.periods.map(p => p.items_count) // Store for tooltips
+        itemsCount: itemsCounts // Store for tooltips
       };
     });
 
@@ -263,3 +338,4 @@ const CategoryComparisonChart = ({
 };
 
 export default CategoryComparisonChart;
+

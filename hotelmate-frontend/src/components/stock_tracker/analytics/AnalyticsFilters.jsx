@@ -40,20 +40,20 @@ const AnalyticsFilters = ({
   const fetchPeriods = async () => {
     setLoadingPeriods(true);
     try {
-      const response = await getPeriodsList(hotelSlug);
-      if (response && response.periods) {
-        setPeriods(response.periods);
+      const response = await getPeriodsList(hotelSlug, true); // Get only closed periods
+      if (response && Array.isArray(response)) {
+        setPeriods(response);
         
         // Auto-select last 3 periods for multi-period comparison
-        if (selectedPeriods.length === 0 && response.periods.length >= 2) {
-          const lastThree = response.periods.slice(0, 3).map(p => p.id);
+        if (selectedPeriods.length === 0 && response.length >= 3) {
+          const lastThree = response.slice(0, 3).map(p => p.id);
           onPeriodsChange?.(lastThree);
         }
         
         // Auto-select last 2 periods for two-period comparison
-        if (!period1 && !period2 && response.periods.length >= 2) {
-          onPeriod1Change?.(response.periods[1].id);
-          onPeriod2Change?.(response.periods[0].id);
+        if (!period1 && !period2 && response.length >= 2) {
+          onPeriod1Change?.(response[1].id);
+          onPeriod2Change?.(response[0].id);
         }
       }
     } catch (error) {
@@ -86,7 +86,7 @@ const AnalyticsFilters = ({
   // Get period name by ID
   const getPeriodName = (periodId) => {
     const period = periods.find(p => p.id === periodId);
-    return period ? period.name : 'Unknown';
+    return period ? period.period_name : 'Unknown';
   };
 
   // Visible periods (show first 6 or all)
@@ -167,7 +167,7 @@ const AnalyticsFilters = ({
                         id={`period-${period.id}`}
                         label={
                           <div className="d-flex justify-content-between align-items-center">
-                            <span>{period.name}</span>
+                            <span>{period.period_name}</span>
                             <small className="text-muted">
                               {period.start_date} - {period.end_date}
                             </small>
@@ -220,7 +220,7 @@ const AnalyticsFilters = ({
                     <option value="">Select Period 1</option>
                     {periods.map(period => (
                       <option key={period.id} value={period.id}>
-                        {period.name}
+                        {period.period_name}
                       </option>
                     ))}
                   </Form.Select>
@@ -243,7 +243,7 @@ const AnalyticsFilters = ({
                     <option value="">Select Period 2</option>
                     {periods.map(period => (
                       <option key={period.id} value={period.id}>
-                        {period.name}
+                        {period.period_name}
                       </option>
                     ))}
                   </Form.Select>

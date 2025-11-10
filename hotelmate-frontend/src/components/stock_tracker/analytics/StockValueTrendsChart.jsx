@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Form, Row, Col, Alert, Badge, Spinner } from 'react-bootstrap';
-import { FaChartLine, FaTrendingUp, FaTrendingDown } from 'react-icons/fa';
+import { FaChartLine, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import UniversalChart from '../charts/UniversalChart';
 import ChartErrorBoundary from '../charts/ChartErrorBoundary';
 import ChartEmptyState from '../charts/ChartEmptyState';
@@ -35,13 +35,25 @@ const StockValueTrendsChart = ({
 
       const data = await getPeriodsList(hotelSlug);
       
-      if (!data.periods || data.periods.length === 0) {
+      // API returns array directly, not {periods: [...]}
+      const periodsList = Array.isArray(data) ? data : (data.periods || data.results || []);
+      
+      if (!periodsList || periodsList.length === 0) {
+        setChartData(null);
+        return;
+      }
+
+      // Filter only closed periods with stocktakes
+      const closedPeriodsWithStocktakes = periodsList.filter(p => p.is_closed && p.stocktake);
+
+      if (closedPeriodsWithStocktakes.length === 0) {
+        setError('No closed periods with stocktakes available');
         setChartData(null);
         return;
       }
 
       // Sort periods by start_date (oldest first for chronological chart)
-      const sortedPeriods = [...data.periods].sort((a, b) => 
+      const sortedPeriods = [...closedPeriodsWithStocktakes].sort((a, b) => 
         new Date(a.start_date) - new Date(b.start_date)
       );
 
@@ -63,9 +75,13 @@ const StockValueTrendsChart = ({
   };
 
   const calculateStatistics = (periodsList) => {
-    if (!periodsList || periodsList.length === 0) return null;
+    if (!periodsList || periodsList.length === 0) {
+      return null;
+    }
 
-    const values = periodsList.map(p => parseFloat(p.total_stock_value || 0));
+    // Use manual_purchases_amount as the stock value
+    const values = periodsList.map(p => parseFloat(p.manual_purchases_amount || 0));
+    
     const sum = values.reduce((acc, val) => acc + val, 0);
     const average = sum / values.length;
     const max = Math.max(...values);
@@ -90,14 +106,17 @@ const StockValueTrendsChart = ({
   };
 
   const transformToChartData = (periodsList, stats) => {
-    if (!periodsList || periodsList.length === 0) return null;
+    if (!periodsList || periodsList.length === 0) {
+      return null;
+    }
 
     const labels = periodsList.map(p => p.period_name || 'Unknown');
-    const values = periodsList.map(p => parseFloat(p.total_stock_value || 0));
+    // Use manual_purchases_amount as the stock value
+    const values = periodsList.map(p => parseFloat(p.manual_purchases_amount || 0));
 
     const datasets = [
       {
-        label: 'Stock Value',
+        label: 'Purchases Amount',
         data: values,
         backgroundColor: 'rgba(54, 162, 235, 0.2)',
         borderColor: 'rgb(54, 162, 235)',
@@ -172,14 +191,14 @@ const StockValueTrendsChart = ({
     if (trendDirection === 'up') {
       return (
         <Badge bg="success">
-          <FaTrendingUp className="me-1" />
+          <FaArrowUp className="me-1" />
           {Math.abs(trendPercentage).toFixed(2)}%
         </Badge>
       );
     } else if (trendDirection === 'down') {
       return (
         <Badge bg="danger">
-          <FaTrendingDown className="me-1" />
+          <FaArrowDown className="me-1" />
           {Math.abs(trendPercentage).toFixed(2)}%
         </Badge>
       );
@@ -237,7 +256,7 @@ const StockValueTrendsChart = ({
           <Row className="align-items-center">
             <Col>
               <FaChartLine className="me-2" />
-              <span>Stock Value Trends</span>
+              <span>Purchases Trends</span>
               <span className="ms-2 small">(Last {periods.length} periods)</span>
             </Col>
           </Row>
@@ -309,21 +328,9 @@ const StockValueTrendsChart = ({
             type={chartType}
             data={chartData}
             config={{
-              xKey: 'period',
-              lines: chartData.datasets.map((ds, idx) => ({
-                dataKey: `value_${idx}`,
-                name: ds.label,
-                stroke: ds.borderColor,
-                fill: ds.fill,
-                strokeDasharray: ds.borderDash ? ds.borderDash.join(' ') : undefined
-              })),
               showLegend: true,
-              tooltipFormatter: (value, name, props) => {
-                if (name === 'Stock Value') {
-                  return `${name}: ${formatCurrency(value)}`;
-                }
-                return `${name}: ${formatCurrency(value)}`;
-              }
+              showGrid: true,
+              smooth: true
             }}
             height={height}
             onDataClick={handleChartClick}

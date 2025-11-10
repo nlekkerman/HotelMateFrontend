@@ -25,12 +25,18 @@ const ItemTrendsChart = ({
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedItems, setSelectedItems] = useState([]);
   const [chartType, setChartType] = useState('line');
+  const [availableCategories, setAvailableCategories] = useState([]);
 
   // Fetch data when periods or filters change
   useEffect(() => {
     if (!hotelSlug || !selectedPeriods || selectedPeriods.length < 2) {
-      setError('Please select at least 2 periods to view trends');
+      if (selectedPeriods && selectedPeriods.length > 0 && selectedPeriods.length < 2) {
+        setError('Please select at least 2 periods to view trends');
+      } else {
+        setError(null);
+      }
       setChartData(null);
+      setLoading(false);
       return;
     }
 
@@ -50,11 +56,18 @@ const ItemTrendsChart = ({
 
       const response = await getTrendAnalysis(hotelSlug, params.periods, params.category, params.items);
       
-      if (!response || !response.trends || response.trends.length === 0) {
+      // API returns {items: [...], periods: [...], filters: {...}}
+      const itemsData = response.items || [];
+      
+      if (!itemsData || itemsData.length === 0) {
         setError('No trend data available for selected filters');
         setChartData(null);
         return;
       }
+
+      // Extract unique categories from items
+      const uniqueCategories = [...new Set(itemsData.map(item => item.category).filter(Boolean))];
+      setAvailableCategories(uniqueCategories);
 
       // Transform API response to chart data
       const transformedData = transformToChartData(response);
@@ -73,30 +86,57 @@ const ItemTrendsChart = ({
    * 
    * API Response Format:
    * {
-   *   trends: [
+   *   periods: [
+   *     { id: 1, name: "Jan 2024", start_date: "...", end_date: "..." }
+   *   ],
+   *   items: [
    *     {
-   *       item_id: 1,
-   *       item_name: "Beer",
-   *       category: "Beverages",
-   *       values: [
-   *         { period_id: 1, period_name: "Jan", value: 1000 },
-   *         { period_id: 2, period_name: "Feb", value: 1200 }
+   *       item_id: 123,
+   *       name: "Beer",
+   *       category: "S",
+   *       trend_data: [
+   *         { period_id: 1, value: 1000, servings: 150, waste: 50 }
    *       ],
    *       trend_direction: "increasing",
    *       volatility: "low",
    *       average_value: 1100
    *     }
-   *   ]
+   *   ],
+   *   filters: { category: "S", item_count: 25 }
    * }
    */
   const transformToChartData = (apiResponse) => {
-    const { trends } = apiResponse;
+    const { items, periods, filters } = apiResponse;
 
-    // Extract period labels from first item
-    const periodLabels = trends[0]?.values.map(v => v.period_name) || [];
+    if (!items || items.length === 0) {
+      return null;
+    }
+
+    // Create period lookup map for names
+    const periodMap = {};
+    if (periods && Array.isArray(periods)) {
+      periods.forEach(p => {
+        periodMap[p.id] = p.name;
+      });
+    }
+
+    // Extract period labels from first item's trend_data and map to names
+    const periodLabels = items[0]?.trend_data?.map(td => periodMap[td.period_id] || `Period ${td.period_id}`) || [];
+
+    // Filter items based on category and limit to top items by average value
+    let filteredItems = [...items];
+    
+    // Filter by category if selected (note: backend already filters, but double-check)
+    if (selectedCategory && selectedCategory !== 'all') {
+      filteredItems = filteredItems.filter(item => item.category === selectedCategory);
+    }
+    
+    // Sort by average value and take top 10 items
+    filteredItems.sort((a, b) => (b.average_value || 0) - (a.average_value || 0));
+    const topItems = filteredItems.slice(0, 10);
 
     // Create datasets - one per item
-    const datasets = trends.map((item, idx) => {
+    const datasets = topItems.map((item, idx) => {
       const colors = [
         'rgb(75, 192, 192)',
         'rgb(255, 99, 132)',
@@ -110,9 +150,9 @@ const ItemTrendsChart = ({
         'rgb(99, 255, 132)'
       ];
 
-      return {
-        label: item.item_name,
-        data: item.values.map(v => v.value),
+      const dataset = {
+        label: item.name,
+        data: item.trend_data?.map(td => parseFloat(td.value || 0)) || [],
         borderColor: colors[idx % colors.length],
         backgroundColor: colors[idx % colors.length].replace('rgb', 'rgba').replace(')', ', 0.1)'),
         trend_direction: item.trend_direction,
@@ -120,12 +160,23 @@ const ItemTrendsChart = ({
         average_value: item.average_value,
         item_id: item.item_id
       };
+      return dataset;
     });
+
+    // Build summary from filters or calculate it
+    const summary = filters ? {
+      category: filters.category || 'All',
+      item_count: filters.item_count || items.length,
+      period_count: periods?.length || 0
+    } : {
+      item_count: items.length,
+      period_count: periods?.length || 0
+    };
 
     return {
       labels: periodLabels,
       datasets: datasets,
-      summary: apiResponse.summary
+      summary: summary
     };
   };
 
@@ -230,11 +281,18 @@ const ItemTrendsChart = ({
         <div className="d-flex justify-content-between align-items-center">
           <div>
             <h5 className="mb-0">Item Trends Analysis</h5>
-            <small>Multi-period value trends</small>
+            <small>Showing top 10 items by value</small>
           </div>
-          <Badge bg="light" text="dark">
-            {selectedPeriods.length} periods
-          </Badge>
+          <div className="d-flex gap-2">
+            <Badge bg="light" text="dark">
+              {selectedPeriods.length} periods
+            </Badge>
+            {chartData && (
+              <Badge bg="success">
+                {chartData.datasets.length} items
+              </Badge>
+            )}
+          </div>
         </div>
       </Card.Header>
 
@@ -250,7 +308,7 @@ const ItemTrendsChart = ({
               style={{ width: '180px' }}
             >
               <option value="all">All Categories</option>
-              {categories.map(cat => (
+              {(categories.length > 0 ? categories : availableCategories).map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </Form.Select>
@@ -270,28 +328,40 @@ const ItemTrendsChart = ({
           </Form.Group>
         </div>
 
+        {/* Summary Info */}
+        {chartData?.summary && (
+          <div className="alert alert-info mb-3 py-2">
+            <small>
+              <strong>Displaying:</strong> {chartData.datasets.length} items across {chartData.summary.period_count} periods
+              {chartData.summary.category !== 'All' && ` (Category: ${chartData.summary.category})`}
+              {' • Total items in database: '}{chartData.summary.item_count}
+            </small>
+          </div>
+        )}
+
         {/* Chart */}
         {chartData ? (
-          <ChartErrorBoundary onRetry={handleRetry}>
-            <UniversalChart
-              type={chartType}
-              data={chartData}
-              config={chartConfig}
-              height={height}
-              onDataClick={(data) => {
-                console.log('Trend data clicked:', data);
-                if (onItemClick && data.datasetIndex !== undefined) {
-                  const dataset = chartData.datasets[data.datasetIndex];
-                  onItemClick({
-                    item_id: dataset.item_id,
-                    item_name: dataset.label,
-                    trend: dataset.trend_direction,
-                    volatility: dataset.volatility
-                  });
-                }
-              }}
-            />
-          </ChartErrorBoundary>
+          <div style={{ marginBottom: '20px' }}>
+            <ChartErrorBoundary onRetry={handleRetry}>
+              <UniversalChart
+                type={chartType}
+                data={chartData}
+                config={chartConfig}
+                height={height}
+                onDataClick={(data) => {
+                  if (onItemClick && data.datasetIndex !== undefined) {
+                    const dataset = chartData.datasets[data.datasetIndex];
+                    onItemClick({
+                      item_id: dataset.item_id,
+                      item_name: dataset.label,
+                      trend: dataset.trend_direction,
+                      volatility: dataset.volatility
+                    });
+                  }
+                }}
+              />
+            </ChartErrorBoundary>
+          </div>
         ) : (
           <ChartEmptyState
             type="no-items"

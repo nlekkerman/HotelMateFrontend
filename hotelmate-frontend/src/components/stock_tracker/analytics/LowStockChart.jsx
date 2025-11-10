@@ -45,18 +45,40 @@ const LowStockChart = ({
 
       const data = await getLowStockItems(hotelSlug, period);
       
-      if (!data.items || data.items.length === 0) {
+      // API returns array of items, not {items: [...]}
+      const itemsList = Array.isArray(data) ? data : (data.items || []);
+      
+      // Filter for low stock items (items below par level)
+      const lowStockItems = itemsList.filter(item => {
+        const currentStock = parseFloat(item.current_full_units || 0) + parseFloat(item.current_partial_units || 0);
+        const parLevel = parseFloat(item.par_level || 0);
+        return parLevel > 0 && currentStock < parLevel;
+      });
+      
+      
+      if (lowStockItems.length === 0) {
         setChartData(null);
         setItems([]);
         return;
       }
 
-      // Add severity level to each item
-      const itemsWithSeverity = data.items.map(item => ({
-        ...item,
-        severity: getSeverity(item.stock_percentage),
-        color: getSeverityColor(item.stock_percentage)
-      }));
+      // Add severity level to each item and calculate stock percentage
+      const itemsWithSeverity = lowStockItems.map(item => {
+        const currentStock = parseFloat(item.current_full_units || 0) + parseFloat(item.current_partial_units || 0);
+        const parLevel = parseFloat(item.par_level || 0);
+        const stockPercentage = parLevel > 0 ? (currentStock / parLevel) * 100 : 0;
+        
+        return {
+          ...item,
+          current_stock: currentStock,
+          par_level: parLevel,
+          stock_percentage: stockPercentage,
+          item_name: item.name,
+          category: item.category_name || item.category,
+          severity: getSeverity(stockPercentage),
+          color: getSeverityColor(stockPercentage)
+        };
+      });
 
       setItems(itemsWithSeverity);
       

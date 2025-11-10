@@ -91,7 +91,8 @@ const ChartLoadingSkeleton = ({ height = 400, width = '100%' }) => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>
+        {`
         @keyframes shimmer {
           0% {
             left: -100%;
@@ -100,7 +101,8 @@ const ChartLoadingSkeleton = ({ height = 400, width = '100%' }) => {
             left: 100%;
           }
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 };
