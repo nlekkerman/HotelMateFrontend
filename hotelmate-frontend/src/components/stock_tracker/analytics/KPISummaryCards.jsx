@@ -32,9 +32,18 @@ const KPISummaryCards = ({
     lowestGPPeriod: null,
     topCategory: { name: '', value: 0 },
     lowStockCount: 0,
+    outOfStockCount: 0,
+    overstockedCount: 0,
+    deadStockCount: 0,
     topMoversCount: 0,
     performanceScore: 0,
-    performanceRating: ''
+    performanceRating: '',
+    performanceBreakdown: null,
+    improvementAreas: [],
+    strengths: [],
+    categoryDistribution: [],
+    totalItems: 0,
+    activeItems: 0
   });
 
   useEffect(() => {
@@ -61,7 +70,8 @@ const KPISummaryCards = ({
       console.log('Fetching KPI data for periods:', periodIds);
 
       // Single API call - backend calculates EVERYTHING
-      const response = await getKPISummary(hotelSlug, periodIds);
+      // Using new flexible API with backward compatibility
+      const response = await getKPISummary(hotelSlug, { periodIds });
       const data = response.data;
 
       console.log('=== KPI BACKEND RESPONSE ===');
@@ -116,17 +126,27 @@ const KPISummaryCards = ({
           value: data.category_performance?.top_by_value?.total_value || 0,
           percentage: data.category_performance?.top_by_value?.percentage_of_total || 0
         },
+        categoryDistribution: data.category_performance?.distribution || [],
         
-        // Inventory Health
-        lowStockCount: (data.inventory_health?.low_stock_count || 0) + 
-                       (data.inventory_health?.out_of_stock_count || 0),
+        // Inventory Health (NEW: separated counts)
+        lowStockCount: data.inventory_health?.low_stock_count || 0,
+        outOfStockCount: data.inventory_health?.out_of_stock_count || 0,
+        overstockedCount: data.inventory_health?.overstocked_count || 0,
+        deadStockCount: data.inventory_health?.dead_stock_count || 0,
         
         // Period Comparison (only if 2+ periods)
         topMoversCount: data.period_comparison?.total_movers_count || 0,
         
-        // Performance Score
+        // Performance Score (NEW: with breakdown)
         performanceScore: data.performance_score?.overall_score || 0,
-        performanceRating: data.performance_score?.rating || 'N/A'
+        performanceRating: data.performance_score?.rating || 'N/A',
+        performanceBreakdown: data.performance_score?.breakdown || null,
+        improvementAreas: data.performance_score?.improvement_areas || [],
+        strengths: data.performance_score?.strengths || [],
+        
+        // Additional Metrics (NEW)
+        totalItems: data.additional_metrics?.total_items_count || 0,
+        activeItems: data.additional_metrics?.active_items_count || 0
       });
 
     } catch (err) {
@@ -352,6 +372,75 @@ const KPISummaryCards = ({
             <div className="mt-1">{getPerformanceBadge(kpis.performanceRating)}</div>
             <div className="mt-1" style={{ fontSize: '0.65rem', color: '#6c757d' }}>
               Overall rating
+            </div>
+          </Card.Body>
+        </Card>
+      </Col>
+
+      {/* Overstocked Items - NEW */}
+      {kpis.overstockedCount > 0 && (
+        <Col xs={12} sm={6} md={4} lg={2}>
+          <Card 
+            className="shadow-sm h-100 hover-card"
+            style={{ cursor: onCardClick ? 'pointer' : 'default' }}
+            onClick={() => handleCardClick('overstockedCount')}
+            title="Items significantly above par level"
+          >
+            <Card.Body className="text-center">
+              <FaBox size={32} className="text-info mb-2" />
+              <div className="small text-muted mb-1">Overstocked</div>
+              <h4 className="mb-0">
+                {kpis.overstockedCount}
+                {kpis.overstockedCount > 5 && (
+                  <Badge bg="info" className="ms-2">!</Badge>
+                )}
+              </h4>
+              <div className="mt-1" style={{ fontSize: '0.65rem', color: '#6c757d' }}>
+                Above par level
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      )}
+
+      {/* Dead Stock - NEW */}
+      {kpis.deadStockCount > 0 && (
+        <Col xs={12} sm={6} md={4} lg={2}>
+          <Card 
+            className="shadow-sm h-100 hover-card"
+            style={{ cursor: onCardClick ? 'pointer' : 'default' }}
+            onClick={() => handleCardClick('deadStockCount')}
+            title="Items with no movement across periods"
+          >
+            <Card.Body className="text-center">
+              <FaExclamationTriangle size={32} className="text-danger mb-2" />
+              <div className="small text-muted mb-1">Dead Stock</div>
+              <h4 className="mb-0">
+                {kpis.deadStockCount}
+                <Badge bg="danger" className="ms-2">⚠</Badge>
+              </h4>
+              <div className="mt-1" style={{ fontSize: '0.65rem', color: '#6c757d' }}>
+                No movement
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      )}
+
+      {/* Total Items - NEW */}
+      <Col xs={12} sm={6} md={4} lg={2}>
+        <Card 
+          className="shadow-sm h-100 hover-card"
+          style={{ cursor: onCardClick ? 'pointer' : 'default' }}
+          onClick={() => handleCardClick('totalItems')}
+          title="Total items tracked in inventory"
+        >
+          <Card.Body className="text-center">
+            <FaBox size={32} className="text-primary mb-2" />
+            <div className="small text-muted mb-1">Total Items</div>
+            <h4 className="mb-0">{kpis.totalItems}</h4>
+            <div className="mt-1" style={{ fontSize: '0.65rem', color: '#6c757d' }}>
+              {kpis.activeItems} active
             </div>
           </Card.Body>
         </Card>

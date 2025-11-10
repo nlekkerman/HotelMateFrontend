@@ -27,6 +27,11 @@ import CategoryComparisonSideBySide from '@/components/stock_tracker/analytics/C
 import CategoryComparisonTable from '@/components/stock_tracker/analytics/CategoryComparisonTable';
 import StockValueTrendsChart from '@/components/stock_tracker/analytics/StockValueTrendsChart';
 import LowStockChart from '@/components/stock_tracker/analytics/LowStockChart';
+// NEW Enhanced KPI Components
+import InventoryHealthBreakdown from '@/components/stock_tracker/analytics/InventoryHealthBreakdown';
+import PerformanceBreakdown from '@/components/stock_tracker/analytics/PerformanceBreakdown';
+import ImprovementRecommendations from '@/components/stock_tracker/analytics/ImprovementRecommendations';
+import CategoryDistributionChart from '@/components/stock_tracker/analytics/CategoryDistributionChart';
 
 export default function Analytics() {
   const { hotel_slug } = useParams();
@@ -44,6 +49,7 @@ export default function Analytics() {
 
   // Visibility state for analytics sections
   const [visibleSections, setVisibleSections] = useState({
+    filters: true, // Filters visibility
     categoryComparison: false,
     topMovers: false,
     waterfallCost: false,
@@ -55,7 +61,12 @@ export default function Analytics() {
     profitability: false,
     categoryBreakdown: false,
     categoryComparisonSideBySide: false,
-    categoryComparisonTable: false
+    categoryComparisonTable: false,
+    // NEW Enhanced KPI sections
+    inventoryHealth: false,
+    performanceBreakdown: false,
+    improvementRecommendations: false,
+    categoryDistribution: false
   });
 
   // Track order of opened sections (newest first)
@@ -100,15 +111,6 @@ export default function Analytics() {
     }, 500);
   };
 
-  // Auto-refresh every 5 minutes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      handleRefresh();
-    }, 5 * 60 * 1000); // 5 minutes
-
-    return () => clearInterval(interval);
-  }, []);
-
   // Format last updated time
   const formatLastUpdated = () => {
     const now = new Date();
@@ -144,24 +146,6 @@ export default function Analytics() {
             Analytics Dashboard
           </h2>
         </div>
-        
-        <div className="d-flex gap-2">
-          <Button 
-            variant="outline-secondary"
-            size="sm"
-            onClick={() => {/* TODO: Export functionality */}}
-          >
-            <FaDownload className="me-1" />
-            {!isMobile && 'Export'}
-          </Button>
-          <Button 
-            variant="outline-primary"
-            size="sm"
-            onClick={() => {/* TODO: Chart settings modal */}}
-          >
-            <FaCog />
-          </Button>
-        </div>
       </div>
 
       {/* Info Alert */}
@@ -170,21 +154,118 @@ export default function Analytics() {
         Select periods below to get started.
       </Alert>
 
+      {/* Control Buttons - Centered */}
+      <div className="d-flex justify-content-center gap-3 mb-4 flex-wrap">
+        <Button 
+          variant="outline-secondary"
+          size="sm"
+          className={`stock-analytics-control-btn ${visibleSections.filters ? 'main-bg text-white' : ''}`}
+          onClick={() => setVisibleSections(prev => ({ ...prev, filters: !prev.filters }))}
+        >
+          <FaCog className="me-1" />
+          {visibleSections.filters ? 'Hide Filters' : 'Show Filters'}
+        </Button>
+        <Button 
+          variant="outline-secondary"
+          size="sm"
+          className="stock-analytics-control-btn"
+          onClick={() => {/* TODO: Export functionality */}}
+        >
+          <FaDownload className="me-1" />
+          Export PDF
+        </Button>
+        {period1 && (
+          <Button
+            variant="outline-secondary"
+            className={`stock-analytics-expand-all-btn ${Object.entries(visibleSections).some(([k, v]) => v && k !== 'filters') ? 'main-bg text-white' : ''}`}
+            onClick={() => {
+              const anyVisible = Object.entries(visibleSections).some(([k, v]) => v && k !== 'filters');
+              if (anyVisible) {
+                // Collapse all charts (keep filters state)
+                setVisibleSections(prev => ({
+                  ...prev,
+                  categoryComparison: false,
+                  topMovers: false,
+                  waterfallCost: false,
+                  itemTrends: false,
+                  varianceHeatmap: false,
+                  performanceRadar: false,
+                  stockValueTrends: false,
+                  lowStock: false,
+                  profitability: false,
+                  categoryBreakdown: false,
+                  categoryComparisonSideBySide: false,
+                  categoryComparisonTable: false,
+                  inventoryHealth: false,
+                  performanceBreakdown: false,
+                  improvementRecommendations: false,
+                  categoryDistribution: false
+                }));
+                setSectionOrder([]);
+              } else {
+                // Expand all charts
+                setVisibleSections(prev => ({
+                  ...prev,
+                  categoryComparison: true,
+                  topMovers: true,
+                  waterfallCost: true,
+                  itemTrends: true,
+                  varianceHeatmap: true,
+                  performanceRadar: true,
+                  stockValueTrends: true,
+                  lowStock: true,
+                  profitability: true,
+                  categoryBreakdown: true,
+                  categoryComparisonSideBySide: true,
+                  categoryComparisonTable: true,
+                  inventoryHealth: true,
+                  performanceBreakdown: true,
+                  improvementRecommendations: true,
+                  categoryDistribution: true
+                }));
+                setSectionOrder([
+                  'categoryDistribution',
+                  'improvementRecommendations',
+                  'performanceBreakdown',
+                  'inventoryHealth',
+                  'categoryComparisonTable',
+                  'categoryComparisonSideBySide',
+                  'categoryBreakdown',
+                  'profitability',
+                  'lowStock',
+                  'stockValueTrends',
+                  'performanceRadar',
+                  'varianceHeatmap',
+                  'itemTrends',
+                  'waterfallCost',
+                  'topMovers',
+                  'categoryComparison'
+                ]);
+              }
+            }}
+          >
+            {Object.entries(visibleSections).some(([k, v]) => v && k !== 'filters') ? 'Collapse All Charts' : 'Expand All Charts'}
+          </Button>
+        )}
+      </div>
+
       {/* Filters */}
-      <AnalyticsFilters
-        hotelSlug={hotel_slug}
-        selectedPeriods={selectedPeriods}
-        onPeriodsChange={setSelectedPeriods}
-        period1={period1}
-        period2={period2}
-        onPeriod1Change={setPeriod1}
-        onPeriod2Change={setPeriod2}
-        selectedCategory={selectedCategory}
-        onCategoryChange={setSelectedCategory}
-        categories={categories}
-        onRefresh={handleRefresh}
-        loading={loading}
-      />
+      {visibleSections.filters && (
+        <AnalyticsFilters
+          hotelSlug={hotel_slug}
+          selectedPeriods={selectedPeriods}
+          onPeriodsChange={setSelectedPeriods}
+          period1={period1}
+          period2={period2}
+          onPeriod1Change={setPeriod1}
+          onPeriod2Change={setPeriod2}
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+          categories={categories}
+          onRefresh={handleRefresh}
+          loading={loading}
+        />
+      )}
 
       {/* KPI Summary Cards */}
       {period1 && (
@@ -201,13 +282,13 @@ export default function Analytics() {
       {/* Big Square Toggle Buttons */}
       {period1 && (
         <div className="mb-4">
-          <h5 className="mb-3 text-muted">Analytics Sections</h5>
+          <h5 className="mb-3 text-muted text-center">Analytics Sections</h5>
           <Row className="g-3">
             {/* Category Comparison Button */}
             <Col xs={6} sm={4} md={3} lg={2}>
               <Button
-                variant={visibleSections.categoryComparison ? "primary" : "outline-primary"}
-                className="w-100 stock-analytics-toggle-btn"
+                variant="outline-secondary"
+                className={`w-100 stock-analytics-toggle-btn ${visibleSections.categoryComparison ? 'main-bg text-white' : ''}`}
                 onClick={() => toggleSection('categoryComparison')}
                 style={{ 
                   height: '120px', 
@@ -227,8 +308,8 @@ export default function Analytics() {
             {/* Top Movers Button */}
             <Col xs={6} sm={4} md={3} lg={2}>
               <Button
-                variant={visibleSections.topMovers ? "success" : "outline-success"}
-                className="w-100 stock-analytics-toggle-btn"
+                variant="outline-secondary"
+                className={`w-100 stock-analytics-toggle-btn ${visibleSections.topMovers ? 'main-bg text-white' : ''}`}
                 onClick={() => toggleSection('topMovers')}
                 style={{ 
                   height: '120px', 
@@ -248,8 +329,8 @@ export default function Analytics() {
             {/* Waterfall Cost Button */}
             <Col xs={6} sm={4} md={3} lg={2}>
               <Button
-                variant={visibleSections.waterfallCost ? "info" : "outline-info"}
-                className="w-100 stock-analytics-toggle-btn"
+                variant="outline-secondary"
+                className={`w-100 stock-analytics-toggle-btn ${visibleSections.waterfallCost ? 'main-bg text-white' : ''}`}
                 onClick={() => toggleSection('waterfallCost')}
                 style={{ 
                   height: '120px', 
@@ -269,8 +350,8 @@ export default function Analytics() {
             {/* Item Trends Button */}
             <Col xs={6} sm={4} md={3} lg={2}>
               <Button
-                variant={visibleSections.itemTrends ? "warning" : "outline-warning"}
-                className="w-100 stock-analytics-toggle-btn"
+                variant="outline-secondary"
+                className={`w-100 stock-analytics-toggle-btn ${visibleSections.itemTrends ? 'main-bg text-white' : ''}`}
                 onClick={() => toggleSection('itemTrends')}
                 style={{ 
                   height: '120px', 
@@ -290,8 +371,8 @@ export default function Analytics() {
             {/* Variance Heatmap Button */}
             <Col xs={6} sm={4} md={3} lg={2}>
               <Button
-                variant={visibleSections.varianceHeatmap ? "danger" : "outline-danger"}
-                className="w-100 stock-analytics-toggle-btn"
+                variant="outline-secondary"
+                className={`w-100 stock-analytics-toggle-btn ${visibleSections.varianceHeatmap ? 'main-bg text-white' : ''}`}
                 onClick={() => toggleSection('varianceHeatmap')}
                 style={{ 
                   height: '120px', 
@@ -311,8 +392,8 @@ export default function Analytics() {
             {/* Performance Radar Button */}
             <Col xs={6} sm={4} md={3} lg={2}>
               <Button
-                variant={visibleSections.performanceRadar ? "secondary" : "outline-secondary"}
-                className="w-100 stock-analytics-toggle-btn"
+                variant="outline-secondary"
+                className={`w-100 stock-analytics-toggle-btn ${visibleSections.performanceRadar ? 'main-bg text-white' : ''}`}
                 onClick={() => toggleSection('performanceRadar')}
                 style={{ 
                   height: '120px', 
@@ -332,8 +413,8 @@ export default function Analytics() {
             {/* Stock Value Trends Button */}
             <Col xs={6} sm={4} md={3} lg={2}>
               <Button
-                variant={visibleSections.stockValueTrends ? "primary" : "outline-primary"}
-                className="w-100 stock-analytics-toggle-btn"
+                variant="outline-secondary"
+                className={`w-100 stock-analytics-toggle-btn ${visibleSections.stockValueTrends ? 'main-bg text-white' : ''}`}
                 onClick={() => toggleSection('stockValueTrends')}
                 style={{ 
                   height: '120px', 
@@ -353,8 +434,8 @@ export default function Analytics() {
             {/* Low Stock Button */}
             <Col xs={6} sm={4} md={3} lg={2}>
               <Button
-                variant={visibleSections.lowStock ? "warning" : "outline-warning"}
-                className="w-100 stock-analytics-toggle-btn"
+                variant="outline-secondary"
+                className={`w-100 stock-analytics-toggle-btn ${visibleSections.lowStock ? 'main-bg text-white' : ''}`}
                 onClick={() => toggleSection('lowStock')}
                 style={{ 
                   height: '120px', 
@@ -374,8 +455,8 @@ export default function Analytics() {
             {/* Profitability Button */}
             <Col xs={6} sm={4} md={3} lg={2}>
               <Button
-                variant={visibleSections.profitability ? "success" : "outline-success"}
-                className="w-100 stock-analytics-toggle-btn"
+                variant="outline-secondary"
+                className={`w-100 stock-analytics-toggle-btn ${visibleSections.profitability ? 'main-bg text-white' : ''}`}
                 onClick={() => toggleSection('profitability')}
                 style={{ 
                   height: '120px', 
@@ -395,8 +476,8 @@ export default function Analytics() {
             {/* Category Breakdown Button */}
             <Col xs={6} sm={4} md={3} lg={2}>
               <Button
-                variant={visibleSections.categoryBreakdown ? "info" : "outline-info"}
-                className="w-100 stock-analytics-toggle-btn"
+                variant="outline-secondary"
+                className={`w-100 stock-analytics-toggle-btn ${visibleSections.categoryBreakdown ? 'main-bg text-white' : ''}`}
                 onClick={() => toggleSection('categoryBreakdown')}
                 style={{ 
                   height: '120px', 
@@ -416,8 +497,8 @@ export default function Analytics() {
             {/* Side by Side Comparison Button */}
             <Col xs={6} sm={4} md={3} lg={2}>
               <Button
-                variant={visibleSections.categoryComparisonSideBySide ? "secondary" : "outline-secondary"}
-                className="w-100 stock-analytics-toggle-btn"
+                variant="outline-secondary"
+                className={`w-100 stock-analytics-toggle-btn ${visibleSections.categoryComparisonSideBySide ? 'main-bg text-white' : ''}`}
                 onClick={() => toggleSection('categoryComparisonSideBySide')}
                 style={{ 
                   height: '120px', 
@@ -437,8 +518,8 @@ export default function Analytics() {
             {/* Comparison Table Button */}
             <Col xs={6} sm={4} md={3} lg={2}>
               <Button
-                variant={visibleSections.categoryComparisonTable ? "dark" : "outline-dark"}
-                className="w-100 stock-analytics-toggle-btn"
+                variant="outline-secondary"
+                className={`w-100 stock-analytics-toggle-btn ${visibleSections.categoryComparisonTable ? 'main-bg text-white' : ''}`}
                 onClick={() => toggleSection('categoryComparisonTable')}
                 style={{ 
                   height: '120px', 
@@ -452,6 +533,90 @@ export default function Analytics() {
               >
                 <div className="stock-analytics-icon-placeholder mb-2"></div>
                 <div className="text-center">Comparison Table</div>
+              </Button>
+            </Col>
+
+            {/* NEW: Inventory Health Breakdown Button */}
+            <Col xs={6} sm={4} md={3} lg={2}>
+              <Button
+                variant="outline-secondary"
+                className={`w-100 stock-analytics-toggle-btn ${visibleSections.inventoryHealth ? 'main-bg text-white' : ''}`}
+                onClick={() => toggleSection('inventoryHealth')}
+                style={{ 
+                  height: '120px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: '600'
+                }}
+              >
+                <div className="stock-analytics-icon-placeholder mb-2"></div>
+                <div className="text-center">Inventory Health</div>
+              </Button>
+            </Col>
+
+            {/* NEW: Performance Breakdown Button */}
+            <Col xs={6} sm={4} md={3} lg={2}>
+              <Button
+                variant="outline-secondary"
+                className={`w-100 stock-analytics-toggle-btn ${visibleSections.performanceBreakdown ? 'main-bg text-white' : ''}`}
+                onClick={() => toggleSection('performanceBreakdown')}
+                style={{ 
+                  height: '120px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: '600'
+                }}
+              >
+                <div className="stock-analytics-icon-placeholder mb-2"></div>
+                <div className="text-center">Performance Breakdown</div>
+              </Button>
+            </Col>
+
+            {/* NEW: Improvement Recommendations Button */}
+            <Col xs={6} sm={4} md={3} lg={2}>
+              <Button
+                variant="outline-secondary"
+                className={`w-100 stock-analytics-toggle-btn ${visibleSections.improvementRecommendations ? 'main-bg text-white' : ''}`}
+                onClick={() => toggleSection('improvementRecommendations')}
+                style={{ 
+                  height: '120px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: '600'
+                }}
+              >
+                <div className="stock-analytics-icon-placeholder mb-2"></div>
+                <div className="text-center">Recommendations</div>
+              </Button>
+            </Col>
+
+            {/* NEW: Category Distribution Button */}
+            <Col xs={6} sm={4} md={3} lg={2}>
+              <Button
+                variant="outline-secondary"
+                className={`w-100 stock-analytics-toggle-btn ${visibleSections.categoryDistribution ? 'main-bg text-white' : ''}`}
+                onClick={() => toggleSection('categoryDistribution')}
+                style={{ 
+                  height: '120px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: '600'
+                }}
+              >
+                <div className="stock-analytics-icon-placeholder mb-2"></div>
+                <div className="text-center">Category Distribution</div>
               </Button>
             </Col>
           </Row>
@@ -555,6 +720,36 @@ export default function Analytics() {
                 hotelSlug={hotel_slug}
                 periods={selectedPeriods}
               />
+            ),
+            // NEW Enhanced KPI Components
+            inventoryHealth: (
+              <InventoryHealthBreakdown
+                hotelSlug={hotel_slug}
+                selectedPeriods={selectedPeriods}
+                period1={period1}
+              />
+            ),
+            performanceBreakdown: (
+              <PerformanceBreakdown
+                hotelSlug={hotel_slug}
+                selectedPeriods={selectedPeriods}
+                period1={period1}
+              />
+            ),
+            improvementRecommendations: (
+              <ImprovementRecommendations
+                hotelSlug={hotel_slug}
+                selectedPeriods={selectedPeriods}
+                period1={period1}
+              />
+            ),
+            categoryDistribution: (
+              <CategoryDistributionChart
+                hotelSlug={hotel_slug}
+                selectedPeriods={selectedPeriods}
+                period1={period1}
+                height={chartHeight}
+              />
             )
           };
 
@@ -582,7 +777,10 @@ export default function Analytics() {
       <div className="text-center text-muted small mt-5 pb-3">
         <div>Last updated: {formatLastUpdated()}</div>
         <div className="mt-1">
-          Using <strong>NEW</strong> comparison analytics endpoints • Auto-refreshes every 5 minutes
+          Using <strong>ENHANCED</strong> KPI Summary API with comprehensive analytics
+        </div>
+        <div className="mt-1 text-success">
+          ✨ <strong>NEW:</strong> Inventory Health, Performance Breakdown, Recommendations & Category Distribution
         </div>
       </div>
 
@@ -631,6 +829,29 @@ export default function Analytics() {
           height: 32px;
           background-color: #ddd;
           border-radius: 4px;
+        }
+
+        .stock-analytics-control-btn {
+          transition: all 0.3s ease;
+        }
+
+        .stock-analytics-control-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .stock-analytics-expand-all-btn {
+          padding: 12px 24px;
+          font-size: 1rem;
+          font-weight: 600;
+          border-radius: 8px;
+          min-width: 180px;
+          transition: all 0.3s ease;
+        }
+
+        .stock-analytics-expand-all-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
       `}</style>
     </Container>

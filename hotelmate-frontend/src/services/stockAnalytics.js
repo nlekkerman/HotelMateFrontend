@@ -14,23 +14,64 @@ import api from './api';
  * Get comprehensive KPI summary across multiple periods
  * Backend calculates ALL metrics - frontend just displays them
  * 
+ * Supports 3 flexible period selection methods:
+ * 1. By year/month (RECOMMENDED - consistent across environments)
+ * 2. By period IDs (works but varies per environment)
+ * 3. By date range
+ * 
  * @param {string} hotelSlug - Hotel identifier (slug)
- * @param {array} periodIds - Array of period IDs [1, 2, 3, ...]
+ * @param {object} options - Period selection options:
+ *   - periodIds: Array of period IDs [1, 2, 3, ...] OR
+ *   - year: Year (e.g., 2024) with optional month (1-12) OR
+ *   - startDate: Start date (YYYY-MM-DD) with endDate (YYYY-MM-DD)
+ * 
  * @returns {Promise} API response with complete KPI data:
  *   - stock_value_metrics: total value, trends, historical values
  *   - profitability_metrics: GP%, pour cost, trends
  *   - category_performance: top categories, distribution
- *   - inventory_health: low stock, out of stock, health score
+ *   - inventory_health: low stock, out of stock, overstocked, dead stock, health score
  *   - period_comparison: top movers, variance (if 2+ periods)
- *   - performance_score: overall score, rating, breakdown
- *   - additional_metrics: item counts, averages
+ *   - performance_score: overall score, rating, breakdown (5 scores), improvements, strengths
+ *   - additional_metrics: item counts, averages, purchase activity
+ * 
+ * @example
+ * // Recommended: By year/month
+ * getKPISummary('carlton-hotel', { year: 2024, month: 10 })
+ * getKPISummary('carlton-hotel', { year: 2024 }) // Entire year
+ * 
+ * // Alternative: By period IDs
+ * getKPISummary('carlton-hotel', { periodIds: [1, 2, 3] })
+ * 
+ * // Alternative: By date range
+ * getKPISummary('carlton-hotel', { startDate: '2024-09-01', endDate: '2024-11-30' })
  */
-export const getKPISummary = async (hotelSlug, periodIds) => {
+export const getKPISummary = async (hotelSlug, options = {}) => {
   try {
-    const periods = Array.isArray(periodIds) ? periodIds.join(',') : periodIds;
-    const response = await api.get(`stock_tracker/${hotelSlug}/kpi-summary/`, {
-      params: { period_ids: periods }
-    });
+    let params = {};
+    
+    // Method 1: Year/Month (RECOMMENDED - consistent across environments)
+    if (options.year) {
+      params.year = options.year;
+      if (options.month) params.month = options.month;
+    }
+    // Method 2: Date Range
+    else if (options.startDate && options.endDate) {
+      params.start_date = options.startDate;
+      params.end_date = options.endDate;
+    }
+    // Method 3: Period IDs (fallback)
+    else if (options.periodIds) {
+      const periods = Array.isArray(options.periodIds) 
+        ? options.periodIds.join(',') 
+        : options.periodIds;
+      params.period_ids = periods;
+    }
+    // Legacy support: if passed as direct array (backward compatibility)
+    else if (Array.isArray(options)) {
+      params.period_ids = options.join(',');
+    }
+    
+    const response = await api.get(`stock_tracker/${hotelSlug}/kpi-summary/`, { params });
     return response.data;
   } catch (error) {
     console.error('Error fetching KPI summary:', error);
