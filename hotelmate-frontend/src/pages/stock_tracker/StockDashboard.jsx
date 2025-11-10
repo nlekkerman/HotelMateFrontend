@@ -4,6 +4,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Badge, Spinner, Alert, Button, Table, Form } from 'react-bootstrap';
 import { FaBoxes, FaChartLine, FaExclamationTriangle, FaClipboardList, FaExchangeAlt, FaCocktail, FaMoneyBillWave, FaCalendarAlt, FaDollarSign, FaPercentage } from 'react-icons/fa';
 import api from '@/services/api';
+import analyticsIcon from '@/assets/icons/analytics-btn.png';
+import stocktakeOpsIcon from '@/assets/icons/stocktake-ops.png';
 
 export default function StockDashboard() {
   const { hotel_slug } = useParams();
@@ -134,39 +136,219 @@ export default function StockDashboard() {
           <h5 className="mb-0">Quick Actions</h5>
         </Card.Header>
         <Card.Body>
-          <Row className="g-4">
-            <Col xs={6} md={4} lg={4}>
-              <Button 
-                variant="outline-primary" 
-                className="w-100 d-flex flex-column align-items-center justify-content-center"
-                style={{ height: '150px', fontSize: '1.1rem' }}
+          <Row className="g-4 justify-content-center">
+            <Col xs="auto" className="d-flex justify-content-center">
+              <div
                 onClick={() => navigate(`/stock_tracker/${hotel_slug}/items`)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.border = '3px solid gold';
+                  e.currentTarget.querySelector('.hover-overlay').style.opacity = '1';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.border = '1px solid rgba(108, 117, 125, 0.3)';
+                  e.currentTarget.querySelector('.hover-overlay').style.opacity = '0';
+                }}
+                style={{
+                  width: '180px',
+                  height: '220px',
+                  margin: '10px',
+                  padding: '5px',
+                  cursor: 'pointer',
+                  border: '1px solid rgba(108, 117, 125, 0.3)',
+                  borderRadius: '0.375rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease'
+                }}
               >
-                <FaClipboardList size={40} className="mb-3" />
-                <span>View All Items</span>
-              </Button>
+                <div 
+                  className="hover-overlay"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    opacity: 0,
+                    transition: 'opacity 0.3s ease',
+                    pointerEvents: 'none',
+                    zIndex: 0
+                  }}
+                ></div>
+                <div style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  padding: '8px',
+                  borderRadius: '8px',
+                  marginBottom: '8px',
+                  position: 'relative',
+                  zIndex: 1
+                }}>
+                  <FaClipboardList size={120} style={{ position: 'relative', zIndex: 1 }} />
+                </div>
+                <span style={{ 
+                  fontSize: '1rem', 
+                  fontWeight: '600', 
+                  position: 'relative', 
+                  zIndex: 1,
+                  textAlign: 'center',
+                  maxWidth: '120px',
+                  wordWrap: 'break-word',
+                  lineHeight: '1.2'
+                }}>View All Items</span>
+              </div>
             </Col>
-            <Col xs={6} md={4} lg={4}>
-              <Button 
-                variant="outline-success" 
-                className="w-100 d-flex flex-column align-items-center justify-content-center"
-                style={{ height: '150px', fontSize: '1.1rem' }}
+            <Col xs="auto" className="d-flex justify-content-center">
+              <div
                 onClick={() => navigate(`/stock_tracker/${hotel_slug}/analytics`)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.border = '3px solid gold';
+                  e.currentTarget.querySelector('.hover-overlay').style.opacity = '1';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.border = '1px solid rgba(108, 117, 125, 0.3)';
+                  e.currentTarget.querySelector('.hover-overlay').style.opacity = '0';
+                }}
+                style={{
+                  width: '180px',
+                  height: '220px',
+                  margin: '10px',
+                  padding: '5px',
+                  cursor: 'pointer',
+                  border: '1px solid rgba(108, 117, 125, 0.3)',
+                  borderRadius: '0.375rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease'
+                }}
               >
-                <FaChartLine size={40} className="mb-3" />
-                <span>Analytics</span>
-              </Button>
+                <div 
+                  className="hover-overlay"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    opacity: 0,
+                    transition: 'opacity 0.3s ease',
+                    pointerEvents: 'none',
+                    zIndex: 0
+                  }}
+                ></div>
+                <div style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  padding: '8px',
+                  borderRadius: '8px',
+                  marginBottom: '8px',
+                  position: 'relative',
+                  zIndex: 1
+                }}>
+                  <img 
+                    src={analyticsIcon} 
+                    alt="Analytics" 
+                    style={{ 
+                      width: '120px', 
+                      height: '120px', 
+                      objectFit: 'contain',
+                      display: 'block'
+                    }} 
+                  />
+                </div>
+                <span style={{ 
+                  fontSize: '1rem', 
+                  fontWeight: '600', 
+                  position: 'relative', 
+                  zIndex: 1,
+                  textAlign: 'center',
+                  maxWidth: '120px',
+                  wordWrap: 'break-word',
+                  lineHeight: '1.2'
+                }}>Analytics</span>
+              </div>
             </Col>
-            <Col xs={6} md={4} lg={4}>
-              <Button 
-                variant="outline-info" 
-                className="w-100 d-flex flex-column align-items-center justify-content-center"
-                style={{ height: '150px', fontSize: '1.1rem' }}
+            <Col xs="auto" className="d-flex justify-content-center">
+              <div
                 onClick={() => navigate(`/stock_tracker/${hotel_slug}/operations`)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.border = '3px solid gold';
+                  e.currentTarget.querySelector('.hover-overlay').style.opacity = '1';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.border = '1px solid rgba(108, 117, 125, 0.3)';
+                  e.currentTarget.querySelector('.hover-overlay').style.opacity = '0';
+                }}
+                style={{
+                  width: '180px',
+                  height: '220px',
+                  margin: '10px',
+                  padding: '5px',
+                  cursor: 'pointer',
+                  border: '1px solid rgba(108, 117, 125, 0.3)',
+                  borderRadius: '0.375rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease'
+                }}
               >
-                <FaBoxes size={40} className="mb-3" />
-                <span>Stock Operations</span>
-              </Button>
+                <div 
+                  className="hover-overlay"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    opacity: 0,
+                    transition: 'opacity 0.3s ease',
+                    pointerEvents: 'none',
+                    zIndex: 0
+                  }}
+                ></div>
+                <div style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  padding: '8px',
+                  borderRadius: '8px',
+                  marginBottom: '8px',
+                  position: 'relative',
+                  zIndex: 1
+                }}>
+                  <img 
+                    src={stocktakeOpsIcon} 
+                    alt="Stock Operations" 
+                    style={{ 
+                      width: '120px', 
+                      height: '120px', 
+                      objectFit: 'contain',
+                      display: 'block'
+                    }} 
+                  />
+                </div>
+                <span style={{ 
+                  fontSize: '1rem', 
+                  fontWeight: '600', 
+                  position: 'relative', 
+                  zIndex: 1,
+                  textAlign: 'center',
+                  maxWidth: '120px',
+                  wordWrap: 'break-word',
+                  lineHeight: '1.2'
+                }}>Stock Operations</span>
+              </div>
             </Col>
           </Row>
         </Card.Body>

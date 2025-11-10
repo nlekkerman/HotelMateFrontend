@@ -12,6 +12,7 @@ import {
 import { useMediaQuery } from 'react-responsive';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import stockMovementIcon from '@/assets/icons/stock-movment.png';
 
 // Import Analytics Components
 import AnalyticsFilters from '@/components/stock_tracker/analytics/AnalyticsFilters';
@@ -556,7 +557,14 @@ export default function Analytics() {
                   fontWeight: '600'
                 }}
               >
-                <div className="stock-analytics-icon-placeholder mb-2"></div>
+                <img 
+                  src={stockMovementIcon} 
+                  alt="Top Movers" 
+                  className="stock-analytics-button-icon"
+                  style={{ 
+                    filter: visibleSections.topMovers ? 'brightness(0) invert(1)' : 'none'
+                  }} 
+                />
                 <div className="text-center">Top Movers</div>
               </Button>
             </Col>
@@ -1126,6 +1134,14 @@ export default function Analytics() {
           height: 32px;
           background-color: #ddd;
           border-radius: 4px;
+        }
+
+        .stock-analytics-button-icon {
+          width: 80px;
+          height: 80px;
+          object-fit: contain;
+          margin-bottom: 8px;
+          transition: filter 0.3s ease;
         }
 
         .stock-analytics-control-btn {
