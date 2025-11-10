@@ -88,6 +88,7 @@ import { PeriodSnapshotDetail } from "@/components/stock_tracker/periods/PeriodS
 import { PeriodsComparison } from "@/components/stock_tracker/periods/PeriodsComparison";
 import { CocktailsPage } from "@/pages/stock_tracker/CocktailsPage";
 import SalesReport from "@/pages/stock_tracker/SalesReport";
+import SalesEntry from "@/pages/stock_tracker/SalesEntry";
 
 import Settings from "@/components/utils/Settings";
 import Maintenance from "@/pages/maintenance/Maintenance";
@@ -322,6 +323,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/stock_tracker/:hotel_slug/periods/:id" element={<ProtectedRoute><PeriodSnapshotDetail /></ProtectedRoute>} />
               <Route path="/stock_tracker/:hotel_slug/comparison" element={<ProtectedRoute><PeriodsComparison /></ProtectedRoute>} />
               <Route path="/stock_tracker/:hotel_slug/sales-report" element={<ProtectedRoute><SalesReport /></ProtectedRoute>} />
+              <Route path="/stock_tracker/:hotel_slug/sales" element={<ProtectedRoute><SalesEntry /></ProtectedRoute>} />
               <Route path="/stock_tracker/:hotel_slug/cocktails" element={<ProtectedRoute><CocktailsPage /></ProtectedRoute>} />
 
               {/* Chat Routes */}

@@ -6,6 +6,7 @@ import { FaBoxes, FaChartLine, FaExclamationTriangle, FaClipboardList, FaExchang
 import api from '@/services/api';
 import analyticsIcon from '@/assets/icons/analytics-btn.png';
 import stocktakeOpsIcon from '@/assets/icons/stocktake-ops.png';
+import stockItemsIcon from '@/assets/icons/stock-items.png';
 
 export default function StockDashboard() {
   const { hotel_slug } = useParams();
@@ -188,7 +189,16 @@ export default function StockDashboard() {
                   position: 'relative',
                   zIndex: 1
                 }}>
-                  <FaClipboardList size={120} style={{ position: 'relative', zIndex: 1 }} />
+                  <img 
+                    src={stockItemsIcon} 
+                    alt="View All Items" 
+                    style={{ 
+                      width: '120px', 
+                      height: '120px', 
+                      objectFit: 'contain',
+                      display: 'block'
+                    }} 
+                  />
                 </div>
                 <span style={{ 
                   fontSize: '1rem', 
