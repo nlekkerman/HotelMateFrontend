@@ -11,15 +11,13 @@ export default function StocktakeDownload({
   onHide, 
   hotelSlug 
 }) {
-  const [stocktakes, setStocktakes] = useState([]);
   const [periods, setPeriods] = useState([]);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState(null);
   
-  // Selection state
-  const [selectedType, setSelectedType] = useState('stocktake'); // 'stocktake' or 'period'
-  const [selectedId, setSelectedId] = useState('');
+  // Date-based selection (NOT period ID)
+  const [selectedPeriod, setSelectedPeriod] = useState(null);
 
   // Fetch data when modal opens
   useEffect(() => {
@@ -33,14 +31,25 @@ export default function StocktakeDownload({
     setError(null);
     
     try {
-      // Fetch both stocktakes and periods
-      const [stocktakesResponse, periodsResponse] = await Promise.all([
-        api.get(`/stock_tracker/${hotelSlug}/stocktakes/`),
-        api.get(`/stock_tracker/${hotelSlug}/periods/`)
-      ]);
+      // Fetch ONLY periods
+      // 🎯 API FILTERING OPTIONS (for future enhancements):
+      // ?year=2025              - Filter by year
+      // ?month=10               - Filter by month (1-12)
+      // ?status=CLOSED          - Filter by status (OPEN/CLOSED)
+      // ?start_date=2025-10-01  - Filter by start date (YYYY-MM-DD)
+      // ?end_date=2025-10-31    - Filter by end date (YYYY-MM-DD)
+      // ?period_type=MONTHLY    - Filter by type (MONTHLY/WEEKLY/CUSTOM)
+      
+      console.log('📥 Fetching periods from:', `/stock_tracker/${hotelSlug}/periods/`);
+      const periodsResponse = await api.get(`/stock_tracker/${hotelSlug}/periods/`);
 
-      const stocktakesList = stocktakesResponse.data.results || stocktakesResponse.data || [];
       const periodsListAll = periodsResponse.data.results || periodsResponse.data || [];
+      
+      console.log('📊 Periods fetched:', {
+        total_count: periodsListAll.length,
+        sample_period: periodsListAll[0],
+        period_fields: periodsListAll[0] ? Object.keys(periodsListAll[0]) : []
+      });
       
       // Filter to show ONLY CLOSED periods for download
       const periodsList = periodsListAll.filter(p => p.is_closed);
@@ -52,47 +61,32 @@ export default function StocktakeDownload({
         return dateB - dateA; // Descending order (newest first)
       };
       
-      stocktakesList.sort(sortByDate);
       periodsList.sort(sortByDate);
       
-      console.log('📊 StocktakeDownload - Periods:', {
-        total: periodsListAll.length,
-        closed: periodsList.length,
-        open: periodsListAll.filter(p => !p.is_closed).length
+      console.log('📊 Closed periods for download:', {
+        total_periods: periodsListAll.length,
+        closed_periods: periodsList.length,
+        open_periods: periodsListAll.filter(p => !p.is_closed).length,
+        period_names: periodsList.map(p => p.period_name || p.name)
       });
 
-      setStocktakes(stocktakesList);
       setPeriods(periodsList);
 
-      // Auto-select first item if available
-      if (selectedType === 'stocktake' && stocktakesList.length > 0) {
-        setSelectedId(stocktakesList[0].id);
-      } else if (selectedType === 'period' && periodsList.length > 0) {
-        setSelectedId(periodsList[0].id);
+      // Auto-select first period if available
+      if (periodsList.length > 0) {
+        setSelectedPeriod(periodsList[0]);
       }
     } catch (err) {
-      console.error('Error fetching data:', err);
-      setError('Failed to load stocktakes and periods. Please try again.');
+      console.error('❌ Error fetching periods:', err);
+      setError('Failed to load periods. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTypeChange = (type) => {
-    setSelectedType(type);
-    setSelectedId('');
-    
-    // Auto-select first item of new type
-    if (type === 'stocktake' && stocktakes.length > 0) {
-      setSelectedId(stocktakes[0].id);
-    } else if (type === 'period' && periods.length > 0) {
-      setSelectedId(periods[0].id);
-    }
-  };
-
   const handleDownload = async () => {
-    if (!selectedId) {
-      setError('Please select an item to download');
+    if (!selectedPeriod) {
+      setError('Please select a period to download');
       return;
     }
 
@@ -100,68 +94,126 @@ export default function StocktakeDownload({
     setError(null);
 
     try {
-      // Fetch the main data
-      const endpoint = selectedType === 'stocktake' 
-        ? `/stock_tracker/${hotelSlug}/stocktakes/${selectedId}/`
-        : `/stock_tracker/${hotelSlug}/periods/${selectedId}/`;
+      // 🎯 KEY CHANGE: Use DATE-BASED filtering, NOT period ID
+      // Filter using period_start and period_end dates from the selected period
+      const periodStartDate = selectedPeriod.start_date.split('T')[0]; // YYYY-MM-DD format
+      const periodEndDate = selectedPeriod.end_date.split('T')[0];     // YYYY-MM-DD format
 
-      console.log('Fetching data from:', endpoint);
-      const response = await api.get(endpoint);
-      const data = response.data;
+      console.log('� Fetching data for date range:', {
+        period_name: selectedPeriod.period_name,
+        start_date: periodStartDate,
+        end_date: periodEndDate,
+        month: selectedPeriod.month,
+        year: selectedPeriod.year
+      });
 
-      console.log('Data received:', data);
-
-      let lines = [];
-
-      // Get lines based on type
-      if (selectedType === 'stocktake') {
-        // Stocktakes: fetch lines from separate endpoint
-        const linesEndpoint = `/stock_tracker/${hotelSlug}/stocktake-lines/?stocktake=${selectedId}`;
-        const linesResponse = await api.get(linesEndpoint);
-        lines = linesResponse.data.results || linesResponse.data || [];
-      } else {
-        // Periods: use snapshots included in the period response
-        // Periods include 'snapshots' which are the line items
-        lines = data.snapshots || data.lines || [];
+      // Fetch snapshots using DATE filtering
+      const snapshotsEndpoint = `/stock_tracker/${hotelSlug}/periods/${selectedPeriod.id}/snapshots/`;
+      console.log('� ===== FETCHING PERIOD DATA =====');
+      console.log('📥 API Endpoint:', snapshotsEndpoint);
+      console.log('📅 Period Info:', {
+        id: selectedPeriod.id,
+        name: selectedPeriod.period_name,
+        start: periodStartDate,
+        end: periodEndDate,
+        month: selectedPeriod.month,
+        year: selectedPeriod.year
+      });
+      
+      let snapshots = [];
+      try {
+        const snapshotsResponse = await api.get(snapshotsEndpoint);
+        console.log('✅ API Response Status:', snapshotsResponse.status);
+        console.log('📦 Raw Response Structure:', {
+          has_results: !!snapshotsResponse.data.results,
+          is_array: Array.isArray(snapshotsResponse.data),
+          data_type: typeof snapshotsResponse.data,
+          keys: Object.keys(snapshotsResponse.data)
+        });
         
-        // If no snapshots in main response, try fetching from snapshots endpoint
-        if (lines.length === 0) {
-          try {
-            const snapshotsEndpoint = `/stock_tracker/${hotelSlug}/periods/${selectedId}/snapshots/`;
-            const snapshotsResponse = await api.get(snapshotsEndpoint);
-            lines = snapshotsResponse.data.results || snapshotsResponse.data || [];
-          } catch (snapshotErr) {
-            console.warn('Could not fetch period snapshots:', snapshotErr);
-          }
+        snapshots = snapshotsResponse.data.results || snapshotsResponse.data || [];
+        
+        console.log('🔍 ===== SNAPSHOT DATA ANALYSIS =====');
+        console.log('📊 Total Snapshots:', snapshots.length);
+        
+        if (snapshots.length > 0) {
+          console.log('🔍 FIRST SNAPSHOT - COMPLETE JSON:');
+          console.log(JSON.stringify(snapshots[0], null, 2));
+          console.log('');
+          console.log('📋 Available Fields:', Object.keys(snapshots[0]));
+          console.log('');
+          console.log('🔢 Sample Values from First Snapshot:');
+          console.log({
+            stock_item_name: snapshots[0].stock_item_name,
+            item_name: snapshots[0].item_name,
+            name: snapshots[0].name,
+            opening_stock_qty: snapshots[0].opening_stock_qty,
+            opening_qty: snapshots[0].opening_qty,
+            opening: snapshots[0].opening,
+            purchases_qty: snapshots[0].purchases_qty,
+            purchase_qty: snapshots[0].purchase_qty,
+            purchases: snapshots[0].purchases,
+            waste_qty: snapshots[0].waste_qty,
+            waste: snapshots[0].waste,
+            closing_stock_qty: snapshots[0].closing_stock_qty,
+            closing_qty: snapshots[0].closing_qty,
+            counted_qty: snapshots[0].counted_qty,
+            variance_qty: snapshots[0].variance_qty,
+            variance: snapshots[0].variance,
+            variance_value: snapshots[0].variance_value,
+            variance_cost: snapshots[0].variance_cost,
+            category_name: snapshots[0].category_name,
+            category: snapshots[0].category
+          });
+          
+          // Show first 3 items to see patterns
+          console.log('');
+          console.log('📋 First 3 Snapshots Summary:');
+          snapshots.slice(0, 3).forEach((snap, idx) => {
+            console.log(`Item ${idx + 1}:`, {
+              name: snap.stock_item_name || snap.item_name || snap.name,
+              category: snap.category_name || snap.category,
+              opening: snap.opening_stock_qty || snap.opening_qty || snap.opening,
+              purchases: snap.purchases_qty || snap.purchase_qty || snap.purchases,
+              closing: snap.closing_stock_qty || snap.closing_qty || snap.counted_qty
+            });
+          });
         }
-      }
-
-      console.log('Lines received:', lines.length);
-
-      if (lines.length === 0) {
-        setError('No data found to download. This period/stocktake may be empty.');
+        console.log('🔍 ===== END SNAPSHOT ANALYSIS =====');
+        console.log('');
+      } catch (snapshotErr) {
+        console.error('❌ Failed to fetch snapshots:', snapshotErr);
+        setError('Failed to fetch period snapshot data. This period may not have snapshot data yet.');
         setDownloading(false);
         return;
       }
 
-      const itemName = data.name || `${selectedType}_${selectedId}`;
+      console.log('✅ Total snapshots for PDF:', snapshots.length);
+
+      if (snapshots.length === 0) {
+        setError('No snapshot data found for this period. The period may be empty or not yet finalized.');
+        setDownloading(false);
+        return;
+      }
+
+      const periodName = selectedPeriod.period_name || selectedPeriod.name || `Period_${selectedPeriod.month}_${selectedPeriod.year}`;
 
       // Generate PDF
-      await generatePDF(data, lines, itemName);
+      await generatePDF(selectedPeriod, snapshots, periodName);
 
       // Close modal after successful download
       setTimeout(() => {
         onHide();
       }, 500);
     } catch (err) {
-      console.error('Download error:', err);
+      console.error('❌ Download error:', err);
       setError(`Failed to download file: ${err.response?.data?.detail || err.message}`);
     } finally {
       setDownloading(false);
     }
   };
 
-  const generatePDF = async (data, lines, filename) => {
+  const generatePDF = async (data, snapshots, filename) => {
     const pdf = new jsPDF({
       orientation: 'landscape',
       unit: 'mm',
@@ -175,40 +227,61 @@ export default function StocktakeDownload({
 
     // Add title
     pdf.setFontSize(18);
-    pdf.text(`${selectedType === 'stocktake' ? 'Stocktake' : 'Period'} Report`, 14, 20);
+    pdf.text(`Period Report - ${data.period_name || filename}`, 14, 20);
     
     // Add metadata
     pdf.setFontSize(10);
-    pdf.text(`Name: ${data.name || 'N/A'}`, 14, 30);
-    pdf.text(`Date: ${reportDate.toLocaleDateString()}`, 14, 36);
+    pdf.text(`Period: ${data.period_name || 'N/A'}`, 14, 30);
+    pdf.text(`Start Date: ${reportDate.toLocaleDateString()}`, 14, 36);
     pdf.text(`Status: ${data.is_closed ? 'Closed' : 'Open'}`, 14, 42);
     if (data.end_date) {
       pdf.text(`End Date: ${new Date(data.end_date).toLocaleDateString()}`, 100, 36);
     }
+    pdf.text(`Month/Year: ${data.month}/${data.year}`, 100, 42);
 
-    // Helper function to safely get field values (handles both stocktake lines and period snapshots)
-    const getField = (line, ...fieldNames) => {
-      for (const fieldName of fieldNames) {
-        if (line[fieldName] !== undefined && line[fieldName] !== null) {
-          return line[fieldName];
-        }
-      }
-      return null;
-    };
+    console.log('📄 ===== GENERATING PDF =====');
+    console.log('📊 Data to Process:', {
+      total_snapshots: snapshots.length,
+      period_name: data.period_name || filename,
+      start_date: data.start_date,
+      end_date: data.end_date
+    });
 
-    // Group lines by category
-    const groupedLines = lines.reduce((acc, line) => {
-      // Try multiple field names for category (different between stocktakes and periods)
-      const cat = getField(line, 'category_name', 'item_category_name', 'category') || 'Uncategorized';
+    // Log first snapshot structure to understand what fields are available
+    if (snapshots.length > 0) {
+      console.log('� PDF Generation - First Snapshot Check:');
+      console.log('All Fields:', Object.keys(snapshots[0]));
+      console.log('Attempting to Extract:');
+      console.log({
+        item_name: snapshots[0].stock_item_name,
+        category: snapshots[0].category_name,
+        opening: snapshots[0].opening_stock_qty,
+        purchases: snapshots[0].purchases_qty,
+        waste: snapshots[0].waste_qty,
+        closing: snapshots[0].closing_stock_qty,
+        variance: snapshots[0].variance_qty,
+        variance_value: snapshots[0].variance_value
+      });
+    }
+
+    // Group snapshots by category_code
+    const groupedSnapshots = snapshots.reduce((acc, snapshot) => {
+      // Use category_code from period snapshots
+      const cat = snapshot.category_code || 'Uncategorized';
       if (!acc[cat]) acc[cat] = [];
-      acc[cat].push(line);
+      acc[cat].push(snapshot);
       return acc;
     }, {});
+    
+    console.log('📊 Grouped snapshots by category:', Object.keys(groupedSnapshots).map(cat => ({
+      category: cat,
+      count: groupedSnapshots[cat].length
+    })));
 
-    let currentY = 50;
+    let currentY = 55;
 
     // Process each category
-    for (const [category, categoryLines] of Object.entries(groupedLines)) {
+    for (const [category, categorySnapshots] of Object.entries(groupedSnapshots)) {
       // Check if we need a new page
       if (currentY > 180) {
         pdf.addPage();
@@ -222,54 +295,88 @@ export default function StocktakeDownload({
       currentY += 7;
       pdf.setFont(undefined, 'normal');
 
-      // Prepare table data - safely parse all numeric values
-      const tableData = categoryLines.map(line => {
+      // Prepare table data - using period snapshot structure
+      const tableData = categorySnapshots.map((snapshot, index) => {
         const safeNumber = (value) => {
           const num = parseFloat(value);
           return isNaN(num) ? 0 : num;
         };
 
-        // Get item name (different field names for stocktakes vs periods)
-        const itemName = getField(line, 'item_name', 'stock_item_name', 'name') || 'Unknown';
+        // 🔍 Log FIRST snapshot in EACH category
+        if (index === 0) {
+          console.log(`\n🏷️ ===== CATEGORY: ${category} =====`);
+          console.log('� RAW SNAPSHOT OBJECT:');
+          console.log(JSON.stringify(snapshot, null, 2));
+          console.log('');
+          console.log('� ALL AVAILABLE FIELDS:', Object.keys(snapshot));
+        }
+
+        // ⚠️ PERIOD SNAPSHOTS have different structure than stocktake snapshots
+        // Period snapshots only have CLOSING stock data, not opening/purchases/waste
+        const itemName = snapshot.item_name || snapshot.stock_item_name || snapshot.name || 'Unknown';
+        const itemSku = snapshot.item_sku || snapshot.sku || '';
         
-        // Get numeric fields (try multiple field names)
-        const opening = safeNumber(getField(line, 'opening_stock', 'opening_qty', 'opening'));
-        const purchases = safeNumber(getField(line, 'purchases', 'purchase_qty', 'total_purchases'));
-        const waste = safeNumber(getField(line, 'waste', 'waste_qty', 'total_waste'));
-        const counted = safeNumber(getField(line, 'counted_qty', 'closing_qty', 'counted'));
-        const expected = safeNumber(getField(line, 'expected_qty', 'expected_closing', 'expected'));
-        const variance = safeNumber(getField(line, 'variance', 'variance_qty'));
-        const varianceValue = safeNumber(getField(line, 'variance_value', 'variance_cost'));
+        // Period snapshots use these fields:
+        const closingFullUnits = safeNumber(snapshot.closing_full_units);
+        const closingPartialUnits = safeNumber(snapshot.closing_partial_units);
+        const totalServings = safeNumber(snapshot.total_servings);
+        const closingStockValue = safeNumber(snapshot.closing_stock_value);
+        const unitCost = safeNumber(snapshot.unit_cost);
+        const costPerServing = safeNumber(snapshot.cost_per_serving);
+
+        // Log EXTRACTED values for first item
+        if (index === 0) {
+          console.log('✅ EXTRACTED VALUES:');
+          console.log({
+            itemName,
+            itemSku,
+            closingFullUnits: `${closingFullUnits} (from: ${snapshot.closing_full_units})`,
+            closingPartialUnits: `${closingPartialUnits} (from: ${snapshot.closing_partial_units})`,
+            totalServings: `${totalServings} (from: ${snapshot.total_servings})`,
+            closingStockValue: `€${closingStockValue} (from: ${snapshot.closing_stock_value})`,
+            unitCost: `€${unitCost} (from: ${snapshot.unit_cost})`,
+            costPerServing: `€${costPerServing} (from: ${snapshot.cost_per_serving})`
+          });
+          console.log('');
+          console.log('📋 ROW FOR PDF TABLE:', [
+            `${itemSku} - ${itemName}`,
+            closingFullUnits.toFixed(2),
+            closingPartialUnits.toFixed(2),
+            totalServings.toFixed(2),
+            `€${unitCost.toFixed(2)}`,
+            `€${costPerServing.toFixed(2)}`,
+            `€${closingStockValue.toFixed(2)}`
+          ]);
+          console.log(`===== END ${category} =====\n`);
+        }
 
         return [
-          itemName,
-          opening.toFixed(2),
-          purchases.toFixed(2),
-          waste.toFixed(2),
-          counted.toFixed(2),
-          expected.toFixed(2),
-          variance.toFixed(2),
-          `€${varianceValue.toFixed(2)}`
+          `${itemSku} - ${itemName}`,
+          closingFullUnits.toFixed(2),
+          closingPartialUnits.toFixed(2),
+          totalServings.toFixed(2),
+          `€${unitCost.toFixed(2)}`,
+          `€${costPerServing.toFixed(2)}`,
+          `€${closingStockValue.toFixed(2)}`
         ];
       });
 
-      // Add table using autoTable
+      // Add table using autoTable - PERIOD SNAPSHOT structure
       autoTable(pdf, {
         startY: currentY,
-        head: [['Item', 'Opening', 'Purchases', 'Waste', 'Counted', 'Expected', 'Variance', 'Value']],
+        head: [['SKU - Item', 'Cases', 'Bottles', 'Servings', 'Unit Cost', 'Cost/Serving', 'Stock Value']],
         body: tableData,
         theme: 'striped',
         headStyles: { fillColor: [66, 139, 202], fontSize: 9 },
         bodyStyles: { fontSize: 8 },
         columnStyles: {
-          0: { cellWidth: 60 },
-          1: { cellWidth: 20, halign: 'right' },
-          2: { cellWidth: 20, halign: 'right' },
-          3: { cellWidth: 20, halign: 'right' },
-          4: { cellWidth: 20, halign: 'right' },
-          5: { cellWidth: 20, halign: 'right' },
-          6: { cellWidth: 20, halign: 'right' },
-          7: { cellWidth: 25, halign: 'right' }
+          0: { cellWidth: 80 },  // SKU - Item name
+          1: { cellWidth: 20, halign: 'right' },  // Cases
+          2: { cellWidth: 20, halign: 'right' },  // Bottles
+          3: { cellWidth: 25, halign: 'right' },  // Servings
+          4: { cellWidth: 25, halign: 'right' },  // Unit Cost
+          5: { cellWidth: 30, halign: 'right' },  // Cost per Serving
+          6: { cellWidth: 30, halign: 'right' }   // Stock Value
         },
         margin: { left: 14 }
       });
@@ -290,14 +397,21 @@ export default function StocktakeDownload({
     pdf.setFont(undefined, 'normal');
     pdf.setFontSize(10);
 
-    const totalVarianceValue = lines.reduce((sum, line) => {
-      const varianceValue = parseFloat(getField(line, 'variance_value', 'variance_cost')) || 0;
-      return sum + varianceValue;
+    const totalStockValue = snapshots.reduce((sum, snapshot) => {
+      const stockValue = parseFloat(snapshot.closing_stock_value) || 0;
+      return sum + stockValue;
+    }, 0);
+    
+    const totalServings = snapshots.reduce((sum, snapshot) => {
+      const servings = parseFloat(snapshot.total_servings) || 0;
+      return sum + servings;
     }, 0);
 
-    pdf.text(`Total Items: ${lines.length}`, 14, currentY);
+    pdf.text(`Total Items: ${snapshots.length}`, 14, currentY);
     currentY += 6;
-    pdf.text(`Total Variance Value: €${totalVarianceValue.toFixed(2)}`, 14, currentY);
+    pdf.text(`Total Servings: ${totalServings.toFixed(2)}`, 14, currentY);
+    currentY += 6;
+    pdf.text(`Total Stock Value: €${totalStockValue.toFixed(2)}`, 14, currentY);
     currentY += 10;
 
     // Add Category Breakdown section
@@ -307,15 +421,20 @@ export default function StocktakeDownload({
     pdf.setFont(undefined, 'normal');
 
     // Calculate category totals
-    const categoryBreakdown = Object.entries(groupedLines).map(([category, categoryLines]) => {
-      const categoryVariance = categoryLines.reduce((sum, line) => {
-        const varianceValue = parseFloat(getField(line, 'variance_value', 'variance_cost')) || 0;
-        return sum + varianceValue;
+    const categoryBreakdown = Object.entries(groupedSnapshots).map(([category, categorySnapshots]) => {
+      const categoryStockValue = categorySnapshots.reduce((sum, snapshot) => {
+        const stockValue = parseFloat(snapshot.closing_stock_value) || 0;
+        return sum + stockValue;
+      }, 0);
+      const categoryServings = categorySnapshots.reduce((sum, snapshot) => {
+        const servings = parseFloat(snapshot.total_servings) || 0;
+        return sum + servings;
       }, 0);
       return [
         category,
-        categoryLines.length.toString(),
-        `€${categoryVariance.toFixed(2)}`
+        categorySnapshots.length.toString(),
+        categoryServings.toFixed(2),
+        `€${categoryStockValue.toFixed(2)}`
       ];
     });
 
@@ -328,15 +447,16 @@ export default function StocktakeDownload({
     // Add category breakdown table
     autoTable(pdf, {
       startY: currentY,
-      head: [['Category', 'Items', 'Variance Value']],
+      head: [['Category', 'Items', 'Total Servings', 'Stock Value']],
       body: categoryBreakdown,
       theme: 'grid',
       headStyles: { fillColor: [52, 152, 219], fontSize: 10 },
       bodyStyles: { fontSize: 9 },
       columnStyles: {
-        0: { cellWidth: 100 },
-        1: { cellWidth: 40, halign: 'center' },
-        2: { cellWidth: 50, halign: 'right' }
+        0: { cellWidth: 70 },
+        1: { cellWidth: 30, halign: 'center' },
+        2: { cellWidth: 40, halign: 'right' },
+        3: { cellWidth: 50, halign: 'right' }
       },
       margin: { left: 14 }
     });
@@ -351,13 +471,11 @@ export default function StocktakeDownload({
 
   const handleClose = () => {
     if (!downloading) {
-      setSelectedId('');
+      setSelectedPeriod(null);
       setError(null);
       onHide();
     }
   };
-
-  const currentList = selectedType === 'stocktake' ? stocktakes : periods;
 
   return (
     <Modal 
@@ -371,7 +489,7 @@ export default function StocktakeDownload({
       <Modal.Header closeButton={!downloading}>
         <Modal.Title>
           <FaDownload className="me-2" />
-          Download Stocktake Data
+          Download Period Report
         </Modal.Title>
       </Modal.Header>
 
@@ -389,60 +507,36 @@ export default function StocktakeDownload({
           </div>
         ) : (
           <>
-            {/* Type Selection */}
-            <Form.Group className="mb-4">
-              <Form.Label className="fw-bold">Select Data Type</Form.Label>
-              <div className="d-flex gap-3">
-                <Button
-                  variant={selectedType === 'stocktake' ? 'primary' : 'outline-primary'}
-                  className="flex-fill"
-                  onClick={() => handleTypeChange('stocktake')}
-                  disabled={downloading}
-                >
-                  Stocktakes
-                  <Badge bg="secondary" className="ms-2">{stocktakes.length}</Badge>
-                </Button>
-                <Button
-                  variant={selectedType === 'period' ? 'primary' : 'outline-primary'}
-                  className="flex-fill"
-                  onClick={() => handleTypeChange('period')}
-                  disabled={downloading}
-                >
-                  Periods (Closed)
-                  <Badge bg="secondary" className="ms-2">{periods.length}</Badge>
-                </Button>
-              </div>
-            </Form.Group>
-
-            {/* Item Selection */}
+            {/* Period Selection */}
             <Form.Group className="mb-4">
               <Form.Label className="fw-bold">
-                Select {selectedType === 'stocktake' ? 'Stocktake' : 'Period'}
+                Select Period (Closed Periods Only)
               </Form.Label>
-              {currentList.length === 0 ? (
+              <Form.Text className="d-block mb-2 text-muted">
+                Periods are filtered by start/end dates, not by ID
+              </Form.Text>
+              {periods.length === 0 ? (
                 <Alert variant="info" className="mb-0">
-                  No {selectedType === 'stocktake' ? 'stocktakes' : 'periods'} available
+                  No closed periods available for download
                 </Alert>
               ) : (
                 <Form.Select
-                  value={selectedId}
-                  onChange={(e) => setSelectedId(e.target.value)}
+                  value={selectedPeriod?.id || ''}
+                  onChange={(e) => {
+                    const period = periods.find(p => p.id === parseInt(e.target.value));
+                    setSelectedPeriod(period || null);
+                  }}
                   disabled={downloading}
                   size="lg"
                 >
-                  <option value="">-- Select {selectedType} --</option>
-                  {currentList.map(item => {
-                    const itemDate = new Date(item.start_date || item.created_at);
-                    const fullDate = itemDate.toLocaleDateString('en-GB', { 
-                      day: '2-digit',
-                      month: 'short', 
-                      year: 'numeric' 
-                    });
-                    const status = item.is_closed ? 'Closed' : 'Open';
+                  <option value="">-- Select Period --</option>
+                  {periods.map(period => {
+                    const startDate = new Date(period.start_date);
+                    const endDate = new Date(period.end_date);
                     
                     return (
-                      <option key={item.id} value={item.id}>
-                        {fullDate} - {item.name || `${selectedType} #${item.id}`} ({status})
+                      <option key={period.id} value={period.id}>
+                        {period.period_name || `${period.month}/${period.year}`} ({startDate.toLocaleDateString('en-GB')} - {endDate.toLocaleDateString('en-GB')})
                       </option>
                     );
                   })}
@@ -450,31 +544,15 @@ export default function StocktakeDownload({
               )}
             </Form.Group>
 
-            {/* Format Display - PDF Only */}
-            <Form.Group className="mb-3">
-              <Form.Label className="fw-bold">Export Format</Form.Label>
-              <div className="format-card selected" style={{ cursor: 'default', maxWidth: '300px', margin: '0 auto' }}>
-                <FaFilePdf size={40} className="mb-2" style={{ color: '#DC3545' }} />
-                <div className="fw-bold">PDF</div>
-                <small className="text-muted">Printable format (.pdf)</small>
-              </div>
-            </Form.Group>
-
-            {selectedId && (
+            {selectedPeriod && (
               <Alert variant="info" className="mb-0">
                 <small>
                   <strong>Ready to download PDF:</strong>{' '}
-                  {(() => {
-                    const selectedItem = currentList.find(item => item.id === selectedId);
-                    if (!selectedItem) return 'selected item';
-                    const itemDate = new Date(selectedItem.start_date || selectedItem.created_at);
-                    const fullDate = itemDate.toLocaleDateString('en-GB', { 
-                      day: '2-digit',
-                      month: 'short', 
-                      year: 'numeric' 
-                    });
-                    return `${fullDate} - ${selectedItem.name || `${selectedType} #${selectedItem.id}`}`;
-                  })()}
+                  {selectedPeriod.period_name || `${selectedPeriod.month}/${selectedPeriod.year}`}
+                  <br />
+                  <strong>Date Range:</strong> {new Date(selectedPeriod.start_date).toLocaleDateString('en-GB')} - {new Date(selectedPeriod.end_date).toLocaleDateString('en-GB')}
+                  <br />
+                  <strong>Filter Method:</strong> Using period dates (not ID)
                 </small>
               </Alert>
             )}
@@ -494,7 +572,7 @@ export default function StocktakeDownload({
         <Button 
           variant="success" 
           onClick={handleDownload}
-          disabled={!selectedId || downloading || loading}
+          disabled={!selectedPeriod || downloading || loading}
         >
           {downloading ? (
             <>
@@ -517,29 +595,6 @@ export default function StocktakeDownload({
         </Button>
       </Modal.Footer>
 
-      {/* Styles */}
-      <style>{`
-        .format-card {
-          border: 2px solid #dee2e6;
-          border-radius: 12px;
-          padding: 25px;
-          text-align: center;
-          transition: all 0.3s ease;
-          background: white;
-        }
-
-        .format-card:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          border-color: #0d6efd;
-        }
-
-        .format-card.selected {
-          border-color: #0d6efd;
-          background: #e7f1ff;
-          box-shadow: 0 2px 8px rgba(13, 110, 253, 0.2);
-        }
-      `}</style>
     </Modal>
   );
 }
