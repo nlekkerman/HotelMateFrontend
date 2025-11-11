@@ -61,9 +61,9 @@ export const CategoryTotalsRow = ({ categoryCode, categoryName, totals, isLocked
         <td colSpan="5"></td>
         <td className="text-end bg-warning-subtle">
           <div className="d-flex flex-column gap-1">
-            <small className="text-muted">Expected Total:</small>
-            <strong>{formatQty(totals.expected_qty)} servings</strong>
-            <small className="text-success">€{formatValue(totals.expected_value)}</small>
+            <small className="text-muted">Counted Total:</small>
+            <strong>{formatQty(totals.counted_qty)} servings</strong>
+            <small className="text-success">€{formatValue(totals.counted_value)}</small>
           </div>
         </td>
         <td colSpan="5"></td>

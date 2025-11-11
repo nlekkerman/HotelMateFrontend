@@ -158,7 +158,7 @@ const SalesListView = () => {
       <Button 
         variant="outline-secondary"
         className="shadow mb-3"
-        onClick={() => navigate(`/stock_tracker/${hotel_slug}`)}
+        onClick={() => navigate(`/stock_tracker/${hotel_slug}/sales/analysis`)}
         style={{
           position: 'fixed',
           top: '80px',
@@ -169,7 +169,7 @@ const SalesListView = () => {
           backdropFilter: 'blur(8px)'
         }}
       >
-        <FaArrowLeft className="me-2" /> Back
+        <FaArrowLeft className="me-2" /> Back to Sales Dashboard
       </Button>
 
       {/* Header */}

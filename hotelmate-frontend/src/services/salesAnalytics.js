@@ -8,15 +8,18 @@ import api from './api';
  */
 
 // ============================================================================
-// SALES ANALYSIS ENDPOINTS (Period-Based Analytics)
+// SALES ANALYSIS ENDPOINTS (LEGACY - Period-Based, Deprecated)
 // ============================================================================
 
 /**
  * Get sales analysis combining stock items + cocktail sales for a period
- * Comprehensive sales breakdown for reporting
+ * 
+ * ⚠️ LEGACY ENDPOINT - This uses period-based filtering which is being phased out
+ * ⚠️ Sales should NOT be tied to periods - they are date-based by nature
+ * ⚠️ Consider using getSalesSummary() with date/month filters instead
  * 
  * @param {string} hotelSlug - Hotel identifier (slug)
- * @param {number} periodId - Period ID to analyze
+ * @param {number} periodId - Period ID to analyze (LEGACY - NOT RECOMMENDED)
  * @param {object} options - Optional parameters:
  *   - includeCocktails: boolean (default: true) - Include cocktail sales data
  *   - includeCategoryBreakdown: boolean (default: true) - Include D/B/S/W/M/COCKTAILS breakdown
@@ -29,12 +32,14 @@ import api from './api';
  *   - breakdown_percentages: {stock_revenue_percentage, cocktail_revenue_percentage, ...}
  *   - category_breakdown: [{category_code, category_name, revenue, cost, count, profit, gp_percentage}, ...]
  * 
+ * @deprecated Use getSalesSummary() with month or date range filters instead
+ * 
  * @example
- * // Get full analysis with cocktails
+ * // LEGACY (not recommended)
  * getSalesAnalysis('hotel-killarney', 10, { includeCocktails: true })
  * 
- * // Get stock items only
- * getSalesAnalysis('hotel-killarney', 10, { includeCocktails: false })
+ * // RECOMMENDED instead:
+ * getSalesSummary('hotel-killarney', { month: '2025-09' })
  */
 export const getSalesAnalysis = async (hotelSlug, periodId, options = {}) => {
   try {
@@ -390,11 +395,12 @@ export const deleteSale = async (hotelSlug, saleId) => {
 // ============================================================================
 
 /**
- * Get sales summary by DATE RANGE (grouped by category)
+ * Get sales summary by DATE RANGE or MONTH (grouped by category)
  * Returns aggregated sales data with totals by category
  * 
  * @param {string} hotelSlug - Hotel identifier
  * @param {object} filters - Filters:
+ *   - month: Month (YYYY-MM) - NEW! Filter by month
  *   - start_date: Start date (YYYY-MM-DD) - REQUIRED for date range filtering
  *   - end_date: End date (YYYY-MM-DD) - REQUIRED for date range filtering
  *   - stocktake: Stocktake ID (optional - legacy support)
@@ -403,7 +409,10 @@ export const deleteSale = async (hotelSlug, saleId) => {
  *   - overall: {total_sales, total_quantity, total_revenue, total_cost, gross_profit, gp_percentage}
  * 
  * @example
- * // Get summary by date range (RECOMMENDED)
+ * // Get summary by MONTH (NEW - RECOMMENDED)
+ * getSalesSummary('hotel-killarney', { month: '2025-09' })
+ * 
+ * // Get summary by date range
  * getSalesSummary('hotel-killarney', { start_date: '2025-09-11', end_date: '2025-11-11' })
  * 
  * // Legacy: Get summary by stocktake (rarely used)
@@ -413,12 +422,40 @@ export const getSalesSummary = async (hotelSlug, filters = {}) => {
   try {
     const params = {};
     
+    // Month filtering (NEW - Convert month to date range for backend)
+    if (filters.month) {
+      // Convert YYYY-MM to date range (first day to last day of month)
+      const [year, month] = filters.month.split('-');
+      const startDate = `${year}-${month}-01`;
+      
+      // Get last day of month
+      const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+      const endDate = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+      
+      params.start_date = startDate;
+      params.end_date = endDate;
+      
+      console.log('📅 Month converted to date range:', { 
+        month: filters.month, 
+        start_date: startDate, 
+        end_date: endDate 
+      });
+    }
     // Date range filtering (PRIMARY method)
-    if (filters.start_date) params.start_date = filters.start_date;
-    if (filters.end_date) params.end_date = filters.end_date;
-    
+    else if (filters.start_date && filters.end_date) {
+      params.start_date = filters.start_date;
+      params.end_date = filters.end_date;
+    }
+    else if (filters.start_date) {
+      params.start_date = filters.start_date;
+    }
+    else if (filters.end_date) {
+      params.end_date = filters.end_date;
+    }
     // Stocktake filtering (legacy support)
-    if (filters.stocktake) params.stocktake = filters.stocktake;
+    else if (filters.stocktake) {
+      params.stocktake = filters.stocktake;
+    }
     
     console.log('📡 Fetching Sales Summary:', { 
       endpoint: `/stock_tracker/${hotelSlug}/sales/summary/`,
@@ -436,6 +473,15 @@ export const getSalesSummary = async (hotelSlug, filters = {}) => {
     return response.data;
   } catch (error) {
     console.error('❌ Error fetching sales summary:', error);
+    
+    // Check for backend UnboundLocalError (stocktake_id bug)
+    if (error.response?.status === 500 && error.response?.data?.detail?.includes('stocktake_id')) {
+      console.error('🔥 BACKEND BUG DETECTED: UnboundLocalError with stocktake_id');
+      console.error('   Backend needs fix in stock_tracker/views.py line ~2549');
+      console.error('   The summary view tries to access stocktake_id that is not defined');
+      throw new Error('Backend error: Please contact the developer to fix the sales summary endpoint');
+    }
+    
     throw error;
   }
 };

@@ -3,22 +3,21 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Badge, Spinner, Alert, Button, Table } from 'react-bootstrap';
 import { FaArrowLeft, FaCalendarAlt, FaBoxes, FaShoppingCart, FaCocktail, FaChartPie } from 'react-icons/fa';
 import api from '@/services/api';
-import { getSalesAnalysis } from '@/services/salesAnalytics';
-import SalesDashboard from '@/components/stock_tracker/analytics/SalesDashboard';
+import { getSales, getSalesSummary, groupSalesByMonth } from '@/services/salesAnalytics';
 import CategoryBreakdownChartWithCocktails from '@/components/stock_tracker/analytics/CategoryBreakdownChartWithCocktails';
 
 export default function SalesReport() {
   const { hotel_slug } = useParams();
   const navigate = useNavigate();
   
-  const [periods, setPeriods] = useState([]);
-  const [selectedPeriod, setSelectedPeriod] = useState(null);
+  const [availableMonths, setAvailableMonths] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [viewMode, setViewMode] = useState('combined'); // 'combined' or 'legacy'
   
-  // For combined view
+  // For month-based view
   const [salesData, setSalesData] = useState(null);
+  const [salesSummary, setSalesSummary] = useState(null);
 
   // Category definitions
   const categories = {
@@ -30,33 +29,45 @@ export default function SalesReport() {
   };
 
   useEffect(() => {
-    fetchPeriods();
+    fetchAvailableMonths();
   }, [hotel_slug]);
 
   useEffect(() => {
-    if (selectedPeriod) {
+    if (selectedMonth) {
       fetchSalesData();
     }
-  }, [selectedPeriod, viewMode]);
+  }, [selectedMonth]);
 
-  const fetchPeriods = async () => {
+  const fetchAvailableMonths = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/stock_tracker/${hotel_slug}/periods/`);
-      const allPeriods = response.data.results || response.data;
+      console.log('📅 Fetching all sales to determine available months...');
       
-      const closedPeriods = allPeriods.filter(p => p.is_closed);
-      setPeriods(closedPeriods);
-
-      if (closedPeriods.length >= 1) {
-        setSelectedPeriod(closedPeriods[closedPeriods.length - 1]);
-      } else {
-        setError('No closed periods found');
+      // Fetch ALL sales
+      const allSales = await getSales(hotel_slug, {});
+      
+      console.log('✅ Fetched sales:', allSales.length);
+      
+      if (allSales.length === 0) {
+        setError('No sales found. Please create some sales first.');
         setLoading(false);
+        return;
+      }
+      
+      // Group sales by month
+      const groupedByMonth = groupSalesByMonth(allSales);
+      
+      console.log('📊 Available months:', groupedByMonth.map(m => m.monthLabel));
+      
+      setAvailableMonths(groupedByMonth);
+      
+      // Select most recent month by default
+      if (groupedByMonth.length > 0) {
+        setSelectedMonth(groupedByMonth[0].monthKey); // Most recent month
       }
     } catch (err) {
-      console.error('Error fetching periods:', err);
-      setError(err.response?.data?.detail || 'Failed to fetch periods');
+      console.error('❌ Error fetching available months:', err);
+      setError(err.response?.data?.detail || 'Failed to fetch sales data');
       setLoading(false);
     }
   };
@@ -65,16 +76,23 @@ export default function SalesReport() {
     try {
       setLoading(true);
       setError(null);
+      
+      console.log('📊 Fetching sales summary for month:', selectedMonth);
 
-      // Fetch comprehensive sales analysis (stock + cocktails)
-      const data = await getSalesAnalysis(hotel_slug, selectedPeriod.id, {
-        includeCocktails: true,
-        includeCategoryBreakdown: true
-      });
-
-      setSalesData(data);
+      // Fetch sales for selected month
+      const sales = await getSales(hotel_slug, { month: selectedMonth });
+      
+      console.log('✅ Sales for', selectedMonth, ':', sales.length);
+      
+      // Calculate summary
+      const summary = await getSalesSummary(hotel_slug, { month: selectedMonth });
+      
+      console.log('✅ Summary:', summary);
+      
+      setSalesData(sales);
+      setSalesSummary(summary);
     } catch (err) {
-      console.error('Error fetching sales data:', err);
+      console.error('❌ Error fetching sales data:', err);
       setError(err.message || err.response?.data?.detail || 'Failed to fetch sales data');
     } finally {
       setLoading(false);
@@ -93,12 +111,12 @@ export default function SalesReport() {
     return `${(value || 0).toFixed(2)}%`;
   };
 
-  const handlePeriodChange = (e) => {
-    const periodId = parseInt(e.target.value);
-    const selected = periods.find(p => p.id === periodId);
-    if (selected) {
-      setSelectedPeriod(selected);
-    }
+  const handleMonthChange = (e) => {
+    setSelectedMonth(e.target.value);
+  };
+  
+  const getSelectedMonthData = () => {
+    return availableMonths.find(m => m.monthKey === selectedMonth);
   };
 
   if (loading) {
@@ -125,10 +143,10 @@ export default function SalesReport() {
     );
   }
 
-  if (!salesData) {
+  if (!salesSummary || !salesData) {
     return (
       <Container className="mt-4">
-        <Alert variant="info">No sales data available for this period</Alert>
+        <Alert variant="info">No sales data available for the selected month</Alert>
         <Button variant="secondary" onClick={() => navigate(`/stock_tracker/${hotel_slug}`)}>
           <FaArrowLeft className="me-2" />
           Back to Dashboard
@@ -136,6 +154,8 @@ export default function SalesReport() {
       </Container>
     );
   }
+  
+  const selectedMonthData = getSelectedMonthData();
 
   return (
     <Container fluid className="mt-4">
@@ -179,36 +199,36 @@ export default function SalesReport() {
             <FaChartPie className="me-2" />
             Sales Analysis Report
           </h2>
-          <Badge bg="success" className="ms-3">NEW - Combined View</Badge>
+          <Badge bg="success" className="ms-3">MONTH-BASED VIEW</Badge>
         </div>
       </div>
 
-      {/* Period Selector */}
+      {/* Month Selector */}
       <Card className="mb-4">
         <Card.Body>
           <Row className="align-items-center">
             <Col md={4}>
               <label className="form-label">
                 <FaCalendarAlt className="me-2" />
-                Select Period
+                Select Month
               </label>
               <select 
                 className="form-select"
-                value={selectedPeriod?.id || ''}
-                onChange={handlePeriodChange}
+                value={selectedMonth || ''}
+                onChange={handleMonthChange}
               >
-                {periods.map(period => (
-                  <option key={period.id} value={period.id}>
-                    {period.period_name}
+                {availableMonths.map(month => (
+                  <option key={month.monthKey} value={month.monthKey}>
+                    {month.monthLabel}
                   </option>
                 ))}
               </select>
             </Col>
             <Col md={8}>
               <div className="text-muted small">
-                Displaying sales for date range: <strong>{new Date(selectedPeriod?.start_date).toLocaleDateString()}</strong>
-                {' '} to <strong>{new Date(selectedPeriod?.end_date).toLocaleDateString()}</strong>
-                <Badge bg="info" className="ms-2">DATE-BASED</Badge>
+                Displaying sales for: <strong>{selectedMonthData?.monthLabel}</strong>
+                <Badge bg="primary" className="ms-2">MONTH: {selectedMonth}</Badge>
+                <Badge bg="info" className="ms-2">{salesData?.length || 0} sales</Badge>
               </div>
             </Col>
           </Row>
@@ -280,111 +300,122 @@ export default function SalesReport() {
         </Card.Body>
       </Card>
 
-      {/* Sales Dashboard - Combined View */}
-      <SalesDashboard 
-        hotelSlug={hotel_slug} 
-        periodId={selectedPeriod.id} 
-        height={400}
-      />
-
-      {/* Category Breakdown Chart */}
-      <div className="mt-4">
-        <CategoryBreakdownChartWithCocktails
-          hotelSlug={hotel_slug}
-          periodId={selectedPeriod.id}
-          height={450}
-          includeCocktails={true}
-        />
-      </div>
-
-      {/* Quick Stats Row */}
-      <Row className="mt-4">
-        <Col md={6}>
-          <Card className="border-0 bg-light">
+      {/* Month Summary Cards */}
+      <Row className="mb-4">
+        <Col md={3}>
+          <Card className="border-primary">
             <Card.Body>
-              <h6 className="text-muted mb-3">
-                <FaBoxes className="me-2" />
-                Stock Items Performance
-              </h6>
-              <Table borderless size="sm" className="mb-0">
-                <tbody>
-                  <tr>
-                    <td>Revenue:</td>
-                    <td className="text-end"><strong>{formatCurrency(salesData.general_sales.revenue)}</strong></td>
-                  </tr>
-                  <tr>
-                    <td>Cost (COGS):</td>
-                    <td className="text-end">{formatCurrency(salesData.general_sales.cost)}</td>
-                  </tr>
-                  <tr>
-                    <td>Gross Profit:</td>
-                    <td className="text-end text-success">
-                      <strong>{formatCurrency(salesData.general_sales.profit)}</strong>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>GP%:</td>
-                    <td className="text-end">
-                      <Badge bg="success">{formatPercentage(salesData.general_sales.gp_percentage)}</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Items Sold:</td>
-                    <td className="text-end">{salesData.general_sales.count}</td>
-                  </tr>
-                </tbody>
-              </Table>
+              <small className="text-muted">Total Revenue</small>
+              <h3 className="mb-0 text-primary">{formatCurrency(salesSummary?.overall?.total_revenue || 0)}</h3>
+              <small className="text-muted">{salesSummary?.overall?.total_sales || 0} sales</small>
             </Card.Body>
           </Card>
         </Col>
-
-        <Col md={6}>
-          <Card className="border-0 bg-light">
+        <Col md={3}>
+          <Card className="border-danger">
             <Card.Body>
-              <h6 className="text-muted mb-3">
-                <FaCocktail className="me-2" />
-                Cocktails Performance
-                <Badge bg="warning" text="dark" className="ms-2 small">Separate Tracking</Badge>
-              </h6>
-              <Table borderless size="sm" className="mb-0">
-                <tbody>
-                  <tr>
-                    <td>Revenue:</td>
-                    <td className="text-end"><strong>{formatCurrency(salesData.cocktail_sales.revenue)}</strong></td>
-                  </tr>
-                  <tr>
-                    <td>Cost:</td>
-                    <td className="text-end">{formatCurrency(salesData.cocktail_sales.cost)}</td>
-                  </tr>
-                  <tr>
-                    <td>Gross Profit:</td>
-                    <td className="text-end text-success">
-                      <strong>{formatCurrency(salesData.cocktail_sales.profit)}</strong>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>GP%:</td>
-                    <td className="text-end">
-                      <Badge bg="success">{formatPercentage(salesData.cocktail_sales.gp_percentage)}</Badge>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Cocktails Sold:</td>
-                    <td className="text-end">{salesData.cocktail_sales.count}</td>
-                  </tr>
-                </tbody>
-              </Table>
+              <small className="text-muted">Total Cost</small>
+              <h3 className="mb-0 text-danger">{formatCurrency(salesSummary?.overall?.total_cost || 0)}</h3>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col md={3}>
+          <Card className="border-success">
+            <Card.Body>
+              <small className="text-muted">Gross Profit</small>
+              <h3 className="mb-0 text-success">{formatCurrency(salesSummary?.overall?.gross_profit || 0)}</h3>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col md={3}>
+          <Card className="border-info">
+            <Card.Body>
+              <small className="text-muted">GP %</small>
+              <h3 className="mb-0 text-info">{formatPercentage(salesSummary?.overall?.gp_percentage || 0)}</h3>
             </Card.Body>
           </Card>
         </Col>
       </Row>
 
+      {/* Category Breakdown Table */}
+      <Card className="mb-4">
+        <Card.Header className="bg-primary text-white">
+          <h5 className="mb-0">
+            <FaBoxes className="me-2" />
+            Sales by Category
+          </h5>
+        </Card.Header>
+        <Card.Body>
+          <Table responsive hover>
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th className="text-end">Sales</th>
+                <th className="text-end">Quantity</th>
+                <th className="text-end">Revenue</th>
+                <th className="text-end">Cost</th>
+                <th className="text-end">Profit</th>
+                <th className="text-end">GP %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {salesSummary?.by_category?.map(cat => (
+                <tr key={cat.category_code}>
+                  <td>
+                    <Badge bg="light" text="dark">
+                      {cat.category_code}
+                    </Badge>
+                    {' '}
+                    <strong>{cat.category_name}</strong>
+                  </td>
+                  <td className="text-end">{cat.count}</td>
+                  <td className="text-end">{parseFloat(cat.quantity || 0).toFixed(0)}</td>
+                  <td className="text-end">
+                    <strong>{formatCurrency(cat.revenue)}</strong>
+                  </td>
+                  <td className="text-end text-muted">{formatCurrency(cat.cost)}</td>
+                  <td className="text-end text-success">
+                    <strong>{formatCurrency(cat.profit)}</strong>
+                  </td>
+                  <td className="text-end">
+                    <Badge bg="success">{formatPercentage(cat.gp_percentage)}</Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot className="table-secondary">
+              <tr>
+                <th>TOTAL</th>
+                <th className="text-end">{salesSummary?.overall?.total_sales || 0}</th>
+                <th className="text-end">{parseFloat(salesSummary?.overall?.total_quantity || 0).toFixed(0)}</th>
+                <th className="text-end">
+                  <strong>{formatCurrency(salesSummary?.overall?.total_revenue)}</strong>
+                </th>
+                <th className="text-end">{formatCurrency(salesSummary?.overall?.total_cost)}</th>
+                <th className="text-end text-success">
+                  <strong>{formatCurrency(salesSummary?.overall?.gross_profit)}</strong>
+                </th>
+                <th className="text-end">
+                  <Badge bg="success">{formatPercentage(salesSummary?.overall?.gp_percentage)}</Badge>
+                </th>
+              </tr>
+            </tfoot>
+          </Table>
+        </Card.Body>
+      </Card>
+
       {/* Info Alert */}
       <Alert variant="success" className="mt-4">
-        <Alert.Heading>✅ Real Sales Analysis</Alert.Heading>
+        <Alert.Heading>✅ Month-Based Sales Analysis</Alert.Heading>
         <p className="mb-0">
-          This report displays <strong>real sales data</strong> from your backend combining stock item sales 
-          and cocktail sales for comprehensive business intelligence. All calculations are performed by the backend.
+          This report displays sales for <strong>{selectedMonthData?.monthLabel}</strong>. 
+          All sales created in this month are automatically grouped and displayed here, 
+          regardless of which specific date you selected in the calendar.
+        </p>
+        <hr />
+        <p className="mb-0 small">
+          <strong>💡 Tip:</strong> When you create a sale and select ANY date in September 
+          (like Sep 5th, Sep 15th, or Sep 30th), it will appear under "September 2025" in this dropdown.
         </p>
       </Alert>
     </Container>

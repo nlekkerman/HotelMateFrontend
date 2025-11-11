@@ -40,7 +40,26 @@ export default function StocktakeDownload({
       ]);
 
       const stocktakesList = stocktakesResponse.data.results || stocktakesResponse.data || [];
-      const periodsList = periodsResponse.data.results || periodsResponse.data || [];
+      const periodsListAll = periodsResponse.data.results || periodsResponse.data || [];
+      
+      // Filter to show ONLY CLOSED periods for download
+      const periodsList = periodsListAll.filter(p => p.is_closed);
+      
+      // Sort by date (most recent first)
+      const sortByDate = (a, b) => {
+        const dateA = new Date(a.start_date || a.created_at);
+        const dateB = new Date(b.start_date || b.created_at);
+        return dateB - dateA; // Descending order (newest first)
+      };
+      
+      stocktakesList.sort(sortByDate);
+      periodsList.sort(sortByDate);
+      
+      console.log('📊 StocktakeDownload - Periods:', {
+        total: periodsListAll.length,
+        closed: periodsList.length,
+        open: periodsListAll.filter(p => !p.is_closed).length
+      });
 
       setStocktakes(stocktakesList);
       setPeriods(periodsList);
@@ -81,7 +100,7 @@ export default function StocktakeDownload({
     setError(null);
 
     try {
-      // Fetch the stocktake/period data with lines
+      // Fetch the main data
       const endpoint = selectedType === 'stocktake' 
         ? `/stock_tracker/${hotelSlug}/stocktakes/${selectedId}/`
         : `/stock_tracker/${hotelSlug}/periods/${selectedId}/`;
@@ -92,15 +111,38 @@ export default function StocktakeDownload({
 
       console.log('Data received:', data);
 
-      // Get lines
-      const linesEndpoint = selectedType === 'stocktake'
-        ? `/stock_tracker/${hotelSlug}/stocktake-lines/?stocktake=${selectedId}`
-        : `/stock_tracker/${hotelSlug}/period-lines/?period=${selectedId}`;
-      
-      const linesResponse = await api.get(linesEndpoint);
-      const lines = linesResponse.data.results || linesResponse.data || [];
+      let lines = [];
+
+      // Get lines based on type
+      if (selectedType === 'stocktake') {
+        // Stocktakes: fetch lines from separate endpoint
+        const linesEndpoint = `/stock_tracker/${hotelSlug}/stocktake-lines/?stocktake=${selectedId}`;
+        const linesResponse = await api.get(linesEndpoint);
+        lines = linesResponse.data.results || linesResponse.data || [];
+      } else {
+        // Periods: use snapshots included in the period response
+        // Periods include 'snapshots' which are the line items
+        lines = data.snapshots || data.lines || [];
+        
+        // If no snapshots in main response, try fetching from snapshots endpoint
+        if (lines.length === 0) {
+          try {
+            const snapshotsEndpoint = `/stock_tracker/${hotelSlug}/periods/${selectedId}/snapshots/`;
+            const snapshotsResponse = await api.get(snapshotsEndpoint);
+            lines = snapshotsResponse.data.results || snapshotsResponse.data || [];
+          } catch (snapshotErr) {
+            console.warn('Could not fetch period snapshots:', snapshotErr);
+          }
+        }
+      }
 
       console.log('Lines received:', lines.length);
+
+      if (lines.length === 0) {
+        setError('No data found to download. This period/stocktake may be empty.');
+        setDownloading(false);
+        return;
+      }
 
       const itemName = data.name || `${selectedType}_${selectedId}`;
 
@@ -144,9 +186,20 @@ export default function StocktakeDownload({
       pdf.text(`End Date: ${new Date(data.end_date).toLocaleDateString()}`, 100, 36);
     }
 
+    // Helper function to safely get field values (handles both stocktake lines and period snapshots)
+    const getField = (line, ...fieldNames) => {
+      for (const fieldName of fieldNames) {
+        if (line[fieldName] !== undefined && line[fieldName] !== null) {
+          return line[fieldName];
+        }
+      }
+      return null;
+    };
+
     // Group lines by category
     const groupedLines = lines.reduce((acc, line) => {
-      const cat = line.category_name || 'Uncategorized';
+      // Try multiple field names for category (different between stocktakes and periods)
+      const cat = getField(line, 'category_name', 'item_category_name', 'category') || 'Uncategorized';
       if (!acc[cat]) acc[cat] = [];
       acc[cat].push(line);
       return acc;
@@ -176,15 +229,27 @@ export default function StocktakeDownload({
           return isNaN(num) ? 0 : num;
         };
 
+        // Get item name (different field names for stocktakes vs periods)
+        const itemName = getField(line, 'item_name', 'stock_item_name', 'name') || 'Unknown';
+        
+        // Get numeric fields (try multiple field names)
+        const opening = safeNumber(getField(line, 'opening_stock', 'opening_qty', 'opening'));
+        const purchases = safeNumber(getField(line, 'purchases', 'purchase_qty', 'total_purchases'));
+        const waste = safeNumber(getField(line, 'waste', 'waste_qty', 'total_waste'));
+        const counted = safeNumber(getField(line, 'counted_qty', 'closing_qty', 'counted'));
+        const expected = safeNumber(getField(line, 'expected_qty', 'expected_closing', 'expected'));
+        const variance = safeNumber(getField(line, 'variance', 'variance_qty'));
+        const varianceValue = safeNumber(getField(line, 'variance_value', 'variance_cost'));
+
         return [
-          line.item_name || 'Unknown',
-          safeNumber(line.opening_stock).toFixed(2),
-          safeNumber(line.purchases).toFixed(2),
-          safeNumber(line.waste).toFixed(2),
-          safeNumber(line.counted_qty).toFixed(2),
-          safeNumber(line.expected_qty).toFixed(2),
-          safeNumber(line.variance).toFixed(2),
-          `£${safeNumber(line.variance_value).toFixed(2)}`
+          itemName,
+          opening.toFixed(2),
+          purchases.toFixed(2),
+          waste.toFixed(2),
+          counted.toFixed(2),
+          expected.toFixed(2),
+          variance.toFixed(2),
+          `€${varianceValue.toFixed(2)}`
         ];
       });
 
@@ -225,13 +290,14 @@ export default function StocktakeDownload({
     pdf.setFont(undefined, 'normal');
     pdf.setFontSize(10);
 
-    const totalVarianceValue = lines.reduce((sum, line) => 
-      sum + (parseFloat(line.variance_value) || 0), 0
-    );
+    const totalVarianceValue = lines.reduce((sum, line) => {
+      const varianceValue = parseFloat(getField(line, 'variance_value', 'variance_cost')) || 0;
+      return sum + varianceValue;
+    }, 0);
 
     pdf.text(`Total Items: ${lines.length}`, 14, currentY);
     currentY += 6;
-    pdf.text(`Total Variance Value: £${totalVarianceValue.toFixed(2)}`, 14, currentY);
+    pdf.text(`Total Variance Value: €${totalVarianceValue.toFixed(2)}`, 14, currentY);
     currentY += 10;
 
     // Add Category Breakdown section
@@ -242,13 +308,14 @@ export default function StocktakeDownload({
 
     // Calculate category totals
     const categoryBreakdown = Object.entries(groupedLines).map(([category, categoryLines]) => {
-      const categoryVariance = categoryLines.reduce((sum, line) => 
-        sum + (parseFloat(line.variance_value) || 0), 0
-      );
+      const categoryVariance = categoryLines.reduce((sum, line) => {
+        const varianceValue = parseFloat(getField(line, 'variance_value', 'variance_cost')) || 0;
+        return sum + varianceValue;
+      }, 0);
       return [
         category,
         categoryLines.length.toString(),
-        `£${categoryVariance.toFixed(2)}`
+        `€${categoryVariance.toFixed(2)}`
       ];
     });
 
@@ -366,12 +433,16 @@ export default function StocktakeDownload({
                   <option value="">-- Select {selectedType} --</option>
                   {currentList.map(item => {
                     const itemDate = new Date(item.start_date || item.created_at);
-                    const monthYear = itemDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                    const fullDate = itemDate.toLocaleDateString('en-GB', { 
+                      day: '2-digit',
+                      month: 'short', 
+                      year: 'numeric' 
+                    });
                     const status = item.is_closed ? 'Closed' : 'Open';
                     
                     return (
                       <option key={item.id} value={item.id}>
-                        {monthYear} - {item.name || selectedType} ({status})
+                        {fullDate} - {item.name || `${selectedType} #${item.id}`} ({status})
                       </option>
                     );
                   })}
@@ -397,8 +468,12 @@ export default function StocktakeDownload({
                     const selectedItem = currentList.find(item => item.id === selectedId);
                     if (!selectedItem) return 'selected item';
                     const itemDate = new Date(selectedItem.start_date || selectedItem.created_at);
-                    const monthYear = itemDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                    return `${monthYear} - ${selectedItem.name || selectedType}`;
+                    const fullDate = itemDate.toLocaleDateString('en-GB', { 
+                      day: '2-digit',
+                      month: 'short', 
+                      year: 'numeric' 
+                    });
+                    return `${fullDate} - ${selectedItem.name || `${selectedType} #${selectedItem.id}`}`;
                   })()}
                 </small>
               </Alert>

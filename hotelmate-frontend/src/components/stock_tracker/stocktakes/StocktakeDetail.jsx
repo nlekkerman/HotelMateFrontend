@@ -131,6 +131,9 @@ export const StocktakeDetail = () => {
       const response = await api.get(
         `/stock_tracker/${hotel_slug}/stocktakes/${id}/`
       );
+      console.log("📊 Stocktake API Response:", response.data);
+      console.log("💰 total_counted_value:", response.data.total_counted_value);
+      console.log("💰 total_value:", response.data.total_value);
       setStocktake(response.data);
       setLines(response.data.lines || []);
       setError(null);
@@ -575,14 +578,24 @@ export const StocktakeDetail = () => {
               </Badge>
             </div>
             <div className="col-md-3">
-              {stocktake.approved_at && (
-                <div>
-                  <strong>Approved:</strong>{" "}
-                  {new Date(stocktake.approved_at).toLocaleString()}
-                </div>
-              )}
+              <strong>Total Stock Value:</strong>{" "}
+              <Badge bg="success">
+                €{stocktake.total_counted_value 
+                  ? parseFloat(stocktake.total_counted_value).toFixed(2) 
+                  : "0.00"}
+              </Badge>
             </div>
           </div>
+          {stocktake.approved_at && (
+            <div className="row mt-2">
+              <div className="col-md-12">
+                <small className="text-muted">
+                  <strong>Approved:</strong>{" "}
+                  {new Date(stocktake.approved_at).toLocaleString()}
+                </small>
+              </div>
+            </div>
+          )}
         </Card.Body>
       </Card>
 
