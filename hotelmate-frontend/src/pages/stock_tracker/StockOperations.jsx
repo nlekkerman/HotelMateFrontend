@@ -41,10 +41,12 @@ export default function StockOperations() {
                 onMouseEnter={(e) => {
                   e.currentTarget.style.border = '3px solid gold';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '1';
+                  e.currentTarget.querySelector('span').style.color = 'white';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.border = '1px solid rgba(108, 117, 125, 0.3)';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '0';
+                  e.currentTarget.querySelector('span').style.color = 'black';
                 }}
                 style={{
                   width: '180px',
@@ -105,7 +107,9 @@ export default function StockOperations() {
                   textAlign: 'center',
                   maxWidth: '160px',
                   wordWrap: 'break-word',
-                  lineHeight: '1.2'
+                  lineHeight: '1.2',
+                  color: 'black',
+                  transition: 'color 0.3s ease'
                 }}>Stocktakes</span>
               </div>
             </Col>
@@ -115,10 +119,12 @@ export default function StockOperations() {
                 onMouseEnter={(e) => {
                   e.currentTarget.style.border = '3px solid gold';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '1';
+                  e.currentTarget.querySelector('span').style.color = 'white';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.border = '1px solid rgba(108, 117, 125, 0.3)';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '0';
+                  e.currentTarget.querySelector('span').style.color = 'black';
                 }}
                 style={{
                   width: '180px',
@@ -170,7 +176,9 @@ export default function StockOperations() {
                   textAlign: 'center',
                   maxWidth: '160px',
                   wordWrap: 'break-word',
-                  lineHeight: '1.2'
+                  lineHeight: '1.2',
+                  color: 'black',
+                  transition: 'color 0.3s ease'
                 }}>Periods</span>
               </div>
             </Col>
@@ -180,10 +188,12 @@ export default function StockOperations() {
                 onMouseEnter={(e) => {
                   e.currentTarget.style.border = '3px solid gold';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '1';
+                  e.currentTarget.querySelector('span').style.color = 'white';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.border = '1px solid rgba(108, 117, 125, 0.3)';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '0';
+                  e.currentTarget.querySelector('span').style.color = 'black';
                 }}
                 style={{
                   width: '180px',
@@ -235,7 +245,9 @@ export default function StockOperations() {
                   textAlign: 'center',
                   maxWidth: '160px',
                   wordWrap: 'break-word',
-                  lineHeight: '1.2'
+                  lineHeight: '1.2',
+                  color: 'black',
+                  transition: 'color 0.3s ease'
                 }}>Cocktails</span>
               </div>
             </Col>
@@ -245,10 +257,12 @@ export default function StockOperations() {
                 onMouseEnter={(e) => {
                   e.currentTarget.style.border = '3px solid gold';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '1';
+                  e.currentTarget.querySelector('span').style.color = 'white';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.border = '1px solid rgba(108, 117, 125, 0.3)';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '0';
+                  e.currentTarget.querySelector('span').style.color = 'black';
                 }}
                 style={{
                   width: '180px',
@@ -300,20 +314,24 @@ export default function StockOperations() {
                   textAlign: 'center',
                   maxWidth: '160px',
                   wordWrap: 'break-word',
-                  lineHeight: '1.2'
+                  lineHeight: '1.2',
+                  color: 'black',
+                  transition: 'color 0.3s ease'
                 }}>Download Stocktake</span>
               </div>
             </Col>
             <Col xs="auto" className="d-flex justify-content-center">
               <div
-                onClick={() => navigate(`/stock_tracker/${hotel_slug}/sales`)}
+                onClick={() => navigate(`/stock_tracker/${hotel_slug}/sales/analysis`)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.border = '3px solid gold';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '1';
+                  e.currentTarget.querySelector('span').style.color = 'white';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.border = '1px solid rgba(108, 117, 125, 0.3)';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '0';
+                  e.currentTarget.querySelector('span').style.color = 'black';
                 }}
                 style={{
                   width: '180px',
@@ -365,8 +383,10 @@ export default function StockOperations() {
                   textAlign: 'center',
                   maxWidth: '160px',
                   wordWrap: 'break-word',
-                  lineHeight: '1.2'
-                }}>Sales Entry</span>
+                  lineHeight: '1.2',
+                  color: 'black',
+                  transition: 'color 0.3s ease'
+                }}>Sales Dashboard</span>
               </div>
             </Col>
           </Row>

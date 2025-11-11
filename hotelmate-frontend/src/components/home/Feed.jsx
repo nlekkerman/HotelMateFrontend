@@ -60,13 +60,27 @@ export default function Feed() {
       {hotelSlug && (
         <PostComposer hotelSlug={hotelSlug} onPostCreated={handleNewPost} />
       )}
-      <hr />
+      
       {loading ? (
-        <p>Loading posts...</p>
+        <div className="feed-loading">
+          <div>
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="mt-3">Loading posts...</p>
+          </div>
+        </div>
       ) : error ? (
-        <p style={{ color: "red" }}>{error}</p>
+        <div className="feed-error">
+          <i className="bi bi-exclamation-triangle-fill mb-2" style={{ fontSize: '2rem' }}></i>
+          <p className="mb-0">{error}</p>
+        </div>
       ) : posts.length === 0 ? (
-        <p>No posts yet.</p>
+        <div className="feed-empty">
+          <div className="feed-empty-icon">📝</div>
+          <div className="feed-empty-text">No posts yet</div>
+          <div className="feed-empty-subtext">Be the first to share something!</div>
+        </div>
       ) : (
         posts.map((post) => (
           <Post

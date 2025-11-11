@@ -75,31 +75,59 @@ export const PeriodSnapshots = () => {
   };
 
   const getPeriodBadge = (period, allPeriods) => {
+    console.log('🏷️ Badge for period:', period.period_name, 'is_closed:', period.is_closed);
+    
     if (period.is_closed) {
+      console.log('   → Closed period badge');
       return <span className="badge bg-secondary">{period.period_name}</span>;
     }
     
     // For open periods, check if this is the most recent one
     const openPeriods = allPeriods.filter(p => !p.is_closed);
+    console.log('   → Open periods count:', openPeriods.length);
+    console.log('   → Open periods:', openPeriods.map(p => ({ name: p.period_name, start: p.start_date })));
+    
     const mostRecentOpen = openPeriods.sort((a, b) => 
       new Date(b.start_date) - new Date(a.start_date)
     )[0];
     
+    console.log('   → Most recent open:', mostRecentOpen?.period_name);
+    console.log('   → Current period ID:', period.id, 'Most recent ID:', mostRecentOpen?.id);
+    
     // Only the most recent open period is "Current Period"
     if (mostRecentOpen?.id === period.id) {
+      console.log('   → ✅ This is CURRENT period');
       return <span className="badge bg-success">Current Period</span>;
     }
     
     // Older open periods show "Open"
+    console.log('   → ⚠️ This is older OPEN period');
     return <span className="badge bg-info">Open</span>;
   };
 
   const filteredPeriods = periods.filter(period => {
-    if (statusFilter === "all") return true;
-    if (statusFilter === "open") return !period.is_closed;
-    if (statusFilter === "closed") return period.is_closed;
+    console.log('🔍 Filtering period:', period.period_name, 'statusFilter:', statusFilter, 'is_closed:', period.is_closed);
+    
+    if (statusFilter === "all") {
+      console.log('   → Filter: ALL - include');
+      return true;
+    }
+    if (statusFilter === "open") {
+      const include = !period.is_closed;
+      console.log('   → Filter: OPEN - include?', include);
+      return include;
+    }
+    if (statusFilter === "closed") {
+      const include = period.is_closed;
+      console.log('   → Filter: CLOSED - include?', include);
+      return include;
+    }
+    console.log('   → Filter: default - include');
     return true;
   });
+  
+  console.log('📋 Filtered periods result:', filteredPeriods.length, 'of', periods.length);
+  console.log('📊 Filtered period names:', filteredPeriods.map(p => p.period_name));
 
   const handleReopenClick = (e, period) => {
     e.stopPropagation(); // Prevent card click

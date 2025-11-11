@@ -71,23 +71,21 @@ export default function PostComposer({ hotelSlug, onPostCreated }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="card p-3 shadow-sm mb-3">
+    <form onSubmit={handleSubmit} className="post-composer">
       <textarea
-        className="form-control border-0"
-        placeholder="Share your thoughts..."
+        className="post-composer-textarea"
+        placeholder="What's on your mind?"
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        rows={2}
-        style={{ resize: "none", fontSize: "0.95rem" }}
+        rows={3}
       />
 
       {preview && (
-        <div className="mt-2 text-center">
+        <div className="post-composer-preview">
           <img
-          src={preview}
-          alt="preview"
-          className="img-fluid rounded"
-          style={{ maxHeight: 240, objectFit: "contain" }}
+            src={preview}
+            alt="preview"
+            className="post-composer-preview-img"
           />
         </div>
       )}
@@ -98,9 +96,9 @@ export default function PostComposer({ hotelSlug, onPostCreated }) {
         </div>
       )}
 
-      <div className="d-flex justify-content-between align-items-center mt-2">
-        <div>
-          <label htmlFor="post-image" className="btn btn-sm btn-outline-secondary">
+      <div className="post-composer-actions">
+        <div className="post-composer-toolbar">
+          <label htmlFor="post-image" className="composer-icon-btn" title="Add image">
             <i className="bi bi-image"></i>
           </label>
           <input
@@ -113,10 +111,11 @@ export default function PostComposer({ hotelSlug, onPostCreated }) {
           {image && (
             <button
               type="button"
-              className="btn btn-sm btn-outline-danger ms-2"
+              className="composer-icon-btn danger"
               onClick={() => handleFile(null)}
+              title="Remove image"
             >
-              Remove
+              <i className="bi bi-x-lg"></i>
             </button>
           )}
         </div>
@@ -124,7 +123,7 @@ export default function PostComposer({ hotelSlug, onPostCreated }) {
         {(content.trim() || image) && (
           <button
             type="submit"
-            className="btn btn-sm btn-primary"
+            className="composer-post-btn"
             disabled={submitting}
           >
             {submitting ? "Posting..." : "Post"}

@@ -96,141 +96,140 @@ export default function Post({ post, onPostUpdated }) {
         onCancel={() => setShowDeleteModal(false)}
       />
 
-      <div className="shadow-sm p-2 mb-4">
-        <div className="card-body p-4 bg-light mb-2">
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            {/* LEFT: avatar + name */}
-            <div className="d-flex align-items-center">
+      <div className="post-card">
+        <div className="post-card-header">
+          <div className="post-author">
+            <div className="post-author-avatar">
               {authorAvatar ? (
                 <img
                   src={authorAvatar}
                   alt="avatar"
-                  className="rounded-circle me-3"
-                  style={{ width: 40, height: 40, objectFit: "cover" }}
+                  className="post-author-avatar-img"
                 />
               ) : (
                 <FaUserCircle
-                  className="me-3 text-secondary"
-                  style={{ fontSize: 40 }}
+                  className="post-author-avatar-img"
+                  style={{ fontSize: 40, color: '#999' }}
                 />
               )}
-              <div>
-                <div className="fw-bold text-capitalize">
-                  {author.first_name} {author.last_name}
-                </div>
+            </div>
+            <div className="post-author-info">
+              <div className="post-author-name">
+                {author.first_name} {author.last_name}
+              </div>
+              <div className="post-timestamp">
+                {new Date(post.created_at).toLocaleString()}
               </div>
             </div>
-
-            {isAuthor && (
-              <div className="btn-group btn-group-sm">
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary"
-                  onClick={() => setEditing(true)}
-                  title="Edit Post"
-                >
-                  <i className="bi bi-pencil-fill"></i>
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-outline-danger"
-                  onClick={() => setShowDeleteModal(true)}
-                  title="Delete Post"
-                >
-                  <i className="bi bi-trash-fill"></i>
-                </button>
-              </div>
-            )}
           </div>
 
-          {/* Edit form or content */}
-          {editing ? (
-            <form onSubmit={handleUpdate} className="mb-3">
-              <textarea
-                className="form-control mb-2"
-                rows={3}
-                value={contentInput}
-                onChange={(e) => setContentInput(e.target.value)}
-              />
-              <input
-                type="file"
-                accept="image/*"
-                className="form-control mb-3"
-                onChange={(e) => setImageFile(e.target.files[0])}
-              />
+          {isAuthor && (
+            <div className="post-actions-menu">
+              <button
+                type="button"
+                className="post-action-icon-btn"
+                onClick={() => setEditing(true)}
+                title="Edit Post"
+              >
+                <i className="bi bi-pencil-fill"></i>
+              </button>
+              <button
+                type="button"
+                className="post-action-icon-btn danger"
+                onClick={() => setShowDeleteModal(true)}
+                title="Delete Post"
+              >
+                <i className="bi bi-trash-fill"></i>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {editing ? (
+          <form onSubmit={handleUpdate} className="post-edit-form">
+            <textarea
+              className="post-edit-textarea"
+              rows={3}
+              value={contentInput}
+              onChange={(e) => setContentInput(e.target.value)}
+            />
+            <input
+              type="file"
+              accept="image/*"
+              className="form-control mb-3 mt-2"
+              onChange={(e) => setImageFile(e.target.files[0])}
+            />
+            <div className="post-edit-actions">
               <button
                 type="submit"
-                className="btn btn-sm btn-primary me-2"
+                className="post-edit-btn primary"
                 disabled={isUpdating}
               >
                 {isUpdating ? "Saving…" : "Save"}
               </button>
               <button
                 type="button"
-                className="btn btn-sm btn-secondary"
+                className="post-edit-btn secondary"
                 onClick={() => setEditing(false)}
                 disabled={isUpdating}
               >
                 Cancel
               </button>
-            </form>
-          ) : (
-            <>
-              <p className="card-text">{post.content}</p>
-              {safeImg && (
-  <div className="text-center mb-3">
-    <img
-      src={safeImg}
-      alt="Post"
-      className="img-fluid rounded mx-auto d-block"
-      style={{ maxHeight: "400px", objectFit: "contain", cursor: "zoom-in" }}
-      onClick={() => setShowImageModal(true)}
-    />
-  </div>
-)}
+            </div>
+          </form>
+        ) : (
+          <>
+            <div className="post-content">
+              <p className="post-text">{post.content}</p>
+            </div>
+            
+            {safeImg && (
+              <div className="post-image-container" onClick={() => setShowImageModal(true)}>
+                <img
+                  src={safeImg}
+                  alt="Post"
+                  className="post-image"
+                />
+              </div>
+            )}
+          </>
+        )}
 
-            </>
-          )}
+        <div className="post-interactions">
+          <button
+            type="button"
+            className={`interaction-btn like-btn ${liked ? 'liked' : ''}`}
+            onClick={handleLike}
+            disabled={isLiking}
+          >
+            <span className="btn-icon">❤️</span>
+            <span>{liked ? "Liked" : "Like"}</span>
+            <span className="btn-count">{likeCount}</span>
+          </button>
 
-          <div className="date-time-container d-flex justify-content-end mb-2">
-          <small className="text-muted small">
-              {new Date(post.created_at).toLocaleString()}
-            </small>
-          </div>
+          <button
+            type="button"
+            className="interaction-btn comment-btn"
+            onClick={() => setShowComments((prev) => !prev)}
+          >
+            <span className="btn-icon">💬</span>
+            <span>Comment</span>
+            <span className="btn-count">{post.comment_count ?? 0}</span>
+          </button>
 
-          <div className="d-flex justify-content-around shadow-sm p-1 mt-4 mb13">
-            <button
-              type="button"
-              className={`like-share-comment-button ${
-                liked ? "btn-danger" : "btn-outline-danger"
-              }`}
-              onClick={handleLike}
-              disabled={isLiking}
-            >
-              ❤️ {liked ? "Liked" : "Like"} ({likeCount})
-            </button>
-
-            <button
-              type="button"
-              className="like-share-comment-button"
-              onClick={() => setShowComments((prev) => !prev)}
-            >
-              💬 Comment ({post.comment_count ?? 0})
-            </button>
-
-            <button
-              type="button"
-              className="like-share-comment-button"
-              onClick={() =>
-                navigator.share?.({
-                  title: "Hotel Post",
-                  url: window.location.href,
-                })
-              }
-            >
-              🔗 Share
-            </button>
-          </div>
+          <button
+            type="button"
+            className="interaction-btn share-btn"
+            onClick={() =>
+              navigator.share?.({
+                title: "Hotel Post",
+                url: window.location.href,
+              })
+            }
+          >
+            <span className="btn-icon">🔗</span>
+            <span>Share</span>
+          </button>
         </div>
 
         {showComments && (
@@ -242,14 +241,14 @@ export default function Post({ post, onPostUpdated }) {
           />
         )}
       </div>
+      
       {showImageModal && (
-  <ImageModal
-    src={safeImg}
-    alt="Post Image"
-    onClose={() => setShowImageModal(false)}
-  />
-)}
-
+        <ImageModal
+          src={safeImg}
+          alt="Post Image"
+          onClose={() => setShowImageModal(false)}
+        />
+      )}
     </>
   );
 }

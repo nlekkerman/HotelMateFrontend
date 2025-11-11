@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Badge, Spinner, Alert, Button, Table } from 'react-bootstrap';
-import { FaArrowLeft, FaCalendarAlt, FaBoxes, FaShoppingCart } from 'react-icons/fa';
+import { FaArrowLeft, FaCalendarAlt, FaBoxes, FaShoppingCart, FaCocktail, FaChartPie } from 'react-icons/fa';
 import api from '@/services/api';
+import { getSalesAnalysis } from '@/services/stockAnalytics';
+import SalesDashboard from '@/components/stock_tracker/analytics/SalesDashboard';
+import CategoryBreakdownChartWithCocktails from '@/components/stock_tracker/analytics/CategoryBreakdownChartWithCocktails';
 
 export default function SalesReport() {
   const { hotel_slug } = useParams();
@@ -10,10 +13,12 @@ export default function SalesReport() {
   
   const [periods, setPeriods] = useState([]);
   const [selectedPeriod, setSelectedPeriod] = useState(null);
-  const [snapshots, setSnapshots] = useState([]);
-  const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [viewMode, setViewMode] = useState('combined'); // 'combined' or 'legacy'
+  
+  // For combined view
+  const [salesData, setSalesData] = useState(null);
 
   // Category definitions
   const categories = {
@@ -30,9 +35,9 @@ export default function SalesReport() {
 
   useEffect(() => {
     if (selectedPeriod) {
-      fetchStockData();
+      fetchSalesData();
     }
-  }, [selectedPeriod]);
+  }, [selectedPeriod, viewMode]);
 
   const fetchPeriods = async () => {
     try {
@@ -56,73 +61,24 @@ export default function SalesReport() {
     }
   };
 
-  const fetchStockData = async () => {
+  const fetchSalesData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const [snapshotsData, purchasesData] = await Promise.all([
-        api.get(`/stock_tracker/${hotel_slug}/snapshots/?period=${selectedPeriod.id}`),
-        api.get(`/stock_tracker/${hotel_slug}/movements/?period=${selectedPeriod.id}&movement_type=PURCHASE`)
-      ]);
+      // Fetch comprehensive sales analysis (stock + cocktails)
+      const data = await getSalesAnalysis(hotel_slug, selectedPeriod.id, {
+        includeCocktails: true,
+        includeCategoryBreakdown: true
+      });
 
-      setSnapshots(snapshotsData.data.results || snapshotsData.data);
-      setPurchases(purchasesData.data.results || purchasesData.data);
+      setSalesData(data);
     } catch (err) {
-      console.error('Error fetching stock data:', err);
-      setError(err.response?.data?.detail || 'Failed to fetch stock data');
+      console.error('Error fetching sales data:', err);
+      setError(err.message || err.response?.data?.detail || 'Failed to fetch sales data');
     } finally {
       setLoading(false);
     }
-  };
-
-  // Simple grouping by category - NO calculations, just display backend data
-  const getStockValueByCategory = () => {
-    const categoryData = {};
-    
-    Object.keys(categories).forEach(code => {
-      categoryData[code] = {
-        name: categories[code].name,
-        code: code,
-        costValue: 0,
-        itemCount: 0,
-        items: []
-      };
-    });
-
-    snapshots.forEach(snapshot => {
-      const category = snapshot.item.category;
-      if (categoryData[category]) {
-        categoryData[category].costValue += parseFloat(snapshot.closing_stock_value || 0);
-        categoryData[category].itemCount += 1;
-        categoryData[category].items.push(snapshot);
-      }
-    });
-
-    return categoryData;
-  };
-
-  const getPurchasesByCategory = () => {
-    const categoryData = {};
-    
-    Object.keys(categories).forEach(code => {
-      categoryData[code] = {
-        name: categories[code].name,
-        purchaseValue: 0,
-        purchaseCount: 0
-      };
-    });
-
-    purchases.forEach(purchase => {
-      const category = purchase.item.sku[0];
-      if (categoryData[category]) {
-        const purchaseValue = parseFloat(purchase.quantity || 0) * parseFloat(purchase.unit_cost || 0);
-        categoryData[category].purchaseValue += purchaseValue;
-        categoryData[category].purchaseCount += 1;
-      }
-    });
-
-    return categoryData;
   };
 
   const formatCurrency = (value) => {
@@ -130,7 +86,11 @@ export default function SalesReport() {
       style: 'currency',
       currency: 'EUR',
       minimumFractionDigits: 2
-    }).format(value);
+    }).format(value || 0);
+  };
+
+  const formatPercentage = (value) => {
+    return `${(value || 0).toFixed(2)}%`;
   };
 
   const handlePeriodChange = (e) => {
@@ -165,10 +125,10 @@ export default function SalesReport() {
     );
   }
 
-  if (!snapshots.length) {
+  if (!salesData) {
     return (
       <Container className="mt-4">
-        <Alert variant="info">No stock data available for this period</Alert>
+        <Alert variant="info">No sales data available for this period</Alert>
         <Button variant="secondary" onClick={() => navigate(`/stock_tracker/${hotel_slug}`)}>
           <FaArrowLeft className="me-2" />
           Back to Dashboard
@@ -176,13 +136,6 @@ export default function SalesReport() {
       </Container>
     );
   }
-
-  const stockByCategory = getStockValueByCategory();
-  const purchasesByCategory = getPurchasesByCategory();
-  
-  const totalCostValue = Object.values(stockByCategory).reduce((sum, cat) => sum + cat.costValue, 0);
-  const totalPurchases = Object.values(purchasesByCategory).reduce((sum, cat) => sum + cat.purchaseValue, 0);
-  const totalItems = snapshots.length;
 
   return (
     <Container fluid className="mt-4">
@@ -223,9 +176,10 @@ export default function SalesReport() {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h2 className="d-inline">
-            <FaBoxes className="me-2" />
-            Stock Value Report
+            <FaChartPie className="me-2" />
+            Sales Analysis Report
           </h2>
+          <Badge bg="success" className="ms-3">NEW - Combined View</Badge>
         </div>
       </div>
 
@@ -260,154 +214,178 @@ export default function SalesReport() {
         </Card.Body>
       </Card>
 
-      {/* Summary Cards */}
-      <Row className="mb-4">
-        <Col md={4}>
-          <Card className="h-100 border-primary">
+      {/* Sales Navigation Cards */}
+      <Card className="mb-4 border-success">
+        <Card.Header className="bg-success text-white">
+          <h5 className="mb-0">
+            <FaShoppingCart className="me-2" />
+            Sales Operations
+          </h5>
+        </Card.Header>
+        <Card.Body>
+          <Row className="g-3">
+            <Col md={4}>
+              <Card 
+                className="h-100 border-primary"
+                style={{ cursor: 'pointer', transition: 'transform 0.2s', opacity: 1 }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <Card.Body className="text-center">
+                  <FaChartPie size={48} className="text-primary mb-3" />
+                  <h5>Sales Analysis</h5>
+                  <p className="text-muted small mb-0">
+                    📊 You are here - View comprehensive sales reports
+                  </p>
+                  <Badge bg="primary" className="mt-2">Current Page</Badge>
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col md={4}>
+              <Card 
+                className="h-100 border-info"
+                style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                onClick={() => navigate(`/stock_tracker/${hotel_slug}/sales/list`)}
+              >
+                <Card.Body className="text-center">
+                  <FaBoxes size={48} className="text-info mb-3" />
+                  <h5>Sales History</h5>
+                  <p className="text-muted small mb-0">
+                    📋 View all individual sale transactions
+                  </p>
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col md={4}>
+              <Card 
+                className="h-100 border-success"
+                style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                onClick={() => navigate(`/stock_tracker/${hotel_slug}/sales/entry`)}
+              >
+                <Card.Body className="text-center">
+                  <FaShoppingCart size={48} className="text-success mb-3" />
+                  <h5>Enter Sales</h5>
+                  <p className="text-muted small mb-0">
+                    ✍️ Record new sales transactions
+                  </p>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
+
+      {/* Sales Dashboard - Combined View */}
+      <SalesDashboard 
+        hotelSlug={hotel_slug} 
+        periodId={selectedPeriod.id} 
+        height={400}
+      />
+
+      {/* Category Breakdown Chart */}
+      <div className="mt-4">
+        <CategoryBreakdownChartWithCocktails
+          hotelSlug={hotel_slug}
+          periodId={selectedPeriod.id}
+          height={450}
+          includeCocktails={true}
+        />
+      </div>
+
+      {/* Quick Stats Row */}
+      <Row className="mt-4">
+        <Col md={6}>
+          <Card className="border-0 bg-light">
             <Card.Body>
-              <p className="text-muted mb-1 small">💰 Stock Cost Value</p>
-              <h3 className="text-primary mb-0">{formatCurrency(totalCostValue)}</h3>
-              <small className="text-muted">What you paid for inventory</small>
+              <h6 className="text-muted mb-3">
+                <FaBoxes className="me-2" />
+                Stock Items Performance
+              </h6>
+              <Table borderless size="sm" className="mb-0">
+                <tbody>
+                  <tr>
+                    <td>Revenue:</td>
+                    <td className="text-end"><strong>{formatCurrency(salesData.general_sales.revenue)}</strong></td>
+                  </tr>
+                  <tr>
+                    <td>Cost (COGS):</td>
+                    <td className="text-end">{formatCurrency(salesData.general_sales.cost)}</td>
+                  </tr>
+                  <tr>
+                    <td>Gross Profit:</td>
+                    <td className="text-end text-success">
+                      <strong>{formatCurrency(salesData.general_sales.profit)}</strong>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GP%:</td>
+                    <td className="text-end">
+                      <Badge bg="success">{formatPercentage(salesData.general_sales.gp_percentage)}</Badge>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Items Sold:</td>
+                    <td className="text-end">{salesData.general_sales.count}</td>
+                  </tr>
+                </tbody>
+              </Table>
             </Card.Body>
           </Card>
         </Col>
-        
-        <Col md={4}>
-          <Card className="h-100 border-info">
+
+        <Col md={6}>
+          <Card className="border-0 bg-light">
             <Card.Body>
-              <p className="text-muted mb-1 small">📦 Total Items</p>
-              <h3 className="text-info mb-0">{totalItems}</h3>
-              <small className="text-muted">In closing stock</small>
-            </Card.Body>
-          </Card>
-        </Col>
-        
-        <Col md={4}>
-          <Card className="h-100 border-warning">
-            <Card.Body>
-              <p className="text-muted mb-1 small">🛒 Period Purchases</p>
-              <h3 className="text-warning mb-0">{formatCurrency(totalPurchases)}</h3>
-              <small className="text-muted">⚠️ Mock data for display</small>
+              <h6 className="text-muted mb-3">
+                <FaCocktail className="me-2" />
+                Cocktails Performance
+                <Badge bg="warning" text="dark" className="ms-2 small">Separate Tracking</Badge>
+              </h6>
+              <Table borderless size="sm" className="mb-0">
+                <tbody>
+                  <tr>
+                    <td>Revenue:</td>
+                    <td className="text-end"><strong>{formatCurrency(salesData.cocktail_sales.revenue)}</strong></td>
+                  </tr>
+                  <tr>
+                    <td>Cost:</td>
+                    <td className="text-end">{formatCurrency(salesData.cocktail_sales.cost)}</td>
+                  </tr>
+                  <tr>
+                    <td>Gross Profit:</td>
+                    <td className="text-end text-success">
+                      <strong>{formatCurrency(salesData.cocktail_sales.profit)}</strong>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>GP%:</td>
+                    <td className="text-end">
+                      <Badge bg="success">{formatPercentage(salesData.cocktail_sales.gp_percentage)}</Badge>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Cocktails Sold:</td>
+                    <td className="text-end">{salesData.cocktail_sales.count}</td>
+                  </tr>
+                </tbody>
+              </Table>
             </Card.Body>
           </Card>
         </Col>
       </Row>
 
-      {/* Warning Banner */}
-      <Alert variant="warning" className="mb-4">
-        <Alert.Heading>⚠️ Display Only</Alert.Heading>
+      {/* Info Alert */}
+      <Alert variant="success" className="mt-4">
+        <Alert.Heading>✅ Real Sales Analysis</Alert.Heading>
         <p className="mb-0">
-          This shows stock values from backend calculations. Purchase data is mock data for demonstration purposes.
-          Revenue and sales calculations will come from backend when real POS data is integrated.
+          This report displays <strong>real sales data</strong> from your backend combining stock item sales 
+          and cocktail sales for comprehensive business intelligence. All calculations are performed by the backend.
         </p>
       </Alert>
-
-      {/* Stock Value by Category */}
-      <Card className="mb-4">
-        <Card.Header className="bg-primary text-white">
-          <h5 className="mb-0">Stock Value by Category</h5>
-        </Card.Header>
-        <Card.Body className="p-0">
-          <Table responsive hover className="mb-0">
-            <thead className="table-light">
-              <tr>
-                <th>Category</th>
-                <th className="text-end">Items</th>
-                <th className="text-end">Stock Cost Value</th>
-                <th className="text-end">Period Purchases</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.values(stockByCategory).map(category => (
-                <tr key={category.code}>
-                  <td>
-                    <strong>{category.name}</strong>
-                    <Badge bg="secondary" className="ms-2">{category.code}</Badge>
-                  </td>
-                  <td className="text-end">{category.itemCount}</td>
-                  <td className="text-end"><strong>{formatCurrency(category.costValue)}</strong></td>
-                  <td className="text-end text-muted">
-                    {formatCurrency(purchasesByCategory[category.code]?.purchaseValue || 0)}
-                    {purchasesByCategory[category.code]?.purchaseCount > 0 && (
-                      <small className="ms-1">({purchasesByCategory[category.code].purchaseCount} items)</small>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot className="table-secondary">
-              <tr>
-                <th>TOTAL</th>
-                <th className="text-end">{totalItems}</th>
-                <th className="text-end">{formatCurrency(totalCostValue)}</th>
-                <th className="text-end">{formatCurrency(totalPurchases)}</th>
-              </tr>
-            </tfoot>
-          </Table>
-        </Card.Body>
-      </Card>
-
-      {/* Purchases Detail (if any) */}
-      {purchases.length > 0 && (
-        <Card className="mb-4">
-          <Card.Header className="bg-warning text-dark">
-            <h5 className="mb-0">
-              <FaShoppingCart className="me-2" />
-              Period Purchases (Mock Data)
-            </h5>
-          </Card.Header>
-          <Card.Body className="p-0">
-            <Table responsive hover className="mb-0" size="sm">
-              <thead className="table-light">
-                <tr>
-                  <th>Date</th>
-                  <th>SKU</th>
-                  <th>Item</th>
-                  <th className="text-end">Quantity</th>
-                  <th className="text-end">Unit Cost</th>
-                  <th className="text-end">Total</th>
-                  <th>Reference</th>
-                </tr>
-              </thead>
-              <tbody>
-                {purchases.slice(0, 20).map(purchase => (
-                  <tr key={purchase.id}>
-                    <td>{new Date(purchase.timestamp).toLocaleDateString()}</td>
-                    <td><code>{purchase.item.sku}</code></td>
-                    <td>{purchase.item.name}</td>
-                    <td className="text-end">{parseFloat(purchase.quantity).toFixed(2)}</td>
-                    <td className="text-end">{formatCurrency(parseFloat(purchase.unit_cost))}</td>
-                    <td className="text-end">
-                      <strong>
-                        {formatCurrency(parseFloat(purchase.quantity) * parseFloat(purchase.unit_cost))}
-                      </strong>
-                    </td>
-                    <td><small className="text-muted">{purchase.reference}</small></td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-            {purchases.length > 20 && (
-              <div className="p-3 text-center text-muted">
-                <small>Showing first 20 of {purchases.length} purchases</small>
-              </div>
-            )}
-          </Card.Body>
-        </Card>
-      )}
-
-      {/* Info Card */}
-      <Card className="mb-4 border-info">
-        <Card.Body>
-          <h5>📊 About This Report</h5>
-          <ul className="mb-0">
-            <li><strong>Stock Cost Value</strong>: What you paid for current inventory (from backend <code>closing_stock_value</code>)</li>
-            <li><strong>Period Purchases</strong>: Mock purchase data for demonstration (replace with real data)</li>
-            <li><strong>Sales Value & Revenue</strong>: Will be calculated by backend when real POS data is integrated</li>
-            <li><strong>All calculations</strong>: Performed by backend, frontend displays only</li>
-          </ul>
-        </Card.Body>
-      </Card>
     </Container>
   );
 }

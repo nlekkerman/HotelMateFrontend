@@ -1,0 +1,753 @@
+/* Modern Social Network Style for Home Page */
+/* Uses custom colors from Settings (ColorSelector): --main-color, --secondary-color, --button-color, etc. */
+
+:root {
+  /* Using custom colors from ColorSelector.jsx */
+  --social-primary: var(--main-color, #3498db);
+  --social-secondary: var(--secondary-color, #2ecc71);
+  --social-button: var(--button-color, #004faf);
+  --social-button-text: var(--button-text-color, #ffffff);
+  --social-button-hover: var(--button-hover-color, #0066cc);
+  --social-text: var(--text-color, #333333);
+  --social-bg: var(--background-color, #ffffff);
+  --social-border: var(--border-color, #e5e7eb);
+  --social-link: var(--link-color, #007bff);
+  --social-link-hover: var(--link-hover-color, #0056b3);
+  
+  /* Derived colors for social features */
+  --color-like: #ed4956;
+  --color-comment: var(--main-color, #0095f6);
+  --color-share: #00ba7c;
+  
+  /* Neutral palette */
+  --bg-primary: #fafafa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f5f5f5;
+  --text-primary: var(--text-color, #262626);
+  --text-secondary: #737373;
+  --text-muted: #8e8e8e;
+  --border-light: #efefef;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-hover: 0 6px 20px rgba(0, 0, 0, 0.15);
+  
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+  
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+}
+
+/* Main Feed Container */
+.feed-container {
+  max-width: 630px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  background: var(--social-bg, #fafafa);
+  min-height: 100vh;
+}
+
+/* Feed Wrapper */
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Loading State */
+.feed-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+/* Error State */
+.feed-error {
+  background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+  padding: 24px;
+  text-align: center;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+/* Empty State */
+.feed-empty {
+  background: var(--bg-secondary);
+  border: 2px dashed var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.feed-empty-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.feed-empty-text {
+  font-size: 1.125rem;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+.feed-empty-subtext {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+/* Post Composer */
+.post-composer {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+}
+
+.post-composer:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--social-primary);
+}
+
+.post-composer:focus-within {
+  border-color: var(--social-primary);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1), var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.post-composer-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.post-composer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 2px solid var(--border-light);
+  transition: border-color var(--transition-fast);
+}
+
+.post-composer:focus-within .post-composer-avatar {
+  border-color: var(--social-primary);
+}
+
+.post-composer-textarea {
+  width: 100%;
+  border: none;
+  background: transparent;
+  resize: none;
+  font-size: 0.9375rem;
+  color: var(--social-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+  padding: 0;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.post-composer-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.post-composer-textarea:focus::placeholder {
+  color: transparent;
+}
+
+.post-composer-preview {
+  margin: 16px 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  position: relative;
+  animation: scaleIn 0.3s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.post-composer-preview-img {
+  width: 100%;
+  max-height: 400px;
+  object-fit: cover;
+  display: block;
+}
+
+.post-composer-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light);
+  margin-top: 8px;
+}
+
+.post-composer-toolbar {
+  display: flex;
+  gap: 8px;
+}
+
+.composer-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 18px;
+}
+
+.composer-icon-btn:hover {
+  background: var(--social-primary);
+  color: white;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: var(--shadow-sm);
+}
+
+.composer-icon-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.composer-icon-btn.danger {
+  background: #fee;
+  color: var(--color-like);
+}
+
+.composer-icon-btn.danger:hover {
+  background: var(--color-like);
+  color: white;
+}
+
+.composer-post-btn {
+  background: linear-gradient(135deg, var(--social-button) 0%, var(--social-button-hover) 100%);
+  color: var(--social-button-text);
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 10px 28px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.composer-post-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  background: linear-gradient(135deg, var(--social-button-hover) 0%, var(--social-button) 100%);
+}
+
+.composer-post-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.composer-post-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #ccc;
+}
+
+/* Post Card */
+.post-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+  animation: fadeInUp 0.4s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.post-card:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+}
+
+.post-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.5), transparent);
+}
+
+.post-author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.post-author-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 3px solid transparent;
+  background: linear-gradient(135deg, var(--social-primary), var(--social-secondary)) border-box;
+  padding: 2px;
+  transition: transform var(--transition-fast);
+}
+
+.post-author-avatar:hover {
+  transform: scale(1.1);
+}
+
+.post-author-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+}
+
+.post-author-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.post-author-name {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  text-transform: capitalize;
+  transition: color var(--transition-fast);
+}
+
+.post-author-name:hover {
+  color: var(--social-primary);
+}
+
+.post-timestamp {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.post-actions-menu {
+  display: flex;
+  gap: 4px;
+}
+
+.post-action-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 14px;
+}
+
+.post-action-icon-btn:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--social-primary);
+  color: var(--social-primary);
+  transform: scale(1.1);
+}
+
+.post-action-icon-btn.danger:hover {
+  border-color: var(--color-like);
+  color: var(--color-like);
+  background: #fee;
+}
+
+.post-action-icon-btn:active {
+  transform: scale(0.95);
+}
+
+.post-content {
+  padding: 0 20px 16px;
+}
+
+.post-text {
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin: 0;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.post-image-container {
+  margin: 16px 0 0 0;
+  position: relative;
+  background: var(--bg-tertiary);
+  cursor: zoom-in;
+  overflow: hidden;
+}
+
+.post-image {
+  width: 100%;
+  max-height: 600px;
+  object-fit: cover;
+  display: block;
+  transition: transform var(--transition-slow);
+}
+
+.post-image:hover {
+  transform: scale(1.05);
+}
+
+/* Post Interactions */
+.post-interactions {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-around;
+  gap: 8px;
+  background: transparent;
+}
+
+.interaction-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.interaction-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: none;
+}
+
+.interaction-btn:hover::before {
+  width: 0;
+  height: 0;
+}
+
+.interaction-btn:hover {
+  transform: none;
+}
+
+.interaction-btn:active {
+  transform: scale(0.98);
+}
+
+/* Like Button */
+.interaction-btn.like-btn {
+  color: var(--text-secondary);
+}
+
+.interaction-btn.like-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.interaction-btn.like-btn.liked {
+  background: var(--bg-tertiary);
+  color: var(--social-primary);
+  font-weight: 600;
+}
+
+.interaction-btn.like-btn.liked .btn-icon {
+  animation: heartBeat 0.5s ease;
+}
+
+@keyframes heartBeat {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.2); }
+  50% { transform: scale(0.95); }
+  75% { transform: scale(1.1); }
+}
+
+/* Comment Button */
+.interaction-btn.comment-btn {
+  color: var(--text-secondary);
+}
+
+.interaction-btn.comment-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* Share Button */
+.interaction-btn.share-btn {
+  color: var(--text-secondary);
+}
+
+.interaction-btn.share-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.btn-icon {
+  font-size: 1.125rem;
+  transition: transform var(--transition-fast);
+}
+
+.btn-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid var(--border-light);
+}
+
+/* Edit Form */
+.post-edit-form {
+  padding: 16px 20px;
+  background: var(--bg-tertiary);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+  }
+}
+
+.post-edit-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--social-border);
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+  resize: vertical;
+  font-family: inherit;
+  background: white;
+  transition: border-color var(--transition-fast);
+  color: var(--social-text);
+}
+
+.post-edit-textarea:focus {
+  outline: none;
+  border-color: var(--social-primary);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.post-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.post-edit-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.post-edit-btn.primary {
+  background: linear-gradient(135deg, var(--social-button) 0%, var(--social-button-hover) 100%);
+  color: var(--social-button-text);
+}
+
+.post-edit-btn.primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.post-edit-btn.secondary {
+  background: var(--bg-secondary);
+  border: 1px solid var(--social-border);
+  color: var(--text-secondary);
+}
+
+.post-edit-btn.secondary:hover {
+  background: var(--bg-tertiary);
+}
+
+.post-edit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Skeleton Loading */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 0%,
+    #e0e0e0 50%,
+    var(--bg-tertiary) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.post-skeleton {
+  background: var(--bg-secondary);
+  border: 1px solid var(--social-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 24px;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.skeleton-header {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+}
+
+.skeleton-author {
+  flex: 1;
+}
+
+.skeleton-line {
+  height: 12px;
+  margin-bottom: 8px;
+}
+
+.skeleton-line.short {
+  width: 60%;
+}
+
+.skeleton-image {
+  width: 100%;
+  height: 300px;
+  margin: 16px 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .feed-container {
+    padding: 16px 8px;
+  }
+  
+  .post-card,
+  .post-composer {
+    border-radius: var(--radius-md);
+  }
+  
+  .interaction-btn {
+    padding: 8px 12px;
+    font-size: 0.8125rem;
+  }
+  
+  .btn-icon {
+    font-size: 1.125rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .post-card,
+  .post-composer {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  
+  .feed-container {
+    padding: 12px 0;
+  }
+  
+  .interaction-btn {
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.75rem;
+    padding: 8px 8px;
+  }
+  
+  .btn-count {
+    font-size: 0.6875rem;
+    min-width: 20px;
+    height: 18px;
+  }
+  
+  .composer-post-btn {
+    padding: 8px 20px;
+    font-size: 0.8125rem;
+  }
+}
+
+/* Dark Mode Support - Removed automatic dark mode detection */
+/* Use custom colors from Settings instead */

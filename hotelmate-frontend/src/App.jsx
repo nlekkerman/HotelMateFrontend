@@ -89,6 +89,7 @@ import { PeriodsComparison } from "@/components/stock_tracker/periods/PeriodsCom
 import { CocktailsPage } from "@/pages/stock_tracker/CocktailsPage";
 import SalesReport from "@/pages/stock_tracker/SalesReport";
 import SalesEntry from "@/pages/stock_tracker/SalesEntry";
+import SalesListView from "@/pages/stock_tracker/SalesListView";
 
 import Settings from "@/components/utils/Settings";
 import Maintenance from "@/pages/maintenance/Maintenance";
@@ -322,8 +323,12 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/stock_tracker/:hotel_slug/periods" element={<ProtectedRoute><PeriodSnapshots /></ProtectedRoute>} />
               <Route path="/stock_tracker/:hotel_slug/periods/:id" element={<ProtectedRoute><PeriodSnapshotDetail /></ProtectedRoute>} />
               <Route path="/stock_tracker/:hotel_slug/comparison" element={<ProtectedRoute><PeriodsComparison /></ProtectedRoute>} />
-              <Route path="/stock_tracker/:hotel_slug/sales-report" element={<ProtectedRoute><SalesReport /></ProtectedRoute>} />
-              <Route path="/stock_tracker/:hotel_slug/sales" element={<ProtectedRoute><SalesEntry /></ProtectedRoute>} />
+              <Route path="/stock_tracker/:hotel_slug/sales/analysis" element={<ProtectedRoute><SalesReport /></ProtectedRoute>} />
+              <Route path="/stock_tracker/:hotel_slug/sales/list" element={<ProtectedRoute><SalesListView /></ProtectedRoute>} />
+              <Route path="/stock_tracker/:hotel_slug/sales/entry" element={<ProtectedRoute><SalesEntry /></ProtectedRoute>} />
+              {/* Legacy routes - redirect to new sales routes */}
+              <Route path="/stock_tracker/:hotel_slug/sales-report" element={<Navigate to="../sales/analysis" replace />} />
+              <Route path="/stock_tracker/:hotel_slug/sales" element={<Navigate to="./entry" replace />} />
               <Route path="/stock_tracker/:hotel_slug/cocktails" element={<ProtectedRoute><CocktailsPage /></ProtectedRoute>} />
 
               {/* Chat Routes */}

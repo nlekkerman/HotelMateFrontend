@@ -95,6 +95,18 @@ export default function Analytics() {
     if (!isCurrentlyVisible) {
       // Opening: add to the beginning (top)
       setSectionOrder(prev => [section, ...prev.filter(s => s !== section)]);
+      
+      // Scroll to the chart after a short delay to allow rendering
+      setTimeout(() => {
+        const chartElement = document.querySelector(`[data-chart-section="${section}"]`);
+        if (chartElement) {
+          chartElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+            inline: 'nearest'
+          });
+        }
+      }, 100);
     } else {
       // Closing: remove from order
       setSectionOrder(prev => prev.filter(s => s !== section));

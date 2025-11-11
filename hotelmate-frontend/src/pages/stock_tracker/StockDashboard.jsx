@@ -144,10 +144,12 @@ export default function StockDashboard() {
                 onMouseEnter={(e) => {
                   e.currentTarget.style.border = '3px solid gold';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '1';
+                  e.currentTarget.querySelector('span').style.color = 'white';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.border = '1px solid rgba(108, 117, 125, 0.3)';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '0';
+                  e.currentTarget.querySelector('span').style.color = 'black';
                 }}
                 style={{
                   width: '180px',
@@ -208,7 +210,9 @@ export default function StockDashboard() {
                   textAlign: 'center',
                   maxWidth: '120px',
                   wordWrap: 'break-word',
-                  lineHeight: '1.2'
+                  lineHeight: '1.2',
+                  color: 'black',
+                  transition: 'color 0.3s ease'
                 }}>View All Items</span>
               </div>
             </Col>
@@ -218,10 +222,12 @@ export default function StockDashboard() {
                 onMouseEnter={(e) => {
                   e.currentTarget.style.border = '3px solid gold';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '1';
+                  e.currentTarget.querySelector('span').style.color = 'white';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.border = '1px solid rgba(108, 117, 125, 0.3)';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '0';
+                  e.currentTarget.querySelector('span').style.color = 'black';
                 }}
                 style={{
                   width: '180px',
@@ -282,7 +288,9 @@ export default function StockDashboard() {
                   textAlign: 'center',
                   maxWidth: '120px',
                   wordWrap: 'break-word',
-                  lineHeight: '1.2'
+                  lineHeight: '1.2',
+                  color: 'black',
+                  transition: 'color 0.3s ease'
                 }}>Analytics</span>
               </div>
             </Col>
@@ -292,10 +300,12 @@ export default function StockDashboard() {
                 onMouseEnter={(e) => {
                   e.currentTarget.style.border = '3px solid gold';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '1';
+                  e.currentTarget.querySelector('span').style.color = 'white';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.border = '1px solid rgba(108, 117, 125, 0.3)';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '0';
+                  e.currentTarget.querySelector('span').style.color = 'black';
                 }}
                 style={{
                   width: '180px',
@@ -356,7 +366,9 @@ export default function StockDashboard() {
                   textAlign: 'center',
                   maxWidth: '120px',
                   wordWrap: 'break-word',
-                  lineHeight: '1.2'
+                  lineHeight: '1.2',
+                  color: 'black',
+                  transition: 'color 0.3s ease'
                 }}>Stock Operations</span>
               </div>
             </Col>

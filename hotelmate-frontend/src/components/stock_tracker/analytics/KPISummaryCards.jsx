@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Spinner, Badge } from 'react-bootstrap';
+import { Card, Row, Col, Spinner, Badge, Form, Alert } from 'react-bootstrap';
 import { 
   FaMoneyBillWave, 
   FaPercentage, 
   FaChartLine, 
   FaExclamationTriangle,
   FaArrowUp,
-  FaBox
+  FaBox,
+  FaCocktail
 } from 'react-icons/fa';
 import { 
   getKPISummary,
   formatCurrency 
 } from '@/services/stockAnalytics';
+import StockKpiDetailModal from '@/components/modals/StockKpiDetailModal';
 
 const KPISummaryCards = ({ 
   hotelSlug, 
@@ -22,6 +24,10 @@ const KPISummaryCards = ({
 }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [includeCocktails, setIncludeCocktails] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedKpiType, setSelectedKpiType] = useState(null);
+  const [fullKpiData, setFullKpiData] = useState(null);
   const [kpis, setKpis] = useState({
     totalStockValue: 0,
     currentPeriodName: null,
@@ -43,14 +49,16 @@ const KPISummaryCards = ({
     strengths: [],
     categoryDistribution: [],
     totalItems: 0,
-    activeItems: 0
+    activeItems: 0,
+    // Cocktail-specific metrics
+    cocktailMetrics: null
   });
 
   useEffect(() => {
     if (hotelSlug && (selectedPeriods.length > 0 || period1)) {
       fetchKPIData();
     }
-  }, [hotelSlug, period1, period2, selectedPeriods]);
+  }, [hotelSlug, period1, period2, selectedPeriods, includeCocktails]);
 
   const fetchKPIData = async () => {
     try {
@@ -68,10 +76,11 @@ const KPISummaryCards = ({
       }
 
       console.log('Fetching KPI data for periods:', periodIds);
+      console.log('Include Cocktails:', includeCocktails);
 
       // Single API call - backend calculates EVERYTHING
       // Using new flexible API with backward compatibility
-      const response = await getKPISummary(hotelSlug, { periodIds });
+      const response = await getKPISummary(hotelSlug, { periodIds, includeCocktails });
       const data = response.data;
 
       console.log('=== KPI BACKEND RESPONSE ===');
@@ -94,6 +103,9 @@ const KPISummaryCards = ({
         : [];
 
       console.log('Sorted Periods (by date):', sortedPeriods);
+
+      // Store full data for modal
+      setFullKpiData(data);
 
       // Map backend response to component state - NO CALCULATIONS
       setKpis({
@@ -146,7 +158,10 @@ const KPISummaryCards = ({
         
         // Additional Metrics (NEW)
         totalItems: data.additional_metrics?.total_items_count || 0,
-        activeItems: data.additional_metrics?.active_items_count || 0
+        activeItems: data.additional_metrics?.active_items_count || 0,
+        
+        // Cocktail Metrics (when includeCocktails=true)
+        cocktailMetrics: data.cocktail_sales_metrics || null
       });
 
     } catch (err) {
@@ -158,9 +173,19 @@ const KPISummaryCards = ({
   };
 
   const handleCardClick = (kpiType) => {
+    console.log('KPI Card clicked:', kpiType);
+    setSelectedKpiType(kpiType);
+    setShowModal(true);
+    
+    // Still call parent handler if provided
     if (onCardClick) {
       onCardClick(kpiType, kpis[kpiType]);
     }
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedKpiType(null);
   };
 
   const getPerformanceBadge = (rating) => {
@@ -233,14 +258,41 @@ const KPISummaryCards = ({
   }
 
   return (
-    <Row className="g-3">
+    <>
+      {/* Cocktail Toggle Control */}
+      <div className="d-flex justify-content-end align-items-center mb-3">
+        <Form.Check 
+          type="switch"
+          id="cocktail-metrics-toggle"
+          label={
+            <span>
+              <FaCocktail className="me-1" />
+              Include Cocktail Metrics
+              <Badge bg="info" className="ms-2">NEW</Badge>
+            </span>
+          }
+          checked={includeCocktails}
+          onChange={(e) => setIncludeCocktails(e.target.checked)}
+        />
+      </div>
+
+      {/* Info Alert when cocktails enabled */}
+      {includeCocktails && (
+        <Alert variant="info" className="mb-3">
+          <FaCocktail className="me-2" />
+          <strong>Cocktail Metrics:</strong> Separate from stock inventory calculations. 
+          Cocktail sales are tracked for business intelligence but don't affect stock levels.
+        </Alert>
+      )}
+
+      <Row className="g-3">
       {/* Total Stock Value */}
       <Col xs={12} sm={6} md={4} lg={2}>
         <Card 
           className="shadow-sm h-100 hover-card"
-          style={{ cursor: onCardClick ? 'pointer' : 'default' }}
+          style={{ cursor: 'pointer' }}
           onClick={() => handleCardClick('totalStockValue')}
-          title="Current total value of all stock on hand"
+          title="Current total value of all stock on hand - Click for details"
         >
           <Card.Body className="text-center">
             <FaMoneyBillWave size={32} className="text-success mb-2" />
@@ -260,8 +312,9 @@ const KPISummaryCards = ({
       <Col xs={12} sm={6} md={4} lg={2}>
         <Card 
           className="shadow-sm h-100 hover-card"
-          style={{ cursor: onCardClick ? 'pointer' : 'default' }}
+          style={{ cursor: 'pointer' }}
           onClick={() => handleCardClick('averageGP')}
+          title="Gross profit percentage analysis - Click for details"
         >
           <Card.Body className="text-center">
             <FaPercentage size={32} className="text-primary mb-2" />
@@ -293,9 +346,9 @@ const KPISummaryCards = ({
       <Col xs={12} sm={6} md={4} lg={2}>
         <Card 
           className="shadow-sm h-100 hover-card"
-          style={{ cursor: onCardClick ? 'pointer' : 'default' }}
+          style={{ cursor: 'pointer' }}
           onClick={() => handleCardClick('topCategory')}
-          title="Category with highest total stock value"
+          title="Category with highest total stock value - Click to see all categories"
         >
           <Card.Body className="text-center">
             <FaChartLine size={32} className="text-info mb-2" />
@@ -313,9 +366,9 @@ const KPISummaryCards = ({
       <Col xs={12} sm={6} md={4} lg={2}>
         <Card 
           className="shadow-sm h-100 hover-card"
-          style={{ cursor: onCardClick ? 'pointer' : 'default' }}
+          style={{ cursor: 'pointer' }}
           onClick={() => handleCardClick('lowStockCount')}
-          title="Items below par level or out of stock"
+          title="Items below par level or out of stock - Click to view list"
         >
           <Card.Body className="text-center">
             <FaExclamationTriangle size={32} className="text-warning mb-2" />
@@ -338,9 +391,9 @@ const KPISummaryCards = ({
         <Col xs={12} sm={6} md={4} lg={2}>
           <Card 
             className="shadow-sm h-100 hover-card"
-            style={{ cursor: onCardClick ? 'pointer' : 'default' }}
+            style={{ cursor: 'pointer' }}
             onClick={() => handleCardClick('topMoversCount')}
-            title="Items with big stock level changes between periods"
+            title="Items with big stock level changes - Click to see top movers"
           >
             <Card.Body className="text-center">
               <FaChartLine size={32} className="text-success mb-2" />
@@ -358,9 +411,9 @@ const KPISummaryCards = ({
       <Col xs={12} sm={6} md={4} lg={2}>
         <Card 
           className="shadow-sm h-100 hover-card"
-          style={{ cursor: onCardClick ? 'pointer' : 'default' }}
+          style={{ cursor: 'pointer' }}
           onClick={() => handleCardClick('performanceScore')}
-          title="Overall performance: profitability, stock health, turnover & variance"
+          title="Overall performance score - Click for detailed breakdown"
         >
           <Card.Body className="text-center">
             <FaBox size={32} className="text-secondary mb-2" />
@@ -382,9 +435,9 @@ const KPISummaryCards = ({
         <Col xs={12} sm={6} md={4} lg={2}>
           <Card 
             className="shadow-sm h-100 hover-card"
-            style={{ cursor: onCardClick ? 'pointer' : 'default' }}
+            style={{ cursor: 'pointer' }}
             onClick={() => handleCardClick('overstockedCount')}
-            title="Items significantly above par level"
+            title="Items significantly above par level - Click to view list"
           >
             <Card.Body className="text-center">
               <FaBox size={32} className="text-info mb-2" />
@@ -408,9 +461,9 @@ const KPISummaryCards = ({
         <Col xs={12} sm={6} md={4} lg={2}>
           <Card 
             className="shadow-sm h-100 hover-card"
-            style={{ cursor: onCardClick ? 'pointer' : 'default' }}
+            style={{ cursor: 'pointer' }}
             onClick={() => handleCardClick('deadStockCount')}
-            title="Items with no movement across periods"
+            title="Items with no movement - Click to view list"
           >
             <Card.Body className="text-center">
               <FaExclamationTriangle size={32} className="text-danger mb-2" />
@@ -431,9 +484,9 @@ const KPISummaryCards = ({
       <Col xs={12} sm={6} md={4} lg={2}>
         <Card 
           className="shadow-sm h-100 hover-card"
-          style={{ cursor: onCardClick ? 'pointer' : 'default' }}
+          style={{ cursor: 'pointer' }}
           onClick={() => handleCardClick('totalItems')}
-          title="Total items tracked in inventory"
+          title="Total items tracked - Click for category breakdown"
         >
           <Card.Body className="text-center">
             <FaBox size={32} className="text-primary mb-2" />
@@ -446,6 +499,91 @@ const KPISummaryCards = ({
         </Card>
       </Col>
 
+      {/* Cocktail-Specific Metrics (when toggle enabled) */}
+      {includeCocktails && kpis.cocktailMetrics && (
+        <>
+          {/* Cocktail Revenue */}
+          <Col xs={12} sm={6} md={4} lg={2}>
+            <Card 
+              className="shadow-sm h-100"
+              style={{ borderLeft: '4px solid #ff6b6b' }}
+              title="Total revenue from cocktail sales"
+            >
+              <Card.Body className="text-center">
+                <FaCocktail size={32} className="mb-2" style={{ color: '#ff6b6b' }} />
+                <div className="small text-muted mb-1">Cocktail Revenue</div>
+                <h5 className="mb-0" style={{ color: '#ff6b6b' }}>
+                  {formatCurrency(kpis.cocktailMetrics.total_revenue || 0)}
+                </h5>
+                <div className="mt-1" style={{ fontSize: '0.65rem', color: '#6c757d' }}>
+                  Separate from stock
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+
+          {/* Cocktail GP% */}
+          <Col xs={12} sm={6} md={4} lg={2}>
+            <Card 
+              className="shadow-sm h-100"
+              style={{ borderLeft: '4px solid #ff6b6b' }}
+              title="Gross profit percentage for cocktails"
+            >
+              <Card.Body className="text-center">
+                <FaPercentage size={32} className="mb-2" style={{ color: '#ff6b6b' }} />
+                <div className="small text-muted mb-1">Cocktail GP%</div>
+                <h5 className="mb-0" style={{ color: '#ff6b6b' }}>
+                  {kpis.cocktailMetrics.gross_profit_percentage?.toFixed(1) || 0}%
+                </h5>
+                <div className="mt-1" style={{ fontSize: '0.65rem', color: '#6c757d' }}>
+                  Cocktail profitability
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+
+          {/* Average Cocktail Price */}
+          <Col xs={12} sm={6} md={4} lg={2}>
+            <Card 
+              className="shadow-sm h-100"
+              style={{ borderLeft: '4px solid #ff6b6b' }}
+              title="Average price per cocktail"
+            >
+              <Card.Body className="text-center">
+                <FaMoneyBillWave size={32} className="mb-2" style={{ color: '#ff6b6b' }} />
+                <div className="small text-muted mb-1">Avg Cocktail Price</div>
+                <h5 className="mb-0" style={{ color: '#ff6b6b' }}>
+                  {formatCurrency(kpis.cocktailMetrics.average_price || 0)}
+                </h5>
+                <div className="mt-1" style={{ fontSize: '0.65rem', color: '#6c757d' }}>
+                  Per drink
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+
+          {/* Total Cocktails Sold */}
+          <Col xs={12} sm={6} md={4} lg={2}>
+            <Card 
+              className="shadow-sm h-100"
+              style={{ borderLeft: '4px solid #ff6b6b' }}
+              title="Total number of cocktails sold"
+            >
+              <Card.Body className="text-center">
+                <FaCocktail size={32} className="mb-2" style={{ color: '#ff6b6b' }} />
+                <div className="small text-muted mb-1">Cocktails Sold</div>
+                <h5 className="mb-0" style={{ color: '#ff6b6b' }}>
+                  {kpis.cocktailMetrics.total_quantity_sold || 0}
+                </h5>
+                <div className="mt-1" style={{ fontSize: '0.65rem', color: '#6c757d' }}>
+                  Total drinks
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+        </>
+      )}
+
       {/* Add hover effect styles */}
       <style>{`
         .hover-card {
@@ -457,6 +595,19 @@ const KPISummaryCards = ({
         }
       `}</style>
     </Row>
+
+    {/* KPI Detail Modal */}
+    <StockKpiDetailModal
+      show={showModal}
+      onClose={handleCloseModal}
+      kpiType={selectedKpiType}
+      kpiData={kpis}
+      hotelSlug={hotelSlug}
+      period1={period1}
+      period2={period2}
+      allKpisData={fullKpiData}
+    />
+    </>
   );
 };
 

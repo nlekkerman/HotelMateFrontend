@@ -3,6 +3,7 @@ import ReactDatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import DownloadRosters from "@/components/analytics/DownloadRosters";
 import { useAnalytics } from "@/components/analytics/hooks/useAnalytics";
+import KpiDetailModal from "@/components/modals/KpiDetailModal";
 
 // Cards import
 import {
@@ -51,9 +52,20 @@ export default function RosterAnalytics(props) {
   });
 
   const [selectedMetric, setSelectedMetric] = useState("kpis");
+  const [showKpiModal, setShowKpiModal] = useState(false);
+  const [selectedKpiData, setSelectedKpiData] = useState(null);
 
   const fmt = (n, digits = 2) =>
     typeof n === "number" && !Number.isNaN(n) ? n.toFixed(digits) : "0.00";
+
+  const handleKpiCardClick = (kpiType, title, value) => {
+    setSelectedKpiData({
+      type: kpiType,
+      title: title,
+      value: value
+    });
+    setShowKpiModal(true);
+  };
 
   return (
     <div className="container mt-4">
@@ -98,11 +110,31 @@ export default function RosterAnalytics(props) {
       {/* Render cards based on selected metric */}
       {!loading && !error && selectedMetric === "kpis" && kpis && (
         <div className="row mb-4">
-  <KpiCard title="Total Hours" value={fmt(Number(kpis.total_rostered_hours))} colorKey="hours" />
-  <KpiCard title="Total Shifts" value={Number(kpis.total_shifts)} colorKey="shifts" />
-  <KpiCard title="Avg Shift Length" value={fmt(Number(kpis.avg_shift_length))} colorKey="avgLength" />
-  <KpiCard title="Unique Staff" value={Number(kpis.unique_staff)} colorKey="staff" />
-</div>
+          <KpiCard 
+            title="Total Hours" 
+            value={fmt(Number(kpis.total_rostered_hours))} 
+            colorKey="hours"
+            onClick={() => handleKpiCardClick("hours", "Total Hours", fmt(Number(kpis.total_rostered_hours)))}
+          />
+          <KpiCard 
+            title="Total Shifts" 
+            value={Number(kpis.total_shifts)} 
+            colorKey="shifts"
+            onClick={() => handleKpiCardClick("shifts", "Total Shifts", Number(kpis.total_shifts))}
+          />
+          <KpiCard 
+            title="Avg Shift Length" 
+            value={fmt(Number(kpis.avg_shift_length))} 
+            colorKey="avgLength"
+            onClick={() => handleKpiCardClick("avgLength", "Avg Shift Length", fmt(Number(kpis.avg_shift_length)))}
+          />
+          <KpiCard 
+            title="Unique Staff" 
+            value={Number(kpis.unique_staff)} 
+            colorKey="staff"
+            onClick={() => handleKpiCardClick("staff", "Unique Staff", Number(kpis.unique_staff))}
+          />
+        </div>
       )}
 
       {!loading && !error && selectedMetric === "staff" && (
@@ -124,6 +156,21 @@ export default function RosterAnalytics(props) {
         hotelSlug={hotelSlug}
         department={props.selectedDepartment}
         defaultDate={props.startDate}
+      />
+
+      {/* KPI Detail Modal */}
+      <KpiDetailModal
+        show={showKpiModal}
+        onClose={() => setShowKpiModal(false)}
+        kpiData={selectedKpiData}
+        allData={{
+          total_rostered_hours: kpis?.total_rostered_hours,
+          total_shifts: kpis?.total_shifts,
+          avg_shift_length: kpis?.avg_shift_length,
+          unique_staff: kpis?.unique_staff,
+          staffSummary: staffSummary,
+          departmentSummary: departmentSummary
+        }}
       />
     </div>
     

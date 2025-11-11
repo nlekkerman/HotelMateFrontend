@@ -18,16 +18,36 @@ const bgColors = {
   staff: "#f5f5dc",      // beige
 };
 
-export function KpiCard({ title, value, colorKey }) {
+export function KpiCard({ title, value, colorKey, onClick }) {
   return (
     <div className="col-12 col-md-3 mb-3">
       <div
         className="card text-center h-100 shadow-sm"
-        style={{ backgroundColor: bgColors[colorKey] || "white" }}
+        style={{ 
+          backgroundColor: bgColors[colorKey] || "white",
+          cursor: onClick ? "pointer" : "default",
+          transition: "transform 0.2s, box-shadow 0.2s"
+        }}
+        onClick={onClick}
+        onMouseEnter={(e) => {
+          if (onClick) {
+            e.currentTarget.style.transform = "translateY(-4px)";
+            e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.2)";
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (onClick) {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "";
+          }
+        }}
       >
         <div className="card-body">
           <h5 className="card-title">{title}</h5>
           <p className="card-text mb-0 text-danger">{value}</p>
+          {onClick && (
+            <small className="text-muted d-block mt-2">Click for details</small>
+          )}
         </div>
       </div>
     </div>
