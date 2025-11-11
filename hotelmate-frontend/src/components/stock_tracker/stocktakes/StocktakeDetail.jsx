@@ -23,6 +23,7 @@ import api from "@/services/api";
 import { StocktakeLines } from "./StocktakeLines";
 import { StocktakeCloseModal } from "./StocktakeCloseModal";
 import { useStocktakeRealtime } from "../hooks/useStocktakeRealtime";
+import { useCategoryTotals } from "../hooks/useCategoryTotals";
 // import { CategoryTotalsSummary } from './CategoryTotalsSummary'; // TODO: Enable when summary endpoint exists
 
 export const StocktakeDetail = () => {
@@ -37,6 +38,9 @@ export const StocktakeDetail = () => {
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [pusher, setPusher] = useState(null);
   const [pusherReady, setPusherReady] = useState(false);
+
+  // Fetch category totals for calculating grand total
+  const { categoryTotals } = useCategoryTotals(hotel_slug, id);
 
   // Initialize Pusher instance for real-time updates
   useEffect(() => {
@@ -131,9 +135,6 @@ export const StocktakeDetail = () => {
       const response = await api.get(
         `/stock_tracker/${hotel_slug}/stocktakes/${id}/`
       );
-      console.log("📊 Stocktake API Response:", response.data);
-      console.log("💰 total_counted_value:", response.data.total_counted_value);
-      console.log("💰 total_value:", response.data.total_value);
       setStocktake(response.data);
       setLines(response.data.lines || []);
       setError(null);
@@ -580,9 +581,20 @@ export const StocktakeDetail = () => {
             <div className="col-md-3">
               <strong>Total Stock Value:</strong>{" "}
               <Badge bg="success">
-                €{stocktake.total_counted_value 
-                  ? parseFloat(stocktake.total_counted_value).toFixed(2) 
-                  : "0.00"}
+                €{(() => {
+                  // Try to use backend field first (when it's available)
+                  if (stocktake.total_counted_value) {
+                    return Number(stocktake.total_counted_value).toFixed(2);
+                  }
+                  // Fallback: Calculate from category totals
+                  if (categoryTotals && Object.keys(categoryTotals).length > 0) {
+                    const total = Object.values(categoryTotals).reduce((sum, cat) => {
+                      return sum + parseFloat(cat.counted_value || 0);
+                    }, 0);
+                    return Number(total).toFixed(2);
+                  }
+                  return "0.00";
+                })()}
               </Badge>
             </div>
           </div>
