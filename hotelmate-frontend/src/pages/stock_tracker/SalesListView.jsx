@@ -1,16 +1,15 @@
 // src/pages/stock_tracker/SalesListView.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Table, Badge, Spinner, Alert, Button, Form } from 'react-bootstrap';
-import { FaArrowLeft, FaFilter, FaFileExport, FaLink, FaLockOpen } from 'react-icons/fa';
-import { getAllSales } from '@/services/stockAnalytics';
-import api from '@/services/api';
+import { Container, Row, Col, Card, Table, Badge, Spinner, Alert, Button, Form, Accordion } from 'react-bootstrap';
+import { FaArrowLeft, FaFilter, FaFileExport, FaLink, FaLockOpen, FaCalendarAlt, FaChevronDown } from 'react-icons/fa';
+import { getAllSales, groupSalesByMonth, calculateSalesTotals, formatCurrency, formatSaleDate } from '@/services/salesAnalytics';
 
 /**
  * SalesListView Component
  * 
- * Displays ALL individual sale records (independent + linked to periods)
- * Shows badges indicating if sales are linked to a period/stocktake or independent
+ * Displays ALL individual sale records grouped by MONTH (using real sale_date)
+ * NOT grouped by period - shows actual calendar months
  */
 const SalesListView = () => {
   const { hotel_slug } = useParams();
@@ -40,28 +39,92 @@ const SalesListView = () => {
       setLoading(true);
       setError(null);
 
+      console.log('\n📊 === SALES LIST VIEW - FETCHING DATA ===');
+      console.log('Hotel:', hotel_slug);
+      console.log('Selected Category:', selectedCategory);
+
       const filters = selectedCategory !== 'all' ? { category: selectedCategory } : {};
+      console.log('Filters:', filters);
+      console.log('Calling getAllSales...');
+
       const data = await getAllSales(hotel_slug, filters);
 
-      setSales(Array.isArray(data) ? data : data.results || []);
+      console.log('✅ API Response received:');
+      console.log('  Raw data type:', typeof data);
+      console.log('  Is array?', Array.isArray(data));
+      console.log('  Has results?', !!data?.results);
+      console.log('  Data:', data);
+
+      const salesArray = Array.isArray(data) ? data : data.results || [];
+      console.log('  Final sales array length:', salesArray.length);
+      
+      if (salesArray.length > 0) {
+        console.log('  First sale sample:', salesArray[0]);
+        console.log('  Total sales found:', salesArray.length);
+      } else {
+        console.warn('⚠️ No sales returned from API!');
+        console.warn('Expected: 17 sales from Sept 11, 2025');
+        console.warn('Check backend endpoint: /api/stock_tracker/' + hotel_slug + '/sales/');
+      }
+
+      setSales(salesArray);
     } catch (err) {
-      console.error('Error fetching sales:', err);
+      console.error('❌ Error fetching sales:', err);
+      console.error('Error details:', err.response?.data);
       setError(err.response?.data?.detail || 'Failed to fetch sales');
     } finally {
       setLoading(false);
     }
   };
 
-  // Calculate totals
-  const totals = sales.reduce((acc, sale) => ({
-    revenue: acc.revenue + parseFloat(sale.total_revenue || 0),
-    cost: acc.cost + parseFloat(sale.total_cost || 0),
-    profit: acc.profit + parseFloat(sale.gross_profit || 0),
-    quantity: acc.quantity + parseFloat(sale.quantity || 0)
-  }), { revenue: 0, cost: 0, profit: 0, quantity: 0 });
+  // Group sales by month using real sale_date
+  const salesByMonth = useMemo(() => {
+    const grouped = {};
+    
+    sales.forEach(sale => {
+      const saleDate = new Date(sale.sale_date);
+      const monthKey = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}`;
+      const monthLabel = saleDate.toLocaleDateString('en-IE', { year: 'numeric', month: 'long' });
+      
+      if (!grouped[monthKey]) {
+        grouped[monthKey] = {
+          monthKey,
+          monthLabel,
+          sales: [],
+          totals: {
+            revenue: 0,
+            cost: 0,
+            profit: 0,
+            quantity: 0,
+            count: 0
+          }
+        };
+      }
+      
+      grouped[monthKey].sales.push(sale);
+      grouped[monthKey].totals.revenue += parseFloat(sale.total_revenue || 0);
+      grouped[monthKey].totals.cost += parseFloat(sale.total_cost || 0);
+      grouped[monthKey].totals.profit += parseFloat(sale.gross_profit || (sale.total_revenue - sale.total_cost) || 0);
+      grouped[monthKey].totals.quantity += parseFloat(sale.quantity || 0);
+      grouped[monthKey].totals.count += 1;
+    });
+    
+    // Sort by month (most recent first)
+    return Object.values(grouped).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+  }, [sales]);
 
-  const averageGP = totals.revenue > 0 
-    ? ((totals.profit / totals.revenue) * 100).toFixed(2) 
+  // Calculate overall totals
+  const grandTotals = useMemo(() => {
+    return sales.reduce((acc, sale) => ({
+      revenue: acc.revenue + parseFloat(sale.total_revenue || 0),
+      cost: acc.cost + parseFloat(sale.total_cost || 0),
+      profit: acc.profit + parseFloat(sale.gross_profit || (sale.total_revenue - sale.total_cost) || 0),
+      quantity: acc.quantity + parseFloat(sale.quantity || 0)
+    }), { revenue: 0, cost: 0, profit: 0, quantity: 0 });
+  }, [sales]);
+
+  const averageGP = grandTotals.revenue > 0 
+    ? ((grandTotals.profit / grandTotals.revenue) * 100).toFixed(2) 
     : 0;
 
   const formatCurrency = (value) => {
@@ -113,12 +176,12 @@ const SalesListView = () => {
       <Row className="mb-4">
         <Col>
           <h2>
-            All Sales Transactions
-            <Badge bg="success" className="ms-3">All Records</Badge>
+            <FaCalendarAlt className="me-2" />
+            Sales by Month
+            <Badge bg="info" className="ms-3">{sales.length} Total Sales</Badge>
           </h2>
           <p className="text-muted">
-            <FaLockOpen className="me-2" />
-            Viewing all sales (independent + linked to periods)
+            Grouped by calendar month using real sale dates (not periods)
           </p>
         </Col>
       </Row>
@@ -165,14 +228,14 @@ const SalesListView = () => {
         </Alert>
       )}
 
-      {/* Summary Cards */}
+      {/* Grand Total Summary Cards */}
       {sales.length > 0 && (
         <Row className="mb-4">
           <Col md={3}>
             <Card className="border-primary">
               <Card.Body>
                 <small className="text-muted">Total Revenue</small>
-                <h4 className="mb-0 text-primary">{formatCurrency(totals.revenue)}</h4>
+                <h4 className="mb-0 text-primary">{formatCurrency(grandTotals.revenue)}</h4>
               </Card.Body>
             </Card>
           </Col>
@@ -180,7 +243,7 @@ const SalesListView = () => {
             <Card className="border-danger">
               <Card.Body>
                 <small className="text-muted">Total Cost</small>
-                <h4 className="mb-0 text-danger">{formatCurrency(totals.cost)}</h4>
+                <h4 className="mb-0 text-danger">{formatCurrency(grandTotals.cost)}</h4>
               </Card.Body>
             </Card>
           </Col>
@@ -188,7 +251,7 @@ const SalesListView = () => {
             <Card className="border-success">
               <Card.Body>
                 <small className="text-muted">Gross Profit</small>
-                <h4 className="mb-0 text-success">{formatCurrency(totals.profit)}</h4>
+                <h4 className="mb-0 text-success">{formatCurrency(grandTotals.profit)}</h4>
                 <Badge bg="success">{averageGP}% GP</Badge>
               </Card.Body>
             </Card>
@@ -197,7 +260,7 @@ const SalesListView = () => {
             <Card className="border-info">
               <Card.Body>
                 <small className="text-muted">Items Sold</small>
-                <h4 className="mb-0 text-info">{totals.quantity.toFixed(0)}</h4>
+                <h4 className="mb-0 text-info">{grandTotals.quantity.toFixed(0)}</h4>
                 <small className="text-muted">{sales.length} transactions</small>
               </Card.Body>
             </Card>
@@ -205,132 +268,152 @@ const SalesListView = () => {
         </Row>
       )}
 
-      {/* Sales Table */}
-      <Card>
-        <Card.Header className="bg-light d-flex justify-content-between align-items-center">
-          <h5 className="mb-0">
-            Sales Transactions
-            {sales.length > 0 && (
-              <Badge bg="secondary" className="ms-2">{sales.length} records</Badge>
-            )}
-          </h5>
-          {sales.length > 0 && (
-            <Button variant="outline-success" size="sm">
-              <FaFileExport className="me-2" />
-              Export CSV
+      {/* Sales Grouped by Month */}
+      {sales.length === 0 ? (
+        <Card>
+          <Card.Body className="text-center p-5">
+            <p className="text-muted mb-3">No sales records found</p>
+            <Button 
+              variant="primary" 
+              onClick={() => navigate(`/stock_tracker/${hotel_slug}/sales/entry`)}
+            >
+              Enter Sales Records
             </Button>
-          )}
-        </Card.Header>
-        <Card.Body className="p-0">
-          {loading ? (
-            <div className="text-center p-5">
-              <Spinner animation="border" variant="primary" />
-              <p className="mt-2 text-muted">Loading sales...</p>
-            </div>
-          ) : sales.length === 0 ? (
-            <div className="text-center p-5">
-              <p className="text-muted mb-0">No sales records found for selected filters</p>
-              <Button 
-                variant="link" 
-                onClick={() => navigate(`/stock_tracker/${hotel_slug}/sales/entry`)}
-              >
-                Enter Sales Records
-              </Button>
-            </div>
-          ) : (
-            <Table responsive hover className="mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th>Date</th>
-                  <th>Status</th>
-                  <th>Item</th>
-                  <th>Category</th>
-                  <th className="text-end">Qty</th>
-                  <th className="text-end">Unit Price</th>
-                  <th className="text-end">Unit Cost</th>
-                  <th className="text-end">Revenue</th>
-                  <th className="text-end">Cost</th>
-                  <th className="text-end">Profit</th>
-                  <th className="text-end">GP%</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sales.map(sale => (
-                  <tr key={sale.id}>
-                    <td>{formatDate(sale.sale_date)}</td>
-                    <td>
-                      {sale.stocktake_period_name ? (
-                        <Badge bg="primary" className="d-flex align-items-center gap-1">
-                          <FaLink size={10} />
-                          {sale.stocktake_period_name}
-                        </Badge>
-                      ) : (
-                        <Badge bg="secondary" className="d-flex align-items-center gap-1">
-                          <FaLockOpen size={10} />
-                          Independent
-                        </Badge>
-                      )}
-                    </td>
-                    <td>
-                      <strong>{sale.item_name}</strong>
-                      <br />
-                      <small className="text-muted">{sale.item_sku}</small>
-                    </td>
-                    <td>
-                      <Badge 
-                        bg="light" 
-                        text="dark"
-                        style={{ 
-                          borderLeft: `3px solid ${categories[sale.category_code]?.color || '#ccc'}`
-                        }}
-                      >
-                        {sale.category_name || sale.category_code}
-                      </Badge>
-                    </td>
-                    <td className="text-end">{parseFloat(sale.quantity).toFixed(0)}</td>
-                    <td className="text-end">{formatCurrency(sale.unit_price)}</td>
-                    <td className="text-end text-muted">{formatCurrency(sale.unit_cost)}</td>
-                    <td className="text-end">
-                      <strong>{formatCurrency(sale.total_revenue)}</strong>
-                    </td>
-                    <td className="text-end text-muted">
-                      {formatCurrency(sale.total_cost)}
-                    </td>
-                    <td className="text-end text-success">
-                      <strong>{formatCurrency(sale.gross_profit)}</strong>
-                    </td>
-                    <td className="text-end">
-                      <Badge bg="success">
-                        {parseFloat(sale.gross_profit_percentage || 0).toFixed(1)}%
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot className="table-secondary">
-                <tr>
-                  <th colSpan="4">TOTALS</th>
-                  <th className="text-end">{totals.quantity.toFixed(0)}</th>
-                  <th colSpan="2"></th>
-                  <th className="text-end">
-                    <strong>{formatCurrency(totals.revenue)}</strong>
-                  </th>
-                  <th className="text-end">{formatCurrency(totals.cost)}</th>
-                  <th className="text-end text-success">
-                    <strong>{formatCurrency(totals.profit)}</strong>
-                  </th>
-                  <th className="text-end">
-                    <Badge bg="success">{averageGP}%</Badge>
-                  </th>
-                </tr>
-              </tfoot>
-            </Table>
-          )}
-        </Card.Body>
-      </Card>
+          </Card.Body>
+        </Card>
+      ) : (
+        <Accordion defaultActiveKey="0">
+          {salesByMonth.map((monthData, idx) => {
+            const monthGP = monthData.totals.revenue > 0 
+              ? ((monthData.totals.profit / monthData.totals.revenue) * 100).toFixed(2)
+              : 0;
+
+            return (
+              <Accordion.Item eventKey={String(idx)} key={monthData.monthKey}>
+                <Accordion.Header>
+                  <div className="w-100 d-flex justify-content-between align-items-center pe-3">
+                    <div>
+                      <FaCalendarAlt className="me-2" />
+                      <strong>{monthData.monthLabel}</strong>
+                      <Badge bg="secondary" className="ms-2">{monthData.totals.count} sales</Badge>
+                    </div>
+                    <div className="d-flex gap-3">
+                      <span className="text-primary">
+                        <strong>Revenue:</strong> {formatCurrency(monthData.totals.revenue)}
+                      </span>
+                      <span className="text-success">
+                        <strong>Profit:</strong> {formatCurrency(monthData.totals.profit)}
+                      </span>
+                      <Badge bg="success">{monthGP}% GP</Badge>
+                    </div>
+                  </div>
+                </Accordion.Header>
+                <Accordion.Body className="p-0">
+                  <Table responsive hover className="mb-0">
+                    <thead className="table-light">
+                      <tr>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Item</th>
+                        <th>Category</th>
+                        <th className="text-end">Qty</th>
+                        <th className="text-end">Unit Price</th>
+                        <th className="text-end">Unit Cost</th>
+                        <th className="text-end">Revenue</th>
+                        <th className="text-end">Cost</th>
+                        <th className="text-end">Profit</th>
+                        <th className="text-end">GP%</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {monthData.sales.map(sale => {
+                        const saleGP = sale.gross_profit_percentage || 
+                          (sale.total_revenue > 0 
+                            ? ((parseFloat(sale.gross_profit || 0) / parseFloat(sale.total_revenue)) * 100).toFixed(1)
+                            : 0);
+                        
+                        return (
+                          <tr key={sale.id}>
+                            <td>
+                              <strong>{formatDate(sale.sale_date)}</strong>
+                            </td>
+                            <td>
+                              {sale.stocktake_period_name ? (
+                                <Badge bg="primary" className="d-flex align-items-center gap-1" style={{ width: 'fit-content' }}>
+                                  <FaLink size={10} />
+                                  {sale.stocktake_period_name}
+                                </Badge>
+                              ) : (
+                                <Badge bg="secondary" className="d-flex align-items-center gap-1" style={{ width: 'fit-content' }}>
+                                  <FaLockOpen size={10} />
+                                  Independent
+                                </Badge>
+                              )}
+                            </td>
+                            <td>
+                              <strong>{sale.item_name || sale.item?.name}</strong>
+                              <br />
+                              <small className="text-muted">{sale.item_sku || sale.item?.sku}</small>
+                            </td>
+                            <td>
+                              <Badge 
+                                bg="light" 
+                                text="dark"
+                                style={{ 
+                                  borderLeft: `3px solid ${categories[sale.category_code || sale.item?.category?.code]?.color || '#ccc'}`
+                                }}
+                              >
+                                {sale.category_name || sale.item?.category?.name || sale.category_code}
+                              </Badge>
+                            </td>
+                            <td className="text-end">{parseFloat(sale.quantity).toFixed(0)}</td>
+                            <td className="text-end">{formatCurrency(sale.unit_price)}</td>
+                            <td className="text-end text-muted">{formatCurrency(sale.unit_cost)}</td>
+                            <td className="text-end">
+                              <strong>{formatCurrency(sale.total_revenue)}</strong>
+                            </td>
+                            <td className="text-end text-muted">
+                              {formatCurrency(sale.total_cost)}
+                            </td>
+                            <td className="text-end text-success">
+                              <strong>{formatCurrency(sale.gross_profit || (sale.total_revenue - sale.total_cost))}</strong>
+                            </td>
+                            <td className="text-end">
+                              <Badge bg="success">
+                                {saleGP}%
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="table-secondary">
+                      <tr>
+                        <th colSpan="4">MONTH TOTALS</th>
+                        <th className="text-end">{monthData.totals.quantity.toFixed(0)}</th>
+                        <th colSpan="2"></th>
+                        <th className="text-end">
+                          <strong>{formatCurrency(monthData.totals.revenue)}</strong>
+                        </th>
+                        <th className="text-end">{formatCurrency(monthData.totals.cost)}</th>
+                        <th className="text-end text-success">
+                          <strong>{formatCurrency(monthData.totals.profit)}</strong>
+                        </th>
+                        <th className="text-end">
+                          <Badge bg="success">{monthGP}%</Badge>
+                        </th>
+                      </tr>
+                    </tfoot>
+                  </Table>
+                </Accordion.Body>
+              </Accordion.Item>
+            );
+          })}
+        </Accordion>
+      )}
 
       {/* Info Note */}
-      <Alert variant="info" className="mt-3">
+      <Alert variant="info" className="mt-4">
         <strong>ℹ️ About Sales Records:</strong>
         <ul className="mb-0 mt-2">
           <li><Badge bg="primary">Linked</Badge> sales are associated with a specific period/stocktake</li>

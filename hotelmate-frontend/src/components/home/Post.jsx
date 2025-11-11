@@ -202,7 +202,7 @@ export default function Post({ post, onPostUpdated }) {
             onClick={handleLike}
             disabled={isLiking}
           >
-            <span className="btn-icon">❤️</span>
+           
             <span>{liked ? "Liked" : "Like"}</span>
             <span className="btn-count">{likeCount}</span>
           </button>

@@ -5,7 +5,7 @@ import { FaChartPie, FaCocktail, FaBoxes } from 'react-icons/fa';
 import UniversalChart from '../charts/UniversalChart';
 import ChartErrorBoundary from '../charts/ChartErrorBoundary';
 import ChartEmptyState from '../charts/ChartEmptyState';
-import { getSalesAnalysis, formatCurrency } from '@/services/stockAnalytics';
+import { getSalesAnalysis, formatCurrency } from '@/services/salesAnalytics';
 
 /**
  * CategoryBreakdownChartWithCocktails
@@ -54,8 +54,50 @@ const CategoryBreakdownChartWithCocktails = ({
       const transformedData = transformToChartData(data.category_breakdown || []);
       setChartData(transformedData);
       setCategoryDetails(data.category_breakdown || []);
+      
+      // === TOP ANALYTICS LOGGING - SALES BY CATEGORY (NOT STOCKTAKE) ===
+      console.log('\n' + '='.repeat(80));
+      console.log('📊 TOP ANALYTICS: SALES BY CATEGORY (SEPARATE FROM STOCKTAKE)');
+      console.log('='.repeat(80));
+      console.log('🏨 Hotel:', hotelSlug);
+      console.log('📅 Period ID:', periodId);
+      console.log('🍹 Cocktails Included:', showCocktails);
+      console.log('⚠️  NOTE: This shows SALES breakdown, not stocktake inventory');
+      
+      if (data.category_breakdown && data.category_breakdown.length > 0) {
+        console.log('\n📦 Category Sales Breakdown:');
+        
+        let totalRevenue = 0;
+        data.category_breakdown.forEach(cat => {
+          totalRevenue += cat.revenue || 0;
+        });
+        
+        data.category_breakdown.forEach(cat => {
+          const percentOfTotal = totalRevenue > 0 ? ((cat.revenue / totalRevenue) * 100).toFixed(1) : 0;
+          console.log(`\n  ${cat.category_code === 'COCKTAILS' ? '🍹' : '📦'} ${cat.category_code} - ${cat.category_name}:`);
+          console.log(`    Revenue: €${cat.revenue?.toFixed(2)} (${percentOfTotal}% of total)`);
+          console.log(`    Cost: €${cat.cost?.toFixed(2)}`);
+          console.log(`    Profit: €${cat.profit?.toFixed(2)}`);
+          console.log(`    GP%: ${cat.gp_percentage?.toFixed(2)}%`);
+          console.log(`    Count: ${cat.count} items sold`);
+        });
+        
+        console.log('\n💰 Total Revenue Across All Categories: €' + totalRevenue.toFixed(2));
+      } else {
+        console.warn('⚠️ No category breakdown data available');
+        console.warn('Possible reasons:');
+        console.warn('  1. No sales recorded for this period');
+        console.warn('  2. Sales analysis endpoint may not be returning category_breakdown');
+        console.warn('  3. Period may not have completed stocktake');
+        console.log('Full response data:', data);
+      }
+      
+      console.log('\n' + '='.repeat(80));
+      console.log('END SALES CATEGORY BREAKDOWN (SEPARATE FROM STOCKTAKE)');
+      console.log('='.repeat(80) + '\n');
+      
     } catch (err) {
-      console.error('Failed to fetch category breakdown:', err);
+      console.error('❌ Failed to fetch category breakdown:', err);
       setError(err.message || 'Failed to load category breakdown');
     } finally {
       setLoading(false);

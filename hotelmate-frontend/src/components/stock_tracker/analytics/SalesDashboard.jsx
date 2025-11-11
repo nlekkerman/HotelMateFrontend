@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Badge, Spinner, Alert, Form, Table } from 'react-bootstrap';
 import { FaCocktail, FaBoxes, FaChartPie } from 'react-icons/fa';
-import { getSalesAnalysis } from '@/services/stockAnalytics';
+import { getSalesAnalysis } from '@/services/salesAnalytics';
 
 /**
  * SalesDashboard Component
@@ -28,13 +28,169 @@ const SalesDashboard = ({ hotelSlug, periodId, height = 400 }) => {
     try {
       setLoading(true);
       setError(null);
+      
+      console.log('🌐 Fetching Sales Analysis (Standalone Sales by Date)...');
+      console.log('  Hotel:', hotelSlug);
+      console.log('  Period ID:', periodId);
+      console.log('  Include Cocktails:', includeCocktails);
+      console.log('  Primary URL:', `stock_tracker/${hotelSlug}/periods/${periodId}/sales-analysis/`);
+      console.log('  Fallback URL (if needed):', `stock_tracker/${hotelSlug}/sales/?start_date=X&end_date=Y`);
+      console.log('  Note: Backend has working date filter - ensure sales-analysis uses it');
+      
       const data = await getSalesAnalysis(hotelSlug, periodId, {
         includeCocktails,
         includeCategoryBreakdown: true
       });
       setSalesData(data);
+      
+      // === TOP ANALYTICS LOGGING - SALES ONLY (NOT STOCKTAKE) ===
+      console.log('\n' + '='.repeat(80));
+      console.log('💰 TOP ANALYTICS: SALES DASHBOARD (SEPARATE FROM STOCKTAKE)');
+      console.log('='.repeat(80));
+      console.log('📅 Period:', data.period_name);
+      console.log('📆 Date Range:', data.period_start, 'to', data.period_end);
+      console.log('🔒 Status:', data.period_is_closed ? 'CLOSED' : 'OPEN');
+      console.log('⚠️  NOTE: Sales are tracked separately from stocktake inventory');
+      
+      // Log raw data for debugging
+      console.log('\n🔍 RAW API RESPONSE:');
+      console.log('Full data object:', JSON.stringify(data, null, 2));
+      
+      // Check for data inconsistencies
+      console.log('\n🔎 DATA VALIDATION:');
+      console.log('  - Has general_sales?', !!data.general_sales);
+      console.log('  - Has cocktail_sales?', !!data.cocktail_sales);
+      console.log('  - Has combined_sales?', !!data.combined_sales);
+      console.log('  - Has category_breakdown?', !!data.category_breakdown);
+      console.log('  - Category breakdown length:', data.category_breakdown?.length || 0);
+      console.log('  - Period is closed?', data.period_is_closed);
+      
+      console.log('\n💰 === GENERAL SALES (Stock Items) ===');
+      if (data.general_sales) {
+        console.log('  Revenue:', '€' + data.general_sales.revenue?.toFixed(2));
+        console.log('  Cost:', '€' + data.general_sales.cost?.toFixed(2));
+        console.log('  Profit:', '€' + data.general_sales.profit?.toFixed(2));
+        console.log('  GP%:', data.general_sales.gp_percentage?.toFixed(2) + '%');
+        console.log('  Count:', data.general_sales.count, 'items sold');
+      }
+      
+      if (includeCocktails && data.cocktail_sales) {
+        console.log('\n🍹 === COCKTAIL SALES ===');
+        console.log('  Revenue:', '€' + data.cocktail_sales.revenue?.toFixed(2));
+        console.log('  Cost:', '€' + data.cocktail_sales.cost?.toFixed(2));
+        console.log('  Profit:', '€' + data.cocktail_sales.profit?.toFixed(2));
+        console.log('  GP%:', data.cocktail_sales.gp_percentage?.toFixed(2) + '%');
+        console.log('  Count:', data.cocktail_sales.count, 'cocktails sold');
+      }
+      
+      if (data.combined_sales) {
+        console.log('\n📊 === COMBINED TOTALS (Stock + Cocktails) ===');
+        console.log('  Total Revenue:', '€' + data.combined_sales.total_revenue?.toFixed(2));
+        console.log('  Total Cost:', '€' + data.combined_sales.total_cost?.toFixed(2));
+        console.log('  Total Profit:', '€' + data.combined_sales.profit?.toFixed(2));
+        console.log('  Combined GP%:', data.combined_sales.gp_percentage?.toFixed(2) + '%');
+        console.log('  Total Items Sold:', data.combined_sales.total_count);
+        
+        // Warning for no sales data
+        if (data.combined_sales.total_revenue === 0 && data.combined_sales.total_count === 0) {
+          console.warn('\n⚠️ WARNING: No sales data found for this period!');
+          console.warn('');
+          console.warn('🔍 DIAGNOSTIC INFORMATION:');
+          console.warn(`  Period: ${data.period_name} (ID: ${data.period_id})`);
+          console.warn(`  Date Range: ${data.period_start} to ${data.period_end}`);
+          console.warn(`  Period Status: ${data.period_is_closed ? 'CLOSED' : 'OPEN'}`);
+          console.warn('');
+          console.warn('💡 POSSIBLE REASONS:');
+          console.warn('  1. No sales exist within this period\'s date range');
+          console.warn('  2. Sales exist but have dates outside the period range');
+          console.warn('  3. Backend sales-analysis endpoint is not querying by date correctly');
+          console.warn('  4. Backend might be filtering by stocktake instead of date range');
+          console.warn('  5. Sale dates might be in different format/timezone');
+          console.warn('');
+          console.warn('🔧 TROUBLESHOOTING STEPS:');
+          console.warn('  1. Check Django Admin: Do sales from Sept 11, 2025 fall within period dates?');
+          console.warn('  2. Check backend logs for SQL queries from sales-analysis endpoint');
+          console.warn('  3. Verify backend is using date range filtering (NOT stocktake relationship)');
+          console.warn('  4. Check if sale_date field matches period start/end dates');
+          console.warn('  5. Ensure backend uses: sale_date__gte AND sale_date__lte');
+          console.warn('');
+          console.warn('📊 REQUIRED BACKEND IMPLEMENTATION (Sales are standalone):');
+          console.warn('');
+          console.warn('  Backend sales-analysis endpoint MUST query by date range:');
+          console.warn(`  Sale.objects.filter(`);
+          console.warn(`    sale_date__gte='${data.period_start}',`);
+          console.warn(`    sale_date__lte='${data.period_end}'`);
+          console.warn(`  ).aggregate(`);
+          console.warn(`    revenue=Sum('total_revenue'),`);
+          console.warn(`    cost=Sum('total_cost'),`);
+          console.warn(`    count=Count('id')`);
+          console.warn(`  )`);
+          console.warn('');
+          console.warn('🔧 BACKEND FIX NEEDED:');
+          console.warn('  The sales-analysis endpoint is returning zeros because:');
+          console.warn('  ❌ It may be querying by stocktake (which has NO linked sales)');
+          console.warn('  ✅ It needs to query by DATE RANGE instead');
+          console.warn('');
+          console.warn('📊 KNOWN DATA FROM BACKEND CHECK:');
+          console.warn('  - Database has 17 standalone sales on Sept 11, 2025');
+          console.warn('  - Total Revenue: €67,308.75');
+          console.warn('  - Total Cost: €23,510.05');
+          console.warn('  - Gross Profit: €43,798.70 (GP: 65.07%)');
+          console.warn(`  - Sept 11 IS within this period (${data.period_start} to ${data.period_end})`);
+          console.warn('  - These sales are NOT linked to any stocktake');
+          console.warn('  - Backend script confirms: "No sales linked to stocktake periods"');
+          console.warn('');
+          console.warn('📝 BACKEND DEVELOPER ACTION REQUIRED:');
+          console.warn(`  Fix /stock_tracker/<hotel_identifier>/periods/${data.period_id}/sales-analysis/ endpoint:`);
+          console.warn('');
+          console.warn('  ISSUE: Endpoint exists but returns zeros');
+          console.warn('  REASON: Likely filtering by stocktake instead of date range');
+          console.warn('');
+          console.warn('  ✅ GOOD NEWS: SaleViewSet already has date filtering working!');
+          console.warn(`     GET /api/stock_tracker/<hotel_identifier>/sales/?start_date=${data.period_start}&end_date=${data.period_end}`);
+          console.warn('     Returns: Filtered sales by sale_date__gte and sale_date__lte');
+          console.warn('');
+          console.warn('  🔧 FIX: Update sales-analysis endpoint to use the SAME logic:');
+          console.warn(`     period = StockPeriod.objects.get(id=${data.period_id})`);
+          console.warn(`     sales = Sale.objects.filter(`);
+          console.warn(`       sale_date__gte=period.start_date,  # ${data.period_start}`);
+          console.warn(`       sale_date__lte=period.end_date     # ${data.period_end}`);
+          console.warn(`     )`);
+          console.warn('');
+          console.warn('  📊 Expected Result for this period:');
+          console.warn('     - 17 sales from Sept 11, 2025');
+          console.warn('     - Total Revenue: €67,308.75');
+          console.warn('     - Total Cost: €23,510.05');
+          console.warn('     - GP: 65.07%');
+          console.warn('');
+          console.warn('  💡 REFERENCE: Check SaleViewSet.get_queryset() for working implementation');
+        }
+      }
+      
+      if (data.breakdown_percentages) {
+        console.log('\n📈 === BREAKDOWN PERCENTAGES ===');
+        console.log('  Stock Revenue %:', (data.breakdown_percentages.stock_revenue_percentage ?? 0).toFixed(2) + '%');
+        console.log('  Cocktail Revenue %:', (data.breakdown_percentages.cocktail_revenue_percentage ?? 0).toFixed(2) + '%');
+        console.log('  Stock Cost %:', (data.breakdown_percentages.stock_cost_percentage ?? 0).toFixed(2) + '%');
+        console.log('  Cocktail Cost %:', (data.breakdown_percentages.cocktail_cost_percentage ?? 0).toFixed(2) + '%');
+      }
+      
+      if (data.category_breakdown && data.category_breakdown.length > 0) {
+        console.log('\n📦 === CATEGORY BREAKDOWN ===');
+        data.category_breakdown.forEach(category => {
+          console.log(`  ${category.category_code} - ${category.category_name}:`);
+          console.log(`    Revenue: €${category.revenue?.toFixed(2)}, Cost: €${category.cost?.toFixed(2)}`);
+          console.log(`    Profit: €${category.profit?.toFixed(2)}, GP: ${category.gp_percentage?.toFixed(2)}%`);
+          console.log(`    Count: ${category.count} items`);
+        });
+      }
+      
+      console.log('\n' + '='.repeat(80));
+      console.log('END SALES DASHBOARD ANALYTICS (SEPARATE FROM STOCKTAKE)');
+      console.log('='.repeat(80) + '\n');
+      
     } catch (err) {
-      console.error('Failed to fetch sales analysis:', err);
+      console.error('❌ Failed to fetch sales analysis:', err);
       setError(err.response?.data?.detail || 'Failed to fetch sales analysis');
     } finally {
       setLoading(false);
@@ -89,8 +245,9 @@ const SalesDashboard = ({ hotelSlug, periodId, height = 400 }) => {
                 Sales Analysis - {salesData.period_name}
               </h4>
               <p className="text-muted mb-0 small">
-                Period: {new Date(salesData.period_start).toLocaleDateString()} - {new Date(salesData.period_end).toLocaleDateString()}
-                {salesData.period_is_closed && <Badge bg="success" className="ms-2">Closed</Badge>}
+                <strong>Sales Date Range:</strong> {new Date(salesData.period_start).toLocaleDateString()} - {new Date(salesData.period_end).toLocaleDateString()}
+                <Badge bg="info" className="ms-2">DATE-BASED FILTER</Badge>
+                {salesData.period_is_closed && <Badge bg="success" className="ms-2">Period Closed</Badge>}
               </p>
             </Col>
             <Col md={4} className="text-end">

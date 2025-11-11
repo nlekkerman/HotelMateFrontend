@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Form, Alert, Spinner, Badge } from 'react-bootstrap';
 import { FaPlus, FaTrash, FaSave, FaUndo } from 'react-icons/fa';
-import { bulkCreateSales } from '@/services/stockAnalytics';
+import { bulkCreateSales } from '@/services/salesAnalytics';
 import api from '@/services/api';
 
 /**

@@ -83,15 +83,68 @@ const KPISummaryCards = ({
       const response = await getKPISummary(hotelSlug, { periodIds, includeCocktails });
       const data = response.data;
 
-      console.log('=== KPI BACKEND RESPONSE ===');
+      console.log('\n' + '='.repeat(80));
+      console.log('🎯 TOP ANALYTICS - SEPARATED BY TYPE');
+      console.log('='.repeat(80));
+      
+      // === STOCKTAKE ANALYTICS (INVENTORY) ===
+      console.log('\n📦 === STOCKTAKE ANALYTICS (INVENTORY TRACKING) === 📦');
       console.log('Stock Value Metrics:', data.stock_value_metrics);
       console.log('Period Values (as received):', data.stock_value_metrics?.period_values);
-      console.log('Profitability Metrics:', data.profitability_metrics);
-      console.log('Category Performance:', data.category_performance);
       console.log('Inventory Health:', data.inventory_health);
-      console.log('Period Comparison:', data.period_comparison);
-      console.log('Performance Score:', data.performance_score);
-      console.log('===========================');
+      console.log('  - Low Stock:', data.inventory_health?.low_stock_count);
+      console.log('  - Out of Stock:', data.inventory_health?.out_of_stock_count);
+      console.log('  - Overstocked:', data.inventory_health?.overstocked_count);
+      console.log('  - Dead Stock:', data.inventory_health?.dead_stock_count);
+      
+      // === SALES ANALYTICS (SEPARATE FROM STOCKTAKE) ===
+      console.log('\n� === SALES ANALYTICS (SEPARATE FROM STOCKTAKE) === �');
+      
+      // General Sales Analytics (Stock Items)
+      if (data.profitability_metrics) {
+        console.log('📈 General Sales Metrics:');
+        console.log('  - Average GP%:', data.profitability_metrics.average_gp_percentage?.toFixed(2) + '%');
+        console.log('  - Average Pour Cost:', data.profitability_metrics.avg_pour_cost?.toFixed(2) + '%');
+        console.log('  - GP Trend:', data.profitability_metrics.gp_trend);
+        console.log('  - Highest GP Period:', data.profitability_metrics.highest_gp_period);
+        console.log('  - Lowest GP Period:', data.profitability_metrics.lowest_gp_period);
+      }
+      
+      // Category-wise Sales Breakdown
+      if (data.category_performance) {
+        console.log('\n📦 Category Sales Performance:');
+        console.log('  - Top Category:', data.category_performance.top_by_value);
+        console.log('  - Distribution:', data.category_performance.distribution);
+        if (data.category_performance.distribution) {
+          data.category_performance.distribution.forEach(cat => {
+            console.log(`    • ${cat.category_name}: €${cat.total_value?.toFixed(2)} (${cat.percentage_of_total?.toFixed(1)}%)`);
+          });
+        }
+      }
+      
+      // === COCKTAILS ANALYTICS (SEPARATE FROM SALES & STOCKTAKE) ===
+      if (includeCocktails && data.cocktail_sales_metrics) {
+        console.log('\n🍹 === COCKTAILS ANALYTICS (SEPARATE FROM SALES & STOCKTAKE) === 🍹');
+        console.log('  - Total Revenue:', '€' + data.cocktail_sales_metrics.total_revenue?.toFixed(2));
+        console.log('  - Total Cost:', '€' + data.cocktail_sales_metrics.total_cost?.toFixed(2));
+        console.log('  - Total Profit:', '€' + data.cocktail_sales_metrics.total_profit?.toFixed(2));
+        console.log('  - GP Percentage:', data.cocktail_sales_metrics.gp_percentage?.toFixed(2) + '%');
+        console.log('  - Total Cocktails Sold:', data.cocktail_sales_metrics.count);
+        console.log('  - Average Price per Cocktail:', '€' + data.cocktail_sales_metrics.avg_price_per_cocktail?.toFixed(2));
+      } else if (!includeCocktails) {
+        console.log('\n🍹 Cocktails Analytics: DISABLED (toggle to enable)');
+      }
+      
+      // Period Comparison Sales
+      if (data.period_comparison && data.period_comparison.top_movers_count > 0) {
+        console.log('\n📊 Period-to-Period Sales Comparison:');
+        console.log('  - Total Movers Count:', data.period_comparison.total_movers_count);
+        console.log('  - Variance Summary:', data.period_comparison.variance_summary);
+      }
+      
+      console.log('\n' + '='.repeat(80));
+      console.log('END OF SEPARATED ANALYTICS (STOCKTAKE | SALES | COCKTAILS)');
+      console.log('='.repeat(80) + '\n');
 
       // Sort period_values by date to ensure chronological order
       const sortedPeriods = data.stock_value_metrics?.period_values 

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Badge, Spinner, Alert, Button, Table } from 'react-bootstrap';
 import { FaArrowLeft, FaCalendarAlt, FaBoxes, FaShoppingCart, FaCocktail, FaChartPie } from 'react-icons/fa';
 import api from '@/services/api';
-import { getSalesAnalysis } from '@/services/stockAnalytics';
+import { getSalesAnalysis } from '@/services/salesAnalytics';
 import SalesDashboard from '@/components/stock_tracker/analytics/SalesDashboard';
 import CategoryBreakdownChartWithCocktails from '@/components/stock_tracker/analytics/CategoryBreakdownChartWithCocktails';
 
@@ -206,8 +206,9 @@ export default function SalesReport() {
             </Col>
             <Col md={8}>
               <div className="text-muted small">
-                Displaying closing stock value for <strong>{selectedPeriod?.period_name}</strong>
-                {' '}({new Date(selectedPeriod?.end_date).toLocaleDateString()})
+                Displaying sales for date range: <strong>{new Date(selectedPeriod?.start_date).toLocaleDateString()}</strong>
+                {' '} to <strong>{new Date(selectedPeriod?.end_date).toLocaleDateString()}</strong>
+                <Badge bg="info" className="ms-2">DATE-BASED</Badge>
               </div>
             </Col>
           </Row>
