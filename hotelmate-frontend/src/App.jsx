@@ -26,6 +26,7 @@ import LogoBanner from "./components/layout/LogoBanner";
 import PusherDebugger from "@/components/utils/PusherDebugger";
 import MessengerWidget from "@/staff_chat/components/MessengerWidget";
 import PusherProvider from "@/staff_chat/context/PusherProvider";
+import GlobalQuickNotifications from "@/staff_chat/components/GlobalQuickNotifications";
 
 // Pages + Components
 import Home from "@/pages/home/Home";
@@ -382,6 +383,11 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
       {/* Messenger Widget */}
       {showFloatingButton && (
         <MessengerWidget position="bottom-right" />
+      )}
+
+      {/* Global Quick Notifications - Always visible when logged in */}
+      {user && !isClockInPage && !isAuthPage && !isGuestPage && (
+        <GlobalQuickNotifications />
       )}
     </>
   );
