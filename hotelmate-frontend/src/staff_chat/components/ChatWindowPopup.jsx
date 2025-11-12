@@ -152,8 +152,9 @@ const ChatWindowPopup = ({
     staffId: currentUserId,
     onNewMessage: (data) => {
       console.log('📨 Real-time new message:', data);
-      if (data.message) {
-        addPaginatedMessage(data.message);
+      // The data object IS the message
+      if (data && data.id) {
+        addPaginatedMessage(data);
         scrollToBottom();
       }
     },

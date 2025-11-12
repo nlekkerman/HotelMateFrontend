@@ -68,7 +68,7 @@ async function bootstrap() {
           );
           new Notification(payload.notification.title, {
             body: payload.notification.body,
-            icon: "/favicon.ico",
+            icon: "/favicon.svg",
             tag: payload?.data?.conversation_id || payload?.data?.order_id || Date.now().toString(),
             data: payload.data
           });
@@ -80,7 +80,7 @@ async function bootstrap() {
           );
           new Notification(payload.notification.title, {
             body: payload.notification.body,
-            icon: "/favicon.ico",
+            icon: "/favicon.svg",
           });
         } else {
           console.log(
