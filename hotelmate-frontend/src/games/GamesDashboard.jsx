@@ -2,11 +2,13 @@
 
 import React from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTheme } from "@/context/ThemeContext";
 import smiley from "@/games/whack-a-mole/assets/images/smiley.png";
 
 export default function GamesDashboard() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { mainColor } = useTheme();
   const hotelParam = searchParams.get('hotel');
 
   const handleNavigate = (path) => {
@@ -22,6 +24,41 @@ export default function GamesDashboard() {
   return (
     <div className="container mt-5">
       <h2 className="mb-4 text-center">Games Dashboard</h2>
+
+      {/* Mobile Quick Actions - Same style as desktop */}
+      <div 
+        className="d-lg-none position-fixed start-0 end-0"
+        style={{
+          top: "60px",
+          zIndex: 1045,
+          background: "transparent",
+        }}
+      >
+        <div className="container-fluid">
+          <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-2 flex-wrap">
+            <button className="contextual-action-btn" onClick={() => handleNavigate('/games')} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-controller" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Dashboard</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => handleNavigate('/games/memory-match')} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-grid-3x3-gap" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Memory Match</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => handleNavigate('/games/whack-a-mole')} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-joystick" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Whack-a-Mole</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => handleNavigate('/games/memory-match/leaderboard')} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-trophy-fill" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Leaderboard</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => handleNavigate('/games/memory-match/tournaments')} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-award" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Tournaments</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div className="row g-4 justify-content-center">
         {/* Settings Card */}

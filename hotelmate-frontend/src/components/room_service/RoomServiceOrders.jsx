@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
@@ -7,6 +8,7 @@ import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationCo
 
 export default function RoomServiceOrders() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const hotelSlug = user?.hotel_slug;
   const { refreshAll: refreshCount } = useOrderCount(hotelSlug);
   const { hasNewRoomService, markRoomServiceRead } = useRoomServiceNotifications();
@@ -109,6 +111,37 @@ export default function RoomServiceOrders() {
 
   return (
     <div className="container my-4">
+      {/* Mobile Quick Actions - Same style as desktop */}
+      <div 
+        className="d-lg-none position-fixed start-0 end-0"
+        style={{
+          top: "60px",
+          zIndex: 1045,
+          background: "transparent",
+        }}
+      >
+        <div className="container-fluid">
+          <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-2 flex-wrap">
+            <button className="contextual-action-btn" onClick={() => navigate(`/room_services/${hotelSlug}/orders`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-receipt-cutoff" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>All Orders</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => navigate(`/room_services/${hotelSlug}/breakfast-orders`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-egg-fried" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Breakfast</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => navigate(`/room_services/${hotelSlug}/orders-management`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-clipboard-data" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Management</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => navigate(`/room_services/${hotelSlug}/orders-summary`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-graph-up" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Summary</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="card shadow-sm">
         <div className="card-header d-flex align-items-center justify-content-between flex-wrap">
           <h3 className="mb-0">

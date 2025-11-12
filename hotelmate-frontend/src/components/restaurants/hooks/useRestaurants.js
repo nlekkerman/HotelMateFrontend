@@ -9,11 +9,17 @@ export const useRestaurants = (hotelSlug) => {
   const fetchRestaurants = async () => {
     if (!hotelSlug) return;
     setLoading(true);
+    setError(null);
     try {
-      const res = await api.get(`/bookings/restaurants/?hotel_slug=${hotelSlug}`);
-      setRestaurants(res.data.results || []);
+      // Use hotel-scoped endpoint as per RESTAURANT_API_GUIDE.md
+      const res = await api.get(`/bookings/${hotelSlug}/restaurants/`);
+      // Handle both array and paginated responses
+      const data = Array.isArray(res.data) ? res.data : (res.data.results || []);
+      setRestaurants(data);
     } catch (err) {
-      setError(err.message || "Failed to fetch restaurants");
+      const errorMessage = err.response?.data?.detail || err.message || "Failed to fetch restaurants";
+      setError(errorMessage);
+      console.error("Error fetching restaurants:", err);
     } finally {
       setLoading(false);
     }

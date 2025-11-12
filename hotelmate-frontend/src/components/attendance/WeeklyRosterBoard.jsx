@@ -30,6 +30,7 @@ export default function WeeklyRosterBoard({
   onSubmitSuccess,
   refreshKey,
   initialDate,
+  externalShowAnalytics,
 }) {
   const {
     period,
@@ -92,6 +93,13 @@ const [showRosterContainer, setShowRosterContainer] = useState(false);
   });
   const [locations, setLocations] = useState([]);
   const [showAnalytics, setShowAnalytics] = useState(false);
+
+  // Use external control if provided
+  useEffect(() => {
+    if (externalShowAnalytics !== undefined) {
+      setShowAnalytics(externalShowAnalytics);
+    }
+  }, [externalShowAnalytics]);
 
   // Cloudinary image url builder
   const cloudinaryBase = import.meta.env.VITE_CLOUDINARY_BASE || "";
@@ -289,7 +297,8 @@ return (
       
       </div>
 
-    <div className="ms-auto">
+    {externalShowAnalytics === undefined && (
+      <div className="ms-auto">
         <button
           className={`btn custom-button btn-sm`}
           onClick={() => setShowAnalytics((prev) => !prev)}
@@ -297,6 +306,7 @@ return (
           {showAnalytics ? "Hide Analytics" : "Show Analytics"}
         </button>
       </div>
+    )}
     </div>
 
     {/* Analytics Section */}

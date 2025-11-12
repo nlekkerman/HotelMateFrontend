@@ -6,6 +6,8 @@ import HotelInfoCreateForm from "@/components/hotel_info/HotelInfoCreateForm";
 import HotelInfoModal from "@/components/modals/HotelInfoModal.jsx";
 import CreateCategoryForm from "@/components/hotel_info/CreateCategoryForm";
 import HotelInfoEditModal from "@/components/hotel_info/modals/HotelInfoEditModal";
+import ConfirmationModal from "@/components/modals/ConfirmationModal";
+import SuccessModal from "@/components/modals/SuccessModal";
 
 export default function HotelInfo() {
   const { hotel_slug, category } = useParams();
@@ -31,6 +33,10 @@ export default function HotelInfo() {
   const CLOUD_BASE = import.meta.env.VITE_CLOUDINARY_BASE;
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  
+  // QR Download modals
+  const [showQRConfirmModal, setShowQRConfirmModal] = useState(false);
+  const [showQRSuccessModal, setShowQRSuccessModal] = useState(false);
 
   // ── 1) Fetch categories ────────────────────────────────────────────
   const fetchCategories = useCallback(async () => {
@@ -137,6 +143,36 @@ export default function HotelInfo() {
     fetchCategoryData();
   }, [fetchCategoryData]);
 
+  // ── Listen to Quick Actions events ─────────────────────────────────
+  useEffect(() => {
+    const handleOpenCreateCategory = () => {
+      setShowCreateCategory((prev) => !prev);
+      // Always close Create Info when toggling Create Category
+      setShowCreateForm(false);
+    };
+    
+    const handleOpenCreateInfo = () => {
+      setShowCreateForm((prev) => !prev);
+      // Always close Create Category when toggling Create Info
+      setShowCreateCategory(false);
+    };
+    
+    const handleDownloadAllQRs = () => {
+      // Show confirmation modal
+      setShowQRConfirmModal(true);
+    };
+
+    window.addEventListener('openCreateCategory', handleOpenCreateCategory);
+    window.addEventListener('openCreateInfo', handleOpenCreateInfo);
+    window.addEventListener('downloadAllQRs', handleDownloadAllQRs);
+
+    return () => {
+      window.removeEventListener('openCreateCategory', handleOpenCreateCategory);
+      window.removeEventListener('openCreateInfo', handleOpenCreateInfo);
+      window.removeEventListener('downloadAllQRs', handleDownloadAllQRs);
+    };
+  }, []);
+
   // ── Group events into date‐sections ────────────────────────────────
   const sections = useMemo(() => {
     const now = new Date();
@@ -241,6 +277,12 @@ export default function HotelInfo() {
     setEditingItem(item);
     setShowEditModal(true);
   };
+  
+  const handleQRDownloadConfirm = async () => {
+    setShowQRConfirmModal(false);
+    await downloadAllQrsWithText();
+    setShowQRSuccessModal(true);
+  };
   // ── Render ─────────────────────────────────────────────────────────
   return (
     <div className="my-4 w-100">
@@ -271,38 +313,55 @@ export default function HotelInfo() {
             </div>
           </div>
 
-          {/* Create Buttons */}
-          <div className="container mb-4">
-            <div className="row g-3 justify-content-center">
-              <div className="col-12 col-sm-6 col-md-4 col-lg-3">
+          {/* Mobile Quick Actions - Same style as desktop */}
+          <div 
+            className="d-lg-none position-fixed start-0 end-0"
+            style={{
+              top: "60px",
+              zIndex: 1045,
+              background: "transparent",
+            }}
+          >
+            <div className="container-fluid">
+              <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-2 flex-wrap">
                 <button
-                  className="btn btn-secondary w-100 py-3 shadow-sm"
-                  onClick={() => setShowCreateCategory(true)}
+                  className="contextual-action-btn"
+                  onClick={() => {
+                    setShowCreateCategory((prev) => !prev);
+                    setShowCreateForm(false);
+                  }}
+                  style={{
+                    color: mainColor || '#3498db',
+                    boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}`,
+                  }}
                 >
-                  Create Info Category
+                  <i className="bi bi-folder-plus" style={{ color: mainColor || '#3498db' }} />
+                  <span className="action-label" style={{ color: mainColor || '#3498db' }}>Create Category</span>
                 </button>
-              </div>
-              <div className="col-12 col-sm-6 col-md-4 col-lg-3">
                 <button
-                  className="btn btn-success w-100 py-3 shadow-sm"
-                  onClick={() => setShowCreateForm(true)}
+                  className="contextual-action-btn"
+                  onClick={() => {
+                    setShowCreateForm((prev) => !prev);
+                    setShowCreateCategory(false);
+                  }}
+                  style={{
+                    color: mainColor || '#3498db',
+                    boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}`,
+                  }}
                 >
-                  Create Info
+                  <i className="bi bi-file-earmark-plus" style={{ color: mainColor || '#3498db' }} />
+                  <span className="action-label" style={{ color: mainColor || '#3498db' }}>Create Info</span>
                 </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Download All QRs */}
-          <div className="container mb-4">
-            <div className="row justify-content-center">
-              <div className="col-12 col-md-6 col-lg-4">
                 <button
-                  className="btn btn-outline-dark w-100 py-3 shadow-sm"
-                  style={{ borderRadius: "10px", fontWeight: "500" }}
-                  onClick={downloadAllQrsWithText}
+                  className="contextual-action-btn"
+                  onClick={() => setShowQRConfirmModal(true)}
+                  style={{
+                    color: mainColor || '#3498db',
+                    boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}`,
+                  }}
                 >
-                  Download QR Codes
+                  <i className="bi bi-qr-code" style={{ color: mainColor || '#3498db' }} />
+                  <span className="action-label" style={{ color: mainColor || '#3498db' }}>Download QR</span>
                 </button>
               </div>
             </div>
@@ -342,6 +401,23 @@ export default function HotelInfo() {
         </HotelInfoModal>
       )}
 
+      {/* QR Download Confirmation Modal */}
+      {showQRConfirmModal && (
+        <ConfirmationModal
+          title="Download QR Codes"
+          message="Are you sure you want to download all QR codes?"
+          onConfirm={handleQRDownloadConfirm}
+          onCancel={() => setShowQRConfirmModal(false)}
+        />
+      )}
+
+      {/* QR Download Success Modal */}
+      <SuccessModal
+        show={showQRSuccessModal}
+        message="QR codes downloaded successfully!"
+        onClose={() => setShowQRSuccessModal(false)}
+      />
+
       {/* FORM OR DISPLAY */}
       {showCreateForm ? (
         <HotelInfoCreateForm
@@ -353,7 +429,7 @@ export default function HotelInfo() {
             navigate(`/hotel_info/${hotelSlug}/${newCategorySlug}`);
           }}
         />
-      ) : (
+      ) : !showCreateCategory ? (
         <>
           {loadingCategoryData && (
             <p className="text-center">Loading category data…</p>
@@ -497,7 +573,7 @@ export default function HotelInfo() {
             </section>
           )}
         </>
-      )}
+      ) : null}
     </div>
   );
 }

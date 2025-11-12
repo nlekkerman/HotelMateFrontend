@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "@/services/api";
 import StaffByDepartment from "./StaffByDepartment";
 import ClockedInTicker from "@/components/analytics/ClockedInTicker.jsx";
@@ -13,6 +13,16 @@ export default function Staff() {
   const [loadingClockedIn, setLoadingClockedIn] = useState(false);
   const navigate = useNavigate();
   const [showClockedIn, setShowClockedIn] = useState(false);
+  
+  // Expose toggle function globally so quick actions can access it
+  useEffect(() => {
+    window.toggleClockedInView = () => {
+      setShowClockedIn((prev) => !prev);
+    };
+    return () => {
+      delete window.toggleClockedInView;
+    };
+  }, []);
 
   useEffect(() => {
   const fetchStaff = async () => {
@@ -72,28 +82,13 @@ export default function Staff() {
   return (
     <div className="container my-4">
       <div className="text-center mb-4">
-        <h2 className="fw-bold mb-3">Staff Directory</h2>
-        <button
-          className="btn custom-button"
-          onClick={() => navigate(`/${hotelSlug}/staff/create`)}
-          disabled={loadingStaff}
-        >
-          + Create New Staff
-        </button>
-
-        <button
-          className="btn btn-success ms-3"
-          onClick={() => setShowClockedIn((prev) => !prev)}
-          disabled={loadingClockedIn}
-        >
-          {showClockedIn
-            ? "Hide Clocked In Staff"
-            : "Show Currently Clocked In Staff"}
-        </button>
+        <h2 className="fw-bold mb-3">
+          {showClockedIn ? "Currently Clocked In Staff" : "Staff Directory"}
+        </h2>
       </div>
 
       {/* Show loading indicators */}
-      {loadingStaff && (
+      {loadingStaff && !showClockedIn && (
         <div className="text-center my-4">
           <div className="spinner-border text-primary" role="status" />
           <div>Loading staff...</div>
@@ -107,23 +102,33 @@ export default function Staff() {
         </div>
       )}
 
-      {/* Pass the fetched clocked-in logs to ClockedInTicker */}
+      {/* Show clocked-in staff when toggled */}
       {showClockedIn && !loadingClockedIn && (
-        <ClockedInTicker staffList={clockedInLogs} />
+        <>
+          {clockedInLogs.length > 0 ? (
+            <ClockedInTicker staffList={clockedInLogs} />
+          ) : (
+            <div className="alert alert-info text-center">
+              <i className="bi bi-info-circle me-2"></i>
+              No staff currently clocked in
+            </div>
+          )}
+        </>
       )}
 
-      {!loadingStaff && !error && staffList.length > 0 && (
+      {/* Show all staff when not in clocked-in view */}
+      {!showClockedIn && !loadingStaff && !error && staffList.length > 0 && (
         <StaffByDepartment
           staffList={staffList}
           onStaffClick={(staff) => navigate(`/${hotelSlug}/staff/${staff.id}`)}
         />
       )}
 
-      {!loadingStaff && error && (
+      {!showClockedIn && !loadingStaff && error && (
         <div className="alert alert-danger">{error}</div>
       )}
 
-      {!loadingStaff && !error && staffList.length === 0 && (
+      {!showClockedIn && !loadingStaff && !error && staffList.length === 0 && (
         <p className="text-center text-muted">No staff available.</p>
       )}
     </div>

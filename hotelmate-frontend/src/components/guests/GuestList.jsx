@@ -74,6 +74,37 @@ const GuestList = () => {
         Guests at {hotelName}
       </h3>
 
+      {/* Mobile Quick Actions - Same style as desktop */}
+      <div 
+        className="d-lg-none position-fixed start-0 end-0"
+        style={{
+          top: "60px",
+          zIndex: 1045,
+          background: "transparent",
+        }}
+      >
+        <div className="container-fluid">
+          <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-2 flex-wrap">
+            <button className="contextual-action-btn" onClick={() => navigate(`/${hotelIdentifier}/guests`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-people-fill" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>All Guests</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => navigate('/rooms')} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-door-open" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Rooms</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => navigate('/bookings')} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-calendar-event" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Bookings</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => navigate(`/room_services/${hotelIdentifier}/orders`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-receipt" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Room Service</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="mb-3">
         <input
           type="text"

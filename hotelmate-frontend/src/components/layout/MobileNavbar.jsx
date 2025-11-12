@@ -51,6 +51,18 @@ const MobileNavbar = () => {
     window.location.href = "/login";
   };
 
+  // Add/remove class to body when navbar expands/collapses
+  useEffect(() => {
+    if (!collapsed) {
+      document.body.classList.add('mobile-navbar-expanded');
+    } else {
+      document.body.classList.remove('mobile-navbar-expanded');
+    }
+    return () => {
+      document.body.classList.remove('mobile-navbar-expanded');
+    };
+  }, [collapsed]);
+
   const isActive = (path) => {
     // Handle paths with query parameters (like Games)
     if (path.includes('?')) {

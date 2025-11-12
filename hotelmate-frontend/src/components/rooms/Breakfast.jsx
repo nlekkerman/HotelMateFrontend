@@ -16,7 +16,7 @@ const TIME_SLOTS = [
 const Breakfast = ({ isAdmin = false }) => {
   const { roomNumber, hotelIdentifier } = useParams();
   const [items, setItems] = useState([]);
-  const [selectedItems, setSelectedItems] = useState({});
+  const [selectedItems, setSelectedItems] = useState({}); // { itemId: { quantity: 1, notes: "" } }
   const [timeSlot, setTimeSlot] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -41,10 +41,12 @@ const Breakfast = ({ isAdmin = false }) => {
   // Handle item checkbox toggle
   const toggleItem = (itemId) => {
     setSelectedItems((prev) => {
-      const newSelected = {
-        ...prev,
-        [itemId]: prev[itemId] ? undefined : 1,
-      };
+      const newSelected = { ...prev };
+      if (newSelected[itemId]) {
+        delete newSelected[itemId];
+      } else {
+        newSelected[itemId] = { quantity: 1, notes: "" };
+      }
       console.log("Toggled item selection:", newSelected);
       return newSelected;
     });
@@ -52,30 +54,44 @@ const Breakfast = ({ isAdmin = false }) => {
 
   // Handle quantity change
   const handleQuantityChange = (itemId, qty) => {
-    setSelectedItems((prev) => {
-      const newSelected = {
-        ...prev,
-        [itemId]: qty,
-      };
-      console.log(`Quantity changed for item ${itemId}:`, qty);
-      return newSelected;
-    });
+    setSelectedItems((prev) => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], quantity: qty },
+    }));
   };
+
+  // Handle notes change
+  const handleNotesChange = (itemId, notes) => {
+    setSelectedItems((prev) => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], notes },
+    }));
+  };
+
+  // Group items by category
+  const groupedItems = items.reduce((acc, item) => {
+    const category = item.category || "Other";
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(item);
+    return acc;
+  }, {});
+
+  // Define category order for display
+  const categoryOrder = ["Mains", "Hot Buffet", "Cold Buffet", "Breads", "Condiments", "Drinks", "Other"];
 
   // Submit order
   const handleSubmit = async () => {
     setLoading(true);
 
-    const itemsPayload = Object.entries(selectedItems).map(
-      ([id, quantity]) => ({
-        item_id: parseInt(id),
-        quantity,
-      })
-    );
+    const itemsPayload = Object.entries(selectedItems).map(([id, data]) => ({
+      item_id: parseInt(id),
+      quantity: data.quantity,
+      notes: data.notes || undefined, // Only include if not empty
+    }));
 
     const payload = {
       room_number: parseInt(roomNumber),
-      delivery_time: timeSlot || null,
+      delivery_time: timeSlot || undefined,
       items: itemsPayload,
     };
 
@@ -85,12 +101,14 @@ const Breakfast = ({ isAdmin = false }) => {
         payload
       );
       console.log("Order submitted successfully:", response.data);
-      alert("Breakfast order submitted successfully!");
+      alert(`Breakfast order #${response.data.id} submitted successfully! Kitchen staff have been notified.`);
       setSubmitted(true);
       setSelectedItems({});
       setTimeSlot("");
     } catch (error) {
-      alert(error.response?.data || error.message || "Failed to submit order");
+      const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || "Failed to submit order";
+      alert(errorMsg);
+      console.error("Order submission error:", error.response?.data || error);
     } finally {
       setLoading(false);
     }
@@ -137,60 +155,113 @@ const Breakfast = ({ isAdmin = false }) => {
       {showOrders && !loadingOrders && <ViewOrders orders={orders} />}
     </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {items.map((item) => (
-          <div key={item.id} className="border rounded-xl p-4 shadow-sm">
-            {item.image && (
-              <img
-                src={item.image}
-                alt={item.name}
-                className="w-full h-40 object-cover rounded-md mb-2"
-              />
-            )}
-            <h3 className="text-lg font-semibold">{item.name}</h3>
-            <p className="text-sm text-gray-600">{item.description}</p>
-            <p className="text-sm italic">{item.category}</p>
+      {/* Display items grouped by category */}
+      {categoryOrder.map((category) => {
+        const categoryItems = groupedItems[category];
+        if (!categoryItems || categoryItems.length === 0) return null;
 
-            <div className="mt-2">
-              <label>
-                <input
-                  type="checkbox"
-                  className="mr-2"
-                  checked={!!selectedItems[item.id]}
-                  onChange={() => toggleItem(item.id)}
-                />
-                Add to order
-              </label>
+        return (
+          <div key={category} className="mb-6">
+            <h3 className="text-xl font-bold mb-3 pb-2 border-b-2 border-gray-300">
+              {category}
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {categoryItems.map((item) => {
+                const isOutOfStock = item.is_on_stock === false;
+                const isSelected = !!selectedItems[item.id];
 
-              {selectedItems[item.id] && (
-                <input
-                  type="number"
-                  min="1"
-                  value={selectedItems[item.id]}
-                  onChange={(e) =>
-                    handleQuantityChange(item.id, parseInt(e.target.value) || 1)
-                  }
-                  className="ml-3 border rounded px-2 py-1 w-16"
-                />
-              )}
+                return (
+                  <div 
+                    key={item.id} 
+                    className={`border rounded-xl p-4 shadow-sm ${isOutOfStock ? 'opacity-50 bg-gray-100' : ''}`}
+                  >
+                    {item.image && (
+                      <div className="relative">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-full h-40 object-cover rounded-md mb-2"
+                        />
+                        {isOutOfStock && (
+                          <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded text-xs font-bold">
+                            OUT OF STOCK
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <h4 className="text-lg font-semibold">{item.name}</h4>
+                    <p className="text-sm text-gray-600">{item.description}</p>
+
+                    {isOutOfStock ? (
+                      <div className="mt-2 text-red-600 font-semibold text-sm">
+                        <i className="bi bi-x-circle me-1"></i>
+                        Currently unavailable
+                      </div>
+                    ) : (
+                      <>
+                        <div className="mt-3">
+                          <label className="flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="mr-2"
+                              checked={isSelected}
+                              onChange={() => toggleItem(item.id)}
+                            />
+                            <span className="font-medium">Add to order</span>
+                          </label>
+
+                          {isSelected && (
+                            <div className="mt-2 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium">Quantity:</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={selectedItems[item.id].quantity}
+                                  onChange={(e) =>
+                                    handleQuantityChange(item.id, parseInt(e.target.value) || 1)
+                                  }
+                                  className="border rounded px-2 py-1 w-16"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium block mb-1">
+                                  Special instructions (optional):
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g., No mushrooms please"
+                                  value={selectedItems[item.id].notes}
+                                  onChange={(e) => handleNotesChange(item.id, e.target.value)}
+                                  className="border rounded px-2 py-1 w-full text-sm"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+
+                    {isAdmin && (
+                      <div className="mt-2">
+                        <label>
+                          <input
+                            type="checkbox"
+                            className="mr-2"
+                            checked={item.is_on_stock}
+                            onChange={() => alert("Admin stock toggle logic needed")}
+                          />
+                          In Stock
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-
-            {isAdmin && (
-              <div className="mt-2">
-                <label>
-                  <input
-                    type="checkbox"
-                    className="mr-2"
-                    checked={item.is_on_stock}
-                    onChange={() => alert("Admin stock toggle logic needed")}
-                  />
-                  In Stock
-                </label>
-              </div>
-            )}
           </div>
-        ))}
-      </div>
+        );
+      })}
 
       <div className="mt-6 d-flex justify-content-evenly">
         

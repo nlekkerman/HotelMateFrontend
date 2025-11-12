@@ -1,14 +1,17 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import ChatSidebar from "@/components/chat/ChatSidebar";
 import ChatWindow from "@/components/chat/ChatWindow";
 import { useAuth } from "@/context/AuthContext";
 import { useChat } from "@/context/ChatContext";
+import { useTheme } from "@/context/ThemeContext";
 
 const ChatHomePage = ({ selectedRoom, onSelectRoom, onUnreadChange }) => {
   const { hotelSlug } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { conversations } = useChat();
+  const { mainColor } = useTheme();
   const userId = user?.id;
 
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -60,6 +63,33 @@ const ChatHomePage = ({ selectedRoom, onSelectRoom, onUnreadChange }) => {
 
   return (
     <div className="chat-layout">
+      {/* Mobile Quick Actions - Same style as desktop */}
+      <div 
+        className="d-lg-none position-fixed start-0 end-0"
+        style={{
+          top: "60px",
+          zIndex: 1045,
+          background: "transparent",
+        }}
+      >
+        <div className="container-fluid">
+          <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-2 flex-wrap">
+            <button className="contextual-action-btn" onClick={() => navigate(`/hotel/${hotelSlug}/chat`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-chat-dots-fill" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>All Chats</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => navigate(`/${hotelSlug}/staff-chat`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-people" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Staff Chat</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => {}} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-bell" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Notifications</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Mobile: Show either sidebar OR chat window */}
       {/* Desktop: Show both sidebar and chat window side by side */}
       

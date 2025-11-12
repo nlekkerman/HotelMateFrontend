@@ -11,9 +11,23 @@ export default function BreakfastRoomService() {
   const { refreshAll } = useOrderCount(hotelSlug);
   const { hasNewBreakfast, markBreakfastRead } = useRoomServiceNotifications();
   const [orders, setOrders] = useState([]);
+  const [pendingCount, setPendingCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { mainColor } = useTheme();
+
+  const fetchPendingCount = () => {
+    if (!hotelSlug) return;
+
+    api
+      .get(`/room_services/${hotelSlug}/breakfast-orders/breakfast-pending-count/`)
+      .then((res) => {
+        setPendingCount(res.data.count || 0);
+      })
+      .catch((err) => {
+        console.error("Error fetching pending count:", err);
+      });
+  };
 
   const fetchOrders = () => {
     if (!hotelSlug) {
@@ -35,6 +49,9 @@ export default function BreakfastRoomService() {
         if (hasNewBreakfast) {
           markBreakfastRead();
         }
+
+        // Fetch pending count
+        fetchPendingCount();
       })
       .catch((err) => {
         setError("Error fetching breakfast orders.");
@@ -55,6 +72,25 @@ export default function BreakfastRoomService() {
 
   const handleStatusChange = (order, newStatus) => {
     const prev = order.status;
+
+    // Validate status transition workflow: pending → accepted → completed
+    const isValidTransition = 
+      (prev === "pending" && (newStatus === "accepted" || newStatus === "pending")) ||
+      (prev === "accepted" && (newStatus === "completed" || newStatus === "accepted"));
+
+    if (!isValidTransition) {
+      const workflowMessage = prev === "pending" 
+        ? "Orders must be accepted before they can be completed."
+        : prev === "accepted"
+        ? "Accepted orders can only be marked as completed."
+        : "Completed orders cannot be changed.";
+      
+      setError(`Invalid status transition: ${workflowMessage}`);
+      alert(`Cannot change status from "${prev}" to "${newStatus}".\n\n${workflowMessage}`);
+      return;
+    }
+
+    // Optimistically update UI
     setOrders((all) =>
       newStatus === "completed"
         ? all.filter((o) => o.id !== order.id)
@@ -65,13 +101,22 @@ export default function BreakfastRoomService() {
       .patch(`/room_services/${hotelSlug}/breakfast-orders/${order.id}/`, {
         status: newStatus,
       })
-      .then(() => refreshAll())
+      .then(() => {
+        refreshAll();
+        fetchPendingCount(); // Update pending count
+        setError(null); // Clear any previous errors
+      })
       .catch((err) => {
+        // Revert optimistic update
         setOrders((all) =>
           all.map((o) => (o.id === order.id ? { ...o, status: prev } : o))
         );
-        setError("Error updating status.");
-        console.error("Failed to update status:", err);
+        
+        // Handle specific error messages from backend
+        const errorMsg = err.response?.data?.error || err.response?.data?.detail || "Error updating status.";
+        setError(errorMsg);
+        alert(`Failed to update status: ${errorMsg}`);
+        console.error("Failed to update status:", err.response?.data || err);
       });
   };
 
@@ -103,6 +148,14 @@ export default function BreakfastRoomService() {
             <i className="bi bi-egg-fried me-2 text-warning" />
             Breakfast Orders
           </h3>
+          {pendingCount > 0 && (
+            <div className="d-flex align-items-center gap-2">
+              <span className={`badge ${mainColor ? 'main-bg' : 'bg-warning'} text-dark fs-6`}>
+                <i className="bi bi-clock-history me-1"></i>
+                {pendingCount} Pending
+              </span>
+            </div>
+          )}
         </div>
         <div className="card-body">
           {loading ? (
@@ -146,23 +199,39 @@ export default function BreakfastRoomService() {
                       <div className="mb-2">
                         <strong>Status:</strong>
                         <select
-  className={`form-select mt-1 border-${
-    order.status === "completed" ? "success" : "warning"
-  }`}
-  value={order.status}
-  onChange={(e) => handleStatusChange(order, e.target.value)}
->
-  {["pending", "accepted"].includes(order.status) && (
-    <option value="pending">Pending</option>
-  )}
-  {["pending", "accepted"].includes(order.status) && (
-    <option value="accepted">Accepted</option>
-  )}
-  {order.status === "accepted" && (
-    <option value="completed">Completed</option>
-  )}
-</select>
-
+                          className={`form-select mt-1 border-${
+                            order.status === "completed" 
+                              ? "success" 
+                              : order.status === "accepted"
+                              ? "primary"
+                              : "warning"
+                          }`}
+                          value={order.status}
+                          onChange={(e) => handleStatusChange(order, e.target.value)}
+                        >
+                          {/* Show current status */}
+                          {order.status === "pending" && (
+                            <>
+                              <option value="pending">Pending</option>
+                              <option value="accepted">Accept Order</option>
+                            </>
+                          )}
+                          {order.status === "accepted" && (
+                            <>
+                              <option value="accepted">Accepted</option>
+                              <option value="completed">Mark Completed</option>
+                            </>
+                          )}
+                          {order.status === "completed" && (
+                            <option value="completed">Completed</option>
+                          )}
+                        </select>
+                        {order.status === "pending" && (
+                          <small className="text-muted d-block mt-1">
+                            <i className="bi bi-info-circle me-1"></i>
+                            Must accept before completing
+                          </small>
+                        )}
                       </div>
                       <div>
                         <strong>Ordered:</strong>{" "}

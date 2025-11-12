@@ -6,20 +6,72 @@ import { isAfter, parseISO, isWithinInterval, startOfDay } from "date-fns";
 import DailyPlan from "@/components/attendance/DailyPlan";
 import RosterPeriodSelector from "@/components/attendance/RosterPeriodSelector";
 import DepartmentClockLogs from "@/components/attendance/DepartmentClockLogs";
+import { useTheme } from "@/context/ThemeContext";
 
 export default function DepartmentRosterView({
   department,
   hotelSlug,
   onSubmit,
 }) {
+  const { mainColor } = useTheme();
   const [periods, setPeriods] = useState([]);
   const [periodObj, setPeriodObj] = useState(null); // <-- FULL object
   const [shifts, setShifts] = useState([]);
   const [staffList, setStaffList] = useState([]);
-   const [showClockLogs, setShowClockLogs] = useState(false);
+  const [showClockLogs, setShowClockLogs] = useState(false);
   const [showDailyPlan, setShowDailyPlan] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const handleSubmitSuccess = () => setRefreshKey((prev) => prev + 1);
+
+  // Listen to Quick Actions events - only one view open at a time
+  useEffect(() => {
+    const handleToggleDailyPlans = () => {
+      setShowDailyPlan((prev) => {
+        const newValue = !prev;
+        if (newValue) {
+          // Opening Daily Plans - close others
+          setShowClockLogs(false);
+          setShowAnalytics(false);
+        }
+        return newValue;
+      });
+    };
+    
+    const handleToggleClockLogs = () => {
+      setShowClockLogs((prev) => {
+        const newValue = !prev;
+        if (newValue) {
+          // Opening Clock Logs - close others
+          setShowDailyPlan(false);
+          setShowAnalytics(false);
+        }
+        return newValue;
+      });
+    };
+    
+    const handleToggleAnalytics = () => {
+      setShowAnalytics((prev) => {
+        const newValue = !prev;
+        if (newValue) {
+          // Opening Analytics - close others
+          setShowDailyPlan(false);
+          setShowClockLogs(false);
+        }
+        return newValue;
+      });
+    };
+
+    window.addEventListener('toggleDailyPlans', handleToggleDailyPlans);
+    window.addEventListener('toggleClockLogs', handleToggleClockLogs);
+    window.addEventListener('toggleAnalytics', handleToggleAnalytics);
+
+    return () => {
+      window.removeEventListener('toggleDailyPlans', handleToggleDailyPlans);
+      window.removeEventListener('toggleClockLogs', handleToggleClockLogs);
+      window.removeEventListener('toggleAnalytics', handleToggleAnalytics);
+    };
+  }, []);
 
   // --------------------------------------------------
   // Fetch staff once
@@ -191,21 +243,79 @@ export default function DepartmentRosterView({
       {department.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
     </h3>
 
-    {/* Buttons aligned horizontally */}
-    <div className="d-flex gap-2 mb-4 justify-center">
-      <button
-        onClick={() => setShowDailyPlan((prev) => !prev)}
-        className="px-4 py-2 custom-button transition"
-      >
-        {showDailyPlan ? "Hide Daily Plans" : "Show Daily Plans"}
-      </button>
-
-      <button
-        onClick={() => setShowClockLogs((prev) => !prev)}
-        className="px-4 py-2 custom-button transition"
-      >
-        {showClockLogs ? "Hide Clock Logs" : "Show Clock Logs"}
-      </button>
+    {/* Mobile Quick Actions - Same style as desktop */}
+    <div 
+      className="d-lg-none position-fixed start-0 end-0"
+      style={{
+        top: "60px",
+        zIndex: 1045,
+        background: "transparent",
+      }}
+    >
+      <div className="container-fluid">
+        <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-2 flex-wrap">
+          <button
+            className="contextual-action-btn"
+            onClick={() => {
+              setShowDailyPlan((prev) => {
+                const newValue = !prev;
+                if (newValue) {
+                  setShowClockLogs(false);
+                  setShowAnalytics(false);
+                }
+                return newValue;
+              });
+            }}
+            style={{
+              color: mainColor || '#3498db',
+              boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}`,
+            }}
+          >
+            <i className="bi bi-calendar-check" style={{ color: mainColor || '#3498db' }} />
+            <span className="action-label" style={{ color: mainColor || '#3498db' }}>Daily Plans</span>
+          </button>
+          <button
+            className="contextual-action-btn"
+            onClick={() => {
+              setShowClockLogs((prev) => {
+                const newValue = !prev;
+                if (newValue) {
+                  setShowDailyPlan(false);
+                  setShowAnalytics(false);
+                }
+                return newValue;
+              });
+            }}
+            style={{
+              color: mainColor || '#3498db',
+              boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}`,
+            }}
+          >
+            <i className="bi bi-clock-history" style={{ color: mainColor || '#3498db' }} />
+            <span className="action-label" style={{ color: mainColor || '#3498db' }}>Clock Logs</span>
+          </button>
+          <button
+            className="contextual-action-btn"
+            onClick={() => {
+              setShowAnalytics((prev) => {
+                const newValue = !prev;
+                if (newValue) {
+                  setShowDailyPlan(false);
+                  setShowClockLogs(false);
+                }
+                return newValue;
+              });
+            }}
+            style={{
+              color: mainColor || '#3498db',
+              boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}`,
+            }}
+          >
+            <i className="bi bi-graph-up" style={{ color: mainColor || '#3498db' }} />
+            <span className="action-label" style={{ color: mainColor || '#3498db' }}>Analytics</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     {/* Conditional rendering */}
@@ -233,6 +343,7 @@ export default function DepartmentRosterView({
       fetchShifts={fetchShifts}
       onSubmitSuccess={handleSubmitSuccess}
       refreshKey={refreshKey}
+      externalShowAnalytics={showAnalytics}
     />
   </div>
 );

@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import api from "@/services/api";
 import RestaurantBookings from "./RestaurantBookings";
 import { useBookingNotifications } from "@/context/BookingNotificationContext";
+import { useTheme } from "@/context/ThemeContext";
+
 export default function Bookings() {
   const {
     hotelSlug: qrHotelSlug,
     restaurantSlug: qrCategorySlug,
     roomNumber: qrRoomNumber,
   } = useParams();
- const { markAllBookingRead } = useBookingNotifications();
+  const navigate = useNavigate();
+  const { markAllBookingRead } = useBookingNotifications();
+  const { mainColor } = useTheme();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -93,6 +97,37 @@ export default function Bookings() {
       <h2 className="text-center mb-4">
         Bookings {hotelName ? `@ ${hotelName}` : ""}
       </h2>
+
+      {/* Mobile Quick Actions - Same style as desktop */}
+      <div 
+        className="d-lg-none position-fixed start-0 end-0"
+        style={{
+          top: "60px",
+          zIndex: 1045,
+          background: "transparent",
+        }}
+      >
+        <div className="container-fluid">
+          <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-2 flex-wrap">
+            <button className="contextual-action-btn" onClick={() => navigate('/bookings')} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-calendar3" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>All Bookings</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => navigate('/bookings?filter=today')} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-calendar-plus" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Today</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => navigate('/bookings?filter=pending')} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-hourglass-split" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Pending</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => navigate('/bookings?filter=confirmed')} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-check-circle" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Confirmed</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       {!qrCategorySlug && (
        <div className="d-flex flex-wrap justify-content-center gap-2 mb-4">

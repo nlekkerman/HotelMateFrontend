@@ -7,10 +7,12 @@ import api from '@/services/api';
 import analyticsIcon from '@/assets/icons/analytics-btn.png';
 import stocktakeOpsIcon from '@/assets/icons/stocktake-ops.png';
 import stockItemsIcon from '@/assets/icons/stock-items.png';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function StockDashboard() {
   const { hotel_slug } = useParams();
   const navigate = useNavigate();
+  const { mainColor } = useTheme();
   
   const [periods, setPeriods] = useState([]);
   const [selectedPeriod, setSelectedPeriod] = useState(null);
@@ -129,6 +131,45 @@ export default function StockDashboard() {
           <FaBoxes className="me-2" />
           Stock Tracker Dashboard
         </h2>
+      </div>
+
+      {/* Mobile Quick Actions - Same style as desktop */}
+      <div 
+        className="d-lg-none position-fixed start-0 end-0"
+        style={{
+          top: "60px",
+          zIndex: 1045,
+          background: "transparent",
+        }}
+      >
+        <div className="container-fluid">
+          <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-2 flex-wrap">
+            <button className="contextual-action-btn" onClick={() => navigate(`/stock_tracker/${hotel_slug}/items`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-box-seam" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Items</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => navigate(`/stock_tracker/${hotel_slug}/stocktakes`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-clipboard-check" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Stocktakes</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => navigate(`/stock_tracker/${hotel_slug}/periods`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-calendar-range" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Periods</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => navigate(`/stock_tracker/${hotel_slug}/operations`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-arrows-move" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Operations</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => navigate(`/stock_tracker/${hotel_slug}/analytics`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-graph-up" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Analytics</span>
+            </button>
+            <button className="contextual-action-btn" onClick={() => navigate(`/stock_tracker/${hotel_slug}/sales/analysis`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <i className="bi bi-cash-coin" style={{ color: mainColor || '#3498db' }} />
+              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Sales</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Quick Actions */}
