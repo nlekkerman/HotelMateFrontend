@@ -17,6 +17,7 @@ import useEditMessage from '../hooks/useEditMessage';
 import useDeleteMessage from '../hooks/useDeleteMessage';
 import useReadReceipts from '../hooks/useReadReceipts';
 import useMessagePagination from '../hooks/useMessagePagination';
+import useStaffChatRealtime from '../hooks/useStaffChatRealtime';
 
 /**
  * ChatWindowPopup Component
@@ -143,6 +144,60 @@ const ChatWindowPopup = ({
     getReadStatus,
     isRead
   } = useReadReceipts(conversation?.id, currentUserId);
+
+  // Use real-time hook for Pusher updates
+  useStaffChatRealtime({
+    hotelSlug,
+    conversationId: conversation?.id,
+    staffId: currentUserId,
+    onNewMessage: (data) => {
+      console.log('📨 Real-time new message:', data);
+      if (data.message) {
+        addPaginatedMessage(data.message);
+        scrollToBottom();
+      }
+    },
+    onMessageEdited: (data) => {
+      console.log('✏️ Real-time message edited:', data);
+      if (data.message_id && data.message) {
+        updatePaginatedMessage(data.message_id, { 
+          message: data.message,
+          is_edited: true 
+        });
+      }
+    },
+    onMessageDeleted: (data) => {
+      console.log('🗑️ Real-time message deleted:', data);
+      if (data.message_id) {
+        if (data.hard_delete) {
+          removePaginatedMessage(data.message_id);
+        } else {
+          updatePaginatedMessage(data.message_id, {
+            is_deleted: true,
+            message: 'Message deleted'
+          });
+        }
+      }
+    },
+    onReaction: (data) => {
+      console.log('👍 Real-time reaction:', data);
+      if (data.message_id && data.reactions) {
+        updatePaginatedMessage(data.message_id, { reactions: data.reactions });
+      }
+    },
+    onReadReceipt: (data) => {
+      console.log('📖 Real-time read receipt:', data);
+      // Update read status for messages
+      if (data.message_ids) {
+        data.message_ids.forEach(messageId => {
+          updatePaginatedMessage(messageId, { 
+            is_read: true,
+            read_by: data.read_by || []
+          });
+        });
+      }
+    }
+  });
 
   const [showReactionPicker, setShowReactionPicker] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState([]);

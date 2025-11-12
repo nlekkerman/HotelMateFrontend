@@ -25,6 +25,7 @@ import NetworkHandler from "@/components/offline/NetworkHandler";
 import LogoBanner from "./components/layout/LogoBanner";
 import PusherDebugger from "@/components/utils/PusherDebugger";
 import MessengerWidget from "@/staff_chat/components/MessengerWidget";
+import PusherProvider from "@/staff_chat/context/PusherProvider";
 
 // Pages + Components
 import Home from "@/pages/home/Home";
@@ -404,24 +405,30 @@ export default function App() {
       />
       <UIProvider>
         <AuthProvider>
-          <ThemeProvider>
-            <ChartPreferencesProvider>
-              <ChatProvider>
-                <BookingNotificationProvider>
-                  <RoomServiceNotificationProvider>
-                    <BrowserRouter>
-                      <NetworkHandler />
-                      <AppLayout
-                        collapsed={collapsed}
-                        setCollapsed={setCollapsed}
-                        isMobile={isMobile}
-                      />
-                    </BrowserRouter>
-                  </RoomServiceNotificationProvider>
-                </BookingNotificationProvider>
-              </ChatProvider>
-            </ChartPreferencesProvider>
-          </ThemeProvider>
+          <PusherProvider 
+            appKey={import.meta.env.VITE_PUSHER_KEY} 
+            cluster={import.meta.env.VITE_PUSHER_CLUSTER}
+            enabled={true}
+          >
+            <ThemeProvider>
+              <ChartPreferencesProvider>
+                <ChatProvider>
+                  <BookingNotificationProvider>
+                    <RoomServiceNotificationProvider>
+                      <BrowserRouter>
+                        <NetworkHandler />
+                        <AppLayout
+                          collapsed={collapsed}
+                          setCollapsed={setCollapsed}
+                          isMobile={isMobile}
+                        />
+                      </BrowserRouter>
+                    </RoomServiceNotificationProvider>
+                  </BookingNotificationProvider>
+                </ChatProvider>
+              </ChartPreferencesProvider>
+            </ThemeProvider>
+          </PusherProvider>
         </AuthProvider>
       </UIProvider>
     </QueryClientProvider>
