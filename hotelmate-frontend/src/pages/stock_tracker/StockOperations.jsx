@@ -3,30 +3,55 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Button } from 'react-bootstrap';
 import { FaBoxes, FaClipboardList, FaCocktail, FaArrowLeft, FaDownload, FaMoneyBillWave } from 'react-icons/fa';
-import StocktakeDownload from '../../components/stock_tracker/downloads/StocktakeDownload';
+import CombinedDownload from '../../components/stock_tracker/downloads/CombinedDownload';
 import stockItemsIcon from '@/assets/icons/stock-items.png';
 import stocktakeOpsIcon from '@/assets/icons/stocktake-ops.png';
 
 export default function StockOperations() {
   const { hotel_slug } = useParams();
   const navigate = useNavigate();
-  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [showCombinedModal, setShowCombinedModal] = useState(false);
 
   return (
     <Container fluid className="mt-4">
+      {/* Sticky Floating Back Button - Top Left */}
+      <Button
+        variant="outline-secondary"
+        className="shadow"
+        onClick={() => navigate(`/stock_tracker/${hotel_slug}`)}
+        style={{
+          position: "fixed",
+          top: "80px",
+          left: "120px",
+          zIndex: 1050,
+          borderRadius: "8px",
+          padding: "8px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          fontSize: "1rem",
+          backgroundColor: "rgba(255, 255, 255, 0.9)",
+          backdropFilter: "blur(8px)",
+          transition: "all 0.3s ease",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 1)";
+          e.currentTarget.style.transform = "scale(1.05)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.9)";
+          e.currentTarget.style.transform = "scale(1)";
+        }}
+        title="Back to Stock Tracker"
+      >
+        <FaArrowLeft /> Back
+      </Button>
+
       <div className="d-flex justify-content-center align-items-center mb-4 position-relative">
         <h2 className="mb-0">
           <FaBoxes className="me-2" />
           Stock Operations
         </h2>
-        <Button 
-          variant="outline-secondary"
-          className="position-absolute end-0"
-          onClick={() => navigate(`/stock_tracker/${hotel_slug}`)}
-        >
-          <FaArrowLeft className="me-2" />
-          Back to Dashboard
-        </Button>
       </div>
 
       <Card>
@@ -253,7 +278,7 @@ export default function StockOperations() {
             </Col>
             <Col xs="auto" className="d-flex justify-content-center">
               <div
-                onClick={() => setShowDownloadModal(true)}
+                onClick={() => setShowCombinedModal(true)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.border = '3px solid gold';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '1';
@@ -317,7 +342,7 @@ export default function StockOperations() {
                   lineHeight: '1.2',
                   color: 'black',
                   transition: 'color 0.3s ease'
-                }}>Download Stocktake</span>
+                }}>Download Combined Report</span>
               </div>
             </Col>
             <Col xs="auto" className="d-flex justify-content-center">
@@ -393,10 +418,10 @@ export default function StockOperations() {
         </Card.Body>
       </Card>
 
-      {/* Download Modal */}
-      <StocktakeDownload
-        show={showDownloadModal}
-        onHide={() => setShowDownloadModal(false)}
+      {/* Combined Download Modal */}
+      <CombinedDownload
+        show={showCombinedModal}
+        onHide={() => setShowCombinedModal(false)}
         hotelSlug={hotel_slug}
       />
     </Container>

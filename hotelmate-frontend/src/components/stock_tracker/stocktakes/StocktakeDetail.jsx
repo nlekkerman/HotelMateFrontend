@@ -17,6 +17,7 @@ import {
   FaExclamationTriangle,
   FaMoneyBillWave,
 } from "react-icons/fa";
+import { FileDown, FileSpreadsheet } from "lucide-react";
 import { toast } from "react-toastify";
 import Pusher from "pusher-js";
 import api from "@/services/api";
@@ -539,7 +540,57 @@ export const StocktakeDetail = () => {
             </Badge>
           )}
         </div>
-        <div>
+        <div className="d-flex gap-2">
+          {isLocked && (
+            <>
+              <Button
+                variant="outline-primary"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const response = await api.get(`/stock_tracker/${hotel_slug}/stocktakes/${id}/download-pdf/`, { responseType: 'blob' });
+                    const blob = new Blob([response.data], { type: 'application/pdf' });
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `stocktake_${id}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(url);
+                  } catch (err) {
+                    console.error('Download error:', err);
+                  }
+                }}
+                title="Download PDF Report"
+              >
+                <FileDown size={16} /> PDF
+              </Button>
+              <Button
+                variant="outline-success"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const response = await api.get(`/stock_tracker/${hotel_slug}/stocktakes/${id}/download-excel/`, { responseType: 'blob' });
+                    const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `stocktake_${id}.xlsx`;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(url);
+                  } catch (err) {
+                    console.error('Download error:', err);
+                  }
+                }}
+                title="Download Excel Workbook"
+              >
+                <FileSpreadsheet size={16} /> Excel
+              </Button>
+            </>
+          )}
           {!isLocked && lines.length === 0 && (
             <Button
               variant="primary"
@@ -553,7 +604,6 @@ export const StocktakeDetail = () => {
             <Button
               variant="success"
               onClick={() => setShowApproveModal(true)}
-              className="ms-2"
             >
               <FaCheckCircle /> Approve & Close Period
             </Button>

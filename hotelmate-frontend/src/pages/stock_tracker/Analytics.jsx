@@ -376,17 +376,42 @@ export default function Analytics() {
 
   return (
     <Container fluid className="mt-4 pb-5">
+      {/* Sticky Floating Back Button - Top Left */}
+      <Button
+        variant="outline-secondary"
+        className="shadow"
+        onClick={() => navigate(`/stock_tracker/${hotel_slug}`)}
+        style={{
+          position: "fixed",
+          top: "80px",
+          left: "120px",
+          zIndex: 1050,
+          borderRadius: "8px",
+          padding: "8px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          fontSize: "1rem",
+          backgroundColor: "rgba(255, 255, 255, 0.9)",
+          backdropFilter: "blur(8px)",
+          transition: "all 0.3s ease",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 1)";
+          e.currentTarget.style.transform = "scale(1.05)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.9)";
+          e.currentTarget.style.transform = "scale(1)";
+        }}
+        title="Back to Stock Tracker"
+      >
+        <FaArrowLeft /> Back
+      </Button>
+
       {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div className="d-flex align-items-center gap-3">
-          <Button 
-            variant="outline-secondary"
-            size={isMobile ? 'sm' : 'md'}
-            onClick={() => navigate(`/stock_tracker/${hotel_slug}`)}
-          >
-            <FaArrowLeft className="me-2" />
-            {!isMobile && 'Back'}
-          </Button>
           <h2 className="mb-0">
             <FaChartLine className="me-2" />
             Analytics Dashboard

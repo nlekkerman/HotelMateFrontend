@@ -1,17 +1,18 @@
-﻿// src/components/stock_tracker/downloads/StocktakeDownload.jsx
+﻿// src/components/stock_tracker/downloads/PeriodDownload.jsx
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, ButtonGroup, Badge, Spinner, Alert } from 'react-bootstrap';
 import { FaTimes } from 'react-icons/fa';
 import { FileDown, FileSpreadsheet } from 'lucide-react';
 import api from '../../../services/api';
 
-export default function StocktakeDownload({ show, onHide, hotelSlug }) {
-  const [stocktakes, setStocktakes] = useState([]);
+export default function PeriodDownload({ show, onHide, hotelSlug }) {
+  const [periods, setPeriods] = useState([]);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState(null);
   const [downloadFormat, setDownloadFormat] = useState('pdf');
-  const [selectedStocktake, setSelectedStocktake] = useState(null);
+  const [includeCocktails, setIncludeCocktails] = useState(true);
+  const [selectedPeriod, setSelectedPeriod] = useState(null);
 
   useEffect(() => {
     if (show && hotelSlug) {
@@ -23,30 +24,30 @@ export default function StocktakeDownload({ show, onHide, hotelSlug }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get(`/stock_tracker/${hotelSlug}/stocktakes/`);
+      const response = await api.get(`/stock_tracker/${hotelSlug}/periods/`);
       const all = response.data.results || response.data || [];
-      const approved = all.filter(st => st.status === 'APPROVED');
-      approved.sort((a, b) => new Date(b.period_start || b.created_at) - new Date(a.period_start || a.created_at));
-      setStocktakes(approved);
-      if (approved.length > 0) setSelectedStocktake(approved[0]);
+      const closed = all.filter(p => p.is_closed);
+      closed.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
+      setPeriods(closed);
+      if (closed.length > 0) setSelectedPeriod(closed[0]);
     } catch (err) {
-      setError('Failed to load stocktakes');
+      setError('Failed to load periods');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDownload = async (format = downloadFormat) => {
-    if (!selectedStocktake) return;
+    if (!selectedPeriod) return;
     setDownloading(true);
     setError(null);
     try {
       const endpoint = format === 'pdf' 
-        ? `/stock_tracker/${hotelSlug}/stocktakes/${selectedStocktake.id}/download-pdf/`
-        : `/stock_tracker/${hotelSlug}/stocktakes/${selectedStocktake.id}/download-excel/`;
+        ? `/stock_tracker/${hotelSlug}/periods/${selectedPeriod.id}/download-pdf/?include_cocktails=${includeCocktails}`
+        : `/stock_tracker/${hotelSlug}/periods/${selectedPeriod.id}/download-excel/?include_cocktails=${includeCocktails}`;
       const response = await api.get(endpoint, { responseType: 'blob' });
       const contentDisposition = response.headers['content-disposition'];
-      let filename = `stocktake_${selectedStocktake.id}.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
+      let filename = `period_${selectedPeriod.id}.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
       if (contentDisposition) {
         const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
         if (match && match[1]) filename = match[1].replace(/['"]/g, '');
@@ -73,7 +74,7 @@ export default function StocktakeDownload({ show, onHide, hotelSlug }) {
   return (
     <Modal show={show} onHide={() => !downloading && onHide()} size="lg" centered>
       <Modal.Header closeButton={!downloading}>
-        <Modal.Title><FileDown size={20} className="me-2" />Download Stocktake Report</Modal.Title>
+        <Modal.Title><FileDown size={20} className="me-2" />Download Period Report</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
@@ -82,21 +83,21 @@ export default function StocktakeDownload({ show, onHide, hotelSlug }) {
         ) : (
           <>
             <Form.Group className="mb-4">
-              <Form.Label className="fw-bold">Select Stocktake (Approved Only)</Form.Label>
-              {stocktakes.length === 0 ? (
-                <Alert variant="info">No approved stocktakes available for download.</Alert>
+              <Form.Label className="fw-bold">Select Period (Closed Only)</Form.Label>
+              {periods.length === 0 ? (
+                <Alert variant="info">No closed periods available for download.</Alert>
               ) : (
-                <Form.Select value={selectedStocktake?.id || ''} onChange={(e) => setSelectedStocktake(stocktakes.find(st => st.id === parseInt(e.target.value)))} disabled={downloading} size="lg">
-                  <option value="">-- Select Stocktake --</option>
-                  {stocktakes.map(st => (
-                    <option key={st.id} value={st.id}>
-                      Stocktake #{st.id} - {new Date(st.period_start).toLocaleDateString()} to {new Date(st.period_end).toLocaleDateString()}
+                <Form.Select value={selectedPeriod?.id || ''} onChange={(e) => setSelectedPeriod(periods.find(p => p.id === parseInt(e.target.value)))} disabled={downloading} size="lg">
+                  <option value="">-- Select Period --</option>
+                  {periods.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.period_name || `${p.month}/${p.year}`} ({new Date(p.start_date).toLocaleDateString()} - {new Date(p.end_date).toLocaleDateString()})
                     </option>
                   ))}
                 </Form.Select>
               )}
             </Form.Group>
-            {selectedStocktake && (
+            {selectedPeriod && (
               <>
                 <Form.Group className="mb-4">
                   <Form.Label className="fw-bold">Download Format</Form.Label>
@@ -109,7 +110,10 @@ export default function StocktakeDownload({ show, onHide, hotelSlug }) {
                     </Button>
                   </ButtonGroup>
                 </Form.Group>
-                <Alert variant="info"><small><strong>Ready:</strong> Stocktake #{selectedStocktake.id}<br /><strong>Format:</strong> {downloadFormat.toUpperCase()}</small></Alert>
+                <Form.Group className="mb-4">
+                  <Form.Check type="checkbox" checked={includeCocktails} onChange={(e) => setIncludeCocktails(e.target.checked)} label="Include cocktail sales data" disabled={downloading} />
+                </Form.Group>
+                <Alert variant="info"><small><strong>Ready:</strong> {selectedPeriod.period_name || `Period ${selectedPeriod.id}`}<br /><strong>Format:</strong> {downloadFormat.toUpperCase()}<br /><strong>Cocktails:</strong> {includeCocktails ? 'Included' : 'Excluded'}</small></Alert>
               </>
             )}
           </>
@@ -117,7 +121,7 @@ export default function StocktakeDownload({ show, onHide, hotelSlug }) {
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={() => onHide()} disabled={downloading}><FaTimes className="me-2" />Cancel</Button>
-        <Button variant="success" onClick={() => handleDownload()} disabled={!selectedStocktake || downloading}>
+        <Button variant="success" onClick={() => handleDownload()} disabled={!selectedPeriod || downloading}>
           {downloading ? <><Spinner as="span" animation="border" size="sm" className="me-2" />Downloading...</> : <>{downloadFormat === 'pdf' ? <FileDown size={16} className="me-2" /> : <FileSpreadsheet size={16} className="me-2" />}Download</>}
         </Button>
       </Modal.Footer>
