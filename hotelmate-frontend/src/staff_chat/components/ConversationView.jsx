@@ -50,7 +50,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     conversationId: conversation?.id,
     staffId: currentUserId,
     onReadReceipt: (data) => {
-      console.log('📖 Received read receipt event:', data);
+      // console.log('📖 Received read receipt event:', data);
       updateReadReceipts(data);
       
       // Update message list with new read counts
@@ -83,7 +83,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
 
   // Debug: Log replyTo state changes
   useEffect(() => {
-    console.log('🔔 ConversationView - replyTo state changed:', replyTo);
+    // console.log('🔔 ConversationView - replyTo state changed:', replyTo);
   }, [replyTo]);
   
   // Check if user is manager/admin
@@ -109,7 +109,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
       (entries) => {
         if (entries[0].isIntersecting) {
           // User scrolled to bottom, mark conversation as read
-          console.log('👀 Last message visible, marking conversation as read');
+          //
           markConversationRead();
         }
       },
@@ -188,14 +188,14 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
   };
 
   const handleReply = (message) => {
-    console.log('========================================');
-    console.log('🔄🔄🔄 HANDLE REPLY CALLED IN CONVERSATIONVIEW 🔄🔄🔄');
-    console.log('🔄 Reply button clicked, message object:', message);
-    console.log('🔄 Message type:', typeof message);
-    console.log('🔄 Message ID:', message?.id);
-    console.log('🔄 Message text:', message?.message || message?.content);
-    console.log('🔄 Sender info:', message?.sender, message?.sender_info);
-    console.log('🔄 Sender name:', message?.sender_name);
+    //
+    //
+    // console.log('🔄 Reply button clicked, message object:', message);
+    // console.log('🔄 Message type:', typeof message);
+    // console.log('🔄 Message ID:', message?.id);
+    // console.log('🔄 Message text:', message?.message || message?.content);
+    // console.log('🔄 Sender info:', message?.sender, message?.sender_info);
+    // console.log('🔄 Sender name:', message?.sender_name);
     
     // Ensure message has proper structure for MessageInput
     const replyMessage = {
@@ -210,13 +210,13 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
       sender_info: message.sender_info || message.sender,
     };
     
-    console.log('🔄 Setting replyTo state to:', replyMessage);
-    console.log('========================================');
+    // console.log('🔄 Setting replyTo state to:', replyMessage);
+    //
     setReplyTo(replyMessage);
   };
 
   const handleCancelReply = () => {
-    console.log('❌ Canceling reply');
+    //
     setReplyTo(null);
   };
 
@@ -396,9 +396,9 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
                     }}
                     onCancelEdit={() => setEditingMessageId(null)}
                     onReply={() => {
-                      console.log('📣📣📣 INLINE REPLY HANDLER CALLED 📣📣📣');
-                      console.log('📣 Message ID:', message.id);
-                      console.log('📣 Full message object:', message);
+                      //
+                      // console.log('📣 Message ID:', message.id);
+                      // console.log('📣 Full message object:', message);
                       handleReply(message);
                     }}
                     onReaction={() => setShowReactionPicker(message.id)}
@@ -477,7 +477,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
           hotelSlug={hotelSlug}
           currentUserId={currentUser?.id}
           onMessageForwarded={async (conversation, newMessage) => {
-            console.log('✅ Message forwarded, refreshing messages');
+            //
             // Reload messages to show the forwarded message immediately
             await loadMessages();
           }}
@@ -495,12 +495,12 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
         hotelSlug={hotelSlug}
         canManageParticipants={true}
         onParticipantRemoved={(participantId) => {
-          console.log('✅ Participant removed:', participantId);
+          // console.log('✅ Participant removed:', participantId);
           // Reload messages to reflect changes
           loadMessages();
         }}
         onLeaveGroup={(convId) => {
-          console.log('✅ Left group:', convId);
+          // console.log('✅ Left group:', convId);
           // You may want to navigate away or show a message
           alert('You have left the group');
         }}

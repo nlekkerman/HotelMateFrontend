@@ -37,8 +37,8 @@ const useStaffChatNotifications = ({
    */
   const playNotificationSound = useCallback(() => {
     if (audioRef.current) {
-      audioRef.current.play().catch(err => {
-        console.log('Could not play notification sound:', err);
+      audioRef.current.play().catch(() => {
+        // Silently fail if sound cannot play
       });
     }
   }, []);
@@ -271,8 +271,6 @@ const useStaffChatNotifications = ({
    * Handle new message from personal notification channel
    */
   const handlePersonalNotification = useCallback((data) => {
-    console.log('Personal notification received:', data);
-
     // Call callback if provided
     if (onNewMessage) {
       onNewMessage(data);
@@ -296,14 +294,14 @@ const useStaffChatNotifications = ({
    */
   useEffect(() => {
     if (!enabled || !isReady || !staffId || !hotelSlug) {
-      console.log('Skipping notification subscription:', { enabled, isReady, staffId, hotelSlug });
+      // console.log('Skipping notification subscription:', { enabled, isReady, staffId, hotelSlug });
       return;
     }
 
     // Personal notification channel: {hotel_slug}-staff-{staff_id}-notifications
     const personalChannel = `${hotelSlug}-staff-${staffId}-notifications`;
 
-    console.log(`Subscribing to personal notifications: ${personalChannel}`);
+    // console.log(`Subscribing to personal notifications: ${personalChannel}`);
     subscribe(personalChannel);
 
     // Bind to new-message event (sent when user receives a message in any conversation)
@@ -314,7 +312,7 @@ const useStaffChatNotifications = ({
 
     // Cleanup
     return () => {
-      console.log(`Unsubscribing from personal notifications: ${personalChannel}`);
+      // console.log(`Unsubscribing from personal notifications: ${personalChannel}`);
       unbind(personalChannel, 'new-message', handlePersonalNotification);
       unbind(personalChannel, 'mention', handlePersonalNotification);
       unsubscribe(personalChannel);

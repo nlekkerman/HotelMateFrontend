@@ -57,14 +57,14 @@ const useSendMessage = (hotelSlug, conversationId, onMessageSent) => {
    * @param {Object} message - Message object to reply to
    */
   const setReply = (message) => {
-    console.log('🔄 useSendMessage - setReply called with:', message);
-    console.log('🔄 Message structure:', {
-      id: message?.id,
-      message: message?.message,
-      content: message?.content,
-      sender_name: message?.sender_name,
-      sender_info: message?.sender_info
-    });
+    // console.log('🔄 useSendMessage - setReply called with:', message);
+    // console.log('🔄 Message structure:', {
+    //   id: message?.id,
+    //   message: message?.message,
+    //   content: message?.content,
+    //   sender_name: message?.sender_name,
+    //   sender_info: message?.sender_info
+    // });
     setReplyToMessage(message);
   };
 

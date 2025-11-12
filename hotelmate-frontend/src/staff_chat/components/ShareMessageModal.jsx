@@ -169,11 +169,11 @@ const ShareMessageModal = ({
     setError(null);
 
     try {
-      console.log('Forwarding message:', {
-        messageId: message.id,
-        conversationIds: selectedConversations,
-        newParticipantIds: selectedNewPeople,
-      });
+      // console.log('Forwarding message:', {
+      //   messageId: message.id,
+      //   conversationIds: selectedConversations,
+      //   newParticipantIds: selectedNewPeople,
+      // });
 
       const results = await forwardMessage(
         hotelSlug,
@@ -182,7 +182,7 @@ const ShareMessageModal = ({
         selectedNewPeople
       );
 
-      console.log('Forward results:', results);
+      // console.log('Forward results:', results);
       
       setForwardResults(results);
       setShowSuccess(true);

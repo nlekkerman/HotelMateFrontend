@@ -565,8 +565,8 @@ const DesktopSidebarNavbarWithPusher = (props) => {
   const pusherEnabled = Boolean(user?.hotel_slug);
   
   // Get Pusher credentials from environment
-  const pusherAppKey = import.meta.env.VITE_PUSHER_APP_KEY || 'your-pusher-app-key';
-  const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER || 'mt1';
+  const pusherAppKey = import.meta.env.VITE_PUSHER_KEY;
+  const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER;
 
   if (!pusherEnabled) {
     return <DesktopSidebarNavbar {...props} />;

@@ -16,7 +16,7 @@ const SuccessModal = ({
   useEffect(() => {
     if (show && autoCloseDelay > 0) {
       const timer = setTimeout(() => {
-        console.log('✅ Auto-closing success modal');
+        //
         onHide();
       }, autoCloseDelay);
       

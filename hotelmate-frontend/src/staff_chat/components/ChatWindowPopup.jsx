@@ -34,14 +34,7 @@ const ChatWindowPopup = ({
   stackIndex = 0,
   isVisible = true
 }) => {
-  console.log('💬 ChatWindowPopup rendering with:', {
-    hotelSlug,
-    conversationId: conversation?.id,
-    staff: staff?.full_name,
-    isMinimized,
-    stackIndex,
-    isVisible
-  });
+  // ChatWindowPopup rendering
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -53,12 +46,7 @@ const ChatWindowPopup = ({
   const currentUserId = currentUserData?.staff_id || currentUserData?.id || null;
   
   // Debug: Log current user info
-  console.log('Current User Data:', { 
-    currentUserData, 
-    currentUserId,
-    staff_id: currentUserData?.staff_id,
-    id: currentUserData?.id 
-  });
+  // Current user data loaded
   
   // For 1-on-1 chats, if staff prop is not provided or is the current user,
   // find the other participant from the conversation
@@ -73,7 +61,7 @@ const ChatWindowPopup = ({
     // 1. No staff prop was provided, OR
     // 2. The staff prop is actually the current user (wrong!)
     if (otherParticipant && (!staff || staff.id === currentUserId)) {
-      console.log('🔄 Correcting staff display - using other participant:', otherParticipant.full_name);
+      // console.log('🔄 Correcting staff display - using other participant:', otherParticipant.full_name);
       displayStaff = otherParticipant;
     }
   }
@@ -125,23 +113,16 @@ const ChatWindowPopup = ({
     deleteMsg,
     deleting: isDeletingMessage
   } = useDeleteMessage(hotelSlug, conversation?.id, (messageId, hardDelete, result) => {
-    console.log('🗑️ Message deleted callback:', { messageId, hardDelete, result });
+    // console.log('🗑️ Message deleted callback:', { messageId, hardDelete, result });
     
     if (hardDelete) {
       // Hard delete - remove from UI
-      console.log('🗑️ Hard delete - removing message from UI');
+      //
       removePaginatedMessage(messageId);
     } else {
       // Soft delete - update message to show deleted state
       const deletedMessage = result?.message?.message || 'Message deleted';
-      console.log('🗑️ Soft delete - updating message to deleted state:', {
-        messageId,
-        deletedMessage,
-        updates: {
-          is_deleted: true,
-          message: deletedMessage
-        }
-      });
+      // Soft delete - updating message to deleted state
       
       updatePaginatedMessage(messageId, {
         is_deleted: true,
@@ -151,7 +132,7 @@ const ChatWindowPopup = ({
       // Verify the update
       setTimeout(() => {
         const updatedMessages = messages.find(m => m.id === messageId);
-        console.log('🗑️ Message after update:', updatedMessages);
+        // console.log('🗑️ Message after update:', updatedMessages);
       }, 100);
     }
   });
@@ -211,15 +192,6 @@ const ChatWindowPopup = ({
   const handleUploadFiles = async (messageText = '') => {
     if (selectedFiles.length === 0) return;
 
-    console.log('📤 Starting file upload:', {
-      hotelSlug,
-      conversationId: conversation.id,
-      fileCount: selectedFiles.length,
-      files: selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })),
-      messageText: messageText || '(no text)',
-      replyToId: replyTo?.id
-    });
-
     setUploading(true);
     try {
       const result = await uploadFiles(
@@ -230,10 +202,10 @@ const ChatWindowPopup = ({
         replyTo?.id
       );
 
-      console.log('✅ Upload successful:', result);
+      // console.log('✅ Upload successful:', result);
 
       if (result.success && result.message) {
-        console.log('📨 Adding message to UI:', result.message);
+        // console.log('📨 Adding message to UI:', result.message);
         addPaginatedMessage(result.message);
         setSelectedFiles([]);
         if (replyTo) cancelReply();
@@ -286,9 +258,9 @@ const ChatWindowPopup = ({
 
   // Handle delete - show confirmation modal
   const handleDelete = (messageId, permanent = false) => {
-    console.log('🗑️ handleDelete called:', { messageId, permanent });
+    // console.log('🗑️ handleDelete called:', { messageId, permanent });
     const message = messages.find(m => m.id === messageId);
-    console.log('🗑️ Found message:', message);
+    // console.log('🗑️ Found message:', message);
     
     setMessageToDelete(message);
     setDeleteHard(permanent);
@@ -302,13 +274,13 @@ const ChatWindowPopup = ({
       return;
     }
 
-    console.log('🗑️ Confirming delete:', { 
-      messageId: messageToDelete.id, 
-      hardDelete: deleteHard 
-    });
+    // console.log('🗑️ Confirming delete:', { 
+    //   messageId: messageToDelete.id, 
+    //   hardDelete: deleteHard 
+    // });
 
     const result = await deleteMsg(messageToDelete.id, deleteHard);
-    console.log('🗑️ Delete result:', result);
+    // console.log('🗑️ Delete result:', result);
 
     if (result.success) {
       setShowDeleteConfirm(false);
@@ -322,14 +294,14 @@ const ChatWindowPopup = ({
 
   // Handle share
   const handleShare = (message) => {
-    console.log('📤 Share message:', message);
+    // console.log('📤 Share message:', message);
     setMessageToShare(message);
     setShowShareModal(true);
   };
 
   // Handle reaction
   const handleReaction = (messageId, emoji) => {
-    console.log('👍 Handle reaction:', { messageId, emoji });
+    // console.log('👍 Handle reaction:', { messageId, emoji });
     const message = messages.find(m => m.id === messageId);
     if (message) {
       toggleReaction(messageId, emoji, message.reactions || [], currentUserId);
@@ -482,12 +454,12 @@ const ChatWindowPopup = ({
                       const readStatus = getReadStatus(message.id);
                       
                       // Log message state including deletion status
-                      console.log('💬 Rendering message:', {
-                        id: message.id,
-                        isDeleted: message.is_deleted,
-                        messageText: messageText.substring(0, 30),
-                        isOwn
-                      });
+                      // console.log('💬 Rendering message:', {
+                      //   id: message.id,
+                      //   isDeleted: message.is_deleted,
+                      //   messageText: messageText.substring(0, 30),
+                      //   isOwn
+                      // });
                       
                       return (
                         <div
@@ -593,7 +565,7 @@ const ChatWindowPopup = ({
         <ShareMessageModal
           show={showShareModal}
           onHide={() => {
-            console.log('📤 Closing share modal');
+            //
             setShowShareModal(false);
             setMessageToShare(null);
           }}
@@ -601,7 +573,7 @@ const ChatWindowPopup = ({
           hotelSlug={hotelSlug}
           currentUserId={currentUserId}
           onMessageForwarded={(conversation, newMessage) => {
-            console.log('✅ Message forwarded in popup');
+            //
             // Pusher will automatically update all participants in real-time
             // The new message will appear via Pusher event
           }}
@@ -612,7 +584,7 @@ const ChatWindowPopup = ({
       <ConfirmDeleteModal
         show={showDeleteConfirm}
         onHide={() => {
-          console.log('🗑️ Closing delete confirmation');
+          //
           setShowDeleteConfirm(false);
           setMessageToDelete(null);
         }}
@@ -626,7 +598,7 @@ const ChatWindowPopup = ({
       <SuccessModal
         show={showSuccessModal}
         onHide={() => {
-          console.log('✅ Closing success modal');
+          //
           setShowSuccessModal(false);
           setSuccessMessage('');
         }}
@@ -646,11 +618,11 @@ const ChatWindowPopup = ({
         hotelSlug={hotelSlug}
         canManageParticipants={true}
         onParticipantRemoved={(participantId) => {
-          console.log('✅ Participant removed:', participantId);
+          // console.log('✅ Participant removed:', participantId);
           // The conversation will be updated via Pusher
         }}
         onLeaveGroup={(convId) => {
-          console.log('✅ Left group:', convId);
+          // console.log('✅ Left group:', convId);
           // Close the chat window
           onClose();
         }}

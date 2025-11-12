@@ -12,11 +12,11 @@ const useDeleteMessage = (hotelSlug, conversationId, onMessageDeleted) => {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
 
-  console.log('🗑️ useDeleteMessage initialized:', { 
-    hotelSlug, 
-    conversationId,
-    hasCallback: !!onMessageDeleted 
-  });
+  // console.log('🗑️ useDeleteMessage initialized:', { 
+  //   hotelSlug, 
+  //   conversationId,
+  //   hasCallback: !!onMessageDeleted 
+  // });
 
   /**
    * Delete a message
@@ -25,7 +25,7 @@ const useDeleteMessage = (hotelSlug, conversationId, onMessageDeleted) => {
    * @returns {Promise<Object>} Result with success status and data
    */
   const deleteMsg = async (messageId, hardDelete = false) => {
-    console.log('🗑️ Starting deleteMsg:', { messageId, hardDelete, deleting });
+    // console.log('🗑️ Starting deleteMsg:', { messageId, hardDelete, deleting });
     
     if (deleting) {
       console.warn('⚠️ Already deleting a message');
@@ -36,13 +36,13 @@ const useDeleteMessage = (hotelSlug, conversationId, onMessageDeleted) => {
     setError(null);
 
     try {
-      console.log('🗑️ Calling deleteMessage API:', { hotelSlug, messageId, hardDelete });
+      // console.log('🗑️ Calling deleteMessage API:', { hotelSlug, messageId, hardDelete });
       const result = await deleteMessage(hotelSlug, messageId, hardDelete);
-      console.log('✅ Delete API response:', result);
+      // console.log('✅ Delete API response:', result);
 
       // Notify parent callback
       if (typeof onMessageDeleted === 'function') {
-        console.log('📢 Calling onMessageDeleted callback');
+        //
         onMessageDeleted(messageId, hardDelete, result);
       } else {
         console.warn('⚠️ onMessageDeleted is not a function:', typeof onMessageDeleted);
@@ -57,7 +57,7 @@ const useDeleteMessage = (hotelSlug, conversationId, onMessageDeleted) => {
       return { success: false, error: errorMsg };
     } finally {
       setDeleting(false);
-      console.log('🗑️ deleteMsg completed');
+      //
     }
   };
 

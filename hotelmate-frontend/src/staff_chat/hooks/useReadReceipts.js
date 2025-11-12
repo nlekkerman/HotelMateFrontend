@@ -145,7 +145,7 @@ const useReadReceipts = (hotelSlug, conversationId, currentUserId) => {
       return;
     }
 
-    console.log('📖 Updating read receipts from Pusher event:', data);
+    // console.log('📖 Updating read receipts from Pusher event:', data);
 
     // Update read receipts for all affected messages
     setReadReceipts(prev => {

@@ -33,7 +33,7 @@ const NotificationHandler = ({ children }) => {
     staffId,
     currentConversationId,
     onNewMessage: (data) => {
-      console.log('New message notification:', data);
+      // Notification received
     },
     onUnreadCountChange: (updater) => {
       // Increment the global unread count
@@ -57,9 +57,9 @@ const StaffChatNotificationProvider = ({ children }) => {
   // Only enable if user is logged in and has Pusher credentials
   const pusherEnabled = Boolean(user?.hotel_slug);
   
-  // Get Pusher credentials from environment or config
-  const pusherAppKey = import.meta.env.VITE_PUSHER_APP_KEY || 'your-pusher-app-key';
-  const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER || 'mt1';
+  // Get Pusher credentials from environment
+  const pusherAppKey = import.meta.env.VITE_PUSHER_KEY;
+  const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER;
 
   if (!pusherEnabled) {
     return <>{children}</>;

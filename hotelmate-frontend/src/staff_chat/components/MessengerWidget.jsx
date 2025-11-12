@@ -54,8 +54,8 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
 
   // Debug: Log when openChats changes
   React.useEffect(() => {
-    console.log('🔄 openChats state changed:', openChats);
-    console.log('📄 Current page:', currentPage, '| Total pages:', totalPages);
+    // console.log('🔄 openChats state changed:', openChats);
+    // console.log('📄 Current page:', currentPage, '| Total pages:', totalPages);
   }, [openChats, currentPage, totalPages]);
 
   // Reset to last page if current page becomes invalid
@@ -80,9 +80,9 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   };
 
   const handleOpenChat = (conversation, staff) => {
-    console.log('🎯 handleOpenChat called with:', { conversation, staff });
-    console.log('🎯 Conversation ID:', conversation?.id);
-    console.log('🎯 Current open chats:', openChats);
+    // console.log('🎯 handleOpenChat called with:', { conversation, staff });
+    // console.log('🎯 Conversation ID:', conversation?.id);
+    // console.log('🎯 Current open chats:', openChats);
     
     if (!conversation?.id) {
       console.error('❌ No conversation ID provided!');
@@ -93,7 +93,7 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
     const existingChat = openChats.find(chat => chat.conversationId === conversation.id);
     
     if (existingChat) {
-      console.log('✅ Chat already open, restoring if minimized');
+      //
       // If minimized, restore it
       if (existingChat.isMinimized) {
         setOpenChats(openChats.map(chat => 
@@ -103,7 +103,7 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
         ));
       }
     } else {
-      console.log('✅ Opening new chat window');
+      //
       // Add new chat window (no limit, but only show 3 at a time)
       setOpenChats([...openChats, {
         conversationId: conversation.id,
@@ -117,7 +117,7 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
       const newLastPage = Math.ceil(newTotalChats / CHATS_PER_PAGE) - 1;
       setCurrentPage(newLastPage);
       
-      console.log('✅ Chat window added to openChats array');
+      //
     }
     
     // Close the widget after opening chat (both mobile and desktop)
@@ -168,7 +168,7 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   };
 
   const handleGroupCreated = (conversation) => {
-    console.log('✅ Group created:', conversation);
+    // console.log('✅ Group created:', conversation);
     
     // Open the newly created group chat
     handleOpenChat(conversation, null);
@@ -182,9 +182,9 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
     'bottom-left': 'messenger-widget--bottom-left'
   };
 
-  console.log('🎨 MessengerWidget render - openChats:', openChats);
-  console.log('🎨 Number of open chats:', openChats.length);
-  console.log('🎨 Visible chats:', visibleChats.length);
+  // console.log('🎨 MessengerWidget render - openChats:', openChats);
+  // console.log('🎨 Number of open chats:', openChats.length);
+  // console.log('🎨 Visible chats:', visibleChats.length);
 
   return (
     <>

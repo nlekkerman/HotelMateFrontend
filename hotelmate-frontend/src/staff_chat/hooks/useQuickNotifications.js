@@ -129,7 +129,6 @@ const useQuickNotifications = ({ hotelSlug, staffId }) => {
    * Handle incoming notification from Pusher
    */
   const handlePusherNotification = useCallback((data) => {
-    console.log('Quick notification received:', data);
     addNotification(data);
   }, [addNotification]);
 
@@ -144,7 +143,6 @@ const useQuickNotifications = ({ hotelSlug, staffId }) => {
     // Personal notification channel: {hotel_slug}-staff-{staff_id}-notifications
     const personalChannel = `${hotelSlug}-staff-${staffId}-notifications`;
 
-    console.log(`[QuickNotifications] Subscribing to: ${personalChannel}`);
     subscribe(personalChannel);
 
     // Bind to notification events
@@ -154,7 +152,6 @@ const useQuickNotifications = ({ hotelSlug, staffId }) => {
 
     // Cleanup
     return () => {
-      console.log(`[QuickNotifications] Unsubscribing from: ${personalChannel}`);
       unbind(personalChannel, 'new-message', handlePusherNotification);
       unbind(personalChannel, 'mention', handlePusherNotification);
       unbind(personalChannel, 'file-uploaded', handlePusherNotification);

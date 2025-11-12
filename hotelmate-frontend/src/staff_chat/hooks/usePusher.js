@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import Pusher from 'pusher-js';
+import { pusherLogger } from '../utils/logger';
 
 /**
  * Custom hook for managing Pusher real-time connections
@@ -21,7 +22,6 @@ const usePusher = ({ appKey, cluster = 'mt1', enabled = true }) => {
    */
   useEffect(() => {
     if (!enabled || !appKey) {
-      console.log('Pusher is disabled or appKey is missing');
       return;
     }
 
@@ -41,15 +41,15 @@ const usePusher = ({ appKey, cluster = 'mt1', enabled = true }) => {
 
       // Connection state logging
       pusherRef.current.connection.bind('connected', () => {
-        console.log('Pusher connected');
+        pusherLogger.connection('Connected');
       });
 
       pusherRef.current.connection.bind('disconnected', () => {
-        console.log('Pusher disconnected');
+        pusherLogger.connection('Disconnected');
       });
 
       pusherRef.current.connection.bind('error', (err) => {
-        console.error('Pusher connection error:', err);
+        pusherLogger.error('Connection error', err);
       });
 
       return () => {
@@ -69,7 +69,7 @@ const usePusher = ({ appKey, cluster = 'mt1', enabled = true }) => {
         }
       };
     } catch (error) {
-      console.error('Error initializing Pusher:', error);
+      pusherLogger.error('Initialization failed', error);
     }
   }, [appKey, cluster, enabled]);
 
@@ -80,7 +80,6 @@ const usePusher = ({ appKey, cluster = 'mt1', enabled = true }) => {
    */
   const subscribe = useCallback((channelName) => {
     if (!pusherRef.current || !channelName) {
-      console.warn('Cannot subscribe: Pusher not initialized or invalid channel name');
       return null;
     }
 
@@ -93,10 +92,10 @@ const usePusher = ({ appKey, cluster = 'mt1', enabled = true }) => {
       const channel = pusherRef.current.subscribe(channelName);
       channelsRef.current[channelName] = channel;
       
-      console.log(`Subscribed to channel: ${channelName}`);
+      pusherLogger.channel(`Subscribed: ${channelName}`);
       return channel;
     } catch (error) {
-      console.error(`Error subscribing to channel ${channelName}:`, error);
+      pusherLogger.error(`Subscribe failed: ${channelName}`, error);
       return null;
     }
   }, []);
@@ -115,10 +114,10 @@ const usePusher = ({ appKey, cluster = 'mt1', enabled = true }) => {
         pusherRef.current.unsubscribe(channelName);
         delete channelsRef.current[channelName];
         delete eventHandlersRef.current[channelName];
-        console.log(`Unsubscribed from channel: ${channelName}`);
+        pusherLogger.channel(`Unsubscribed: ${channelName}`);
       }
     } catch (error) {
-      console.error(`Error unsubscribing from channel ${channelName}:`, error);
+      pusherLogger.error(`Unsubscribe failed: ${channelName}`, error);
     }
   }, []);
 
@@ -130,7 +129,6 @@ const usePusher = ({ appKey, cluster = 'mt1', enabled = true }) => {
    */
   const bind = useCallback((channelName, eventName, callback) => {
     if (!channelName || !eventName || !callback) {
-      console.warn('Invalid bind parameters');
       return;
     }
 
@@ -149,9 +147,9 @@ const usePusher = ({ appKey, cluster = 'mt1', enabled = true }) => {
       }
       eventHandlersRef.current[channelName][eventName].push(callback);
       
-      console.log(`Bound event ${eventName} on channel ${channelName}`);
+      pusherLogger.event(`Bound ${eventName} on ${channelName}`);
     } catch (error) {
-      console.error(`Error binding event ${eventName} on channel ${channelName}:`, error);
+      pusherLogger.error(`Bind failed: ${eventName} on ${channelName}`, error);
     }
   }, [subscribe]);
 
@@ -184,9 +182,9 @@ const usePusher = ({ appKey, cluster = 'mt1', enabled = true }) => {
         }
       }
 
-      console.log(`Unbound event ${eventName} from channel ${channelName}`);
+      pusherLogger.event(`Unbound ${eventName} from ${channelName}`);
     } catch (error) {
-      console.error(`Error unbinding event ${eventName} from channel ${channelName}:`, error);
+      pusherLogger.error(`Unbind failed: ${eventName} from ${channelName}`, error);
     }
   }, []);
 

@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { usePusherContext } from '../context/PusherProvider';
+import { pusherLogger } from '../utils/logger';
 
 /**
  * Custom hook for real-time staff chat updates via Pusher
@@ -56,7 +57,6 @@ const useStaffChatRealtime = ({
    * Handle new message event
    */
   const handleNewMessage = useCallback((data) => {
-    console.log('Pusher: New message received', data);
     if (onNewMessage) {
       onNewMessage(data);
     }
@@ -66,7 +66,6 @@ const useStaffChatRealtime = ({
    * Handle message edited event
    */
   const handleMessageEdited = useCallback((data) => {
-    console.log('Pusher: Message edited', data);
     if (onMessageEdited) {
       onMessageEdited(data);
     }
@@ -76,7 +75,6 @@ const useStaffChatRealtime = ({
    * Handle message deleted event
    */
   const handleMessageDeleted = useCallback((data) => {
-    console.log('Pusher: Message deleted', data);
     if (onMessageDeleted) {
       onMessageDeleted(data);
     }
@@ -86,7 +84,6 @@ const useStaffChatRealtime = ({
    * Handle reaction event
    */
   const handleReaction = useCallback((data) => {
-    console.log('Pusher: Reaction update', data);
     if (onReaction) {
       onReaction(data);
     }
@@ -96,7 +93,6 @@ const useStaffChatRealtime = ({
    * Handle attachment uploaded event
    */
   const handleAttachmentUploaded = useCallback((data) => {
-    console.log('Pusher: Attachment uploaded', data);
     if (onAttachmentUploaded) {
       onAttachmentUploaded(data);
     }
@@ -106,7 +102,6 @@ const useStaffChatRealtime = ({
    * Handle attachment deleted event
    */
   const handleAttachmentDeleted = useCallback((data) => {
-    console.log('Pusher: Attachment deleted', data);
     if (onAttachmentDeleted) {
       onAttachmentDeleted(data);
     }
@@ -116,7 +111,6 @@ const useStaffChatRealtime = ({
    * Handle typing indicator event
    */
   const handleTyping = useCallback((data) => {
-    console.log('Pusher: User typing', data);
     if (onTyping) {
       onTyping(data);
     }
@@ -126,7 +120,6 @@ const useStaffChatRealtime = ({
    * Handle read receipt event
    */
   const handleReadReceipt = useCallback((data) => {
-    console.log('Pusher: Read receipt', data);
     if (onReadReceipt) {
       onReadReceipt(data);
     }
@@ -137,11 +130,10 @@ const useStaffChatRealtime = ({
    */
   useEffect(() => {
     if (!enabled || !isReady || !conversationChannel) {
-      console.log('Skipping Pusher subscription:', { enabled, isReady, conversationChannel });
       return;
     }
 
-    console.log(`Subscribing to conversation channel: ${conversationChannel}`);
+    pusherLogger.channel(`Subscribing to conversation: ${conversationChannel}`);
     subscribe(conversationChannel);
 
     // Bind all events
@@ -156,7 +148,7 @@ const useStaffChatRealtime = ({
 
     // Cleanup function
     return () => {
-      console.log(`Unsubscribing from conversation channel: ${conversationChannel}`);
+      pusherLogger.channel(`Unsubscribing from conversation: ${conversationChannel}`);
       unbind(conversationChannel, 'new-message', handleNewMessage);
       unbind(conversationChannel, 'message-edited', handleMessageEdited);
       unbind(conversationChannel, 'message-deleted', handleMessageDeleted);
@@ -193,7 +185,7 @@ const useStaffChatRealtime = ({
       return;
     }
 
-    console.log(`Subscribing to personal channel: ${personalChannel}`);
+    pusherLogger.channel(`Subscribing to personal: ${personalChannel}`);
     subscribe(personalChannel);
 
     // Bind personal notification events
@@ -201,7 +193,7 @@ const useStaffChatRealtime = ({
     // Add specific handlers as needed
 
     return () => {
-      console.log(`Unsubscribing from personal channel: ${personalChannel}`);
+      pusherLogger.channel(`Unsubscribing from personal: ${personalChannel}`);
       unsubscribe(personalChannel);
     };
   }, [enabled, isReady, personalChannel, subscribe, unsubscribe]);

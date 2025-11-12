@@ -47,7 +47,7 @@ const ParticipantsModal = ({
         onParticipantRemoved(participantId);
       }
       
-      console.log('✅ Participant removed successfully');
+      //
     } catch (err) {
       console.error('❌ Failed to remove participant:', err);
       setError(err.response?.data?.error || 'Failed to remove participant');
@@ -77,7 +77,7 @@ const ParticipantsModal = ({
         onLeaveGroup(conversationId);
       }
       
-      console.log('✅ Left group successfully');
+      //
       onHide();
     } catch (err) {
       console.error('❌ Failed to leave group:', err);

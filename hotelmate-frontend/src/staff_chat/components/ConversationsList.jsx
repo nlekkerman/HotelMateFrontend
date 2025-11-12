@@ -43,24 +43,24 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
     const loadConversations = async () => {
       try {
         const response = await fetchConversations(hotelSlug);
-        console.log('📋 Raw backend response:', response);
+        // console.log('📋 Raw backend response:', response);
         
         // Backend returns paginated response: { count, results: [...] }
         const conversations = response?.results || response || [];
-        console.log('📋 Extracted conversations array:', conversations);
-        console.log('📋 Number of conversations:', conversations.length);
+        // console.log('📋 Extracted conversations array:', conversations);
+        // console.log('📋 Number of conversations:', conversations.length);
         
         // Log each conversation details
         conversations.forEach((conv, index) => {
-          console.log(`📋 Conversation ${index + 1}:`, {
-            id: conv.id,
-            participants: conv.participants?.map(p => p.full_name),
-            lastMessage: conv.last_message?.message,
-            hasAttachments: conv.last_message?.has_attachments,
-            attachments: conv.last_message?.attachments,
-            unreadCount: conv.unread_count,
-            timestamp: conv.updated_at
-          });
+          // console.log(`📋 Conversation ${index + 1}:`, {
+          //   id: conv.id,
+          //   participants: conv.participants?.map(p => p.full_name),
+          //   lastMessage: conv.last_message?.message,
+          //   hasAttachments: conv.last_message?.has_attachments,
+          //   attachments: conv.last_message?.attachments,
+          //   unreadCount: conv.unread_count,
+          //   timestamp: conv.updated_at
+          // });
         });
         
         setExistingConversations(conversations);
@@ -78,7 +78,7 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
   const { startConversation } = useStartConversation(hotelSlug);
 
   const handleStartNewChat = async (staff) => {
-    console.log('🚀 Starting chat with staff:', staff);
+    // console.log('🚀 Starting chat with staff:', staff);
     setStartingChatWithId(staff.id);
     
     try {
@@ -93,20 +93,20 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
       });
 
       if (existingConv) {
-        console.log('✅ Found existing conversation:', existingConv.id);
+        // console.log('✅ Found existing conversation:', existingConv.id);
         // Open existing conversation
         if (onOpenChat) {
           onOpenChat(existingConv, staff);
           clearSearch();
         }
       } else {
-        console.log('🆕 Creating new conversation with staff:', staff.id);
+        // console.log('🆕 Creating new conversation with staff:', staff.id);
         // Create new conversation
         const conversation = await startConversation([staff.id]);
-        console.log('✅ Conversation created:', conversation);
+        // console.log('✅ Conversation created:', conversation);
         
         if (conversation && onOpenChat) {
-          console.log('📞 Calling onOpenChat with:', { conversation, staff });
+          // console.log('📞 Calling onOpenChat with:', { conversation, staff });
           onOpenChat(conversation, staff);
           clearSearch();
           
@@ -144,7 +144,7 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
     
     try {
       const response = await bulkMarkAsRead(hotelSlug, unreadConvIds);
-      console.log('✅ Marked all as read:', response);
+      // console.log('✅ Marked all as read:', response);
       
       // Update local conversations to reflect zero unread
       setExistingConversations(prev =>

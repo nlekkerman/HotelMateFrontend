@@ -65,12 +65,12 @@ const MessageBubble = ({
 
   // Debug logging for deleted messages
   if (isDeleted) {
-    console.log('🗑️ MessageBubble - Rendering deleted message:', {
-      isDeleted,
-      deletedText,
-      messageText,
-      hasAttachments: attachments?.length > 0
-    });
+    // console.log('🗑️ MessageBubble - Rendering deleted message:', {
+    //   isDeleted,
+    //   deletedText,
+    //   messageText,
+    //   hasAttachments: attachments?.length > 0
+    // });
   }
 
   return (
@@ -90,13 +90,13 @@ const MessageBubble = ({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('🔘 Reply button clicked in MessageBubble');
-            console.log('🔘 onReply function:', onReply);
-            console.log('🔘 onReply toString:', onReply.toString());
+            //
+            // console.log('🔘 onReply function:', onReply);
+            // console.log('🔘 onReply toString:', onReply.toString());
             if (onReply) {
-              console.log('🔘 Calling onReply now...');
+              //
               onReply();
-              console.log('🔘 onReply called successfully');
+              //
             } else {
               console.error('❌ onReply is not defined!');
             }
