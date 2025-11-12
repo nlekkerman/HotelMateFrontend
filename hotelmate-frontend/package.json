@@ -29,6 +29,7 @@
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
     "lottie-react": "^2.4.1",
+    "lucide-react": "^0.553.0",
     "pusher-js": "^8.4.0",
     "qrcode": "^1.5.4",
     "react": "^19.1.0",
