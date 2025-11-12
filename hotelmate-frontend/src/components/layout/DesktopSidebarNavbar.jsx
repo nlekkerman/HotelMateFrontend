@@ -11,6 +11,7 @@ import { useNavigation } from "@/hooks/useNavigation";
 import { useChat } from "@/context/ChatContext";
 import { useBookingNotifications } from "@/context/BookingNotificationContext";
 import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationContext";
+import useUnreadCount from "@/staff_chat/hooks/useUnreadCount";
 
 const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const location = useLocation();
@@ -24,6 +25,9 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const { hasNewRoomService, hasNewBreakfast } = useRoomServiceNotifications();
   const { roomServiceCount, breakfastCount, totalServiceCount } =
     useOrderCount(hotelIdentifier);
+  
+  // Staff chat unread count
+  const { totalUnread: staffChatUnread } = useUnreadCount(hotelIdentifier, 30000);
   
   const [staffProfile, setStaffProfile] = useState(null);
   const [isOnDuty, setIsOnDuty] = useState(false);
