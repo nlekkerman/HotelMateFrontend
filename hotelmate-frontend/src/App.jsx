@@ -268,6 +268,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin" element={<DinnerPinAuth />} />
               
               {/* Restaurant Management */}
+              <Route path="/hotel-:hotelSlug/restaurants" element={<ProtectedRoute><RestaurantManagementDashboard /></ProtectedRoute>} />
               <Route path="/:hotelSlug/:restaurantSlug" element={<ProtectedRoute><RestaurantManagementDashboard /></ProtectedRoute>} />
               <Route path="/hotels/:hotelSlug/restaurants/:restaurantSlug" element={<Restaurant />} />
 
@@ -379,7 +380,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
       
       {/* Messenger Widget */}
       {showFloatingButton && (
-        <MessengerWidget position={isMobile ? 'bottom-left' : 'bottom-right'} />
+        <MessengerWidget position="bottom-right" />
       )}
     </>
   );

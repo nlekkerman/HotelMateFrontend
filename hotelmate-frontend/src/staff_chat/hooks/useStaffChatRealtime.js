@@ -6,8 +6,9 @@ import { usePusherContext } from '../context/PusherProvider';
  * Handles all chat-related events: messages, edits, deletes, reactions, attachments
  * 
  * @param {Object} params - Hook parameters
+ * @param {string} params.hotelSlug - Hotel slug for channel subscription
  * @param {number} params.conversationId - Current conversation ID
- * @param {number} params.hotelId - Hotel ID for channel subscription
+ * @param {number} params.staffId - Staff ID for personal notifications
  * @param {Function} params.onNewMessage - Callback for new messages
  * @param {Function} params.onMessageEdited - Callback for edited messages
  * @param {Function} params.onMessageDeleted - Callback for deleted messages
@@ -19,8 +20,9 @@ import { usePusherContext } from '../context/PusherProvider';
  * @returns {Object} Real-time connection status
  */
 const useStaffChatRealtime = ({
+  hotelSlug,
   conversationId,
-  hotelId,
+  staffId,
   onNewMessage,
   onMessageEdited,
   onMessageDeleted,
@@ -40,12 +42,14 @@ const useStaffChatRealtime = ({
     enabled 
   } = usePusherContext();
 
-  // Generate channel names
-  const conversationChannel = conversationId 
-    ? `private-conversation.${conversationId}` 
+  // Generate channel names according to backend format
+  // Conversation: {hotel_slug}-staff-conversation-{id}
+  // Personal: {hotel_slug}-staff-{staff_id}-notifications
+  const conversationChannel = conversationId && hotelSlug
+    ? `${hotelSlug}-staff-conversation-${conversationId}` 
     : null;
-  const hotelChannel = hotelId 
-    ? `private-hotel.${hotelId}.staff-chat` 
+  const personalChannel = staffId && hotelSlug
+    ? `${hotelSlug}-staff-${staffId}-notifications` 
     : null;
 
   /**
@@ -148,7 +152,7 @@ const useStaffChatRealtime = ({
     bind(conversationChannel, 'attachment-uploaded', handleAttachmentUploaded);
     bind(conversationChannel, 'attachment-deleted', handleAttachmentDeleted);
     bind(conversationChannel, 'user-typing', handleTyping);
-    bind(conversationChannel, 'message-read', handleReadReceipt);
+    bind(conversationChannel, 'messages-read', handleReadReceipt); // Note: event name is 'messages-read' not 'message-read'
 
     // Cleanup function
     return () => {
@@ -160,7 +164,7 @@ const useStaffChatRealtime = ({
       unbind(conversationChannel, 'attachment-uploaded', handleAttachmentUploaded);
       unbind(conversationChannel, 'attachment-deleted', handleAttachmentDeleted);
       unbind(conversationChannel, 'user-typing', handleTyping);
-      unbind(conversationChannel, 'message-read', handleReadReceipt);
+      unbind(conversationChannel, 'messages-read', handleReadReceipt); // Note: event name is 'messages-read' not 'message-read'
       unsubscribe(conversationChannel);
     };
   }, [
@@ -182,31 +186,32 @@ const useStaffChatRealtime = ({
   ]);
 
   /**
-   * Subscribe to hotel channel for general notifications
+   * Subscribe to personal channel for notifications (mentions, new conversations)
    */
   useEffect(() => {
-    if (!enabled || !isReady || !hotelChannel) {
+    if (!enabled || !isReady || !personalChannel) {
       return;
     }
 
-    console.log(`Subscribing to hotel channel: ${hotelChannel}`);
-    subscribe(hotelChannel);
+    console.log(`Subscribing to personal channel: ${personalChannel}`);
+    subscribe(personalChannel);
 
-    // Bind hotel-wide events (e.g., new conversations, staff status updates)
+    // Bind personal notification events
+    // message-mention, new-conversation, etc.
     // Add specific handlers as needed
 
     return () => {
-      console.log(`Unsubscribing from hotel channel: ${hotelChannel}`);
-      unsubscribe(hotelChannel);
+      console.log(`Unsubscribing from personal channel: ${personalChannel}`);
+      unsubscribe(personalChannel);
     };
-  }, [enabled, isReady, hotelChannel, subscribe, unsubscribe]);
+  }, [enabled, isReady, personalChannel, subscribe, unsubscribe]);
 
   return {
     isConnected: isConnected(),
     isReady,
     enabled,
     conversationChannel,
-    hotelChannel
+    personalChannel
   };
 };
 

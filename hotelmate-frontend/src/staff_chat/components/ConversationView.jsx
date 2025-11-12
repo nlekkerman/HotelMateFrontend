@@ -8,10 +8,13 @@ import ShareMessageModal from './ShareMessageModal';
 import ReactionPicker from './ReactionPicker';
 import ReactionsList from './ReactionsList';
 import ParticipantsModal from './ParticipantsModal';
+import useReadReceipts from '../hooks/useReadReceipts';
+import useStaffChatRealtime from '../hooks/useStaffChatRealtime';
 
 /**
  * ConversationView Component
  * Displays messages and allows sending new messages in a conversation
+ * Auto-marks messages as read when scrolled into view
  */
 const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
   const [messages, setMessages] = useState([]);
@@ -27,10 +30,56 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
   const [deleting, setDeleting] = useState(false);
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const messagesEndRef = useRef(null);
+  const lastMessageRef = useRef(null);
 
   // Get current user ID from localStorage or props
   const currentUserData = currentUser || JSON.parse(localStorage.getItem('user') || '{}');
   const currentUserId = currentUserData?.staff_id || currentUserData?.id || null;
+
+  // Read receipts management
+  const {
+    readReceipts,
+    markConversationRead,
+    updateFromRealtimeEvent: updateReadReceipts,
+    loadReadReceipts
+  } = useReadReceipts(hotelSlug, conversation?.id, currentUserId);
+
+  // Real-time Pusher integration for read receipts
+  useStaffChatRealtime({
+    hotelSlug: hotelSlug,
+    conversationId: conversation?.id,
+    staffId: currentUserId,
+    onReadReceipt: (data) => {
+      console.log('📖 Received read receipt event:', data);
+      updateReadReceipts(data);
+      
+      // Update message list with new read counts
+      setMessages(prevMessages =>
+        prevMessages.map(msg => {
+          if (data.message_ids && data.message_ids.includes(msg.id)) {
+            const alreadyReadBy = msg.read_by_list || [];
+            const alreadyRead = alreadyReadBy.some(r => r.id === data.staff_id);
+            
+            if (!alreadyRead) {
+              return {
+                ...msg,
+                read_by_count: (msg.read_by_count || 0) + 1,
+                read_by_list: [
+                  ...alreadyReadBy,
+                  {
+                    id: data.staff_id,
+                    name: data.staff_name,
+                    timestamp: data.timestamp
+                  }
+                ]
+              };
+            }
+          }
+          return msg;
+        })
+      );
+    }
+  });
 
   // Debug: Log replyTo state changes
   useEffect(() => {
@@ -52,6 +101,26 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     scrollToBottom();
   }, [messages]);
 
+  // Auto-mark as read when last message is visible
+  useEffect(() => {
+    if (!lastMessageRef.current || messages.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          // User scrolled to bottom, mark conversation as read
+          console.log('👀 Last message visible, marking conversation as read');
+          markConversationRead();
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    observer.observe(lastMessageRef.current);
+
+    return () => observer.disconnect();
+  }, [messages.length, markConversationRead]);
+
   const loadMessages = async () => {
     if (!conversation?.id) return;
 
@@ -60,7 +129,11 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
 
     try {
       const data = await fetchMessages(hotelSlug, conversation.id);
-      setMessages(Array.isArray(data) ? data : data.results || []);
+      const messageList = Array.isArray(data) ? data : data.results || [];
+      setMessages(messageList);
+      
+      // Load read receipts from message data
+      loadReadReceipts(messageList);
     } catch (err) {
       setError(err.message);
       console.error('Error loading messages:', err);
@@ -278,7 +351,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
           </div>
         ) : (
           <>
-            {messages.map((message) => {
+            {messages.map((message, index) => {
               // Determine sender ID - handle various API response formats
               const senderId = message.sender?.id || Number(message.sender) || message.sender_id;
               const userId = Number(currentUserId);
@@ -290,9 +363,19 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
                                message.sender_info?.full_name ||
                                'User';
               
+              // Get read receipt info
+              const readStatus = readReceipts[message.id] || {
+                read_by: message.read_by_list || [],
+                read_count: message.read_by_count || 0
+              };
+
+              // Attach ref to last message for intersection observer
+              const isLastMessage = index === messages.length - 1;
+              
               return (
                 <div
                   key={message.id}
+                  ref={isLastMessage ? lastMessageRef : null}
                   className={`staff-chat-message ${isOwn ? 'staff-chat-message--own' : 'staff-chat-message--other'}`}
                 >
                   <MessageBubble
@@ -305,6 +388,8 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
                     isDeleted={message.is_deleted || false}
                     attachments={message.attachments || []}
                     isEditing={editingMessageId === message.id}
+                    readByList={readStatus.read_by}
+                    readByCount={readStatus.read_count}
                     onSaveEdit={(newText) => {
                       // Handle edit save (you can implement editMessage API call)
                       setEditingMessageId(null);

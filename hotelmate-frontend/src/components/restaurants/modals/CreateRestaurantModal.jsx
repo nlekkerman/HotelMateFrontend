@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const CreateRestaurantModal = ({ show, toggle, onCreated, api }) => {
+const CreateRestaurantModal = ({ show, toggle, onCreated, api, hotelSlug: propHotelSlug }) => {
   const [name, setName] = useState("");
   const [capacity, setCapacity] = useState(30);
   const [description, setDescription] = useState("");
@@ -18,8 +18,12 @@ const CreateRestaurantModal = ({ show, toggle, onCreated, api }) => {
     setError("");
 
     try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      const hotelSlug = user?.hotel_slug;
+      // Use prop hotelSlug first, fallback to localStorage
+      let hotelSlug = propHotelSlug;
+      if (!hotelSlug) {
+        const user = JSON.parse(localStorage.getItem("user"));
+        hotelSlug = user?.hotel_slug;
+      }
       if (!hotelSlug) throw new Error("Hotel slug not found");
 
       // Build request body - only include fields that are provided
@@ -70,12 +74,40 @@ const CreateRestaurantModal = ({ show, toggle, onCreated, api }) => {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black opacity-50" onClick={toggle}></div>
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded shadow-lg w-full max-w-2xl z-50 max-h-[90vh] overflow-y-auto">
+      {/* Backdrop - full screen overlay */}
+      <div 
+        className="position-fixed top-0 start-0 w-100 h-100 bg-dark"
+        style={{ 
+          opacity: 0.7, 
+          zIndex: 1055,
+          backdropFilter: 'blur(3px)'
+        }} 
+        onClick={toggle}
+      ></div>
+      
+      {/* Modal centered on screen */}
+      <div 
+        className="position-fixed top-50 start-50 translate-middle bg-white rounded shadow-lg"
+        style={{ 
+          zIndex: 1056,
+          width: '90%',
+          maxWidth: '800px',
+          maxHeight: '90vh',
+          overflowY: 'auto'
+        }}
+      >
         <form onSubmit={handleSubmit}>
-          <div className="modal-header p-4 border-b flex justify-between items-center sticky top-0 bg-white">
-            <h5 className="modal-title">Create Restaurant</h5>
-            <button type="button" className="btn-close" onClick={toggle}></button>
+          <div className="modal-header p-4 border-bottom d-flex justify-content-between align-items-center sticky-top bg-white" style={{ zIndex: 1 }}>
+            <h5 className="modal-title fw-bold mb-0">
+              <i className="bi bi-shop me-2 text-primary"></i>
+              Create New Restaurant
+            </h5>
+            <button 
+              type="button" 
+              className="btn-close" 
+              onClick={toggle}
+              aria-label="Close"
+            ></button>
           </div>
           <div className="modal-body p-4">
             {error && (
@@ -189,12 +221,32 @@ const CreateRestaurantModal = ({ show, toggle, onCreated, api }) => {
               </div>
             </div>
           </div>
-          <div className="modal-footer p-4 border-t flex justify-end gap-2 sticky bottom-0 bg-white">
-            <button type="button" className="btn btn-secondary" onClick={toggle}>
+          <div className="modal-footer p-4 border-top d-flex justify-content-end gap-2 sticky-bottom bg-white" style={{ zIndex: 1 }}>
+            <button 
+              type="button" 
+              className="btn btn-secondary px-4" 
+              onClick={toggle}
+              disabled={loading}
+            >
+              <i className="bi bi-x-circle me-2"></i>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? "Creating..." : "Create Restaurant"}
+            <button 
+              type="submit" 
+              className="btn btn-primary px-4" 
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-check-circle me-2"></i>
+                  Create Restaurant
+                </>
+              )}
             </button>
           </div>
         </form>

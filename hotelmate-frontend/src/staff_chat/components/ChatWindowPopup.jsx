@@ -344,11 +344,11 @@ const ChatWindowPopup = ({
   // Calculate position based on stack index
   // Start from the messenger widget (340px + 24px gap = 364px), then add stacking
   const rightOffset = position === 'bottom-right' 
-    ? 388 + (stackIndex * 340) // 364px for widget + 24px gap, then 340px per chat
+    ? 364 + (stackIndex * 340) // 340px for widget + 24px gap, then 340px per chat
     : 'auto';
   
   const leftOffset = position === 'bottom-left'
-    ? 388 + (stackIndex * 340)
+    ? 364 + (stackIndex * 340) // 340px for widget + 24px gap, then 340px per chat
     : 'auto';
 
   return (

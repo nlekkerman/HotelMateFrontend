@@ -397,3 +397,78 @@ export const leaveConversation = async (hotelSlug, conversationId) => {
     throw error;
   }
 };
+
+/**
+ * Get global unread message count across all conversations
+ * @param {string} hotelSlug - The hotel's slug identifier
+ * @returns {Promise<Object>} Object with total_unread, conversations_with_unread, and breakdown array
+ */
+export const fetchUnreadCount = async (hotelSlug) => {
+  try {
+    const response = await api.get(`/staff_chat/${hotelSlug}/conversations/unread-count/`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching unread count:', error);
+    throw error;
+  }
+};
+
+/**
+ * Mark a conversation as read (all messages)
+ * @param {string} hotelSlug - The hotel's slug identifier
+ * @param {number} conversationId - The conversation ID
+ * @returns {Promise<Object>} Object with success, marked_count, and message_ids array
+ */
+export const markConversationAsRead = async (hotelSlug, conversationId) => {
+  try {
+    const response = await api.post(
+      `/staff_chat/${hotelSlug}/conversations/${conversationId}/mark_as_read/`
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error marking conversation as read:', error);
+    throw error;
+  }
+};
+
+/**
+ * Bulk mark multiple conversations as read
+ * @param {string} hotelSlug - The hotel's slug identifier
+ * @param {Array<number>} conversationIds - Array of conversation IDs
+ * @returns {Promise<Object>} Object with success, marked_conversations, and total_messages_marked
+ */
+export const bulkMarkAsRead = async (hotelSlug, conversationIds) => {
+  try {
+    const payload = {
+      conversation_ids: conversationIds
+    };
+    
+    const response = await api.post(
+      `/staff_chat/${hotelSlug}/conversations/bulk-mark-as-read/`,
+      payload
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error bulk marking as read:', error);
+    throw error;
+  }
+};
+
+/**
+ * Mark an individual message as read
+ * @param {string} hotelSlug - The hotel's slug identifier
+ * @param {number} messageId - The message ID
+ * @returns {Promise<Object>} Object with success, was_unread, and updated message
+ */
+export const markMessageAsRead = async (hotelSlug, messageId) => {
+  try {
+    const response = await api.post(
+      `/staff_chat/${hotelSlug}/messages/${messageId}/mark-as-read/`
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error marking message as read:', error);
+    throw error;
+  }
+};

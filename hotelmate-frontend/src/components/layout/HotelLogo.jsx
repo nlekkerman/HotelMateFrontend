@@ -1,8 +1,9 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import useHotel from "@/hooks/useHotel";
+import CustomIcon from "@/components/utils/CustomIcon";
 
-export default function HotelLogo({ className = "", style = {} }) {
+export default function HotelLogo({ className = "", style = {}, useHomeIcon = false }) {
   const { hotelLogo, hotelName } = useHotel();
   const navigate = useNavigate();
 
@@ -15,6 +16,20 @@ export default function HotelLogo({ className = "", style = {} }) {
     console.error("[HotelLogo] Image failed to load:", e.currentTarget.src);
     e.currentTarget.style.display = "none"; // hide broken image
   };
+
+  // If useHomeIcon prop is true, use the custom home icon
+  if (useHomeIcon) {
+    return (
+      <CustomIcon
+        name="home"
+        alt="Home"
+        onClick={() => navigate("/")}
+        className={`hotel-logo ${className}`}
+        style={{ maxHeight: "60px", ...style }}
+        size={60}
+      />
+    );
+  }
 
   return hotelLogo ? (
     <img

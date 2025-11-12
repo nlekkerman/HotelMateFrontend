@@ -1,19 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Container, Row, Col, Spinner, Alert } from "react-bootstrap";
 
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useRestaurantSelection } from "@/components/restaurants/hooks/useRestaurantSelection";
 import RestaurantList from "@/components/restaurants/RestaurantList";
+import CreateRestaurantModal from "@/components/restaurants/modals/CreateRestaurantModal";
+import api from "@/services/api";
 
 const RestaurantManagementDashboard = () => {
   const { user } = useAuth();
   const { mainColor } = useTheme();
-  const hotelSlug = user?.hotel_slug;
+  const { hotelSlug: urlHotelSlug } = useParams();
+  const hotelSlug = urlHotelSlug || user?.hotel_slug;
   const navigate = useNavigate();
   const [showAddModal, setShowAddModal] = useState(false);
+
+  console.log("🏨 RestaurantManagementDashboard - URL hotelSlug:", urlHotelSlug);
+  console.log("🏨 RestaurantManagementDashboard - User hotelSlug:", user?.hotel_slug);
+  console.log("🏨 RestaurantManagementDashboard - Final hotelSlug:", hotelSlug);
 
   const {
     restaurants,
@@ -38,10 +45,26 @@ const RestaurantManagementDashboard = () => {
   };
 
   const handleAddRestaurant = () => {
-    // TODO: Open modal or navigate to add restaurant page
     setShowAddModal(true);
-    console.log("Add new restaurant");
   };
+
+  const handleRestaurantCreated = (newRestaurant) => {
+    setShowAddModal(false);
+    // Refresh the restaurant list to show the new restaurant
+    window.location.reload();
+  };
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (showAddModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showAddModal]);
 
   return (
     <Container fluid className="py-4" style={{ maxWidth: '1400px' }}>
@@ -62,32 +85,34 @@ const RestaurantManagementDashboard = () => {
         </Col>
       </Row>
 
-      {/* Mobile Quick Actions - Same style as desktop */}
-      <div 
-        className="d-lg-none position-fixed start-0 end-0"
-        style={{
-          top: "60px",
-          zIndex: 1045,
-          background: "transparent",
-        }}
-      >
-        <div className="container-fluid">
-          <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-2 flex-wrap">
-            <button className="contextual-action-btn" onClick={() => navigate(`/room_services/${hotelSlug}/orders`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
-              <i className="bi bi-receipt-cutoff" style={{ color: mainColor || '#3498db' }} />
-              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Room Service</span>
-            </button>
-            <button className="contextual-action-btn" onClick={() => navigate(`/room_services/${hotelSlug}/breakfast-orders`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
-              <i className="bi bi-egg-fried" style={{ color: mainColor || '#3498db' }} />
-              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Breakfast</span>
-            </button>
-            <button className="contextual-action-btn" onClick={() => navigate('/bookings')} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
-              <i className="bi bi-calendar3" style={{ color: mainColor || '#3498db' }} />
-              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Bookings</span>
-            </button>
+      {/* Mobile Quick Actions - Only show to authenticated users */}
+      {user && (
+        <div 
+          className="d-lg-none position-fixed start-0 end-0"
+          style={{
+            top: "60px",
+            zIndex: 1045,
+            background: "transparent",
+          }}
+        >
+          <div className="container-fluid">
+            <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-2 flex-wrap">
+              <button className="contextual-action-btn" onClick={() => navigate(`/room_services/${hotelSlug}/orders`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+                <i className="bi bi-receipt-cutoff" style={{ color: mainColor || '#3498db' }} />
+                <span className="action-label" style={{ color: mainColor || '#3498db' }}>Room Service</span>
+              </button>
+              <button className="contextual-action-btn" onClick={() => navigate(`/room_services/${hotelSlug}/breakfast-orders`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+                <i className="bi bi-egg-fried" style={{ color: mainColor || '#3498db' }} />
+                <span className="action-label" style={{ color: mainColor || '#3498db' }}>Breakfast</span>
+              </button>
+              <button className="contextual-action-btn" onClick={() => navigate('/bookings')} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+                <i className="bi bi-calendar3" style={{ color: mainColor || '#3498db' }} />
+                <span className="action-label" style={{ color: mainColor || '#3498db' }}>Bookings</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Loading State */}
       {loading && (
@@ -114,6 +139,15 @@ const RestaurantManagementDashboard = () => {
           onAddRestaurant={handleAddRestaurant}
         />
       )}
+
+      {/* Create Restaurant Modal */}
+      <CreateRestaurantModal
+        show={showAddModal}
+        toggle={() => setShowAddModal(false)}
+        onCreated={handleRestaurantCreated}
+        api={api}
+        hotelSlug={hotelSlug}
+      />
     </Container>
   );
 };

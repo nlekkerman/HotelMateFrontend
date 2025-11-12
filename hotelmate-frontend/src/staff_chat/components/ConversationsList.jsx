@@ -3,20 +3,29 @@ import PropTypes from 'prop-types';
 import useStaffList from '../hooks/useStaffList';
 import useStaffSearch from '../hooks/useStaffSearch';
 import useStartConversation from '../hooks/useStartConversation';
-import { fetchConversations } from '../services/staffChatApi';
+import { fetchConversations, bulkMarkAsRead } from '../services/staffChatApi';
+import useUnreadCount from '../hooks/useUnreadCount';
 
 /**
  * ConversationsList Component
  * Search bar at top to find staff and start conversations
- * (Conversations list will be added when backend is ready)
+ * Shows existing conversations with unread counts and "Mark All as Read" button
  */
 const ConversationsList = ({ hotelSlug, onOpenChat }) => {
   const [startingChatWithId, setStartingChatWithId] = useState(null);
   const [existingConversations, setExistingConversations] = useState([]);
+  const [markingAllAsRead, setMarkingAllAsRead] = useState(false);
   
   // Get current user ID from localStorage
   const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
   const currentUserId = currentUserData?.staff_id || currentUserData?.id || null;
+
+  // Track unread counts
+  const { 
+    totalUnread, 
+    conversationsWithUnread, 
+    refresh: refreshUnreadCount 
+  } = useUnreadCount(hotelSlug, 30000);
 
   // Search functionality
   const { searchTerm, debouncedSearchTerm, handleSearchChange, clearSearch } = useStaffSearch();
@@ -119,13 +128,50 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
     }
   };
 
+  /**
+   * Mark all conversations as read
+   */
+  const handleMarkAllAsRead = async () => {
+    const unreadConvIds = existingConversations
+      .filter(c => c.unread_count > 0)
+      .map(c => c.id);
+    
+    if (unreadConvIds.length === 0) {
+      return;
+    }
+
+    setMarkingAllAsRead(true);
+    
+    try {
+      const response = await bulkMarkAsRead(hotelSlug, unreadConvIds);
+      console.log('✅ Marked all as read:', response);
+      
+      // Update local conversations to reflect zero unread
+      setExistingConversations(prev =>
+        prev.map(conv => ({
+          ...conv,
+          unread_count: 0
+        }))
+      );
+      
+      // Refresh unread count
+      refreshUnreadCount();
+      
+    } catch (error) {
+      console.error('❌ Failed to mark all as read:', error);
+      alert('Failed to mark all as read. Please try again.');
+    } finally {
+      setMarkingAllAsRead(false);
+    }
+  };
+
   const showSearchResults = searchTerm.trim().length > 0;
 
   return (
     <div className="h-100 d-flex flex-column">
       {/* Search Bar */}
       <div className="p-3 border-bottom">
-        <div className="position-relative">
+        <div className="position-relative mb-2">
           <input
             type="text"
             value={searchTerm}
@@ -145,6 +191,28 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
             </button>
           )}
         </div>
+        
+        {/* Mark All as Read Button */}
+        {!showSearchResults && conversationsWithUnread > 0 && (
+          <button
+            onClick={handleMarkAllAsRead}
+            disabled={markingAllAsRead}
+            className="btn btn-sm btn-outline-primary w-100"
+            style={{ fontSize: '0.85rem' }}
+          >
+            {markingAllAsRead ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Marking as read...
+              </>
+            ) : (
+              <>
+                <i className="bi bi-check2-all me-2"></i>
+                Mark All as Read ({totalUnread})
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Content Area */}
@@ -229,8 +297,8 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
           </div>
         ) : existingConversations.length > 0 ? (
           // Show Existing Conversations
-          <div className="border-bottom">
-            <div className="list-group list-group-flush gap-1">
+          <div className="p-2">
+            <div className="d-flex flex-column gap-2">
               {existingConversations.map((conversation) => {
                 // Get the other participant (not current user)
                 // Filter out the current user from participants to show the OTHER person
@@ -239,47 +307,40 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
                 );
                 
                 return (
-                  <button
+                  <div
                     key={conversation.id}
-                    className="list-group-item list-group-item-action border-0 py-3"
+                    className="conversation-card"
                     onClick={() => onOpenChat(conversation, otherParticipant)}
+                    role="button"
+                    tabIndex={0}
                   >
-                    <div className="d-flex align-items-center">
+                    <div className="conversation-card__content">
                       {/* Avatar */}
-                      <div className="position-relative me-3">
+                      <div className="conversation-card__avatar">
                         {otherParticipant?.profile_image_url ? (
                           <img 
                             src={otherParticipant.profile_image_url} 
                             alt={otherParticipant.full_name}
-                            className="rounded-circle"
-                            width="48"
-                            height="48"
-                            style={{ objectFit: 'cover' }}
+                            className="conversation-card__avatar-img"
                           />
                         ) : (
-                          <div 
-                            className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center fw-bold"
-                            style={{ width: '48px', height: '48px', fontSize: '18px' }}
-                          >
+                          <div className="conversation-card__avatar-placeholder">
                             {otherParticipant?.full_name?.charAt(0)?.toUpperCase() || '?'}
                           </div>
                         )}
                         {otherParticipant?.is_on_duty && (
-                          <span 
-                            className="position-absolute bottom-0 end-0 bg-success border border-2 border-white rounded-circle"
-                            style={{ width: '14px', height: '14px' }}
-                          />
+                          <span className="conversation-card__online-dot" />
                         )}
                       </div>
                       
                       {/* Conversation Info */}
-                      <div className="flex-grow-1 text-start">
-                        <div className="d-flex justify-content-between align-items-start">
-                          <h6 className="mb-0">
+                      <div className="conversation-card__info">
+                        <div className="conversation-card__header">
+                          <h6 className="conversation-card__name">
                             {conversation.title || otherParticipant?.full_name || 'Chat'}
                           </h6>
                           {conversation.unread_count > 0 && (
-                            <span className="badge bg-primary rounded-pill">
+                            <span className="conversation-card__badge">
                               {conversation.unread_count}
                             </span>
                           )}
@@ -287,7 +348,7 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
                         
                         {/* Last Message Preview */}
                         {conversation.last_message && (
-                          <small className="text-muted text-truncate d-block" style={{ maxWidth: '250px' }}>
+                          <p className="conversation-card__message">
                             {(() => {
                               const msg = conversation.last_message;
                               
@@ -341,18 +402,18 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
                               
                               return 'Message';
                             })()}
-                          </small>
+                          </p>
                         )}
                         
                         {/* Role */}
                         {!conversation.last_message && otherParticipant?.role && (
-                          <small className="text-muted">
+                          <p className="conversation-card__role">
                             {otherParticipant.role.name}
-                          </small>
+                          </p>
                         )}
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
