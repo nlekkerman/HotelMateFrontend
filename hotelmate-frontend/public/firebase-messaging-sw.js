@@ -45,7 +45,23 @@ self.addEventListener('notificationclick', (event) => {
   const notificationData = event.notification.data;
   let urlToOpen = '/';
 
-  if (notificationData.type === 'new_chat_message') {
+  // Staff Chat Messages
+  if (notificationData.type === 'staff_chat_message' || notificationData.type === 'staff_chat_mention') {
+    const hotelSlug = notificationData.hotel_slug;
+    const conversationId = notificationData.conversation_id;
+    
+    if (conversationId && hotelSlug) {
+      // Navigate to staff chat conversation
+      urlToOpen = `/${hotelSlug}/staff-chat?conversation=${conversationId}`;
+      console.log('[SW] Opening staff chat conversation:', urlToOpen);
+    } else {
+      // No specific conversation, open staff chat main page
+      urlToOpen = `/${hotelSlug}/staff-chat`;
+      console.log('[SW] Opening staff chat main page:', urlToOpen);
+    }
+  }
+  // Guest Chat Messages
+  else if (notificationData.type === 'new_chat_message') {
     // Chat message notification (both guest→staff and staff→guest)
     const hotelSlug = notificationData.hotel_slug;
     const conversationId = notificationData.conversation_id;
@@ -57,7 +73,7 @@ self.addEventListener('notificationclick', (event) => {
       // Navigate staff to: /chat/{hotel}/conversations/{id}/messages
       if (conversationId && hotelSlug) {
         urlToOpen = `/chat/${hotelSlug}/conversations/${conversationId}/messages`;
-        console.log('[SW] Opening staff chat (guest sent message):', urlToOpen);
+        console.log('[SW] Opening guest chat (guest sent message):', urlToOpen);
       }
     } else if (senderType === 'staff') {
       // Staff sent message → Guest receives notification
