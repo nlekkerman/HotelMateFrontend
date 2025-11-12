@@ -1,0 +1,188 @@
+/* Quick Notifications - Blinking buttons in quick actions bar */
+
+.quick-notifications-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 16px;
+  padding-left: 16px;
+  border-left: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.quick-notification-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: #e74c3c;
+  color: white;
+  border: 2px solid #e74c3c;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 300px;
+}
+
+.quick-notification-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(231, 76, 60, 0.6);
+  animation: none; /* Stop blinking on hover */
+}
+
+.quick-notification-btn:active {
+  transform: translateY(0);
+}
+
+/* Blinking animation - red pulsating effect */
+@keyframes blink-notification {
+  0% {
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(231, 76, 60, 0.8);
+    transform: scale(1.05);
+  }
+  100% {
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+    transform: scale(1);
+  }
+}
+
+.blink-animation {
+  animation: blink-notification 1.5s ease-in-out infinite;
+}
+
+/* From label - truncate if too long */
+.notification-from {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+/* Count badge */
+.notification-count-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 2px 6px;
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #e74c3c;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Dismiss button */
+.notification-dismiss-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin-left: 4px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.notification-dismiss-btn:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.notification-dismiss-btn:active {
+  transform: scale(0.95);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .quick-notifications-container {
+    margin-left: 8px;
+    padding-left: 8px;
+    gap: 6px;
+  }
+
+  .quick-notification-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    gap: 6px;
+    max-width: 200px;
+  }
+
+  .notification-from {
+    font-size: 11px;
+  }
+
+  .notification-count-badge {
+    min-width: 20px;
+    height: 20px;
+    font-size: 10px;
+  }
+}
+
+/* Different colors for different notification types */
+.quick-notification-btn[data-type="mention"] {
+  background-color: #f39c12;
+  border-color: #f39c12;
+  box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4);
+}
+
+.quick-notification-btn[data-type="mention"]:hover {
+  box-shadow: 0 6px 16px rgba(243, 156, 18, 0.6);
+}
+
+.quick-notification-btn[data-type="file"] {
+  background-color: #9b59b6;
+  border-color: #9b59b6;
+  box-shadow: 0 4px 12px rgba(155, 89, 182, 0.4);
+}
+
+.quick-notification-btn[data-type="file"]:hover {
+  box-shadow: 0 6px 16px rgba(155, 89, 182, 0.6);
+}
+
+.quick-notification-btn[data-type="message"] {
+  background-color: #3498db;
+  border-color: #3498db;
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
+.quick-notification-btn[data-type="message"]:hover {
+  box-shadow: 0 6px 16px rgba(52, 152, 219, 0.6);
+}
+
+/* Glow effect for new notifications */
+@keyframes glow {
+  0% {
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(231, 76, 60, 0.8), 0 0 30px rgba(231, 76, 60, 0.6);
+  }
+  100% {
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+  }
+}
+
+.quick-notification-btn.new {
+  animation: glow 2s ease-in-out infinite;
+}

@@ -12,6 +12,9 @@ import { useChat } from "@/context/ChatContext";
 import { useBookingNotifications } from "@/context/BookingNotificationContext";
 import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationContext";
 import useUnreadCount from "@/staff_chat/hooks/useUnreadCount";
+import useQuickNotifications from "@/staff_chat/hooks/useQuickNotifications";
+import QuickNotificationButtons from "@/staff_chat/components/QuickNotificationButtons";
+import PusherProvider from "@/staff_chat/context/PusherProvider";
 
 const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const location = useLocation();
@@ -28,6 +31,16 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   
   // Staff chat unread count
   const { totalUnread: staffChatUnread } = useUnreadCount(hotelIdentifier, 30000);
+  
+  // Quick notifications (blinking buttons)
+  const {
+    notifications: quickNotifications,
+    removeNotification,
+    removeNotificationsByConversation
+  } = useQuickNotifications({
+    hotelSlug: hotelIdentifier,
+    staffId: user?.id
+  });
   
   const [staffProfile, setStaffProfile] = useState(null);
   const [isOnDuty, setIsOnDuty] = useState(false);
@@ -378,10 +391,12 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
                 if (item.slug === "room-service") orderCount = roomServiceCount;
                 if (item.slug === "breakfast") orderCount = breakfastCount;
                 if (item.slug === "chat") orderCount = totalUnread;
+                if (item.slug === "staff-chat") orderCount = staffChatUnread;
                 
                 const showNewBadge = 
                   item.slug === "bookings" ? hasNewBooking : 
                   item.slug === "chat" ? totalUnread > 0 : 
+                  item.slug === "staff-chat" ? staffChatUnread > 0 :
                   item.slug === "room-service" ? hasNewRoomService :
                   item.slug === "breakfast" ? hasNewBreakfast :
                   false;
@@ -437,7 +452,7 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
 
       {/* Spacer to push content down - adjusted for navbar + quick actions */}
       <div className="d-none d-lg-block" style={{ 
-        height: contextualActions.length > 0 ? "90px" : 
+        height: (contextualActions.length > 0 || quickNotifications.length > 0) ? "90px" : 
                 (location.pathname.includes('/roster') && new URLSearchParams(location.search).get('department')) ? "130px" :
                 location.pathname.includes('/roster') ? "90px" : "50px" 
       }}></div>
@@ -486,7 +501,7 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
       })()}
 
       {/* Contextual Quick Actions Bar - Desktop - Always Visible Below Navbar */}
-      {contextualActions.length > 0 && (
+      {(contextualActions.length > 0 || quickNotifications.length > 0) && (
         <div 
           className="d-none d-lg-flex position-fixed start-0 end-0 contextual-actions-bar"
           style={{
@@ -497,6 +512,7 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
         >
           <div className="container-fluid">
             <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-3">
+              {/* Contextual action buttons */}
               {contextualActions.map((action, idx) => (
                 <button
                   key={idx}
@@ -512,6 +528,14 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
                   <span className="action-label" style={{ color: mainColor || '#3498db' }}>{action.label}</span>
                 </button>
               ))}
+              
+              {/* Quick notification buttons - blinking red buttons */}
+              <QuickNotificationButtons
+                notifications={quickNotifications}
+                onNotificationDismiss={removeNotification}
+                hotelSlug={hotelIdentifier}
+                mainColor={mainColor}
+              />
             </div>
           </div>
         </div>
@@ -533,4 +557,30 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   );
 };
 
-export default DesktopSidebarNavbar;
+// Wrap with PusherProvider for real-time notifications
+const DesktopSidebarNavbarWithPusher = (props) => {
+  const { user } = useAuth();
+  
+  // Only enable if user is logged in
+  const pusherEnabled = Boolean(user?.hotel_slug);
+  
+  // Get Pusher credentials from environment
+  const pusherAppKey = import.meta.env.VITE_PUSHER_APP_KEY || 'your-pusher-app-key';
+  const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER || 'mt1';
+
+  if (!pusherEnabled) {
+    return <DesktopSidebarNavbar {...props} />;
+  }
+
+  return (
+    <PusherProvider
+      appKey={pusherAppKey}
+      cluster={pusherCluster}
+      enabled={pusherEnabled}
+    >
+      <DesktopSidebarNavbar {...props} />
+    </PusherProvider>
+  );
+};
+
+export default DesktopSidebarNavbarWithPusher;
