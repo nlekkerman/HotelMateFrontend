@@ -47,24 +47,43 @@ export const useStocktakes = (hotelSlug) => {
 
   // Create stocktake
   const createStocktake = async (stocktakeData) => {
+    console.log('📦 Creating stocktake:', stocktakeData);
     try {
       const res = await api.post(`/stock_tracker/${hotelSlug}/stocktakes/`, stocktakeData);
+      console.log('✅ Stocktake created:', {
+        id: res.data.id,
+        status: res.data.status,
+        period_start: res.data.period_start,
+        period_end: res.data.period_end
+      });
       setStocktakes([res.data, ...stocktakes]);
       return res.data;
     } catch (err) {
-      console.error("Error creating stocktake:", err);
+      console.error("❌ Error creating stocktake:", err);
+      console.error("Response:", err.response?.data);
       throw err;
     }
   };
 
   // Populate stocktake
   const populateStocktake = async (stocktakeId) => {
+    console.log('🔄 Populating stocktake #' + stocktakeId);
+    console.time('populate-duration');
+    
     try {
       const res = await api.post(`/stock_tracker/${hotelSlug}/stocktakes/${stocktakeId}/populate/`);
+      
+      console.timeEnd('populate-duration');
+      console.log('✅ Population complete:', {
+        lines_created: res.data.lines_created,
+        message: res.data.message
+      });
+      
       await fetchStocktake(stocktakeId); // Refresh data
       return res.data;
     } catch (err) {
-      console.error("Error populating stocktake:", err);
+      console.error("❌ Error populating stocktake:", err);
+      console.error("Response:", err.response?.data);
       throw err;
     }
   };
@@ -102,14 +121,25 @@ export const useStocktakes = (hotelSlug) => {
 
   // Approve stocktake
   const approveStocktake = async (stocktakeId, approvedBy) => {
+    console.log('🔒 Approving stocktake #' + stocktakeId);
+    console.log('   Approved by:', approvedBy);
+    
     try {
       const res = await api.post(`/stock_tracker/${hotelSlug}/stocktakes/${stocktakeId}/approve/`, {
         approved_by: approvedBy
       });
+      
+      console.log('✅ Stocktake approved:', {
+        status: res.data.stocktake?.status,
+        approved_at: res.data.stocktake?.approved_at,
+        adjustments_created: res.data.adjustments_created
+      });
+      
       await fetchStocktake(stocktakeId); // Refresh data
       return res.data;
     } catch (err) {
-      console.error("Error approving stocktake:", err);
+      console.error("❌ Error approving stocktake:", err);
+      console.error("Response:", err.response?.data);
       throw err;
     }
   };

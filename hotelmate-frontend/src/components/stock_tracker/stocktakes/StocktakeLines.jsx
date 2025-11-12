@@ -1,27 +1,29 @@
 /**
  * StocktakeLines Component
  * 
- * Displays and manages stocktake line items with counting, purchases, and waste tracking.
+ * ✅ BACKEND CALCULATES ALL VALUES - Frontend only displays
+ * ✅ NO OPTIMISTIC UPDATES - Pusher handles real-time sync
+ * ✅ FRONTEND VALIDATES INPUT FORMAT ONLY - No business logic calculations
  * 
- * IMPORTANT: This component implements the exact calculations used by the backend.
- * See FRONTEND_STOCKTAKE_CALCULATIONS.md for detailed documentation.
+ * Architecture:
+ * 1. User enters counted values → Frontend validates format → Sends to backend
+ * 2. Backend calculates everything → Saves to database → Broadcasts via Pusher
+ * 3. All clients receive Pusher event → Update UI with backend values
  * 
- * Key Features:
- * - Category-specific validation (B and M-Doz use whole numbers, others allow 2 decimals)
- * - Correct API endpoints: /api/stock_tracker/{hotel}/stocktake-lines/...
- * - Proper calculation formulas: expected = opening + purchases - waste
- * - Optimistic updates with backend validation
- * - Real-time variance preview with accurate calculations
+ * What Frontend Does:
+ * - Validates user input format (whole numbers for B/M-Doz, 2 decimals for D/S/W)
+ * - Sends counted_full_units and counted_partial_units to backend
+ * - Displays backend values directly (expected, counted, variance, values)
+ * - Updates UI from Pusher events (real-time sync across all users)
  * 
- * Calculation Functions (from stocktakeCalculations.js):
- * - calculateCountedQty: (full_units × uom) + partial_units
- * - calculateExpectedQty: opening + purchases - waste
- * - calculateVariance: counted - expected
+ * What Backend Does:
+ * - Calculates expected_qty = opening + purchases - waste
+ * - Calculates counted_qty from user input with category-specific formulas
+ * - Calculates variance_qty = counted - expected
+ * - Converts to display units with category-specific rounding
+ * - Calculates all values (€) using frozen valuation_cost
  * 
- * Notes:
- * - All backend numeric fields come as strings and must be parseFloat'd
- * - Sales are tracked separately, not in expected calculation
- * - Variance: positive = surplus, negative = shortage
+ * See: BACKEND_API_COMPLETE_REFERENCE_FOR_FRONTEND.md for full API documentation
  */
 import React, { useState } from 'react';
 import { Card, Table, Form, Button, Badge } from 'react-bootstrap';
@@ -32,15 +34,9 @@ import { useCategoryTotals } from '../hooks/useCategoryTotals';
 import { MovementsList } from './MovementsList';
 import api from '@/services/api';
 import {
-  calculateCountedQty,
-  calculateExpectedQty,
-  calculateVariance,
-  calculateValues,
-  convertToDisplayUnits,
   validatePartialUnits,
   formatUserInput,
-  getInputConfig,
-  optimisticUpdateCount
+  getInputConfig
 } from '../utils/stocktakeCalculations';
 
 export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdated, hotelSlug, stocktakeId }) => {
@@ -442,13 +438,14 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     // Get input configuration for this category
     const inputConfig = getInputConfig({ category_code: line.category_code, item_size: line.item_size });
 
-    // NO OPTIMISTIC UPDATES - Only use backend values for variance display
-    // Use the saved values from backend, not input values
+    // ✅ BACKEND CALCULATES ALL VALUES - Frontend only displays
+    // No optimistic updates - Pusher handles real-time sync
     const varianceQty = parseFloat(line.variance_qty) || 0;
     const varianceValue = parseFloat(line.variance_value) || 0;
     
-    // Convert to display units for saved variance
-    const varianceDisplay = convertToDisplayUnits(Math.abs(varianceQty), line);
+    // ✅ Use backend-calculated display units (already rounded per category rules)
+    const varianceDisplayFull = line.variance_display_full_units || '0';
+    const varianceDisplayPartial = line.variance_display_partial_units || '0';
     
     const isShortage = varianceValue < 0;
     const isSurplus = varianceValue > 0;
@@ -810,14 +807,14 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               <div>
                 <strong className={`${textClass} ${strongClass}`}>
                   {isShortage ? '-' : '+'}
-                  {Math.abs(varianceDisplay.full)}
+                  {Math.abs(parseFloat(varianceDisplayFull))}
                 </strong>
                 <small className="text-muted ms-1">{labels.unit}</small>
               </div>
               <div>
                 <strong className={`${textClass} ${strongClass}`}>
                   {isShortage ? '-' : '+'}
-                  {varianceDisplay.partial.toFixed(varianceDisplay.decimals)}
+                  {Math.abs(parseFloat(varianceDisplayPartial))}
                 </strong>
                 <small className="text-muted ms-1">{labels.servingUnit}</small>
               </div>
@@ -857,7 +854,10 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     const cumulativeWaste = parseFloat(line.waste || 0);
     const varianceQty = parseFloat(line.variance_qty) || 0;
     const varianceValue = parseFloat(line.variance_value) || 0;
-    const varianceDisplay = convertToDisplayUnits(Math.abs(varianceQty), line);
+    
+    // ✅ Use backend-calculated display units (already rounded per category rules)
+    const varianceDisplayFull = line.variance_display_full_units || '0';
+    const varianceDisplayPartial = line.variance_display_partial_units || '0';
     
     const isShortage = varianceValue < 0;
     const isSurplus = varianceValue > 0;
@@ -982,14 +982,14 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               <div>
                 <span className={`${textClass} ${strongClass}`} style={{ fontSize: '1.1rem', fontWeight: '700' }}>
                   {isShortage ? '-' : '+'}
-                  {Math.abs(varianceDisplay.full)}
+                  {Math.abs(parseFloat(varianceDisplayFull))}
                 </span>
                 <small className="text-muted ms-1">{labels.unit}</small>
               </div>
               <div>
                 <span className={`${textClass} ${strongClass}`} style={{ fontSize: '1.1rem', fontWeight: '700' }}>
                   {isShortage ? '-' : '+'}
-                  {varianceDisplay.partial.toFixed(varianceDisplay.decimals)}
+                  {Math.abs(parseFloat(varianceDisplayPartial))}
                 </span>
                 <small className="text-muted ms-1">{labels.servingUnit}</small>
               </div>

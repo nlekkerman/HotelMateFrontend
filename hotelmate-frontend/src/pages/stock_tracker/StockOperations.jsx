@@ -3,14 +3,14 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Button } from 'react-bootstrap';
 import { FaBoxes, FaClipboardList, FaCocktail, FaArrowLeft, FaDownload, FaMoneyBillWave } from 'react-icons/fa';
-import CombinedDownload from '../../components/stock_tracker/downloads/CombinedDownload';
+import StocktakeDownload from '../../components/stock_tracker/downloads/StocktakeDownload';
 import stockItemsIcon from '@/assets/icons/stock-items.png';
 import stocktakeOpsIcon from '@/assets/icons/stocktake-ops.png';
 
 export default function StockOperations() {
   const { hotel_slug } = useParams();
   const navigate = useNavigate();
-  const [showCombinedModal, setShowCombinedModal] = useState(false);
+  const [showStocktakeDownload, setShowStocktakeDownload] = useState(false);
 
   return (
     <Container fluid className="mt-4">
@@ -278,7 +278,7 @@ export default function StockOperations() {
             </Col>
             <Col xs="auto" className="d-flex justify-content-center">
               <div
-                onClick={() => setShowCombinedModal(true)}
+                onClick={() => setShowStocktakeDownload(true)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.border = '3px solid gold';
                   e.currentTarget.querySelector('.hover-overlay').style.opacity = '1';
@@ -342,7 +342,7 @@ export default function StockOperations() {
                   lineHeight: '1.2',
                   color: 'black',
                   transition: 'color 0.3s ease'
-                }}>Download Combined Report</span>
+                }}>Download Stocktakes</span>
               </div>
             </Col>
             <Col xs="auto" className="d-flex justify-content-center">
@@ -418,10 +418,10 @@ export default function StockOperations() {
         </Card.Body>
       </Card>
 
-      {/* Combined Download Modal */}
-      <CombinedDownload
-        show={showCombinedModal}
-        onHide={() => setShowCombinedModal(false)}
+      {/* Stocktake Download Modal */}
+      <StocktakeDownload
+        show={showStocktakeDownload}
+        onHide={() => setShowStocktakeDownload(false)}
         hotelSlug={hotel_slug}
       />
     </Container>

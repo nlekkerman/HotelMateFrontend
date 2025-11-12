@@ -25,10 +25,10 @@ export default function StocktakeDownload({ show, onHide, hotelSlug }) {
     try {
       const response = await api.get(`/stock_tracker/${hotelSlug}/stocktakes/`);
       const all = response.data.results || response.data || [];
-      const approved = all.filter(st => st.status === 'APPROVED');
-      approved.sort((a, b) => new Date(b.period_start || b.created_at) - new Date(a.period_start || a.created_at));
-      setStocktakes(approved);
-      if (approved.length > 0) setSelectedStocktake(approved[0]);
+      // Sort by date (newest first) - include ALL stocktakes (open and approved)
+      all.sort((a, b) => new Date(b.period_start || b.created_at) - new Date(a.period_start || a.created_at));
+      setStocktakes(all);
+      if (all.length > 0) setSelectedStocktake(all[0]);
     } catch (err) {
       setError('Failed to load stocktakes');
     } finally {
@@ -82,15 +82,15 @@ export default function StocktakeDownload({ show, onHide, hotelSlug }) {
         ) : (
           <>
             <Form.Group className="mb-4">
-              <Form.Label className="fw-bold">Select Stocktake (Approved Only)</Form.Label>
+              <Form.Label className="fw-bold">Select Stocktake</Form.Label>
               {stocktakes.length === 0 ? (
-                <Alert variant="info">No approved stocktakes available for download.</Alert>
+                <Alert variant="info">No stocktakes available for download.</Alert>
               ) : (
                 <Form.Select value={selectedStocktake?.id || ''} onChange={(e) => setSelectedStocktake(stocktakes.find(st => st.id === parseInt(e.target.value)))} disabled={downloading} size="lg">
                   <option value="">-- Select Stocktake --</option>
                   {stocktakes.map(st => (
                     <option key={st.id} value={st.id}>
-                      Stocktake #{st.id} - {new Date(st.period_start).toLocaleDateString()} to {new Date(st.period_end).toLocaleDateString()}
+                      Stocktake #{st.id} - {new Date(st.period_start).toLocaleDateString()} to {new Date(st.period_end).toLocaleDateString()} ({st.status})
                     </option>
                   ))}
                 </Form.Select>

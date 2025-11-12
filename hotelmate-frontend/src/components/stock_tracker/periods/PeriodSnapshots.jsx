@@ -4,6 +4,8 @@ import { toast } from "react-toastify";
 import api from "@/services/api";
 import { formatCurrency } from '../utils/stockDisplayUtils';
 import { ReopenPeriodModal } from '../modals/ReopenPeriodModal';
+import { CreatePeriodModal } from '../modals/CreatePeriodModal';
+import { DeletePeriodModal } from '../modals/DeletePeriodModal';
 
 export const PeriodSnapshots = () => {
   const { hotel_slug } = useParams();
@@ -16,6 +18,9 @@ export const PeriodSnapshots = () => {
   const [reopening, setReopening] = useState(null);
   const [showReopenModal, setShowReopenModal] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState(null);
+  const [showCreatePeriodModal, setShowCreatePeriodModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [periodToDelete, setPeriodToDelete] = useState(null);
   
   // Check if user is superuser from localStorage
   const getUserFromLocalStorage = () => {
@@ -135,33 +140,59 @@ export const PeriodSnapshots = () => {
     setShowReopenModal(true);
   };
 
+  const handleDeleteClick = (e, period) => {
+    e.stopPropagation(); // Prevent card click
+    setPeriodToDelete(period);
+    setShowDeleteModal(true);
+  };
+
   const handleModalSuccess = async () => {
-    // Refresh periods data after reopening
+    // Refresh periods data after reopening or deleting
     await fetchPeriods();
   };
 
   const handlePeriodClick = async (period) => {
+    console.log('\n🔵 ========================================');
+    console.log('🔵 PERIOD CLICKED - Starting Flow');
+    console.log('🔵 ========================================');
+    console.log('📋 Period:', {
+      id: period.id,
+      name: period.period_name,
+      start: period.start_date,
+      end: period.end_date,
+      is_closed: period.is_closed,
+      has_stocktake: !!period.stocktake
+    });
+
     // FLOW:
     // 1. If period has stocktake → Go to stocktake details
-    // 2. If period has NO stocktake → CREATE stocktake for that period → Go to new stocktake details
+    // 2. If period has NO stocktake → CREATE stocktake for that period → POPULATE → Go to stocktake details
     
     if (period.stocktake?.id) {
       // Has stocktake - go directly to stocktake details
       console.log('✅ Period has stocktake ID:', period.stocktake.id);
+      console.log('   → Navigating to existing stocktake');
       navigate(`/stock_tracker/${hotel_slug}/stocktakes/${period.stocktake.id}`);
       return;
     }
     
     // No stocktake - search for existing stocktake first
-    console.warn('⚠️ Period missing stocktake, searching for existing stocktake...');
+    console.warn('⚠️ Period missing stocktake reference, searching database...');
     try {
       const response = await api.get(`/stock_tracker/${hotel_slug}/stocktakes/`);
       const stocktakes = response.data.results || response.data;
+      
+      console.log('📊 Found', stocktakes.length, 'total stocktakes in database');
       
       // Find stocktake that matches this period's dates
       // Use date-only string comparison to avoid timezone issues
       const periodStartDate = period.start_date.split('T')[0]; // Get YYYY-MM-DD
       const periodEndDate = period.end_date.split('T')[0]; // Get YYYY-MM-DD
+      
+      console.log('🔍 Searching for stocktake matching dates:', {
+        start: periodStartDate,
+        end: periodEndDate
+      });
       
       const matchingStocktake = stocktakes.find(st => {
         const stStartDate = st.period_start.split('T')[0];
@@ -170,13 +201,21 @@ export const PeriodSnapshots = () => {
       });
       
       if (matchingStocktake) {
-        console.log('✅ Found existing stocktake:', matchingStocktake.id, 'for period', period.period_name);
+        console.log('✅ Found existing stocktake:', {
+          id: matchingStocktake.id,
+          status: matchingStocktake.status,
+          total_lines: matchingStocktake.total_lines
+        });
+        console.log('   → Navigating to existing stocktake');
         navigate(`/stock_tracker/${hotel_slug}/stocktakes/${matchingStocktake.id}`);
         return;
       }
       
       // No stocktake exists - CREATE ONE for this period
-      console.log('📝 Creating new stocktake for period:', period.period_name);
+      console.log('\n📝 ========================================');
+      console.log('📝 STEP 1: Creating Stocktake');
+      console.log('📝 ========================================');
+      console.log('📦 Creating new stocktake for period:', period.period_name);
       toast.info(`Creating stocktake for ${period.period_name}...`);
       
       const createPayload = {
@@ -185,29 +224,97 @@ export const PeriodSnapshots = () => {
         status: 'DRAFT'
       };
       
+      console.log('📤 POST payload:', createPayload);
+      
       const createResponse = await api.post(`/stock_tracker/${hotel_slug}/stocktakes/`, createPayload);
       const newStocktake = createResponse.data;
       
-      console.log('✅ Stocktake created:', newStocktake.id);
+      console.log('✅ Stocktake created:', {
+        id: newStocktake.id,
+        status: newStocktake.status,
+        total_lines: newStocktake.total_lines
+      });
       
       // POPULATE the stocktake with inventory items
+      console.log('\n🔄 ========================================');
+      console.log('🔄 STEP 2: Populating Stocktake');
+      console.log('🔄 ========================================');
       console.log('📦 Populating stocktake with items...');
       toast.info('Loading inventory items...');
       
+      console.time('populate-duration');
+      
       try {
-        await api.post(`/stock_tracker/${hotel_slug}/stocktakes/${newStocktake.id}/populate/`);
-        console.log('✅ Stocktake populated successfully');
+        const populateResponse = await api.post(`/stock_tracker/${hotel_slug}/stocktakes/${newStocktake.id}/populate/`);
+        
+        console.timeEnd('populate-duration');
+        
+        console.log('✅ Population complete:', {
+          lines_created: populateResponse.data.lines_created,
+          message: populateResponse.data.message
+        });
+        
+        // Verify opening balances
+        console.log('\n🔍 ========================================');
+        console.log('🔍 STEP 3: Verifying Opening Balances');
+        console.log('🔍 ========================================');
+        
+        const verifyResponse = await api.get(`/stock_tracker/${hotel_slug}/stocktakes/${newStocktake.id}/`);
+        const populatedStocktake = verifyResponse.data;
+        
+        console.log('📊 Stocktake has', populatedStocktake.lines.length, 'lines');
+        
+        // Check first 5 lines for opening stock
+        console.log('🔍 Checking opening balances (first 5 items):');
+        populatedStocktake.lines.slice(0, 5).forEach(line => {
+          console.log(`  ${line.item_sku} - ${line.item_name}:`, {
+            opening_qty: line.opening_qty,
+            opening_display: `${line.opening_display_full_units} + ${line.opening_display_partial_units}`,
+            purchases: line.purchases,
+            expected_qty: line.expected_qty,
+            source: line.opening_qty === '0.0000' ? '❌ ZERO (ERROR!)' : '✅ Has opening'
+          });
+        });
+        
+        // Alert if all opening balances are zero
+        const allZero = populatedStocktake.lines.every(line => 
+          parseFloat(line.opening_qty) === 0
+        );
+        
+        if (allZero) {
+          console.error('❌ WARNING: All opening balances are ZERO!');
+          console.error('This indicates a backend issue. Contact support.');
+          toast.warning('⚠️ Opening balances are all zero - this may need attention');
+        } else {
+          console.log('✅ Opening balances look good!');
+        }
+        
         toast.success(`Stocktake created and populated for ${period.period_name}! 🎉`);
       } catch (populateErr) {
+        console.error('\n❌ ========================================');
+        console.error('❌ POPULATE FAILED');
+        console.error('❌ ========================================');
+        console.error('Error:', populateErr);
+        console.error('Response:', populateErr.response?.data);
+        
         console.warn('⚠️ Failed to populate stocktake:', populateErr);
         toast.warning('Stocktake created but failed to populate. Click "Populate Lines" button.');
       }
+      
+      console.log('\n✅ ========================================');
+      console.log('✅ FLOW COMPLETE - Navigating to Stocktake');
+      console.log('✅ ========================================\n');
       
       // Navigate to the new stocktake
       navigate(`/stock_tracker/${hotel_slug}/stocktakes/${newStocktake.id}`);
       
     } catch (err) {
-      console.error('❌ Error with stocktake:', err);
+      console.error('\n❌ ========================================');
+      console.error('❌ ERROR IN handlePeriodClick');
+      console.error('❌ ========================================');
+      console.error('Error:', err);
+      console.error('Response:', err.response?.data);
+      
       toast.error(err.response?.data?.detail || 'Failed to create stocktake');
     }
   };
@@ -252,6 +359,14 @@ export const PeriodSnapshots = () => {
           <h2 className="d-inline">Period History</h2>
           <small className="text-muted ms-2">View all accounting periods and their stocktakes</small>
         </div>
+        <button 
+          className="btn btn-primary"
+          onClick={() => setShowCreatePeriodModal(true)}
+          title="Create a new period"
+        >
+          <i className="bi bi-plus-circle me-2"></i>
+          Create New Period
+        </button>
       </div>
 
       {/* Filter */}
@@ -293,8 +408,22 @@ export const PeriodSnapshots = () => {
                      onClick={() => handlePeriodClick(period)}>
                   {/* Period Header */}
                   <div className="card-header d-flex justify-content-between align-items-center">
-                    <strong>{period.period_name}</strong>
-                    {getPeriodBadge(period, periods)}
+                    <div className="d-flex align-items-center gap-2">
+                      <strong>{period.period_name}</strong>
+                      {getPeriodBadge(period, periods)}
+                    </div>
+                    
+                    {/* Delete Button - Superusers Only */}
+                    {isSuperuser && (
+                      <button 
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={(e) => handleDeleteClick(e, period)}
+                        title="Delete period and all related data (superuser only)"
+                        style={{ zIndex: 10 }}
+                      >
+                        <i className="bi bi-trash"></i>
+                      </button>
+                    )}
                   </div>
                   
                   <div className="card-body">
@@ -403,12 +532,34 @@ export const PeriodSnapshots = () => {
         </div>
       )}
 
+      {/* Create Period Modal */}
+      <CreatePeriodModal
+        show={showCreatePeriodModal}
+        onHide={() => setShowCreatePeriodModal(false)}
+        hotelSlug={hotel_slug}
+        onSuccess={handleModalSuccess}
+      />
+
       {/* Reopen Period Modal */}
       {selectedPeriod && (
         <ReopenPeriodModal
           show={showReopenModal}
           onHide={() => setShowReopenModal(false)}
           period={selectedPeriod}
+          hotelSlug={hotel_slug}
+          onSuccess={handleModalSuccess}
+        />
+      )}
+
+      {/* Delete Period Modal - Superusers Only */}
+      {periodToDelete && (
+        <DeletePeriodModal
+          show={showDeleteModal}
+          onHide={() => {
+            setShowDeleteModal(false);
+            setPeriodToDelete(null);
+          }}
+          period={periodToDelete}
           hotelSlug={hotel_slug}
           onSuccess={handleModalSuccess}
         />

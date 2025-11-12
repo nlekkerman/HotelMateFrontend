@@ -176,12 +176,71 @@ export const StocktakeDetail = () => {
   };
 
   const handlePopulate = async () => {
+    console.log('\n🔄 ========================================');
+    console.log('🔄 POPULATING STOCKTAKE');
+    console.log('🔄 ========================================');
+    console.log('📋 Stocktake ID:', id);
+    console.log('📅 Period:', {
+      start: stocktake.period_start,
+      end: stocktake.period_end
+    });
+
     try {
       setPopulating(true);
-      await api.post(`/stock_tracker/${hotel_slug}/stocktakes/${id}/populate/`);
+      
+      console.time('populate-duration');
+      
+      const response = await api.post(`/stock_tracker/${hotel_slug}/stocktakes/${id}/populate/`);
+      
+      console.timeEnd('populate-duration');
+      
+      console.log('✅ Population complete:', {
+        lines_created: response.data.lines_created,
+        message: response.data.message
+      });
+      
+      // Fetch updated stocktake
       await fetchStocktake();
+      
+      // Verify opening balances
+      console.log('\n🔍 Verifying opening balances...');
+      const verifyResponse = await api.get(`/stock_tracker/${hotel_slug}/stocktakes/${id}/`);
+      const populatedStocktake = verifyResponse.data;
+      
+      console.log('📊 Total lines:', populatedStocktake.lines.length);
+      
+      // Check first 5 lines
+      console.log('🔍 First 5 items:');
+      populatedStocktake.lines.slice(0, 5).forEach(line => {
+        console.log(`  ${line.item_sku} - ${line.item_name}:`, {
+          opening_qty: line.opening_qty,
+          opening_display: `${line.opening_display_full_units} + ${line.opening_display_partial_units}`,
+          expected_qty: line.expected_qty
+        });
+      });
+      
+      // Check for zeros
+      const allZero = populatedStocktake.lines.every(line => 
+        parseFloat(line.opening_qty) === 0
+      );
+      
+      if (allZero) {
+        console.error('❌ WARNING: All opening balances are ZERO!');
+        toast.warning('⚠️ All opening balances are zero - please check previous period');
+      } else {
+        console.log('✅ Opening balances look good!');
+        toast.success('Stocktake populated successfully! 🎉');
+      }
+      
     } catch (err) {
+      console.error('\n❌ ========================================');
+      console.error('❌ POPULATE FAILED');
+      console.error('❌ ========================================');
+      console.error('Error:', err);
+      console.error('Response:', err.response?.data);
+      
       setError(err.response?.data?.detail || "Failed to populate");
+      toast.error('Failed to populate stocktake');
     } finally {
       setPopulating(false);
     }
@@ -429,7 +488,35 @@ export const StocktakeDetail = () => {
 
       console.log("\n✅ ========================================");
       console.log("✅ UPDATE COMPLETE - UI NOW SHOWS DB VALUES");
-      console.log("✅ ========================================\n");
+      console.log("✅ ========================================");
+      
+      // Check for large variances and warn user
+      const finalLine = movementsAdded 
+        ? await api.get(`/stock_tracker/${hotel_slug}/stocktake-lines/${lineId}/`)
+        : response;
+      
+      const varianceQty = parseFloat(finalLine.data?.variance_qty || response.data.variance_qty);
+      const varianceValue = parseFloat(finalLine.data?.variance_value || response.data.variance_value);
+      
+      if (Math.abs(varianceQty) > 10) {
+        console.warn('⚠️ LARGE VARIANCE DETECTED:', {
+          item: currentLine.item_name,
+          variance_qty: varianceQty,
+          variance_value: varianceValue
+        });
+        
+        if (varianceQty < -10) {
+          toast.warning(`⚠️ Large shortage detected: ${currentLine.item_name} (${varianceQty.toFixed(2)} units)`, {
+            autoClose: 5000
+          });
+        } else if (varianceQty > 10) {
+          toast.warning(`⚠️ Large surplus detected: ${currentLine.item_name} (+${varianceQty.toFixed(2)} units)`, {
+            autoClose: 5000
+          });
+        }
+      }
+      
+      console.log("\n");
     } catch (err) {
       console.error("\n❌ ========================================");
       console.error("❌ ERROR IN handleUpdateLine");
@@ -438,6 +525,8 @@ export const StocktakeDetail = () => {
       console.error("Response:", err.response?.data);
 
       setError(err.response?.data?.detail || "Failed to update line");
+      toast.error('Failed to update line');
+      
       // Revert optimistic update on error by refetching
       console.log("🔄 Reverting optimistic update by refetching from DB...");
       await fetchStocktake();
@@ -548,21 +637,12 @@ export const StocktakeDetail = () => {
                 size="sm"
                 onClick={async () => {
                   try {
-                    const response = await api.get(`/stock_tracker/${hotel_slug}/stocktakes/${id}/download-pdf/`, { responseType: 'blob' });
-                    const blob = new Blob([response.data], { type: 'application/pdf' });
-                    const url = window.URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `stocktake_${id}.pdf`;
-                    document.body.appendChild(link);
-                    link.click();
-                    link.remove();
-                    window.URL.revokeObjectURL(url);
+                    await downloadStocktakePDF(hotel_slug, parseInt(id), api.get);
                   } catch (err) {
-                    console.error('Download error:', err);
+                    alert(err.message || 'Failed to download PDF. Please try again.');
                   }
                 }}
-                title="Download PDF Report"
+                title="Download Stocktake PDF Report"
               >
                 <FileDown size={16} /> PDF
               </Button>
@@ -571,21 +651,12 @@ export const StocktakeDetail = () => {
                 size="sm"
                 onClick={async () => {
                   try {
-                    const response = await api.get(`/stock_tracker/${hotel_slug}/stocktakes/${id}/download-excel/`, { responseType: 'blob' });
-                    const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                    const url = window.URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `stocktake_${id}.xlsx`;
-                    document.body.appendChild(link);
-                    link.click();
-                    link.remove();
-                    window.URL.revokeObjectURL(url);
+                    await downloadStocktakeExcel(hotel_slug, parseInt(id), api.get);
                   } catch (err) {
-                    console.error('Download error:', err);
+                    alert(err.message || 'Failed to download Excel. Please try again.');
                   }
                 }}
-                title="Download Excel Workbook"
+                title="Download Stocktake Excel Workbook"
               >
                 <FileSpreadsheet size={16} /> Excel
               </Button>
@@ -769,13 +840,43 @@ export const StocktakeDetail = () => {
       )}
 
       {lines.length === 0 ? (
-        <Alert variant="info">Click Populate Lines to begin</Alert>
+        <Alert variant="info">
+          <strong>Step 1:</strong> Click "Populate Lines" to load all inventory items into this stocktake.
+          <br />
+          <small className="text-muted">
+            This will create stocktake lines with opening balances from the previous period's closing stock.
+          </small>
+        </Alert>
       ) : (
         <>
-          {!isLocked && countedLines < lines.length && (
+          {!isLocked && countedLines === 0 && (
+            <Alert variant="info">
+              <strong>Step 2:</strong> Count your physical inventory and enter the quantities below.
+              <br />
+              <small className="text-muted">
+                Enter full units (cases/kegs/bottles) and partial units (bottles/pints/shots) for each item.
+              </small>
+            </Alert>
+          )}
+          
+          {!isLocked && countedLines > 0 && countedLines < lines.length && (
             <Alert variant="warning">
-              <FaExclamationTriangle /> Please count all items before approving
+              <FaExclamationTriangle /> <strong>Step 2 (In Progress):</strong> Please count all items before approving
               ({countedLines}/{lines.length} counted)
+              <br />
+              <small className="text-muted">
+                You must count every item to proceed with approval.
+              </small>
+            </Alert>
+          )}
+          
+          {!isLocked && countedLines === lines.length && (
+            <Alert variant="success">
+              <FaCheckCircle /> <strong>Step 3:</strong> All items counted! Ready to approve.
+              <br />
+              <small className="text-muted">
+                Click "Approve & Close Period" to lock this stocktake and close the period.
+              </small>
             </Alert>
           )}
 
