@@ -83,6 +83,8 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
           : '',
       wasteQuantity: '',
       purchasesQty: '',
+      openingFullUnits: '',
+      openingPartialUnits: '',
     };
   };
 
@@ -93,6 +95,8 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         partialUnits: '',
         wasteQuantity: '',
         purchasesQty: '',
+        openingFullUnits: '',
+        openingPartialUnits: '',
       };
       return {
         ...prev,
@@ -427,6 +431,132 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     }
   };
 
+  /**
+   * Handles saving opening stock (manual entry).
+   * Backend expects: PATCH with opening_full_units and opening_partial_units
+   * Backend will calculate opening_qty = (full × uom) + partial
+   */
+  const handleSaveOpeningStock = async (lineId, line) => {
+    console.log('💾 SAVE OPENING STOCK - Line:', lineId);
+    const inputs = getLineInputs(lineId, line);
+    
+    // Validate that at least one field has a value
+    if (inputs.openingFullUnits === '' && inputs.openingPartialUnits === '') {
+      setValidationErrors({ 
+        [lineId]: { 
+          openingFullUnits: 'Please enter opening stock values',
+          openingPartialUnits: 'Please enter opening stock values'
+        } 
+      });
+      return;
+    }
+
+    const fullUnits = parseFloat(inputs.openingFullUnits) || 0;
+    const partialUnits = parseFloat(inputs.openingPartialUnits) || 0;
+
+    if (fullUnits < 0 || partialUnits < 0) {
+      setValidationErrors({ 
+        [lineId]: { 
+          openingFullUnits: 'Cannot be negative',
+          openingPartialUnits: 'Cannot be negative'
+        } 
+      });
+      return;
+    }
+
+    // Category-specific validation
+    const categoryCode = line.category_code;
+    const size = line.item_size;
+    const uom = parseFloat(line.item_uom || line.uom || 1);
+
+    if (categoryCode === 'B' || (categoryCode === 'M' && size?.includes('Doz'))) {
+      // Whole numbers only
+      if (fullUnits !== Math.floor(fullUnits) || partialUnits !== Math.floor(partialUnits)) {
+        setValidationErrors({ 
+          [lineId]: { 
+            openingPartialUnits: 'Must be whole numbers for this category'
+          } 
+        });
+        return;
+      }
+      if (partialUnits >= uom) {
+        setValidationErrors({ 
+          [lineId]: { 
+            openingPartialUnits: `Must be less than ${uom}`
+          } 
+        });
+        return;
+      }
+    }
+
+    // Clear errors if validation passes
+    setValidationErrors((prev) => {
+      const { [lineId]: _, ...rest } = prev;
+      return rest;
+    });
+
+    try {
+      // Calculate opening_qty for the PATCH request
+      const opening_qty = (fullUnits * uom) + partialUnits;
+      
+      const payload = {
+        opening_qty: opening_qty.toFixed(4)
+      };
+      
+      console.log('🧮 Opening Stock Payload:', {
+        fullUnits,
+        partialUnits,
+        uom,
+        calculated_opening_qty: opening_qty,
+        payload
+      });
+
+      // ✅ PATCH endpoint to update opening_qty
+      const response = await api.patch(
+        `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/`,
+        payload
+      );
+
+      const updatedLine = response.data;
+      
+      console.log('✅ Opening stock saved - Full backend response:', {
+        opening_qty: updatedLine?.opening_qty,
+        expected_qty: updatedLine?.expected_qty,
+        variance_qty: updatedLine?.variance_qty,
+        opening_display_full: updatedLine?.opening_display_full_units,
+        opening_display_partial: updatedLine?.opening_display_partial_units
+      });
+      
+      // Update UI with backend data
+      if (updatedLine && typeof onLineUpdated === 'function') {
+        console.log('🔄 Calling onLineUpdated with updated line');
+        onLineUpdated(updatedLine);
+      }
+
+      // Clear inputs after successful save
+      setLineInputs((prev) => ({
+        ...prev,
+        [lineId]: {
+          ...prev[lineId],
+          openingFullUnits: '',
+          openingPartialUnits: '',
+        },
+      }));
+      
+      // Refetch totals to update category summaries
+      refetchTotals?.();
+    } catch (err) {
+      console.error('❌ Save opening stock failed:', err);
+      console.error('Error details:', err.response?.data);
+      
+      setValidationErrors({
+        [lineId]: { 
+          openingFullUnits: `Failed to save: ${err.response?.data?.message || err.message}` 
+        }
+      });
+    }
+  };
+
   const renderLineRow = (line) => {
     const labels = getCountingLabels(line.category_code, line.item_size);
     const uom = parseFloat(line.item_uom || line.uom || 1);
@@ -480,20 +610,120 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
           </Badge>
         </td>
 
-        {/* Opening */}
-        <td className="text-center bg-info-subtle" style={{ borderRight: '1px solid #dee2e6' }}>
-          <div className="d-flex flex-column align-items-center gap-1">
-            <div>
-              <strong className="text-primary">{line.opening_display_full_units || '0'}</strong>
-              <small className="text-muted ms-1">{labels.unit}</small>
+        {/* Opening - Editable */}
+        <td className="text-center bg-info-subtle" style={{ verticalAlign: 'middle', borderRight: '1px solid #dee2e6' }}>
+          <div className="d-flex flex-column align-items-center gap-2 p-2" style={{ width: '100%' }}>
+            <div 
+              className="border rounded bg-white shadow-sm p-2 w-100 d-flex flex-column align-items-center gap-2"
+              style={{ maxWidth: 180 }}
+            >
+              {/* Display current opening stock */}
+              <div className="d-flex flex-column align-items-center w-100 mb-2">
+                <div>
+                  <strong className="text-primary">{line.opening_display_full_units || '0'}</strong>
+                  <small className="text-muted ms-1">{labels.unit}</small>
+                </div>
+                <div>
+                  <strong className="text-info">{line.opening_display_partial_units || '0'}</strong>
+                  <small className="text-muted ms-1">{labels.servingUnit}</small>
+                </div>
+                <small className="text-muted" style={{ fontSize: '0.7rem' }}>
+                  {parseFloat(line.opening_qty || 0).toFixed(2)} servings
+                </small>
+              </div>
+
+              {/* Input fields for editing opening stock */}
+              <small className="text-muted" style={{ fontSize: '0.7rem' }}>
+                Edit Opening {labels.unit}
+              </small>
+              <Form.Control
+                type="number"
+                step="1"
+                min="0"
+                size="sm"
+                value={inputs.openingFullUnits}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // For B and M-Doz, only allow whole numbers
+                  if (line.category_code === 'B' || (line.category_code === 'M' && line.item_size?.includes('Doz'))) {
+                    if (value === '' || /^\d+$/.test(value)) {
+                      updateLineInput(line.id, 'openingFullUnits', value);
+                    }
+                  } else {
+                    updateLineInput(line.id, 'openingFullUnits', value);
+                  }
+                }}
+                onFocus={(e) => {
+                  e.target.classList.add('bg-info-subtle');
+                  if (lineErrors.openingFullUnits) {
+                    setValidationErrors((prev) => {
+                      const { [line.id]: lineErr, ...rest } = prev;
+                      if (lineErr) {
+                        const { openingFullUnits, ...otherErrors } = lineErr;
+                        return Object.keys(otherErrors).length > 0 
+                          ? { ...rest, [line.id]: otherErrors } 
+                          : rest;
+                      }
+                      return rest;
+                    });
+                  }
+                }}
+                onBlur={(e) => e.target.classList.remove('bg-info-subtle')}
+                className="bg-light text-center mb-2"
+                placeholder={`${labels.unit}`}
+                isInvalid={!!lineErrors.openingFullUnits}
+                disabled={isLocked}
+              />
+
+              <small className="text-muted" style={{ fontSize: '0.7rem' }}>
+                Edit Opening {labels.servingUnit}
+              </small>
+              <Form.Control
+                type="number"
+                step={inputConfig.step}
+                min="0"
+                size="sm"
+                value={inputs.openingPartialUnits}
+                onChange={(e) => updateLineInput(line.id, 'openingPartialUnits', e.target.value)}
+                onFocus={(e) => {
+                  e.target.classList.add('bg-info-subtle');
+                  if (lineErrors.openingPartialUnits) {
+                    setValidationErrors((prev) => {
+                      const { [line.id]: lineErr, ...rest } = prev;
+                      if (lineErr) {
+                        const { openingPartialUnits, ...otherErrors } = lineErr;
+                        return Object.keys(otherErrors).length > 0 
+                          ? { ...rest, [line.id]: otherErrors } 
+                          : rest;
+                      }
+                      return rest;
+                    });
+                  }
+                }}
+                onBlur={(e) => e.target.classList.remove('bg-info-subtle')}
+                className="bg-light text-center mb-2"
+                placeholder={`${labels.servingUnit}`}
+                isInvalid={!!lineErrors.openingPartialUnits}
+                disabled={isLocked}
+              />
+
+              {(lineErrors.openingFullUnits || lineErrors.openingPartialUnits) && (
+                <small className="text-danger d-block mb-1">
+                  {lineErrors.openingFullUnits || lineErrors.openingPartialUnits}
+                </small>
+              )}
+
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => handleSaveOpeningStock(line.id, line)}
+                title="Save Opening Stock"
+                style={{ fontSize: '0.8rem', padding: '2px 10px', width: '100%' }}
+                disabled={isLocked}
+              >
+                💾 Save
+              </Button>
             </div>
-            <div>
-              <strong className="text-info">{line.opening_display_partial_units || '0'}</strong>
-              <small className="text-muted ms-1">{labels.servingUnit}</small>
-            </div>
-            <small className="text-muted">
-              {parseFloat(line.opening_qty || 0).toFixed(2)} servings
-            </small>
           </div>
         </td>
 
@@ -668,8 +898,8 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         </td>
 
         {/* Expected */}
-        <td className="text-center bg-warning-subtle" style={{ borderRight: '1px solid #dee2e6' }}>
-          <div className="d-flex flex-column align-items-center gap-1">
+        <td className="text-center bg-success" style={{ borderRight: '1px solid #dee2e6' }}>
+          <div className="d-flex flex-column align-items-center gap-1 border border-warning border-2 rounded p-2 bg-white shadow-sm">
             <div>
               <strong className="text-warning">{line.expected_display_full_units || '0'}</strong>
               <small className="text-muted ms-1">{labels.unit}</small>
@@ -678,7 +908,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               <strong className="text-warning">{line.expected_display_partial_units || '0'}</strong>
               <small className="text-muted ms-1">{labels.servingUnit}</small>
             </div>
-            <small className="text-muted">€{parseFloat(line.expected_value || 0).toFixed(2)}</small>
+            <small className="text-success">€{parseFloat(line.expected_value || 0).toFixed(2)}</small>
           </div>
         </td>
 

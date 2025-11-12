@@ -9,6 +9,7 @@ import {
   Modal,
   Row,
   Col,
+  Table,
 } from "react-bootstrap";
 import {
   FaArrowLeft,
@@ -581,7 +582,7 @@ export const StocktakeDetail = () => {
         onClick={() => navigate(`/stock_tracker/${hotel_slug}/stocktakes`)}
         style={{
           position: "fixed",
-          top: "80px",
+          top: "50px",
           left: "120px",
           zIndex: 1050,
           borderRadius: "8px",
@@ -590,7 +591,7 @@ export const StocktakeDetail = () => {
           alignItems: "center",
           gap: "8px",
           fontSize: "1rem",
-          backgroundColor: "rgba(255, 255, 255, 0.7)",
+          backgroundColor: "rgba(255, 255, 255, 0.8)",
           backdropFilter: "blur(8px)",
           transition: "all 0.3s ease",
         }}
@@ -703,6 +704,25 @@ export const StocktakeDetail = () => {
               <strong>Total Stock Value:</strong>{" "}
               <Badge bg="success">
                 €{(() => {
+                  // DEBUG: Log the data we're working with
+                  console.log('💰 TOTAL STOCK VALUE DEBUG:', {
+                    stocktake_total_counted_value: stocktake.total_counted_value,
+                    categoryTotals: categoryTotals,
+                    categoryTotals_keys: categoryTotals ? Object.keys(categoryTotals) : [],
+                    sample_lines: lines.slice(0, 5).map(line => ({
+                      id: line.id,
+                      sku: line.item_sku,
+                      name: line.item_name,
+                      counted_full_units: line.counted_full_units,
+                      counted_partial_units: line.counted_partial_units,
+                      counted_qty: line.counted_qty,
+                      counted_value: line.counted_value,
+                      valuation_cost: line.valuation_cost
+                    })),
+                    lines_with_counted: lines.filter(l => l.counted_full_units !== null || l.counted_partial_units !== null).length,
+                    lines_with_value: lines.filter(l => l.counted_value && l.counted_value > 0).length
+                  });
+                  
                   // Try to use backend field first (when it's available)
                   if (stocktake.total_counted_value) {
                     return Number(stocktake.total_counted_value).toFixed(2);
@@ -731,6 +751,290 @@ export const StocktakeDetail = () => {
           )}
         </Card.Body>
       </Card>
+
+      {/* ==================== STOCKTAKE REPORT SUMMARY - PDF MATCH ==================== */}
+      {isLocked && (
+        <Card className="mb-4 border-primary shadow-lg">
+          <Card.Header className="bg-primary bg-gradient text-white">
+            <h4 className="mb-0">
+              <i className="bi bi-file-earmark-text-fill me-2"></i>
+              Stocktake Report - {stocktake.hotel_name || 'Hotel'}
+              <Badge bg="light" text="primary" className="ms-2">PDF Summary</Badge>
+            </h4>
+          </Card.Header>
+          <Card.Body>
+            {/* Report Header Info */}
+            <div className="alert alert-info mb-4">
+              <div className="row g-3">
+                <div className="col-12 col-md-4">
+                  <strong>Period:</strong><br />
+                  {new Date(stocktake.period_start).toLocaleDateString()} to {new Date(stocktake.period_end).toLocaleDateString()}
+                </div>
+                <div className="col-6 col-md-4">
+                  <strong>Status:</strong><br />
+                  <Badge bg="secondary" className="fs-6">{stocktake.status}</Badge>
+                </div>
+                <div className="col-6 col-md-4">
+                  <strong>Created:</strong><br />
+                  {new Date(stocktake.created_at).toLocaleString()}
+                </div>
+                {stocktake.approved_at && stocktake.approved_by_name && (
+                  <div className="col-12">
+                    <strong>Approved:</strong> {new Date(stocktake.approved_at).toLocaleString()} 
+                    <span className="ms-2">by <strong>{stocktake.approved_by_name}</strong></span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Summary Section */}
+            <div className="row mb-4">
+              <div className="col-12">
+                <h5 className="border-bottom pb-2 mb-3">
+                  <i className="bi bi-clipboard-data me-2"></i>Summary
+                </h5>
+              </div>
+              <div className="col-6 col-md-3 mb-3">
+                <Card className="border-primary h-100">
+                  <Card.Body className="text-center p-3" style={{ backgroundColor: '#E3F2FD' }}>
+                    <small className="text-muted d-block mb-1">Total Items</small>
+                    <h4 className="mb-0 text-primary">{lines.length}</h4>
+                  </Card.Body>
+                </Card>
+              </div>
+              <div className="col-6 col-md-3 mb-3">
+                <Card className="border-info h-100">
+                  <Card.Body className="text-center p-3" style={{ backgroundColor: '#E1F5FE' }}>
+                    <small className="text-muted d-block mb-1">Expected Stock Value</small>
+                    <h5 className="mb-0 text-info">
+                      {stocktake.total_expected_value 
+                        ? `€${parseFloat(stocktake.total_expected_value).toFixed(2)}`
+                        : '€0.00'}
+                    </h5>
+                  </Card.Body>
+                </Card>
+              </div>
+              <div className="col-6 col-md-3 mb-3">
+                <Card className="border-success h-100">
+                  <Card.Body className="text-center p-3" style={{ backgroundColor: '#E8F5E9' }}>
+                    <small className="text-muted d-block mb-1">Counted Stock Value</small>
+                    <h5 className="mb-0 text-success">
+                      {(() => {
+                        if (stocktake.total_counted_value) {
+                          return `€${parseFloat(stocktake.total_counted_value).toFixed(2)}`;
+                        }
+                        if (categoryTotals && Object.keys(categoryTotals).length > 0) {
+                          const total = Object.values(categoryTotals).reduce((sum, cat) => {
+                            return sum + parseFloat(cat.counted_value || 0);
+                          }, 0);
+                          return `€${total.toFixed(2)}`;
+                        }
+                        return '€0.00';
+                      })()}
+                    </h5>
+                  </Card.Body>
+                </Card>
+              </div>
+              <div className="col-6 col-md-3 mb-3">
+                <Card className={`h-100 ${stocktake.total_variance >= 0 ? 'border-success' : 'border-danger'}`}>
+                  <Card.Body className="text-center p-3" style={{ 
+                    backgroundColor: stocktake.total_variance >= 0 ? '#E8F5E9' : '#FFEBEE' 
+                  }}>
+                    <small className="text-muted d-block mb-1">Variance</small>
+                    <h5 className={`mb-0 ${stocktake.total_variance >= 0 ? 'text-success' : 'text-danger'}`}>
+                      {stocktake.total_variance 
+                        ? `€${parseFloat(stocktake.total_variance).toFixed(2)}`
+                        : '€0.00'}
+                    </h5>
+                  </Card.Body>
+                </Card>
+              </div>
+            </div>
+
+            {/* Financial Metrics Row */}
+            {(stocktake.total_cogs || stocktake.total_revenue) && (
+              <div className="row mb-4">
+                <div className="col-12 col-md-6 col-lg-3 mb-3">
+                  <Card className="border-danger h-100">
+                    <Card.Body className="text-center p-3" style={{ backgroundColor: '#FFEBEE' }}>
+                      <small className="text-muted d-block mb-1">Total COGS</small>
+                      <h5 className="mb-0 text-danger">
+                        {stocktake.total_cogs 
+                          ? `€${parseFloat(stocktake.total_cogs).toFixed(2)}`
+                          : '€0.00'}
+                      </h5>
+                    </Card.Body>
+                  </Card>
+                </div>
+                <div className="col-12 col-md-6 col-lg-3 mb-3">
+                  <Card className="border-success h-100">
+                    <Card.Body className="text-center p-3" style={{ backgroundColor: '#E8F5E9' }}>
+                      <small className="text-muted d-block mb-1">Total Revenue</small>
+                      <h5 className="mb-0 text-success">
+                        {stocktake.total_revenue 
+                          ? `€${parseFloat(stocktake.total_revenue).toFixed(2)}`
+                          : '€0.00'}
+                      </h5>
+                    </Card.Body>
+                  </Card>
+                </div>
+                <div className="col-12 col-md-6 col-lg-3 mb-3">
+                  <Card className="border-primary h-100">
+                    <Card.Body className="text-center p-3" style={{ backgroundColor: '#E3F2FD' }}>
+                      <small className="text-muted d-block mb-1">GP%</small>
+                      <h5 className="mb-0 text-primary">
+                        {stocktake.gross_profit_percentage 
+                          ? `${parseFloat(stocktake.gross_profit_percentage).toFixed(2)}%`
+                          : '0.00%'}
+                      </h5>
+                    </Card.Body>
+                  </Card>
+                </div>
+                <div className="col-12 col-md-6 col-lg-3 mb-3">
+                  <Card className="border-warning h-100">
+                    <Card.Body className="text-center p-3" style={{ backgroundColor: '#FFF8E1' }}>
+                      <small className="text-muted d-block mb-1">Pour Cost%</small>
+                      <h5 className="mb-0 text-warning">
+                        {stocktake.pour_cost_percentage 
+                          ? `${parseFloat(stocktake.pour_cost_percentage).toFixed(2)}%`
+                          : '0.00%'}
+                      </h5>
+                    </Card.Body>
+                  </Card>
+                </div>
+              </div>
+            )}
+          </Card.Body>
+        </Card>
+      )}
+
+      {/* ==================== CATEGORY TOTALS - PDF MATCH ==================== */}
+      {isLocked && categoryTotals && Object.keys(categoryTotals).length > 0 && (() => {
+        return (
+          <Card className="mb-4 border-success shadow-lg">
+            <Card.Header className="bg-success bg-gradient text-white">
+              <h5 className="mb-0">
+                <i className="bi bi-diagram-3-fill me-2"></i>
+                Category Totals
+                <Badge bg="light" text="success" className="ms-2">PDF Breakdown</Badge>
+              </h5>
+            </Card.Header>
+            <Card.Body className="p-0">
+              <div className="table-responsive">
+                <Table hover bordered className="mb-0">
+                  <thead className="table-dark">
+                    <tr>
+                      <th>Category</th>
+                      <th className="text-end bg-primary text-white">Opening</th>
+                      <th className="text-end bg-info text-white">Purchases</th>
+                      <th className="text-end bg-warning text-dark">Expected</th>
+                      <th className="text-end bg-success text-white">Counted</th>
+                      <th className="text-end">Variance</th>
+                      <th className="text-end">Value €</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(categoryTotals).map(([categoryCode, cat]) => {
+                      const variance = parseFloat(cat.variance_value || 0);
+                      const openingValue = parseFloat(cat.opening_value || 0);
+                      const purchasesValue = parseFloat(cat.purchases_value || 0);
+                      
+                      return (
+                        <tr key={categoryCode}>
+                          <td><strong>{cat.category_name || categoryCode}</strong></td>
+                          <td className="text-end" style={{ backgroundColor: '#E3F2FD' }}>
+                            <strong className="text-primary">
+                              {openingValue.toFixed(2)}
+                            </strong>
+                          </td>
+                          <td className="text-end" style={{ backgroundColor: '#E1F5FE' }}>
+                            <strong className="text-info">
+                              {purchasesValue.toFixed(2)}
+                            </strong>
+                          </td>
+                          <td className="text-end" style={{ backgroundColor: '#FFF8E1' }}>
+                            <strong className="text-warning">
+                              {cat.expected_value ? parseFloat(cat.expected_value).toFixed(2) : '0.00'}
+                            </strong>
+                          </td>
+                          <td className="text-end" style={{ backgroundColor: '#E8F5E9' }}>
+                            <strong className="text-success">
+                              {cat.counted_value ? parseFloat(cat.counted_value).toFixed(2) : '0.00'}
+                            </strong>
+                          </td>
+                          <td className={`text-end ${variance >= 0 ? 'bg-success bg-opacity-10' : 'bg-danger bg-opacity-10'}`}>
+                            <strong className={variance >= 0 ? 'text-success' : 'text-danger'}>
+                              {variance >= 0 ? '+' : ''}{variance.toFixed(2)}
+                            </strong>
+                          </td>
+                          <td className="text-end">
+                            <strong className={variance >= 0 ? 'text-success' : 'text-danger'}>
+                              €{Math.abs(variance).toFixed(2)}
+                            </strong>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {/* TOTALS ROW */}
+                    <tr className="table-active border-top border-3 border-dark">
+                      <td><strong className="fs-5">TOTAL</strong></td>
+                      <td className="text-end" style={{ backgroundColor: '#E3F2FD' }}>
+                        <strong className="fs-5 text-primary">
+                          {Object.values(categoryTotals).reduce((sum, cat) => 
+                            sum + parseFloat(cat.opening_value || 0), 0).toFixed(2)}
+                        </strong>
+                      </td>
+                      <td className="text-end" style={{ backgroundColor: '#E1F5FE' }}>
+                        <strong className="fs-5 text-info">
+                          {Object.values(categoryTotals).reduce((sum, cat) => 
+                            sum + parseFloat(cat.purchases_value || 0), 0).toFixed(2)}
+                        </strong>
+                      </td>
+                      <td className="text-end" style={{ backgroundColor: '#FFF8E1' }}>
+                        <strong className="fs-5 text-warning">
+                          {stocktake.total_expected_value 
+                            ? parseFloat(stocktake.total_expected_value).toFixed(2)
+                            : '0.00'}
+                        </strong>
+                      </td>
+                      <td className="text-end" style={{ backgroundColor: '#E8F5E9' }}>
+                        <strong className="fs-5 text-success">
+                          {(() => {
+                            if (stocktake.total_counted_value) {
+                              return parseFloat(stocktake.total_counted_value).toFixed(2);
+                            }
+                            const total = Object.values(categoryTotals).reduce((sum, cat) => 
+                              sum + parseFloat(cat.counted_value || 0), 0);
+                            return total.toFixed(2);
+                          })()}
+                        </strong>
+                      </td>
+                      <td className={`text-end ${stocktake.total_variance >= 0 ? 'bg-success bg-opacity-25' : 'bg-danger bg-opacity-25'}`}>
+                        <strong className={`fs-5 ${stocktake.total_variance >= 0 ? 'text-success' : 'text-danger'}`}>
+                          {stocktake.total_variance >= 0 ? '+' : ''}
+                          {stocktake.total_variance ? parseFloat(stocktake.total_variance).toFixed(2) : '0.00'}
+                        </strong>
+                      </td>
+                      <td className="text-end">
+                        <strong className={`fs-5 ${stocktake.total_variance >= 0 ? 'text-success' : 'text-danger'}`}>
+                          €{stocktake.total_variance ? Math.abs(parseFloat(stocktake.total_variance)).toFixed(2) : '0.00'}
+                        </strong>
+                      </td>
+                    </tr>
+                  </tbody>
+                </Table>
+              </div>
+            </Card.Body>
+            <Card.Footer className="bg-light">
+              <small className="text-muted">
+                <i className="bi bi-info-circle me-1"></i>
+                <strong>Note:</strong> These calculations match your PDF download. 
+                Opening & Purchases calculated from individual items | Expected = Opening + Purchases | Variance = Counted - Expected
+              </small>
+            </Card.Footer>
+          </Card>
+        );
+      })()}
 
       {/* Financial Results - Only show for approved/locked stocktakes */}
       {isLocked && (stocktake.total_cogs || stocktake.total_revenue) && (
