@@ -41,8 +41,8 @@ const ChatWindowPopup = ({
   const messagesContainerRef = useRef(null);
   const sentinelRef = useRef(null);
   
-  // Get Pusher instance from StaffChatContext (already connected!)
-  const { pusherInstance } = useStaffChat();
+  // Get event subscription from StaffChatContext (single source of truth!)
+  const { subscribeToMessages } = useStaffChat();
   
   // Get current user ID from localStorage or use a fallback
   const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
@@ -148,100 +148,33 @@ const ChatWindowPopup = ({
     isRead
   } = useReadReceipts(conversation?.id, currentUserId);
 
-  // Subscribe to conversation channel using StaffChatContext's Pusher (already connected!)
+  // Subscribe to messages from StaffChatContext (single source of truth!)
   useEffect(() => {
-    if (!pusherInstance || !conversation?.id || !hotelSlug) {
-      console.log('⚠️ [ChatWindowPopup] Skipping Pusher subscription:', {
-        hasPusher: !!pusherInstance,
-        conversationId: conversation?.id,
-        hotelSlug
-      });
+    if (!conversation?.id) {
+      console.log('⚠️ [ChatWindowPopup] No conversation ID');
       return;
     }
 
-    const channelName = `${hotelSlug}-staff-conversation-${conversation.id}`;
-    console.log('🎯 [ChatWindowPopup] Subscribing to:', channelName);
-    console.log('✅ [ChatWindowPopup] Using StaffChatContext Pusher (already connected!)');
+    console.log('🎯 [ChatWindowPopup] Subscribing to StaffChatContext messages for conversation:', conversation.id);
 
-    const channel = pusherInstance.subscribe(channelName);
-
-    // Handle new messages
-    const handleNewMessage = (data) => {
-      console.log('📨 [ChatWindowPopup] Real-time new message received:', data);
-      if (data && data.id && data.conversation === conversation.id) {
-        console.log('✅ [ChatWindowPopup] Adding message to UI');
-        addPaginatedMessage(data);
+    // Listen to messages broadcasted by StaffChatContext
+    const unsubscribe = subscribeToMessages((message) => {
+      // Only process messages for this conversation
+      if (message.conversation === conversation.id || message.conversation_id === conversation.id) {
+        console.log('📨 [ChatWindowPopup] Received message for this conversation:', message.id);
+        addPaginatedMessage(message);
         scrollToBottom();
       }
-    };
+    });
 
-    // Handle message edits
-    const handleMessageEdited = (data) => {
-      console.log('✏️ [ChatWindowPopup] Message edited:', data);
-      if (data.message_id && data.message) {
-        updatePaginatedMessage(data.message_id, { 
-          message: data.message,
-          is_edited: true 
-        });
-      }
-    };
-
-    // Handle message deletes
-    const handleMessageDeleted = (data) => {
-      console.log('🗑️ [ChatWindowPopup] Message deleted:', data);
-      if (data.message_id) {
-        if (data.hard_delete) {
-          removePaginatedMessage(data.message_id);
-        } else {
-          updatePaginatedMessage(data.message_id, {
-            is_deleted: true,
-            message: 'Message deleted'
-          });
-        }
-      }
-    };
-
-    // Handle reactions
-    const handleReaction = (data) => {
-      console.log('👍 [ChatWindowPopup] Reaction:', data);
-      if (data.message_id && data.reactions) {
-        updatePaginatedMessage(data.message_id, { reactions: data.reactions });
-      }
-    };
-
-    // Handle read receipts
-    const handleReadReceipt = (data) => {
-      console.log('📖 [ChatWindowPopup] Read receipt:', data);
-      if (data.message_ids) {
-        data.message_ids.forEach(messageId => {
-          updatePaginatedMessage(messageId, { 
-            is_read: true,
-            read_by: data.read_by || []
-          });
-        });
-      }
-    };
-
-    // Bind events
-    channel.bind('new-message', handleNewMessage);
-    channel.bind('message-edited', handleMessageEdited);
-    channel.bind('message-deleted', handleMessageDeleted);
-    channel.bind('message-reaction', handleReaction);
-    channel.bind('messages-read', handleReadReceipt);
-
-    console.log('✅ [ChatWindowPopup] Subscribed and listening for events');
+    console.log('✅ [ChatWindowPopup] Subscribed to StaffChatContext message events');
 
     // Cleanup
     return () => {
-      console.log('🧹 [ChatWindowPopup] Unsubscribing from:', channelName);
-      channel.unbind('new-message', handleNewMessage);
-      channel.unbind('message-edited', handleMessageEdited);
-      channel.unbind('message-deleted', handleMessageDeleted);
-      channel.unbind('message-reaction', handleReaction);
-      channel.unbind('messages-read', handleReadReceipt);
-      pusherInstance.unsubscribe(channelName);
+      console.log('🧹 [ChatWindowPopup] Unsubscribing from StaffChatContext');
+      unsubscribe();
     };
-  }, [pusherInstance, conversation?.id, hotelSlug, addPaginatedMessage, updatePaginatedMessage, removePaginatedMessage]);
+  }, [conversation?.id, subscribeToMessages, addPaginatedMessage]);
 
   const [showReactionPicker, setShowReactionPicker] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState([]);

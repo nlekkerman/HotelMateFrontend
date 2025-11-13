@@ -28,7 +28,7 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
   } = useUnreadCount(hotelSlug, 30000);
 
   // Get conversations from StaffChatContext (real-time updates via Pusher)
-  const { conversations, fetchStaffConversations } = useStaffChat();
+  const { conversations, fetchStaffConversations, subscribeToConversationUpdates } = useStaffChat();
   
   console.log('📋 [CONVERSATIONS LIST] Rendering with conversations from context:', {
     count: conversations.length,
@@ -54,6 +54,25 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
       fetchStaffConversations();
     }
   }, [hotelSlug, fetchStaffConversations]);
+
+  // Subscribe to conversation updates from StaffChatContext
+  useEffect(() => {
+    console.log('📋 [CONVERSATIONS LIST] Subscribing to conversation updates');
+
+    const unsubscribe = subscribeToConversationUpdates((conversationId, updates) => {
+      console.log('📋 [CONVERSATIONS LIST] Received conversation update:', {
+        conversationId,
+        updates
+      });
+      // Context already handles updating the conversations array
+      // This is just for logging/debugging
+    });
+
+    return () => {
+      console.log('🧹 [CONVERSATIONS LIST] Unsubscribing from conversation updates');
+      unsubscribe();
+    };
+  }, [subscribeToConversationUpdates]);
 
   // Start new conversation
   const { startConversation } = useStartConversation(hotelSlug);

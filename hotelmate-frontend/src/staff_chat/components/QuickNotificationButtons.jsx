@@ -23,7 +23,8 @@ const QuickNotificationButtons = ({
   onNotificationClick,
   onNotificationDismiss,
   hotelSlug,
-  mainColor
+  mainColor,
+  conversations // NEW: Pass conversations from StaffChatContext
 }) => {
   const navigate = useNavigate();
   const { openChat, isReady: messengerReady } = useMessenger();
@@ -50,14 +51,21 @@ const QuickNotificationButtons = ({
         // Desktop: Open pocket window (ChatWindowPopup)
         console.log('🪟 [QuickNotificationButtons] Opening pocket window for conversation:', conversationId);
         
-        // Create conversation object for messenger
-        const conversation = {
-          id: conversationId,
-          // Add any other conversation details from notification data if available
-          ...(notification.data || {})
-        };
+        // Find the ACTUAL conversation from StaffChatContext
+        const actualConversation = conversations?.find(c => c.id === conversationId);
         
-        openChat(conversation, null);
+        if (actualConversation) {
+          console.log('✅ [QuickNotificationButtons] Found actual conversation:', actualConversation);
+          openChat(actualConversation, null);
+        } else {
+          console.warn('⚠️ [QuickNotificationButtons] Conversation not found in context, creating minimal object');
+          // Fallback: Create minimal conversation object
+          const conversation = {
+            id: conversationId,
+            ...(notification.data || {})
+          };
+          openChat(conversation, null);
+        }
       } else {
         // Mobile or messenger not ready: Navigate to staff-chat page
         console.log('📱 [QuickNotificationButtons] Navigating to staff-chat page');
@@ -155,7 +163,8 @@ QuickNotificationButtons.propTypes = {
   onNotificationClick: PropTypes.func,
   onNotificationDismiss: PropTypes.func.isRequired,
   hotelSlug: PropTypes.string.isRequired,
-  mainColor: PropTypes.string
+  mainColor: PropTypes.string,
+  conversations: PropTypes.array // Array of conversation objects from StaffChatContext
 };
 
 export default QuickNotificationButtons;

@@ -12,10 +12,72 @@ export const StaffChatProvider = ({ children }) => {
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const pusherRef = useRef(null);
   const channelsRef = useRef(new Map());
+  
+  // Event listeners for broadcasting messages to all components
+  const messageListenersRef = useRef(new Set());
+  const conversationUpdateListenersRef = useRef(new Set());
 
   // Get staff ID and hotel slug from user
   const staffId = user?.staff_id || user?.id;
   const hotelSlug = user?.hotel_slug;
+  
+  /**
+   * Subscribe to new message events
+   * Components can register callbacks to receive all new messages
+   */
+  const subscribeToMessages = useCallback((callback) => {
+    messageListenersRef.current.add(callback);
+    console.log('📢 [StaffChatContext] Message listener registered. Total:', messageListenersRef.current.size);
+    
+    // Return unsubscribe function
+    return () => {
+      messageListenersRef.current.delete(callback);
+      console.log('📢 [StaffChatContext] Message listener removed. Total:', messageListenersRef.current.size);
+    };
+  }, []);
+  
+  /**
+   * Subscribe to conversation update events
+   * Components can register callbacks to receive conversation updates
+   */
+  const subscribeToConversationUpdates = useCallback((callback) => {
+    conversationUpdateListenersRef.current.add(callback);
+    console.log('📢 [StaffChatContext] Conversation update listener registered. Total:', conversationUpdateListenersRef.current.size);
+    
+    // Return unsubscribe function
+    return () => {
+      conversationUpdateListenersRef.current.delete(callback);
+      console.log('📢 [StaffChatContext] Conversation update listener removed. Total:', conversationUpdateListenersRef.current.size);
+    };
+  }, []);
+  
+  /**
+   * Broadcast new message to all listeners
+   */
+  const broadcastMessage = useCallback((message) => {
+    console.log('📣 [StaffChatContext] Broadcasting message to', messageListenersRef.current.size, 'listeners');
+    messageListenersRef.current.forEach(callback => {
+      try {
+        callback(message);
+      } catch (error) {
+        console.error('❌ [StaffChatContext] Error in message listener:', error);
+      }
+    });
+  }, []);
+  
+  /**
+   * Broadcast conversation update to all listeners
+   */
+  const broadcastConversationUpdate = useCallback((conversationId, updates) => {
+    console.log('📣 [StaffChatContext] Broadcasting conversation update to', conversationUpdateListenersRef.current.size, 'listeners');
+    conversationUpdateListenersRef.current.forEach(callback => {
+      try {
+        callback(conversationId, updates);
+      } catch (error) {
+        console.error('❌ [StaffChatContext] Error in conversation update listener:', error);
+      }
+    });
+  }, []);
 
   // Fetch staff conversations
   const fetchStaffConversations = useCallback(async () => {
@@ -175,6 +237,9 @@ export const StaffChatProvider = ({ children }) => {
         console.log("📨 [STAFF-TO-STAFF] Full message data:", JSON.stringify(msg, null, 2));
         console.log("=================================================================");
         
+        // 🔥 BROADCAST MESSAGE TO ALL LISTENERS (ChatWindowPopup, QuickNotifications, etc.)
+        broadcastMessage(msg);
+        
         setConversations((prev) =>
           prev.map((c) => {
             if (c.id === msg.conversation_id || c.id === conv.id) {
@@ -189,7 +254,7 @@ export const StaffChatProvider = ({ children }) => {
                 willIncrement: !isCurrentConv && !isMyMessage
               });
               
-              return {
+              const updatedConv = {
                 ...c,
                 last_message: {
                   message: msg.message || msg.content,
@@ -206,6 +271,11 @@ export const StaffChatProvider = ({ children }) => {
                     : (c.unread_count || 0) + 1,
                 updated_at: msg.timestamp || msg.created_at
               };
+              
+              // 🔥 BROADCAST CONVERSATION UPDATE TO ALL LISTENERS (ConversationsList, etc.)
+              broadcastConversationUpdate(c.id, updatedConv);
+              
+              return updatedConv;
             }
             return c;
           })
@@ -256,7 +326,12 @@ export const StaffChatProvider = ({ children }) => {
       totalUnread,
       pusherInstance: pusherRef.current,
       currentConversationId,
-      setCurrentConversationId
+      setCurrentConversationId,
+      // 🔥 NEW: Event subscription methods for components
+      subscribeToMessages,
+      subscribeToConversationUpdates,
+      hotelSlug,
+      staffId
     }}>
       {children}
     </StaffChatContext.Provider>
