@@ -5,7 +5,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 const DEFAULT_NAV_ITEMS = [
   { slug: 'home', name: 'Home', path: '/', icon: 'house' },
   { slug: 'chat', name: 'Chat', path: '/hotel/{hotelSlug}/chat', icon: 'chat-dots' },
-  { slug: 'staff-chat', name: 'Staff Chat', path: '/{hotelSlug}/staff-chat', icon: 'people-fill' },
+  // Removed 'staff-chat' - using MessengerWidget instead
   { slug: 'reception', name: 'Reception', path: '/reception', icon: 'bell' },
   { slug: 'rooms', name: 'Rooms', path: '/rooms', icon: 'door-closed' },
   { slug: 'guests', name: 'Guests', path: '/{hotelSlug}/guests', icon: 'people' },

@@ -14,7 +14,6 @@ import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationCo
 import useUnreadCount from "@/staff_chat/hooks/useUnreadCount";
 import useQuickNotifications from "@/staff_chat/hooks/useQuickNotifications";
 import QuickNotificationButtons from "@/staff_chat/components/QuickNotificationButtons";
-import PusherProvider from "@/staff_chat/context/PusherProvider";
 
 const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const location = useLocation();
@@ -557,30 +556,5 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   );
 };
 
-// Wrap with PusherProvider for real-time notifications
-const DesktopSidebarNavbarWithPusher = (props) => {
-  const { user } = useAuth();
-  
-  // Only enable if user is logged in
-  const pusherEnabled = Boolean(user?.hotel_slug);
-  
-  // Get Pusher credentials from environment
-  const pusherAppKey = import.meta.env.VITE_PUSHER_KEY;
-  const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER;
-
-  if (!pusherEnabled) {
-    return <DesktopSidebarNavbar {...props} />;
-  }
-
-  return (
-    <PusherProvider
-      appKey={pusherAppKey}
-      cluster={pusherCluster}
-      enabled={pusherEnabled}
-    >
-      <DesktopSidebarNavbar {...props} />
-    </PusherProvider>
-  );
-};
-
-export default DesktopSidebarNavbarWithPusher;
+// No need for separate PusherProvider - already wrapped in App.jsx
+export default DesktopSidebarNavbar;
