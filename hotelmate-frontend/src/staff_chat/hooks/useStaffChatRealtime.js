@@ -57,6 +57,9 @@ const useStaffChatRealtime = ({
    * Handle new message event
    */
   const handleNewMessage = useCallback((data) => {
+    console.log('🔔 [useStaffChatRealtime] Pusher new-message event received:', data);
+    console.log('🔔 [useStaffChatRealtime] Event data type:', typeof data);
+    console.log('🔔 [useStaffChatRealtime] Has callback:', !!onNewMessage);
     if (onNewMessage) {
       onNewMessage(data);
     }
@@ -130,13 +133,16 @@ const useStaffChatRealtime = ({
    */
   useEffect(() => {
     if (!enabled || !isReady || !conversationChannel) {
+      console.log('⚠️ [useStaffChatRealtime] Skipping subscription:', { enabled, isReady, conversationChannel });
       return;
     }
 
+    console.log('🎯 [useStaffChatRealtime] Subscribing to conversation:', conversationChannel);
     pusherLogger.channel(`Subscribing to conversation: ${conversationChannel}`);
     subscribe(conversationChannel);
 
     // Bind all events
+    console.log('🔗 [useStaffChatRealtime] Binding new-message event to:', conversationChannel);
     bind(conversationChannel, 'new-message', handleNewMessage);
     bind(conversationChannel, 'message-edited', handleMessageEdited);
     bind(conversationChannel, 'message-deleted', handleMessageDeleted);

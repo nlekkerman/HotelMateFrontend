@@ -151,11 +151,23 @@ const ChatWindowPopup = ({
     conversationId: conversation?.id,
     staffId: currentUserId,
     onNewMessage: (data) => {
-      console.log('📨 Real-time new message:', data);
+      console.log('📨 [ChatWindowPopup] Real-time new message received:', data);
+      console.log('📨 [ChatWindowPopup] Current conversation ID:', conversation?.id);
+      console.log('📨 [ChatWindowPopup] Message conversation ID:', data?.conversation);
+      console.log('📨 [ChatWindowPopup] Current messages count:', messages.length);
+      
       // The data object IS the message
       if (data && data.id) {
-        addPaginatedMessage(data);
-        scrollToBottom();
+        // Only add if it belongs to this conversation
+        if (data.conversation === conversation?.id) {
+          console.log('✅ [ChatWindowPopup] Adding message to UI');
+          addPaginatedMessage(data);
+          scrollToBottom();
+        } else {
+          console.log('⏭️ [ChatWindowPopup] Message belongs to different conversation, skipping');
+        }
+      } else {
+        console.warn('⚠️ [ChatWindowPopup] Invalid message data:', data);
       }
     },
     onMessageEdited: (data) => {

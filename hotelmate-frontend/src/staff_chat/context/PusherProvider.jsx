@@ -40,14 +40,47 @@ const PusherProvider = ({
   const [isReady, setIsReady] = useState(false);
   const pusherMethods = usePusher({ appKey, cluster, enabled });
 
-  // Set ready state when Pusher is initialized
+  // Set ready state when Pusher is connected (not just initialized)
   useEffect(() => {
-    if (enabled && appKey && pusherMethods.pusher) {
-      setIsReady(true);
-    } else {
+    if (!enabled || !appKey || !pusherMethods.pusher) {
       setIsReady(false);
+      return;
     }
-  }, [enabled, appKey, pusherMethods.pusher]);
+
+    // Check initial connection state
+    const checkConnection = () => {
+      const state = pusherMethods.getConnectionState();
+      console.log('🔌 [PusherProvider] Connection state:', state);
+      setIsReady(state === 'connected');
+    };
+
+    // Bind to connection state changes
+    const handleConnected = () => {
+      console.log('✅ [PusherProvider] Pusher connected - isReady = true');
+      setIsReady(true);
+    };
+
+    const handleDisconnected = () => {
+      console.log('❌ [PusherProvider] Pusher disconnected - isReady = false');
+      setIsReady(false);
+    };
+
+    if (pusherMethods.pusher) {
+      pusherMethods.pusher.connection.bind('connected', handleConnected);
+      pusherMethods.pusher.connection.bind('disconnected', handleDisconnected);
+      
+      // Check initial state
+      checkConnection();
+    }
+
+    // Cleanup
+    return () => {
+      if (pusherMethods.pusher) {
+        pusherMethods.pusher.connection.unbind('connected', handleConnected);
+        pusherMethods.pusher.connection.unbind('disconnected', handleDisconnected);
+      }
+    };
+  }, [enabled, appKey, pusherMethods.pusher, pusherMethods.getConnectionState]);
 
   const contextValue = {
     ...pusherMethods,
