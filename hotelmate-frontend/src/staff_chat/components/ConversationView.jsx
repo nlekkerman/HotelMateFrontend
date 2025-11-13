@@ -99,18 +99,33 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
       
       // Check if message already exists
       setMessages(prev => {
+        console.log('📨 [STAFF CHAT] ===== ADDING MESSAGE TO UI =====');
         console.log('📨 [STAFF CHAT] Current messages in state:', prev.length);
+        console.log('📨 [STAFF CHAT] Current message IDs:', prev.map(m => m.id));
+        console.log('📨 [STAFF CHAT] New message ID:', data.id);
+        
         const exists = prev.some(m => m.id === data.id);
         if (exists) {
           console.log('⚠️ [STAFF CHAT] Message already exists, skipping. Message ID:', data.id);
           return prev;
         }
-        console.log('✅ [STAFF CHAT] Adding new message to UI. New total:', prev.length + 1);
+        
+        console.log('✅ [STAFF CHAT] Message does NOT exist - ADDING TO UI');
+        console.log('✅ [STAFF CHAT] Message content:', data.message || data.content);
         const newMessages = [...prev, data];
-        console.log('✅ [STAFF CHAT] Messages after add:', newMessages.map(m => ({ id: m.id, text: m.message?.substring(0, 30) })));
+        console.log('✅ [STAFF CHAT] New total messages:', newMessages.length);
+        console.log('✅ [STAFF CHAT] Updated message IDs:', newMessages.map(m => m.id));
+        console.log('✅ [STAFF CHAT] Last 3 messages:', newMessages.slice(-3).map(m => ({ 
+          id: m.id, 
+          text: (m.message || m.content)?.substring(0, 30),
+          sender: m.sender_name || m.sender_info?.full_name
+        })));
+        console.log('📨 [STAFF CHAT] ===== END ADDING MESSAGE =====');
+        
         return newMessages;
       });
       
+      console.log('📨 [STAFF CHAT] Scrolling to bottom...');
       scrollToBottom();
     };
 

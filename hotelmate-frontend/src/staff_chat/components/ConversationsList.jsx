@@ -14,7 +14,6 @@ import { useStaffChat } from '../context/StaffChatContext';
  */
 const ConversationsList = ({ hotelSlug, onOpenChat }) => {
   const [startingChatWithId, setStartingChatWithId] = useState(null);
-  const [existingConversations, setExistingConversations] = useState([]);
   const [markingAllAsRead, setMarkingAllAsRead] = useState(false);
   
   // Get current user ID from localStorage
@@ -28,8 +27,14 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
     refresh: refreshUnreadCount 
   } = useUnreadCount(hotelSlug, 30000);
 
-  // Get conversations and Pusher from StaffChatContext
-  const { fetchStaffConversations } = useStaffChat();
+  // Get conversations from StaffChatContext (real-time updates via Pusher)
+  const { conversations, fetchStaffConversations } = useStaffChat();
+  
+  console.log('📋 [CONVERSATIONS LIST] Rendering with conversations from context:', {
+    count: conversations.length,
+    conversationIds: conversations.map(c => c.id),
+    unreadCounts: conversations.map(c => ({ id: c.id, unread: c.unread_count }))
+  });
 
   // Search functionality
   const { searchTerm, debouncedSearchTerm, handleSearchChange, clearSearch } = useStaffSearch();
@@ -42,46 +47,9 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
     error: staffError 
   } = useStaffList(hotelSlug, shouldFetchStaff ? debouncedSearchTerm : null);
 
-  // Fetch existing conversations on mount
+  // Initial load - fetch conversations once on mount
   useEffect(() => {
-    const loadConversations = async () => {
-      try {
-        const response = await fetchConversations(hotelSlug);
-        // console.log('📋 Raw backend response:', response);
-        
-        // Backend returns paginated response: { count, results: [...] }
-        const conversations = response?.results || response || [];
-        // console.log('📋 Extracted conversations array:', conversations);
-        // console.log('📋 Number of conversations:', conversations.length);
-        
-        // Log each conversation details
-        conversations.forEach((conv, index) => {
-          // console.log(`📋 Conversation ${index + 1}:`, {
-          //   id: conv.id,
-          //   participants: conv.participants?.map(p => p.full_name),
-          //   lastMessage: conv.last_message?.message,
-          //   hasAttachments: conv.last_message?.has_attachments,
-          //   attachments: conv.last_message?.attachments,
-          //   unreadCount: conv.unread_count,
-          //   timestamp: conv.updated_at
-          // });
-        });
-        
-        setExistingConversations(conversations);
-      } catch (error) {
-        console.error('❌ Failed to load conversations:', error);
-      }
-    };
-
-    if (hotelSlug) {
-      loadConversations();
-    }
-  }, [hotelSlug]);
-
-  // Real-time updates are now handled by StaffChatContext
-  // This component will re-render when conversations update via context
-  useEffect(() => {
-    // Refresh conversations when component mounts
+    console.log('📋 [CONVERSATIONS LIST] Component mounted, fetching conversations');
     if (hotelSlug) {
       fetchStaffConversations();
     }
@@ -96,7 +64,7 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
     
     try {
       // Check if a 1-on-1 conversation already exists with this staff member
-      const existingConv = existingConversations.find(conv => {
+      const existingConv = conversations.find(conv => {
         // Check if it's a 1-on-1 conversation (2 participants only)
         if (conv.is_group || !conv.participants || conv.participants.length !== 2) {
           return false;
@@ -123,8 +91,7 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
           onOpenChat(conversation, staff);
           clearSearch();
           
-          // Add to existing conversations list to prevent duplicates
-          setExistingConversations(prev => [...prev, conversation]);
+          // Context will automatically update via fetchStaffConversations
         }
       }
     } catch (err) {
@@ -145,7 +112,7 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
    * Mark all conversations as read
    */
   const handleMarkAllAsRead = async () => {
-    const unreadConvIds = existingConversations
+    const unreadConvIds = conversations
       .filter(c => c.unread_count > 0)
       .map(c => c.id);
     
@@ -157,17 +124,11 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
     
     try {
       const response = await bulkMarkAsRead(hotelSlug, unreadConvIds);
-      // console.log('✅ Marked all as read:', response);
+      console.log('✅ Marked all as read:', response);
       
-      // Update local conversations to reflect zero unread
-      setExistingConversations(prev =>
-        prev.map(conv => ({
-          ...conv,
-          unread_count: 0
-        }))
-      );
-      
-      // Refresh unread count
+      // Context will handle the update via markConversationRead
+      // Refresh to ensure sync
+      await fetchStaffConversations();
       refreshUnreadCount();
       
     } catch (error) {
@@ -308,11 +269,11 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
               </div>
             )}
           </div>
-        ) : existingConversations.length > 0 ? (
+        ) : conversations.length > 0 ? (
           // Show Existing Conversations
           <div className="p-2">
             <div className="d-flex flex-column gap-2">
-              {existingConversations.map((conversation) => {
+              {conversations.map((conversation) => {
                 // Get the other participant (not current user)
                 // Filter out the current user from participants to show the OTHER person
                 const otherParticipant = conversation.participants?.find(

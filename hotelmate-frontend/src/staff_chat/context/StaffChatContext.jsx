@@ -167,7 +167,9 @@ export const StaffChatProvider = ({ children }) => {
         console.log("📨 [STAFF-TO-STAFF] Channel:", channelName);
         console.log("📨 [STAFF-TO-STAFF] Conversation ID:", conv.id);
         console.log("📨 [STAFF-TO-STAFF] Message ID:", msg.id);
-        console.log("📨 [STAFF-TO-STAFF] Sender ID:", msg.sender?.id || msg.sender_id);
+        // Backend sends sender as plain number, not nested object
+        const senderId = msg.sender_info?.id || msg.sender;
+        console.log("📨 [STAFF-TO-STAFF] Sender ID:", senderId, "(from msg.sender)");
         console.log("📨 [STAFF-TO-STAFF] My ID:", staffId);
         console.log("📨 [STAFF-TO-STAFF] Current conversation:", currentConversationId);
         console.log("📨 [STAFF-TO-STAFF] Full message data:", JSON.stringify(msg, null, 2));
@@ -176,7 +178,7 @@ export const StaffChatProvider = ({ children }) => {
         setConversations((prev) =>
           prev.map((c) => {
             if (c.id === msg.conversation_id || c.id === conv.id) {
-              const isMyMessage = (msg.sender?.id || msg.sender_id) === staffId;
+              const isMyMessage = senderId === staffId;
               const isCurrentConv = c.id === currentConversationId;
               
               console.log("📨 [STAFF-TO-STAFF] Updating conversation:", {
@@ -212,14 +214,15 @@ export const StaffChatProvider = ({ children }) => {
         // Show desktop notification if not current conversation
         if (
           msg.conversation_id !== currentConversationId &&
-          msg.sender?.id !== staffId &&
+          senderId !== staffId &&
           "Notification" in window &&
           Notification.permission === "granted"
         ) {
-          const senderName = msg.sender?.full_name || msg.sender_name || 'Staff member';
+          const senderName = msg.sender_info?.full_name || msg.sender_name || 'Staff member';
           new Notification(`New message from ${senderName}`, {
             body: msg.message || msg.content || 'New message',
             icon: msg.sender?.profile_image_url || "/favicon-32x32.png",
+            tag: `staff-msg-${msg.id}`, // Prevent duplicate notifications for same message
           });
         }
       });
