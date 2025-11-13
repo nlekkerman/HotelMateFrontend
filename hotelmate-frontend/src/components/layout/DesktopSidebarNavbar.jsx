@@ -11,10 +11,6 @@ import { useNavigation } from "@/hooks/useNavigation";
 import { useChat } from "@/context/ChatContext";
 import { useBookingNotifications } from "@/context/BookingNotificationContext";
 import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationContext";
-import useUnreadCount from "@/staff_chat/hooks/useUnreadCount";
-import useQuickNotifications from "@/staff_chat/hooks/useQuickNotifications";
-import QuickNotificationButtons from "@/staff_chat/components/QuickNotificationButtons";
-
 const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -28,18 +24,7 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   const { roomServiceCount, breakfastCount, totalServiceCount } =
     useOrderCount(hotelIdentifier);
   
-  // Staff chat unread count
-  const { totalUnread: staffChatUnread } = useUnreadCount(hotelIdentifier, 30000);
-  
-  // Quick notifications (blinking buttons)
-  const {
-    notifications: quickNotifications,
-    removeNotification,
-    removeNotificationsByConversation
-  } = useQuickNotifications({
-    hotelSlug: hotelIdentifier,
-    staffId: user?.id
-  });
+  // Quick notifications moved to GlobalQuickNotifications component
   
   const [staffProfile, setStaffProfile] = useState(null);
   const [isOnDuty, setIsOnDuty] = useState(false);
@@ -390,12 +375,11 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
                 if (item.slug === "room-service") orderCount = roomServiceCount;
                 if (item.slug === "breakfast") orderCount = breakfastCount;
                 if (item.slug === "chat") orderCount = totalUnread;
-                if (item.slug === "staff-chat") orderCount = staffChatUnread;
+                // staff-chat removed - using MessengerWidget with quick action buttons
                 
                 const showNewBadge = 
                   item.slug === "bookings" ? hasNewBooking : 
                   item.slug === "chat" ? totalUnread > 0 : 
-                  item.slug === "staff-chat" ? staffChatUnread > 0 :
                   item.slug === "room-service" ? hasNewRoomService :
                   item.slug === "breakfast" ? hasNewBreakfast :
                   false;
@@ -451,7 +435,7 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
 
       {/* Spacer to push content down - adjusted for navbar + quick actions */}
       <div className="d-none d-lg-block" style={{ 
-        height: (contextualActions.length > 0 || quickNotifications.length > 0) ? "90px" : 
+        height: contextualActions.length > 0 ? "90px" : 
                 (location.pathname.includes('/roster') && new URLSearchParams(location.search).get('department')) ? "130px" :
                 location.pathname.includes('/roster') ? "90px" : "50px" 
       }}></div>
@@ -500,7 +484,7 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
       })()}
 
       {/* Contextual Quick Actions Bar - Desktop - Always Visible Below Navbar */}
-      {(contextualActions.length > 0 || quickNotifications.length > 0) && (
+      {contextualActions.length > 0 && (
         <div 
           className="d-none d-lg-flex position-fixed start-0 end-0 contextual-actions-bar"
           style={{
@@ -528,13 +512,7 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
                 </button>
               ))}
               
-              {/* Quick notification buttons - blinking red buttons */}
-              <QuickNotificationButtons
-                notifications={quickNotifications}
-                onNotificationDismiss={removeNotification}
-                hotelSlug={hotelIdentifier}
-                mainColor={mainColor}
-              />
+              {/* Quick notification buttons moved to GlobalQuickNotifications - always visible globally */}
             </div>
           </div>
         </div>

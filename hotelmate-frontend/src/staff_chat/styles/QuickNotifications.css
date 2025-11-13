@@ -2,7 +2,7 @@
 
 .quick-notifications-container {
   position: fixed;
-  top: 20px;
+  top: 60px; /* Below the navbar (50px + 10px margin) */
   right: 20px;
   display: flex;
   flex-direction: column;
