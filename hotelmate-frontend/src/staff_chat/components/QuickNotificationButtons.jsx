@@ -1,12 +1,15 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
+import { useMessenger } from '../context/MessengerContext';
 import '@/staff_chat/styles/QuickNotifications.css';
 
 /**
  * QuickNotificationButtons Component
  * Displays real-time notification buttons in the quick actions bar
  * Each notification type gets its own blinking button with count
+ * On PC: Opens pocket window (ChatWindowPopup)
+ * On Mobile: Navigates to staff-chat page
  * 
  * @param {Object} props - Component properties
  * @param {Array} props.notifications - Array of notification objects
@@ -23,19 +26,46 @@ const QuickNotificationButtons = ({
   mainColor
 }) => {
   const navigate = useNavigate();
+  const { openChat, isReady: messengerReady } = useMessenger();
+  
+  // Detect if we're on desktop (PC)
+  const isDesktop = window.innerWidth >= 992;
 
   if (!notifications || notifications.length === 0) {
     return null;
   }
 
   const handleNotificationClick = (notification) => {
-    // Navigate based on notification type
+    console.log('🔔 [QuickNotificationButtons] Notification clicked:', { 
+      notification, 
+      isDesktop, 
+      messengerReady 
+    });
+
+    // Handle staff chat notifications
     if (notification.category.startsWith('staff_chat')) {
       const conversationId = notification.conversationId || notification.data?.conversation_id;
-      if (conversationId) {
-        navigate(`/${hotelSlug}/staff-chat?conversation=${conversationId}`);
+      
+      if (isDesktop && messengerReady && conversationId) {
+        // Desktop: Open pocket window (ChatWindowPopup)
+        console.log('🪟 [QuickNotificationButtons] Opening pocket window for conversation:', conversationId);
+        
+        // Create conversation object for messenger
+        const conversation = {
+          id: conversationId,
+          // Add any other conversation details from notification data if available
+          ...(notification.data || {})
+        };
+        
+        openChat(conversation, null);
       } else {
-        navigate(`/${hotelSlug}/staff-chat`);
+        // Mobile or messenger not ready: Navigate to staff-chat page
+        console.log('📱 [QuickNotificationButtons] Navigating to staff-chat page');
+        if (conversationId) {
+          navigate(`/${hotelSlug}/staff-chat?conversation=${conversationId}`);
+        } else {
+          navigate(`/${hotelSlug}/staff-chat`);
+        }
       }
       
       // Dismiss this notification
@@ -59,44 +89,51 @@ const QuickNotificationButtons = ({
 
   return (
     <div className="quick-notifications-container">
-      {notifications.map((notification) => (
-        <button
-          key={notification.id}
-          className="quick-notification-btn blink-animation new"
-          data-type={notification.category.replace('staff_chat_', '')}
-          onClick={() => handleNotificationClick(notification)}
-          style={{
-            backgroundColor: notification.color || mainColor || '#e74c3c',
-            borderColor: notification.color || mainColor || '#e74c3c',
-          }}
-          title={`${notification.count} new from ${notification.from}`}
-        >
-          {/* Icon */}
-          <i 
-            className={`bi bi-${notification.icon}`} 
-            style={{ fontSize: '16px' }}
-          />
-          
-          {/* From label */}
-          <span className="notification-from">
-            {notification.from}
-          </span>
-          
-          {/* Count badge */}
-          <span className="notification-count-badge">
-            {notification.count > 99 ? '99+' : notification.count}
-          </span>
-
-          {/* Dismiss button */}
+      {notifications.map((notification) => {
+        // Group notifications by category and show total count
+        const displayLabel = notification.count > 1 
+          ? `New Messages (${notification.count})` 
+          : 'New Message';
+        
+        return (
           <button
-            className="notification-dismiss-btn"
-            onClick={(e) => handleDismiss(e, notification.id)}
-            title="Dismiss"
+            key={notification.id}
+            className="quick-notification-btn blink-animation new"
+            data-type={notification.category.replace('staff_chat_', '')}
+            onClick={() => handleNotificationClick(notification)}
+            style={{
+              backgroundColor: notification.color || mainColor || '#e74c3c',
+              borderColor: notification.color || mainColor || '#e74c3c',
+            }}
+            title={`${notification.count} new from ${notification.from}`}
           >
-            <i className="bi bi-x" />
+            {/* Icon */}
+            <i 
+              className={`bi bi-${notification.icon}`} 
+              style={{ fontSize: '16px' }}
+            />
+            
+            {/* Label: "New Message" with count */}
+            <span className="notification-from">
+              {displayLabel}
+            </span>
+            
+            {/* Count badge */}
+            <span className="notification-count-badge">
+              {notification.count > 99 ? '99+' : notification.count}
+            </span>
+
+            {/* Dismiss button */}
+            <button
+              className="notification-dismiss-btn"
+              onClick={(e) => handleDismiss(e, notification.id)}
+              title="Dismiss"
+            >
+              <i className="bi bi-x" />
+            </button>
           </button>
-        </button>
-      ))}
+        );
+      })}
     </div>
   );
 };

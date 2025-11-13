@@ -27,6 +27,7 @@ import LogoBanner from "./components/layout/LogoBanner";
 import PusherDebugger from "@/components/utils/PusherDebugger";
 import MessengerWidget from "@/staff_chat/components/MessengerWidget";
 import PusherProvider from "@/staff_chat/context/PusherProvider";
+import { MessengerProvider } from "@/staff_chat/context/MessengerContext";
 import GlobalQuickNotifications from "@/staff_chat/components/GlobalQuickNotifications";
 
 // Pages + Components
@@ -417,26 +418,28 @@ export default function App() {
             cluster={import.meta.env.VITE_PUSHER_CLUSTER}
             enabled={true}
           >
-            <ThemeProvider>
-              <ChartPreferencesProvider>
-                <ChatProvider>
-                  <StaffChatProvider>
-                    <BookingNotificationProvider>
-                      <RoomServiceNotificationProvider>
-                        <BrowserRouter>
-                          <NetworkHandler />
-                          <AppLayout
-                            collapsed={collapsed}
-                            setCollapsed={setCollapsed}
-                            isMobile={isMobile}
-                          />
-                        </BrowserRouter>
-                      </RoomServiceNotificationProvider>
-                    </BookingNotificationProvider>
-                  </StaffChatProvider>
-                </ChatProvider>
-              </ChartPreferencesProvider>
-            </ThemeProvider>
+            <MessengerProvider>
+              <ThemeProvider>
+                <ChartPreferencesProvider>
+                  <ChatProvider>
+                    <StaffChatProvider>
+                      <BookingNotificationProvider>
+                        <RoomServiceNotificationProvider>
+                          <BrowserRouter>
+                            <NetworkHandler />
+                            <AppLayout
+                              collapsed={collapsed}
+                              setCollapsed={setCollapsed}
+                              isMobile={isMobile}
+                            />
+                          </BrowserRouter>
+                        </RoomServiceNotificationProvider>
+                      </BookingNotificationProvider>
+                    </StaffChatProvider>
+                  </ChatProvider>
+                </ChartPreferencesProvider>
+              </ThemeProvider>
+            </MessengerProvider>
           </PusherProvider>
         </AuthProvider>
       </UIProvider>

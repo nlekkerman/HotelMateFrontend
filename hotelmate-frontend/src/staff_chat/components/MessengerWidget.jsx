@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Dropdown } from 'react-bootstrap';
 import { useAuth } from '@/context/AuthContext';
+import { useMessenger } from '../context/MessengerContext';
 import ConversationsList from './ConversationsList';
 import ChatWindowPopup from './ChatWindowPopup';
 import GroupChatModal from './GroupChatModal';
@@ -15,6 +16,7 @@ import '../staffChat.css';
 const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpanded, onExpandChange }) => {
   const { user } = useAuth();
   const hotelSlug = user?.hotel_slug;
+  const { registerOpenChatHandler } = useMessenger();
   const [internalExpanded, setInternalExpanded] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [openChats, setOpenChats] = useState(() => {
@@ -64,6 +66,11 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
       setCurrentPage(totalPages - 1);
     }
   }, [totalPages, currentPage]);
+
+  // Register the openChat handler so other components can open chats
+  useEffect(() => {
+    registerOpenChatHandler(handleOpenChat);
+  }, [registerOpenChatHandler, openChats]);
 
   if (!hotelSlug) return null;
 

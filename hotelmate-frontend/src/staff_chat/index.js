@@ -16,6 +16,9 @@ export { default as MessengerWidget } from './components/MessengerWidget';
 export { default as ConversationsList } from './components/ConversationsList';
 export { default as ChatWindowPopup } from './components/ChatWindowPopup';
 
+// Context
+export { MessengerProvider, useMessenger } from './context/MessengerContext';
+
 // Hooks
 export { default as useStaffList } from './hooks/useStaffList';
 export { default as useStartConversation } from './hooks/useStartConversation';
