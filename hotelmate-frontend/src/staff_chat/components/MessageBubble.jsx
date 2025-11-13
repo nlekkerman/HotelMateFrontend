@@ -21,7 +21,6 @@ const MessageBubble = ({
   readByCount = 0,
   isSending = false,
   onSaveEdit = null,
-  onSaveEdit = null,
   onCancelEdit = null,
   onReply = null,
   onReaction = null,
