@@ -12,6 +12,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 import { UIProvider } from "@/context/UIContext";
 import { ChatProvider } from "@/context/ChatContext";
+import { StaffChatProvider } from "@/staff_chat/context/StaffChatContext";
 import { BookingNotificationProvider } from "@/context/BookingNotificationContext";
 import { RoomServiceNotificationProvider } from "@/context/RoomServiceNotificationContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
@@ -419,18 +420,20 @@ export default function App() {
             <ThemeProvider>
               <ChartPreferencesProvider>
                 <ChatProvider>
-                  <BookingNotificationProvider>
-                    <RoomServiceNotificationProvider>
-                      <BrowserRouter>
-                        <NetworkHandler />
-                        <AppLayout
-                          collapsed={collapsed}
-                          setCollapsed={setCollapsed}
-                          isMobile={isMobile}
-                        />
-                      </BrowserRouter>
-                    </RoomServiceNotificationProvider>
-                  </BookingNotificationProvider>
+                  <StaffChatProvider>
+                    <BookingNotificationProvider>
+                      <RoomServiceNotificationProvider>
+                        <BrowserRouter>
+                          <NetworkHandler />
+                          <AppLayout
+                            collapsed={collapsed}
+                            setCollapsed={setCollapsed}
+                            isMobile={isMobile}
+                          />
+                        </BrowserRouter>
+                      </RoomServiceNotificationProvider>
+                    </BookingNotificationProvider>
+                  </StaffChatProvider>
                 </ChatProvider>
               </ChartPreferencesProvider>
             </ThemeProvider>

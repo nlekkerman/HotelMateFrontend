@@ -5,7 +5,7 @@ import useStaffSearch from '../hooks/useStaffSearch';
 import useStartConversation from '../hooks/useStartConversation';
 import { fetchConversations, bulkMarkAsRead } from '../services/staffChatApi';
 import useUnreadCount from '../hooks/useUnreadCount';
-import { usePusherContext } from '../context/PusherProvider';
+import { useStaffChat } from '../context/StaffChatContext';
 
 /**
  * ConversationsList Component
@@ -28,8 +28,8 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
     refresh: refreshUnreadCount 
   } = useUnreadCount(hotelSlug, 30000);
 
-  // Pusher for real-time updates
-  const { subscribe, unsubscribe, bind, unbind, isReady } = usePusherContext();
+  // Get conversations and Pusher from StaffChatContext
+  const { fetchStaffConversations } = useStaffChat();
 
   // Search functionality
   const { searchTerm, debouncedSearchTerm, handleSearchChange, clearSearch } = useStaffSearch();
@@ -78,36 +78,14 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
     }
   }, [hotelSlug]);
 
-  // Subscribe to personal notifications channel for new messages
+  // Real-time updates are now handled by StaffChatContext
+  // This component will re-render when conversations update via context
   useEffect(() => {
-    if (!isReady || !hotelSlug || !currentUserId) return;
-
-    const personalChannel = `${hotelSlug}-staff-${currentUserId}-notifications`;
-    console.log('📡 Subscribing to personal notifications:', personalChannel);
-    
-    subscribe(personalChannel);
-
-    // Listen for new messages to refresh conversation list
-    const handleNewMessage = (data) => {
-      console.log('📨 New message notification received:', data);
-      // Reload conversations to update last message and unread count
-      fetchConversations(hotelSlug).then(response => {
-        const conversations = response?.results || response || [];
-        setExistingConversations(conversations);
-      });
-      // Refresh unread count
-      refreshUnreadCount();
-    };
-
-    bind(personalChannel, 'new-message', handleNewMessage);
-    bind(personalChannel, 'message-mention', handleNewMessage);
-
-    return () => {
-      unbind(personalChannel, 'new-message', handleNewMessage);
-      unbind(personalChannel, 'message-mention', handleNewMessage);
-      unsubscribe(personalChannel);
-    };
-  }, [isReady, hotelSlug, currentUserId, subscribe, unsubscribe, bind, unbind, refreshUnreadCount]);
+    // Refresh conversations when component mounts
+    if (hotelSlug) {
+      fetchStaffConversations();
+    }
+  }, [hotelSlug, fetchStaffConversations]);
 
   // Start new conversation
   const { startConversation } = useStartConversation(hotelSlug);

@@ -9,7 +9,7 @@ import ReactionPicker from './ReactionPicker';
 import ReactionsList from './ReactionsList';
 import ParticipantsModal from './ParticipantsModal';
 import useReadReceipts from '../hooks/useReadReceipts';
-import useStaffChatRealtime from '../hooks/useStaffChatRealtime';
+import { useStaffChat } from '../context/StaffChatContext';
 
 /**
  * ConversationView Component
@@ -44,13 +44,68 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     loadReadReceipts
   } = useReadReceipts(hotelSlug, conversation?.id, currentUserId);
 
-  // Real-time Pusher integration for read receipts
-  useStaffChatRealtime({
-    hotelSlug: hotelSlug,
-    conversationId: conversation?.id,
-    staffId: currentUserId,
-    onReadReceipt: (data) => {
-      // console.log('📖 Received read receipt event:', data);
+  // Get Pusher instance from StaffChatContext
+  const { pusherInstance, setCurrentConversationId } = useStaffChat();
+
+  // Real-time Pusher integration - direct channel subscription
+  useEffect(() => {
+    if (!pusherInstance || !hotelSlug || !conversation?.id) return;
+
+    const channelName = `${hotelSlug}-staff-conversation-${conversation.id}`;
+    console.log('📡 [STAFF CHAT] ConversationView subscribing to:', channelName);
+    
+    // Get or subscribe to channel
+    let channel = pusherInstance.channel(channelName);
+    if (!channel) {
+      channel = pusherInstance.subscribe(channelName);
+    }
+
+    // Handle new messages
+    const handleNewMessage = (data) => {
+      console.log('📨 [STAFF CHAT] New message received:', data);
+      
+      // Check if message already exists
+      setMessages(prev => {
+        const exists = prev.some(m => m.id === data.id);
+        if (exists) {
+          console.log('⚠️ [STAFF CHAT] Message already exists, skipping');
+          return prev;
+        }
+        return [...prev, data];
+      });
+      
+      scrollToBottom();
+    };
+
+    // Handle message edited
+    const handleMessageEdited = (data) => {
+      console.log('✏️ [STAFF CHAT] Message edited:', data);
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === data.id ? { ...msg, ...data, is_edited: true } : msg
+        )
+      );
+    };
+
+    // Handle message deleted
+    const handleMessageDeleted = (data) => {
+      console.log('🗑️ [STAFF CHAT] Message deleted:', data);
+      if (data.hard_delete) {
+        setMessages(prev => prev.filter(msg => msg.id !== data.message_id));
+      } else {
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === data.message_id
+              ? { ...msg, is_deleted: true, message: data.message?.message || '[Message deleted]' }
+              : msg
+          )
+        );
+      }
+    };
+
+    // Handle read receipts
+    const handleReadReceipt = (data) => {
+      console.log('📖 [STAFF CHAT] Read receipt received:', data);
       updateReadReceipts(data);
       
       // Update message list with new read counts
@@ -78,8 +133,42 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
           return msg;
         })
       );
-    }
-  });
+    };
+
+    // Handle attachment deleted
+    const handleAttachmentDeleted = (data) => {
+      console.log('📎 [STAFF CHAT] Attachment deleted:', data);
+      setMessages(prev =>
+        prev.map(msg => {
+          if (msg.id === data.message_id) {
+            return {
+              ...msg,
+              attachments: (msg.attachments || []).filter(att => att.id !== data.attachment_id)
+            };
+          }
+          return msg;
+        })
+      );
+    };
+
+    // Bind all event handlers
+    channel.bind('new-message', handleNewMessage);
+    channel.bind('message-edited', handleMessageEdited);
+    channel.bind('message-deleted', handleMessageDeleted);
+    channel.bind('messages-read', handleReadReceipt);
+    channel.bind('attachment-deleted', handleAttachmentDeleted);
+
+    console.log('✅ [STAFF CHAT] ConversationView event handlers bound');
+
+    return () => {
+      console.log('🔌 [STAFF CHAT] ConversationView cleaning up event handlers');
+      channel.unbind('new-message', handleNewMessage);
+      channel.unbind('message-edited', handleMessageEdited);
+      channel.unbind('message-deleted', handleMessageDeleted);
+      channel.unbind('messages-read', handleReadReceipt);
+      channel.unbind('attachment-deleted', handleAttachmentDeleted);
+    };
+  }, [pusherInstance, hotelSlug, conversation?.id, updateReadReceipts]);
 
   // Debug: Log replyTo state changes
   useEffect(() => {
@@ -94,8 +183,14 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
   };
 
   useEffect(() => {
-    loadMessages();
-  }, [conversation?.id]);
+    if (conversation?.id) {
+      setCurrentConversationId(conversation.id);
+      loadMessages();
+    }
+    return () => {
+      setCurrentConversationId(null);
+    };
+  }, [conversation?.id, setCurrentConversationId]);
 
   useEffect(() => {
     scrollToBottom();
