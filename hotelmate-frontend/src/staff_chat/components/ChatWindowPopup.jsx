@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { fetchMessages, sendMessage, uploadFiles } from '../services/staffChatApi';
+import { fetchMessages, sendMessage, uploadFiles, markConversationAsRead } from '../services/staffChatApi';
 import { useStaffChat } from '../context/StaffChatContext';
 import MessageInput from './MessageInput';
 import MessageBubble from './MessageBubble';
@@ -278,6 +278,19 @@ const ChatWindowPopup = ({
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Handle input focus - mark conversation as read
+  const handleInputFocus = async () => {
+    if (conversation?.unread_count > 0) {
+      console.log('📖 [ChatWindowPopup] Input focused - marking conversation as read:', conversation.id);
+      try {
+        await markConversationAsRead(hotelSlug, conversation.id);
+        console.log('✅ [ChatWindowPopup] Conversation marked as read');
+      } catch (error) {
+        console.error('❌ [ChatWindowPopup] Failed to mark conversation as read:', error);
+      }
+    }
+  };
+
   // Handle reply
   const handleReply = (message) => {
     setReply(message);
@@ -524,6 +537,9 @@ const ChatWindowPopup = ({
                               isDeleted={message.is_deleted}
                               attachments={message.attachments}
                               isEditing={isEditing(message.id)}
+                              isSending={sending && message.id === messages[messages.length - 1]?.id}
+                              readByList={readStatus.read_by || []}
+                              readByCount={(readStatus.read_by || []).length}
                               onSaveEdit={(newText) => saveEdit(newText)}
                               onCancelEdit={cancelEdit}
                               onReply={() => handleReply(message)}
@@ -587,6 +603,7 @@ const ChatWindowPopup = ({
               onFileSelect={handleFileSelect}
               selectedFiles={selectedFiles}
               onRemoveFile={handleRemoveFile}
+              onFocus={handleInputFocus}
             />
           </div>
         </>

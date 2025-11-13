@@ -3,6 +3,8 @@ import PropTypes from 'prop-types';
 import { Dropdown } from 'react-bootstrap';
 import { useAuth } from '@/context/AuthContext';
 import { useMessenger } from '../context/MessengerContext';
+import { useStaffChat } from '../context/StaffChatContext';
+import { markConversationAsRead } from '../services/staffChatApi';
 import ConversationsList from './ConversationsList';
 import ChatWindowPopup from './ChatWindowPopup';
 import GroupChatModal from './GroupChatModal';
@@ -17,8 +19,10 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   const { user } = useAuth();
   const hotelSlug = user?.hotel_slug;
   const { registerOpenChatHandler } = useMessenger();
+  const { conversations, subscribeToConversationUpdates } = useStaffChat();
   const [internalExpanded, setInternalExpanded] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
+  const [totalUnread, setTotalUnread] = useState(0);
   const [openChats, setOpenChats] = useState(() => {
     // Restore open chats from localStorage on mount
     try {
@@ -67,6 +71,27 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
     }
   }, [totalPages, currentPage]);
 
+  // Subscribe to conversation updates for real-time unread count
+  useEffect(() => {
+    console.log('📊 [MessengerWidget] Subscribing to conversation updates for unread count');
+    
+    const unsubscribe = subscribeToConversationUpdates(() => {
+      // Calculate total unread from conversations
+      const unread = conversations.reduce((sum, conv) => sum + (conv.unread_count || 0), 0);
+      console.log('📊 [MessengerWidget] Unread count updated:', unread);
+      setTotalUnread(unread);
+    });
+
+    // Initial calculation
+    const unread = conversations.reduce((sum, conv) => sum + (conv.unread_count || 0), 0);
+    setTotalUnread(unread);
+
+    return () => {
+      console.log('🧹 [MessengerWidget] Unsubscribing from conversation updates');
+      unsubscribe();
+    };
+  }, [subscribeToConversationUpdates, conversations]);
+
   // Register the openChat handler so other components can open chats
   useEffect(() => {
     registerOpenChatHandler(handleOpenChat);
@@ -86,7 +111,7 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
     }
   };
 
-  const handleOpenChat = (conversation, staff) => {
+  const handleOpenChat = async (conversation, staff) => {
     // console.log('🎯 handleOpenChat called with:', { conversation, staff });
     // console.log('🎯 Conversation ID:', conversation?.id);
     // console.log('🎯 Current open chats:', openChats);
@@ -94,6 +119,17 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
     if (!conversation?.id) {
       console.error('❌ No conversation ID provided!');
       return;
+    }
+    
+    // Auto-mark conversation as read when opening
+    if (conversation.unread_count > 0) {
+      console.log('📖 [MessengerWidget] Auto-marking conversation as read:', conversation.id);
+      try {
+        await markConversationAsRead(hotelSlug, conversation.id);
+        console.log('✅ [MessengerWidget] Conversation marked as read');
+      } catch (error) {
+        console.error('❌ [MessengerWidget] Failed to mark conversation as read:', error);
+      }
     }
     
     // Check if chat is already open

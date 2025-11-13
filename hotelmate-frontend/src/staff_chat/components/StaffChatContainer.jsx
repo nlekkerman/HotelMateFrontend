@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import { useSearchParams } from 'react-router-dom';
+import { useStaffChat } from '../context/StaffChatContext';
 import StaffChatList from './StaffChatList';
 import ConversationView from './ConversationView';
 
@@ -7,15 +9,48 @@ import ConversationView from './ConversationView';
  * StaffChatContainer Component
  * Container component that manages the overall staff chat flow
  * Handles navigation between staff list and conversation view
+ * Supports opening specific conversation via URL query parameter
  */
 const StaffChatContainer = ({ 
   hotelSlug,
   onNavigateToConversation,
   renderConversationView 
 }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { conversations } = useStaffChat();
   const [activeView, setActiveView] = useState('list'); // 'list' or 'conversation'
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [selectedStaff, setSelectedStaff] = useState(null);
+
+  // Check for conversation ID in URL query parameter
+  useEffect(() => {
+    const conversationIdParam = searchParams.get('conversation');
+    
+    if (conversationIdParam && conversations.length > 0) {
+      const conversationId = parseInt(conversationIdParam, 10);
+      const conversation = conversations.find(c => c.id === conversationId);
+      
+      if (conversation) {
+        console.log('📱 [StaffChatContainer] Opening conversation from URL:', conversationId);
+        
+        // Get current user ID to find the other participant
+        const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
+        const currentUserId = currentUserData?.staff_id || currentUserData?.id;
+        
+        // Find the other participant
+        const otherParticipant = conversation.participants?.find(
+          p => p.id !== currentUserId
+        );
+        
+        setSelectedConversation(conversation);
+        setSelectedStaff(otherParticipant || null);
+        setActiveView('conversation');
+        
+        // Clear the query parameter after opening
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, conversations, setSearchParams]);
 
   const handleConversationCreated = (conversation, staff) => {
     setSelectedConversation(conversation);

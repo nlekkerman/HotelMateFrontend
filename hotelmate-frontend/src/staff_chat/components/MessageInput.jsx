@@ -16,6 +16,7 @@ const MessageInput = ({
   onFileSelect = null,
   selectedFiles = [],
   onRemoveFile = null,
+  onFocus = null,
 }) => {
   const [value, setValue] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -196,6 +197,7 @@ const MessageInput = ({
             value={value}
             onChange={handleChange}
             onKeyPress={handleKeyPress}
+            onFocus={onFocus}
             placeholder={placeholder}
             className="message-input__textarea"
             rows="1"
@@ -337,7 +339,9 @@ MessageInput.propTypes = {
   /** Selected files array */
   selectedFiles: PropTypes.array,
   /** Callback to remove a file */
-  onRemoveFile: PropTypes.func
+  onRemoveFile: PropTypes.func,
+  /** Callback when input is focused */
+  onFocus: PropTypes.func
 };
 
 export default MessageInput;

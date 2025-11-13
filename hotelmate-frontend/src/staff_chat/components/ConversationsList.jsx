@@ -20,15 +20,12 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
   const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
   const currentUserId = currentUserData?.staff_id || currentUserData?.id || null;
 
-  // Track unread counts
-  const { 
-    totalUnread, 
-    conversationsWithUnread, 
-    refresh: refreshUnreadCount 
-  } = useUnreadCount(hotelSlug, 30000);
-
   // Get conversations from StaffChatContext (real-time updates via Pusher)
   const { conversations, fetchStaffConversations, subscribeToConversationUpdates } = useStaffChat();
+  
+  // Calculate unread counts from conversations in real-time
+  const totalUnread = conversations.reduce((sum, conv) => sum + (conv.unread_count || 0), 0);
+  const conversationsWithUnread = conversations.filter(c => c.unread_count > 0).length;
   
   console.log('📋 [CONVERSATIONS LIST] Rendering with conversations from context:', {
     count: conversations.length,
@@ -145,10 +142,8 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
       const response = await bulkMarkAsRead(hotelSlug, unreadConvIds);
       console.log('✅ Marked all as read:', response);
       
-      // Context will handle the update via markConversationRead
-      // Refresh to ensure sync
+      // Refresh conversations to get updated unread counts
       await fetchStaffConversations();
-      refreshUnreadCount();
       
     } catch (error) {
       console.error('❌ Failed to mark all as read:', error);
@@ -341,15 +336,16 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
                         
                         {/* Last Message Preview */}
                         {conversation.last_message && (
-                          <p className="conversation-card__message">
-                            {(() => {
-                              const msg = conversation.last_message;
-                              
-                              // Check if backend sent has_attachments flag
-                              const hasAttachments = msg.has_attachments || (msg.attachments && msg.attachments.length > 0);
-                              
-                              // If message is "[File shared]" or has attachments, show icon
-                              if (hasAttachments || msg.message === '[File shared]') {
+                          <div className="conversation-card__message-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <p className="conversation-card__message" style={{ margin: 0 }}>
+                              {(() => {
+                                const msg = conversation.last_message;
+                                
+                                // Check if backend sent has_attachments flag
+                                const hasAttachments = msg.has_attachments || (msg.attachments && msg.attachments.length > 0);
+                                
+                                // If message is "[File shared]" or has attachments, show icon
+                                if (hasAttachments || msg.message === '[File shared]') {
                                 // Try to determine if it's an image from attachments array
                                 if (msg.attachments && msg.attachments.length > 0) {
                                   const hasImage = msg.attachments.some(att => {
@@ -395,7 +391,24 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
                               
                               return 'Message';
                             })()}
-                          </p>
+                            </p>
+                            
+                            {/* Status indicator for own messages */}
+                            {conversation.last_message.sender === currentUserId && (
+                              <span style={{
+                                fontSize: '9px',
+                                color: conversation.last_message.read_by_count > 0 ? '#0d6efd' : '#28a745',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '2px',
+                                flexShrink: 0,
+                                fontWeight: '500'
+                              }}>
+                                <i className={`bi bi-check2-all`} style={{ fontSize: '10px' }}></i>
+                                {conversation.last_message.read_by_count > 0 ? 'Seen' : 'Delivered'}
+                              </span>
+                            )}
+                          </div>
                         )}
                         
                         {/* Role */}

@@ -19,6 +19,8 @@ const MessageBubble = ({
   isEditing = false,
   readByList = [],
   readByCount = 0,
+  isSending = false,
+  onSaveEdit = null,
   onSaveEdit = null,
   onCancelEdit = null,
   onReply = null,
@@ -180,85 +182,110 @@ const MessageBubble = ({
               </span>
             )}
             
-            {/* Read Receipts - only show for own messages */}
-            {isOwn && readByCount > 0 && (
-              <div className="staff-chat-message__read-receipts" title={`Read by ${readByCount} ${readByCount === 1 ? 'person' : 'people'}`}>
-                {readByList.length > 0 && (
-                  <div className="staff-chat-message__read-avatars">
-                    {readByList.slice(0, 3).map((reader, index) => (
-                      <div
-                        key={reader.id || index}
-                        className="staff-chat-message__read-avatar"
-                        title={reader.name || 'User'}
-                        style={{
-                          marginLeft: index > 0 ? '-8px' : '0',
-                          zIndex: readByList.length - index
-                        }}
-                      >
-                        {reader.avatar ? (
-                          <img 
-                            src={reader.avatar} 
-                            alt={reader.name}
-                            style={{
-                              width: '16px',
-                              height: '16px',
-                              borderRadius: '50%',
-                              border: '1px solid white',
-                              objectFit: 'cover'
-                            }}
-                          />
-                        ) : (
+            {/* Message Status Labels - Only for own messages */}
+            {isOwn && !isDeleted && (
+              <div className="message-status" style={{
+                fontSize: '10px',
+                marginLeft: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+                color: isSending ? '#6c757d' : (readByCount > 0 ? '#0d6efd' : '#28a745'),
+                fontWeight: '500'
+              }}>
+                {isSending ? (
+                  // Sending...
+                  <>
+                    <i className="bi bi-clock" style={{ fontSize: '10px' }}></i>
+                    <span style={{ fontStyle: 'italic' }}>Sending</span>
+                  </>
+                ) : readByCount > 0 ? (
+                  // Seen with avatars
+                  <>
+                    {readByList.length > 0 && (
+                      <div className="staff-chat-message__read-avatars" style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        marginRight: '2px'
+                      }}>
+                        {readByList.slice(0, 3).map((reader, index) => (
                           <div
+                            key={reader.id || index}
+                            className="staff-chat-message__read-avatar"
+                            title={reader.name || 'User'}
                             style={{
-                              width: '16px',
-                              height: '16px',
+                              marginLeft: index > 0 ? '-8px' : '0',
+                              zIndex: readByList.length - index
+                            }}
+                          >
+                            {reader.avatar ? (
+                              <img 
+                                src={reader.avatar} 
+                                alt={reader.name}
+                                style={{
+                                  width: '14px',
+                                  height: '14px',
+                                  borderRadius: '50%',
+                                  border: '1px solid white',
+                                  objectFit: 'cover'
+                                }}
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  width: '14px',
+                                  height: '14px',
+                                  borderRadius: '50%',
+                                  border: '1px solid white',
+                                  backgroundColor: '#0d6efd',
+                                  color: 'white',
+                                  fontSize: '7px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontWeight: 'bold'
+                                }}
+                              >
+                                {(reader.name || 'U').charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        {readByCount > 3 && (
+                          <div
+                            className="staff-chat-message__read-avatar"
+                            style={{
+                              marginLeft: '-8px',
+                              zIndex: 0,
+                              width: '14px',
+                              height: '14px',
                               borderRadius: '50%',
                               border: '1px solid white',
-                              backgroundColor: '#0d6efd',
+                              backgroundColor: '#6c757d',
                               color: 'white',
-                              fontSize: '8px',
+                              fontSize: '7px',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               fontWeight: 'bold'
                             }}
                           >
-                            {(reader.name || 'U').charAt(0).toUpperCase()}
+                            +{readByCount - 3}
                           </div>
                         )}
                       </div>
-                    ))}
-                    {readByCount > 3 && (
-                      <div
-                        className="staff-chat-message__read-avatar"
-                        style={{
-                          marginLeft: '-8px',
-                          zIndex: 0,
-                          width: '16px',
-                          height: '16px',
-                          borderRadius: '50%',
-                          border: '1px solid white',
-                          backgroundColor: '#6c757d',
-                          color: 'white',
-                          fontSize: '8px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 'bold'
-                        }}
-                      >
-                        +{readByCount - 3}
-                      </div>
                     )}
-                  </div>
+                    <i className="bi bi-check2-all" style={{ fontSize: '11px' }}></i>
+                    <span>Seen</span>
+                  </>
+                ) : (
+                  // Delivered
+                  <>
+                    <i className="bi bi-check2-all" style={{ fontSize: '11px' }}></i>
+                    <span>Delivered</span>
+                  </>
                 )}
-                <i className="bi bi-check2-all ms-1" style={{ fontSize: '14px', color: '#0d6efd' }}></i>
               </div>
-            )}
-            
-            {/* Status indicator for own messages without reads yet */}
-            {isOwn && readByCount === 0 && !isDeleted && (
-              <i className="bi bi-check2 ms-1" style={{ fontSize: '14px', opacity: 0.7 }} title="Sent"></i>
             )}
           </div>
         </div>
@@ -387,6 +414,8 @@ MessageBubble.propTypes = {
   })),
   /** Total number of users who have read this message */
   readByCount: PropTypes.number,
+  /** Whether message is currently being sent */
+  isSending: PropTypes.bool,
   /** Callback to save edited message */
   onSaveEdit: PropTypes.func,
   /** Callback to cancel editing */
