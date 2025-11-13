@@ -17,6 +17,14 @@ import { useStaffChat } from '../context/StaffChatContext';
  * Auto-marks messages as read when scrolled into view
  */
 const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
+  console.log('🎬 [CONVERSATION VIEW] Component rendered/updated with:', {
+    hotelSlug,
+    conversationId: conversation?.id,
+    conversationTitle: conversation?.title,
+    staffId: currentUser?.id || currentUser?.staff_id,
+    timestamp: new Date().toISOString()
+  });
+  
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -49,10 +57,25 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
 
   // Real-time Pusher integration - direct channel subscription
   useEffect(() => {
-    if (!pusherInstance || !hotelSlug || !conversation?.id) return;
+    console.log('🔄 [PUSHER EFFECT] Running Pusher subscription effect:', {
+      hasPusherInstance: !!pusherInstance,
+      pusherState: pusherInstance?.connection?.state,
+      hotelSlug,
+      conversationId: conversation?.id
+    });
+    
+    if (!pusherInstance || !hotelSlug || !conversation?.id) {
+      console.warn('⚠️ [PUSHER EFFECT] Missing required data, skipping subscription');
+      return;
+    }
 
     const channelName = `${hotelSlug}-staff-conversation-${conversation.id}`;
-    console.log('📡 [STAFF CHAT] ConversationView subscribing to:', channelName);
+    console.log('📡 [STAFF-TO-STAFF] ConversationView subscribing to:', channelName);
+    console.log('📡 [STAFF-TO-STAFF] ⚠️ IMPORTANT: This is STAFF-TO-STAFF (NO -chat suffix!)');
+    console.log('📡 [STAFF-TO-STAFF] Hotel:', hotelSlug);
+    console.log('📡 [STAFF-TO-STAFF] Conversation ID:', conversation.id);
+    console.log('📡 [STAFF-TO-STAFF] Pusher connection state:', pusherInstance.connection.state);
+    console.log('📡 [STAFF-TO-STAFF] Pusher socket ID:', pusherInstance.connection.socket_id);
     
     // Get or subscribe to channel
     let channel = pusherInstance.channel(channelName);
@@ -62,16 +85,30 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
 
     // Handle new messages
     const handleNewMessage = (data) => {
-      console.log('📨 [STAFF CHAT] New message received:', data);
+      console.log('📨 [STAFF CHAT] ==================== NEW MESSAGE EVENT ====================');
+      console.log('📨 [STAFF CHAT] Raw event data:', JSON.stringify(data, null, 2));
+      console.log('📨 [STAFF CHAT] Message details:', {
+        id: data.id,
+        message: data.message || data.content,
+        sender_id: data.sender?.id || data.sender_id,
+        sender_name: data.sender?.full_name || data.sender_name,
+        conversation_id: data.conversation_id,
+        timestamp: data.timestamp || data.created_at,
+        has_attachments: !!data.attachments?.length
+      });
       
       // Check if message already exists
       setMessages(prev => {
+        console.log('📨 [STAFF CHAT] Current messages in state:', prev.length);
         const exists = prev.some(m => m.id === data.id);
         if (exists) {
-          console.log('⚠️ [STAFF CHAT] Message already exists, skipping');
+          console.log('⚠️ [STAFF CHAT] Message already exists, skipping. Message ID:', data.id);
           return prev;
         }
-        return [...prev, data];
+        console.log('✅ [STAFF CHAT] Adding new message to UI. New total:', prev.length + 1);
+        const newMessages = [...prev, data];
+        console.log('✅ [STAFF CHAT] Messages after add:', newMessages.map(m => ({ id: m.id, text: m.message?.substring(0, 30) })));
+        return newMessages;
       });
       
       scrollToBottom();
@@ -152,13 +189,28 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     };
 
     // Bind all event handlers
+    console.log('🎧 [STAFF CHAT] Binding event handlers to channel:', channelName);
     channel.bind('new-message', handleNewMessage);
+    console.log('🎧 [STAFF CHAT] ✓ Bound: new-message');
     channel.bind('message-edited', handleMessageEdited);
+    console.log('🎧 [STAFF CHAT] ✓ Bound: message-edited');
     channel.bind('message-deleted', handleMessageDeleted);
+    console.log('🎧 [STAFF CHAT] ✓ Bound: message-deleted');
     channel.bind('messages-read', handleReadReceipt);
+    console.log('🎧 [STAFF CHAT] ✓ Bound: messages-read');
     channel.bind('attachment-deleted', handleAttachmentDeleted);
+    console.log('🎧 [STAFF CHAT] ✓ Bound: attachment-deleted');
 
-    console.log('✅ [STAFF CHAT] ConversationView event handlers bound');
+    // Listen for Pusher subscription events
+    channel.bind('pusher:subscription_succeeded', () => {
+      console.log('✅ [STAFF CHAT] Successfully subscribed to channel:', channelName);
+    });
+    
+    channel.bind('pusher:subscription_error', (error) => {
+      console.error('❌ [STAFF CHAT] Subscription error for channel:', channelName, error);
+    });
+
+    console.log('✅ [STAFF CHAT] All event handlers bound successfully');
 
     return () => {
       console.log('🔌 [STAFF CHAT] ConversationView cleaning up event handlers');
@@ -238,7 +290,19 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
   };
 
   const handleSendMessage = async (messageText, mentions) => {
-    if ((!messageText.trim() && selectedFiles.length === 0) || sending) return;
+    console.log('📤 [SEND MESSAGE] Starting message send:', {
+      messageText: messageText?.substring(0, 50),
+      hasFiles: selectedFiles.length > 0,
+      fileCount: selectedFiles.length,
+      conversationId: conversation?.id,
+      replyToId: replyTo?.id,
+      currentUserId
+    });
+    
+    if ((!messageText.trim() && selectedFiles.length === 0) || sending) {
+      console.warn('⚠️ [SEND MESSAGE] Cannot send - empty or already sending');
+      return;
+    }
 
     setSending(true);
     
@@ -265,10 +329,28 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
       }
       
       // Add new message to list
+      console.log('✅ [SEND MESSAGE] Message sent successfully:', {
+        messageId: result.message?.id || result.id,
+        hasMessage: !!result.message,
+        hasId: !!result.id
+      });
+      
       if (result.message) {
-        setMessages(prev => [...prev, result.message]);
+        console.log('📝 [SEND MESSAGE] Adding result.message to UI:', result.message.id);
+        setMessages(prev => {
+          console.log('📝 [SEND MESSAGE] Previous count:', prev.length);
+          const newMessages = [...prev, result.message];
+          console.log('📝 [SEND MESSAGE] New count:', newMessages.length);
+          return newMessages;
+        });
       } else if (result.id) {
-        setMessages(prev => [...prev, result]);
+        console.log('📝 [SEND MESSAGE] Adding result to UI:', result.id);
+        setMessages(prev => {
+          console.log('📝 [SEND MESSAGE] Previous count:', prev.length);
+          const newMessages = [...prev, result];
+          console.log('📝 [SEND MESSAGE] New count:', newMessages.length);
+          return newMessages;
+        });
       }
       
       // Clear inputs

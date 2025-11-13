@@ -52,28 +52,52 @@ async function bootstrap() {
 
       // Handle foreground FCM messages
       listenForFirebaseMessages((payload) => {
-        console.log("🔥 [FG FCM] Payload received:", payload);
+        console.log("🔥🔥🔥 [FCM] ==================== FCM MESSAGE RECEIVED ====================");
+        console.log("🔥 [FCM] Full payload:", JSON.stringify(payload, null, 2));
+        console.log("🔥 [FCM] Payload.data:", payload?.data);
+        console.log("🔥 [FCM] Payload.notification:", payload?.notification);
+        console.log("🔥 [FCM] Timestamp:", new Date().toISOString());
 
         // Show notification for room_service, breakfast, stock_movement, or order status updates
         const notificationType = payload?.data?.type;
         const hasOrderId = payload?.data?.order_id;
+        const conversationId = payload?.data?.conversation_id;
+        const messageId = payload?.data?.message_id;
+        
+        console.log("🔥 [FCM] Parsed data:", {
+          notificationType,
+          hasOrderId,
+          conversationId,
+          messageId,
+          hasNotification: !!payload?.notification
+        });
+
+        // Check if this is a staff chat message
+        if (messageId && conversationId) {
+          console.log("💬 [FCM] STAFF CHAT MESSAGE DETECTED!", {
+            messageId,
+            conversationId,
+            senderName: payload?.data?.sender_name,
+            message: payload?.data?.message
+          });
+        }
         
         if (
           ["room_service", "room_service_order", "breakfast", "stock_movement"].includes(notificationType) &&
           payload?.notification
         ) {
           console.log(
-            "🔔 [FG FCM] Displaying notification for type:",
+            "🔔 [FCM] Displaying notification for type:",
             notificationType
           );
           new Notification(payload.notification.title, {
             body: payload.notification.body,
-            icon: "/favicon.ico",
+            icon: "/favicon.svg",
           });
         } else if (hasOrderId && payload?.notification) {
           // Guest order status update (no type field)
           console.log(
-            "🔔 [FG FCM] Displaying order status update for order:",
+            "🔔 [FCM] Displaying order status update for order:",
             payload.data.order_id
           );
           new Notification(payload.notification.title, {
@@ -82,12 +106,16 @@ async function bootstrap() {
           });
         } else {
           console.log(
-            "ℹ️ [FG FCM] Ignored notification - type:",
+            "ℹ️ [FCM] Notification not displayed - type:",
             notificationType,
             "hasOrderId:",
-            hasOrderId
+            hasOrderId,
+            "hasNotification:",
+            !!payload?.notification
           );
         }
+        
+        console.log("🔥🔥🔥 [FCM] ==================== END FCM MESSAGE ====================");
       });
     } catch (err) {
       console.error("❌ SW registration failed:", err);

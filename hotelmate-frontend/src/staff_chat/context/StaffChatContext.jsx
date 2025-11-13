@@ -38,8 +38,10 @@ export const StaffChatProvider = ({ children }) => {
   useEffect(() => {
     if (!hotelSlug || !staffId) return;
 
-    console.log('🔌 [STAFF CHAT] Initializing Pusher for staff-to-staff chat');
-    console.log('🔌 [STAFF CHAT] Hotel:', hotelSlug, 'Staff ID:', staffId);
+    console.log('🔌 [STAFF-TO-STAFF CHAT] Initializing Pusher for STAFF-TO-STAFF chat');
+    console.log('🔌 [STAFF-TO-STAFF CHAT] Hotel:', hotelSlug, 'Staff ID:', staffId);
+    console.log('🔌 [STAFF-TO-STAFF CHAT] ⚠️ Channel format: {hotel}-staff-conversation-{id} (NO -chat suffix!)');
+    console.log('🔌 [STAFF-TO-STAFF CHAT] ⚠️ Notification channel: {hotel}-staff-{id}-notifications (NOT -chat!)');
 
     const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
       cluster: import.meta.env.VITE_PUSHER_CLUSTER,
@@ -48,17 +50,19 @@ export const StaffChatProvider = ({ children }) => {
     pusherRef.current = pusher;
 
     pusher.connection.bind("connected", () => {
-      console.log("✅ [STAFF CHAT] Pusher connected for staff-to-staff chat");
+      console.log("✅ [STAFF-TO-STAFF] Pusher connected for staff-to-staff chat");
+      console.log("✅ [STAFF-TO-STAFF] Connection state:", pusher.connection.state);
     });
 
     pusher.connection.bind("error", (err) => {
-      console.error("❌ [STAFF CHAT] Pusher connection error:", err);
+      console.error("❌ [STAFF-TO-STAFF] Pusher connection error:", err);
     });
 
     // Subscribe to personal staff notifications channel
-    // Format: {hotel_slug}-staff-{staff_id}-notifications
+    // Format for staff-to-STAFF: {hotel_slug}-staff-{staff_id}-notifications (NOT -chat!)
     const staffNotificationsChannel = `${hotelSlug}-staff-${staffId}-notifications`;
-    console.log('📡 [STAFF CHAT] Subscribing to personal notifications:', staffNotificationsChannel);
+    console.log('📡 [STAFF-TO-STAFF CHAT] Subscribing to personal notifications:', staffNotificationsChannel);
+    console.log('📡 [STAFF-TO-STAFF CHAT] NOTE: This is staff-to-staff, not staff-to-guest!');
     
     const notifChannel = pusher.subscribe(staffNotificationsChannel);
     
@@ -70,35 +74,16 @@ export const StaffChatProvider = ({ children }) => {
       console.error(`❌ [STAFF CHAT] Subscription error for ${staffNotificationsChannel}:`, error);
     });
     
-    // Listen for new messages from other staff
-    notifChannel.bind("new-message", (data) => {
-      console.log("💬 [STAFF CHAT] New message notification received:", data);
-      
-      // Refresh conversations to get updated last message and unread counts
-      fetchStaffConversations();
+    // ⚠️ IMPORTANT: Backend does NOT send "new-message" to notification channel!
+    // Notification channel ONLY receives: message-mention, new-conversation
+    // All "new-message" events come through conversation channels below
 
-      // Show browser notification if not the current conversation
-      if (
-        data.conversation_id !== currentConversationId &&
-        "Notification" in window &&
-        Notification.permission === "granted"
-      ) {
-        const notification = new Notification(`New Message from ${data.sender_name}`, {
-          body: data.message || 'New message',
-          icon: data.sender_profile_image || "/favicon-32x32.png",
-          tag: `staff-chat-${data.message_id}`,
-        });
-
-        notification.onclick = () => {
-          window.focus();
-          window.location.href = `/${hotelSlug}/staff-chat`;
-        };
-      }
-    });
-
-    // Listen for mentions
+    // Listen for mentions (this IS sent to notification channel)
     notifChannel.bind("message-mention", (data) => {
-      console.log("🔔 [STAFF CHAT] Mention notification received:", data);
+      console.log("🔔 [STAFF-TO-STAFF] ==================== MENTION NOTIFICATION ====================");
+      console.log("🔔 [STAFF-TO-STAFF] Channel:", staffNotificationsChannel);
+      console.log("🔔 [STAFF-TO-STAFF] Event: message-mention");
+      console.log("🔔 [STAFF-TO-STAFF] Data:", JSON.stringify(data, null, 2));
       
       // Refresh conversations
       fetchStaffConversations();
@@ -112,6 +97,29 @@ export const StaffChatProvider = ({ children }) => {
           body: data.message || 'You were mentioned in a message',
           icon: data.sender_profile_image || "/favicon-32x32.png",
           tag: `staff-mention-${data.message_id}`,
+        });
+      }
+    });
+
+    // Listen for new conversation invites (this IS sent to notification channel)
+    notifChannel.bind("new-conversation", (data) => {
+      console.log("📬 [STAFF-TO-STAFF] ==================== NEW CONVERSATION ====================");
+      console.log("📬 [STAFF-TO-STAFF] Channel:", staffNotificationsChannel);
+      console.log("📬 [STAFF-TO-STAFF] Event: new-conversation");
+      console.log("📬 [STAFF-TO-STAFF] Data:", JSON.stringify(data, null, 2));
+      
+      // Refresh to show new conversation
+      fetchStaffConversations();
+
+      // Show notification
+      if (
+        "Notification" in window &&
+        Notification.permission === "granted"
+      ) {
+        new Notification("Added to new conversation", {
+          body: data.title || 'You were added to a conversation',
+          icon: "/favicon-32x32.png",
+          tag: `new-conv-${data.conversation_id}`,
         });
       }
     });
@@ -137,9 +145,10 @@ export const StaffChatProvider = ({ children }) => {
     conversations.forEach((conv) => {
       if (channelsRef.current.has(conv.id)) return;
 
-      // Format: {hotel_slug}-staff-conversation-{conversation_id}
+      // Format for staff-to-STAFF: {hotel_slug}-staff-conversation-{conversation_id} (NO -chat suffix!)
       const channelName = `${hotelSlug}-staff-conversation-${conv.id}`;
-      console.log('📡 [STAFF CHAT] Subscribing to conversation channel:', channelName);
+      console.log('📡 [STAFF-TO-STAFF CHAT] Subscribing to conversation channel:', channelName);
+      console.log('📡 [STAFF-TO-STAFF CHAT] Conv ID:', conv.id, 'Title:', conv.title);
       
       const channel = pusherRef.current.subscribe(channelName);
 
@@ -151,27 +160,53 @@ export const StaffChatProvider = ({ children }) => {
         console.error(`❌ [STAFF CHAT] Subscription error for ${channelName}:`, error);
       });
 
+      // ✅ THIS IS WHERE ALL "new-message" EVENTS COME FROM
+      // Backend calls broadcast_new_message() which triggers this event
       channel.bind("new-message", (msg) => {
-        console.log(`📨 [STAFF CHAT] New message in conversation ${conv.id}:`, msg);
+        console.log("📨 [STAFF-TO-STAFF] ==================== NEW MESSAGE IN CONVERSATION ====================");
+        console.log("📨 [STAFF-TO-STAFF] Channel:", channelName);
+        console.log("📨 [STAFF-TO-STAFF] Conversation ID:", conv.id);
+        console.log("📨 [STAFF-TO-STAFF] Message ID:", msg.id);
+        console.log("📨 [STAFF-TO-STAFF] Sender ID:", msg.sender?.id || msg.sender_id);
+        console.log("📨 [STAFF-TO-STAFF] My ID:", staffId);
+        console.log("📨 [STAFF-TO-STAFF] Current conversation:", currentConversationId);
+        console.log("📨 [STAFF-TO-STAFF] Full message data:", JSON.stringify(msg, null, 2));
+        console.log("=================================================================");
         
         setConversations((prev) =>
-          prev.map((c) =>
-            c.id === msg.conversation_id || c.id === conv.id
-              ? {
-                  ...c,
-                  last_message: {
-                    message: msg.message || msg.content,
-                    has_attachments: msg.attachments?.length > 0 || false,
-                    attachments: msg.attachments || []
-                  },
-                  // Don't increment unread if this is the current conversation
-                  unread_count:
-                    c.id === currentConversationId
-                      ? c.unread_count
-                      : (c.unread_count || 0) + 1,
-                }
-              : c
-          )
+          prev.map((c) => {
+            if (c.id === msg.conversation_id || c.id === conv.id) {
+              const isMyMessage = (msg.sender?.id || msg.sender_id) === staffId;
+              const isCurrentConv = c.id === currentConversationId;
+              
+              console.log("📨 [STAFF-TO-STAFF] Updating conversation:", {
+                convId: c.id,
+                isMyMessage,
+                isCurrentConv,
+                oldUnread: c.unread_count,
+                willIncrement: !isCurrentConv && !isMyMessage
+              });
+              
+              return {
+                ...c,
+                last_message: {
+                  message: msg.message || msg.content,
+                  has_attachments: msg.attachments?.length > 0 || false,
+                  attachments: msg.attachments || [],
+                  timestamp: msg.timestamp || msg.created_at
+                },
+                // Don't increment unread if:
+                // 1. This is the current conversation (user is viewing it)
+                // 2. I sent the message
+                unread_count:
+                  isCurrentConv || isMyMessage
+                    ? c.unread_count
+                    : (c.unread_count || 0) + 1,
+                updated_at: msg.timestamp || msg.created_at
+              };
+            }
+            return c;
+          })
         );
 
         // Show desktop notification if not current conversation
