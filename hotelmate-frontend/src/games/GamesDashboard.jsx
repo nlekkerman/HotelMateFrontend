@@ -138,11 +138,29 @@ export default function GamesDashboard() {
           >
             <div className="card-body d-flex flex-column justify-content-center align-items-center">
               <i
-                className="bi bi-question-circle-fill text-info"
+                className="bi bi-patch-question-fill text-info"
                 style={{ fontSize: "3rem" }}
               ></i>
-              <h5 className="card-title mt-3">Quiz Challenge</h5>
-              <p className="card-text">Test your knowledge with 5 difficulty levels!</p>
+              <h5 className="card-title mt-3">Guessticulator Quiz</h5>
+              <p className="card-text">Test your knowledge across multiple categories!</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Quiz Tournaments Card */}
+        <div className="col-md-3">
+          <div
+            className="card h-100 text-center border-primary"
+            onClick={() => handleNavigate("/games/quiz/tournaments")}
+            style={{ cursor: "pointer" }}
+          >
+            <div className="card-body d-flex flex-column justify-content-center align-items-center">
+              <i
+                className="bi bi-trophy-fill text-primary"
+                style={{ fontSize: "3rem" }}
+              ></i>
+              <h5 className="card-title mt-3">Quiz Tournaments</h5>
+              <p className="card-text">Compete in quiz tournaments and win prizes!</p>
             </div>
           </div>
         </div>

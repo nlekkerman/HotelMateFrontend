@@ -113,7 +113,11 @@ import TournamentDashboard from "@/games/memory-match/pages/TournamentDashboard"
 import TournamentWinners from "@/games/memory-match/pages/TournamentWinners";
 import Leaderboard from "@/games/memory-match/pages/Leaderboard";
 import PersonalStats from "@/games/memory-match/pages/PersonalStats";
-import QuizGame from "@/games/quiz-game/QuizGame";
+import QuizStartScreen from "@/games/quiz-game/pages/QuizStartScreen";
+import QuizPlayScreen from "@/games/quiz-game/pages/QuizPlayScreen";
+import QuizResultsScreen from "@/games/quiz-game/pages/QuizResultsScreen";
+import QuizLeaderboard from "@/games/quiz-game/pages/QuizLeaderboard";
+import QuizTournaments from "@/games/quiz-game/pages/QuizTournaments";
 
 const queryClient = new QueryClient();
 // Default settings for all games
@@ -377,7 +381,14 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/games/memory-match/tournaments" element={<ProtectedRoute><TournamentDashboard /></ProtectedRoute>} />
               <Route path="/games/memory-match/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
               <Route path="/games/memory-match/stats" element={<ProtectedRoute><PersonalStats /></ProtectedRoute>} />
-              <Route path="/games/quiz" element={<QuizGame />} />
+              
+              {/* Quiz Game Routes */}
+              <Route path="/games/quiz" element={<ProtectedRoute><QuizStartScreen /></ProtectedRoute>} />
+              <Route path="/games/quiz/play" element={<ProtectedRoute><QuizPlayScreen /></ProtectedRoute>} />
+              <Route path="/games/quiz/results" element={<ProtectedRoute><QuizResultsScreen /></ProtectedRoute>} />
+              <Route path="/games/quiz/leaderboard" element={<ProtectedRoute><QuizLeaderboard /></ProtectedRoute>} />
+              <Route path="/games/quiz/tournaments" element={<ProtectedRoute><QuizTournaments /></ProtectedRoute>} />
+              
               <Route path="/games/settings" element={<ProtectedRoute><div>Game Settings Coming Soon!</div></ProtectedRoute>} />
               
               {/* Catch All */}

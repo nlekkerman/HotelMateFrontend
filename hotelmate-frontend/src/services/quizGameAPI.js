@@ -1,223 +1,273 @@
 import api from "./api";
-import { v4 as uuidv4 } from 'uuid';
 
 class QuizGameAPI {
   constructor() {
-    // Note: api.js already has /api/ in baseURL, so we just need 'entertainment'
     this.baseURL = 'entertainment';
   }
 
-  // ============================================
-  // SESSION TOKEN MANAGEMENT
-  // ============================================
-  
-  getSessionToken() {
-    let token = localStorage.getItem('quiz_session_token');
+  // Player Token Management
+  generatePlayerToken() {
+    return `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  getPlayerToken() {
+    let token = localStorage.getItem('quiz_player_token');
     if (!token) {
-      token = uuidv4();
-      localStorage.setItem('quiz_session_token', token);
+      token = this.generatePlayerToken();
+      localStorage.setItem('quiz_player_token', token);
     }
     return token;
   }
 
-  generateNewSessionToken() {
-    const token = uuidv4();
-    localStorage.setItem('quiz_session_token', token);
-    console.log('🔄 Generated new session token:', token);
-    return token;
+  clearPlayerToken() {
+    localStorage.removeItem('quiz_player_token');
   }
 
-  clearSessionToken() {
-    localStorage.removeItem('quiz_session_token');
-    console.log('🗑️ Cleared session token');
+  // Player Name Management
+  getPlayerName() {
+    return localStorage.getItem('quiz_player_name') || null;
   }
 
-  // ============================================
-  // QUIZZES (NEW API)
-  // ============================================
-  
-  async getQuizzes() {
-    try {
-      const response = await api.get(`${this.baseURL}/quizzes/`);
-      return response.data || [];
-    } catch (error) {
-      console.error('❌ Failed to fetch quizzes:', error);
-      throw error;
+  savePlayerName(name) {
+    if (name && name.trim()) {
+      localStorage.setItem('quiz_player_name', name.trim());
+      return true;
     }
+    return false;
   }
 
-  async getQuizDetail(slug) {
-    try {
-      const response = await api.get(`${this.baseURL}/quizzes/${slug}/`);
-      return response.data;
-    } catch (error) {
-      console.error(`❌ Failed to fetch quiz ${slug}:`, error);
-      throw error;
-    }
+  clearPlayerName() {
+    localStorage.removeItem('quiz_player_name');
   }
 
-  // ============================================
-  // QUIZ CATEGORIES (NEW API)
-  // ============================================
-  
+  formatPlayerName(username) {
+    const token = this.getPlayerToken();
+    return `${username}|${token}`;
+  }
+
+  // Quiz Categories
   async getCategories() {
     try {
       const response = await api.get(`${this.baseURL}/quiz-categories/`);
       return response.data || [];
     } catch (error) {
-      console.error('❌ Failed to fetch quiz categories:', error);
+      console.error('Failed to fetch quiz categories:', error);
       throw error;
     }
   }
 
-  async getCategoryDetail(slug) {
+  async getCategoryDetail(id) {
     try {
-      const response = await api.get(`${this.baseURL}/quiz-categories/${slug}/`);
+      const response = await api.get(`${this.baseURL}/quiz-categories/${id}/`);
       return response.data;
     } catch (error) {
-      console.error(`❌ Failed to fetch category ${slug}:`, error);
+      console.error(`Failed to fetch category ${id}:`, error);
       throw error;
     }
   }
 
-  // ============================================
-  // GAME SESSION FLOW (NEW API)
-  // ============================================
-  
-  async startSession(playerName, isTournamentMode = false, tournamentSlug = null) {
+  async getRandomCategories(count = 5) {
     try {
-      const sessionToken = this.getSessionToken();
+      const response = await api.get(`${this.baseURL}/quiz-categories/random_selection/`, {
+        params: { count }
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Failed to fetch random categories:', error);
+      throw error;
+    }
+  }
+
+  // Quiz Questions
+  async getQuestions(categoryId = null, difficulty = null) {
+    try {
+      const params = {};
+      if (categoryId) params.category = categoryId;
+      if (difficulty) params.difficulty = difficulty;
       
-      const sessionData = {
+      const response = await api.get(`${this.baseURL}/quiz-questions/`, { params });
+      return response.data || [];
+    } catch (error) {
+      console.error('Failed to fetch questions:', error);
+      throw error;
+    }
+  }
+
+  async getQuestionDetail(id) {
+    try {
+      const response = await api.get(`${this.baseURL}/quiz-questions/${id}/`);
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to fetch question ${id}:`, error);
+      throw error;
+    }
+  }
+
+  // Quiz Sessions
+  async startQuiz(username, hotelId = null, tournamentId = null, questionsPerQuiz = 20) {
+    try {
+      const playerName = this.formatPlayerName(username);
+      const requestData = {
         player_name: playerName,
-        session_token: sessionToken,
-        is_tournament_mode: isTournamentMode,
-        tournament_slug: tournamentSlug
+        questions_per_quiz: questionsPerQuiz
       };
+
+      if (hotelId) requestData.hotel = hotelId;
+      if (tournamentId) requestData.tournament = tournamentId;
+
+      const response = await api.post(`${this.baseURL}/quiz-sessions/start_quiz/`, requestData);
       
-      const response = await api.post(`${this.baseURL}/quiz/game/start_session/`, sessionData);
-      console.log('✅ Quiz session started:', response.data);
+      if (response.data.session) {
+        localStorage.setItem('quiz_session_id', response.data.session.id);
+      }
+      
       return response.data;
     } catch (error) {
-      console.error('❌ Failed to start quiz session:', error);
+      console.error('Failed to start quiz:', error);
       throw error;
     }
   }
 
-  async submitAnswer(sessionId, categorySlug, question, selectedAnswer, selectedAnswerId, timeTaken) {
+  async submitAnswer(sessionId, questionId, selectedAnswer, timeSeconds = null) {
     try {
-      const answerData = {
-        session_id: sessionId,
-        category_slug: categorySlug,
-        question_text: question.text,
-        selected_answer: selectedAnswer?.text || null,
-        time_taken_seconds: timeTaken
+      const requestData = {
+        question_id: questionId,
+        selected_answer: selectedAnswer
       };
-      
-      // Add question_id for regular questions
-      if (question.id) {
-        answerData.question_id = question.id;
-        answerData.selected_answer_id = selectedAnswerId;
-      }
-      
-      // Add question_data for math questions
-      if (question.question_data) {
-        answerData.question_data = question.question_data;
-      }
-      
+
+      if (timeSeconds !== null) requestData.time_seconds = timeSeconds;
+
       const response = await api.post(
-        `${this.baseURL}/quiz/game/submit_answer/`,
-        answerData
+        `${this.baseURL}/quiz-sessions/${sessionId}/submit_answer/`,
+        requestData
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to submit answer:', error);
+      throw error;
+    }
+  }
+
+  async completeSession(sessionId, timeSeconds = null) {
+    try {
+      const requestData = {};
+      if (timeSeconds !== null) requestData.time_seconds = timeSeconds;
+
+      const response = await api.post(
+        `${this.baseURL}/quiz-sessions/${sessionId}/complete_session/`,
+        requestData
       );
       
-      console.log('✅ Answer submitted:', response.data);
+      localStorage.removeItem('quiz_session_id');
       return response.data;
     } catch (error) {
-      console.error('❌ Failed to submit answer:', error);
+      console.error('Failed to complete session:', error);
       throw error;
     }
   }
 
-  async completeSession(sessionId) {
+  async getSessions(playerToken = null, tournamentId = null) {
     try {
-      const response = await api.post(`${this.baseURL}/quiz/game/complete_session/`, {
-        session_id: sessionId
-      });
-      console.log('✅ Quiz session completed:', response.data);
-      return response.data;
+      const params = {};
+      if (playerToken) params.player_token = playerToken;
+      if (tournamentId) params.tournament = tournamentId;
+
+      const response = await api.get(`${this.baseURL}/quiz-sessions/`, { params });
+      return response.data || [];
     } catch (error) {
-      console.error('❌ Failed to complete session:', error);
+      console.error('Failed to fetch sessions:', error);
       throw error;
     }
   }
 
-  // ============================================
-  // TOURNAMENTS (NEW API)
-  // ============================================
-  
-  async getTournaments() {
+  async getSessionDetail(sessionId) {
     try {
-      const response = await api.get(`${this.baseURL}/quiz-tournaments/`);
-      return response.data || [];
-    } catch (error) {
-      console.error('❌ Failed to fetch tournaments:', error);
-      return [];
-    }
-  }
-
-  async getTournamentDetail(slug) {
-    try {
-      const response = await api.get(`${this.baseURL}/quiz-tournaments/${slug}/`);
+      const response = await api.get(`${this.baseURL}/quiz-sessions/${sessionId}/`);
       return response.data;
     } catch (error) {
-      console.error(`❌ Failed to fetch tournament ${slug}:`, error);
+      console.error(`Failed to fetch session ${sessionId}:`, error);
       throw error;
     }
   }
 
-  async getTournamentLeaderboard(slug) {
+  // Leaderboard
+  async getLeaderboard() {
     try {
-      const response = await api.get(`${this.baseURL}/quiz-tournaments/${slug}/leaderboard/`);
+      const response = await api.get(`${this.baseURL}/quiz-leaderboard/`);
       return response.data || [];
     } catch (error) {
-      console.error(`❌ Failed to fetch tournament leaderboard for ${slug}:`, error);
+      console.error('Failed to fetch leaderboard:', error);
       return [];
     }
   }
 
-  // ============================================
-  // LEADERBOARDS (NEW API)
-  // ============================================
-  
-  async getAllTimeLeaderboard(limit = 10) {
+  async getMyRank(playerToken = null) {
     try {
-      const response = await api.get(`${this.baseURL}/quiz/leaderboard/all-time/`, {
-        params: { limit }
-      });
-      return response.data || [];
-    } catch (error) {
-      console.error('❌ Failed to fetch all-time leaderboard:', error);
-      return [];
-    }
-  }
-
-  async getPlayerStats(sessionToken = null) {
-    try {
-      const token = sessionToken || this.getSessionToken();
-      const response = await api.get(`${this.baseURL}/quiz/leaderboard/player-stats/`, {
-        params: { session_token: token }
+      const token = playerToken || this.getPlayerToken();
+      const response = await api.get(`${this.baseURL}/quiz-leaderboard/my_rank/`, {
+        params: { player_token: token }
       });
       return response.data;
     } catch (error) {
-      console.error('❌ Failed to fetch player stats:', error);
+      console.error('Failed to fetch player rank:', error);
       return null;
     }
   }
 
-  // ============================================
-  // UTILITY METHODS
-  // ============================================
-  
+  // Tournaments
+  async getTournaments(status = null, hotelId = null) {
+    try {
+      const params = {};
+      if (status) params.status = status;
+      if (hotelId) params.hotel = hotelId;
+
+      const response = await api.get(`${this.baseURL}/quiz-tournaments/`, { params });
+      return response.data || [];
+    } catch (error) {
+      console.error('Failed to fetch tournaments:', error);
+      return [];
+    }
+  }
+
+  async getTournamentDetail(tournamentId) {
+    try {
+      const response = await api.get(`${this.baseURL}/quiz-tournaments/${tournamentId}/`);
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to fetch tournament ${tournamentId}:`, error);
+      throw error;
+    }
+  }
+
+  async getTournamentLeaderboard(tournamentId, limit = null) {
+    try {
+      const params = {};
+      if (limit) params.limit = limit;
+
+      const response = await api.get(
+        `${this.baseURL}/quiz-tournaments/${tournamentId}/leaderboard/`,
+        { params }
+      );
+      return response.data || [];
+    } catch (error) {
+      console.error(`Failed to fetch tournament leaderboard for ${tournamentId}:`, error);
+      return [];
+    }
+  }
+
+  async getTournamentTopPlayers(tournamentId) {
+    try {
+      const response = await api.get(
+        `${this.baseURL}/quiz-tournaments/${tournamentId}/top_players/`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to fetch tournament top players for ${tournamentId}:`, error);
+      throw error;
+    }
+  }
+
+  // Utility Methods
   formatTime(seconds) {
     if (!seconds && seconds !== 0) return '--';
     const mins = Math.floor(seconds / 60);
@@ -242,18 +292,7 @@ class QuizGameAPI {
     }
     return shuffled;
   }
-
-  // ============================================
-  // URL PARSING
-  // ============================================
-  
-  parseTournamentFromURL() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('tournament');
-  }
 }
 
-// Create and export singleton instance
 export const quizGameAPI = new QuizGameAPI();
-
 export default quizGameAPI;

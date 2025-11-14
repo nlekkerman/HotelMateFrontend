@@ -1,0 +1,285 @@
+/* Quiz Game Animations and Transitions */
+
+/* Question Card Fade In */
+.question-card {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Answer Button Hover Effects */
+.btn-quiz-option {
+  transition: all 0.3s ease;
+  transform: scale(1);
+}
+
+.btn-quiz-option:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-quiz-option:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Correct Answer Animation */
+@keyframes correctPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.btn-success.answer-feedback {
+  animation: correctPulse 0.6s ease-in-out;
+}
+
+/* Incorrect Answer Shake */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+.btn-danger.answer-feedback {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Score Popup Animation */
+@keyframes scorePopup {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(-20px);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.score-popup {
+  animation: scorePopup 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Timer Warning Pulse */
+@keyframes timerWarning {
+  0%, 100% {
+    color: #dc3545;
+    transform: scale(1);
+  }
+  50% {
+    color: #ff0000;
+    transform: scale(1.1);
+  }
+}
+
+.timer-warning .timer-display {
+  animation: timerWarning 1s ease-in-out infinite;
+  font-weight: bold;
+}
+
+/* Progress Bar Animation */
+.progress-bar {
+  transition: width 0.6s ease;
+}
+
+/* Leaderboard Entry Highlight */
+@keyframes highlightRow {
+  0%, 100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+  }
+}
+
+.table-active {
+  animation: highlightRow 2s ease-in-out;
+}
+
+/* Badge Bounce */
+@keyframes badgeBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.badge-animated {
+  animation: badgeBounce 0.6s ease;
+}
+
+/* Card Entrance */
+.card-entrance {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+/* Loading Spinner Pulse */
+@keyframes spinnerPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.spinner-border {
+  animation: spinnerPulse 1.5s ease-in-out infinite;
+}
+
+/* Button Click Effect */
+.btn-click-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-click-effect::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn-click-effect:active::after {
+  width: 300px;
+  height: 300px;
+}
+
+/* Trophy Rotation */
+@keyframes trophyRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-10deg);
+  }
+  75% {
+    transform: rotate(10deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+.trophy-animated {
+  animation: trophyRotate 0.8s ease-in-out;
+}
+
+/* Slide In From Right */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.slide-in-right {
+  animation: slideInRight 0.4s ease-out;
+}
+
+/* Fade Out */
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.fade-out {
+  animation: fadeOut 0.3s ease-out forwards;
+}
+
+/* Category Badge Pulse */
+.category-badge {
+  transition: transform 0.3s ease;
+}
+
+.category-badge:hover {
+  transform: scale(1.1);
+}
+
+/* Responsive Timer Display */
+.timer-display {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+/* Question Card Shadow Hover */
+.card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+  transition: box-shadow 0.3s ease;
+}
+
+/* Result Screen Entrance */
+.result-entrance {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.result-stat-card {
+  animation: fadeInUp 0.6s ease-out;
+  animation-fill-mode: both;
+}
+
+.result-stat-card:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.result-stat-card:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.result-stat-card:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.result-stat-card:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  .btn-quiz-option {
+    font-size: 0.9rem;
+    padding: 0.75rem;
+  }
+  
+  .timer-display {
+    font-size: 0.85rem;
+  }
+}
