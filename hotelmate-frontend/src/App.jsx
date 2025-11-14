@@ -113,6 +113,7 @@ import TournamentDashboard from "@/games/memory-match/pages/TournamentDashboard"
 import TournamentWinners from "@/games/memory-match/pages/TournamentWinners";
 import Leaderboard from "@/games/memory-match/pages/Leaderboard";
 import PersonalStats from "@/games/memory-match/pages/PersonalStats";
+import QuizGame from "@/games/quiz-game/QuizGame";
 
 const queryClient = new QueryClient();
 // Default settings for all games
@@ -138,6 +139,9 @@ const GUEST_ROUTE_PATTERNS = [
   
   // Good to Know (Public)
   '/good_to_know/:hotel_slug/:slug',
+  
+  // Quiz Game (Public - Anonymous play via QR)
+  '/games/quiz',
 ];
 
 // Helper function to check if current path is a guest route
@@ -373,6 +377,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/games/memory-match/tournaments" element={<ProtectedRoute><TournamentDashboard /></ProtectedRoute>} />
               <Route path="/games/memory-match/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
               <Route path="/games/memory-match/stats" element={<ProtectedRoute><PersonalStats /></ProtectedRoute>} />
+              <Route path="/games/quiz" element={<QuizGame />} />
               <Route path="/games/settings" element={<ProtectedRoute><div>Game Settings Coming Soon!</div></ProtectedRoute>} />
               
               {/* Catch All */}

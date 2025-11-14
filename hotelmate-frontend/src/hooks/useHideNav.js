@@ -10,6 +10,9 @@ const hiddenNavPaths = [
 
   // 3) HotelInfo pages (both with and without category)
   /^\/hotel_info\/[^/]+(\/[^/]+)?\/?$/,
+
+  // 4) Quiz game for guests (anonymous play)
+  /^\/games\/quiz\/?$/,
 ];
 
 export default function useHideNav() {

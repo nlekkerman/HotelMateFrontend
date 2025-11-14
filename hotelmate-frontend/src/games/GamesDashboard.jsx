@@ -128,6 +128,24 @@ export default function GamesDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Quiz Game Card */}
+        <div className="col-md-3">
+          <div
+            className="card h-100 text-center border-info"
+            onClick={() => handleNavigate("/games/quiz")}
+            style={{ cursor: "pointer" }}
+          >
+            <div className="card-body d-flex flex-column justify-content-center align-items-center">
+              <i
+                className="bi bi-question-circle-fill text-info"
+                style={{ fontSize: "3rem" }}
+              ></i>
+              <h5 className="card-title mt-3">Quiz Challenge</h5>
+              <p className="card-text">Test your knowledge with 5 difficulty levels!</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
