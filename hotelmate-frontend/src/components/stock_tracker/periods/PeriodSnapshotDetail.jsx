@@ -8,6 +8,7 @@ import {
   getGPBadgeVariant,
   getCategoryDisplay 
 } from '../utils/stockDisplayUtils';
+import { SubcategoryBadge } from '../utils/SubcategoryBadge';
 
 export const PeriodSnapshotDetail = () => {
   const { hotel_slug, id } = useParams();
@@ -48,7 +49,8 @@ export const PeriodSnapshotDetail = () => {
     : snapshots.filter(snap => snap.item.category === selectedCategory);
 
   // Group snapshots by category
-  const groupedSnapshots = filteredSnapshots.reduce((acc, snap) => {
+  // Backend already sorts items alphabetically within each category, so we preserve that order
+  const sortedGroupedSnapshots = filteredSnapshots.reduce((acc, snap) => {
     const catName = snap.item.category_display || "Uncategorized";
     if (!acc[catName]) acc[catName] = [];
     acc[catName].push(snap);
@@ -60,7 +62,7 @@ export const PeriodSnapshotDetail = () => {
     ? parseFloat(periodData.total_value) 
     : snapshots.reduce((sum, snap) => sum + parseFloat(snap.closing_stock_value || 0), 0);
   
-  const categoryTotals = Object.entries(groupedSnapshots).map(([categoryName, items]) => ({
+  const categoryTotals = Object.entries(sortedGroupedSnapshots).map(([categoryName, items]) => ({
     categoryName,
     openingValue: items.reduce((sum, item) => sum + parseFloat(item.opening_stock_value || 0), 0),
     closingValue: items.reduce((sum, item) => sum + parseFloat(item.closing_stock_value || 0), 0),
@@ -239,7 +241,7 @@ export const PeriodSnapshotDetail = () => {
                 onChange={(e) => setSelectedCategory(e.target.value)}
               >
                 <option value="all">All Categories</option>
-                {Object.keys(groupedSnapshots).map(cat => (
+                {Object.keys(sortedGroupedSnapshots).map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
@@ -255,7 +257,7 @@ export const PeriodSnapshotDetail = () => {
         </div>
       ) : (
         <>
-          {Object.entries(groupedSnapshots).map(([categoryName, categorySnapshots]) => (
+          {Object.entries(sortedGroupedSnapshots).map(([categoryName, categorySnapshots]) => (
             <div key={categoryName} className="card mb-4 shadow-sm">
               <div className="card-header bg-dark bg-gradient text-white">
                 <div className="d-flex justify-content-between align-items-center">
@@ -271,8 +273,10 @@ export const PeriodSnapshotDetail = () => {
                       <tr>
                         <th style={{ width: "8%" }}>SKU</th>
                         <th style={{ width: "18%" }}>Item</th>
+                        <th className="text-end">Stock Price €</th>
                         <th className="text-center pastel-blue">Opening Stock</th>
                         <th className="text-center pastel-green">Closing Stock</th>
+                        <th className="text-end">Stock Value €</th>
                         <th className="text-end pastel-blue text-pastel-blue">Opening Value €</th>
                         <th className="text-end pastel-green text-pastel-green">Closing Value €</th>
                         <th className="text-end">Cost/Serving</th>
@@ -287,15 +291,37 @@ export const PeriodSnapshotDetail = () => {
                             <td><strong>{snap.item.sku}</strong></td>
                             <td>
                               <strong>{snap.item.name}</strong>
+                              {snap.item.subcategory && (
+                                <div className="mt-1">
+                                  <SubcategoryBadge subcategory={snap.item.subcategory} size="xs" />
+                                </div>
+                              )}
                               {snap.item.size && (
                                 <><br /><small className="text-muted">{snap.item.size}</small></>
                               )}
+                            </td>
+                            <td className="text-end">
+                              <div className="d-flex flex-column align-items-end">
+                                <div>
+                                  <small className="text-muted" style={{ fontSize: '0.7rem' }}>Bottle: </small>
+                                  <small>{formatCurrency(snap.valuation_cost || snap.item.unit_price)}</small>
+                                </div>
+                                {snap.case_cost && (
+                                  <div>
+                                    <small className="text-muted" style={{ fontSize: '0.7rem' }}>Case: </small>
+                                    <small>{formatCurrency(snap.case_cost)}</small>
+                                  </div>
+                                )}
+                              </div>
                             </td>
                             <td className="text-center pastel-blue">
                               <small className="text-pastel-blue"><strong>{formatStockDisplay(snap, 'opening')}</strong></small>
                             </td>
                             <td className="text-center pastel-green">
                               <small className="text-pastel-green"><strong>{formatStockDisplay(snap, 'closing')}</strong></small>
+                            </td>
+                            <td className="text-end">
+                              <strong>{formatCurrency(snap.counted_value)}</strong>
                             </td>
                             <td className="text-end pastel-blue">
                               <strong className="text-pastel-blue">{formatCurrency(snap.opening_stock_value)}</strong>
@@ -324,15 +350,39 @@ export const PeriodSnapshotDetail = () => {
                     <div key={snap.id} className="border-bottom p-3">
                       <div className="d-flex justify-content-between align-items-start mb-2">
                         <div>
-                          <strong>{snap.item.name}</strong><br />
-                          <small className="text-muted">SKU: {snap.item.sku}</small>
-                          {snap.item.size && <small className="text-muted"> • {snap.item.size}</small>}
+                          <strong>{snap.item.name}</strong>
+                          {snap.item.subcategory && (
+                            <div className="mt-1">
+                              <SubcategoryBadge subcategory={snap.item.subcategory} size="xs" />
+                            </div>
+                          )}
+                          <div>
+                            <small className="text-muted">SKU: {snap.item.sku}</small>
+                            {snap.item.size && <small className="text-muted"> • {snap.item.size}</small>}
+                          </div>
                         </div>
                         <span className={`badge bg-${getGPBadgeVariant(snap.gp_percentage)}`}>
                           {parseFloat(snap.gp_percentage || 0).toFixed(1)}%
                         </span>
                       </div>
                       <div className="row g-2">
+                        <div className="col-6">
+                          <small className="text-muted">Stock Price:</small><br />
+                          <div>
+                            <small className="text-muted" style={{ fontSize: '0.7rem' }}>Bottle: </small>
+                            <strong>{formatCurrency(snap.valuation_cost || snap.item.unit_price)}</strong>
+                          </div>
+                          {snap.case_cost && (
+                            <div>
+                              <small className="text-muted" style={{ fontSize: '0.7rem' }}>Case: </small>
+                              <strong>{formatCurrency(snap.case_cost)}</strong>
+                            </div>
+                          )}
+                        </div>
+                        <div className="col-6">
+                          <small className="text-muted">Cost/Serving:</small><br />
+                          <strong>{formatCurrency(snap.cost_per_serving)}</strong>
+                        </div>
                         <div className="col-12">
                           <small className="text-muted">Opening Stock:</small><br />
                           <strong>{formatStockDisplay(snap, 'opening')}</strong>
@@ -341,6 +391,10 @@ export const PeriodSnapshotDetail = () => {
                           <small className="text-muted">Closing Stock:</small><br />
                           <strong>{formatStockDisplay(snap, 'closing')}</strong>
                         </div>
+                        <div className="col-12">
+                          <small className="text-muted">Stock Value:</small><br />
+                          <strong className="text-info">{formatCurrency(snap.counted_value)}</strong>
+                        </div>
                         <div className="col-6">
                           <small className="text-muted">Opening Value:</small><br />
                           <strong className="text-primary">{formatCurrency(snap.opening_stock_value)}</strong>
@@ -348,10 +402,6 @@ export const PeriodSnapshotDetail = () => {
                         <div className="col-6">
                           <small className="text-muted">Closing Value:</small><br />
                           <strong className="text-success">{formatCurrency(snap.closing_stock_value)}</strong>
-                        </div>
-                        <div className="col-6">
-                          <small className="text-muted">Cost/Serving:</small><br />
-                          <strong>{formatCurrency(snap.cost_per_serving)}</strong>
                         </div>
                       </div>
                     </div>

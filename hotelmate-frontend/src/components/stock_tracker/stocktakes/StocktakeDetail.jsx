@@ -10,6 +10,7 @@ import {
   Row,
   Col,
   Table,
+  Form,
 } from "react-bootstrap";
 import {
   FaArrowLeft,
@@ -40,9 +41,31 @@ export const StocktakeDetail = () => {
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [pusher, setPusher] = useState(null);
   const [pusherReady, setPusherReady] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   // Fetch category totals for calculating grand total
   const { categoryTotals } = useCategoryTotals(hotel_slug, id);
+
+  // Get unique categories and subcategories from lines (must be before conditional returns)
+  const categoryOptions = React.useMemo(() => {
+    const categories = {};
+    lines.forEach(line => {
+      const catCode = line.category_code;
+      const catName = line.category_name || catCode;
+      
+      if (!categories[catCode]) {
+        categories[catCode] = {
+          name: catName,
+          subcategories: new Set()
+        };
+      }
+      
+      if (line.subcategory) {
+        categories[catCode].subcategories.add(line.subcategory);
+      }
+    });
+    return categories;
+  }, [lines]);
 
   // Initialize Pusher instance for real-time updates
   useEffect(() => {
@@ -562,6 +585,19 @@ export const StocktakeDetail = () => {
   ).length;
   const canApprove =
     !isLocked && lines.length > 0 && countedLines === lines.length;
+
+  // Filter lines based on category selection
+  const filteredLines = categoryFilter === 'all' 
+    ? lines 
+    : lines.filter(line => {
+        // Handle subcategory filters (e.g., "M:SOFT_DRINKS")
+        if (categoryFilter.includes(':')) {
+          const [catCode, subcat] = categoryFilter.split(':');
+          return line.category_code === catCode && line.subcategory === subcat;
+        }
+        // Handle regular category filters
+        return line.category_code === categoryFilter;
+      });
 
   return (
     <div
@@ -1184,9 +1220,88 @@ export const StocktakeDetail = () => {
             </Alert>
           )}
 
+          {/* Category Filter */}
+          {lines.length > 0 && (
+            <Card className="mb-3">
+              <Card.Body>
+                <Row className="align-items-center">
+                  <Col md={4}>
+                    <Form.Group>
+                      <Form.Label className="fw-bold mb-2">
+                        <i className="bi bi-funnel me-2"></i>
+                        Filter by Category
+                      </Form.Label>
+                      <Form.Select
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                        size="lg"
+                      >
+                        <option value="all">All Categories ({lines.length} items)</option>
+                        
+                        {Object.entries(categoryOptions).map(([code, { name, subcategories }]) => {
+                          const categoryLines = lines.filter(l => l.category_code === code);
+                          
+                          if (subcategories.size === 0) {
+                            // No subcategories - simple option
+                            return (
+                              <option key={code} value={code}>
+                                {name} ({categoryLines.length} items)
+                              </option>
+                            );
+                          } else {
+                            // Has subcategories - use optgroup
+                            return (
+                              <optgroup key={code} label={`${name} (${categoryLines.length} items)`}>
+                                <option value={code}>→ All {name}</option>
+                                {Array.from(subcategories).sort().map(subcat => {
+                                  const subcatLines = lines.filter(
+                                    l => l.category_code === code && l.subcategory === subcat
+                                  );
+                                  const subcatLabel = subcat.split('_').map(w => 
+                                    w.charAt(0) + w.slice(1).toLowerCase()
+                                  ).join(' ');
+                                  return (
+                                    <option key={`${code}:${subcat}`} value={`${code}:${subcat}`}>
+                                      → {subcatLabel} ({subcatLines.length} items)
+                                    </option>
+                                  );
+                                })}
+                              </optgroup>
+                            );
+                          }
+                        })}
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                  <Col md={8}>
+                    <div className="text-muted small">
+                      {categoryFilter !== 'all' && (
+                        <>
+                          Showing <strong>{filteredLines.length}</strong> of <strong>{lines.length}</strong> items
+                          {' '}
+                          <Button 
+                            variant="link" 
+                            size="sm" 
+                            className="p-0 ms-2"
+                            onClick={() => setCategoryFilter('all')}
+                          >
+                            Clear filter
+                          </Button>
+                        </>
+                      )}
+                      {categoryFilter === 'all' && (
+                        <>Showing all <strong>{lines.length}</strong> items across all categories</>
+                      )}
+                    </div>
+                  </Col>
+                </Row>
+              </Card.Body>
+            </Card>
+          )}
+
           {/* Stocktake Lines */}
           <StocktakeLines
-            lines={lines}
+            lines={filteredLines}
             isLocked={isLocked}
             onUpdateLine={handleUpdateLine}
             onLineUpdated={(updatedLine) => {

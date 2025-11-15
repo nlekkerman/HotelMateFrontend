@@ -29,6 +29,7 @@ import React, { useState } from 'react';
 import { Card, Table, Form, Button, Badge } from 'react-bootstrap';
 import { FaCheck } from 'react-icons/fa';
 import { getCountingLabels } from '../utils/categoryHelpers';
+import { SubcategoryBadge, getSubcategoryHelpText } from '../utils/SubcategoryBadge';
 import { CategoryTotalsRow } from './CategoryTotalsRow';
 import { useCategoryTotals } from '../hooks/useCategoryTotals';
 import { MovementsList } from './MovementsList';
@@ -44,6 +45,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
   const [validationErrors, setValidationErrors] = useState({});
   const [showPurchases, setShowPurchases] = useState({});
   const [showWaste, setShowWaste] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { categoryTotals, loading: totalsLoading, refetch: refetchTotals } =
     useCategoryTotals(hotelSlug, stocktakeId);
@@ -62,13 +64,42 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     return () => document.removeEventListener('click', handleClickAnywhere);
   }, [validationErrors]);
 
-  // Group lines by category name
-  const groupedLines = lines.reduce((acc, line) => {
+  // Filter lines based on search term
+  const filteredLines = searchTerm
+    ? lines.filter(line => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          (line.item_name || '').toLowerCase().includes(searchLower) ||
+          (line.item_sku || '').toLowerCase().includes(searchLower) ||
+          (line.category_name || '').toLowerCase().includes(searchLower)
+        );
+      })
+    : lines;
+
+  // Group lines by category name and sort by item name within each category
+  const groupedLines = filteredLines.reduce((acc, line) => {
     const cat = line.category_name || 'Uncategorized';
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(line);
     return acc;
   }, {});
+
+  // Sort items alphabetically by name within each category
+  Object.keys(groupedLines).forEach(category => {
+    groupedLines[category].sort((a, b) => {
+      const nameA = (a.item_name || '').toLowerCase();
+      const nameB = (b.item_name || '').toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+  });
+
+  // Function to scroll to category
+  const scrollToCategory = (categoryName) => {
+    const element = document.getElementById(`category-${categoryName}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   const getLineInputs = (lineId, line) => {
     if (lineInputs[lineId]) return lineInputs[lineId];
@@ -114,6 +145,9 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     const size = line.item_size;
     const uom = parseFloat(line.item_uom || line.uom || 1);
     
+    // Get labels to access partialMax from API if available
+    const labels = getCountingLabels(categoryCode, size, line.input_fields);
+    
     // Get input config for this category
     const config = getInputConfig({ category_code: categoryCode, item_size: size });
     
@@ -136,8 +170,10 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
       } else if (partial < 0) {
         errors.partialUnits = 'Must be 0 or greater';
       } else {
-        // Category-specific validation
-        if (categoryCode === 'B') {
+        // ✅ NEW: Check API-provided max value first
+        if (labels.partialMax && partial > labels.partialMax) {
+          errors.partialUnits = `${labels.partialLabel} cannot exceed ${labels.partialMax}`;
+        } else if (categoryCode === 'B') {
           // Bottled Beer - whole numbers only, max = uom - 1
           if (partial !== Math.round(partial)) {
             errors.partialUnits = 'Bottled beer must be whole bottles (no decimals)';
@@ -215,26 +251,25 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
   const handleSaveCount = async (lineId, line) => {
     console.log('💾 SAVE COUNT - Line:', lineId);
     const inputs = getLineInputs(lineId, line);
-    const errors = validateInputs(line, inputs);
+    console.log('📥 Raw inputs:', inputs);
     
-    if (Object.keys(errors).length) {
-      setValidationErrors({ [lineId]: errors });
-      return;
-    }
+    // Clear any previous validation errors
     setValidationErrors((prev) => {
       const { [lineId]: _, ...rest } = prev;
       return rest;
     });
 
-    // Parse inputs with category-specific validation
+    // Parse inputs - send whatever user entered, backend will validate
     let fullUnits = parseInt(inputs.fullUnits, 10);
-    if (isNaN(fullUnits) || fullUnits < 0) fullUnits = 0;
+    if (isNaN(fullUnits)) fullUnits = 0;
     
     let partialUnits = parseFloat(inputs.partialUnits);
-    if (isNaN(partialUnits) || partialUnits < 0) partialUnits = 0;
+    if (isNaN(partialUnits)) partialUnits = 0;
     
-    // Apply category-specific rounding
-    partialUnits = validatePartialUnits(partialUnits, line.category_code, line.item_size);
+    console.log('🔢 Parsed values:', { fullUnits, partialUnits });
+    
+    // NO frontend validation - backend handles all validation
+    // Just send the raw values to backend
 
     try {
       const payload = {
@@ -440,60 +475,16 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     console.log('💾 SAVE OPENING STOCK - Line:', lineId);
     const inputs = getLineInputs(lineId, line);
     
-    // Validate that at least one field has a value
-    if (inputs.openingFullUnits === '' && inputs.openingPartialUnits === '') {
-      setValidationErrors({ 
-        [lineId]: { 
-          openingFullUnits: 'Please enter opening stock values',
-          openingPartialUnits: 'Please enter opening stock values'
-        } 
-      });
-      return;
-    }
-
-    const fullUnits = parseFloat(inputs.openingFullUnits) || 0;
-    const partialUnits = parseFloat(inputs.openingPartialUnits) || 0;
-
-    if (fullUnits < 0 || partialUnits < 0) {
-      setValidationErrors({ 
-        [lineId]: { 
-          openingFullUnits: 'Cannot be negative',
-          openingPartialUnits: 'Cannot be negative'
-        } 
-      });
-      return;
-    }
-
-    // Category-specific validation
-    const categoryCode = line.category_code;
-    const size = line.item_size;
-    const uom = parseFloat(line.item_uom || line.uom || 1);
-
-    if (categoryCode === 'B' || (categoryCode === 'M' && size?.includes('Doz'))) {
-      // Whole numbers only
-      if (fullUnits !== Math.floor(fullUnits) || partialUnits !== Math.floor(partialUnits)) {
-        setValidationErrors({ 
-          [lineId]: { 
-            openingPartialUnits: 'Must be whole numbers for this category'
-          } 
-        });
-        return;
-      }
-      if (partialUnits >= uom) {
-        setValidationErrors({ 
-          [lineId]: { 
-            openingPartialUnits: `Must be less than ${uom}`
-          } 
-        });
-        return;
-      }
-    }
-
-    // Clear errors if validation passes
+    // Clear any previous validation errors
     setValidationErrors((prev) => {
       const { [lineId]: _, ...rest } = prev;
       return rest;
     });
+
+    // Parse inputs - send whatever user entered, backend will validate
+    const fullUnits = parseFloat(inputs.openingFullUnits) || 0;
+    const partialUnits = parseFloat(inputs.openingPartialUnits) || 0;
+    const uom = parseFloat(line.item_uom || line.uom || 1);
 
     try {
       // Calculate opening_qty for the PATCH request
@@ -558,7 +549,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
   };
 
   const renderLineRow = (line) => {
-    const labels = getCountingLabels(line.category_code, line.item_size);
+    const labels = getCountingLabels(line.category_code, line.item_size, line.input_fields);
     const uom = parseFloat(line.item_uom || line.uom || 1);
     const inputs = getLineInputs(line.id, line);
     const lineErrors = validationErrors[line.id] || {};
@@ -590,7 +581,14 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
           <code className="small">{line.item_sku}</code>
         </td>
         <td style={{ borderRight: '1px solid #dee2e6' }}>
-          <strong>{line.item_name}</strong>
+          <div className="d-flex flex-column">
+            <strong>{line.item_name}</strong>
+            {line.subcategory && (
+              <div className="mt-1">
+                <SubcategoryBadge subcategory={line.subcategory} size="xs" />
+              </div>
+            )}
+          </div>
         </td>
         <td className="text-center" style={{ borderRight: '1px solid #dee2e6' }}>
           <Badge bg="secondary" className="small">
@@ -920,6 +918,11 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               style={{ maxWidth: 120 }}
             >
               <small className="text-muted" style={{ fontSize: '0.75rem' }}>Counted {labels.unit}</small>
+              {line.subcategory && (
+                <small className="text-info d-block" style={{ fontSize: '0.65rem' }}>
+                  {getSubcategoryHelpText(line.subcategory)?.split('.')[0]}
+                </small>
+              )}
               <Form.Control
                 type="number"
                 step="1"
@@ -969,6 +972,13 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               {lineErrors.fullUnits && (
                 <small className="text-danger d-block">{lineErrors.fullUnits}</small>
               )}
+              {/* Stock at Cost - shown below input in Cases column */}
+              {(line.counted_full_units !== null || line.counted_partial_units !== null) && (
+                <div className="mt-2 pt-2 border-top w-100 text-center">
+                  <small className="text-muted d-block" style={{ fontSize: '0.65rem' }}>Stock at Cost</small>
+                  <strong className="text-success" style={{ fontSize: '0.85rem' }}>€{parseFloat(line.counted_value || 0).toFixed(2)}</strong>
+                </div>
+              )}
             </div>
           </div>
         </td>
@@ -985,6 +995,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                 type="number"
                 step={inputConfig.step}
                 min="0"
+                max={labels.partialMax}
                 size="sm"
                 value={inputs.partialUnits}
                 onChange={(e) => updateLineInput(line.id, 'partialUnits', e.target.value)}
@@ -1021,6 +1032,15 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               />
               {lineErrors.partialUnits && (
                 <small className="text-danger d-block">{lineErrors.partialUnits}</small>
+              )}
+              {/* Total in bottles/pints - shown below input in Bottles column */}
+              {(line.counted_full_units !== null || line.counted_partial_units !== null) && (
+                <div className="mt-2 pt-2 border-top w-100 text-center">
+                  <small className="text-muted d-block" style={{ fontSize: '0.65rem' }}>Total {labels.servingUnit}</small>
+                  <strong className="text-primary" style={{ fontSize: '0.85rem' }}>
+                    {parseFloat(line.counted_qty || 0).toFixed(2)}
+                  </strong>
+                </div>
               )}
             </div>
           </div>
@@ -1078,7 +1098,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
 
   // Simplified render for LOCKED stocktakes - Clean, stylish, NO inputs
   const renderLockedLineRow = (line) => {
-    const labels = getCountingLabels(line.category_code, line.item_size);
+    const labels = getCountingLabels(line.category_code, line.item_size, line.input_fields);
     const uom = parseFloat(line.item_uom || line.uom || 1);
     const cumulativePurchases = parseFloat(line.purchases || 0);
     const cumulativeWaste = parseFloat(line.waste || 0);
@@ -1105,7 +1125,14 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         
         {/* Name */}
         <td style={{ borderRight: '1px solid #dee2e6' }}>
-          <strong>{line.item_name}</strong>
+          <div className="d-flex flex-column">
+            <strong>{line.item_name}</strong>
+            {line.subcategory && (
+              <div className="mt-1">
+                <SubcategoryBadge subcategory={line.subcategory} size="xs" />
+              </div>
+            )}
+          </div>
         </td>
         
         {/* Category */}
@@ -1190,6 +1217,9 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
             <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#212529' }}>
               {line.counted_full_units !== null ? line.counted_full_units : '-'}
             </div>
+            {(line.counted_full_units !== null || line.counted_partial_units !== null) && (
+              <small className="text-success fw-bold mt-1">€{parseFloat(line.counted_value || 0).toFixed(2)}</small>
+            )}
           </div>
         </td>
         
@@ -1237,14 +1267,63 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     );
   };
 
+  // Get all unique categories for navigation
+  const categories = Object.keys(groupedLines).sort();
+
   return (
     <>
+      {/* Search and Category Navigation */}
+      <div className="stocktake-nav-sticky">
+        <div className="d-flex flex-column gap-3 py-3 justify-content-center align-items-center">
+          {/* Search Bar */}
+          <div className="stocktake-saerch">
+            <Form.Control
+              type="text"
+              placeholder="🔍 Search by name, SKU, or category..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="contextual-action-btn"
+              style={{ 
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85))',
+                border: '1px solid rgba(255, 255, 255, 0.4)',
+                boxShadow: '0 4px 15px rgba(52, 152, 219, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                backdropFilter: 'blur(10px)'
+              }}
+            />
+            {searchTerm && (
+              <small className="text-muted d-block mt-1">
+                Found {filteredLines.length} items
+              </small>
+            )}
+          </div>
+
+          {/* Category Quick Links */}
+          <div className="stocktake-saerch-categories">
+            <div className="d-flex flex-wrap gap-2 justify-content-center">
+              {categories.map(categoryName => (
+                <button
+                  key={categoryName}
+                  onClick={() => scrollToCategory(categoryName)}
+                  className="contextual-action-btn zoom-buttons"
+                  style={{ 
+                    color: '#3498db',
+                    boxShadow: '0 4px 15px rgba(52, 152, 219, 0.4)'
+                  }}
+                >
+                  <span className="action-label">{categoryName} ({groupedLines[categoryName].length})</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {Object.entries(groupedLines).map(([categoryName, catLines]) => {
         const categoryCode = catLines[0]?.category_code || '';
         const totals = categoryTotals?.[categoryCode] || null;
 
         return (
-          <Card key={categoryName} className="mb-4">
+          <Card key={categoryName} className="mb-4" id={`category-${categoryName}`}>
             <Card.Header className="d-flex justify-content-between align-items-center">
               <div>
                 <strong>{categoryName}</strong>{' '}

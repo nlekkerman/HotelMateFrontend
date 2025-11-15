@@ -6,7 +6,7 @@
 /**
  * Get the unit labels for displaying stock based on item category and size
  * 
- * @param {Object} item - Stock item with category and size
+ * @param {Object} item - Stock item with category, size, and optional subcategory
  * @returns {Object} - { full: string, partial: string }
  * 
  * Rules:
@@ -14,21 +14,44 @@
  * - Draught Beer (D): kegs + pints (2 decimals)
  * - Spirits (S): bottles + fractional (2 decimals)
  * - Wine (W): bottles + fractional (2 decimals)
- * - Mixers (M, Doz): cases + bottles (whole numbers 0-11)
- * - Mixers (M, other): bottles + fractional (2 decimals)
+ * - Minerals (M) - Now with subcategories:
+ *   - SOFT_DRINKS: cases + bottles
+ *   - SYRUPS: bottles + ml
+ *   - JUICES: bottles + ml
+ *   - CORDIALS: cases + bottles
+ *   - BIB: boxes + liters
  */
 export const getUnitLabels = (item) => {
   if (!item) return { full: 'units', partial: 'partial' };
   
   const category = item.category;
   const size = item.size;
+  const subcategory = item.subcategory;
+  
+  // ✅ NEW: Minerals with subcategories
+  if (category === 'M' && subcategory) {
+    switch (subcategory) {
+      case 'SOFT_DRINKS':
+        return { full: 'cases', partial: 'bottles' };
+      case 'SYRUPS':
+        return { full: 'bottles', partial: 'ml' };
+      case 'JUICES':
+        return { full: 'bottles', partial: 'ml' };
+      case 'CORDIALS':
+        return { full: 'cases', partial: 'bottles' };
+      case 'BIB':
+        return { full: 'boxes', partial: 'liters' };
+      default:
+        return { full: 'bottles', partial: '' };
+    }
+  }
   
   // Bottled Beer (Category B, Size "Doz")
   if (category === 'B' && size === 'Doz') {
     return { full: 'cases', partial: 'bottles' };
   }
   
-  // Mixers with Doz size (Category M, Size "Doz")
+  // Mixers with Doz size (Category M, Size "Doz") - Legacy support
   if (category === 'M' && size === 'Doz') {
     return { full: 'cases', partial: 'bottles' };
   }
@@ -61,7 +84,7 @@ export const getUnitLabels = (item) => {
  * Format the display value for partial units based on category
  * 
  * @param {string|number} value - The partial units value
- * @param {Object} item - Stock item with category and size
+ * @param {Object} item - Stock item with category, size, and subcategory
  * @returns {string} - Formatted value
  */
 export const formatPartialUnits = (value, item) => {
@@ -70,6 +93,26 @@ export const formatPartialUnits = (value, item) => {
   const numValue = parseFloat(value);
   const category = item?.category;
   const size = item?.size;
+  const subcategory = item?.subcategory;
+  
+  // ✅ NEW: Minerals subcategories
+  if (category === 'M' && subcategory) {
+    switch (subcategory) {
+      case 'SOFT_DRINKS':
+      case 'CORDIALS':
+        // Whole numbers (bottles)
+        return Math.round(numValue).toString();
+      case 'SYRUPS':
+      case 'JUICES':
+        // ml values - no decimals needed
+        return Math.round(numValue).toString();
+      case 'BIB':
+        // Liters - 1 decimal
+        return numValue.toFixed(1);
+      default:
+        return numValue.toFixed(2);
+    }
+  }
   
   // Bottled Beer and Mixers (Doz) - whole numbers only (0-11)
   if ((category === 'B' || category === 'M') && size === 'Doz') {

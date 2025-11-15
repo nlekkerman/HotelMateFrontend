@@ -7,9 +7,33 @@
  * Get counting labels and input rules for a specific category
  * @param {string} categoryCode - Category code (D, S, W, B, M)
  * @param {string} size - Item size (optional, for special cases like Doz, LT)
+ * @param {object} inputFields - Optional API-provided input_fields object
  * @returns {object} Labels and rules for counting inputs
  */
-export function getCountingLabels(categoryCode, size = '') {
+export function getCountingLabels(categoryCode, size = '', inputFields = null) {
+  // ✅ NEW: If API provides input_fields, use them directly (universal approach)
+  if (inputFields && inputFields.full && inputFields.partial) {
+    return {
+      fullLabel: inputFields.full.label,
+      fullPlaceholder: `e.g., 10`,
+      fullStep: inputFields.full.step || '1',
+      fullInputType: 'number',
+      partialLabel: inputFields.partial.label,
+      partialPlaceholder: `0`,
+      partialStep: inputFields.partial.step || '1',
+      partialInputType: 'number',
+      partialMax: inputFields.partial.max,
+      unit: inputFields.full.label.toLowerCase(),
+      servingUnit: inputFields.partial.label.toLowerCase(),
+      helpText: `Enter ${inputFields.full.label.toLowerCase()}, then ${inputFields.partial.label.toLowerCase()}`,
+      example: `Example: 10 ${inputFields.full.label.toLowerCase()} + 5 ${inputFields.partial.label.toLowerCase()}`,
+      showPartial: true,
+      allowDecimalFull: (inputFields.full.step && parseFloat(inputFields.full.step) < 1),
+      partialOptional: false
+    };
+  }
+  
+  // ⚠️ FALLBACK: If no input_fields from API, use legacy hardcoded logic
   const sizeUpper = size?.toUpperCase() || '';
   
   // Check for special size cases

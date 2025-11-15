@@ -34,11 +34,16 @@ export default function QuizStartScreen() {
         quizGameAPI.getCategories(),
         quizGameAPI.getTournaments('active', hotelParam)
       ]);
-      setCategories(categoriesData);
-      setTournaments(tournamentsData);
+      
+      // Ensure we always set arrays, even if API returns something else
+      setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+      setTournaments(Array.isArray(tournamentsData) ? tournamentsData : []);
     } catch (err) {
       console.error('Failed to load initial data:', err);
       setError('Failed to load quiz data. Please try again.');
+      // Set empty arrays on error to prevent crashes
+      setCategories([]);
+      setTournaments([]);
     } finally {
       setLoadingData(false);
     }
@@ -52,6 +57,11 @@ export default function QuizStartScreen() {
 
     if (selectedMode === 'tournament' && !selectedTournament) {
       setError('Please select a tournament');
+      return;
+    }
+
+    if (!Array.isArray(categories) || categories.length === 0) {
+      setError('No quiz categories available. Please try again later.');
       return;
     }
 
@@ -217,25 +227,29 @@ export default function QuizStartScreen() {
               <div className="mb-4">
                 <label className="form-label fw-bold">
                   <i className="bi bi-grid-3x3 me-2"></i>
-                  Available Categories ({categories.length})
+                  Available Categories ({Array.isArray(categories) ? categories.length : 0})
                 </label>
                 <div className="d-flex flex-wrap gap-2">
-                  {categories.map((category) => (
-                    <span
-                      key={category.id}
-                      className="badge rounded-pill p-2 px-3"
-                      style={{
-                        backgroundColor: category.color || '#6c757d',
-                        fontSize: '0.9rem'
-                      }}
-                    >
-                      <span className="me-1">{category.icon}</span>
-                      {category.name}
-                      <span className="ms-1 opacity-75">({category.question_count})</span>
-                    </span>
-                  ))}
+                  {Array.isArray(categories) && categories.length > 0 ? (
+                    categories.map((category) => (
+                      <span
+                        key={category.id}
+                        className="badge rounded-pill p-2 px-3"
+                        style={{
+                          backgroundColor: category.color || '#6c757d',
+                          fontSize: '0.9rem'
+                        }}
+                      >
+                        <span className="me-1">{category.icon}</span>
+                        {category.name}
+                        <span className="ms-1 opacity-75">({category.question_count})</span>
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-muted">Loading categories...</span>
+                  )}
                 </div>
-                {categories.length < 5 && (
+                {Array.isArray(categories) && categories.length < 5 && categories.length > 0 && (
                   <div className="alert alert-info mt-3 mb-0">
                     <i className="bi bi-info-circle me-2"></i>
                     More categories coming soon! Currently featuring: {categories.map(c => c.name).join(', ')}
