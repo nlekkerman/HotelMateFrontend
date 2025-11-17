@@ -8,28 +8,78 @@
  * @param {string} categoryCode - Category code (D, S, W, B, M)
  * @param {string} size - Item size (optional, for special cases like Doz, LT)
  * @param {object} inputFields - Optional API-provided input_fields object
+ * @param {string} subcategory - Subcategory (for Minerals: SOFT_DRINKS, SYRUPS, JUICES, CORDIALS, BIB)
  * @returns {object} Labels and rules for counting inputs
  */
-export function getCountingLabels(categoryCode, size = '', inputFields = null) {
-  // ✅ NEW: If API provides input_fields, use them directly (universal approach)
-  if (inputFields && inputFields.full && inputFields.partial) {
+export function getCountingLabels(categoryCode, size = '', inputFields = null, subcategory = null) {
+  // ✅ PRIORITY: SYRUPS and JUICES subcategory overrides - must check BEFORE input_fields
+  // SYRUPS: Single decimal field for TOTAL bottles (not split into full+partial)
+  if (categoryCode === 'M' && subcategory === 'SYRUPS') {
     return {
-      fullLabel: inputFields.full.label,
-      fullPlaceholder: `e.g., 10`,
-      fullStep: inputFields.full.step || '1',
-      fullInputType: 'number',
-      partialLabel: inputFields.partial.label,
-      partialPlaceholder: `0`,
-      partialStep: inputFields.partial.step || '1',
+      fullLabel: null, // No full units field for SYRUPS
+      fullPlaceholder: null,
+      fullStep: null,
+      fullInputType: null,
+      partialLabel: 'Total Bottles',
+      partialPlaceholder: 'e.g., 10.5 or 100.5',
+      partialStep: '0.001',
       partialInputType: 'number',
-      partialMax: inputFields.partial.max,
-      unit: inputFields.full.label.toLowerCase(),
-      servingUnit: inputFields.partial.label.toLowerCase(),
-      helpText: `Enter ${inputFields.full.label.toLowerCase()}, then ${inputFields.partial.label.toLowerCase()}`,
-      example: `Example: 10 ${inputFields.full.label.toLowerCase()} + 5 ${inputFields.partial.label.toLowerCase()}`,
+      unit: null, // No full units
+      servingUnit: 'bottles',
+      helpText: 'Enter total bottles as decimal (e.g., 10.5 = 10 bottles + 500ml)',
+      example: 'Example: 100.5 bottles = 2,871.43 servings',
       showPartial: true,
-      allowDecimalFull: (inputFields.full.step && parseFloat(inputFields.full.step) < 1),
+      showFull: false, // Hide full units field
+      allowDecimalFull: false,
+      allowDecimalPartial: true,
       partialOptional: false
+    };
+  }
+  
+  // ✅ NEW: JUICES-specific handling for 3-level tracking (cases + bottles + ml)
+  if (categoryCode === 'M' && subcategory === 'JUICES') {
+    return {
+      fullLabel: 'Full Cases',
+      fullPlaceholder: 'e.g., 59',
+      fullStep: '1',
+      fullInputType: 'number',
+      partialLabel: 'Bottles (decimal)',
+      partialPlaceholder: 'e.g., 8.008',
+      partialStep: '0.001',
+      partialInputType: 'number',
+      unit: 'cases',
+      servingUnit: 'bottles',
+      helpText: 'Enter full cases, then bottles with decimal for ml (e.g., 8.008 = 8 bottles + 8ml)',
+      example: 'Example: 59 cases + 8.008 bottles = 3,580.04 servings',
+      showPartial: true,
+      showFull: true,
+      allowDecimalFull: false,
+      allowDecimalPartial: true,
+      partialOptional: false
+    };
+  }
+  
+  // ✅ NEW: BULK_JUICES - Lemonade/juice bottles tracked individually (not on menu)
+  if (categoryCode === 'M' && subcategory === 'BULK_JUICES') {
+    return {
+      fullLabel: 'Bottles',
+      fullPlaceholder: 'e.g., 138',
+      fullStep: '1',
+      fullInputType: 'number',
+      partialLabel: 'Partial',
+      partialPlaceholder: '0.5 for half bottle',
+      partialStep: '0.5',
+      partialInputType: 'number',
+      unit: 'bottles',
+      servingUnit: 'partial',
+      helpText: 'Enter whole bottles and fractional (0.5 = half bottle)',
+      example: 'Example: 138 bottles or 43 bottles + 0.5 partial',
+      showPartial: true,
+      showFull: true,
+      allowDecimalFull: false,
+      allowDecimalPartial: true,
+      partialOptional: true,
+      partialMax: 0.99
     };
   }
   
@@ -279,4 +329,26 @@ export function formatVariance(varianceQty, expectedQty) {
     isShortage: variance < 0,
     isSurplus: variance > 0
   };
+}
+
+/**
+ * Convert total bottles to cases + bottles
+ * Used for SOFT_DRINKS auto-calculation
+ * 
+ * @param {number} totalBottles - Total number of bottles
+ * @param {number} bottlesPerCase - Bottles per case (default 12)
+ * @returns {object} { cases, bottles }
+ * 
+ * @example
+ * bottlesToCasesAndBottles(145, 12) => { cases: 12, bottles: 1 }
+ * bottlesToCasesAndBottles(10, 12) => { cases: 0, bottles: 10 }
+ */
+export function bottlesToCasesAndBottles(totalBottles, bottlesPerCase = 12) {
+  const total = parseFloat(totalBottles) || 0;
+  const perCase = parseFloat(bottlesPerCase) || 12;
+  
+  const cases = Math.floor(total / perCase);
+  const bottles = total % perCase;
+  
+  return { cases, bottles };
 }

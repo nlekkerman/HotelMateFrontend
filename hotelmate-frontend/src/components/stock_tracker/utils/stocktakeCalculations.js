@@ -175,6 +175,7 @@ export function formatUserInput(value, categoryCode, itemSize) {
 export function getInputConfig(item) {
   const categoryCode = item.category_code || item.category?.code;
   const size = item.item_size || item.size || '';
+  const subcategory = item.subcategory;
   
   if (categoryCode === 'B' || (categoryCode === 'M' && size?.includes('Doz'))) {
     return {
@@ -186,7 +187,29 @@ export function getInputConfig(item) {
     };
   }
   
-  // D, S, W, M (non-dozen)
+  // ✅ SYRUPS: Single field for total bottles (3 decimal places)
+  if (categoryCode === 'M' && subcategory === 'SYRUPS') {
+    return {
+      step: 0.001,
+      decimals: 3,
+      pattern: '[0-9]+(\\.[0-9]{0,3})?',
+      example: '10.5',
+      type: 'number'
+    };
+  }
+  
+  // ✅ JUICES: Allow 3 decimal places for ml tracking (e.g., 8.008 = 8 bottles + 8ml)
+  if (categoryCode === 'M' && subcategory === 'JUICES') {
+    return {
+      step: 0.001,
+      decimals: 3,
+      pattern: '[0-9]+(\\.[0-9]{0,3})?',
+      example: '8.008',
+      type: 'number'
+    };
+  }
+  
+  // D, S, W, M (non-dozen, non-JUICES)
   return {
     step: 0.01,
     decimals: 2,

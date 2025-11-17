@@ -10,7 +10,8 @@ const SUBCATEGORY_CONFIG = {
   SYRUPS: { icon: '🍯', color: 'warning', label: 'Syrups' },
   JUICES: { icon: '🧃', color: 'info', label: 'Juices' },
   CORDIALS: { icon: '🍶', color: 'secondary', label: 'Cordials' },
-  BIB: { icon: '📦', color: 'success', label: 'BIB' }
+  BIB: { icon: '📦', color: 'success', label: 'BIB' },
+  BULK_JUICES: { icon: '🍋', color: 'danger', label: 'Bulk Juices' }
 };
 
 export const SubcategoryBadge = ({ subcategory, size = 'xs' }) => {
@@ -39,9 +40,10 @@ export const getSubcategoryHelpText = (subcategory) => {
   const helpText = {
     SOFT_DRINKS: 'Count full cases (12 bottles each) and loose bottles (0-11)',
     SYRUPS: 'Count full bottles (700ml or 1L) and ml in any open bottle',
-    JUICES: 'Count full bottles (1L or 1.5L) and ml in any open bottle',
+    JUICES: 'Count full cases (12 bottles each) and bottles with decimals (e.g., 3.5 = 3 bottles + 500ml)',
     CORDIALS: 'Count full cases and individual bottles (no serving calculation)',
-    BIB: 'Count full boxes (18L each) and liters remaining in current box'
+    BIB: 'Count full boxes (18L each) and liters remaining in current box',
+    BULK_JUICES: 'Count whole bottles and fractional (0.5 = half bottle, not on menu)'
   };
   
   return helpText[subcategory] || null;

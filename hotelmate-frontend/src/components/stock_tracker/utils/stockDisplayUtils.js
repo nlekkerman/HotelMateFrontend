@@ -34,13 +34,15 @@ export const getUnitLabels = (item) => {
       case 'SOFT_DRINKS':
         return { full: 'cases', partial: 'bottles' };
       case 'SYRUPS':
-        return { full: 'bottles', partial: 'ml' };
+        return { full: 'bottles', partial: '' };
       case 'JUICES':
-        return { full: 'bottles', partial: 'ml' };
+        return { full: 'cases', partial: 'bottles' }; // 3-level: cases + bottles (decimal)
       case 'CORDIALS':
         return { full: 'cases', partial: 'bottles' };
       case 'BIB':
         return { full: 'boxes', partial: 'liters' };
+      case 'BULK_JUICES':
+        return { full: 'bottles', partial: 'partial' }; // bottles + fractional (0.5 = half)
       default:
         return { full: 'bottles', partial: '' };
     }
@@ -103,12 +105,17 @@ export const formatPartialUnits = (value, item) => {
         // Whole numbers (bottles)
         return Math.round(numValue).toString();
       case 'SYRUPS':
+        // Fractional bottles (0.50 = half bottle)
+        return numValue.toFixed(2);
       case 'JUICES':
-        // ml values - no decimals needed
-        return Math.round(numValue).toString();
+        // Bottles with 3 decimal places for ml tracking (e.g., 8.008 = 8 bottles + 8ml)
+        return numValue.toFixed(3);
       case 'BIB':
         // Liters - 1 decimal
         return numValue.toFixed(1);
+      case 'BULK_JUICES':
+        // Fractional bottles - 2 decimal places (0.5 = half bottle)
+        return numValue.toFixed(2);
       default:
         return numValue.toFixed(2);
     }

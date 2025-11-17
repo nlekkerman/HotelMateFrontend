@@ -5,6 +5,7 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
     sku: "",
     name: "",
     category: "",
+    subcategory: "",
     size: "",
     size_value: "",
     size_unit: "",
@@ -21,6 +22,7 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
         sku: item.sku || "",
         name: item.name || "",
         category: item.category || "",
+        subcategory: item.subcategory || "",
         size: item.size || "",
         size_value: item.size_value || "",
         size_unit: item.size_unit || "",
@@ -35,6 +37,7 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
         sku: "",
         name: "",
         category: categories[0]?.code || "",
+        subcategory: "",
         size: "",
         size_value: "",
         size_unit: "",
@@ -46,6 +49,14 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
       });
     }
   }, [item, categories, isOpen]);
+  
+  // ✅ Determine step for partial units based on category and subcategory
+  const getPartialUnitsStep = () => {
+    if (formData.category === 'M' && formData.subcategory === 'JUICES') {
+      return '0.001'; // 3 decimal places for JUICES
+    }
+    return '0.01'; // Default 2 decimal places
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -199,14 +210,18 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
                   <label className="form-label">Partial Units</label>
                   <input
                     type="number"
-                    step="0.01"
+                    step={getPartialUnitsStep()}
                     className="form-control"
                     name="current_partial_units"
                     value={formData.current_partial_units}
                     onChange={handleChange}
                     placeholder="0"
                   />
-                  <small className="form-text text-muted">Pints/shots/individual bottles</small>
+                  <small className="form-text text-muted">
+                    {formData.category === 'M' && formData.subcategory === 'JUICES' 
+                      ? 'Bottles (decimals allowed, e.g., 8.008)' 
+                      : 'Pints/shots/individual bottles'}
+                  </small>
                 </div>
 
                 <div className="col-md-6">
