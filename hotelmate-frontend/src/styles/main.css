@@ -1898,9 +1898,6 @@ body.terminal-mode,
   .layout-container.collapsed .hotel-logo-image {
     margin-right: calc(90px / 2);
   }
-  .main-content-area {
-    padding-left: 100px;
-  }
 }
 @media (max-width: 576px) {
   .sm-border-bottom {

@@ -731,6 +731,8 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                     }}
                     onFocus={(e) => {
                       e.target.classList.add('bg-info-subtle');
+                      e.target.dataset.originalValue = e.target.value;
+                      e.target.value = '';  // Clear on focus for new entry
                       if (lineErrors.openingFullUnits) {
                         setValidationErrors((prev) => {
                           const { [line.id]: lineErr, ...rest } = prev;
@@ -744,7 +746,12 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                         });
                       }
                     }}
-                    onBlur={(e) => e.target.classList.remove('bg-info-subtle')}
+                    onBlur={(e) => {
+                      e.target.classList.remove('bg-info-subtle');
+                      if (e.target.value === '') {
+                        updateLineInput(line.id, 'openingFullUnits', '');  // Keep empty if no input
+                      }
+                    }}
                     className="bg-light text-center"
                     placeholder={`${labels.unit}`}
                     isInvalid={!!lineErrors.openingFullUnits}
@@ -778,6 +785,8 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                     onChange={(e) => updateLineInput(line.id, 'openingPartialUnits', e.target.value)}
                     onFocus={(e) => {
                       e.target.classList.add('bg-info-subtle');
+                      e.target.dataset.originalValue = e.target.value;
+                      e.target.value = '';  // Clear on focus for new entry
                       if (lineErrors.openingPartialUnits) {
                         setValidationErrors((prev) => {
                           const { [line.id]: lineErr, ...rest } = prev;
@@ -791,7 +800,12 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                         });
                       }
                     }}
-                    onBlur={(e) => e.target.classList.remove('bg-info-subtle')}
+                    onBlur={(e) => {
+                      e.target.classList.remove('bg-info-subtle');
+                      if (e.target.value === '') {
+                        updateLineInput(line.id, 'openingPartialUnits', '');  // Keep empty if no input
+                      }
+                    }}
                     className="bg-light text-center"
                     placeholder={`${labels.servingUnit}`}
                     isInvalid={!!lineErrors.openingPartialUnits}
@@ -1229,7 +1243,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         {/* Actions */}
         {!isLocked && (
           <td>
-            <Button variant="outline-secondary" size="sm" onClick={() => handleClear(line.id, line)} title="Clear" style={{ fontSize: '0.75rem' }}>
+            <Button variant="danger" size="sm" onClick={() => handleClear(line.id, line)} title="Clear" style={{ fontSize: '0.75rem', color: 'white' }}>
               Clear
             </Button>
           </td>
