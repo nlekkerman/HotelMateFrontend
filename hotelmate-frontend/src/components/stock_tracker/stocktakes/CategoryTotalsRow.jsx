@@ -50,30 +50,48 @@ export const CategoryTotalsRow = ({ categoryCode, categoryName, totals, isLocked
     <>
       {/* Category Totals Summary Row */}
       <tr className="table-info fw-bold">
-        <td colSpan="5" className="text-end">
+        <td colSpan="2" className="text-start ps-3">
           <strong>{categoryName} Category Totals:</strong>
-        </td>
-        <td className="text-center">
-          <Badge bg="info" className="px-3">
+          <Badge bg="info" className="ms-2 px-2">
             {totals.item_count} Items
           </Badge>
         </td>
-        <td colSpan="5"></td>
-        <td className="text-end bg-warning-subtle">
+        <td colSpan="3"></td>
+        <td className="text-center bg-info-subtle">
           <div className="d-flex flex-column gap-1">
-            <small className="text-muted">{isLocked ? 'Closing Stock:' : 'Counted Total:'}</small>
+            <small className="text-muted">Opening:</small>
+            <strong>{formatQty(totals.opening_qty)} servings</strong>
+            <small className="text-primary">€{formatValue(totals.opening_value)}</small>
+          </div>
+        </td>
+        <td className="text-center">
+          <div className="d-flex flex-column gap-1">
+            <small className="text-muted">Movements:</small>
+            <small className="text-success">+{formatQty(totals.purchases_qty)}</small>
+            <small className="text-danger">-{formatQty(totals.waste_qty)}</small>
+          </div>
+        </td>
+        <td className="text-center bg-warning-subtle">
+          <div className="d-flex flex-column gap-1">
+            <small className="text-muted">Expected:</small>
+            <strong>{formatQty(totals.expected_qty)} servings</strong>
+            <small className="text-success">€{formatValue(totals.expected_value)}</small>
+          </div>
+        </td>
+        <td className="text-center bg-success-subtle">
+          <div className="d-flex flex-column gap-1">
+            <small className="text-muted">{isLocked ? 'Closing:' : 'Counted:'}</small>
             <strong>{formatQty(totals.counted_qty)} servings</strong>
             <small className="text-success">€{formatValue(totals.counted_value)}</small>
           </div>
         </td>
-        <td colSpan="5"></td>
-        <td className="text-end">
+        <td className="text-center">
           <div className="d-flex flex-column gap-1">
             <Badge bg={getVarianceBadgeColor()} className="mb-1">
               {varianceValue > 0 ? '+' : ''}{formatQty(totals.variance_qty)} servings
             </Badge>
             <Badge bg={getVarianceBadgeColor()}>
-              {varianceValue >= 0 ? '+' : '-'}€{Math.abs(varianceValue).toFixed(2)}
+              {varianceValue >= 0 ? '+' : ''}€{formatValue(totals.variance_value)}
               {isSignificantVariance && ' ⚠️'}
             </Badge>
             {variancePercent > 0 && (

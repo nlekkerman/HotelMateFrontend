@@ -83,6 +83,29 @@ export function getCountingLabels(categoryCode, size = '', inputFields = null, s
     };
   }
   
+  // ✅ NEW: BIB (Bag-in-Box) - Combined decimal input like SYRUPS but for BOXES
+  if (categoryCode === 'M' && subcategory === 'BIB') {
+    return {
+      fullLabel: null, // No separate full units field for BIB
+      fullPlaceholder: null,
+      fullStep: null,
+      fullInputType: null,
+      partialLabel: 'Total Boxes',
+      partialPlaceholder: 'e.g., 2.5',
+      partialStep: '0.01',
+      partialInputType: 'number',
+      unit: 'boxes', // ✅ Main unit for display
+      servingUnit: 'boxes', // ✅ Both use 'boxes' (not 'servings')
+      helpText: 'Enter total boxes as decimal (e.g., 2.5 = 2 full boxes + half box)',
+      example: 'Example: 2.5 boxes',
+      showPartial: true,
+      showFull: false, // Hide full units field (single combined input)
+      allowDecimalFull: false,
+      allowDecimalPartial: true,
+      partialOptional: false
+    };
+  }
+  
   // ⚠️ FALLBACK: If no input_fields from API, use legacy hardcoded logic
   const sizeUpper = size?.toUpperCase() || '';
   
