@@ -10,7 +10,8 @@ import {
   FaCocktail
 } from 'react-icons/fa';
 import { 
-  getKPISummary,
+  getKPISummary, 
+  getLowStockItems,
   formatCurrency 
 } from '@/services/stockAnalytics';
 import StockKpiDetailModal from '@/components/modals/StockKpiDetailModal';
@@ -78,10 +79,17 @@ const KPISummaryCards = ({
       console.log('Fetching KPI data for periods:', periodIds);
       console.log('Include Cocktails:', includeCocktails);
 
-      // Single API call - backend calculates EVERYTHING
-      // Using new flexible API with backward compatibility
-      const response = await getKPISummary(hotelSlug, { periodIds, includeCocktails });
-      const data = response.data;
+      // Fetch KPI data and low stock items in parallel
+      const [kpiResponse, lowStockItems] = await Promise.all([
+        getKPISummary(hotelSlug, { periodIds, includeCocktails }),
+        getLowStockItems(hotelSlug, 50) // Fetch items below 50 servings
+      ]);
+      
+      const data = kpiResponse.data;
+      
+      // Calculate low stock count from actual items (servings-based, not par-level-based)
+      const actualLowStockCount = Array.isArray(lowStockItems) ? lowStockItems.length : 0;
+      console.log('📊 Low Stock Items (servings-based):', actualLowStockCount);
 
       console.log('\n' + '='.repeat(80));
       console.log('🎯 TOP ANALYTICS - SEPARATED BY TYPE');
@@ -194,7 +202,8 @@ const KPISummaryCards = ({
         categoryDistribution: data.category_performance?.distribution || [],
         
         // Inventory Health (NEW: separated counts)
-        lowStockCount: data.inventory_health?.low_stock_count || 0,
+        // Use actual low stock count from servings-based API instead of par-level-based count
+        lowStockCount: actualLowStockCount,
         outOfStockCount: data.inventory_health?.out_of_stock_count || 0,
         overstockedCount: data.inventory_health?.overstocked_count || 0,
         deadStockCount: data.inventory_health?.dead_stock_count || 0,
@@ -421,19 +430,19 @@ const KPISummaryCards = ({
           className="shadow-sm h-100 hover-card"
           style={{ cursor: 'pointer' }}
           onClick={() => handleCardClick('lowStockCount')}
-          title="Items below par level or out of stock - Click to view list"
+          title="Items below category reorder thresholds (bottles, cases, kegs) - Click to view by severity"
         >
           <Card.Body className="text-center">
             <FaExclamationTriangle size={32} className="text-warning mb-2" />
             <div className="small text-muted mb-1">Low Stock Items</div>
             <h4 className="mb-0">
               {kpis.lowStockCount}
-              {kpis.lowStockCount > 10 && (
+              {kpis.lowStockCount > 50 && (
                 <Badge bg="danger" className="ms-2">!</Badge>
               )}
             </h4>
             <div className="mt-1" style={{ fontSize: '0.65rem', color: '#6c757d' }}>
-              Need attention
+              Below reorder threshold
             </div>
           </Card.Body>
         </Card>

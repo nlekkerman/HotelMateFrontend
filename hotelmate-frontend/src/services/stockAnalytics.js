@@ -85,14 +85,14 @@ export const getKPISummary = async (hotelSlug, options = {}) => {
 /**
  * Compare category data across multiple periods
  * @param {string} hotelSlug - Hotel identifier
- * @param {array} periodIds - Array of period IDs [1, 2, 3, ...]
+ * @param {array} periods - Array of period IDs
  * @returns {Promise} API response with categories comparison data
  */
-export const getCompareCategories = async (hotelSlug, periodIds) => {
+export const getCompareCategories = async (hotelSlug, periods) => {
   try {
-    const periods = Array.isArray(periodIds) ? periodIds.join(',') : periodIds;
+    const periodIds = Array.isArray(periods) ? periods.join(',') : periods;
     const response = await api.get(`stock_tracker/${hotelSlug}/compare/categories/`, {
-      params: { periods }
+      params: { periods: periodIds }
     });
     return response.data;
   } catch (error) {
@@ -104,15 +104,15 @@ export const getCompareCategories = async (hotelSlug, periodIds) => {
 /**
  * Get top movers (biggest increases/decreases) between two periods
  * @param {string} hotelSlug - Hotel identifier
- * @param {number} period1Id - First period ID
- * @param {number} period2Id - Second period ID
+ * @param {number} period1 - Period ID
+ * @param {number} period2 - Period ID
  * @param {number} limit - Number of results to return (default: 10)
  * @returns {Promise} API response with top movers data
  */
-export const getTopMovers = async (hotelSlug, period1Id, period2Id, limit = 10) => {
+export const getTopMovers = async (hotelSlug, period1, period2, limit = 10) => {
   try {
     const response = await api.get(`stock_tracker/${hotelSlug}/compare/top-movers/`, {
-      params: { period1: period1Id, period2: period2Id, limit }
+      params: { period1, period2, limit }
     });
     return response.data;
   } catch (error) {
@@ -124,14 +124,14 @@ export const getTopMovers = async (hotelSlug, period1Id, period2Id, limit = 10) 
 /**
  * Get detailed cost analysis between two periods
  * @param {string} hotelSlug - Hotel identifier
- * @param {number} period1Id - First period ID
- * @param {number} period2Id - Second period ID
+ * @param {number} period1 - Period ID
+ * @param {number} period2 - Period ID
  * @returns {Promise} API response with cost analysis and waterfall data
  */
-export const getCostAnalysis = async (hotelSlug, period1Id, period2Id) => {
+export const getCostAnalysis = async (hotelSlug, period1, period2) => {
   try {
     const response = await api.get(`stock_tracker/${hotelSlug}/compare/cost-analysis/`, {
-      params: { period1: period1Id, period2: period2Id }
+      params: { period1, period2 }
     });
     return response.data;
   } catch (error) {
@@ -143,22 +143,20 @@ export const getCostAnalysis = async (hotelSlug, period1Id, period2Id) => {
 /**
  * Get trend analysis across multiple periods
  * @param {string} hotelSlug - Hotel identifier
- * @param {array} periodIds - Array of period IDs
+ * @param {array} periods - Array of period IDs
  * @param {string} category - Optional category code filter (e.g., 'S', 'W', 'B')
  * @param {array} itemIds - Optional array of specific item IDs
  * @returns {Promise} API response with trend analysis data
  */
-export const getTrendAnalysis = async (hotelSlug, periodIds, category = null, itemIds = null) => {
+export const getTrendAnalysis = async (hotelSlug, periods, category = null, itemIds = null) => {
   try {
-    const periods = Array.isArray(periodIds) ? periodIds.join(',') : periodIds;
-    const params = { periods };
+    const periodIds = Array.isArray(periods) ? periods.join(',') : periods;
+    let params = { periods: periodIds };
     
     if (category) params.category = category;
     if (itemIds && Array.isArray(itemIds)) params.items = itemIds.join(',');
     
-    const response = await api.get(`stock_tracker/${hotelSlug}/compare/trend-analysis/`, {
-      params
-    });
+    const response = await api.get(`stock_tracker/${hotelSlug}/compare/trend-analysis/`, { params });
     return response.data;
   } catch (error) {
     console.error('Error fetching trend analysis:', error);
@@ -169,14 +167,14 @@ export const getTrendAnalysis = async (hotelSlug, periodIds, category = null, it
 /**
  * Get variance heatmap data across multiple periods
  * @param {string} hotelSlug - Hotel identifier
- * @param {array} periodIds - Array of period IDs (minimum 2)
+ * @param {array} periods - Array of period IDs (minimum 2)
  * @returns {Promise} API response with heatmap data
  */
-export const getVarianceHeatmap = async (hotelSlug, periodIds) => {
+export const getVarianceHeatmap = async (hotelSlug, periods) => {
   try {
-    const periods = Array.isArray(periodIds) ? periodIds.join(',') : periodIds;
+    const periodIds = Array.isArray(periods) ? periods.join(',') : periods;
     const response = await api.get(`stock_tracker/${hotelSlug}/compare/variance-heatmap/`, {
-      params: { periods }
+      params: { periods: periodIds }
     });
     return response.data;
   } catch (error) {
@@ -188,15 +186,16 @@ export const getVarianceHeatmap = async (hotelSlug, periodIds) => {
 /**
  * Get performance scorecard comparison between two periods
  * @param {string} hotelSlug - Hotel identifier
- * @param {number} period1Id - First period ID
- * @param {number} period2Id - Second period ID
+ * @param {number} period1 - Period ID
+ * @param {number} period2 - Period ID (optional)
  * @returns {Promise} API response with performance scorecard and radar chart data
  */
-export const getPerformanceScorecard = async (hotelSlug, period1Id, period2Id) => {
+export const getPerformanceScorecard = async (hotelSlug, period1, period2 = null) => {
   try {
-    const response = await api.get(`stock_tracker/${hotelSlug}/compare/performance-scorecard/`, {
-      params: { period1: period1Id, period2: period2Id }
-    });
+    let params = { period1 };
+    if (period2) params.period2 = period2;
+    
+    const response = await api.get(`stock_tracker/${hotelSlug}/compare/performance-scorecard/`, { params });
     return response.data;
   } catch (error) {
     console.error('Error fetching performance scorecard:', error);
@@ -332,10 +331,14 @@ export const getPeriodSnapshot = async (hotelSlug, periodId) => {
  * @param {number} threshold - Minimum servings threshold (default: 50)
  * @returns {Promise} API response with low stock items
  */
-export const getLowStockItems = async (hotelSlug, threshold = 50) => {
+export const getLowStockItems = async (hotelSlug, threshold = 50, periodId = null) => {
   try {
+    const params = { threshold };
+    if (periodId) {
+      params.period_id = periodId;
+    }
     const response = await api.get(`stock_tracker/${hotelSlug}/items/low-stock/`, {
-      params: { threshold }
+      params
     });
     return response.data;
   } catch (error) {

@@ -20,6 +20,7 @@ const ProfitabilityChart = ({
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [metricType, setMetricType] = useState('gp_percentage'); // 'gp_percentage', 'markup_percentage', 'pour_cost'
   const [summary, setSummary] = useState(null);
+  const [allCategories, setAllCategories] = useState([]);
 
   useEffect(() => {
     if (hotelSlug && period) {
@@ -32,15 +33,50 @@ const ProfitabilityChart = ({
       setLoading(true);
       setError(null);
 
+      // Map category name back to code for API call
+      const categoryNameToCode = {
+        'Bottled Beer': 'B',
+        'Draught Beer': 'D',
+        'Minerals & Syrups': 'M',
+        'Spirits': 'S',
+        'Wine': 'W'
+      };
+      
+      const categoryCode = selectedCategory !== 'all' ? categoryNameToCode[selectedCategory] : undefined;
+
+      console.log('🏷️ ProfitabilityChart - Fetching with category:', {
+        selectedCategory,
+        categoryCode,
+        hotelSlug
+      });
+
       // Note: getProfitabilityData doesn't accept period parameter - uses current data
-      const data = await getProfitabilityData(hotelSlug, selectedCategory !== 'all' ? selectedCategory : undefined);
+      const data = await getProfitabilityData(hotelSlug, categoryCode);
+      
+      console.log('🏷️ ProfitabilityChart - API Response:', {
+        dataType: Array.isArray(data) ? 'array' : typeof data,
+        dataLength: Array.isArray(data) ? data.length : 'N/A',
+        categoryCode
+      });
       
       // API returns array of items directly
       const itemsList = Array.isArray(data) ? data : [];
       
+      console.log('🏷️ ProfitabilityChart - Raw API Items:', itemsList.slice(0, 3).map(item => ({
+        category: item.category,
+        category_code: item.category_code,
+        category_name: item.category_name,
+        item_name: item.item_name
+      })));
+      
       // Group by category for summary
       const summary = calculateSummary(itemsList);
       setSummary(summary);
+      
+      // Store all categories for dropdown (only when fetching all categories)
+      if (!categoryCode && summary?.by_category) {
+        setAllCategories(summary.by_category.map(cat => cat.category_name));
+      }
       
       const transformedData = transformToChartData({ by_category: summary?.by_category || [], by_item: itemsList }, view, selectedCategory, metricType);
       setChartData(transformedData);
@@ -76,25 +112,36 @@ const ProfitabilityChart = ({
   };
   
   const groupItemsByCategory = (items) => {
+    // Category code to name mapping
+    const categoryNames = {
+      'B': 'Bottled Beer',
+      'D': 'Draught Beer',
+      'M': 'Minerals & Syrups',
+      'S': 'Spirits',
+      'W': 'Wine'
+    };
+    
     const categoryMap = {};
     
     items.forEach(item => {
-      const cat = item.category_name || item.category || 'Unknown';
-      if (!categoryMap[cat]) {
-        categoryMap[cat] = {
-          category: cat,
+      const categoryCode = item.category || 'Unknown';
+      const categoryName = categoryNames[categoryCode] || categoryCode;
+      
+      if (!categoryMap[categoryCode]) {
+        categoryMap[categoryCode] = {
+          category_name: categoryName,
           items: [],
           total_gp: 0,
           count: 0
         };
       }
-      categoryMap[cat].items.push(item);
-      categoryMap[cat].total_gp += parseFloat(item.gross_profit_percentage || 0);
-      categoryMap[cat].count++;
+      categoryMap[categoryCode].items.push(item);
+      categoryMap[categoryCode].total_gp += parseFloat(item.gross_profit_percentage || 0);
+      categoryMap[categoryCode].count++;
     });
     
     return Object.values(categoryMap).map(cat => ({
-      category: cat.category,
+      category_name: cat.category_name,
       gp_percentage: (cat.total_gp / cat.count).toFixed(2),
       markup_percentage: (cat.items.reduce((sum, item) => sum + parseFloat(item.markup_percentage || 0), 0) / cat.count).toFixed(2),
       pour_cost: (100 - (cat.total_gp / cat.count)).toFixed(2)
@@ -104,14 +151,14 @@ const ProfitabilityChart = ({
   const transformToChartData = (data, currentView, category, metric) => {
     let sourceData;
     
-    if (currentView === 'category') {
+    // When a specific category is selected, always show items breakdown
+    if (category && category !== 'all') {
+      sourceData = data.by_item || [];
+      // Items already filtered by API call
+    } else if (currentView === 'category') {
       sourceData = data.by_category || [];
     } else {
-      // Filter items by category if selected
       sourceData = data.by_item || [];
-      if (category && category !== 'all') {
-        sourceData = sourceData.filter(item => item.category === category || item.category_name === category);
-      }
     }
 
     if (!sourceData || sourceData.length === 0) {
@@ -119,8 +166,19 @@ const ProfitabilityChart = ({
     }
 
     const labels = sourceData.map(item => 
-      currentView === 'category' ? item.category : (item.item_name || item.name)
+      currentView === 'category' ? item.category_name : (item.item_name || item.name)
     );
+
+    // Debug logging for category names
+    if (currentView === 'category') {
+      console.log('🏷️ ProfitabilityChart - Category Labels:', {
+        labels,
+        sourceData: sourceData.map(item => ({
+          category_name: item.category_name,
+          gp_percentage: item.gp_percentage
+        }))
+      });
+    }
 
     const metricData = sourceData.map(item => {
       switch(metric) {
@@ -135,13 +193,28 @@ const ProfitabilityChart = ({
       }
     });
 
+    // Dynamic color based on value
+    const backgroundColors = metricData.map(value => {
+      if (value >= 30) return 'rgba(75, 192, 192, 0.6)'; // Green
+      if (value >= 20) return 'rgba(255, 193, 7, 0.6)'; // Yellow/Orange
+      if (value >= 0) return 'rgba(255, 152, 0, 0.6)'; // Orange
+      return 'rgba(255, 99, 132, 0.6)'; // Red for negative
+    });
+
+    const borderColors = metricData.map(value => {
+      if (value >= 30) return 'rgb(75, 192, 192)'; // Green
+      if (value >= 20) return 'rgb(255, 193, 7)'; // Yellow/Orange
+      if (value >= 0) return 'rgb(255, 152, 0)'; // Orange
+      return 'rgb(255, 99, 132)'; // Red for negative
+    });
+
     return {
       labels,
       datasets: [{
         label: getMetricLabel(metric),
         data: metricData,
-        backgroundColor: getMetricColor(metric),
-        borderColor: getMetricBorderColor(metric),
+        backgroundColor: backgroundColors,
+        borderColor: borderColors,
         borderWidth: 2,
         // Store additional metadata
         costValues: sourceData.map(item => item.cost || 0),
@@ -190,8 +263,8 @@ const ProfitabilityChart = ({
   };
 
   const getCategories = () => {
-    if (!summary || !summary.by_category) return [];
-    return summary.by_category.map(cat => cat.category);
+    // Return all categories stored on initial load
+    return allCategories;
   };
 
   if (loading) {
@@ -270,7 +343,7 @@ const ProfitabilityChart = ({
 
           {/* Controls */}
           <Row className="mb-3">
-            <Col xs={12} md={4}>
+            <Col xs={12} md={3}>
               <Form.Group>
                 <Form.Label className="small text-muted mb-1">View</Form.Label>
                 <Form.Select 
@@ -284,25 +357,30 @@ const ProfitabilityChart = ({
               </Form.Group>
             </Col>
 
-            {view === 'item' && (
-              <Col xs={12} md={4}>
-                <Form.Group>
-                  <Form.Label className="small text-muted mb-1">Category</Form.Label>
-                  <Form.Select 
-                    size="sm" 
-                    value={selectedCategory} 
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                  >
-                    <option value="all">All Categories</option>
-                    {getCategories().map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-            )}
+            <Col xs={12} md={3}>
+              <Form.Group>
+                <Form.Label className="small text-muted mb-1">Filter Category</Form.Label>
+                <Form.Select 
+                  size="sm" 
+                  value={selectedCategory} 
+                  onChange={(e) => {
+                    const newCategory = e.target.value;
+                    setSelectedCategory(newCategory);
+                    // Automatically switch to "By Item" view when selecting a specific category
+                    if (newCategory !== 'all') {
+                      setView('item');
+                    }
+                  }}
+                >
+                  <option value="all">All Categories</option>
+                  {getCategories().map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
 
-            <Col xs={12} md={4}>
+            <Col xs={12} md={3}>
               <Form.Group>
                 <Form.Label className="small text-muted mb-1">Metric</Form.Label>
                 <Form.Select 

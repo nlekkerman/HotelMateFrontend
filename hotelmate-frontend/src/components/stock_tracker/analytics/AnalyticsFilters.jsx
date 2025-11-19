@@ -77,7 +77,8 @@ const AnalyticsFilters = ({
 
   // Handle multi-period checkbox toggle
   const handlePeriodToggle = (periodId) => {
-    const newSelection = selectedPeriods.includes(periodId)
+    const isSelected = selectedPeriods.includes(periodId);
+    const newSelection = isSelected
       ? selectedPeriods.filter(id => id !== periodId)
       : [...selectedPeriods, periodId];
     
@@ -86,8 +87,7 @@ const AnalyticsFilters = ({
 
   // Handle select all periods
   const handleSelectAll = () => {
-    const allPeriodIds = periods.map(p => p.id);
-    onPeriodsChange?.(allPeriodIds);
+    onPeriodsChange?.(periods.map(p => p.id));
   };
 
   // Handle clear all periods
@@ -157,7 +157,7 @@ const AnalyticsFilters = ({
                       variant="outline-secondary" 
                       size="sm" 
                       onClick={handleSelectAll}
-                      disabled={selectedPeriods.length === periods.length}
+                      disabled={selectedPeriods.length === periods.length && periods.length > 0}
                     >
                       Select All
                     </Button>
@@ -226,7 +226,10 @@ const AnalyticsFilters = ({
                   <Form.Label>Period 1 (Baseline)</Form.Label>
                   <Form.Select 
                     value={period1 || ''} 
-                    onChange={(e) => onPeriod1Change?.(e.target.value ? parseInt(e.target.value) : null)}
+                    onChange={(e) => {
+                      const periodId = e.target.value ? parseInt(e.target.value) : null;
+                      onPeriod1Change?.(periodId);
+                    }}
                     disabled={loadingPeriods}
                   >
                     <option value="">Select Period 1</option>
@@ -236,11 +239,6 @@ const AnalyticsFilters = ({
                       </option>
                     ))}
                   </Form.Select>
-                  {period1 && (
-                    <div className="small text-muted mt-1">
-                      {getPeriodName(period1)}
-                    </div>
-                  )}
                 </Form.Group>
               </Col>
               
@@ -249,7 +247,10 @@ const AnalyticsFilters = ({
                   <Form.Label>Period 2 (Comparison)</Form.Label>
                   <Form.Select 
                     value={period2 || ''} 
-                    onChange={(e) => onPeriod2Change?.(e.target.value ? parseInt(e.target.value) : null)}
+                    onChange={(e) => {
+                      const periodId = e.target.value ? parseInt(e.target.value) : null;
+                      onPeriod2Change?.(periodId);
+                    }}
                     disabled={loadingPeriods}
                   >
                     <option value="">Select Period 2</option>
@@ -259,11 +260,6 @@ const AnalyticsFilters = ({
                       </option>
                     ))}
                   </Form.Select>
-                  {period2 && (
-                    <div className="small text-muted mt-1">
-                      {getPeriodName(period2)}
-                    </div>
-                  )}
                 </Form.Group>
               </Col>
             </Row>

@@ -275,42 +275,35 @@ const StockKpiDetailModal = ({
       return <p className="text-muted">No low stock items found.</p>;
     }
 
-    // Filter out items with par_level = 0 (no par level set means not truly low stock)
-    const validLowStockItems = detailData.filter(item => {
-      const parLevel = item.par_level || 0;
-      return parLevel > 0; // Only show items that have a par level set
+    // Low stock is based on category-specific thresholds (bottles, cases, kegs)
+    // All items are already filtered by backend based on their category thresholds
+    const criticalItems = detailData.filter(item => {
+      const current = parseFloat(item.total_stock_in_servings || 0);
+      const threshold = parseFloat(item.low_stock_threshold || 0);
+      const percentage = threshold > 0 ? (current / threshold) * 100 : 0;
+      return percentage < 40; // < 40% of threshold
+    });
+    const warningItems = detailData.filter(item => {
+      const current = parseFloat(item.total_stock_in_servings || 0);
+      const threshold = parseFloat(item.low_stock_threshold || 0);
+      const percentage = threshold > 0 ? (current / threshold) * 100 : 0;
+      return percentage >= 40 && percentage < 70; // 40-70% of threshold
+    });
+    const cautionItems = detailData.filter(item => {
+      const current = parseFloat(item.total_stock_in_servings || 0);
+      const threshold = parseFloat(item.low_stock_threshold || 0);
+      const percentage = threshold > 0 ? (current / threshold) * 100 : 0;
+      return percentage >= 70 && percentage < 100; // 70-100% of threshold
     });
 
-    const itemsWithoutParLevel = detailData.filter(item => (item.par_level || 0) === 0);
+    const allLowStockItems = [...criticalItems, ...warningItems, ...cautionItems];
 
-    // Separate truly out of stock vs low stock
-    const outOfStock = validLowStockItems.filter(item => (item.current_quantity || 0) === 0);
-    const lowStock = validLowStockItems.filter(item => (item.current_quantity || 0) > 0);
-
-    if (validLowStockItems.length === 0 && itemsWithoutParLevel.length === 0) {
+    if (allLowStockItems.length === 0) {
       return (
         <Alert variant="success">
-          <h6>✅ All Good!</h6>
-          <p className="mb-0">No items are currently below their par levels. All stocked items are at adequate levels.</p>
+          <h6>✅ All Items Have Adequate Stock!</h6>
+          <p className="mb-0">All items are at or above their category-specific reorder thresholds. No immediate restocking needed.</p>
         </Alert>
-      );
-    }
-
-    if (validLowStockItems.length === 0 && itemsWithoutParLevel.length > 0) {
-      return (
-        <div>
-          <Alert variant="success">
-            <h6>✅ All Items With Par Levels Are Stocked</h6>
-            <p className="mb-0">All items that have par levels set are at adequate stock levels.</p>
-          </Alert>
-          <Alert variant="info">
-            <h6>ℹ️ Items Without Par Levels</h6>
-            <p className="mb-0">
-              <strong>{itemsWithoutParLevel.length} items</strong> don't have par levels set and are not included in low stock tracking. 
-              Set par levels for these items to enable proper stock monitoring.
-            </p>
-          </Alert>
-        </div>
       );
     }
 
@@ -319,70 +312,48 @@ const StockKpiDetailModal = ({
         <Alert variant="warning">
           <h6>⚠️ Low Stock Items</h6>
           <p className="mb-1">
-            <strong>{validLowStockItems.length} items</strong> need attention
+            <strong>{allLowStockItems.length} items</strong> below their category reorder thresholds
           </p>
           <div className="row mt-2">
-            <div className="col-6">
-              <span className="text-danger">❌ {outOfStock.length} Out of Stock</span>
+            <div className="col-4">
+              <span className="text-danger">🔴 {criticalItems.length} Critical</span>
+              <br /><small className="text-muted">&lt;40% of threshold</small>
             </div>
-            <div className="col-6">
-              <span className="text-warning">⚠️ {lowStock.length} Below Par</span>
+            <div className="col-4">
+              <span className="text-warning">🟡 {warningItems.length} Warning</span>
+              <br /><small className="text-muted">40-70% of threshold</small>
+            </div>
+            <div className="col-4">
+              <span className="text-info">🔵 {cautionItems.length} Caution</span>
+              <br /><small className="text-muted">70-100% of threshold</small>
             </div>
           </div>
         </Alert>
 
-        {outOfStock.length > 0 && (
+        {criticalItems.length > 0 && (
           <div className="mb-3">
-            <h6 className="text-danger">❌ Out of Stock ({outOfStock.length})</h6>
+            <h6 className="text-danger">🔴 Critical Stock ({criticalItems.length})</h6>
             <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
               <Table striped bordered hover size="sm">
                 <thead className="sticky-top bg-white">
                   <tr>
                     <th>Item</th>
                     <th>Category</th>
-                    <th className="text-end">Par Level</th>
-                    <th className="text-end">Shortage</th>
+                    <th className="text-end">Servings</th>
+                    <th className="text-end">Stock %</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {outOfStock.map((item, idx) => (
-                    <tr key={idx} className="table-danger">
-                      <td>{item.name}</td>
-                      <td><Badge bg="secondary">{item.category || 'N/A'}</Badge></td>
-                      <td className="text-end">{item.par_level}</td>
-                      <td className="text-end text-danger">-{item.par_level}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </div>
-          </div>
-        )}
-
-        {lowStock.length > 0 && (
-          <div>
-            <h6 className="text-warning">⚠️ Below Par Level ({lowStock.length})</h6>
-            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-              <Table striped bordered hover size="sm">
-                <thead className="sticky-top bg-white">
-                  <tr>
-                    <th>Item</th>
-                    <th>Category</th>
-                    <th className="text-end">Current</th>
-                    <th className="text-end">Par Level</th>
-                    <th className="text-end">Shortage</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lowStock.map((item, idx) => {
-                    const shortage = (item.par_level || 0) - (item.current_quantity || 0);
+                  {criticalItems.map((item, idx) => {
+                    const current = parseFloat(item.total_stock_in_servings || 0);
+                    const threshold = parseFloat(item.low_stock_threshold || 0);
+                    const percentage = threshold > 0 ? (current / threshold) * 100 : 0;
                     return (
-                      <tr key={idx} className="table-warning">
-                        <td>{item.name}</td>
-                        <td><Badge bg="secondary">{item.category || 'N/A'}</Badge></td>
-                        <td className="text-end">{item.current_quantity}</td>
-                        <td className="text-end">{item.par_level}</td>
-                        <td className="text-end text-warning">-{shortage}</td>
+                      <tr key={idx} className="table-danger">
+                        <td>{item.name || item.item_name}</td>
+                        <td><Badge bg="secondary">{item.category_name || item.category || 'N/A'}</Badge></td>
+                        <td className="text-end">{current.toFixed(1)}</td>
+                        <td className="text-end text-danger">{percentage.toFixed(1)}%</td>
                       </tr>
                     );
                   })}
@@ -392,41 +363,85 @@ const StockKpiDetailModal = ({
           </div>
         )}
 
-        {itemsWithoutParLevel.length > 0 && (
-          <div className="mt-4">
-            <Alert variant="info">
-              <h6>ℹ️ Items Without Par Levels ({itemsWithoutParLevel.length})</h6>
-              <p className="mb-2">
-                These items are not included in low stock tracking because they don't have par levels set.
-              </p>
-              <details>
-                <summary style={{ cursor: 'pointer' }} className="text-primary">
-                  Click to view items without par levels
-                </summary>
-                <div className="mt-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                  <Table striped bordered hover size="sm">
-                    <thead className="sticky-top bg-white">
-                      <tr>
-                        <th>Item</th>
-                        <th>Category</th>
-                        <th className="text-end">Current</th>
+        {warningItems.length > 0 && (
+          <div className="mb-3">
+            <h6 className="text-warning">🟡 Warning Stock ({warningItems.length})</h6>
+            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+              <Table striped bordered hover size="sm">
+                <thead className="sticky-top bg-white">
+                  <tr>
+                    <th>Item</th>
+                    <th>Category</th>
+                    <th className="text-end">Servings</th>
+                    <th className="text-end">Stock %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {warningItems.map((item, idx) => {
+                    const current = parseFloat(item.total_stock_in_servings || 0);
+                    const threshold = parseFloat(item.low_stock_threshold || 0);
+                    const percentage = threshold > 0 ? (current / threshold) * 100 : 0;
+                    return (
+                      <tr key={idx} className="table-warning">
+                        <td>{item.name || item.item_name}</td>
+                        <td><Badge bg="secondary">{item.category_name || item.category || 'N/A'}</Badge></td>
+                        <td className="text-end">{current.toFixed(1)}</td>
+                        <td className="text-end text-warning">{percentage.toFixed(1)}%</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {itemsWithoutParLevel.map((item, idx) => (
-                        <tr key={idx}>
-                          <td>{item.name}</td>
-                          <td><Badge bg="secondary">{item.category || 'N/A'}</Badge></td>
-                          <td className="text-end">{item.current_quantity || 0}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </div>
-              </details>
-            </Alert>
+                    );
+                  })}
+                </tbody>
+              </Table>
+            </div>
           </div>
         )}
+
+        {cautionItems.length > 0 && (
+          <div className="mb-3">
+            <h6 className="text-info">🔵 Caution Stock ({cautionItems.length})</h6>
+            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+              <Table striped bordered hover size="sm">
+                <thead className="sticky-top bg-white">
+                  <tr>
+                    <th>Item</th>
+                    <th>Category</th>
+                    <th className="text-end">Servings</th>
+                    <th className="text-end">Stock %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cautionItems.map((item, idx) => {
+                    const current = parseFloat(item.total_stock_in_servings || 0);
+                    const threshold = parseFloat(item.low_stock_threshold || 0);
+                    const percentage = threshold > 0 ? (current / threshold) * 100 : 0;
+                    return (
+                      <tr key={idx} className="table-info">
+                        <td>{item.name || item.item_name}</td>
+                        <td><Badge bg="secondary">{item.category_name || item.category || 'N/A'}</Badge></td>
+                        <td className="text-end">{current.toFixed(1)}</td>
+                        <td className="text-end text-info">{percentage.toFixed(1)}%</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </Table>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-4">
+          <Alert variant="info">
+            <h6>ℹ️ About Low Stock Tracking</h6>
+            <p className="mb-0">
+              Low stock items are identified using category-specific reorder thresholds (bottles, cases, kegs, etc.):
+              <br />• <strong className="text-danger">Critical</strong>: Below 40% of reorder threshold
+              <br />• <strong className="text-warning">Warning</strong>: 40-70% of reorder threshold
+              <br />• <strong className="text-info">Caution</strong>: 70-100% of reorder threshold
+              <br /><br />
+              <small>Thresholds vary by category: Spirits (2 bottles), Wine (10 bottles), Draught (2 kegs), etc.</small>
+            </p>
+          </Alert>
+        </div>
       </div>
     );
   };

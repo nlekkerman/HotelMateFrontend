@@ -1378,7 +1378,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               {/* SYRUPS, BIB, WINES, SPIRITS: Show combined decimal value only */}
               {(line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') ? (
                 <div className="d-flex flex-column align-items-center">
-                  <small className="text-muted" style={{ fontSize: '0.65rem' }}>{line.subcategory === 'BIB' ? 'boxes' : 'bottles'}</small>
+                  <small className="text-muted" style={{ fontSize: '0.65rem' }}>({line.subcategory === 'BIB' ? 'boxes' : 'bottles'})</small>
                   <strong className={`${textClass} ${strongClass}`}>
                     {varianceValue >= 0 ? '+' : ''}
                     {(Number(varianceDisplayFull) + Number(varianceDisplayPartial)).toFixed(2)}
@@ -1389,7 +1389,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                   {/* Full units variance - only show if labels.unit exists */}
                   {labels.unit && (
                     <div className="d-flex flex-column align-items-center">
-                      <small className="text-muted" style={{ fontSize: '0.65rem' }}>{(line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS') ? 'cases' : labels.unit}</small>
+                      <small className="text-muted" style={{ fontSize: '0.65rem' }}>({(line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS') ? 'cases' : labels.unit})</small>
                       <strong className={`${textClass} ${strongClass}`}>
                         {isShortage ? '-' : '+'}
                         {Math.abs(parseFloat(varianceDisplayFull))}
@@ -1398,7 +1398,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                   )}
                   {/* Partial units variance - always show */}
                   <div className="d-flex flex-column align-items-center">
-                    <small className="text-muted" style={{ fontSize: '0.65rem' }}>{(line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS') ? 'bottles' : labels.servingUnit}</small>
+                    <small className="text-muted" style={{ fontSize: '0.65rem' }}>({(line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS') ? 'bottles' : labels.servingUnit})</small>
                     <strong className={`${textClass} ${strongClass}`}>
                       {isShortage ? '-' : '+'}
                       {Math.abs(parseFloat(varianceDisplayPartial))}
@@ -1408,8 +1408,8 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               )}
               
               {/* Stock Value section */}
-              <div className="d-flex flex-column align-items-center mt-1 pt-1 border-top w-100" style={{ borderColor: 'rgba(0,0,0,0.1)' }}>
-                <small className="text-muted" style={{ fontSize: '0.65rem' }}>Stock Value</small>
+              <div className="d-flex flex-column align-items-center mt-1 pt-1 w-100" style={{ borderTop: '2px solid rgba(255, 255, 255, 1.0)' }}>
+                <small className="text-muted" style={{ fontSize: '0.65rem' }}>(Stock Value)</small>
                 <strong className={`${textClass} ${strongClass}`} style={{ fontSize: '0.9rem' }}>
                   {varianceValue >= 0 ? '+' : ''}€{varianceValue.toFixed(2)}
                   {isSignificant && <span className="ms-1">⚠️</span>}
@@ -1634,7 +1634,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               {/* SYRUPS, BIB, WINES, SPIRITS: Show combined decimal value only */}
               {(line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') ? (
                 <div className="d-flex flex-column align-items-center">
-                  <small className="text-muted" style={{ fontSize: '0.7rem' }}>{line.subcategory === 'BIB' ? 'boxes' : 'bottles'}</small>
+                  <small className="text-muted" style={{ fontSize: '0.7rem' }}>({line.subcategory === 'BIB' ? 'boxes' : 'bottles'})</small>
                   <span className={`${textClass} ${strongClass}`} style={{ fontSize: '1.1rem', fontWeight: '700' }}>
                     {varianceValue >= 0 ? '+' : ''}
                     {(Number(varianceDisplayFull) + Number(varianceDisplayPartial)).toFixed(2)}
@@ -1645,7 +1645,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                   {/* Full units variance - only show if labels.unit exists */}
                   {labels.unit && (
                     <div className="d-flex flex-column align-items-center">
-                      <small className="text-muted" style={{ fontSize: '0.7rem' }}>{(line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS') ? 'cases' : labels.unit}</small>
+                      <small className="text-muted" style={{ fontSize: '0.7rem' }}>({(line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS') ? 'cases' : labels.unit})</small>
                       <span className={`${textClass} ${strongClass}`} style={{ fontSize: '1.1rem', fontWeight: '700' }}>
                         {isShortage ? '-' : '+'}
                         {Math.abs(parseFloat(varianceDisplayFull))}
@@ -1654,7 +1654,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                   )}
                   {/* Partial units variance - always show */}
                   <div className="d-flex flex-column align-items-center">
-                    <small className="text-muted" style={{ fontSize: '0.7rem' }}>{(line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS') ? 'bottles' : labels.servingUnit}</small>
+                    <small className="text-muted" style={{ fontSize: '0.7rem' }}>({(line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS') ? 'bottles' : labels.servingUnit})</small>
                     <span className={`${textClass} ${strongClass}`} style={{ fontSize: '1.1rem', fontWeight: '700' }}>
                       {isShortage ? '-' : '+'}
                       {Math.abs(parseFloat(varianceDisplayPartial))}
@@ -1664,8 +1664,8 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               )}
               
               {/* Stock Value section */}
-              <div className="d-flex flex-column align-items-center mt-2 pt-2 border-top w-100" style={{ borderColor: 'rgba(0,0,0,0.1)' }}>
-                <small className="text-muted" style={{ fontSize: '0.7rem' }}>Stock Value</small>
+              <div className="d-flex flex-column align-items-center mt-2 pt-2 w-100" style={{ borderTop: '2px solid rgba(255, 255, 255, 1.0)' }}>
+                <small className="text-muted" style={{ fontSize: '0.7rem' }}>(Stock Value)</small>
                 <strong className={`${textClass} ${strongClass}`} style={{ fontSize: '1.15rem', fontWeight: 'bold' }}>
                   {varianceValue >= 0 ? '+' : ''}€{varianceValue.toFixed(2)}
                   {isSignificant && <span className="ms-1">⚠️</span>}

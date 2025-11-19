@@ -99,7 +99,7 @@ const CategoryBreakdownChart = ({
       return null;
     }
 
-    const labels = categories.map(cat => cat.category);
+    const labels = categories.map(cat => cat.category_name || cat.category);
     const values = categories.map(cat => parseFloat(cat.total_value || 0));
     const percentages = categories.map(cat => parseFloat(cat.percentage || 0));
 

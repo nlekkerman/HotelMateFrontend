@@ -36,6 +36,8 @@ import InventoryHealthBreakdown from '@/components/stock_tracker/analytics/Inven
 import PerformanceBreakdown from '@/components/stock_tracker/analytics/PerformanceBreakdown';
 import ImprovementRecommendations from '@/components/stock_tracker/analytics/ImprovementRecommendations';
 import CategoryDistributionChart from '@/components/stock_tracker/analytics/CategoryDistributionChart';
+// Debug Panel
+import DebugPanel from '@/components/stock_tracker/analytics/DebugPanel';
 
 export default function Analytics() {
   const { hotel_slug } = useParams();
@@ -43,9 +45,9 @@ export default function Analytics() {
   const isMobile = useMediaQuery({ maxWidth: 768 });
 
   // Filter states
-  const [selectedPeriods, setSelectedPeriods] = useState([]);
-  const [period1, setPeriod1] = useState(null);
-  const [period2, setPeriod2] = useState(null);
+  const [selectedPeriods, setSelectedPeriods] = useState([]); // Array of period IDs
+  const [period1, setPeriod1] = useState(null); // Period ID
+  const [period2, setPeriod2] = useState(null); // Period ID
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -376,38 +378,47 @@ export default function Analytics() {
 
   return (
     <Container fluid className="mt-4 pb-5">
-      {/* Sticky Floating Back Button - Top Left */}
-      <Button
-        variant="outline-secondary"
-        className="shadow"
-        onClick={() => navigate(`/stock_tracker/${hotel_slug}`)}
+      {/* Sticky Floating Buttons - Top Left */}
+      <div 
         style={{
           position: "fixed",
           top: "80px",
           left: "120px",
           zIndex: 1050,
-          borderRadius: "8px",
-          padding: "8px 16px",
           display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          fontSize: "1rem",
-          backgroundColor: "rgba(255, 255, 255, 0.9)",
-          backdropFilter: "blur(8px)",
-          transition: "all 0.3s ease",
+          flexDirection: "column",
+          gap: "10px"
         }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 1)";
-          e.currentTarget.style.transform = "scale(1.05)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.9)";
-          e.currentTarget.style.transform = "scale(1)";
-        }}
-        title="Back to Stock Tracker"
       >
-        <FaArrowLeft /> Back
-      </Button>
+        {/* Back Button */}
+        <Button
+          variant="outline-secondary"
+          className="shadow"
+          onClick={() => navigate(`/stock_tracker/${hotel_slug}`)}
+          style={{
+            borderRadius: "8px",
+            padding: "8px 16px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            fontSize: "1rem",
+            backgroundColor: "rgba(255, 255, 255, 0.9)",
+            backdropFilter: "blur(8px)",
+            transition: "all 0.3s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 1)";
+            e.currentTarget.style.transform = "scale(1.05)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.9)";
+            e.currentTarget.style.transform = "scale(1)";
+          }}
+          title="Back to Stock Tracker"
+        >
+          <FaArrowLeft /> Back
+        </Button>
+      </div>
 
       {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -424,6 +435,15 @@ export default function Analytics() {
         <strong>New Analytics Dashboard:</strong> Compare multiple periods, analyze trends, and track performance with interactive charts. 
         Select periods below to get started.
       </Alert>
+
+      {/* Debug Panel */}
+      <DebugPanel
+        hotelSlug={hotel_slug}
+        selectedPeriods={selectedPeriods}
+        period1={period1}
+        period2={period2}
+        categories={categories}
+      />
 
       {/* Control Buttons - Centered */}
       <div className="d-flex justify-content-center gap-3 mb-4 flex-wrap">

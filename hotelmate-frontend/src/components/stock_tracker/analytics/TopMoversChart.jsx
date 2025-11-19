@@ -41,14 +41,31 @@ const TopMoversChart = ({
     setLoading(true);
     setError(null);
 
+    console.log('🔍 TopMoversChart: Fetching top movers data...', {
+      hotelSlug,
+      period1,
+      period2,
+      limit
+    });
+
     try {
       const response = await getTopMovers(hotelSlug, period1, period2, limit);
       
+      console.log('📦 TopMoversChart: Raw API Response:', response);
+      
       if (!response) {
+        console.error('❌ TopMoversChart: No response from API');
         setError('No top movers data available');
         setChartData(null);
         return;
       }
+
+      console.log('✅ TopMoversChart: Data received:', {
+        increases: response.biggest_increases?.length,
+        decreases: response.biggest_decreases?.length,
+        new: response.new_items?.length,
+        discontinued: response.discontinued_items?.length
+      });
 
       setChartData(response);
     } catch (err) {
@@ -64,7 +81,12 @@ const TopMoversChart = ({
    * Transform data for chart display based on active tab
    */
   const getChartDataForTab = () => {
-    if (!chartData || typeof chartData !== 'object') return null;
+    console.log('🔧 TopMoversChart: Getting data for tab:', activeTab);
+    
+    if (!chartData || typeof chartData !== 'object') {
+      console.error('❌ TopMoversChart: Invalid chart data');
+      return null;
+    }
 
     let items = [];
     let title = '';

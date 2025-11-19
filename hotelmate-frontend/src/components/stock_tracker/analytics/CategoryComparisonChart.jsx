@@ -45,16 +45,26 @@ const CategoryComparisonChart = ({
     setLoading(true);
     setError(null);
 
+    console.log('🔍 CategoryComparisonChart: Fetching data...', {
+      hotelSlug,
+      selectedPeriods,
+      periodsCount: selectedPeriods.length
+    });
+
     try {
       const response = await getCompareCategories(hotelSlug, selectedPeriods);
       
+      console.log('📦 CategoryComparisonChart: Raw API Response:', response);
+      
       // Comprehensive data validation
       if (!response) {
-        console.warn('CategoryComparisonChart: No response from API');
+        console.error('❌ CategoryComparisonChart: No response from API');
         setError('No response from server');
         setChartData(null);
         return;
       }
+
+      console.log('✅ CategoryComparisonChart: Response received, validating...');
 
       if (!response.categories) {
         console.warn('CategoryComparisonChart: Response missing categories property');
@@ -78,14 +88,26 @@ const CategoryComparisonChart = ({
       }
 
       // Transform API response to chart data format
+      console.log('🔄 CategoryComparisonChart: Starting transformation...');
       const transformedData = transformToChartData(response);
       
+      console.log('📊 CategoryComparisonChart: Transformed Data:', transformedData);
+      
       if (!transformedData) {
-        console.warn('CategoryComparisonChart: Transformation returned null');
+        console.error('❌ CategoryComparisonChart: Transformation returned null');
         setError('Invalid or empty category data received');
         setChartData(null);
         return;
       }
+      
+      console.log('✅ CategoryComparisonChart: Chart data set successfully', {
+        labels: transformedData.labels,
+        datasetsCount: transformedData.datasets?.length,
+        datasets: transformedData.datasets?.map(d => ({
+          label: d.label,
+          dataPoints: d.data?.length
+        }))
+      });
       
       setChartData(transformedData);
     } catch (err) {
@@ -115,11 +137,20 @@ const CategoryComparisonChart = ({
    * }
    */
   const transformToChartData = (apiResponse) => {
+    console.log('🔧 CategoryComparisonChart: Transform input:', apiResponse);
+    
     const { categories, periods } = apiResponse;
+
+    console.log('📋 CategoryComparisonChart: Extracted categories and periods:', {
+      categoriesType: Array.isArray(categories) ? 'array' : typeof categories,
+      categoriesLength: categories?.length,
+      periodsType: Array.isArray(periods) ? 'array' : typeof periods,
+      periodsLength: periods?.length
+    });
 
     // Validate categories data
     if (!Array.isArray(categories) || categories.length === 0) {
-      console.warn('CategoryComparisonChart: Invalid or empty categories array');
+      console.error('❌ CategoryComparisonChart: Invalid or empty categories array');
       return null;
     }
 
