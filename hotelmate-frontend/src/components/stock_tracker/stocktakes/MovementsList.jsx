@@ -51,21 +51,32 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
       setLoading(true);
       setError(null);
       
-      console.log('🔍 Fetching movements for line:', lineId);
+      console.log('🔍 ========== FETCHING MOVEMENTS ==========');
+      console.log('📋 Line ID:', lineId);
+      console.log('🏨 Hotel Slug:', hotelSlug);
+      console.log('🌐 Endpoint:', `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/movements/`);
       
       // ✅ CORRECT ENDPOINT: /api/stock_tracker/{hotel}/stocktake-lines/{id}/movements/
       const response = await api.get(
         `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/movements/`
       );
       
-      console.log('✅ Movements fetched:', response.data);
+      console.log('📥 Response status:', response.status);
+      console.log('📦 Full response data:', JSON.stringify(response.data, null, 2));
+      console.log('🔑 Response keys:', Object.keys(response.data));
       
       // Backend returns { movements: [...], summary: {...} }
       const movementsArray = response.data.movements || response.data || [];
       
+      console.log('📊 Movements array type:', Array.isArray(movementsArray));
       console.log('📊 Movement count:', movementsArray.length);
       
+      if (movementsArray.length > 0) {
+        console.log('📝 First movement:', movementsArray[0]);
+      }
+      
       setMovements(movementsArray);
+      console.log('✅ ========== MOVEMENTS LOADED ==========\n');
     } catch (err) {
       console.error('❌ Failed to fetch movements:', err);
       console.error('❌ Error response:', err.response?.data);

@@ -618,8 +618,8 @@ export const StocktakeDetail = () => {
         onClick={() => navigate(`/stock_tracker/${hotel_slug}/stocktakes`)}
         style={{
           position: "fixed",
-          top: "50px",
-          left: "120px",
+          top: "60px",
+          left: "60px",
           zIndex: 1050,
           borderRadius: "8px",
           padding: "8px 16px",
@@ -1045,15 +1045,34 @@ export const StocktakeDetail = () => {
                           })()}
                         </strong>
                       </td>
-                      <td className={`text-end ${stocktake.total_variance >= 0 ? 'bg-success bg-opacity-25' : 'bg-danger bg-opacity-25'}`}>
-                        <strong className={`fs-5 ${stocktake.total_variance >= 0 ? 'text-success' : 'text-danger'}`}>
-                          {stocktake.total_variance >= 0 ? '+' : ''}
-                          {stocktake.total_variance ? parseFloat(stocktake.total_variance).toFixed(2) : '0.00'}
+                      <td className={`text-end ${(() => {
+                        const totalVariance = Object.values(categoryTotals).reduce((sum, cat) => 
+                          sum + parseFloat(cat.variance_value || 0), 0);
+                        return totalVariance >= 0 ? 'bg-success bg-opacity-25' : 'bg-danger bg-opacity-25';
+                      })()}`}>
+                        <strong className={`fs-5 ${(() => {
+                          const totalVariance = Object.values(categoryTotals).reduce((sum, cat) => 
+                            sum + parseFloat(cat.variance_value || 0), 0);
+                          return totalVariance >= 0 ? 'text-success' : 'text-danger';
+                        })()}`}>
+                          {(() => {
+                            const totalVariance = Object.values(categoryTotals).reduce((sum, cat) => 
+                              sum + parseFloat(cat.variance_value || 0), 0);
+                            return `${totalVariance >= 0 ? '+' : ''}${totalVariance.toFixed(2)}`;
+                          })()}
                         </strong>
                       </td>
                       <td className="text-end">
-                        <strong className={`fs-5 ${stocktake.total_variance >= 0 ? 'text-success' : 'text-danger'}`}>
-                          €{stocktake.total_variance ? Math.abs(parseFloat(stocktake.total_variance)).toFixed(2) : '0.00'}
+                        <strong className={`fs-5 ${(() => {
+                          const totalVariance = Object.values(categoryTotals).reduce((sum, cat) => 
+                            sum + parseFloat(cat.variance_value || 0), 0);
+                          return totalVariance >= 0 ? 'text-success' : 'text-danger';
+                        })()}`}>
+                          €{(() => {
+                            const totalVariance = Object.values(categoryTotals).reduce((sum, cat) => 
+                              sum + parseFloat(cat.variance_value || 0), 0);
+                            return Math.abs(totalVariance).toFixed(2);
+                          })()}
                         </strong>
                       </td>
                     </tr>
@@ -1306,26 +1325,46 @@ export const StocktakeDetail = () => {
             onUpdateLine={handleUpdateLine}
             onLineUpdated={(updatedLine) => {
               // Direct line update callback - replaces line in state
-              console.log("📥 PARENT: onLineUpdated received:", {
+              console.log("📥 PARENT: onLineUpdated received - Full line:", updatedLine);
+              console.log("📥 PARENT: Key values:", {
                 id: updatedLine.id,
                 sku: updatedLine.item_sku,
                 purchases: updatedLine.purchases,
                 waste: updatedLine.waste,
                 expected_qty: updatedLine.expected_qty,
                 variance_qty: updatedLine.variance_qty,
+                expected_display_full: updatedLine.expected_display_full_units,
+                expected_display_partial: updatedLine.expected_display_partial_units,
               });
 
               setLines((prevLines) => {
+                console.log("🔍 PARENT: Current lines count:", prevLines.length);
+                const lineIndex = prevLines.findIndex(l => l.id === updatedLine.id);
+                console.log("🔍 PARENT: Found line at index:", lineIndex);
+                
+                if (lineIndex === -1) {
+                  console.error("❌ PARENT: Line not found in state! ID:", updatedLine.id);
+                  return prevLines;
+                }
+                
+                const oldLine = prevLines[lineIndex];
+                console.log("🔄 PARENT: Replacing line in state:", {
+                  old_purchases: oldLine.purchases,
+                  new_purchases: updatedLine.purchases,
+                  old_waste: oldLine.waste,
+                  new_waste: updatedLine.waste,
+                  old_expected: oldLine.expected_qty,
+                  new_expected: updatedLine.expected_qty,
+                });
+                
                 const newLines = prevLines.map((line) => {
                   if (line.id === updatedLine.id) {
-                    console.log("🔄 PARENT: Replacing line in state:", {
-                      old_purchases: line.purchases,
-                      new_purchases: updatedLine.purchases,
-                    });
                     return updatedLine;
                   }
                   return line;
                 });
+                
+                console.log("✅ PARENT: State updated, new line:", newLines[lineIndex]);
                 return newLines;
               });
             }}

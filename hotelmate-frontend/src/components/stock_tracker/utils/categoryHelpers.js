@@ -134,20 +134,23 @@ export function getCountingLabels(categoryCode, size = '', inputFields = null, s
       
     case 'S': // Spirits
       return {
-        fullLabel: 'Full Bottles',
-        fullPlaceholder: 'e.g., 10',
-        fullStep: '1',
-        fullInputType: 'number',
-        partialLabel: 'Remaining Shots',
-        partialPlaceholder: 'e.g., 14',
+        fullLabel: null, // No separate full units field for SPIRITS
+        fullPlaceholder: null,
+        fullStep: null,
+        fullInputType: null,
+        partialLabel: 'Total Bottles',
+        partialPlaceholder: 'e.g., 10.5 or 7.6',
         partialStep: '0.01',
         partialInputType: 'number',
-        unit: 'bottles',
-        servingUnit: 'shots',
-        helpText: 'Enter number of full bottles, then shots remaining in opened bottle',
-        example: 'Example: 10 bottles + 14 shots = 214 shots total',
+        unit: null, // No full units
+        servingUnit: 'bottles',
+        helpText: 'Enter total bottles as decimal (e.g., 7.6 = 7 bottles + 0.6)',
+        example: 'Example: 10.5 bottles',
         showPartial: true,
-        allowDecimalFull: false
+        showFull: false, // Hide full units field (single combined input)
+        allowDecimalFull: false,
+        allowDecimalPartial: true,
+        partialOptional: false
       };
       
     case 'W': // Wine

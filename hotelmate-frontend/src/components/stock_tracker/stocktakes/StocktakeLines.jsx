@@ -25,7 +25,7 @@
  * 
  * See: BACKEND_API_COMPLETE_REFERENCE_FOR_FRONTEND.md for full API documentation
  */
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Card, Table, Form, Button, Badge } from 'react-bootstrap';
 import { FaCheck } from 'react-icons/fa';
 import { getCountingLabels } from '../utils/categoryHelpers';
@@ -34,6 +34,7 @@ import { CategoryTotalsRow } from './CategoryTotalsRow';
 import { useCategoryTotals } from '../hooks/useCategoryTotals';
 import { MovementsList } from './MovementsList';
 import api from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
 import {
   validatePartialUnits,
   formatUserInput,
@@ -41,11 +42,13 @@ import {
 } from '../utils/stocktakeCalculations';
 
 export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdated, hotelSlug, stocktakeId }) => {
+  const { user } = useAuth();
   const [lineInputs, setLineInputs] = useState({});
   const [validationErrors, setValidationErrors] = useState({});
   const [showPurchases, setShowPurchases] = useState({});
   const [showWaste, setShowWaste] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
 
   const { categoryTotals, loading: totalsLoading, refetch: refetchTotals } =
     useCategoryTotals(hotelSlug, stocktakeId);
@@ -117,9 +120,9 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     // If user has interacted with this line, return their input state
     if (lineInputs[lineId]) return lineInputs[lineId];
     
-    // For SYRUPS, WINES, and BIB: combine full + partial from backend into single fullUnits field
+    // For SYRUPS, WINES, SPIRITS, and BIB: combine full + partial from backend into single fullUnits field
     if (line.subcategory_name === 'SYRUPS' || line.subcategory === 'SYRUPS' ||
-        line.subcategory === 'BIB' || line.category_code === 'W') {
+        line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') {
       const combinedValue = (Number(line.counted_full_units || 0) + Number(line.counted_partial_units || 0));
       return {
         fullUnits: combinedValue !== 0 ? combinedValue.toFixed(2) : '',  // ✅ Always show combined value
@@ -319,11 +322,12 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     // Parse inputs - send whatever user entered, backend will validate
     let fullUnits, partialUnits;
     
-    // ✅ SYRUPS, WINES, and BIB: Read from fullUnits field and split into full + partial
+    // ✅ SYRUPS, WINES, SPIRITS, and BIB: Read from fullUnits field and split into full + partial
     // SYRUPS: User enters 10.5 bottles → full=10, partial=0.5
     // BIB: User enters 2.5 boxes → full=2, partial=0.5
+    // SPIRITS/WINE: User enters 7.6 bottles → full=7, partial=0.6
     if ((line.category_code === 'M' && line.subcategory === 'SYRUPS') ||
-        line.subcategory === 'BIB' || line.category_code === 'W') {
+        line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') {
       const combinedValue = parseFloat(inputs.fullUnits);
       if (isNaN(combinedValue)) {
         fullUnits = 0;
@@ -332,7 +336,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         fullUnits = Math.floor(combinedValue);  // 10 bottles or 2 boxes
         partialUnits = parseFloat((combinedValue - fullUnits).toFixed(3));  // 0.5
       }
-      console.log('🍯 Combined value split:', { 
+      console.log('🍯 Combined value split (SYRUPS/BIB/WINE/SPIRITS):', { 
         category: line.category_code, 
         subcategory: line.subcategory,
         original: inputs.fullUnits, 
@@ -396,20 +400,31 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
    * Backend expects: { movement_type: 'PURCHASE', quantity, notes }
    */
   const handleSavePurchases = async (lineId, line) => {
-    console.log('💾 SAVE PURCHASES - Line:', lineId);
+    console.log('\n🚀 ========== SAVE PURCHASES START ==========');
+    console.log('📋 Line ID:', lineId);
+    console.log('📦 Item:', line.item_name, '(SKU:', line.item_sku + ')');
+    console.log('👤 Current User:', user ? { id: user.id, name: user.staff_name || user.username } : 'NOT FOUND');
+    
     const inputs = getLineInputs(lineId, line);
+    console.log('📝 Inputs:', inputs);
     
     if (!inputs.purchasesQty || inputs.purchasesQty === '') {
+      console.warn('❌ Validation failed: Empty quantity');
       setValidationErrors({ [lineId]: { purchasesQty: 'Please enter a purchases quantity' } });
       return;
     }
 
     const purchasesQty = parseFloat(inputs.purchasesQty);
+    console.log('🔢 Parsed quantity:', purchasesQty);
+    
     if (isNaN(purchasesQty) || purchasesQty <= 0) {
+      console.warn('❌ Validation failed: Invalid quantity');
       setValidationErrors({ [lineId]: { purchasesQty: 'Must be a valid number greater than 0' } });
       return;
     }
 
+    console.log('✅ Validation passed');
+    
     // Clear error only if validation passes
     setValidationErrors((prev) => {
       const { [lineId]: _, ...rest } = prev;
@@ -423,36 +438,67 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         notes: 'Added via stocktake',
       };
       
-      console.log('🧮 Purchases Payload:', payload);
+      // Add staff info if available
+      if (user) {
+        if (user.id) payload.staff_id = user.id;
+        if (user.staff_name) payload.staff_name = user.staff_name;
+        if (user.username && !user.staff_name) payload.staff_name = user.username;
+      }
+      
+      console.log('📤 Payload:', JSON.stringify(payload, null, 2));
+      console.log('🌐 Endpoint:', `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/add-movement/`);
 
-      // ✅ CORRECT ENDPOINT: /api/stock_tracker/{hotel_identifier}/stocktake-lines/{id}/add-movement/
+      console.log('⏳ Sending request...');
       const response = await api.post(
         `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/add-movement/`,
         payload
       );
 
+      console.log('📥 Response received!');
+      console.log('📊 Status:', response.status);
+      console.log('📦 Full response:', JSON.stringify(response.data, null, 2));
+      
       // Backend returns updated line in response.data.line
       const updatedLine = response.data.line || response.data;
       
-      console.log('✅ Purchases saved - Full backend response:', response.data);
-      console.log('✅ Updated line from backend:', {
-        id: updatedLine?.id,
-        purchases: updatedLine?.purchases,
-        expected_qty: updatedLine?.expected_qty,
-        variance_qty: updatedLine?.variance_qty,
-        all_line_keys: Object.keys(updatedLine || {}),
-        full_line: updatedLine
+      if (!updatedLine) {
+        console.error('❌ No updated line in response!');
+        console.error('Response structure:', Object.keys(response.data));
+        return;
+      }
+      
+      console.log('✅ Purchases saved successfully!');
+      console.log('📈 Line updates:', {
+        id: updatedLine.id,
+        purchases_OLD: line.purchases,
+        purchases_NEW: updatedLine.purchases,
+        expected_qty_OLD: line.expected_qty,
+        expected_qty_NEW: updatedLine.expected_qty,
+        variance_qty_NEW: updatedLine.variance_qty,
       });
       
       // Update UI silently with backend data (no optimistic update)
+      console.log('🔄 Checking onLineUpdated callback...');
+      console.log('   - updatedLine exists:', !!updatedLine);
+      console.log('   - onLineUpdated type:', typeof onLineUpdated);
+      console.log('   - onLineUpdated is function:', typeof onLineUpdated === 'function');
+      
       if (updatedLine && typeof onLineUpdated === 'function') {
-        console.log('🔄 Calling onLineUpdated with updated line');
-        onLineUpdated(updatedLine);
+        console.log('🔄 Calling onLineUpdated with line:', updatedLine.id);
+        try {
+          onLineUpdated(updatedLine);
+          console.log('✅ onLineUpdated callback executed successfully');
+        } catch (callbackErr) {
+          console.error('❌ onLineUpdated callback failed:', callbackErr);
+        }
       } else {
-        console.warn('⚠️ No updatedLine or onLineUpdated callback missing');
+        console.warn('⚠️ Cannot update UI!');
+        console.warn('   updatedLine:', !!updatedLine);
+        console.warn('   onLineUpdated:', typeof onLineUpdated);
       }
 
       // Clear input after successful save
+      console.log('🧹 Clearing input...');
       setLineInputs((prev) => ({
         ...prev,
         [lineId]: {
@@ -460,12 +506,22 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
           purchasesQty: '',
         },
       }));
+      console.log('✅ Input cleared');
       
       // Refetch totals to update category summaries
-      refetchTotals?.();
+      if (refetchTotals) {
+        console.log('🔄 Refetching totals...');
+        refetchTotals();
+      }
+      
+      console.log('🎉 ========== SAVE PURCHASES COMPLETE ==========\n');
     } catch (err) {
-      console.error('❌ Save purchases failed:', err);
-      console.error('Error details:', err.response?.data);
+      console.error('\n💥 ========== SAVE PURCHASES FAILED ==========');
+      console.error('❌ Error:', err);
+      console.error('📝 Message:', err.message);
+      console.error('🌐 Status:', err.response?.status);
+      console.error('📦 Response:', JSON.stringify(err.response?.data, null, 2));
+      console.error('🔗 URL:', err.config?.url);
       
       setValidationErrors({
         [lineId]: { purchasesQty: `Failed to save: ${err.response?.data?.message || err.message}` }
@@ -478,20 +534,31 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
    * Backend expects: { movement_type: 'WASTE', quantity, notes }
    */
   const handleSaveWaste = async (lineId, line) => {
-    console.log('💾 SAVE WASTE - Line:', lineId);
+    console.log('\n🚀 ========== SAVE WASTE START ==========');
+    console.log('📋 Line ID:', lineId);
+    console.log('📦 Item:', line.item_name, '(SKU:', line.item_sku + ')');
+    console.log('👤 Current User:', user ? { id: user.id, name: user.staff_name || user.username } : 'NOT FOUND');
+    
     const inputs = getLineInputs(lineId, line);
+    console.log('📝 Inputs:', inputs);
     
     if (!inputs.wasteQuantity || inputs.wasteQuantity === '') {
+      console.warn('❌ Validation failed: Empty quantity');
       setValidationErrors({ [lineId]: { wasteQuantity: 'Please enter a waste quantity' } });
       return;
     }
 
     const wasteQty = parseFloat(inputs.wasteQuantity);
+    console.log('🔢 Parsed quantity:', wasteQty);
+    
     if (isNaN(wasteQty) || wasteQty <= 0) {
+      console.warn('❌ Validation failed: Invalid quantity');
       setValidationErrors({ [lineId]: { wasteQuantity: 'Must be a valid number greater than 0' } });
       return;
     }
 
+    console.log('✅ Validation passed');
+    
     // Clear error only if validation passes
     setValidationErrors((prev) => {
       const { [lineId]: _, ...rest } = prev;
@@ -505,29 +572,67 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         notes: 'Added via stocktake',
       };
       
-      console.log('🧮 Waste Payload:', payload);
+      // Add staff info if available
+      if (user) {
+        if (user.id) payload.staff_id = user.id;
+        if (user.staff_name) payload.staff_name = user.staff_name;
+        if (user.username && !user.staff_name) payload.staff_name = user.username;
+      }
+      
+      console.log('📤 Payload:', JSON.stringify(payload, null, 2));
+      console.log('🌐 Endpoint:', `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/add-movement/`);
 
-      // ✅ CORRECT ENDPOINT: /api/stock_tracker/{hotel_identifier}/stocktake-lines/{id}/add-movement/
+      console.log('⏳ Sending request...');
       const response = await api.post(
         `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/add-movement/`,
         payload
       );
 
+      console.log('📥 Response received!');
+      console.log('📊 Status:', response.status);
+      console.log('📦 Full response:', JSON.stringify(response.data, null, 2));
+      
       // Backend returns updated line in response.data.line
       const updatedLine = response.data.line || response.data;
       
-      console.log('✅ Waste saved - Updating UI from backend:', {
-        waste: updatedLine?.waste,
-        expected_qty: updatedLine?.expected_qty,
-        variance_qty: updatedLine?.variance_qty
+      if (!updatedLine) {
+        console.error('❌ No updated line in response!');
+        console.error('Response structure:', Object.keys(response.data));
+        return;
+      }
+      
+      console.log('✅ Waste saved successfully!');
+      console.log('📈 Line updates:', {
+        id: updatedLine.id,
+        waste_OLD: line.waste,
+        waste_NEW: updatedLine.waste,
+        expected_qty_OLD: line.expected_qty,
+        expected_qty_NEW: updatedLine.expected_qty,
+        variance_qty_NEW: updatedLine.variance_qty,
       });
       
       // Update UI silently with backend data (no optimistic update)
+      console.log('🔄 Checking onLineUpdated callback...');
+      console.log('   - updatedLine exists:', !!updatedLine);
+      console.log('   - onLineUpdated type:', typeof onLineUpdated);
+      console.log('   - onLineUpdated is function:', typeof onLineUpdated === 'function');
+      
       if (updatedLine && typeof onLineUpdated === 'function') {
-        onLineUpdated(updatedLine);
+        console.log('🔄 Calling onLineUpdated with line:', updatedLine.id);
+        try {
+          onLineUpdated(updatedLine);
+          console.log('✅ onLineUpdated callback executed successfully');
+        } catch (callbackErr) {
+          console.error('❌ onLineUpdated callback failed:', callbackErr);
+        }
+      } else {
+        console.warn('⚠️ Cannot update UI!');
+        console.warn('   updatedLine:', !!updatedLine);
+        console.warn('   onLineUpdated:', typeof onLineUpdated);
       }
 
       // Clear input after successful save
+      console.log('🧹 Clearing input...');
       setLineInputs((prev) => ({
         ...prev,
         [lineId]: {
@@ -535,12 +640,22 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
           wasteQuantity: '',
         },
       }));
+      console.log('✅ Input cleared');
       
       // Refetch totals to update category summaries
-      refetchTotals?.();
+      if (refetchTotals) {
+        console.log('🔄 Refetching totals...');
+        refetchTotals();
+      }
+      
+      console.log('🎉 ========== SAVE WASTE COMPLETE ==========\n');
     } catch (err) {
-      console.error('❌ Save waste failed:', err);
-      console.error('Error details:', err.response?.data);
+      console.error('\n💥 ========== SAVE WASTE FAILED ==========');
+      console.error('❌ Error:', err);
+      console.error('📝 Message:', err.message);
+      console.error('🌐 Status:', err.response?.status);
+      console.error('📦 Response:', JSON.stringify(err.response?.data, null, 2));
+      console.error('🔗 URL:', err.config?.url);
       
       setValidationErrors({
         [lineId]: { wasteQuantity: `Failed to save: ${err.response?.data?.message || err.message}` }
@@ -554,7 +669,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
    * Backend will calculate opening_qty = (full × uom) + partial
    */
   const handleSaveOpeningStock = async (lineId, line) => {
-    console.log('💾 SAVE OPENING STOCK - Line:', lineId);
     const inputs = getLineInputs(lineId, line);
     
     // Clear any previous validation errors
@@ -569,17 +683,22 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     const uom = parseFloat(line.item_uom || line.uom || 1);
 
     try {
-      // ✅ SYRUPS: opening_qty = bottles directly (no conversion!)
+      // ✅ SYRUPS, SPIRITS, WINES & BIB: opening_qty = bottles/boxes directly (no conversion!)
       // User enters 10.5 → send opening_qty = 10.5
       let payload;
       
-      if (line.category_code === 'M' && line.subcategory === 'SYRUPS') {
+      if ((line.category_code === 'M' && line.subcategory === 'SYRUPS') || 
+          line.subcategory === 'BIB' || 
+          line.category_code === 'W' || 
+          line.category_code === 'S') {
         payload = {
           opening_qty: parseFloat(partialUnits).toFixed(4)
         };
-        console.log('🍯 SYRUPS opening (bottles directly):', { 
+        console.log('🍯 Combined opening (SYRUPS/SPIRITS/WINES/BIB - bottles/boxes directly):', { 
           input: inputs.openingPartialUnits,
-          opening_qty: partialUnits
+          opening_qty: partialUnits,
+          category: line.category_code,
+          subcategory: line.subcategory
         });
       } else {
         // Other categories: calculate from full + partial
@@ -657,6 +776,19 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     const varianceDisplayFull = line.variance_display_full_units || '0';
     const varianceDisplayPartial = line.variance_display_partial_units || '0';
     
+    // Debug logging for SYRUPS variance
+    if (line.subcategory === 'SYRUPS' && line.sku === 'M0006') {
+      console.log('🔍 M0006 Variance Debug:', {
+        sku: line.sku,
+        name: line.name,
+        variance_display_full_units: line.variance_display_full_units,
+        variance_display_partial_units: line.variance_display_partial_units,
+        varianceDisplayFull,
+        varianceDisplayPartial,
+        calculated: Number(varianceDisplayFull) + Number(varianceDisplayPartial)
+      });
+    }
+    
     const isShortage = varianceValue < 0;
     const isSurplus = varianceValue > 0;
     const isSignificant = Math.abs(varianceValue) > 10;
@@ -704,10 +836,20 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               className="border rounded bg-white shadow-sm p-2 w-100 d-flex flex-column align-items-center gap-2"
               style={{ minWidth: 180 }}
             >
+              {/* SYRUPS, WINES, SPIRITS & BIB: Show current opening value above input */}
+              {(line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') && (line.opening_display_full_units || line.opening_display_partial_units || line.opening_qty) && (
+                <div className="text-center mb-2 p-2 bg-info-subtle rounded">
+                  <small className="text-muted d-block" style={{ fontSize: '0.6rem' }}>Current Opening</small>
+                  <strong className="text-primary" style={{ fontSize: '0.9rem' }}>
+                    {(Number(line.opening_display_full_units || 0) + Number(line.opening_display_partial_units || 0)).toFixed(2)} {line.subcategory === 'BIB' ? 'boxes' : line.category_code === 'S' ? 'bottles' : 'bottles'}
+                  </strong>
+                </div>
+              )}
+              
               {/* Input fields for editing opening stock */}
               <div className="d-flex flex-column gap-2 w-100">
-                {/* Full Units - Hidden for SYRUPS */}
-                {labels.showFull !== false && (
+                {/* Full Units - Hidden for SYRUPS, SPIRITS, WINES & BIB (combined decimal input) */}
+                {labels.showFull !== false && line.subcategory !== 'SYRUPS' && line.subcategory !== 'BIB' && line.category_code !== 'W' && line.category_code !== 'S' && (
                   <div>
                     <small className="text-muted d-block text-center mb-1" style={{ fontSize: '0.7rem' }}>
                       {labels.unit}
@@ -757,28 +899,26 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                     isInvalid={!!lineErrors.openingFullUnits}
                     disabled={isLocked}
                   />
-                  {/* Display opening stock in total bottles for Bottled Beer (cases) */}
-                  {line.category_code === 'B' && line.item_size?.includes('Doz') && (
-                    <small className="text-success d-block text-center mt-1" style={{ fontSize: '0.65rem', opacity: 0.8 }}>
-                      ({((parseFloat(line.opening_display_full_units || 0) * (line.uom || 12)) + parseFloat(line.opening_display_partial_units || 0))} bottles)
-                    </small>
-                  )}
+                
                 </div>
                 )}
 
-                {/* Partial Units */}
+                {/* Partial Units (Combined input for SYRUPS, SPIRITS, WINES, BIB) */}
                 <div>
                   <small className="text-muted d-block text-center mb-1" style={{ fontSize: '0.7rem' }}>
-                    {labels.servingUnit}
+                    {(line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S')
+                      ? `${labels.servingUnit} (Full: ${Math.floor(Number(line.opening_display_full_units || 0) + Number(line.opening_display_partial_units || 0))} + Partial: ${((Number(line.opening_display_full_units || 0) + Number(line.opening_display_partial_units || 0)) % 1).toFixed(2)})`
+                      : labels.servingUnit
+                    }
                   </small>
                   <Form.Control
                     type="number"
-                    step={inputConfig.step}
+                    step={(line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') ? '0.01' : inputConfig.step}
                     min="0"
                     size="sm"
                     value={inputs.openingPartialUnits !== '' 
                       ? inputs.openingPartialUnits 
-                      : (line.category_code === 'M' && line.subcategory === 'SYRUPS' 
+                      : ((line.category_code === 'M' && line.subcategory === 'SYRUPS') || line.category_code === 'S'
                           ? (parseFloat(line.opening_qty || 0).toFixed(2))
                           : (line.opening_display_partial_units || '0'))
                     }
@@ -807,10 +947,20 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                       }
                     }}
                     className="bg-light text-center"
-                    placeholder={`${labels.servingUnit}`}
+                    placeholder={
+                      line.subcategory === 'BIB' ? 'boxes (e.g. 2.50)' :
+                      (line.subcategory === 'SYRUPS' || line.category_code === 'W' || line.category_code === 'S') ? 'bottles (e.g. 10.50)' : 
+                      labels.servingUnit
+                    }
                     isInvalid={!!lineErrors.openingPartialUnits}
                     disabled={isLocked}
                   />
+                    {/* Display opening stock in total bottles for Bottled Beer (cases) */}
+                  {line.category_code === 'B' && line.item_size?.includes('Doz') && (
+                    <small className="text-success d-block text-center mt-1" style={{ fontSize: '0.65rem', opacity: 0.8 }}>
+                      ({((parseFloat(line.opening_display_full_units || 0) * (line.uom || 12)) + parseFloat(line.opening_display_partial_units || 0))} bottles)
+                    </small>
+                  )}
                 </div>
               </div>
 
@@ -996,14 +1146,24 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         {/* Expected */}
         <td className="text-center" style={{ borderRight: '1px solid #dee2e6', backgroundColor: 'rgba(25, 135, 84, 0.08)' }}>
           <div className="d-flex flex-column align-items-center gap-1 border border-success border-1 rounded p-2 bg-white shadow-sm">
-            <div>
-              <strong className="text-success">{line.expected_display_full_units || '0'}</strong>
-              <small className="text-muted ms-1">{labels.unit}</small>
-            </div>
-            <div>
-              <strong className="text-success">{line.expected_display_partial_units || '0'}</strong>
-              <small className="text-muted ms-1">{labels.servingUnit}</small>
-            </div>
+            {/* SYRUPS: Show combined bottles value only */}
+            {line.subcategory === 'SYRUPS' ? (
+              <div>
+                <strong className="text-success">{(Number(line.expected_display_full_units || 0) + Number(line.expected_display_partial_units || 0)).toFixed(2)}</strong>
+                <small className="text-muted ms-1">bottles</small>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <strong className="text-success">{line.expected_display_full_units || '0'}</strong>
+                  <small className="text-muted ms-1">{(line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS') ? 'cases' : labels.unit}</small>
+                </div>
+                <div>
+                  <strong className="text-success">{line.expected_display_partial_units || '0'}</strong>
+                  <small className="text-muted ms-1">{(line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS') ? 'bottles' : labels.servingUnit}</small>
+                </div>
+              </>
+            )}
             <div className="d-flex flex-column align-items-center mt-1">
               <small className="text-muted" style={{ fontSize: '0.6rem' }}>value</small>
               <span className="text-success" style={{ fontSize: '0.75rem' }}>€{parseFloat(line.expected_value || 0).toFixed(2)}</span>
@@ -1036,45 +1196,45 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                 </small>
               )}
               
-              {/* SYRUPS, WINES & BIB: Show current counted value above input */}
-              {(line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W') && (line.counted_full_units !== null || line.counted_partial_units !== null) && (
+              {/* SYRUPS, WINES, SPIRITS & BIB: Show current counted value above input */}
+              {(line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') && (line.counted_full_units !== null || line.counted_partial_units !== null) && (
                 <div className="text-center mb-2 p-2 bg-success-subtle rounded">
                   <small className="text-muted d-block" style={{ fontSize: '0.6rem' }}>Current Counted</small>
                   <strong className="text-success" style={{ fontSize: '0.9rem' }}>
-                    {(Number(line.counted_full_units || 0) + Number(line.counted_partial_units || 0)).toFixed(2)} {line.subcategory === 'BIB' ? 'boxes' : 'bottles'}
+                    {(Number(line.counted_full_units || 0) + Number(line.counted_partial_units || 0)).toFixed(2)} {line.subcategory === 'BIB' ? 'boxes' : line.category_code === 'S' ? 'bottles' : 'bottles'}
                   </strong>
                 </div>
               )}
               
               {/* Two inputs stacked vertically */}
               <div className="d-flex flex-column gap-2 w-100">
-                {/* Cases/Full Units - SHOW for SYRUPS, BIB & WINES (combined value), SHOW for others */}
-                {(labels.showFull !== false || line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W') && (
+                {/* Cases/Full Units - SHOW for SYRUPS, BIB, WINES & SPIRITS (combined value), SHOW for others */}
+                {(labels.showFull !== false || line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') && (
                   <div>
                     <small className="text-muted d-block text-center mb-1" style={{ fontSize: '0.7rem' }}>
-                      {(line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W')
-                        ? `${labels.unit} (Full: ${line.counted_full_units || 0} + Partial: ${Number(line.counted_partial_units || 0).toFixed(2)})`
+                      {(line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S')
+                        ? `${labels.servingUnit} (Full: ${Math.floor(Number(line.counted_full_units || 0) + Number(line.counted_partial_units || 0))} + Partial: ${((Number(line.counted_full_units || 0) + Number(line.counted_partial_units || 0)) % 1).toFixed(2)})`
                         : labels.unit
                       }
                     </small>
                     <Form.Control
                       type="number"
-                      step={(line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W') ? '0.01' : '1'}
+                      step={(line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') ? '0.01' : '1'}
                       min="0"
                       size="sm"
                       value={inputs.fullUnits}
                     onChange={(e) => {
                       const value = e.target.value;
-                      // SYRUPS, BIB & WINES: allow decimals, others: whole numbers only
-                      if (line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W') {
+                      // SYRUPS, BIB, WINES & SPIRITS: allow decimals, others: whole numbers only
+                      if (line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') {
                         updateLineInput(line.id, 'fullUnits', value);
                       } else if (value === '' || /^\d+$/.test(value)) {
                         updateLineInput(line.id, 'fullUnits', value);
                       }
                     }}
                     onKeyDown={(e) => {
-                      // SYRUPS, BIB & WINES: allow decimals, others: block decimals
-                      if (line.subcategory !== 'SYRUPS' && line.subcategory !== 'BIB' && line.category_code !== 'W') {
+                      // SYRUPS, BIB, WINES & SPIRITS: allow decimals, others: block decimals
+                      if (line.subcategory !== 'SYRUPS' && line.subcategory !== 'BIB' && line.category_code !== 'W' && line.category_code !== 'S') {
                         if (e.key === '.' || e.key === ',' || e.key === '-' || e.key === 'e' || e.key === 'E') {
                           e.preventDefault();
                         }
@@ -1100,7 +1260,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                     className="bg-light text-center"
                     placeholder={
                       line.subcategory === 'BIB' ? 'boxes (e.g. 2.50)' :
-                      (line.subcategory === 'SYRUPS' || line.category_code === 'W') ? 'bottles (e.g. 10.50)' : 
+                      (line.subcategory === 'SYRUPS' || line.category_code === 'W' || line.category_code === 'S') ? 'bottles (e.g. 10.50)' : 
                       labels.unit
                     }
                     isInvalid={!!lineErrors.fullUnits}
@@ -1109,8 +1269,8 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                 </div>
                 )}
                 
-                {/* Bottles/Partial Units - Hidden for SYRUPS, BIB & WINES */}
-                {line.subcategory !== 'SYRUPS' && line.subcategory !== 'BIB' && line.category_code !== 'W' && (
+                {/* Bottles/Partial Units - Hidden for SYRUPS, BIB, WINES & SPIRITS */}
+                {line.subcategory !== 'SYRUPS' && line.subcategory !== 'BIB' && line.category_code !== 'W' && line.category_code !== 'S' && (
                 <div>
                   <small className="text-muted d-block text-center mb-1" style={{ fontSize: '0.7rem' }}>
                     {labels.servingUnit}
@@ -1172,18 +1332,27 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                 💾 Save
               </Button>
               
-              {/* Stock value and servings - muted text below inputs */}
+              {/* Stock value and quantity - muted text below inputs */}
               {(line.counted_full_units !== null || line.counted_partial_units !== null) && (
                 <div className="mt-2 pt-2 border-top w-100 text-center">
                   <div className="d-flex justify-content-around align-items-center">
                     <div className="d-flex flex-column align-items-center">
-                      <small className="text-muted" style={{ fontSize: '0.65rem' }}>Value</small>
+                      <small className="text-muted" style={{ fontSize: '0.65rem' }}>Stock Value</small>
                       <small className="text-success fw-bold" style={{ fontSize: '0.75rem' }}>
                         €{parseFloat(line.counted_value || 0).toFixed(2)}
                       </small>
                     </div>
                     <div className="d-flex flex-column align-items-center">
-                      <small className="text-muted" style={{ fontSize: '0.65rem' }}>Servings</small>
+                      <small className="text-muted" style={{ fontSize: '0.65rem' }}>
+                        {/* For UOM=1 (SYRUPS, SPIRITS, WINES, BIB), counted_qty = bottles */}
+                        {/* For UOM>1 (DRAUGHT, BOTTLED BEER, SOFT_DRINKS), counted_qty = servings */}
+                        {line.subcategory === 'SYRUPS' || line.subcategory === 'BULK_JUICES' 
+                          ? 'Bottles' 
+                          : line.category_code === 'S' || line.category_code === 'W'
+                            ? 'Bottles'
+                            : 'Servings'
+                        }
+                      </small>
                       <small className="text-primary fw-bold" style={{ fontSize: '0.75rem' }}>
                         {line.subcategory === 'BIB' && line.variance_drink_servings 
                           ? `${Math.abs(parseFloat(line.variance_drink_servings)).toLocaleString()}`
@@ -1205,35 +1374,57 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               <span className="text-muted">-</span>
             </div>
           ) : (
-            <div className={`d-flex flex-column align-items-center gap-1 p-2 rounded ${bgClass}`}>
-              <div>
-                <strong className={`${textClass} ${strongClass}`}>
-                  {isShortage ? '-' : '+'}
-                  {Math.abs(parseFloat(varianceDisplayFull))}
+            <div className={`d-flex flex-column align-items-center gap-2 p-2 rounded ${bgClass}`}>
+              {/* SYRUPS, BIB, WINES, SPIRITS: Show combined decimal value only */}
+              {(line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') ? (
+                <div className="d-flex flex-column align-items-center">
+                  <small className="text-muted" style={{ fontSize: '0.65rem' }}>{line.subcategory === 'BIB' ? 'boxes' : 'bottles'}</small>
+                  <strong className={`${textClass} ${strongClass}`}>
+                    {varianceValue >= 0 ? '+' : ''}
+                    {(Number(varianceDisplayFull) + Number(varianceDisplayPartial)).toFixed(2)}
+                  </strong>
+                </div>
+              ) : (
+                <>
+                  {/* Full units variance - only show if labels.unit exists */}
+                  {labels.unit && (
+                    <div className="d-flex flex-column align-items-center">
+                      <small className="text-muted" style={{ fontSize: '0.65rem' }}>{(line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS') ? 'cases' : labels.unit}</small>
+                      <strong className={`${textClass} ${strongClass}`}>
+                        {isShortage ? '-' : '+'}
+                        {Math.abs(parseFloat(varianceDisplayFull))}
+                      </strong>
+                    </div>
+                  )}
+                  {/* Partial units variance - always show */}
+                  <div className="d-flex flex-column align-items-center">
+                    <small className="text-muted" style={{ fontSize: '0.65rem' }}>{(line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS') ? 'bottles' : labels.servingUnit}</small>
+                    <strong className={`${textClass} ${strongClass}`}>
+                      {isShortage ? '-' : '+'}
+                      {Math.abs(parseFloat(varianceDisplayPartial))}
+                    </strong>
+                  </div>
+                </>
+              )}
+              
+              {/* Stock Value section */}
+              <div className="d-flex flex-column align-items-center mt-1 pt-1 border-top w-100" style={{ borderColor: 'rgba(0,0,0,0.1)' }}>
+                <small className="text-muted" style={{ fontSize: '0.65rem' }}>Stock Value</small>
+                <strong className={`${textClass} ${strongClass}`} style={{ fontSize: '0.9rem' }}>
+                  {varianceValue >= 0 ? '+' : ''}€{varianceValue.toFixed(2)}
+                  {isSignificant && <span className="ms-1">⚠️</span>}
                 </strong>
-                <small className="text-muted ms-1">{labels.unit}</small>
               </div>
-              <div>
-                <strong className={`${textClass} ${strongClass}`}>
-                  {isShortage ? '-' : '+'}
-                  {Math.abs(parseFloat(varianceDisplayPartial))}
-                </strong>
-                <small className="text-muted ms-1">{labels.servingUnit}</small>
-              </div>
-              <small className={`${textClass} ${strongClass}`}>
-                {varianceValue >= 0 ? '+' : ''}€{varianceValue.toFixed(2)}
-                {isSignificant && <span className="ms-1">⚠️</span>}
-              </small>
+              
+              {/* Servings info */}
               <small className="text-muted" style={{ fontSize: '0.7rem' }}>
                 ({varianceQty >= 0 ? '+' : ''}{varianceQty.toFixed(2)} {line.subcategory === 'BIB' ? 'boxes' : 'servings'})
               </small>
+              
               {/* BIB ONLY: Show drink servings from variance */}
-              {line.variance_drink_servings && (
+              {line.subcategory === 'BIB' && line.variance_drink_servings && (
                 <small className="text-info" style={{ fontSize: '0.65rem', marginTop: '4px' }}>
-                  {Math.abs(parseFloat(line.variance_drink_servings)).toLocaleString()} servings
-                  {line.item && line.item.size_value && (
-                    <span className="text-muted"> ({line.item.size_value}ml)</span>
-                  )}
+                  ({Math.abs(parseFloat(line.variance_drink_servings)).toLocaleString()} drink servings)
                 </small>
               )}
             </div>
@@ -1418,13 +1609,15 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               </div>
             )}
             
-            {/* Stock value and servings */}
+            {/* Stock value and quantity */}
             {(line.counted_full_units !== null || line.counted_partial_units !== null) && (
               <div className="d-flex flex-column align-items-center gap-1 mt-2">
                 <small className="text-muted" style={{ fontSize: '0.7rem' }}>
-                  €{parseFloat(line.counted_value || 0).toFixed(2)} | {line.subcategory === 'BIB' && line.variance_drink_servings 
+                  Stock Value: €{parseFloat(line.counted_value || 0).toFixed(2)} | {line.subcategory === 'BIB' && line.variance_drink_servings 
                     ? `${Math.abs(parseFloat(line.variance_drink_servings)).toLocaleString()} drink servings`
-                    : `${parseFloat(line.counted_qty || 0).toFixed(2)} servings`
+                    : line.subcategory === 'SYRUPS' || line.subcategory === 'BULK_JUICES' || line.category_code === 'S' || line.category_code === 'W'
+                      ? `${parseFloat(line.counted_qty || 0).toFixed(2)} bottles`
+                      : `${parseFloat(line.counted_qty || 0).toFixed(2)} servings`
                   }
                 </small>
               </div>
@@ -1437,28 +1630,53 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
           {!line.counted_full_units && !line.counted_partial_units ? (
             <span className="text-muted">-</span>
           ) : (
-            <div className="d-flex flex-column align-items-center gap-1">
-              <div>
-                <span className={`${textClass} ${strongClass}`} style={{ fontSize: '1.1rem', fontWeight: '700' }}>
-                  {isShortage ? '-' : '+'}
-                  {Math.abs(parseFloat(varianceDisplayFull))}
-                </span>
-                <small className="text-muted ms-1">{labels.unit}</small>
+            <div className="d-flex flex-column align-items-center gap-2">
+              {/* SYRUPS, BIB, WINES, SPIRITS: Show combined decimal value only */}
+              {(line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') ? (
+                <div className="d-flex flex-column align-items-center">
+                  <small className="text-muted" style={{ fontSize: '0.7rem' }}>{line.subcategory === 'BIB' ? 'boxes' : 'bottles'}</small>
+                  <span className={`${textClass} ${strongClass}`} style={{ fontSize: '1.1rem', fontWeight: '700' }}>
+                    {varianceValue >= 0 ? '+' : ''}
+                    {(Number(varianceDisplayFull) + Number(varianceDisplayPartial)).toFixed(2)}
+                  </span>
+                </div>
+              ) : (
+                <>
+                  {/* Full units variance - only show if labels.unit exists */}
+                  {labels.unit && (
+                    <div className="d-flex flex-column align-items-center">
+                      <small className="text-muted" style={{ fontSize: '0.7rem' }}>{(line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS') ? 'cases' : labels.unit}</small>
+                      <span className={`${textClass} ${strongClass}`} style={{ fontSize: '1.1rem', fontWeight: '700' }}>
+                        {isShortage ? '-' : '+'}
+                        {Math.abs(parseFloat(varianceDisplayFull))}
+                      </span>
+                    </div>
+                  )}
+                  {/* Partial units variance - always show */}
+                  <div className="d-flex flex-column align-items-center">
+                    <small className="text-muted" style={{ fontSize: '0.7rem' }}>{(line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS') ? 'bottles' : labels.servingUnit}</small>
+                    <span className={`${textClass} ${strongClass}`} style={{ fontSize: '1.1rem', fontWeight: '700' }}>
+                      {isShortage ? '-' : '+'}
+                      {Math.abs(parseFloat(varianceDisplayPartial))}
+                    </span>
+                  </div>
+                </>
+              )}
+              
+              {/* Stock Value section */}
+              <div className="d-flex flex-column align-items-center mt-2 pt-2 border-top w-100" style={{ borderColor: 'rgba(0,0,0,0.1)' }}>
+                <small className="text-muted" style={{ fontSize: '0.7rem' }}>Stock Value</small>
+                <strong className={`${textClass} ${strongClass}`} style={{ fontSize: '1.15rem', fontWeight: 'bold' }}>
+                  {varianceValue >= 0 ? '+' : ''}€{varianceValue.toFixed(2)}
+                  {isSignificant && <span className="ms-1">⚠️</span>}
+                </strong>
               </div>
-              <div>
-                <span className={`${textClass} ${strongClass}`} style={{ fontSize: '1.1rem', fontWeight: '700' }}>
-                  {isShortage ? '-' : '+'}
-                  {Math.abs(parseFloat(varianceDisplayPartial))}
-                </span>
-                <small className="text-muted ms-1">{labels.servingUnit}</small>
-              </div>
-              <div className={`${textClass} ${strongClass}`} style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
-                {varianceValue >= 0 ? '+' : ''}€{varianceValue.toFixed(2)}
-                {isSignificant && <span className="ms-1">⚠️</span>}
-              </div>
+              
+              {/* Servings info */}
               <small className="text-muted" style={{ fontSize: '0.7rem' }}>
                 ({varianceQty >= 0 ? '+' : ''}{varianceQty.toFixed(2)} {line.subcategory === 'BIB' ? 'boxes' : 'servings'})
               </small>
+              
               {/* BIB ONLY: Show drink servings from variance */}
               {line.subcategory === 'BIB' && line.variance_drink_servings && (
                 <small className="text-info" style={{ fontSize: '0.65rem', marginTop: '4px' }}>
@@ -1472,11 +1690,75 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     );
   };
 
+  // Debug - Use effect to run after lines are loaded
+  const [debugLine, setDebugLine] = React.useState(null);
+  
+  React.useEffect(() => {
+    if (lines && lines.length > 0) {
+      // Try both property names - can be changed to any SKU for debugging
+      const foundLine = lines.find(line => line.sku === 'M0006' || line.item_sku === 'M0006');
+      setDebugLine(foundLine);
+    }
+  }, [lines]);
+
   // Get all unique categories for navigation
   const categories = Object.keys(groupedLines).sort();
 
   return (
     <>
+      {/* Debug Panel */}
+      {showDebugPanel && debugLine && (
+        <div style={{
+          position: 'fixed',
+          top: '10px',
+          right: '10px',
+          background: '#2c3e50',
+          color: 'white',
+          padding: '20px',
+          borderRadius: '10px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          zIndex: 999999,
+          maxWidth: '450px',
+          fontSize: '13px',
+          fontFamily: 'monospace',
+          border: '2px solid #3498db'
+        }}>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <div style={{ fontWeight: 'bold', fontSize: '16px' }}>
+              🔍 Debug Panel
+            </div>
+            <button
+              onClick={() => setShowDebugPanel(false)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'white',
+                fontSize: '20px',
+                cursor: 'pointer',
+                padding: '0 5px'
+              }}
+            >
+              ✕
+            </button>
+          </div>
+          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '5px' }}>
+            <div><strong>Total Lines:</strong> {lines.length}</div>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', marginTop: '10px', paddingTop: '10px' }}>
+              <strong>Debug Item: {debugLine.item_sku}</strong>
+            </div>
+            <div><strong>Name:</strong> {debugLine.item_name}</div>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', marginTop: '10px', paddingTop: '10px' }}>
+              <strong>Backend Values:</strong>
+            </div>
+            <div>variance_display_full: <span style={{ color: '#f39c12' }}>{debugLine.variance_display_full_units || 'NULL'}</span></div>
+            <div>variance_display_partial: <span style={{ color: '#f39c12' }}>{debugLine.variance_display_partial_units || 'NULL'}</span></div>
+            <div>variance_qty: <span style={{ color: '#e74c3c' }}>{debugLine.variance_qty}</span></div>
+            <div>counted_qty: <span style={{ color: '#2ecc71' }}>{debugLine.counted_qty}</span></div>
+            <div>expected_qty: <span style={{ color: '#3498db' }}>{debugLine.expected_qty}</span></div>
+          </div>
+        </div>
+      )}
+
       {/* Search and Category Navigation */}
       <div className="stocktake-nav-sticky">
         <div className="d-flex flex-column gap-3 py-3 justify-content-center align-items-center">
@@ -1548,6 +1830,21 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                   <span className="action-label">{categoryName} ({groupedLines[categoryName].length})</span>
                 </button>
               ))}
+              
+              {/* Debug Toggle Button */}
+              {debugLine && (
+                <button
+                  onClick={() => setShowDebugPanel(!showDebugPanel)}
+                  className="contextual-action-btn zoom-buttons"
+                  style={{ 
+                    color: showDebugPanel ? '#e74c3c' : '#95a5a6',
+                    boxShadow: showDebugPanel ? '0 4px 15px rgba(231, 76, 60, 0.4)' : '0 4px 15px rgba(149, 165, 166, 0.4)'
+                  }}
+                  title="Toggle Debug Panel"
+                >
+                  <span className="action-label">🔍 Debug</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
