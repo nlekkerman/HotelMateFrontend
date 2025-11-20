@@ -121,7 +121,7 @@ export const VoiceCommandPreview = ({ command, stocktake, onConfirm, onCancel })
         </Button>
       </Modal.Footer>
 
-      <style jsx>{`
+      <style>{`
         .command-preview {
           padding: 0.5rem;
         }

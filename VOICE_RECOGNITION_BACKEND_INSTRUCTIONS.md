@@ -49,21 +49,42 @@ FormData {
   "success": true,
   "command": {
     "action": "count",           // 'count', 'purchase', or 'waste'
-    "item_identifier": "guinness", // Product name or SKU from transcription
-    "value": 5.5,                 // Numeric quantity
-    "transcription": "count guinness five point five" // Raw text for debugging
+    "line_id": 12345,            // ✅ EXACT stocktake line ID (backend finds this!)
+    "item_name": "Beamish Stout", // Matched product name
+    "item_sku": "D0001",         // Matched product SKU
+    "value": 5.5,                // Numeric quantity
+    "full_units": 5,             // Optional: cases/kegs/dozen
+    "partial_units": 6,          // Optional: bottles/pints
+    "transcription": "count beams five point five" // Raw text for debugging
   }
 }
 ```
+
+**IMPORTANT:** Backend must:
+1. Parse transcription → Get product name ("beams")
+2. Normalize with aliases → "beams" = "Beamish"
+3. Query stocktake lines for this stocktake_id
+4. Find matching line by name/SKU/aliases
+5. Return the exact `line_id`
+
+Frontend will just update that line - NO frontend matching!
 
 ### Error Response
 ```json
 {
   "success": false,
-  "error": "Could not parse command from transcription",
-  "transcription": "count something unknown" // Optional: for debugging
+  "error": "Product 'beams' not found in stocktake",
+  "transcription": "count beams thirty",
+  "searched_for": "beamish",  // After normalization
+  "available_products": 15     // How many products in this stocktake
 }
 ```
+
+Possible errors:
+- `"No action keyword found"`
+- `"No numeric value found"`
+- `"Product '{name}' not found in stocktake"`
+- `"Stocktake not found"`
 
 ---
 

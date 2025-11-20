@@ -29,6 +29,9 @@ import React, { useState, useContext } from 'react';
 import { Card, Table, Form, Button, Badge } from 'react-bootstrap';
 import { FaCheck } from 'react-icons/fa';
 import { getCountingLabels } from '../utils/categoryHelpers';
+import { VoiceRecorder } from '@/voiceRecognition/VoiceRecorder';
+import { VoiceCommandPreview } from '@/voiceRecognition/VoiceCommandPreview';
+import { confirmVoiceCommand } from '@/voiceRecognition/voiceApi';
 import { SubcategoryBadge, getSubcategoryHelpText } from '../utils/SubcategoryBadge';
 import { CategoryTotalsRow } from './CategoryTotalsRow';
 import { useCategoryTotals } from '../hooks/useCategoryTotals';
@@ -49,9 +52,69 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
   const [showWaste, setShowWaste] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [voiceCommand, setVoiceCommand] = useState(null);
 
   const { categoryTotals, loading: totalsLoading, refetch: refetchTotals } =
     useCategoryTotals(hotelSlug, stocktakeId);
+
+  // Handle voice command received from VoiceRecorder
+  const onVoiceCommand = (command) => {
+    console.log('🎤 Voice command received:', command);
+    console.log('📊 Command details:', {
+      action: command.action,
+      item_identifier: command.item_identifier,
+      value: command.value,
+      full_units: command.full_units,
+      partial_units: command.partial_units,
+      line_id: command.line_id,
+      transcription: command.transcription
+    });
+    setVoiceCommand(command);
+  };
+
+  // Handle voice command confirmation - Use new backend confirm endpoint
+  const handleVoiceCommandConfirm = async (command) => {
+    try {
+      console.log('✅ User confirmed voice command:', command);
+      
+      // Call backend confirm endpoint - backend does ALL the work!
+      // Backend will:
+      // 1. Find the exact stocktake line (fuzzy matching with rapidfuzz)
+      // 2. Update the database
+      // 3. Broadcast via Pusher for real-time updates across all clients
+      const result = await confirmVoiceCommand(command, stocktakeId, hotelSlug);
+
+      if (result.success) {
+        console.log('✅ Command confirmed successfully:', {
+          item: result.item_name,
+          sku: result.item_sku,
+          message: result.message
+        });
+
+        // Show success message
+        alert(`✅ ${result.message || 'Command applied successfully'}\n${result.item_name} (${result.item_sku})`);
+
+        // Close the modal
+        setVoiceCommand(null);
+        
+        // UI will update automatically via Pusher! 🎉
+        // The backend broadcasts the update and Pusher listeners will handle it
+        // No need to manually update state - real-time sync across all clients
+      } else {
+        throw new Error(result.error || 'Failed to apply command');
+      }
+    } catch (error) {
+      console.error('❌ Failed to confirm voice command:', error);
+      alert(`❌ Failed: ${error.message}`);
+      // Keep modal open on error so user can retry
+    }
+  };
+
+  // Handle voice command cancellation
+  const handleVoiceCommandCancel = () => {
+    console.log('❌ User cancelled voice command');
+    setVoiceCommand(null);
+  };
 
   // Clear ALL validation errors when clicking anywhere
   React.useEffect(() => {
@@ -1959,51 +2022,63 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
 
       {/* Search and Category Navigation */}
       <div className="stocktake-nav-sticky">
-        <div className="d-flex flex-column gap-3 py-3 justify-content-center align-items-center">
+        <div className="d-flex flex-column gap-3 py-3">
+          
           {/* Search Bar */}
           <div className="stocktake-saerch">
-            <div style={{ position: 'relative', width: '100%' }}>
-              <Form.Control
-                type="text"
-                placeholder="🔍 Search by name, SKU, category, or subcategory..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="contextual-action-btn"
-                style={{ 
-                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85))',
-                  border: '1px solid rgba(255, 255, 255, 0.4)',
-                  boxShadow: '0 4px 15px rgba(52, 152, 219, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
-                  backdropFilter: 'blur(10px)',
-                  paddingRight: searchTerm ? '35px' : '12px'
-                }}
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  style={{
-                    position: 'absolute',
-                    right: '8px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#6c757d',
-                    fontSize: '16px',
-                    cursor: 'pointer',
-                    padding: '4px 8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: '0.6',
-                    transition: 'opacity 0.2s ease'
+            <div style={{ position: 'relative', width: '100%', display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <div style={{ position: 'relative', flex: '1' }}>
+                <Form.Control
+                  type="text"
+                  placeholder="🔍 Search by name, SKU, category, or subcategory..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="contextual-action-btn"
+                  style={{ 
+                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85))',
+                    border: '1px solid rgba(255, 255, 255, 0.4)',
+                    boxShadow: '0 4px 15px rgba(52, 152, 219, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                    backdropFilter: 'blur(10px)',
+                    paddingRight: searchTerm ? '35px' : '12px'
                   }}
-                  onMouseEnter={(e) => e.target.style.opacity = '1'}
-                  onMouseLeave={(e) => e.target.style.opacity = '0.6'}
-                  title="Clear search"
-                >
-                  ✕
-                </button>
-              )}
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#6c757d',
+                      fontSize: '16px',
+                      cursor: 'pointer',
+                      padding: '4px 8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: '0.6',
+                      transition: 'opacity 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.target.style.opacity = '1'}
+                    onMouseLeave={(e) => e.target.style.opacity = '0.6'}
+                    title="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {/* Voice Button */}
+              <div style={{ position: 'relative' }}>
+                <VoiceRecorder 
+                  stocktakeId={stocktakeId}
+                  hotelSlug={hotelSlug}
+                  onCommandReceived={onVoiceCommand}
+                  isLocked={isLocked}
+                />
+              </div>
             </div>
             {searchTerm && (
               <small className="text-muted d-block mt-1">
@@ -2144,6 +2219,16 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
           </Card>
         );
       })}
+
+      {/* Voice Command Confirmation Modal */}
+      {voiceCommand && (
+        <VoiceCommandPreview
+          command={voiceCommand}
+          stocktake={{ id: stocktakeId, hotelSlug }}
+          onConfirm={handleVoiceCommandConfirm}
+          onCancel={handleVoiceCommandCancel}
+        />
+      )}
     </>
   );
 };
