@@ -120,8 +120,9 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     // If user has interacted with this line, return their input state
     if (lineInputs[lineId]) return lineInputs[lineId];
     
-    // For SYRUPS, WINES, SPIRITS, and BIB: combine full + partial from backend into single fullUnits field
+    // For SYRUPS, BULK_JUICES, WINES, SPIRITS, and BIB: combine full + partial from backend into single fullUnits field
     if (line.subcategory_name === 'SYRUPS' || line.subcategory === 'SYRUPS' ||
+        line.subcategory === 'BULK_JUICES' ||
         line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') {
       const combinedValue = (Number(line.counted_full_units || 0) + Number(line.counted_partial_units || 0));
       return {
@@ -152,9 +153,24 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
 
   const updateLineInput = (lineId, field, value) => {
     setLineInputs((prev) => {
+      // Get the line data to preserve existing counted values
+      const line = lines.find(l => l.id === lineId);
+      
+      // Initialize with existing counted values from line prop if not in state yet
       const current = prev[lineId] || {
-        fullUnits: '',
-        partialUnits: '',
+        fullUnits: line ? (
+          (line.subcategory === 'SYRUPS' || line.subcategory === 'BULK_JUICES' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S')
+            ? ((Number(line.counted_full_units || 0) + Number(line.counted_partial_units || 0)) !== 0 
+                ? (Number(line.counted_full_units || 0) + Number(line.counted_partial_units || 0)).toFixed(2) 
+                : '')
+            : (line.counted_full_units !== null && line.counted_full_units !== undefined ? line.counted_full_units : '')
+        ) : '',
+        partialUnits: line ? (
+          (line.counted_partial_units !== null && line.counted_partial_units !== undefined && 
+           !(line.subcategory === 'SYRUPS' || line.subcategory === 'BULK_JUICES' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S'))
+            ? line.counted_partial_units 
+            : ''
+        ) : '',
         wasteQuantity: '',
         purchasesQty: '',
         openingFullUnits: '',
@@ -322,11 +338,13 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     // Parse inputs - send whatever user entered, backend will validate
     let fullUnits, partialUnits;
     
-    // ✅ SYRUPS, WINES, SPIRITS, and BIB: Read from fullUnits field and split into full + partial
+    // ✅ SYRUPS, BULK_JUICES, WINES, SPIRITS, and BIB: Read from fullUnits field and split into full + partial
     // SYRUPS: User enters 10.5 bottles → full=10, partial=0.5
+    // BULK_JUICES: User enters 20.5 bottles → full=20, partial=0.5
     // BIB: User enters 2.5 boxes → full=2, partial=0.5
     // SPIRITS/WINE: User enters 7.6 bottles → full=7, partial=0.6
     if ((line.category_code === 'M' && line.subcategory === 'SYRUPS') ||
+        (line.category_code === 'M' && line.subcategory === 'BULK_JUICES') ||
         line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') {
       const combinedValue = parseFloat(inputs.fullUnits);
       if (isNaN(combinedValue)) {
@@ -336,7 +354,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         fullUnits = Math.floor(combinedValue);  // 10 bottles or 2 boxes
         partialUnits = parseFloat((combinedValue - fullUnits).toFixed(3));  // 0.5
       }
-      console.log('🍯 Combined value split (SYRUPS/BIB/WINE/SPIRITS):', { 
+      console.log('🍯 Combined value split (SYRUPS/BULK_JUICES/BIB/WINE/SPIRITS):', { 
         category: line.category_code, 
         subcategory: line.subcategory,
         original: inputs.fullUnits, 
@@ -421,6 +439,74 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
       console.warn('❌ Validation failed: Invalid quantity');
       setValidationErrors({ [lineId]: { purchasesQty: 'Must be a valid number greater than 0' } });
       return;
+    }
+    
+    // Category-aware validation for purchases
+    const categoryCode = line.category_code;
+    const subcategory = line.subcategory;
+    const uom = parseFloat(line.item_uom || line.uom || 1);
+    
+    // DRAUGHT (D): Must be multiples of UOM (full kegs in pints)
+    if (categoryCode === 'D') {
+      if (purchasesQty % uom !== 0) {
+        console.warn(`❌ Validation failed: Not a multiple of ${uom}`);
+        setValidationErrors({ 
+          [lineId]: { 
+            purchasesQty: `Purchases must be full kegs only (multiples of ${uom} pints)` 
+          } 
+        });
+        return;
+      }
+    }
+    // BOTTLED BEER (B): Must be whole number of CASES (user enters cases, not bottles)
+    else if (categoryCode === 'B') {
+      if (purchasesQty % 1 !== 0) {
+        console.warn('❌ Validation failed: Not a whole number of cases');
+        setValidationErrors({ 
+          [lineId]: { 
+            purchasesQty: 'Purchases must be full cases only (whole numbers, e.g., 5 cases)' 
+          } 
+        });
+        return;
+      }
+    }
+    // SOFT_DRINKS and CORDIALS: Must be whole number of CASES (user enters cases, not bottles)
+    else if (categoryCode === 'M' && (subcategory === 'SOFT_DRINKS' || subcategory === 'CORDIALS')) {
+      if (purchasesQty % 1 !== 0) {
+        console.warn('❌ Validation failed: Not a whole number of cases');
+        setValidationErrors({ 
+          [lineId]: { 
+            purchasesQty: 'Purchases must be full cases only (whole numbers, e.g., 5 cases)' 
+          } 
+        });
+        return;
+      }
+    }
+    // SPIRITS (S), WINE (W), SYRUPS, BIB, BULK_JUICES: Must be whole numbers (full bottles/boxes)
+    else if (categoryCode === 'S' || categoryCode === 'W' || 
+             (categoryCode === 'M' && (subcategory === 'SYRUPS' || subcategory === 'BIB' || subcategory === 'BULK_JUICES'))) {
+      if (purchasesQty % 1 !== 0) {
+        const unitType = (subcategory === 'BIB' || subcategory === 'BULK_JUICES') ? 'boxes' : 'bottles';
+        console.warn('❌ Validation failed: Not a whole number');
+        setValidationErrors({ 
+          [lineId]: { 
+            purchasesQty: `Purchases must be full ${unitType} only (whole numbers)` 
+          } 
+        });
+        return;
+      }
+    }
+    // JUICES: Must be whole numbers (full cases)
+    else if (categoryCode === 'M' && subcategory === 'JUICES') {
+      if (purchasesQty % 1 !== 0) {
+        console.warn('❌ Validation failed: Not a whole number');
+        setValidationErrors({ 
+          [lineId]: { 
+            purchasesQty: 'Purchases must be full cases only (whole numbers)' 
+          } 
+        });
+        return;
+      }
     }
 
     console.log('✅ Validation passed');
@@ -555,6 +641,94 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
       console.warn('❌ Validation failed: Invalid quantity');
       setValidationErrors({ [lineId]: { wasteQuantity: 'Must be a valid number greater than 0' } });
       return;
+    }
+    
+    // Category-aware validation for waste
+    const categoryCode = line.category_code;
+    const subcategory = line.subcategory;
+    const uom = parseFloat(line.item_uom || line.uom || 1);
+    
+    // DRAUGHT (D): Must be less than UOM (partial kegs in pints)
+    if (categoryCode === 'D') {
+      if (wasteQty >= uom) {
+        console.warn(`❌ Validation failed: Waste exceeds partial keg limit`);
+        setValidationErrors({ 
+          [lineId]: { 
+            wasteQuantity: `Waste must be partial keg only (less than ${uom} pints)` 
+          } 
+        });
+        return;
+      }
+    }
+    // BOTTLED BEER (B): Must be less than UOM (loose bottles, less than full case)
+    else if (categoryCode === 'B') {
+      if (wasteQty >= uom) {
+        console.warn(`❌ Validation failed: Waste exceeds partial case limit`);
+        setValidationErrors({ 
+          [lineId]: { 
+            wasteQuantity: `Waste must be loose bottles only (less than ${uom} bottles per case)` 
+          } 
+        });
+        return;
+      }
+      // Must be whole bottles for waste
+      if (wasteQty % 1 !== 0) {
+        console.warn('❌ Validation failed: Waste must be whole bottles');
+        setValidationErrors({ 
+          [lineId]: { 
+            wasteQuantity: 'Waste must be whole bottles (e.g., 3, 7, 11)' 
+          } 
+        });
+        return;
+      }
+    }
+    // SOFT_DRINKS and CORDIALS: Must be less than UOM (loose bottles, less than full case)
+    else if (categoryCode === 'M' && (subcategory === 'SOFT_DRINKS' || subcategory === 'CORDIALS')) {
+      if (wasteQty >= uom) {
+        console.warn(`❌ Validation failed: Waste exceeds partial case limit`);
+        setValidationErrors({ 
+          [lineId]: { 
+            wasteQuantity: `Waste must be loose bottles only (less than ${uom} bottles per case)` 
+          } 
+        });
+        return;
+      }
+      // Must be whole bottles for waste
+      if (wasteQty % 1 !== 0) {
+        console.warn('❌ Validation failed: Waste must be whole bottles');
+        setValidationErrors({ 
+          [lineId]: { 
+            wasteQuantity: 'Waste must be whole bottles (e.g., 3, 7, 11)' 
+          } 
+        });
+        return;
+      }
+    }
+    // SPIRITS (S), WINE (W), SYRUPS, BIB, BULK_JUICES: Must be less than 1 (partial bottles/boxes)
+    else if (categoryCode === 'S' || categoryCode === 'W' || 
+             (categoryCode === 'M' && (subcategory === 'SYRUPS' || subcategory === 'BIB' || subcategory === 'BULK_JUICES'))) {
+      if (wasteQty >= 1) {
+        const unitType = (subcategory === 'BIB' || subcategory === 'BULK_JUICES') ? 'box' : 'bottle';
+        console.warn('❌ Validation failed: Waste exceeds partial unit');
+        setValidationErrors({ 
+          [lineId]: { 
+            wasteQuantity: `Waste must be partial ${unitType} only (less than 1)` 
+          } 
+        });
+        return;
+      }
+    }
+    // JUICES: Must be less than UOM (partial cases)
+    else if (categoryCode === 'M' && subcategory === 'JUICES') {
+      if (wasteQty >= uom) {
+        console.warn(`❌ Validation failed: Waste exceeds partial case limit`);
+        setValidationErrors({ 
+          [lineId]: { 
+            wasteQuantity: `Waste must be partial case only (less than ${uom} bottles)` 
+          } 
+        });
+        return;
+      }
     }
 
     console.log('✅ Validation passed');
@@ -852,7 +1026,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                 {labels.showFull !== false && line.subcategory !== 'SYRUPS' && line.subcategory !== 'BIB' && line.category_code !== 'W' && line.category_code !== 'S' && (
                   <div>
                     <small className="text-muted d-block text-center mb-1" style={{ fontSize: '0.7rem' }}>
-                      {labels.unit}
+                      {(line.category_code === 'B' || (line.category_code === 'M' && (line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS'))) ? 'cases' : labels.unit}
                     </small>
                     <Form.Control
                       type="number"
@@ -903,12 +1077,15 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                 </div>
                 )}
 
-                {/* Partial Units (Combined input for SYRUPS, SPIRITS, WINES, BIB) */}
+                {/* Partial Units (Combined input for SYRUPS, SPIRITS, WINES, BIB) - Hidden for BULK_JUICES */}
+                {line.subcategory !== 'BULK_JUICES' && (
                 <div>
                   <small className="text-muted d-block text-center mb-1" style={{ fontSize: '0.7rem' }}>
                     {(line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S')
                       ? `${labels.servingUnit} (Full: ${Math.floor(Number(line.opening_display_full_units || 0) + Number(line.opening_display_partial_units || 0))} + Partial: ${((Number(line.opening_display_full_units || 0) + Number(line.opening_display_partial_units || 0)) % 1).toFixed(2)})`
-                      : labels.servingUnit
+                      : (line.category_code === 'B' || (line.category_code === 'M' && (line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS')))
+                        ? 'bottles'
+                        : labels.servingUnit
                     }
                   </small>
                   <Form.Control
@@ -949,7 +1126,8 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                     className="bg-light text-center"
                     placeholder={
                       line.subcategory === 'BIB' ? 'boxes (e.g. 2.50)' :
-                      (line.subcategory === 'SYRUPS' || line.category_code === 'W' || line.category_code === 'S') ? 'bottles (e.g. 10.50)' : 
+                      (line.subcategory === 'SYRUPS' || line.category_code === 'W' || line.category_code === 'S') ? 'bottles (e.g. 10.50)' :
+                      (line.category_code === 'B' || (line.category_code === 'M' && (line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS'))) ? 'bottles (e.g. 11)' :
                       labels.servingUnit
                     }
                     isInvalid={!!lineErrors.openingPartialUnits}
@@ -962,6 +1140,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                     </small>
                   )}
                 </div>
+                )}
               </div>
 
               {(lineErrors.openingFullUnits || lineErrors.openingPartialUnits) && (
@@ -1018,7 +1197,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               
               <Form.Control
                 type="number"
-                step="0.01"
+                step="1"
                 size="sm"
                 value={inputs.purchasesQty}
                 onChange={(e) => {
@@ -1046,7 +1225,14 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                 }}
                 className="bg-light text-center mb-2"
                 style={{ width: '100%' }}
-                placeholder="Purchases"
+                placeholder={
+                  line.category_code === 'D' ? `Pints (e.g., 88, 176)` :
+                  line.category_code === 'B' ? `Cases (e.g., 5, 10)` :
+                  line.category_code === 'S' || line.category_code === 'W' ? `Bottles (e.g., 6, 10)` :
+                  (line.category_code === 'M' && (line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.subcategory === 'BULK_JUICES')) ? `${line.subcategory === 'BIB' || line.subcategory === 'BULK_JUICES' ? 'Boxes' : 'Bottles'} (e.g., 3, 5)` :
+                  (line.category_code === 'M' && (line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS')) ? `Cases (e.g., 5, 10)` :
+                  'Purchases'
+                }
                 isInvalid={!!lineErrors.purchasesQty}
                 disabled={isLocked}
               />
@@ -1094,7 +1280,14 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               
               <Form.Control
                 type="number"
-                step="0.01"
+                step={
+                  line.category_code === 'D' ? '0.5' :
+                  line.category_code === 'B' ? '1' :
+                  (line.category_code === 'S' || line.category_code === 'W' || 
+                   (line.category_code === 'M' && (line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.subcategory === 'BULK_JUICES'))) ? '0.01' :
+                  (line.category_code === 'M' && (line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS')) ? '1' :
+                  '0.01'
+                }
                 size="sm"
                 value={inputs.wasteQuantity}
                 onChange={(e) => {
@@ -1122,7 +1315,14 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                 }}
                 className="bg-light text-center mb-2"
                 style={{ width: '100%' }}
-                placeholder="Waste"
+                placeholder={
+                  line.category_code === 'D' ? `Pints (e.g., 15, 25.5)` :
+                  line.category_code === 'B' ? `Bottles (e.g., 3, 7)` :
+                  line.category_code === 'S' || line.category_code === 'W' ? `Partial (e.g., 0.5, 0.7)` :
+                  (line.category_code === 'M' && (line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.subcategory === 'BULK_JUICES')) ? `Partial ${line.subcategory === 'BIB' || line.subcategory === 'BULK_JUICES' ? 'box' : 'bottle'} (e.g., 0.5)` :
+                  (line.category_code === 'M' && (line.subcategory === 'SOFT_DRINKS' || line.subcategory === 'CORDIALS')) ? `Bottles (e.g., 3, 7, 11)` :
+                  'Waste'
+                }
                 isInvalid={!!lineErrors.wasteQuantity}
                 disabled={isLocked}
               />
@@ -1146,8 +1346,8 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         {/* Expected */}
         <td className="text-center" style={{ borderRight: '1px solid #dee2e6', backgroundColor: 'rgba(25, 135, 84, 0.08)' }}>
           <div className="d-flex flex-column align-items-center gap-1 border border-success border-1 rounded p-2 bg-white shadow-sm">
-            {/* SYRUPS: Show combined bottles value only */}
-            {line.subcategory === 'SYRUPS' ? (
+            {/* SYRUPS & BULK_JUICES: Show combined bottles value only */}
+            {(line.subcategory === 'SYRUPS' || line.subcategory === 'BULK_JUICES') ? (
               <div>
                 <strong className="text-success">{(Number(line.expected_display_full_units || 0) + Number(line.expected_display_partial_units || 0)).toFixed(2)}</strong>
                 <small className="text-muted ms-1">bottles</small>
@@ -1190,51 +1390,51 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               className="border rounded bg-white shadow-sm p-2 w-100 d-flex flex-column align-items-center gap-2"
               style={{ minWidth: 200 }}
             >
-              {line.subcategory && line.subcategory !== 'SYRUPS' && line.subcategory !== 'BIB' && line.category_code !== 'W' && (
+              {line.subcategory && line.subcategory !== 'SYRUPS' && line.subcategory !== 'BULK_JUICES' && line.subcategory !== 'BIB' && line.category_code !== 'W' && (
                 <small className="text-info d-block text-center" style={{ fontSize: '0.65rem' }}>
                   {getSubcategoryHelpText(line.subcategory)?.split('.')[0]}
                 </small>
               )}
               
-              {/* SYRUPS, WINES, SPIRITS & BIB: Show current counted value above input */}
-              {(line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') && (line.counted_full_units !== null || line.counted_partial_units !== null) && (
+              {/* SYRUPS, BULK_JUICES, WINES, SPIRITS & BIB: Show current counted value above input */}
+              {(line.subcategory === 'SYRUPS' || line.subcategory === 'BULK_JUICES' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') && (line.counted_full_units !== null || line.counted_partial_units !== null) && (
                 <div className="text-center mb-2 p-2 bg-success-subtle rounded">
                   <small className="text-muted d-block" style={{ fontSize: '0.6rem' }}>Current Counted</small>
                   <strong className="text-success" style={{ fontSize: '0.9rem' }}>
-                    {(Number(line.counted_full_units || 0) + Number(line.counted_partial_units || 0)).toFixed(2)} {line.subcategory === 'BIB' ? 'boxes' : line.category_code === 'S' ? 'bottles' : 'bottles'}
+                    {(Number(line.counted_full_units || 0) + Number(line.counted_partial_units || 0)).toFixed(2)} {line.subcategory === 'BIB' ? 'boxes' : 'bottles'}
                   </strong>
                 </div>
               )}
               
               {/* Two inputs stacked vertically */}
               <div className="d-flex flex-column gap-2 w-100">
-                {/* Cases/Full Units - SHOW for SYRUPS, BIB, WINES & SPIRITS (combined value), SHOW for others */}
-                {(labels.showFull !== false || line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') && (
+                {/* Cases/Full Units - SHOW for SYRUPS, BULK_JUICES, BIB, WINES & SPIRITS (combined value), SHOW for others */}
+                {(labels.showFull !== false || line.subcategory === 'SYRUPS' || line.subcategory === 'BULK_JUICES' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') && (
                   <div>
                     <small className="text-muted d-block text-center mb-1" style={{ fontSize: '0.7rem' }}>
-                      {(line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S')
+                      {(line.subcategory === 'SYRUPS' || line.subcategory === 'BULK_JUICES' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S')
                         ? `${labels.servingUnit} (Full: ${Math.floor(Number(line.counted_full_units || 0) + Number(line.counted_partial_units || 0))} + Partial: ${((Number(line.counted_full_units || 0) + Number(line.counted_partial_units || 0)) % 1).toFixed(2)})`
                         : labels.unit
                       }
                     </small>
                     <Form.Control
                       type="number"
-                      step={(line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') ? '0.01' : '1'}
+                      step={(line.subcategory === 'SYRUPS' || line.subcategory === 'BULK_JUICES' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') ? '0.01' : '1'}
                       min="0"
                       size="sm"
                       value={inputs.fullUnits}
                     onChange={(e) => {
                       const value = e.target.value;
-                      // SYRUPS, BIB, WINES & SPIRITS: allow decimals, others: whole numbers only
-                      if (line.subcategory === 'SYRUPS' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') {
+                      // SYRUPS, BULK_JUICES, BIB, WINES & SPIRITS: allow decimals, others: whole numbers only
+                      if (line.subcategory === 'SYRUPS' || line.subcategory === 'BULK_JUICES' || line.subcategory === 'BIB' || line.category_code === 'W' || line.category_code === 'S') {
                         updateLineInput(line.id, 'fullUnits', value);
                       } else if (value === '' || /^\d+$/.test(value)) {
                         updateLineInput(line.id, 'fullUnits', value);
                       }
                     }}
                     onKeyDown={(e) => {
-                      // SYRUPS, BIB, WINES & SPIRITS: allow decimals, others: block decimals
-                      if (line.subcategory !== 'SYRUPS' && line.subcategory !== 'BIB' && line.category_code !== 'W' && line.category_code !== 'S') {
+                      // SYRUPS, BULK_JUICES, BIB, WINES & SPIRITS: allow decimals, others: block decimals
+                      if (line.subcategory !== 'SYRUPS' && line.subcategory !== 'BULK_JUICES' && line.subcategory !== 'BIB' && line.category_code !== 'W' && line.category_code !== 'S') {
                         if (e.key === '.' || e.key === ',' || e.key === '-' || e.key === 'e' || e.key === 'E') {
                           e.preventDefault();
                         }
@@ -1242,8 +1442,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                     }}
                     onFocus={(e) => {
                       e.target.classList.add('bg-info-subtle');
-                      e.target.dataset.originalValue = e.target.value;
-                      e.target.value = '';  // ✅ Clear on focus for new entry
+                      e.target.select();  // Select all text for easy replacement
                       if (validationErrors[line.id]) {
                         setValidationErrors((prev) => {
                           const { [line.id]: _, ...rest } = prev;
@@ -1253,14 +1452,11 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                     }}
                     onBlur={(e) => {
                       e.target.classList.remove('bg-info-subtle');
-                      if (e.target.value === '') {
-                        updateLineInput(line.id, 'fullUnits', '');  // ✅ Keep empty if no input
-                      }
                     }}
                     className="bg-light text-center"
                     placeholder={
                       line.subcategory === 'BIB' ? 'boxes (e.g. 2.50)' :
-                      (line.subcategory === 'SYRUPS' || line.category_code === 'W' || line.category_code === 'S') ? 'bottles (e.g. 10.50)' : 
+                      (line.subcategory === 'SYRUPS' || line.subcategory === 'BULK_JUICES' || line.category_code === 'W' || line.category_code === 'S') ? 'bottles (e.g. 10.50)' : 
                       labels.unit
                     }
                     isInvalid={!!lineErrors.fullUnits}
@@ -1269,8 +1465,8 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                 </div>
                 )}
                 
-                {/* Bottles/Partial Units - Hidden for SYRUPS, BIB, WINES & SPIRITS */}
-                {line.subcategory !== 'SYRUPS' && line.subcategory !== 'BIB' && line.category_code !== 'W' && line.category_code !== 'S' && (
+                {/* Bottles/Partial Units - Hidden for SYRUPS, BULK_JUICES, BIB, WINES & SPIRITS */}
+                {line.subcategory !== 'SYRUPS' && line.subcategory !== 'BULK_JUICES' && line.subcategory !== 'BIB' && line.category_code !== 'W' && line.category_code !== 'S' && (
                 <div>
                   <small className="text-muted d-block text-center mb-1" style={{ fontSize: '0.7rem' }}>
                     {labels.servingUnit}
@@ -1285,8 +1481,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                     onChange={(e) => updateLineInput(line.id, 'partialUnits', e.target.value)}
                     onFocus={(e) => {
                       e.target.classList.add('bg-info-subtle');
-                      e.target.dataset.originalValue = e.target.value;
-                      e.target.value = '';
+                      e.target.select();  // Select all text for easy replacement
                       if (validationErrors[line.id]) {
                         setValidationErrors((prev) => {
                           const { [line.id]: _, ...rest } = prev;
@@ -1296,10 +1491,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                     }}
                     onBlur={(e) => {
                       e.target.classList.remove('bg-info-subtle');
-                      if (e.target.value === '') {
-                        const originalValue = e.target.dataset.originalValue || '0';
-                        updateLineInput(line.id, 'partialUnits', originalValue);
-                      } else {
+                      if (e.target.value !== '') {
                         const formatted = formatUserInput(e.target.value, line.category_code, line.item_size);
                         updateLineInput(line.id, 'partialUnits', formatted);
                       }
@@ -1517,12 +1709,15 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               </span>
               <small className="text-muted ms-1">{labels.unit}</small>
             </div>
-            <div>
-              <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#0dcaf0' }}>
-                {line.opening_display_partial_units || '0'}
-              </span>
-              <small className="text-muted ms-1">{labels.servingUnit}</small>
-            </div>
+            {/* Hide partial units for BULK_JUICES */}
+            {line.subcategory !== 'BULK_JUICES' && (
+              <div>
+                <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#0dcaf0' }}>
+                  {line.opening_display_partial_units || '0'}
+                </span>
+                <small className="text-muted ms-1">{labels.servingUnit}</small>
+              </div>
+            )}
             <small className="text-muted">{parseFloat(line.opening_qty || 0).toFixed(2)} servings</small>
           </div>
         </td>
@@ -1557,12 +1752,15 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
               </span>
               <small className="text-muted ms-1">{labels.unit}</small>
             </div>
-            <div>
-              <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#dc3545' }}>
-                {line.expected_display_partial_units || '0'}
-              </span>
-              <small className="text-muted ms-1">{labels.servingUnit}</small>
-            </div>
+            {/* Hide partial units for BULK_JUICES */}
+            {line.subcategory !== 'BULK_JUICES' && (
+              <div>
+                <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#dc3545' }}>
+                  {line.expected_display_partial_units || '0'}
+                </span>
+                <small className="text-muted ms-1">{labels.servingUnit}</small>
+              </div>
+            )}
             <small className="text-muted">€{parseFloat(line.expected_value || 0).toFixed(2)}</small>
             <small className="text-muted">{parseFloat(line.expected_qty || 0).toFixed(2)} servings</small>
             {/* BIB ONLY: Show drink servings from backend */}

@@ -11,14 +11,14 @@ const ProfitabilityChart = ({
   period,
   height = 400,
   onItemClick = null,
-  defaultView = 'category' // 'category' or 'item'
+  defaultView = 'category'
 }) => {
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [view, setView] = useState(defaultView);
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [metricType, setMetricType] = useState('gp_percentage'); // 'gp_percentage', 'markup_percentage', 'pour_cost'
+  const [metricType, setMetricType] = useState('gp_percentage');
   const [summary, setSummary] = useState(null);
   const [allCategories, setAllCategories] = useState([]);
 
