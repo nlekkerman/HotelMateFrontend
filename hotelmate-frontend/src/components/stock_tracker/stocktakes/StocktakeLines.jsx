@@ -26,7 +26,7 @@
  * See: BACKEND_API_COMPLETE_REFERENCE_FOR_FRONTEND.md for full API documentation
  */
 import React, { useState, useContext } from 'react';
-import { Card, Table, Form, Button, Badge } from 'react-bootstrap';
+import { Card, Table, Form, Button, Badge, Modal } from 'react-bootstrap';
 import { FaCheck } from 'react-icons/fa';
 import { getCountingLabels } from '../utils/categoryHelpers';
 import { VoiceRecorder } from '@/voiceRecognition/VoiceRecorder';
@@ -48,6 +48,7 @@ import {
 
 export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdated, hotelSlug, stocktakeId }) => {
   const { user } = useAuth();
+  const [voiceError, setVoiceError] = React.useState(null);
   const [lineInputs, setLineInputs] = useState({});
   const [validationErrors, setValidationErrors] = useState({});
   const [showPurchases, setShowPurchases] = useState({});
@@ -220,7 +221,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         stack: error.stack,
         command: command
       });
-      alert(`❌ Failed: ${error.message}`);
+      setVoiceError(error.message);
       // Keep modal open on error so user can retry
     }
   };
@@ -2352,6 +2353,27 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         message={successMessage}
         onClose={() => setShowSuccessModal(false)}
       />
+
+      {/* Voice Command Error Modal */}
+      <Modal show={!!voiceError} onHide={() => setVoiceError(null)} centered>
+        <Modal.Header closeButton className="bg-danger text-white">
+          <Modal.Title>Voice Command Failed</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="text-center py-3">
+            <div className="mb-3">
+              <span style={{ fontSize: '3rem' }}>❌</span>
+            </div>
+            <h5 className="mb-3">Error</h5>
+            <p className="text-muted">{voiceError}</p>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setVoiceError(null)}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* Voice Debug Panel */}
       <VoiceDebugPanel />

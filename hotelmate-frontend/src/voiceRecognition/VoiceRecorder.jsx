@@ -199,9 +199,9 @@ export const VoiceRecorder = ({ stocktakeId, hotelSlug, onCommandReceived, isLoc
           className="voice-error-tooltip"
           style={{
             position: 'absolute',
-            bottom: '60px',
+            top: '130px',
             right: '0',
-            backgroundColor: '#dc3545',
+            backgroundColor: '#dc3535ff',
             color: 'white',
             padding: '10px 14px',
             borderRadius: '8px',

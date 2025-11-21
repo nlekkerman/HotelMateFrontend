@@ -150,7 +150,7 @@ export const VoiceDebugPanel = () => {
             position: 'fixed',
             top: '120px',
             right: '20px',
-            width: '500px',
+            width: '100%',
             maxHeight: '600px',
             zIndex: 9999,
           }}

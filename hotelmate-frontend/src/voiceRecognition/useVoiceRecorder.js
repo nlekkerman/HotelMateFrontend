@@ -85,8 +85,8 @@ export const useVoiceRecorder = () => {
       const dataArray = new Uint8Array(bufferLength);
 
       let silenceStart = Date.now();
-      const SILENCE_THRESHOLD = 30; // Adjust this value (0-255)
-      const SILENCE_DURATION = 2000; // Stop after 2 seconds of silence
+      const SILENCE_THRESHOLD = 20; // Lower threshold to be less sensitive (0-255)
+      const SILENCE_DURATION = 3500; // Stop after 3.5 seconds of silence to allow full sentences
 
       const checkAudioLevel = () => {
         if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') {
@@ -99,9 +99,9 @@ export const useVoiceRecorder = () => {
         if (average < SILENCE_THRESHOLD) {
           // Silence detected
           if (Date.now() - silenceStart > SILENCE_DURATION) {
-            console.log('🔇 Silence detected for 2 seconds, auto-stopping...');
+            console.log('🔇 Silence detected for 3.5 seconds, auto-stopping...');
             addVoiceLog('info', '🔇 Silence detected - auto-stopping recording', {
-              duration: '2 seconds',
+              duration: '3.5 seconds',
               threshold: SILENCE_THRESHOLD
             });
             if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
@@ -123,14 +123,14 @@ export const useVoiceRecorder = () => {
       setIsRecording(true);
       addVoiceLog('success', '🎙️ Recording started - speak now!', {
         mimeType: mimeType,
-        silenceDetection: 'enabled (2s timeout)'
+        silenceDetection: 'enabled (3.5s timeout)'
       });
 
-      // Start silence detection after 1 second (allow initial speech)
+      // Start silence detection after 1.5 seconds (allow initial speech and pauses)
       setTimeout(() => {
         silenceStart = Date.now();
         checkAudioLevel();
-      }, 1000);
+      }, 1500);
 
     } catch (err) {
       console.error('Failed to start recording:', err);
