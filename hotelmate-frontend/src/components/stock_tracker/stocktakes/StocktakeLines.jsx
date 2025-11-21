@@ -32,6 +32,8 @@ import { getCountingLabels } from '../utils/categoryHelpers';
 import { VoiceRecorder } from '@/voiceRecognition/VoiceRecorder';
 import { VoiceCommandPreview } from '@/voiceRecognition/VoiceCommandPreview';
 import { confirmVoiceCommand } from '@/voiceRecognition/voiceApi';
+import VoiceDebugPanel, { addVoiceLog } from '@/voiceRecognition/VoiceDebugPanel';
+import SuccessModal from '@/components/modals/SuccessModal';
 import { SubcategoryBadge, getSubcategoryHelpText } from '../utils/SubcategoryBadge';
 import { CategoryTotalsRow } from './CategoryTotalsRow';
 import { useCategoryTotals } from '../hooks/useCategoryTotals';
@@ -53,6 +55,8 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
   const [searchTerm, setSearchTerm] = useState('');
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [voiceCommand, setVoiceCommand] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const { categoryTotals, loading: totalsLoading, refetch: refetchTotals } =
     useCategoryTotals(hotelSlug, stocktakeId);
@@ -75,7 +79,11 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
   // Handle voice command confirmation - Use new backend confirm endpoint
   const handleVoiceCommandConfirm = async (command) => {
     try {
-      console.log('✅ User confirmed voice command:', command);
+      addVoiceLog('info', '🔄 Starting confirmation process', {
+        command: command,
+        stocktakeId: stocktakeId,
+        hotelSlug: hotelSlug
+      });
       
       // Call backend confirm endpoint - backend does ALL the work!
       // Backend will:
@@ -85,26 +93,125 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
       const result = await confirmVoiceCommand(command, stocktakeId, hotelSlug);
 
       if (result.success) {
-        console.log('✅ Command confirmed successfully:', {
+        addVoiceLog('success', '✅ Backend returned success response', {
           item: result.item_name,
           sku: result.item_sku,
-          message: result.message
+          message: result.message,
+          lineData: result.line
         });
 
-        // Show success message
-        alert(`✅ ${result.message || 'Command applied successfully'}\n${result.item_name} (${result.item_sku})`);
+        // Build detailed success message with breakdown
+        let detailedMessage = `${result.item_name} (${result.item_sku})`;
+        
+        // Add breakdown if available (matching VoiceCommandPreview format)
+        if (result.line) {
+          const line = result.line;
+          const fullUnits = line.counted_full_units;
+          const partialUnits = line.counted_partial_units;
+          
+          // Get the line's category to determine proper labels
+          const lineData = lines.find(l => l.id === line.id);
+          const categoryCode = lineData?.category_code;
+          
+          if (fullUnits !== null && fullUnits !== undefined && fullUnits > 0) {
+            const fullLabel = categoryCode === 'D' ? 'kegs' : 'cases';
+            const partialLabel = categoryCode === 'D' ? 'pints' : 'bottles';
+            
+            detailedMessage += `\n${fullUnits} ${fullLabel}`;
+            
+            if (partialUnits !== null && partialUnits !== undefined && partialUnits > 0) {
+              detailedMessage += `, ${partialUnits} ${partialLabel}`;
+            }
+          } else if (partialUnits !== null && partialUnits !== undefined && partialUnits > 0) {
+            const partialLabel = categoryCode === 'D' ? 'pints' : 'bottles';
+            detailedMessage += `\n${partialUnits} ${partialLabel}`;
+          }
+        }
+        
+        // Show success modal with detailed breakdown
+        setSuccessMessage(detailedMessage);
+        setShowSuccessModal(true);
+
+        // ✅ FIX: Update line state with backend response (same as manual counting)
+        if (result.line && typeof onLineUpdated === 'function') {
+          addVoiceLog('info', '🔄 Updating line state via onLineUpdated callback', {
+            lineId: result.line.id,
+            updatedData: result.line
+          });
+          onLineUpdated(result.line);
+        }
+
+        // ✅ FIX: Update input fields to display the counted values
+        // This ensures the UI shows the values in the input fields immediately
+        if (result.line) {
+          const line = lines.find(l => l.id === result.line.id);
+          
+          addVoiceLog('info', '📝 Updating input fields in UI', {
+            lineId: result.line.id,
+            category: line?.category_code,
+            subcategory: line?.subcategory,
+            counted_full_units: result.line.counted_full_units,
+            counted_partial_units: result.line.counted_partial_units
+          });
+          
+          setLineInputs((prev) => {
+            // For SYRUPS, BULK_JUICES, BIB, WINES, SPIRITS: combine full + partial into single field
+            if ((line?.subcategory === 'SYRUPS' || line?.subcategory === 'BULK_JUICES' || 
+                 line?.subcategory === 'BIB' || line?.category_code === 'W' || line?.category_code === 'S')) {
+              const combinedValue = (Number(result.line.counted_full_units || 0) + Number(result.line.counted_partial_units || 0));
+              return {
+                ...prev,
+                [result.line.id]: {
+                  fullUnits: combinedValue !== 0 ? combinedValue.toFixed(2) : '',
+                  partialUnits: '',
+                  wasteQuantity: '',
+                  purchasesQty: '',
+                  openingFullUnits: '',
+                  openingPartialUnits: '',
+                }
+              };
+            } else {
+              // Normal categories: separate full and partial
+              return {
+                ...prev,
+                [result.line.id]: {
+                  fullUnits: result.line.counted_full_units !== null && result.line.counted_full_units !== undefined
+                    ? result.line.counted_full_units : '',
+                  partialUnits: result.line.counted_partial_units !== null && result.line.counted_partial_units !== undefined
+                    ? result.line.counted_partial_units : '',
+                  wasteQuantity: '',
+                  purchasesQty: '',
+                  openingFullUnits: '',
+                  openingPartialUnits: '',
+                }
+              };
+            }
+          });
+          
+          addVoiceLog('success', '✅ Input fields updated successfully', {
+            lineId: result.line.id
+          });
+        }
 
         // Close the modal
         setVoiceCommand(null);
         
-        // UI will update automatically via Pusher! 🎉
-        // The backend broadcasts the update and Pusher listeners will handle it
-        // No need to manually update state - real-time sync across all clients
+        // Refetch totals to update category summaries
+        refetchTotals?.();
+        
+        addVoiceLog('success', '🎉 Voice command completed - UI fully updated!', {
+          lineId: result.line?.id,
+          itemName: result.item_name
+        });
       } else {
         throw new Error(result.error || 'Failed to apply command');
       }
     } catch (error) {
-      console.error('❌ Failed to confirm voice command:', error);
+      addVoiceLog('error', '❌ Confirmation failed in StocktakeLines handler', {
+        error: error.message,
+        stack: error.stack,
+        command: command
+      });
       alert(`❌ Failed: ${error.message}`);
       // Keep modal open on error so user can retry
     }
@@ -2087,6 +2194,16 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
             )}
           </div>
 
+          {/* Voice Debug Panel - Positioned above category filters */}
+          <div style={{ 
+            position: 'sticky',
+            top: '20px',
+            zIndex: 100,
+            marginBottom: '15px'
+          }}>
+            <VoiceDebugPanel />
+          </div>
+
           {/* Category Quick Links */}
           <div className="stocktake-saerch-categories">
             <div className="d-flex flex-wrap gap-2 justify-content-center">
@@ -2225,10 +2342,21 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         <VoiceCommandPreview
           command={voiceCommand}
           stocktake={{ id: stocktakeId, hotelSlug }}
+          lines={lines}
           onConfirm={handleVoiceCommandConfirm}
           onCancel={handleVoiceCommandCancel}
         />
       )}
+
+      {/* Success Modal - Shows detailed breakdown after voice command confirmation */}
+      <SuccessModal
+        show={showSuccessModal}
+        message={successMessage}
+        onClose={() => setShowSuccessModal(false)}
+      />
+
+      {/* Voice Debug Panel */}
+      <VoiceDebugPanel />
     </>
   );
 };

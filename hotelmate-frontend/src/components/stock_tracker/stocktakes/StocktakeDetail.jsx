@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import {
   Button,
   Badge,
@@ -27,14 +28,12 @@ import { StocktakeLines } from "./StocktakeLines";
 import { StocktakeCloseModal } from "./StocktakeCloseModal";
 import { useStocktakeRealtime } from "../hooks/useStocktakeRealtime";
 import { useCategoryTotals } from "../hooks/useCategoryTotals";
-import { VoiceRecorder } from "@/voiceRecognition/VoiceRecorder";
-import { VoiceCommandPreview } from "@/voiceRecognition/VoiceCommandPreview";
-import VoiceDebugPanel, { addVoiceLog } from "@/voiceRecognition/VoiceDebugPanel";
 // import { CategoryTotalsSummary } from './CategoryTotalsSummary'; // TODO: Enable when summary endpoint exists
 
 export const StocktakeDetail = () => {
   const { hotel_slug, id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [stocktake, setStocktake] = useState(null);
   const [lines, setLines] = useState([]);
@@ -45,10 +44,6 @@ export const StocktakeDetail = () => {
   const [pusher, setPusher] = useState(null);
   const [pusherReady, setPusherReady] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [voicePreviewCommand, setVoicePreviewCommand] = useState(null);
-  
-  // Reference to StocktakeLines component for voice command integration
-  const stocktakeLinesRef = React.useRef(null);
 
   // Fetch category totals for calculating grand total
   const { categoryTotals } = useCategoryTotals(hotel_slug, id);
@@ -573,130 +568,7 @@ export const StocktakeDetail = () => {
     });
   };
 
-  // Voice command handlers
-  const handleVoiceCommandReceived = (command) => {
-    console.log('🎤 Voice command received:', command);
-    addVoiceLog('success', '🎤 Voice command received from backend', {
-      action: command.action,
-      product: command.item_identifier,
-      value: command.value,
-      transcription: command.transcription
-    });
-    setVoicePreviewCommand(command);
-  };
 
-  const handleVoiceCommandConfirm = async (command) => {
-    try {
-      console.log('✅ Confirming voice command:', command);
-      addVoiceLog('info', '🔍 Searching for matching product...', {
-        searching_for: command.item_identifier
-      });
-
-      // Find matching stocktake line by product name (fuzzy match)
-      const productName = command.item_identifier.toLowerCase();
-      const matchingLine = lines.find(line => 
-        line.item_name.toLowerCase().includes(productName) ||
-        productName.includes(line.item_name.toLowerCase()) ||
-        line.item_sku?.toLowerCase() === productName
-      );
-
-      if (!matchingLine) {
-        addVoiceLog('error', `❌ Product not found: "${command.item_identifier}"`, {
-          searched_in: lines.length + ' stocktake lines'
-        });
-        toast.error(`Product "${command.item_identifier}" not found in stocktake`);
-        setVoicePreviewCommand(null);
-        return;
-      }
-
-      console.log('📦 Matched line:', matchingLine);
-      addVoiceLog('success', `✅ Product matched: ${matchingLine.item_name}`, {
-        sku: matchingLine.item_sku,
-        line_id: matchingLine.id
-      });
-
-      // Map action to API call
-      if (command.action === 'count') {
-        // Update counted values
-        const updateData = {};
-
-        if (command.full_units !== null && command.full_units !== undefined) {
-          // Backend provided full/partial breakdown
-          updateData.counted_full_units = command.full_units;
-          updateData.counted_partial_units = command.partial_units || 0;
-        } else {
-          // Backend provided single value - use as counted_quantity
-          updateData.counted_quantity = command.value;
-        }
-
-        addVoiceLog('info', '💾 Saving count to database...', updateData);
-
-        const response = await api.patch(
-          `/stock_tracker/${hotel_slug}/stocktake-lines/${matchingLine.id}/`,
-          updateData
-        );
-
-        // Update line in state
-        setLines(prevLines =>
-          prevLines.map(l => l.id === matchingLine.id ? response.data : l)
-        );
-
-        addVoiceLog('success', `✅ Count saved successfully`, {
-          item: matchingLine.item_name,
-          value: command.value
-        });
-        toast.success(`✅ Count saved: ${matchingLine.item_name} = ${command.value}`);
-
-      } else if (command.action === 'purchase' || command.action === 'waste') {
-        // Add movement
-        const updateData = {};
-
-        if (command.full_units !== null && command.full_units !== undefined) {
-          // Backend provided full/partial breakdown
-          updateData[`${command.action === 'purchase' ? 'purchases' : 'waste'}_full_units`] = command.full_units;
-          updateData[`${command.action === 'purchase' ? 'purchases' : 'waste'}_partial_units`] = command.partial_units || 0;
-        } else {
-          // Backend provided single value
-          updateData[command.action === 'purchase' ? 'purchases' : 'waste'] = command.value;
-        }
-
-        addVoiceLog('info', `💾 Saving ${command.action} to database...`, updateData);
-
-        const response = await api.patch(
-          `/stock_tracker/${hotel_slug}/stocktake-lines/${matchingLine.id}/`,
-          updateData
-        );
-
-        // Update line in state
-        setLines(prevLines =>
-          prevLines.map(l => l.id === matchingLine.id ? response.data : l)
-        );
-
-        addVoiceLog('success', `✅ ${command.action === 'purchase' ? 'Purchase' : 'Waste'} saved successfully`, {
-          item: matchingLine.item_name,
-          value: command.value
-        });
-        toast.success(`✅ ${command.action === 'purchase' ? 'Purchase' : 'Waste'} saved: ${matchingLine.item_name} ${command.action === 'purchase' ? '+' : '-'}${command.value}`);
-      }
-
-      // Close preview modal
-      setVoicePreviewCommand(null);
-
-    } catch (error) {
-      console.error('❌ Voice command confirmation failed:', error);
-      addVoiceLog('error', '❌ Failed to save voice command', {
-        error: error.response?.data?.message || error.message,
-        command: command
-      });
-      toast.error(`Failed to save: ${error.response?.data?.message || error.message}`);
-    }
-  };
-
-  const handleVoiceCommandCancel = () => {
-    console.log('❌ Voice command cancelled');
-    addVoiceLog('warning', '❌ Voice command cancelled by user');
-    setVoicePreviewCommand(null);
-  };
 
   if (loading)
     return (
@@ -1451,26 +1323,13 @@ export const StocktakeDetail = () => {
             </Card>
           )}
 
-          {/* Voice Debug Panel - Fixed to right side of screen */}
-          {lines.length > 0 && (
-            <div style={{
-              position: 'fixed',
-              top: '80px',
-              right: '20px',
-              zIndex: 999,
-              maxWidth: '350px',
-              width: '350px',
-            }}>
-              <VoiceDebugPanel />
-            </div>
-          )}
+        
 
           {/* Stocktake Lines */}
           <StocktakeLines
             lines={filteredLines}
             isLocked={isLocked}
             onUpdateLine={handleUpdateLine}
-            onVoiceCommand={handleVoiceCommandReceived}
             stocktakeId={id}
             hotelSlug={hotel_slug}
             onLineUpdated={(updatedLine) => {
@@ -1531,25 +1390,6 @@ export const StocktakeDetail = () => {
         onSuccess={handleApproveSuccess}
       />
 
-      {/* Voice Command Preview Modal */}
-      {voicePreviewCommand && (
-        <VoiceCommandPreview
-          command={voicePreviewCommand}
-          stocktake={stocktake}
-          onConfirm={handleVoiceCommandConfirm}
-          onCancel={handleVoiceCommandCancel}
-        />
-      )}
-
-      {/* Floating Voice Recorder Button */}
-      {lines.length > 0 && (
-        <VoiceRecorder
-          stocktakeId={parseInt(id)}
-          hotelSlug={hotel_slug}
-          onCommandReceived={handleVoiceCommandReceived}
-          isLocked={isLocked}
-        />
-      )}
     </div>
   );
 };

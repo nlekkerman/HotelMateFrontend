@@ -1,4 +1,5 @@
 import api from '@/services/api';
+import { addVoiceLog } from './VoiceDebugPanel';
 
 /**
  * Send audio recording to backend for voice command processing
@@ -22,12 +23,14 @@ export const sendVoiceCommand = async (audioBlob, stocktakeId, hotelSlug) => {
     formData.append('audio', audioFile);
     formData.append('stocktake_id', stocktakeId.toString());
 
-    console.log('📤 Sending voice command to backend:', {
+    const requestInfo = {
       endpoint: `/stock_tracker/${hotelSlug}/stocktake-lines/voice-command/`,
       fileSize: audioFile.size,
       fileType: audioFile.type,
       stocktakeId: stocktakeId,
-    });
+    };
+
+    addVoiceLog('info', '📤 Sending audio to backend', requestInfo);
 
     // POST to backend voice command endpoint
     const response = await api.post(
@@ -40,11 +43,10 @@ export const sendVoiceCommand = async (audioBlob, stocktakeId, hotelSlug) => {
       }
     );
 
-    console.log('✅ Backend response:', response.data);
+    addVoiceLog('success', '✅ Backend parsed voice command', response.data);
     return response.data;
   } catch (error) {
     console.error('❌ Voice command API error:', error);
-    console.error('Error response:', error.response?.data);
     
     // Extract detailed error message from backend response
     let errorMessage = 'Failed to process voice command';
@@ -55,8 +57,15 @@ export const sendVoiceCommand = async (audioBlob, stocktakeId, hotelSlug) => {
         || data.message 
         || data.detail
         || JSON.stringify(data);
+      
+      addVoiceLog('error', '❌ Backend parse error', {
+        error: errorMessage,
+        fullResponse: error.response.data,
+        status: error.response.status
+      });
     } else if (error.message) {
       errorMessage = error.message;
+      addVoiceLog('error', '❌ Network error', { error: errorMessage });
     }
 
     throw new Error(errorMessage);
@@ -73,26 +82,31 @@ export const sendVoiceCommand = async (audioBlob, stocktakeId, hotelSlug) => {
  */
 export const confirmVoiceCommand = async (command, stocktakeId, hotelSlug) => {
   try {
-    console.log('✅ Confirming voice command:', {
+    const payload = {
+      stocktake_id: stocktakeId,
+      command: command
+    };
+
+    addVoiceLog('info', '📤 Confirming voice command with backend', {
       endpoint: `/stock_tracker/${hotelSlug}/stocktake-lines/voice-command/confirm/`,
-      command,
-      stocktakeId
+      payload: payload
     });
 
     // POST to backend confirm endpoint
     const response = await api.post(
       `/stock_tracker/${hotelSlug}/stocktake-lines/voice-command/confirm/`,
-      {
-        stocktake_id: stocktakeId,
-        command: command
-      }
+      payload
     );
 
-    console.log('✅ Confirm response:', response.data);
+    addVoiceLog('success', '✅ Backend confirmed and updated stocktake', {
+      response: response.data,
+      updatedLine: response.data.line,
+      message: response.data.message
+    });
+
     return response.data;
   } catch (error) {
     console.error('❌ Confirm command API error:', error);
-    console.error('Error response:', error.response?.data);
     
     // Extract detailed error message from backend response
     let errorMessage = 'Failed to confirm voice command';
@@ -103,8 +117,19 @@ export const confirmVoiceCommand = async (command, stocktakeId, hotelSlug) => {
         || data.message 
         || data.detail
         || JSON.stringify(data);
+      
+      addVoiceLog('error', '❌ Confirm failed', {
+        error: errorMessage,
+        fullResponse: error.response.data,
+        status: error.response.status,
+        sentPayload: {
+          stocktake_id: stocktakeId,
+          command: command
+        }
+      });
     } else if (error.message) {
       errorMessage = error.message;
+      addVoiceLog('error', '❌ Network error during confirm', { error: errorMessage });
     }
 
     throw new Error(errorMessage);
