@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { addVoiceLog } from '@/voiceRecognition/VoiceDebugPanel';
 
 /**
  * Custom hook for real-time stocktake updates via Pusher
@@ -48,19 +49,54 @@ export function useStocktakeRealtime(
     // 1. Line counted quantities updated (by another user)
     channel.bind('line-counted-updated', (data) => {
       console.log('📡 Pusher: Line counted updated', data);
+      
+      addVoiceLog('info', '📡 Pusher real-time event received: line-counted-updated', {
+        channel: channelName,
+        lineId: data.line_id,
+        itemSku: data.item_sku,
+        itemName: data.line?.item_name,
+        countedFullUnits: data.line?.counted_full_units,
+        countedPartialUnits: data.line?.counted_partial_units,
+        countedQty: data.line?.counted_qty,
+        hasFullLineData: !!data.line
+      });
 
       if (data.line && typeof onLineUpdated === 'function') {
+        console.log('📡 Calling onLineUpdated callback with Pusher data');
         onLineUpdated(data.line);
+        addVoiceLog('success', '✅ UI updated from Pusher event', {
+          lineId: data.line.id,
+          itemName: data.line.item_name
+        });
+      } else {
+        console.warn('⚠️ Pusher event missing line data or callback not provided');
+        addVoiceLog('warning', '⚠️ Pusher event received but could not update UI', {
+          hasLineData: !!data.line,
+          hasCallback: typeof onLineUpdated === 'function'
+        });
       }
     });
 
     // 2. Movement (purchase/waste) added (by another user)
     channel.bind('line-movement-added', (data) => {
       console.log('📡 Pusher: Movement added', data);
+      
+      addVoiceLog('info', '📡 Pusher real-time event received: line-movement-added', {
+        channel: channelName,
+        lineId: data.line_id,
+        itemSku: data.item_sku,
+        movementType: data.movement_type,
+        hasFullLineData: !!data.line
+      });
 
       if (data.line && typeof onLineUpdated === 'function') {
         // Line includes updated purchases/waste/expected_qty/variance
         onLineUpdated(data.line);
+        addVoiceLog('success', '✅ UI updated from Pusher movement event', {
+          lineId: data.line.id,
+          purchases: data.line.purchases,
+          waste: data.line.waste
+        });
       }
     });
 
@@ -85,10 +121,18 @@ export function useStocktakeRealtime(
     // Handle connection state
     channel.bind('pusher:subscription_succeeded', () => {
       console.log('✅ Successfully subscribed to:', channelName);
+      addVoiceLog('success', '✅ Pusher subscription active for real-time updates', {
+        channel: channelName,
+        listening: ['line-counted-updated', 'line-movement-added', 'stocktake-status-changed']
+      });
     });
 
     channel.bind('pusher:subscription_error', (error) => {
       console.error('❌ Failed to subscribe to channel:', error);
+      addVoiceLog('error', '❌ Pusher subscription failed', {
+        channel: channelName,
+        error: error
+      });
     });
 
     // Cleanup on unmount

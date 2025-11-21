@@ -201,7 +201,15 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         
         addVoiceLog('success', '🎉 Voice command completed - UI fully updated!', {
           lineId: result.line?.id,
-          itemName: result.item_name
+          itemName: result.item_name,
+          note: 'If other computers are viewing this stocktake, they should receive a Pusher event now'
+        });
+        
+        addVoiceLog('info', '⏳ Waiting for Pusher broadcast from backend...', {
+          expectedChannel: `${hotelSlug}-stocktake-${stocktakeId}`,
+          expectedEvent: 'line-counted-updated',
+          lineId: result.line?.id,
+          note: 'Other users should see this update in 1-2 seconds'
         });
       } else {
         throw new Error(result.error || 'Failed to apply command');
@@ -2192,16 +2200,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
                 Found {filteredLines.length} items
               </small>
             )}
-          </div>
-
-          {/* Voice Debug Panel - Positioned above category filters */}
-          <div style={{ 
-            position: 'sticky',
-            top: '20px',
-            zIndex: 100,
-            marginBottom: '15px'
-          }}>
-            <VoiceDebugPanel />
           </div>
 
           {/* Category Quick Links */}

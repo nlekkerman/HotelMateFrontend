@@ -100,87 +100,146 @@ export const VoiceDebugPanel = () => {
   }
 
   return (
-    <Card className="mb-3 border-info" style={{ backgroundColor: 'rgba(13, 110, 253, 0.05)' }}>
-      <Card.Header 
-        className="d-flex justify-content-between align-items-center bg-info text-white"
-        style={{ cursor: 'pointer' }}
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <div>
-          <FaMicrophone className="me-2" />
-          <strong>Voice Recognition Debug Panel</strong>
-          <Badge bg="light" text="dark" className="ms-2">
-            {logs.length} {logs.length === 1 ? 'log' : 'logs'}
-          </Badge>
-        </div>
-        <div className="d-flex gap-2">
-          {logs.length > 0 && (
-            <Button 
-              variant="light" 
-              size="sm" 
-              onClick={(e) => {
-                e.stopPropagation();
-                clearLogs();
-              }}
-            >
-              <FaTimes /> Clear
-            </Button>
-          )}
-          <Badge bg="light" text="dark">
-            {isExpanded ? '▼' : '▶'}
-          </Badge>
-        </div>
-      </Card.Header>
-
-      {isExpanded && (
-        <Card.Body style={{ maxHeight: '400px', overflowY: 'auto' }}>
-          <div className="voice-logs">
-            {logs.map(log => (
-              <div 
-                key={log.id} 
-                className="log-entry mb-2 p-2 border-start border-3"
-                style={{ 
-                  borderColor: `var(--bs-${getBadgeVariant(log.type)})`,
-                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                  borderRadius: '4px'
+    <>
+      {/* Floating Button - Collapsed State */}
+      {!isExpanded && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '120px',
+            right: '20px',
+            zIndex: 9999,
+          }}
+        >
+          <Button
+            variant={logs.some(log => log.type === 'error') ? 'danger' : 'info'}
+            size="sm"
+            className="shadow-lg position-relative"
+            onClick={() => setIsExpanded(true)}
+            style={{
+              padding: '8px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              borderRadius: '20px',
+            }}
+          >
+            <FaMicrophone size={16} />
+            <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>Debug</span>
+            {logs.length > 0 && (
+              <Badge
+                bg="light"
+                text="dark"
+                pill
+                style={{
+                  fontSize: '0.7rem',
+                  minWidth: '20px',
                 }}
               >
-                <div className="d-flex justify-content-between align-items-start">
-                  <div className="flex-grow-1">
-                    <div className="d-flex align-items-center mb-1">
-                      <span className="me-2">{getTypeIcon(log.type)}</span>
-                      <Badge bg={getBadgeVariant(log.type)} className="me-2">
-                        {log.type.toUpperCase()}
-                      </Badge>
-                      <small className="text-muted">{log.timestamp}</small>
-                    </div>
-                    <div className="log-message">
-                      {log.message}
-                    </div>
-                    {log.data && (
-                      <pre 
-                        className="mt-2 mb-0 p-2 border rounded" 
-                        style={{ 
-                          fontSize: '0.75rem',
-                          maxHeight: '200px',
-                          overflowY: 'auto',
-                          backgroundColor: log.type === 'error' ? 'rgba(220, 53, 69, 0.1)' : '#f8f9fa',
-                          borderColor: log.type === 'error' ? 'var(--bs-danger)' : '#dee2e6',
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word',
-                        }}
-                      >
-                        {log.data}
-                      </pre>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card.Body>
+                {logs.length}
+              </Badge>
+            )}
+          </Button>
+        </div>
       )}
-    </Card>
+
+      {/* Expanded Panel */}
+      {isExpanded && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '120px',
+            right: '20px',
+            width: '500px',
+            maxHeight: '600px',
+            zIndex: 9999,
+          }}
+        >
+          <Card className="border-info shadow-lg" style={{ backgroundColor: 'rgba(13, 110, 253, 0.05)' }}>
+            <Card.Header 
+              className="d-flex justify-content-between align-items-center bg-info text-white"
+              style={{ cursor: 'move' }}
+            >
+              <div>
+                <FaMicrophone className="me-2" />
+                <strong>Voice Debug</strong>
+                <Badge bg="light" text="dark" className="ms-2">
+                  {logs.length}
+                </Badge>
+              </div>
+              <div className="d-flex gap-2">
+                {logs.length > 0 && (
+                  <Button 
+                    variant="light" 
+                    size="sm" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      clearLogs();
+                    }}
+                  >
+                    <FaTimes className="me-1" /> Clear
+                  </Button>
+                )}
+                <Button
+                  variant="light"
+                  size="sm"
+                  onClick={() => setIsExpanded(false)}
+                >
+                  ▼
+                </Button>
+              </div>
+            </Card.Header>
+
+            <Card.Body style={{ maxHeight: '500px', overflowY: 'auto' }}>
+              <div className="voice-logs">
+                {logs.map(log => (
+                  <div 
+                    key={log.id} 
+                    className="log-entry mb-2 p-2 border-start border-3"
+                    style={{ 
+                      borderColor: `var(--bs-${getBadgeVariant(log.type)})`,
+                      backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                      borderRadius: '4px'
+                    }}
+                  >
+                    <div className="d-flex justify-content-between align-items-start">
+                      <div className="flex-grow-1">
+                        <div className="d-flex align-items-center mb-1">
+                          <span className="me-2">{getTypeIcon(log.type)}</span>
+                          <Badge bg={getBadgeVariant(log.type)} className="me-2">
+                            {log.type.toUpperCase()}
+                          </Badge>
+                          <small className="text-muted">{log.timestamp}</small>
+                        </div>
+                        <div className="log-message">
+                          {log.message}
+                        </div>
+                        {log.data && (
+                          <pre 
+                            className="mt-2 mb-0 p-2 border rounded" 
+                            style={{ 
+                              fontSize: '0.75rem',
+                              maxHeight: '200px',
+                              overflowY: 'auto',
+                              backgroundColor: log.type === 'error' ? 'rgba(220, 53, 69, 0.1)' : '#f8f9fa',
+                              borderColor: log.type === 'error' ? 'var(--bs-danger)' : '#dee2e6',
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                            }}
+                          >
+                            {log.data}
+                          </pre>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card.Body>
+          </Card>
+        </div>
+      )}
+    </>
   );
 };
 
