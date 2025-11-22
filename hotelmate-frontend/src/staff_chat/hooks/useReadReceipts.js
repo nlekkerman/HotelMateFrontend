@@ -53,36 +53,57 @@ const useReadReceipts = (hotelSlug, conversationId, currentUserId) => {
 
   /**
    * Mark entire conversation as read (all unread messages)
+   * IMPORTANT: This updates the backend AND triggers Pusher event
+   * The UI will update via Pusher event (updateFromRealtimeEvent)
    */
   const markConversationRead = useCallback(async () => {
     if (!conversationId || !hotelSlug) {
+      console.log('⚠️ [useReadReceipts] markConversationRead - missing data:', {
+        conversationId,
+        hotelSlug
+      });
       return null;
     }
 
     try {
+      console.log('📮 [useReadReceipts] Calling markConversationAsRead API...');
       setLoading(true);
       const response = await markConversationAsRead(hotelSlug, conversationId);
       
-      // Update local state for all marked messages
+      console.log('✅ [useReadReceipts] API response:', response);
+      console.log('✅ [useReadReceipts] Message IDs marked:', response.message_ids);
+      
+      // IMMEDIATELY update local state (don't wait for Pusher)
       if (response.message_ids && response.message_ids.length > 0) {
+        console.log('🔄 [useReadReceipts] Updating local readReceipts state...');
         const updates = {};
         response.message_ids.forEach(msgId => {
+          // Add current user to read_by list
           updates[msgId] = {
-            read_by: [{ id: currentUserId }],
+            read_by: [{ 
+              id: currentUserId, 
+              name: 'You',
+              timestamp: new Date().toISOString()
+            }],
             read_count: 1,
             is_read_by_current_user: true
           };
         });
         
-        setReadReceipts(prev => ({
-          ...prev,
-          ...updates
-        }));
+        setReadReceipts(prev => {
+          const newState = {
+            ...prev,
+            ...updates
+          };
+          console.log('✅ [useReadReceipts] readReceipts state updated');
+          console.log('✅ [useReadReceipts] New readReceipts keys:', Object.keys(newState));
+          return newState;
+        });
       }
       
       return response;
     } catch (err) {
-      console.error('Error marking conversation as read:', err);
+      console.error('❌ [useReadReceipts] Error marking conversation as read:', err);
       setError(err.message || 'Failed to mark conversation as read');
       return null;
     } finally {

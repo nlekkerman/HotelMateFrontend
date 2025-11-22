@@ -41,8 +41,8 @@ const ChatWindowPopup = ({
   const messagesContainerRef = useRef(null);
   const sentinelRef = useRef(null);
   
-  // Get event subscription from StaffChatContext (single source of truth!)
-  const { subscribeToMessages } = useStaffChat();
+  // Get event subscription AND Pusher instance from StaffChatContext
+  const { subscribeToMessages, pusherInstance } = useStaffChat();
   
   // Get current user ID from localStorage or use a fallback
   const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
@@ -144,9 +144,41 @@ const ChatWindowPopup = ({
   // Use read receipts hook
   const {
     markAsRead,
+    markConversationRead,
     getReadStatus,
-    isRead
-  } = useReadReceipts(conversation?.id, currentUserId);
+    isRead,
+    readReceipts,
+    updateFromRealtimeEvent: updateReadReceipts,
+    loadReadReceipts
+  } = useReadReceipts(hotelSlug, conversation?.id, currentUserId);
+
+  // Sync readReceipts state changes to messages array (CRITICAL FOR UI UPDATES!)
+  useEffect(() => {
+    if (Object.keys(readReceipts).length === 0) return;
+    
+    console.log('🔄🔄🔄 [POPUP SYNC] readReceipts state changed, syncing to messages array');
+    console.log('🔄 [POPUP SYNC] readReceipts keys:', Object.keys(readReceipts));
+    
+    messages.forEach((msg) => {
+      const receipt = readReceipts[msg.id];
+      if (receipt) {
+        console.log(`🔄 [POPUP SYNC] Updating message ${msg.id}:`, {
+          oldCount: msg.read_by_count,
+          newCount: receipt.read_count,
+          oldList: msg.read_by_list?.length,
+          newList: receipt.read_by?.length
+        });
+        
+        // Update message directly in pagination state
+        updatePaginatedMessage(msg.id, {
+          read_by_list: receipt.read_by,
+          read_by_count: receipt.read_count
+        });
+      }
+    });
+    
+    console.log('✅ [POPUP SYNC] Messages array updated with read receipts');
+  }, [readReceipts, updatePaginatedMessage]);
 
   // Subscribe to messages from StaffChatContext (single source of truth!)
   useEffect(() => {
@@ -176,6 +208,48 @@ const ChatWindowPopup = ({
     };
   }, [conversation?.id, subscribeToMessages, addPaginatedMessage]);
 
+  // Subscribe to Pusher for read receipts (messages-read event)
+  useEffect(() => {
+    console.log('🔄 [POPUP PUSHER] Running Pusher subscription effect');
+    
+    if (!pusherInstance || !hotelSlug || !conversation?.id) {
+      console.warn('⚠️ [POPUP PUSHER] Missing required data:', {
+        hasPusher: !!pusherInstance,
+        hasHotelSlug: !!hotelSlug,
+        hasConversationId: !!conversation?.id
+      });
+      return;
+    }
+
+    const channelName = `${hotelSlug}-staff-conversation-${conversation.id}`;
+    console.log('📡 [POPUP PUSHER] Subscribing to:', channelName);
+    
+    let channel = pusherInstance.channel(channelName);
+    if (!channel) {
+      channel = pusherInstance.subscribe(channelName);
+    }
+
+    // Handle read receipts
+    const handleReadReceipt = (data) => {
+      console.log('🚨🚨🚨 [POPUP READ RECEIPT] Pusher event received!');
+      console.log('📖 [POPUP READ RECEIPT] Data:', JSON.stringify(data, null, 2));
+      
+      updateReadReceipts(data);
+      console.log('✅ [POPUP READ RECEIPT] updateReadReceipts completed');
+    };
+
+    // Bind read receipt event
+    console.log('🎧 [POPUP PUSHER] Binding messages-read event');
+    channel.bind('messages-read', handleReadReceipt);
+    console.log('✅ [POPUP PUSHER] messages-read event bound');
+
+    // Cleanup
+    return () => {
+      console.log('🔌 [POPUP PUSHER] Cleaning up messages-read event');
+      channel.unbind('messages-read', handleReadReceipt);
+    };
+  }, [hotelSlug, conversation?.id, updateReadReceipts]);
+
   const [showReactionPicker, setShowReactionPicker] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -192,6 +266,23 @@ const ChatWindowPopup = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Mark ALL messages as read when popup opens with messages
+  useEffect(() => {
+    if (conversation?.id && messages.length > 0 && !isMinimized) {
+      console.log('🎯🎯🎯 [POPUP MARK ALL] Popup opened with messages, marking ALL as read');
+      console.log('🎯 [POPUP MARK ALL] Conversation ID:', conversation.id);
+      console.log('🎯 [POPUP MARK ALL] Total messages:', messages.length);
+      
+      const timer = setTimeout(async () => {
+        console.log('📮 [POPUP MARK ALL] Calling markConversationRead...');
+        await markConversationRead();
+        console.log('✅ [POPUP MARK ALL] markConversationRead completed');
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [conversation?.id, messages.length, isMinimized, markConversationRead]);
+
   // Setup infinite scroll
   useEffect(() => {
     if (sentinelRef.current && !isMinimized) {
@@ -199,11 +290,22 @@ const ChatWindowPopup = ({
     }
   }, [setupInfiniteScroll, isMinimized]);
 
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (!isMinimized && messages.length > 0) {
       scrollToBottom();
+      
+      // Mark ALL messages as read when new messages arrive and popup is visible
+      console.log('👁️ [POPUP MARK ALL] New messages arrived, marking ALL as read');
+      const timer = setTimeout(async () => {
+        console.log('📮 [POPUP MARK ALL] Calling markConversationRead...');
+        await markConversationRead();
+        console.log('✅ [POPUP MARK ALL] markConversationRead completed');
+      }, 1000);
+      
+      return () => clearTimeout(timer);
     }
-  }, [messages.length, isMinimized]);
+  }, [messages.length, isMinimized, markConversationRead]);
 
   // Handle send message
   const handleSendMessage = async (messageText, mentions) => {
@@ -278,9 +380,15 @@ const ChatWindowPopup = ({
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Handle input focus - removed auto mark as read
+  // Mark ALL messages as read when user focuses input (handles new messages while popup was open)
   const handleInputFocus = async () => {
-    // Auto mark as read removed - handled by ConversationView
+    console.log('🎯🎯🎯 [POPUP MARK ALL] Input focused, marking ALL messages as read');
+    console.log('🎯 [POPUP MARK ALL] This handles new messages received while popup was open');
+    console.log('🎯 [POPUP MARK ALL] Current messages count:', messages.length);
+    
+    console.log('📮 [POPUP MARK ALL] Calling markConversationRead...');
+    await markConversationRead();
+    console.log('✅ [POPUP MARK ALL] markConversationRead completed');
   };
 
   // Handle reply
