@@ -157,18 +157,42 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
 
     // Handle read receipts
     const handleReadReceipt = (data) => {
-      console.log('📖 [STAFF CHAT] Read receipt received:', data);
+      console.log('📖📖📖 [READ RECEIPT EVENT] ===========================================');
+      console.log('📖 [READ RECEIPT EVENT] Pusher event received at:', new Date().toISOString());
+      console.log('📖 [READ RECEIPT EVENT] Raw data:', JSON.stringify(data, null, 2));
+      console.log('📖 [READ RECEIPT EVENT] Data type:', typeof data);
+      console.log('📖 [READ RECEIPT EVENT] Has message_ids:', !!data.message_ids);
+      console.log('📖 [READ RECEIPT EVENT] Message IDs:', data.message_ids);
+      console.log('📖 [READ RECEIPT EVENT] Staff ID who read:', data.staff_id);
+      console.log('📖 [READ RECEIPT EVENT] Staff name:', data.staff_name);
+      console.log('📖 [READ RECEIPT EVENT] Timestamp:', data.timestamp);
+      console.log('📖 [READ RECEIPT EVENT] Current conversation ID:', conversation?.id);
+      console.log('📖 [READ RECEIPT EVENT] Current messages count:', messages.length);
+      console.log('📖 [READ RECEIPT EVENT] ===========================================');
+      
+      console.log('🔄 [READ RECEIPT EVENT] Calling updateReadReceipts from useReadReceipts hook...');
       updateReadReceipts(data);
+      console.log('✅ [READ RECEIPT EVENT] updateReadReceipts completed');
       
       // Update message list with new read counts
-      setMessages(prevMessages =>
-        prevMessages.map(msg => {
+      console.log('🔄 [READ RECEIPT EVENT] Updating messages state...');
+      setMessages(prevMessages => {
+        console.log('📝 [READ RECEIPT STATE] Previous messages count:', prevMessages.length);
+        console.log('📝 [READ RECEIPT STATE] Message IDs to update:', data.message_ids);
+        
+        const updatedMessages = prevMessages.map((msg, index) => {
           if (data.message_ids && data.message_ids.includes(msg.id)) {
+            console.log(`✅ [READ RECEIPT STATE] Found message ${msg.id} to update (index ${index})`);
             const alreadyReadBy = msg.read_by_list || [];
+            console.log(`   Current read_by_list:`, alreadyReadBy);
+            console.log(`   Current read_by_count:`, msg.read_by_count);
+            
             const alreadyRead = alreadyReadBy.some(r => r.id === data.staff_id);
+            console.log(`   Already read by staff ${data.staff_id}?`, alreadyRead);
             
             if (!alreadyRead) {
-              return {
+              console.log(`   ➕ Adding new read receipt for staff ${data.staff_id}`);
+              const updated = {
                 ...msg,
                 read_by_count: (msg.read_by_count || 0) + 1,
                 read_by_list: [
@@ -180,11 +204,22 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
                   }
                 ]
               };
+              console.log(`   New read_by_count:`, updated.read_by_count);
+              console.log(`   New read_by_list:`, updated.read_by_list);
+              return updated;
+            } else {
+              console.log(`   ⚠️ Staff already read this message, not updating`);
             }
           }
           return msg;
-        })
-      );
+        });
+        
+        console.log('📝 [READ RECEIPT STATE] Messages update complete');
+        console.log('📝 [READ RECEIPT STATE] Updated messages count:', updatedMessages.length);
+        return updatedMessages;
+      });
+      
+      console.log('✅✅✅ [READ RECEIPT EVENT] handleReadReceipt completed ===========================================');
     };
 
     // Handle attachment deleted
@@ -211,8 +246,14 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     console.log('🎧 [STAFF CHAT] ✓ Bound: message-edited');
     channel.bind('message-deleted', handleMessageDeleted);
     console.log('🎧 [STAFF CHAT] ✓ Bound: message-deleted');
+    
+    console.log('🎧🎧🎧 [STAFF CHAT] BINDING MESSAGES-READ EVENT...');
+    console.log('🎧 [STAFF CHAT] Event name: "messages-read"');
+    console.log('🎧 [STAFF CHAT] Handler function:', typeof handleReadReceipt);
+    console.log('🎧 [STAFF CHAT] Channel:', channelName);
     channel.bind('messages-read', handleReadReceipt);
-    console.log('🎧 [STAFF CHAT] ✓ Bound: messages-read');
+    console.log('🎧🎧🎧 [STAFF CHAT] ✓✓✓ BOUND: messages-read - THIS IS THE READ RECEIPT EVENT');
+    
     channel.bind('attachment-deleted', handleAttachmentDeleted);
     console.log('🎧 [STAFF CHAT] ✓ Bound: attachment-deleted');
 
@@ -574,10 +615,23 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
                                'User';
               
               // Get read receipt info
-              const readStatus = readReceipts[message.id] || {
-                read_by: message.read_by_list || [],
-                read_count: message.read_by_count || 0
+              // Priority: readReceipts state > message data
+              const hookReadData = readReceipts[message.id];
+              const readStatus = {
+                read_by: hookReadData?.read_by || message.read_by_list || [],
+                read_count: hookReadData?.read_count || message.read_by_count || 0
               };
+              
+              // Debug log for message render
+              if (isOwn) {
+                console.log(`🎨 [UI RENDER] Message ${message.id}:`, {
+                  text: (message.message || message.content || '').substring(0, 30),
+                  hookData: hookReadData,
+                  messageData: { read_by_list: message.read_by_list, read_by_count: message.read_by_count },
+                  finalReadStatus: readStatus,
+                  willShowAsSeen: readStatus.read_count > 0
+                });
+              }
 
               // Attach ref to last message for intersection observer
               const isLastMessage = index === messages.length - 1;

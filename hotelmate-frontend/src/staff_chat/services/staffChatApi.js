@@ -421,12 +421,31 @@ export const fetchUnreadCount = async (hotelSlug) => {
  */
 export const markConversationAsRead = async (hotelSlug, conversationId) => {
   try {
+    console.log('📮📮📮 [API] markConversationAsRead called ===========================================');
+    console.log('📮 [API] Hotel slug:', hotelSlug);
+    console.log('📮 [API] Conversation ID:', conversationId);
+    console.log('📮 [API] Endpoint:', `/staff_chat/${hotelSlug}/conversations/${conversationId}/mark_as_read/`);
+    console.log('📮 [API] Time:', new Date().toISOString());
+    
     const response = await api.post(
       `/staff_chat/${hotelSlug}/conversations/${conversationId}/mark_as_read/`
     );
+    
+    console.log('✅ [API] Response received:', JSON.stringify(response.data, null, 2));
+    console.log('✅ [API] Response status:', response.status);
+    console.log('✅ [API] Marked count:', response.data.marked_count);
+    console.log('✅ [API] Message IDs marked:', response.data.message_ids);
+    console.log('✅ [API] Success:', response.data.success);
+    console.log('📮📮📮 [API] markConversationAsRead completed ===========================================');
+    
     return response.data;
   } catch (error) {
-    console.error('Error marking conversation as read:', error);
+    console.error('❌❌❌ [API] Error marking conversation as read:', error);
+    console.error('❌ [API] Error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
     throw error;
   }
 };

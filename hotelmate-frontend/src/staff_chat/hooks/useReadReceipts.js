@@ -140,26 +140,46 @@ const useReadReceipts = (hotelSlug, conversationId, currentUserId) => {
    * Format: { staff_id, staff_name, message_ids: [], timestamp }
    */
   const updateFromRealtimeEvent = useCallback((data) => {
+    console.log('🎯🎯🎯 [useReadReceipts] updateFromRealtimeEvent called ===========================================');
+    console.log('🎯 [useReadReceipts] Data received:', JSON.stringify(data, null, 2));
+    console.log('🎯 [useReadReceipts] Has data:', !!data);
+    console.log('🎯 [useReadReceipts] Has message_ids:', !!data?.message_ids);
+    console.log('🎯 [useReadReceipts] message_ids is array:', Array.isArray(data?.message_ids));
+    
     if (!data || !data.message_ids || !Array.isArray(data.message_ids)) {
-      console.warn('Invalid read receipt event data:', data);
+      console.warn('❌ [useReadReceipts] Invalid read receipt event data:', data);
+      console.warn('❌ [useReadReceipts] Validation failed:', {
+        hasData: !!data,
+        hasMessageIds: !!data?.message_ids,
+        isArray: Array.isArray(data?.message_ids)
+      });
       return;
     }
 
-    // console.log('📖 Updating read receipts from Pusher event:', data);
+    console.log('📖 [useReadReceipts] Updating read receipts from Pusher event');
+    console.log('📖 [useReadReceipts] Message IDs to update:', data.message_ids);
+    console.log('📖 [useReadReceipts] Staff who read:', data.staff_id, data.staff_name);
 
     // Update read receipts for all affected messages
+    console.log('🔄 [useReadReceipts] Calling setReadReceipts...');
     setReadReceipts(prev => {
+      console.log('📝 [useReadReceipts STATE] Previous readReceipts state:', prev);
+      console.log('📝 [useReadReceipts STATE] Previous keys:', Object.keys(prev));
       const updates = { ...prev };
       
-      data.message_ids.forEach(messageId => {
+      data.message_ids.forEach((messageId, idx) => {
+        console.log(`📝 [useReadReceipts STATE] Processing message ${idx + 1}/${data.message_ids.length}: ID ${messageId}`);
         const existing = updates[messageId] || { read_by: [], read_count: 0 };
+        console.log(`   Current state for message ${messageId}:`, existing);
         
         // Check if this staff member already marked as read
         const alreadyRead = existing.read_by.some(
           reader => reader.id === data.staff_id
         );
+        console.log(`   Already read by staff ${data.staff_id}?`, alreadyRead);
         
         if (!alreadyRead) {
+          console.log(`   ➕ Adding read receipt for message ${messageId}`);
           updates[messageId] = {
             ...existing,
             read_by: [
@@ -172,11 +192,19 @@ const useReadReceipts = (hotelSlug, conversationId, currentUserId) => {
             ],
             read_count: existing.read_count + 1
           };
+          console.log(`   ✅ Updated state for message ${messageId}:`, updates[messageId]);
+        } else {
+          console.log(`   ⚠️ Staff already read message ${messageId}, skipping`);
         }
       });
       
+      console.log('📝 [useReadReceipts STATE] Final updates object:', updates);
+      console.log('📝 [useReadReceipts STATE] Updated keys:', Object.keys(updates));
+      console.log('✅ [useReadReceipts STATE] Returning updated state');
       return updates;
     });
+    
+    console.log('✅✅✅ [useReadReceipts] updateFromRealtimeEvent completed ===========================================');
   }, []);
 
   /**

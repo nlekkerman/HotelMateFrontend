@@ -429,7 +429,8 @@
 .staff-chat-list__footer {
   padding: 12px 24px;
   border-top: 1px solid var(--border-color, #e0e0e0);
-  background: var(--bg-secondary, #f8f9fa);
+ background: linear-gradient(135deg, #15009c 0%, #7f7acb 100%);
+
   text-align: center;
 }
 
@@ -1477,7 +1478,7 @@
   display: flex;
   gap: 8px;
   padding: 12px 5px;
-  background: var(--secondary-color, #2ecc71);
+  background: linear-gradient(135deg, #7f7acb 0%, #15009c 100%);
   border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -2026,7 +2027,7 @@
   align-items: center;
   gap: 8px;
   padding: 3px 16px;
-  background: var(--secondary-color, #2ecc71);
+  background: transparent!important;
   border-top: none;
 }
 
@@ -3813,7 +3814,7 @@
 }
 
 .chat-window-popup__header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #15009c 0%, #7f7acb 100%);
   padding: 14px 16px;
   border-radius: 16px 16px 0 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);

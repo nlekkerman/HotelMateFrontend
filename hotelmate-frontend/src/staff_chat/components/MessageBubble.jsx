@@ -32,6 +32,18 @@ const MessageBubble = ({
   const messageTime = timestamp;
   const displayName = isOwn ? 'You' : senderName;
 
+  // Debug log for props received
+  if (isOwn && !isDeleted) {
+    console.log(`💬 [MessageBubble] Rendering own message:`, {
+      text: messageText.substring(0, 30),
+      readByCount,
+      readByListLength: readByList.length,
+      readByList,
+      willShowAsSeen: readByCount > 0,
+      timestamp: new Date().toISOString()
+    });
+  }
+
   // If in editing mode, show the editor
   if (isEditing) {
     return (
