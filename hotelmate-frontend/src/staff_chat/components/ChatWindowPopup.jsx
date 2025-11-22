@@ -152,33 +152,52 @@ const ChatWindowPopup = ({
     loadReadReceipts
   } = useReadReceipts(hotelSlug, conversation?.id, currentUserId);
 
+  // Load read receipts from messages on initial load (CRITICAL!)
+  useEffect(() => {
+    if (messages.length > 0) {
+      console.log('📖📖📖 [POPUP LOAD] Loading read receipts from messages on initial load');
+      console.log('📖 [POPUP LOAD] Messages count:', messages.length);
+      console.log('📖 [POPUP LOAD] Sample message read data:', messages[0]?.read_by_count, messages[0]?.read_by_list);
+      loadReadReceipts(messages);
+      console.log('✅ [POPUP LOAD] Read receipts loaded from messages');
+    }
+  }, [messages.length]); // Only run when messages.length changes
+
   // Sync readReceipts state changes to messages array (CRITICAL FOR UI UPDATES!)
   useEffect(() => {
     if (Object.keys(readReceipts).length === 0) return;
     
     console.log('🔄🔄🔄 [POPUP SYNC] readReceipts state changed, syncing to messages array');
     console.log('🔄 [POPUP SYNC] readReceipts keys:', Object.keys(readReceipts));
+    console.log('🔄 [POPUP SYNC] Current messages count:', messages.length);
     
-    messages.forEach((msg) => {
-      const receipt = readReceipts[msg.id];
-      if (receipt) {
-        console.log(`🔄 [POPUP SYNC] Updating message ${msg.id}:`, {
-          oldCount: msg.read_by_count,
+    // Batch update all messages with new read receipts
+    const messageIdsToUpdate = Object.keys(readReceipts).map(Number);
+    console.log('🔄 [POPUP SYNC] Message IDs to update:', messageIdsToUpdate);
+    
+    messageIdsToUpdate.forEach((msgId) => {
+      const receipt = readReceipts[msgId];
+      const message = messages.find(m => m.id === msgId);
+      
+      if (receipt && message) {
+        console.log(`🔄 [POPUP SYNC] Updating message ${msgId}:`, {
+          oldCount: message.read_by_count,
           newCount: receipt.read_count,
-          oldList: msg.read_by_list?.length,
+          oldList: message.read_by_list?.length,
           newList: receipt.read_by?.length
         });
         
         // Update message directly in pagination state
-        updatePaginatedMessage(msg.id, {
+        updatePaginatedMessage(msgId, {
           read_by_list: receipt.read_by,
-          read_by_count: receipt.read_count
+          read_by_count: receipt.read_count,
+          is_read: receipt.read_count > 0
         });
       }
     });
     
-    console.log('✅ [POPUP SYNC] Messages array updated with read receipts');
-  }, [readReceipts, updatePaginatedMessage]);
+    console.log('✅ [POPUP SYNC] Messages array update complete');
+  }, [readReceipts]);
 
   // Subscribe to messages from StaffChatContext (single source of truth!)
   useEffect(() => {
@@ -596,7 +615,11 @@ const ChatWindowPopup = ({
                       const isOwn = senderId === userId;
                       
                       const senderName = message.sender_name || message.sender_info?.full_name || 'Unknown';
-                      const readStatus = getReadStatus(message.id);
+                      
+                      // USE MESSAGE DATA AS SINGLE SOURCE OF TRUTH FOR READ RECEIPTS!
+                      // Don't use getReadStatus - it's outdated and causes "Delivered" bug
+                      const readByList = message.read_by_list || [];
+                      const readByCount = message.read_by_count || 0;
                       
                       // Log message state including deletion status
                       // console.log('💬 Rendering message:', {
@@ -638,8 +661,8 @@ const ChatWindowPopup = ({
                               attachments={message.attachments}
                               isEditing={isEditing(message.id)}
                               isSending={sending && message.id === messages[messages.length - 1]?.id}
-                              readByList={readStatus.read_by || []}
-                              readByCount={(readStatus.read_by || []).length}
+                              readByList={readByList}
+                              readByCount={readByCount}
                               onSaveEdit={(newText) => saveEdit(newText)}
                               onCancelEdit={cancelEdit}
                               onReply={() => handleReply(message)}
@@ -676,8 +699,8 @@ const ChatWindowPopup = ({
                           {/* Read Status for own messages */}
                           {isOwn && (
                             <ReadStatus
-                              isRead={isRead(message.id)}
-                              readBy={readStatus.read_by || []}
+                              isRead={readByCount > 0}
+                              readBy={readByList}
                               showDetails={true}
                               size="small"
                             />
