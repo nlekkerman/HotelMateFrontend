@@ -624,10 +624,10 @@ const ChatWindowPopup = ({
                       
                       const senderName = message.sender_name || message.sender_info?.full_name || 'Unknown';
                       
-                      // USE MESSAGE DATA AS SINGLE SOURCE OF TRUTH FOR READ RECEIPTS!
-                      // Don't use getReadStatus - it's outdated and causes "Delivered" bug
-                      const readByList = message.read_by_list || [];
-                      const readByCount = message.read_by_count || 0;
+                      // USE LIVE readReceipts STATE FOR REAL-TIME UPDATES!
+                      const receipt = readReceipts[message.id];
+                      const readByList = receipt?.read_by || message.read_by_list || [];
+                      const readByCount = receipt?.read_count ?? message.read_by_count ?? 0;
                       
                       // Log message state including deletion status
                       // console.log('💬 Rendering message:', {
