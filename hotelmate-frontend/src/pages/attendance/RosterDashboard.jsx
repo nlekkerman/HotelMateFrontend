@@ -8,7 +8,7 @@ import { Container, Row, Col, Card } from "react-bootstrap";
  * RosterDashboard - Department selection and roster management
  * 
  * Quick Actions Integration:
- * - When a department is selected, Quick Actions appear in DesktopSidebarNavbar
+ * - When a department is selected, Quick Actions appear in BigScreenNavbar
  * - Actions dispatch custom events: 'toggleDailyPlans', 'toggleClockLogs', 'toggleAnalytics'
  * - DepartmentRosterView listens to these events and toggles the respective views
  * - Only one view (Daily Plans, Clock Logs, or Analytics) can be active at a time

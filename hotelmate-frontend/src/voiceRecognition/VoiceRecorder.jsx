@@ -189,6 +189,7 @@ export const VoiceRecorder = ({ stocktakeId, hotelSlug, onCommandReceived, isLoc
         className={`voice-floating-button ${isRecording ? 'recording' : ''} ${isProcessing ? 'processing' : ''} ${showSuccess ? 'success' : ''} ${(apiError || recorderError) ? 'error' : ''}`}
         aria-label="Voice Button"
         title={getButtonText()}
+        style={{ display: 'none' }}
       >
         {getButtonIcon()}
         {isRecording && <span className="rec-badge">REC</span>}

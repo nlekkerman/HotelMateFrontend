@@ -30,21 +30,28 @@ export const sendVoiceCommand = async (audioBlob, stocktakeId, hotelSlug) => {
       stocktakeId: stocktakeId,
     };
 
-    addVoiceLog('info', '📤 Sending audio to backend', requestInfo);
+    addVoiceLog('info', '📤 Sending audio to backend (DISABLED)', requestInfo);
 
-    // POST to backend voice command endpoint
-    const response = await api.post(
-      `/stock_tracker/${hotelSlug}/stocktake-lines/voice-command/`,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
-    );
+    // POST to backend voice command endpoint - COMMENTED OUT
+    // const response = await api.post(
+    //   `/stock_tracker/${hotelSlug}/stocktake-lines/voice-command/`,
+    //   formData,
+    //   {
+    //     headers: {
+    //       'Content-Type': 'multipart/form-data',
+    //     },
+    //   }
+    // );
 
-    addVoiceLog('success', '✅ Backend parsed voice command', response.data);
-    return response.data;
+    // addVoiceLog('success', '✅ Backend parsed voice command', response.data);
+    // return response.data;
+    
+    // Return mock response for testing
+    addVoiceLog('warning', '⚠️ API calls are disabled - returning mock data', {});
+    return {
+      success: false,
+      error: 'API calls are currently disabled'
+    };
   } catch (error) {
     console.error('❌ Voice command API error:', error);
     
@@ -87,24 +94,31 @@ export const confirmVoiceCommand = async (command, stocktakeId, hotelSlug) => {
       command: command
     };
 
-    addVoiceLog('info', '📤 Confirming voice command with backend', {
+    addVoiceLog('info', '📤 Confirming voice command with backend (DISABLED)', {
       endpoint: `/stock_tracker/${hotelSlug}/stocktake-lines/voice-command/confirm/`,
       payload: payload
     });
 
-    // POST to backend confirm endpoint
-    const response = await api.post(
-      `/stock_tracker/${hotelSlug}/stocktake-lines/voice-command/confirm/`,
-      payload
-    );
+    // POST to backend confirm endpoint - COMMENTED OUT
+    // const response = await api.post(
+    //   `/stock_tracker/${hotelSlug}/stocktake-lines/voice-command/confirm/`,
+    //   payload
+    // );
 
-    addVoiceLog('success', '✅ Backend confirmed and updated stocktake', {
-      response: response.data,
-      updatedLine: response.data.line,
-      message: response.data.message
-    });
+    // addVoiceLog('success', '✅ Backend confirmed and updated stocktake', {
+    //   response: response.data,
+    //   updatedLine: response.data.line,
+    //   message: response.data.message
+    // });
 
-    return response.data;
+    // return response.data;
+    
+    // Return mock response for testing
+    addVoiceLog('warning', '⚠️ API calls are disabled - returning mock data', {});
+    return {
+      success: false,
+      error: 'API calls are currently disabled'
+    };
   } catch (error) {
     console.error('❌ Confirm command API error:', error);
     

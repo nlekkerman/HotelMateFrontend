@@ -24,8 +24,16 @@ export const useVoiceRecorder = () => {
       setError(null);
       setAudioBlob(null);
 
-      // Request microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Request microphone access with optimized settings for speech
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 48000,
+          channelCount: 1
+        }
+      });
       streamRef.current = stream;
 
       // Create MediaRecorder with webm/opus codec (best compatibility with OpenAI Whisper)
@@ -33,7 +41,10 @@ export const useVoiceRecorder = () => {
         ? 'audio/webm;codecs=opus'
         : 'audio/webm';
 
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      const mediaRecorder = new MediaRecorder(stream, { 
+        mimeType,
+        audioBitsPerSecond: 128000  // Higher bitrate for better quality
+      });
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
@@ -70,13 +81,15 @@ export const useVoiceRecorder = () => {
       };
 
       // Set up silence detection
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)({
+        sampleRate: 48000
+      });
       audioContextRef.current = audioContext;
 
       const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 2048;
-      analyser.smoothingTimeConstant = 0.8;
+      analyser.smoothingTimeConstant = 0.9;  // More smoothing for stable detection
       analyserRef.current = analyser;
 
       source.connect(analyser);
@@ -85,8 +98,8 @@ export const useVoiceRecorder = () => {
       const dataArray = new Uint8Array(bufferLength);
 
       let silenceStart = Date.now();
-      const SILENCE_THRESHOLD = 20; // Lower threshold to be less sensitive (0-255)
-      const SILENCE_DURATION = 3500; // Stop after 3.5 seconds of silence to allow full sentences
+      const SILENCE_THRESHOLD = 15; // Lower threshold to be less sensitive to background noise (0-255)
+      const SILENCE_DURATION = 4000; // Stop after 4 seconds of silence to allow full sentences
 
       const checkAudioLevel = () => {
         if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') {
@@ -99,9 +112,9 @@ export const useVoiceRecorder = () => {
         if (average < SILENCE_THRESHOLD) {
           // Silence detected
           if (Date.now() - silenceStart > SILENCE_DURATION) {
-            console.log('🔇 Silence detected for 3.5 seconds, auto-stopping...');
+            console.log('🔇 Silence detected for 4 seconds, auto-stopping...');
             addVoiceLog('info', '🔇 Silence detected - auto-stopping recording', {
-              duration: '3.5 seconds',
+              duration: '4 seconds',
               threshold: SILENCE_THRESHOLD
             });
             if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
@@ -123,14 +136,16 @@ export const useVoiceRecorder = () => {
       setIsRecording(true);
       addVoiceLog('success', '🎙️ Recording started - speak now!', {
         mimeType: mimeType,
-        silenceDetection: 'enabled (3.5s timeout)'
+        bitrate: '128kbps',
+        silenceDetection: 'enabled (4s timeout)',
+        audioEnhancements: 'noise suppression, echo cancellation, auto gain'
       });
 
-      // Start silence detection after 1.5 seconds (allow initial speech and pauses)
+      // Start silence detection after 2 seconds (allow initial speech and pauses)
       setTimeout(() => {
         silenceStart = Date.now();
         checkAudioLevel();
-      }, 1500);
+      }, 2000);
 
     } catch (err) {
       console.error('Failed to start recording:', err);

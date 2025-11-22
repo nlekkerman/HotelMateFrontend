@@ -21,7 +21,7 @@ import { ChartPreferencesProvider } from "@/context/ChartPreferencesContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, Navigate, matchPath } from "react-router-dom";
 import MobileNavbar from "@/components/layout/MobileNavbar";
-import DesktopSidebarNavbar from "@/components/layout/DesktopSidebarNavbar";
+import BigScreenNavbar from "@/components/layout/BigScreenNavbar";
 import NetworkHandler from "@/components/offline/NetworkHandler";
 import LogoBanner from "./components/layout/LogoBanner";
 import PusherDebugger from "@/components/utils/PusherDebugger";
@@ -213,7 +213,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
 
   const sidebar = !isMobile && !isClockInPage && !isAuthPage && !isGuestPage && (
     <div className={`sidebar-wrapper ${collapsed ? "collapsed" : ""}`}>
-      <DesktopSidebarNavbar
+      <BigScreenNavbar
         collapsed={collapsed}
         setCollapsed={setCollapsed}
       />

@@ -11,7 +11,7 @@ import { useNavigation } from "@/hooks/useNavigation";
 import { useChat } from "@/context/ChatContext";
 import { useBookingNotifications } from "@/context/BookingNotificationContext";
 import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationContext";
-const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
+const BigScreenNavbar = ({ chatUnreadCount }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -71,7 +71,7 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
   };
 
   // Fetch staff profile
-  useEffect(() => {
+  const fetchStaffProfile = () => {
     if (!user || !hotelIdentifier) {
       setStaffProfile(null);
       setIsOnDuty(false);
@@ -80,15 +80,34 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
     api
       .get(`/staff/${hotelIdentifier}/me/`)
       .then((res) => {
-        console.log("[DesktopNav] Staff profile data:", res.data);
+        console.log("[BigScreenNav] Staff profile data:", res.data);
+        console.log("[BigScreenNav] Clock status (is_on_duty):", res.data.is_on_duty);
         setStaffProfile(res.data);
         setIsOnDuty(res.data.is_on_duty);
       })
       .catch((err) => {
-        console.error("[DesktopNav] Failed to fetch staff profile:", err);
+        console.error("[BigScreenNav] Failed to fetch staff profile:", err);
         setStaffProfile(null);
         setIsOnDuty(false);
       });
+  };
+
+  useEffect(() => {
+    fetchStaffProfile();
+  }, [user, hotelIdentifier]);
+
+  // Listen for clock status changes from ClockModal
+  useEffect(() => {
+    const handleClockStatusChange = () => {
+      console.log("[BigScreenNav] Clock status changed, refreshing...");
+      fetchStaffProfile();
+    };
+
+    window.addEventListener('clockStatusChanged', handleClockStatusChange);
+
+    return () => {
+      window.removeEventListener('clockStatusChanged', handleClockStatusChange);
+    };
   }, [user, hotelIdentifier]);
 
   // Collapse/expand sidebar
@@ -309,12 +328,16 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
             <div className="d-flex align-items-center gap-2">
               {user && (
                 <button
-                  className="btn btn-success text-white top-nav-btn clock-btn"
+                  className={`btn ${isOnDuty ? 'btn-danger' : 'btn-success'} text-white top-nav-btn clock-btn`}
                   onClick={() => navigate(`/clock-in/${hotelIdentifier}`)}
-                  title="Clock In / Out"
+                  title={isOnDuty ? "Clock Out" : "Clock In"}
+                  style={{
+                    backgroundColor: isOnDuty ? '#dc3545' : '#28a745',
+                    borderColor: isOnDuty ? '#dc3545' : '#28a745'
+                  }}
                 >
                   <i className="bi bi-clock" />
-                  {isExpanded && <span className="ms-2 btn-label">Clock In/Out</span>}
+                  {isExpanded && <span className="ms-2 btn-label">{isOnDuty ? 'Clock Out' : 'Clock In'}</span>}
                 </button>
               )}
 
@@ -535,4 +558,4 @@ const DesktopSidebarNavbar = ({ chatUnreadCount }) => {
 };
 
 // No need for separate PusherProvider - already wrapped in App.jsx
-export default DesktopSidebarNavbar;
+export default BigScreenNavbar;

@@ -114,22 +114,24 @@ const navigate = useNavigate();
         setClockAction(null);
         setMessage("");
         setError("");
+        // Close the clock-in page and return to previous page
+        navigate(-1);
       }, 3000);
       return () => clearTimeout(t);
     }
-  }, [step]);
+  }, [step, navigate]);
 
   return (
     <div className="face-terminal clock-in-overlay text-light">
-      <div className="text-end bg-white mb-3">
-        <button
-          className="btn text-dark"
-          onClick={() => navigate("/")}
-        >
-          
-          Close
-        </button>
-      </div>
+      <button
+        className="btn btn-close btn-close-white position-absolute top-0 end-0  m-3"
+        onClick={() => navigate("/")}
+        aria-label="Close"
+        style={{
+          fontSize: '1.5rem',
+          zIndex: 1000
+        }}
+      />
       {!modelsLoaded && <h4>Loading face‑api models…</h4>}
       
       <Webcam
@@ -185,7 +187,7 @@ const navigate = useNavigate();
         )}
 
         {step === "confirmed" && message && (
-          <p className="text-success">{message}</p>
+          <p className="text-white">{message}</p>
         )}
 
         {error && <p className="text-danger">{error}</p>}

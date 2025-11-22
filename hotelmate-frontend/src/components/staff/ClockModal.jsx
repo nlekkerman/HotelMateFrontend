@@ -16,6 +16,12 @@ const ClockModal = ({ isOpen, onClose, staffId, initialStatus, onStatusChange })
         is_on_duty: !initialStatus,
       });
       onStatusChange(response.data.is_on_duty);
+      
+      // Dispatch event to update navbar
+      window.dispatchEvent(new CustomEvent('clockStatusChanged', {
+        detail: { is_on_duty: response.data.is_on_duty }
+      }));
+      
       onClose();
     } catch (err) {
       console.error('Failed to update duty status:', err);
@@ -24,7 +30,6 @@ const ClockModal = ({ isOpen, onClose, staffId, initialStatus, onStatusChange })
       setLoading(false);
     }
   };
-console.log('Staff ID passed to ClockModal:', staffId);
   return (
     <div className="modal fade show d-block" tabIndex="-1" role="dialog" onClick={onClose} style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
       <div

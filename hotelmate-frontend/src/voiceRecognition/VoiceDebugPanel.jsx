@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Button } from 'react-bootstrap';
-import { FaMicrophone, FaTimes } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
 
 // Global log storage
 let voiceLogs = [];
@@ -124,8 +124,7 @@ export const VoiceDebugPanel = () => {
               borderRadius: '20px',
             }}
           >
-            <FaMicrophone size={16} />
-            <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>Debug</span>
+            <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>Debug Panel</span>
             {logs.length > 0 && (
               <Badge
                 bg="light"
@@ -150,7 +149,7 @@ export const VoiceDebugPanel = () => {
             position: 'fixed',
             top: '120px',
             right: '20px',
-            width: '100%',
+            maxWidth: '500px',
             maxHeight: '600px',
             zIndex: 9999,
           }}
@@ -161,8 +160,7 @@ export const VoiceDebugPanel = () => {
               style={{ cursor: 'move' }}
             >
               <div>
-                <FaMicrophone className="me-2" />
-                <strong>Voice Debug</strong>
+                <strong>Debug Panel</strong>
                 <Badge bg="light" text="dark" className="ms-2">
                   {logs.length}
                 </Badge>

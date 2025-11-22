@@ -259,6 +259,18 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     };
   }, [conversation?.id, setCurrentConversationId]);
 
+  // Mark conversation as read when conversation is opened
+  useEffect(() => {
+    if (conversation?.id && messages.length > 0) {
+      console.log('✅ [READ RECEIPTS] Conversation opened, marking as read:', conversation.id);
+      // Small delay to ensure messages are loaded
+      const timer = setTimeout(() => {
+        markConversationRead();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [conversation?.id, messages.length]);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -302,6 +314,12 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Mark as read when user clicks on input field
+  const handleInputFocus = () => {
+    console.log('🎯 [READ RECEIPTS] Input focused, marking conversation as read');
+    markConversationRead();
   };
 
   const handleSendMessage = async (messageText, mentions) => {
@@ -655,6 +673,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
         selectedFiles={selectedFiles}
         onRemoveFile={handleRemoveFile}
         showMentionSuggestions={true}
+        onFocus={handleInputFocus}
       />
       
       {/* Share Message Modal */}
