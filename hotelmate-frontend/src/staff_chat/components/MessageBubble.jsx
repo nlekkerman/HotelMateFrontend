@@ -201,7 +201,7 @@ const MessageBubble = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '3px',
-                color: isSending ? '#6c757d' : (readByCount > 0 ? '#0d6efd' : '#28a745'),
+                color: isSending ? '#6c757d' : (readByCount > 0 ? '#0d6efd' : '#f7f7f7ff'),
                 fontWeight: '500'
               }}>
                 {isSending ? (
