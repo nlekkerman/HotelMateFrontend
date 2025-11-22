@@ -263,6 +263,14 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
       );
     };
 
+    // DEBUG: Bind to ALL events to see what's coming through
+    channel.bind_global((eventName, data) => {
+      console.log('🌍🌍🌍 [GLOBAL EVENT CATCHER] Event received on channel:', channelName);
+      console.log('🌍 Event name:', eventName);
+      console.log('🌍 Event data:', data);
+      console.log('🌍 Is it messages-read?', eventName === 'messages-read');
+    });
+
     // Bind all event handlers
     console.log('🎧 [STAFF CHAT] Binding event handlers to channel:', channelName);
     channel.bind('new-message', handleNewMessage);
