@@ -649,6 +649,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
                     isDeleted={message.is_deleted || false}
                     attachments={message.attachments || []}
                     isEditing={editingMessageId === message.id}
+                    isSending={message.is_sending || false}
                     readByList={readStatus.read_by}
                     readByCount={readStatus.read_count}
                     onSaveEdit={(newText) => {
