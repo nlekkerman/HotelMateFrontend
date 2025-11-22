@@ -168,6 +168,8 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
       console.log('📖 [READ RECEIPT EVENT] Timestamp:', data.timestamp);
       console.log('📖 [READ RECEIPT EVENT] Current conversation ID:', conversation?.id);
       console.log('📖 [READ RECEIPT EVENT] Current messages count:', messages.length);
+      console.log('📖 [READ RECEIPT EVENT] Current userId:', currentUserId);
+      console.log('📖 [READ RECEIPT EVENT] Is this my read receipt?', data.staff_id === currentUserId);
       console.log('📖 [READ RECEIPT EVENT] ===========================================');
       
       console.log('🔄 [READ RECEIPT EVENT] Calling updateReadReceipts from useReadReceipts hook...');
@@ -177,35 +179,42 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
       // Update message list with new read counts
       console.log('🔄 [READ RECEIPT EVENT] Updating messages state...');
       setMessages(prevMessages => {
+        console.log('📝 [READ RECEIPT STATE] ===== START STATE UPDATE =====');
         console.log('📝 [READ RECEIPT STATE] Previous messages count:', prevMessages.length);
         console.log('📝 [READ RECEIPT STATE] Message IDs to update:', data.message_ids);
+        console.log('📝 [READ RECEIPT STATE] All message IDs in state:', prevMessages.map(m => m.id));
         
         const updatedMessages = prevMessages.map((msg, index) => {
           if (data.message_ids && data.message_ids.includes(msg.id)) {
             console.log(`✅ [READ RECEIPT STATE] Found message ${msg.id} to update (index ${index})`);
+            console.log(`   Message text:`, (msg.message || msg.content || '').substring(0, 30));
             const alreadyReadBy = msg.read_by_list || [];
-            console.log(`   Current read_by_list:`, alreadyReadBy);
+            console.log(`   Current read_by_list:`, JSON.stringify(alreadyReadBy));
             console.log(`   Current read_by_count:`, msg.read_by_count);
             
             const alreadyRead = alreadyReadBy.some(r => r.id === data.staff_id);
             console.log(`   Already read by staff ${data.staff_id}?`, alreadyRead);
             
             if (!alreadyRead) {
-              console.log(`   ➕ Adding new read receipt for staff ${data.staff_id}`);
+              console.log(`   ➕ ADDING new read receipt for staff ${data.staff_id}`);
+              const newReadByList = [
+                ...alreadyReadBy,
+                {
+                  id: data.staff_id,
+                  name: data.staff_name,
+                  timestamp: data.timestamp
+                }
+              ];
+              const newReadByCount = (msg.read_by_count || 0) + 1;
+              
               const updated = {
                 ...msg,
-                read_by_count: (msg.read_by_count || 0) + 1,
-                read_by_list: [
-                  ...alreadyReadBy,
-                  {
-                    id: data.staff_id,
-                    name: data.staff_name,
-                    timestamp: data.timestamp
-                  }
-                ]
+                read_by_count: newReadByCount,
+                read_by_list: newReadByList
               };
-              console.log(`   New read_by_count:`, updated.read_by_count);
-              console.log(`   New read_by_list:`, updated.read_by_list);
+              console.log(`   ✅✅ UPDATED - New read_by_count:`, updated.read_by_count);
+              console.log(`   ✅✅ UPDATED - New read_by_list:`, JSON.stringify(updated.read_by_list));
+              console.log(`   ✅✅ UPDATED - Complete updated message object keys:`, Object.keys(updated));
               return updated;
             } else {
               console.log(`   ⚠️ Staff already read this message, not updating`);
@@ -214,8 +223,21 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
           return msg;
         });
         
-        console.log('📝 [READ RECEIPT STATE] Messages update complete');
+        console.log('📝 [READ RECEIPT STATE] ===== COMPARING BEFORE/AFTER =====');
+        console.log('📝 [READ RECEIPT STATE] Messages changed?', prevMessages !== updatedMessages);
         console.log('📝 [READ RECEIPT STATE] Updated messages count:', updatedMessages.length);
+        
+        // Log the specific messages that should have been updated
+        data.message_ids?.forEach(msgId => {
+          const oldMsg = prevMessages.find(m => m.id === msgId);
+          const newMsg = updatedMessages.find(m => m.id === msgId);
+          console.log(`📝 [READ RECEIPT STATE] Message ${msgId} comparison:`);
+          console.log(`   Old count:`, oldMsg?.read_by_count, `| New count:`, newMsg?.read_by_count);
+          console.log(`   Old list length:`, oldMsg?.read_by_list?.length, `| New list length:`, newMsg?.read_by_list?.length);
+          console.log(`   Actually changed?`, oldMsg?.read_by_count !== newMsg?.read_by_count);
+        });
+        
+        console.log('📝 [READ RECEIPT STATE] ===== END STATE UPDATE =====');
         return updatedMessages;
       });
       
@@ -622,11 +644,21 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
               
               // Debug log for message render
               if (isOwn) {
-                console.log(`🎨 [UI RENDER] Message ${message.id}:`, {
+                console.log(`🎨🎨🎨 [UI RENDER] Message ${message.id} RENDER CYCLE:`, {
                   text: (message.message || message.content || '').substring(0, 30),
-                  messageData: { read_by_list: message.read_by_list, read_by_count: message.read_by_count },
+                  messageObjectId: message.id,
+                  messageData: { 
+                    read_by_list: message.read_by_list, 
+                    read_by_count: message.read_by_count,
+                    read_by_list_length: message.read_by_list?.length,
+                    full_read_by_list: JSON.stringify(message.read_by_list)
+                  },
                   finalReadStatus: readStatus,
-                  willShowAsSeen: readStatus.read_count > 0
+                  willShowAsSeen: readStatus.read_count > 0,
+                  passedToMessageBubble: {
+                    readByList: readStatus.read_by,
+                    readByCount: readStatus.read_count
+                  }
                 });
               }
 
