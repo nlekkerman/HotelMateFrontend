@@ -157,7 +157,10 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
 
     // Handle read receipts
     const handleReadReceipt = (data) => {
-      console.log('📖📖📖 [READ RECEIPT EVENT] ===========================================');
+      console.log('');
+      console.log('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
+      console.log('📖📖📖 [READ RECEIPT EVENT] PUSHER EVENT FIRED!!!');
+      console.log('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
       console.log('📖 [READ RECEIPT EVENT] Pusher event received at:', new Date().toISOString());
       console.log('📖 [READ RECEIPT EVENT] Raw data:', JSON.stringify(data, null, 2));
       console.log('📖 [READ RECEIPT EVENT] Data type:', typeof data);
