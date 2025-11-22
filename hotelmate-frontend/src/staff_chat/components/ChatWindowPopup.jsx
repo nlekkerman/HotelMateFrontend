@@ -165,39 +165,47 @@ const ChatWindowPopup = ({
 
   // Sync readReceipts state changes to messages array (CRITICAL FOR UI UPDATES!)
   useEffect(() => {
-    if (Object.keys(readReceipts).length === 0) return;
+    const receiptKeys = Object.keys(readReceipts);
+    if (receiptKeys.length === 0) return;
     
     console.log('🔄🔄🔄 [POPUP SYNC] readReceipts state changed, syncing to messages array');
-    console.log('🔄 [POPUP SYNC] readReceipts keys:', Object.keys(readReceipts));
+    console.log('🔄 [POPUP SYNC] readReceipts keys:', receiptKeys);
     console.log('🔄 [POPUP SYNC] Current messages count:', messages.length);
     
     // Batch update all messages with new read receipts
-    const messageIdsToUpdate = Object.keys(readReceipts).map(Number);
+    const messageIdsToUpdate = receiptKeys.map(Number);
     console.log('🔄 [POPUP SYNC] Message IDs to update:', messageIdsToUpdate);
     
+    let updatedCount = 0;
     messageIdsToUpdate.forEach((msgId) => {
       const receipt = readReceipts[msgId];
       const message = messages.find(m => m.id === msgId);
       
       if (receipt && message) {
-        console.log(`🔄 [POPUP SYNC] Updating message ${msgId}:`, {
-          oldCount: message.read_by_count,
-          newCount: receipt.read_count,
-          oldList: message.read_by_list?.length,
-          newList: receipt.read_by?.length
-        });
+        // Only update if values actually changed
+        const needsUpdate = message.read_by_count !== receipt.read_count;
         
-        // Update message directly in pagination state
-        updatePaginatedMessage(msgId, {
-          read_by_list: receipt.read_by,
-          read_by_count: receipt.read_count,
-          is_read: receipt.read_count > 0
-        });
+        if (needsUpdate) {
+          console.log(`🔄 [POPUP SYNC] Updating message ${msgId}:`, {
+            oldCount: message.read_by_count,
+            newCount: receipt.read_count,
+            oldList: message.read_by_list?.length,
+            newList: receipt.read_by?.length
+          });
+          
+          // Update message directly in pagination state
+          updatePaginatedMessage(msgId, {
+            read_by_list: receipt.read_by,
+            read_by_count: receipt.read_count,
+            is_read: receipt.read_count > 0
+          });
+          updatedCount++;
+        }
       }
     });
     
-    console.log('✅ [POPUP SYNC] Messages array update complete');
-  }, [readReceipts]);
+    console.log(`✅ [POPUP SYNC] Updated ${updatedCount} messages`);
+  }, [readReceipts, messages, updatePaginatedMessage]);
 
   // Subscribe to messages from StaffChatContext (single source of truth!)
   useEffect(() => {
