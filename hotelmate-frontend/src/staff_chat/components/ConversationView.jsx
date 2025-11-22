@@ -324,7 +324,6 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
       (entries) => {
         if (entries[0].isIntersecting) {
           // User scrolled to bottom, mark conversation as read
-          //
           markConversationRead();
         }
       },
@@ -614,19 +613,17 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
                                message.sender_info?.full_name ||
                                'User';
               
-              // Get read receipt info
-              // Priority: readReceipts state > message data
-              const hookReadData = readReceipts[message.id];
+              // Get read receipt info - USE MESSAGE DATA AS SINGLE SOURCE OF TRUTH
+              // The messages state is updated by handleReadReceipt, so we only need that
               const readStatus = {
-                read_by: hookReadData?.read_by || message.read_by_list || [],
-                read_count: hookReadData?.read_count || message.read_by_count || 0
+                read_by: message.read_by_list || [],
+                read_count: message.read_by_count || 0
               };
               
               // Debug log for message render
               if (isOwn) {
                 console.log(`🎨 [UI RENDER] Message ${message.id}:`, {
                   text: (message.message || message.content || '').substring(0, 30),
-                  hookData: hookReadData,
                   messageData: { read_by_list: message.read_by_list, read_by_count: message.read_by_count },
                   finalReadStatus: readStatus,
                   willShowAsSeen: readStatus.read_count > 0

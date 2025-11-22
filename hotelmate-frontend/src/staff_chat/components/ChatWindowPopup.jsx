@@ -278,17 +278,9 @@ const ChatWindowPopup = ({
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Handle input focus - mark conversation as read
+  // Handle input focus - removed auto mark as read
   const handleInputFocus = async () => {
-    if (conversation?.unread_count > 0) {
-      console.log('📖 [ChatWindowPopup] Input focused - marking conversation as read:', conversation.id);
-      try {
-        await markConversationAsRead(hotelSlug, conversation.id);
-        console.log('✅ [ChatWindowPopup] Conversation marked as read');
-      } catch (error) {
-        console.error('❌ [ChatWindowPopup] Failed to mark conversation as read:', error);
-      }
-    }
+    // Auto mark as read removed - handled by ConversationView
   };
 
   // Handle reply

@@ -201,9 +201,20 @@ const MessageBubble = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '3px',
-                color: isSending ? '#6c757d' : (readByCount > 0 ? '#0d6efd' : '#f7f7f7ff'),
+                color: isSending ? '#6c757d' : (readByCount > 0 ? '#fd790dff' : '#f7f7f7ff'),
                 fontWeight: '500'
               }}>
+                {(() => {
+                  console.log('🔍 [STATUS RENDER] Deciding status:', {
+                    isSending,
+                    readByCount,
+                    readByCountType: typeof readByCount,
+                    isGreaterThanZero: readByCount > 0,
+                    readByListLength: readByList.length,
+                    willShow: isSending ? 'SENDING' : (readByCount > 0 ? 'SEEN' : 'DELIVERED')
+                  });
+                  return null;
+                })()}
                 {isSending ? (
                   // Sending...
                   <>
