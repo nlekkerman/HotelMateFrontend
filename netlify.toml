@@ -1,0 +1,25 @@
+[build]
+  # Base directory where the build commands are run
+  base = "hotelmate-frontend"
+  
+  # Build command
+  command = "npm run build"
+  
+  # Directory containing the deploy-ready HTML files and assets
+  publish = "dist"
+  
+  # Ignore Python dependencies
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ."
+
+[build.environment]
+  # Use Node.js 18 or later
+  NODE_VERSION = "18"
+  
+  # Skip Python dependency installation
+  SKIP_DEPENDENCY_INSTALL = "true"
+
+[[redirects]]
+  # Redirect all requests to index.html for client-side routing
+  from = "/*"
+  to = "/index.html"
+  status = 200
