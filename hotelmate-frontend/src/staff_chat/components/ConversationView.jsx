@@ -52,6 +52,37 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     loadReadReceipts
   } = useReadReceipts(hotelSlug, conversation?.id, currentUserId);
 
+  // Sync readReceipts state changes to messages array
+  useEffect(() => {
+    if (Object.keys(readReceipts).length === 0) return;
+    
+    console.log('🔄🔄🔄 [SYNC] readReceipts state changed, syncing to messages array');
+    console.log('🔄 [SYNC] readReceipts keys:', Object.keys(readReceipts));
+    
+    setMessages(prev => {
+      const updated = prev.map(msg => {
+        const receipt = readReceipts[msg.id];
+        if (receipt) {
+          console.log(`🔄 [SYNC] Updating message ${msg.id}:`, {
+            oldCount: msg.read_by_count,
+            newCount: receipt.read_count,
+            oldList: msg.read_by_list?.length,
+            newList: receipt.read_by?.length
+          });
+          return {
+            ...msg,
+            read_by_list: receipt.read_by,
+            read_by_count: receipt.read_count
+          };
+        }
+        return msg;
+      });
+      
+      console.log('✅ [SYNC] Messages array updated with read receipts');
+      return updated;
+    });
+  }, [readReceipts]);
+
   // Get Pusher instance from StaffChatContext
   const { pusherInstance, setCurrentConversationId } = useStaffChat();
 
@@ -333,31 +364,39 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     };
   }, [conversation?.id, setCurrentConversationId]);
 
-  // Mark conversation as read when conversation is opened
+  // Mark ALL messages as read when conversation is opened
   useEffect(() => {
     if (conversation?.id && messages.length > 0) {
-      console.log('✅ [READ RECEIPTS] Conversation opened, marking as read:', conversation.id);
+      console.log('🎯🎯🎯 [MARK ALL AS READ] Conversation opened with messages, marking ALL as read');
+      console.log('🎯 [MARK ALL AS READ] Conversation ID:', conversation.id);
+      console.log('🎯 [MARK ALL AS READ] Total messages:', messages.length);
+      
       // Small delay to ensure messages are loaded
-      const timer = setTimeout(() => {
-        markConversationRead();
+      const timer = setTimeout(async () => {
+        console.log('📮 [MARK ALL AS READ] Calling markConversationRead...');
+        await markConversationRead();
+        console.log('✅ [MARK ALL AS READ] markConversationRead completed');
       }, 500);
+      
       return () => clearTimeout(timer);
     }
-  }, [conversation?.id, messages.length]);
+  }, [conversation?.id, messages.length, markConversationRead]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // Auto-mark as read when last message is visible
+  // Auto-mark ALL messages as read when last message is visible (user scrolled to bottom)
   useEffect(() => {
     if (!lastMessageRef.current || messages.length === 0) return;
 
     const observer = new IntersectionObserver(
-      (entries) => {
+      async (entries) => {
         if (entries[0].isIntersecting) {
-          // User scrolled to bottom, mark conversation as read
-          markConversationRead();
+          console.log('👁️ [MARK ALL AS READ] Last message visible, marking ALL as read');
+          console.log('📮 [MARK ALL AS READ] Calling markConversationRead...');
+          await markConversationRead();
+          console.log('✅ [MARK ALL AS READ] markConversationRead completed');
         }
       },
       { threshold: 1.0 }
@@ -389,10 +428,15 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     }
   };
 
-  // Mark as read when user clicks on input field
-  const handleInputFocus = () => {
-    console.log('🎯 [READ RECEIPTS] Input focused, marking conversation as read');
-    markConversationRead();
+  // Mark ALL messages as read when user focuses input (handles new messages while chat was open)
+  const handleInputFocus = async () => {
+    console.log('🎯🎯🎯 [MARK ALL AS READ] Input focused, marking ALL messages as read');
+    console.log('🎯 [MARK ALL AS READ] This handles new messages received while chat window was open');
+    console.log('🎯 [MARK ALL AS READ] Current messages count:', messages.length);
+    
+    console.log('📮 [MARK ALL AS READ] Calling markConversationRead...');
+    await markConversationRead();
+    console.log('✅ [MARK ALL AS READ] markConversationRead completed');
   };
 
   const handleSendMessage = async (messageText, mentions) => {
