@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
 import api from "@/services/api";
 import HotelInfoCreateForm from "@/components/hotel_info/HotelInfoCreateForm";
 import HotelInfoModal from "@/components/modals/HotelInfoModal.jsx";
@@ -14,6 +15,7 @@ export default function HotelInfo() {
   const hotelSlug = hotel_slug;
   const activeCategory = category;
   const { user } = useAuth();
+  const { mainColor } = useTheme();
   const navigate = useNavigate();
 
   // ── State ─────────────────────────────────────────────────────────

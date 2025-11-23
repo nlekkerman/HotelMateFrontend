@@ -28,7 +28,8 @@ const MobileNavbar = () => {
 
   // Use usePermissions WITHOUT argument — it reads roles from localStorage inside
   const { canAccess } = usePermissions();
-  const { visibleNavItems, hasNavigation } = useNavigation();
+  const { visibleNavItems, categories, uncategorizedItems, hasNavigation } = useNavigation();
+  const [expandedCategoryId, setExpandedCategoryId] = useState(null);
 
   useEffect(() => {
     if (!user) {
@@ -70,6 +71,37 @@ const MobileNavbar = () => {
       return location.pathname.startsWith(pathWithoutQuery);
     }
     return location.pathname.startsWith(path);
+  };
+
+  // Helper functions for notifications
+  const getOrderCountForItem = (item) => {
+    if (item.slug === "room_service") return roomServiceCount;
+    if (item.slug === "breakfast") return breakfastCount;
+    if (item.slug === "chat") return totalUnread;
+    return 0;
+  };
+
+  const hasNewBadgeForItem = (item) => {
+    if (item.slug === "room_service") return hasNewRoomService;
+    if (item.slug === "breakfast") return hasNewBreakfast;
+    if (item.slug === "chat") return totalUnread > 0;
+    return false;
+  };
+
+  const categoryHasNotifications = (category) => {
+    return category.items.some(item => {
+      const orderCount = getOrderCountForItem(item);
+      const showNewBadge = hasNewBadgeForItem(item);
+      return orderCount > 0 || showNewBadge;
+    });
+  };
+
+  const isCategoryActive = (category) => {
+    return category.items.some(item => isActive(item.path));
+  };
+
+  const toggleCategory = (categoryId) => {
+    setExpandedCategoryId(expandedCategoryId === categoryId ? null : categoryId);
   };
 
   const hiddenNavPatterns = [
@@ -154,19 +186,10 @@ const MobileNavbar = () => {
 
             {user && (
               <>
-                {visibleNavItems.map((item) => {
-                  // Add order counts for room service and breakfast
-                  let orderCount = 0;
-                  if (item.slug === "room-service") orderCount = roomServiceCount;
-                  if (item.slug === "breakfast") orderCount = breakfastCount;
-                  if (item.slug === "chat") orderCount = totalUnread;
-
-                  // Show NEW badge for notifications
-                  const showNewBadge = 
-                    item.slug === "room-service" ? hasNewRoomService :
-                    item.slug === "breakfast" ? hasNewBreakfast :
-                    item.slug === "chat" ? totalUnread > 0 :
-                    false;
+                {/* Uncategorized items (Home, Settings) */}
+                {uncategorizedItems.map((item) => {
+                  const orderCount = getOrderCountForItem(item);
+                  const showNewBadge = hasNewBadgeForItem(item);
 
                   return (
                     <li className="nav-item" key={item.slug}>
@@ -182,18 +205,82 @@ const MobileNavbar = () => {
                           {item.name}
                         </div>
 
-                        {/* Show count badge when menu is expanded */}
                         {orderCount > 0 && (
                           <span className="badge bg-danger rounded-pill">
                             {orderCount}
                           </span>
                         )}
 
-                        {/* Show NEW badge when expanded but no count */}
                         {showNewBadge && orderCount === 0 && (
                           <span className="badge bg-danger">NEW</span>
                         )}
                       </Link>
+                    </li>
+                  );
+                })}
+
+                {/* Category accordion */}
+                {categories.map((category) => {
+                  const isExpanded = expandedCategoryId === category.id;
+                  const hasNotifications = categoryHasNotifications(category);
+                  const isActive = isCategoryActive(category);
+
+                  return (
+                    <li className="nav-item mobile-category-item" key={category.id}>
+                      <button
+                        className={`nav-link text-white d-flex justify-content-between align-items-center w-100 border-0 bg-transparent text-start ${
+                          isActive ? "active" : ""
+                        }`}
+                        onClick={() => toggleCategory(category.id)}
+                      >
+                        <div>
+                          <i className={`bi bi-${category.icon} me-2`} />
+                          {category.name}
+                        </div>
+                        <div className="d-flex align-items-center gap-2">
+                          {hasNotifications && (
+                            <span className="badge bg-danger rounded-circle" style={{ width: '8px', height: '8px', padding: 0 }}></span>
+                          )}
+                          <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'}`} />
+                        </div>
+                      </button>
+
+                      {/* Category items (accordion content) */}
+                      {isExpanded && (
+                        <ul className="list-unstyled ps-4 mt-2">
+                          {category.items.map((item) => {
+                            const orderCount = getOrderCountForItem(item);
+                            const showNewBadge = hasNewBadgeForItem(item);
+
+                            return (
+                              <li key={item.slug} className="mb-2">
+                                <Link
+                                  className={`nav-link ${
+                                    isActive(item.path) ? "active" : ""
+                                  } text-white d-flex justify-content-between align-items-center py-2`}
+                                  to={item.path}
+                                  onClick={toggleNavbar}
+                                >
+                                  <div>
+                                    <i className={`bi bi-${item.icon} me-2`} />
+                                    {item.name}
+                                  </div>
+
+                                  {orderCount > 0 && (
+                                    <span className="badge bg-danger rounded-pill">
+                                      {orderCount}
+                                    </span>
+                                  )}
+
+                                  {showNewBadge && orderCount === 0 && (
+                                    <span className="badge bg-danger">NEW</span>
+                                  )}
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
                     </li>
                   );
                 })}

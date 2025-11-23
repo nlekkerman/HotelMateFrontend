@@ -304,7 +304,7 @@ const MessageBubble = ({
                   // Delivered
                   <>
                     <i className="bi bi-check2-all" style={{ fontSize: '11px' }}></i>
-                    <span>DeliveSDFSDFSDFred</span>
+                    <span>Delivered</span>
                   </>
                 )}
               </div>

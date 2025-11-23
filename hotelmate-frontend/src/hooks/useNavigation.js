@@ -1,5 +1,10 @@
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { 
+  NAVIGATION_CATEGORIES, 
+  getCategoryForNavItem, 
+  getCategoryById 
+} from "@/config/navigationCategories";
 
 // Default navigation items (fallback if not in localStorage)
 const DEFAULT_NAV_ITEMS = [
@@ -12,7 +17,7 @@ const DEFAULT_NAV_ITEMS = [
   { slug: 'roster', name: 'Roster', path: '/roster/{hotelSlug}', icon: 'calendar-week' },
   { slug: 'staff', name: 'Staff', path: '/{hotelSlug}/staff', icon: 'person-badge' },
   { slug: 'restaurants', name: 'Restaurants', path: '/{hotelSlug}/restaurants', icon: 'shop-window' },
-  { slug: 'bookings', name: 'Bookings', path: '/bookings', icon: 'calendar-check' },
+  { slug: 'bookings', name: 'Restaurant Bookings', path: '/bookings', icon: 'calendar-check' },
   { slug: 'maintenance', name: 'Maintenance', path: '/maintenance', icon: 'tools' },
   { slug: 'hotel_info', name: 'Hotel Info', path: '/hotel_info/{hotelSlug}', icon: 'info-circle' },
   { slug: 'good_to_know', name: 'Good to Know', path: '/good_to_know_console/{hotelSlug}', icon: 'book' },
@@ -51,23 +56,51 @@ export function useNavigation() {
     path: item.path.replace('{hotelSlug}', hotelSlug)
   }));
 
-  // Django superuser sees ALL items (bypass filtering)
-  if (isSuperUser) {
-    return { 
-      visibleNavItems: allNavItems, 
-      allNavItems,
-      hasNavigation: true 
-    };
-  }
-
   // Regular staff: filter by allowed_navs AND exclude settings (superuser only)
-  const visibleNavItems = allNavItems.filter(item => {
-    // Settings is ONLY for Django superuser
-    if (item.slug === 'settings') {
-      return false;
-    }
-    return canAccessNav(item.slug);
-  });
+  // Django superuser sees ALL items (bypass filtering)
+  const visibleNavItems = isSuperUser 
+    ? allNavItems 
+    : allNavItems.filter(item => {
+        // Settings is ONLY for Django superuser
+        if (item.slug === 'settings') {
+          return false;
+        }
+        return canAccessNav(item.slug);
+      });
+
+  // Group navigation items by category
+  const groupItemsByCategory = (items) => {
+    const categorized = {};
+    const uncategorized = [];
+
+    items.forEach(item => {
+      const categoryId = getCategoryForNavItem(item.slug);
+      
+      if (categoryId) {
+        if (!categorized[categoryId]) {
+          categorized[categoryId] = [];
+        }
+        categorized[categoryId].push(item);
+      } else {
+        // Items without category (home, settings) go to uncategorized
+        uncategorized.push(item);
+      }
+    });
+
+    return { categorized, uncategorized };
+  };
+
+  // Create categorized navigation structure
+  const { categorized: categorizedItems, uncategorized } = groupItemsByCategory(visibleNavItems);
+  
+  // Build categories with items and filter out empty categories
+  const categories = NAVIGATION_CATEGORIES
+    .map(category => ({
+      ...category,
+      items: categorizedItems[category.id] || [],
+      hasNotifications: false, // Will be calculated by navbar components
+    }))
+    .filter(category => category.items.length > 0); // Only show categories with items
 
   // Debug logging to compare available vs visible
   if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
@@ -75,12 +108,16 @@ export function useNavigation() {
     console.log('All Available Items:', allNavItems.map(i => i.slug));
     console.log('Visible Items:', visibleNavItems.map(i => i.slug));
     console.log('Hidden Items:', allNavItems.filter(i => !visibleNavItems.includes(i)).map(i => i.slug));
+    console.log('Categories:', categories.map(c => `${c.name} (${c.items.length} items)`));
+    console.log('Uncategorized:', uncategorized.map(i => i.slug));
     console.groupEnd();
   }
 
   return { 
     visibleNavItems, 
     allNavItems,
+    categories,
+    uncategorizedItems: uncategorized,
     hasNavigation: visibleNavItems.length > 0 
   };
 }

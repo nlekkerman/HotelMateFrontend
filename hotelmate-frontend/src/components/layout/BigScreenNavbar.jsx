@@ -32,10 +32,14 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [flyoutOpen, setFlyoutOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showLogoutSuccess, setShowLogoutSuccess] = useState(false);
 
   const { canAccess } = usePermissions();
-  const { visibleNavItems, hasNavigation } = useNavigation();
+  const { visibleNavItems, categories, uncategorizedItems, hasNavigation } = useNavigation();
   const servicesRef = useRef(null);
+  const [openCategoryId, setOpenCategoryId] = useState(null);
+  const categoryRefs = useRef({});
   
   // Detect current section for contextual navigation
   const getCurrentSection = () => {
@@ -119,14 +123,22 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
     }
   }, [collapsed]);
 
-  // Close flyout if clicked outside
+  // Close flyout and category dropdowns if clicked outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (servicesRef.current && !servicesRef.current.contains(event.target)) {
         setFlyoutOpen(false);
       }
+      
+      // Close category dropdowns if clicked outside
+      const clickedInsideCategory = Object.values(categoryRefs.current).some(
+        ref => ref && ref.contains(event.target)
+      );
+      if (!clickedInsideCategory && openCategoryId) {
+        setOpenCategoryId(null);
+      }
     }
-    if (flyoutOpen) {
+    if (flyoutOpen || openCategoryId) {
       document.addEventListener("mousedown", handleClickOutside);
     } else {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -134,12 +146,57 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [flyoutOpen]);
+  }, [flyoutOpen, openCategoryId]);
 
   const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
+    setShowLogoutConfirm(false);
     logout();
-    // Use window.location for a full page reload to ensure clean state
-    window.location.href = "/login";
+    setShowLogoutSuccess(true);
+    
+    // Redirect after showing success message
+    setTimeout(() => {
+      window.location.href = "/login";
+    }, 1500);
+  };
+
+  // Check if any item in category has notifications
+  const categoryHasNotifications = (category) => {
+    return category.items.some(item => {
+      const orderCount = getOrderCountForItem(item);
+      const showNewBadge = hasNewBadgeForItem(item);
+      return orderCount > 0 || showNewBadge;
+    });
+  };
+
+  // Get order count for specific nav item
+  const getOrderCountForItem = (item) => {
+    if (item.slug === "room_service") return roomServiceCount;
+    if (item.slug === "breakfast") return breakfastCount;
+    if (item.slug === "chat") return totalUnread;
+    return 0;
+  };
+
+  // Check if item should show NEW badge
+  const hasNewBadgeForItem = (item) => {
+    if (item.slug === "bookings") return hasNewBooking;
+    if (item.slug === "chat") return totalUnread > 0;
+    if (item.slug === "room_service") return hasNewRoomService;
+    if (item.slug === "breakfast") return hasNewBreakfast;
+    return false;
+  };
+
+  // Toggle category dropdown
+  const toggleCategory = (categoryId) => {
+    setOpenCategoryId(openCategoryId === categoryId ? null : categoryId);
+  };
+
+  // Check if category is active (any item inside is active)
+  const isCategoryActive = (category) => {
+    return category.items.some(item => isPartialActive(item.path));
   };
 
   // Contextual Quick Actions based on current section - FIXED ROUTES
@@ -301,6 +358,36 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
       ];
     }
     
+    // ============================================================================
+    // PLACEHOLDER: Future Category-Based Quick Actions
+    // ============================================================================
+    // These will be implemented as the navigation categories are expanded:
+    //
+    // FRONT OFFICE CATEGORY:
+    //   - Arrivals: Quick view/filters for today's arrivals
+    //   - Departures: Quick view/filters for today's departures
+    //   - In-House: Filter/view current in-house guests
+    //   - Reservations: Create booking, view upcoming
+    //   - Requests: View/create guest requests
+    //
+    // F&B CATEGORY:
+    //   - Table Bookings: Create booking, view today
+    //   - Menus: Create/edit menu items, view by restaurant
+    //
+    // STAFF CATEGORY:
+    //   - Clock: View clock history, clock analytics
+    //
+    // STOCK CATEGORY:
+    //   (Already implemented above)
+    //
+    // GUEST RELATIONS CATEGORY:
+    //   - Entertainment: View/manage activities, event calendar
+    //   - Good To Know: Already implemented (hotel_info routes)
+    //
+    // Note: Quick actions will be populated based on route context and user
+    // permissions. Use the same pattern as existing actions above.
+    // ============================================================================
+    
     return [];
   };
   
@@ -311,21 +398,32 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
       <nav
         className={`d-none d-lg-flex position-fixed top-0 start-0 end-0 top-navbar-strip glassmorphic-nav text-white ${
           mainColor ? "" : "bg-info"
-        } ${isExpanded ? "expanded" : ""} section-${currentSection}`}
+        } expanded section-${currentSection}`}
         style={{
           backgroundColor: mainColor || undefined,
           zIndex: 1050,
-          transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-          height: isExpanded ? "110px" : "50px",
+          height: "60px",
         }}
-        onMouseEnter={() => setIsExpanded(true)}
-        onMouseLeave={() => setIsExpanded(false)}
+
       >
         <div className="container-fluid h-100">
           <div className="d-flex align-items-center justify-content-between h-100 px-3">
             
-            {/* Left side: Clock In + Profile */}
+            {/* Left side: Logout + Clock In + Profile */}
             <div className="d-flex align-items-center gap-2">
+              {user && (
+                <button
+                  className="top-nav-link logout-link"
+                  onClick={handleLogout}
+                  title="Logout"
+                  style={{ color: 'white' }}
+                >
+                  <div className="top-nav-item">
+                    <span className="top-nav-label" style={{ color: 'white' }}>Logout</span>
+                  </div>
+                </button>
+              )}
+
               {user && (
                 <button
                   className={`btn ${isOnDuty ? 'btn-danger' : 'btn-success'} text-white top-nav-btn clock-btn`}
@@ -337,16 +435,14 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                   }}
                 >
                   <i className="bi bi-clock" />
-                  {isExpanded && <span className="ms-2 btn-label">{isOnDuty ? 'Clock Out' : 'Clock In'}</span>}
+                  <span className="ms-2 btn-label">{isOnDuty ? 'Clock Out' : 'Clock In'}</span>
                 </button>
               )}
 
               {(staffProfile || user) && (() => {
-                // Build proper Cloudinary URL for profile image
                 const getImageUrl = (url) => {
                   if (!url) return null;
                   if (url.startsWith('http')) return url;
-                  // Add Cloudinary base if relative path
                   const cloudinaryBase = 'https://res.cloudinary.com/dg0ssec7u/';
                   return `${cloudinaryBase}${url}`;
                 };
@@ -391,22 +487,12 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
               })()}
             </div>
 
-            {/* Center: Main Navigation Items */}
-            <div className="d-flex align-items-center justify-content-center flex-grow-1 gap-1 flex-wrap">
-              {visibleNavItems.map((item) => {
-                let orderCount = 0;
-                if (item.slug === "room-service") orderCount = roomServiceCount;
-                if (item.slug === "breakfast") orderCount = breakfastCount;
-                if (item.slug === "chat") orderCount = totalUnread;
-                // staff-chat removed - using MessengerWidget with quick action buttons
-                
-                const showNewBadge = 
-                  item.slug === "bookings" ? hasNewBooking : 
-                  item.slug === "chat" ? totalUnread > 0 : 
-                  item.slug === "room-service" ? hasNewRoomService :
-                  item.slug === "breakfast" ? hasNewBreakfast :
-                  false;
-
+            {/* Right side: Main Navigation Items - Categories & Uncategorized */}
+            <div className="d-flex align-items-center justify-content-end flex-grow-1 gap-1 flex-wrap">
+              {/* Uncategorized items first (Home, Settings) */}
+              {uncategorizedItems.map((item) => {
+                const orderCount = getOrderCountForItem(item);
+                const showNewBadge = hasNewBadgeForItem(item);
                 const hasNotification = orderCount > 0 || showNewBadge;
                 
                 return (
@@ -419,39 +505,76 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                     title={item.name}
                   >
                     <div className="top-nav-item position-relative">
-                      <i className={`bi bi-${item.icon} top-nav-icon`} />
-                      {isExpanded && <span className="top-nav-label">{item.name}</span>}
+                      <span className="top-nav-label">{item.name}</span>
                       
-                      {/* Notification badge */}
                       {hasNotification && (
-                        <span 
-                          className={`notification-badge ${isExpanded ? 'with-label' : 'dot-only'}`}
-                        >
-                          {isExpanded && orderCount > 0 ? orderCount : ""}
-                          {isExpanded && showNewBadge && orderCount === 0 ? "NEW" : ""}
+                        <span className="notification-badge with-label">
+                          {orderCount > 0 ? orderCount : showNewBadge ? "NEW" : ""}
                         </span>
                       )}
                     </div>
                   </Link>
                 );
               })}
-            </div>
 
-            {/* Right side: Logout */}
-            {user && (
-              <div className="d-flex align-items-center">
-                <button
-                  className="top-nav-link logout-link"
-                  onClick={handleLogout}
-                  title="Logout"
-                >
-                  <div className="top-nav-item">
-                    <i className="bi bi-box-arrow-right top-nav-icon" />
-                    {isExpanded && <span className="top-nav-label">Logout</span>}
+              {/* Categorized navigation with dropdowns */}
+              {categories.map((category) => {
+                const isActive = isCategoryActive(category);
+                const hasNotifications = categoryHasNotifications(category);
+                const isOpen = openCategoryId === category.id;
+                
+                return (
+                  <div 
+                    key={category.id}
+                    className="position-relative category-nav-wrapper"
+                    ref={(el) => (categoryRefs.current[category.id] = el)}
+                  >
+                    <div
+                      className={`top-nav-link category-toggle ${isActive ? "active" : ""}`}
+                      title={category.name}
+                    >
+                      <div className="top-nav-item position-relative">
+                        <span className="top-nav-label">{category.name}</span>
+                        
+                        {hasNotifications && (
+                          <span className="notification-badge with-label">
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Dropdown menu for category items - shows on hover */}
+                    <div className="category-dropdown category-dropdown-hover">
+                        {category.items.map((item) => {
+                          const orderCount = getOrderCountForItem(item);
+                          const showNewBadge = hasNewBadgeForItem(item);
+                          const hasItemNotification = orderCount > 0 || showNewBadge;
+                          
+                          return (
+                            <Link
+                              key={item.slug}
+                              className={`category-dropdown-item ${
+                                isPartialActive(item.path) ? "active" : ""
+                              }`}
+                              to={item.path}
+                              onClick={() => setOpenCategoryId(null)}
+                            >
+                              <i className={`bi bi-${item.icon} me-2`} />
+                              <span>{item.name}</span>
+                              
+                              {hasItemNotification && (
+                                <span className="item-notification-badge ms-auto">
+                                  {orderCount > 0 ? orderCount : "NEW"}
+                                </span>
+                              )}
+                            </Link>
+                          );
+                        })}
+                    </div>
                   </div>
-                </button>
-              </div>
-            )}
+                );
+              })}
+            </div>
           </div>
         </div>
       </nav>
@@ -552,6 +675,46 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
             setIsModalOpen(false);
           }}
         />
+      )}
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Confirm Logout</h5>
+                <button type="button" className="btn-close" onClick={() => setShowLogoutConfirm(false)}></button>
+              </div>
+              <div className="modal-body">
+                <p>Are you sure you want to logout?</p>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowLogoutConfirm(false)}>
+                  Cancel
+                </button>
+                <button type="button" className="btn btn-danger" onClick={confirmLogout}>
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Logout Success Modal */}
+      {showLogoutSuccess && (
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-body text-center py-4">
+                <i className="bi bi-check-circle text-success" style={{ fontSize: '3rem' }}></i>
+                <h5 className="mt-3">Logged Out Successfully</h5>
+                <p className="text-muted">Redirecting to login page...</p>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
