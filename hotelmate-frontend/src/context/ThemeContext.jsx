@@ -43,7 +43,7 @@ export function ThemeProvider({ children }) {
   const { data, isLoading } = useQuery({
     queryKey: ["theme", hotelSlug],
     queryFn: async () => {
-      const res = await api.get(`/common/${hotelSlug}/theme/`);
+      const res = await api.get(`/staff/hotels/${hotelSlug}/common/theme/`);
       return res.data;
     },
     enabled: !!hotelSlug,

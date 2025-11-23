@@ -8,7 +8,7 @@ import {
 
 // Default navigation items (fallback if not in localStorage)
 const DEFAULT_NAV_ITEMS = [
-  { slug: 'home', name: 'Home', path: '/', icon: 'house' },
+  { slug: 'home', name: 'Home', path: '/staff/{hotelSlug}/feed', icon: 'house' },
   { slug: 'chat', name: 'Chat', path: '/hotel/{hotelSlug}/chat', icon: 'chat-dots' },
   // Removed 'staff-chat' - using MessengerWidget instead
   { slug: 'reception', name: 'Reception', path: '/reception', icon: 'bell' },

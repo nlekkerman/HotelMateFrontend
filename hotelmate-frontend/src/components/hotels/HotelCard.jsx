@@ -4,17 +4,11 @@ import { Card } from 'react-bootstrap';
 
 /**
  * HotelCard - Reusable component for displaying hotel information
- * @param {Object} hotel - Hotel object with id, name, slug, logo, city, country, short_description
+ * @param {Object} hotel - Hotel object with id, name, slug, logo_url, city, country, short_description
  */
 const HotelCard = ({ hotel }) => {
-  const getImageUrl = (url) => {
-    if (!url) return null;
-    if (url.startsWith('http')) return url;
-    const cloudinaryBase = 'https://res.cloudinary.com/dg0ssec7u/';
-    return `${cloudinaryBase}${url}`;
-  };
-
-  const logoUrl = getImageUrl(hotel.logo);
+  // Use logo_url directly from API response
+  const logoUrl = hotel.logo_url || hotel.logo;
   const hotelInitials = hotel.name
     .split(' ')
     .map(word => word.charAt(0))

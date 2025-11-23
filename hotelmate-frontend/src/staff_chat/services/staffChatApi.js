@@ -4,7 +4,15 @@
  * Uses axios for consistency with other API services
  */
 
-import api from '@/services/api';
+import api, { buildStaffURL } from '@/services/api';
+
+/**
+ * Helper to build staff chat URL with new pattern
+ * /api/staff/hotels/<hotel_slug>/staff_chat/
+ */
+const buildChatURL = (hotelSlug, path = '') => {
+  return buildStaffURL(hotelSlug, 'staff_chat', path);
+};
 
 /**
  * Fetch list of staff members for a hotel
@@ -30,7 +38,7 @@ export const fetchStaffList = async (hotelSlug, searchTerm = '', ordering = '', 
     params.append('page_size', pageSize.toString());
     
     const queryString = params.toString() ? `?${params.toString()}` : '';
-    const response = await api.get(`/staff_chat/${hotelSlug}/staff-list/${queryString}`);
+    const response = await api.get(buildChatURL(hotelSlug, `/staff-list/${queryString}`));
     
     // Return full paginated response (includes count, next, previous, results)
     return response.data;
@@ -54,7 +62,7 @@ export const createConversation = async (hotelSlug, participantIds, title = null
       ...(title && { title })
     };
     
-    const response = await api.post(`/staff_chat/${hotelSlug}/conversations/`, payload);
+    const response = await api.post(buildChatURL(hotelSlug, '/conversations/'), payload);
     
     // Log whether backend returned existing or created new
     if (response.status === 200) {
@@ -82,7 +90,7 @@ export const createConversation = async (hotelSlug, participantIds, title = null
  */
 export const fetchConversations = async (hotelSlug) => {
   try {
-    const response = await api.get(`/staff_chat/${hotelSlug}/conversations/`);
+    const response = await api.get(buildChatURL(hotelSlug, '/conversations/'));
     
     return response.data;
   } catch (error) {
@@ -110,7 +118,7 @@ export const fetchMessages = async (hotelSlug, conversationId, limit = 50, befor
     
     const queryString = params.toString() ? `?${params.toString()}` : '';
     const response = await api.get(
-      `/staff_chat/${hotelSlug}/conversations/${conversationId}/messages/${queryString}`
+      buildChatURL(hotelSlug, `/conversations/${conversationId}/messages/${queryString}`)
     );
     
     return response.data;
@@ -136,7 +144,7 @@ export const sendMessage = async (hotelSlug, conversationId, message, replyToId 
     };
     
     const response = await api.post(
-      `/staff_chat/${hotelSlug}/conversations/${conversationId}/send-message/`,
+      buildChatURL(hotelSlug, `/conversations/${conversationId}/send-message/`),
       payload
     );
     
@@ -161,7 +169,7 @@ export const editMessage = async (hotelSlug, messageId, newMessage) => {
     };
     
     const response = await api.patch(
-      `/staff_chat/${hotelSlug}/messages/${messageId}/edit/`,
+      buildChatURL(hotelSlug, `/messages/${messageId}/edit/`),
       payload
     );
     
@@ -184,7 +192,7 @@ export const deleteMessage = async (hotelSlug, messageId, hardDelete = false) =>
     const params = hardDelete ? '?hard_delete=true' : '';
     
     const response = await api.delete(
-      `/staff_chat/${hotelSlug}/messages/${messageId}/delete/${params}`
+      buildChatURL(hotelSlug, `/messages/${messageId}/delete/${params}`)
     );
     
     return response.data;
@@ -208,7 +216,7 @@ export const addReaction = async (hotelSlug, messageId, emoji) => {
     };
     
     const response = await api.post(
-      `/staff_chat/${hotelSlug}/messages/${messageId}/react/`,
+      buildChatURL(hotelSlug, `/messages/${messageId}/react/`),
       payload
     );
     
@@ -229,7 +237,7 @@ export const addReaction = async (hotelSlug, messageId, emoji) => {
 export const removeReaction = async (hotelSlug, messageId, emoji) => {
   try {
     const response = await api.delete(
-      `/staff_chat/${hotelSlug}/messages/${messageId}/react/${encodeURIComponent(emoji)}/`
+      buildChatURL(hotelSlug, `/messages/${messageId}/react/${encodeURIComponent(emoji)}/`)
     );
     
     return response.data;
@@ -274,7 +282,7 @@ export const uploadFiles = async (hotelSlug, conversationId, files, message = nu
     }
     
     const response = await api.post(
-      `/staff_chat/${hotelSlug}/conversations/${conversationId}/upload/`,
+      buildChatURL(hotelSlug, `/conversations/${conversationId}/upload/`),
       formData,
       {
         headers: {
@@ -299,7 +307,7 @@ export const uploadFiles = async (hotelSlug, conversationId, files, message = nu
 export const deleteAttachment = async (hotelSlug, attachmentId) => {
   try {
     const response = await api.delete(
-      `/staff_chat/${hotelSlug}/attachments/${attachmentId}/delete/`
+      buildChatURL(hotelSlug, `/attachments/${attachmentId}/delete/`)
     );
     
     return response.data;
@@ -318,7 +326,7 @@ export const deleteAttachment = async (hotelSlug, attachmentId) => {
 export const getConversationsForForwarding = async (hotelSlug, searchQuery = '') => {
   try {
     const params = searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : '';
-    const response = await api.get(`/staff_chat/${hotelSlug}/conversations/for-forwarding/${params}`);
+    const response = await api.get(buildChatURL(hotelSlug, `/conversations/for-forwarding/${params}`));
     
     return response.data;
   } catch (error) {
@@ -348,7 +356,7 @@ export const forwardMessage = async (hotelSlug, messageId, conversationIds = [],
     }
     
     const response = await api.post(
-      `/staff_chat/${hotelSlug}/messages/${messageId}/forward/`,
+      buildChatURL(hotelSlug, `/messages/${messageId}/forward/`),
       payload
     );
     
@@ -369,7 +377,7 @@ export const forwardMessage = async (hotelSlug, messageId, conversationIds = [],
 export const removeParticipant = async (hotelSlug, conversationId, participantId) => {
   try {
     const response = await api.delete(
-      `/staff_chat/${hotelSlug}/conversations/${conversationId}/participants/${participantId}/`
+      buildChatURL(hotelSlug, `/conversations/${conversationId}/participants/${participantId}/`)
     );
     
     return response.data;
@@ -388,7 +396,7 @@ export const removeParticipant = async (hotelSlug, conversationId, participantId
 export const leaveConversation = async (hotelSlug, conversationId) => {
   try {
     const response = await api.post(
-      `/staff_chat/${hotelSlug}/conversations/${conversationId}/leave/`
+      buildChatURL(hotelSlug, `/conversations/${conversationId}/leave/`)
     );
     
     return response.data;
@@ -405,7 +413,7 @@ export const leaveConversation = async (hotelSlug, conversationId) => {
  */
 export const fetchUnreadCount = async (hotelSlug) => {
   try {
-    const response = await api.get(`/staff_chat/${hotelSlug}/conversations/unread-count/`);
+    const response = await api.get(buildChatURL(hotelSlug, '/conversations/unread-count/'));
     return response.data;
   } catch (error) {
     console.error('Error fetching unread count:', error);
@@ -421,15 +429,14 @@ export const fetchUnreadCount = async (hotelSlug) => {
  */
 export const markConversationAsRead = async (hotelSlug, conversationId) => {
   try {
+    const endpoint = buildChatURL(hotelSlug, `/conversations/${conversationId}/mark_as_read/`);
     console.log('📮📮📮 [API] markConversationAsRead called ===========================================');
     console.log('📮 [API] Hotel slug:', hotelSlug);
     console.log('📮 [API] Conversation ID:', conversationId);
-    console.log('📮 [API] Endpoint:', `/staff_chat/${hotelSlug}/conversations/${conversationId}/mark_as_read/`);
+    console.log('📮 [API] Endpoint:', endpoint);
     console.log('📮 [API] Time:', new Date().toISOString());
     
-    const response = await api.post(
-      `/staff_chat/${hotelSlug}/conversations/${conversationId}/mark_as_read/`
-    );
+    const response = await api.post(endpoint);
     
     console.log('✅ [API] Response received:', JSON.stringify(response.data, null, 2));
     console.log('✅ [API] Response status:', response.status);
@@ -463,7 +470,7 @@ export const bulkMarkAsRead = async (hotelSlug, conversationIds) => {
     };
     
     const response = await api.post(
-      `/staff_chat/${hotelSlug}/conversations/bulk-mark-as-read/`,
+      buildChatURL(hotelSlug, '/conversations/bulk-mark-as-read/'),
       payload
     );
     
@@ -483,7 +490,7 @@ export const bulkMarkAsRead = async (hotelSlug, conversationIds) => {
 export const markMessageAsRead = async (hotelSlug, messageId) => {
   try {
     const response = await api.post(
-      `/staff_chat/${hotelSlug}/messages/${messageId}/mark-as-read/`
+      buildChatURL(hotelSlug, `/messages/${messageId}/mark-as-read/`)
     );
     return response.data;
   } catch (error) {

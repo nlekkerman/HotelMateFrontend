@@ -19,13 +19,23 @@ function getHotelSlug() {
 
 // Fetch theme from your API and set CSS vars
 async function applySavedTheme() {
+  const stored = localStorage.getItem("user");
+  if (!stored) return; // No user logged in, skip theme
+  
   const hotel_slug = getHotelSlug();
   if (!hotel_slug) return;
 
   try {
-    const res = await fetch(`/api/common/${hotel_slug}/theme/`, {
+    const userData = JSON.parse(stored);
+    const token = userData?.token;
+    if (!token) return; // No token, skip theme
+    
+    const res = await fetch(`/api/staff/hotels/${hotel_slug}/common/theme/`, {
       credentials: "include",
-      headers: { Accept: "application/json" },
+      headers: { 
+        Accept: "application/json",
+        Authorization: `Token ${token}`
+      },
     });
     if (!res.ok) throw new Error("Non-OK response");
     const { main_color, secondary_color } = await res.json();

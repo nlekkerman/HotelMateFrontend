@@ -67,4 +67,43 @@ api.interceptors.request.use(
   }
 );
 
+// Public API instance (no authentication headers)
+export const publicAPI = axios.create({
+  baseURL,
+  timeout: 30000,
+});
+
+publicAPI.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.code === 'ERR_NETWORK' || error.message.includes('CORS')) {
+      console.error('Network error:', error);
+    }
+    return Promise.reject(error);
+  }
+);
+
+/**
+ * Helper function to build staff API URLs with new pattern
+ * /api/staff/hotels/<hotel_slug>/<app>/
+ * @param {string} hotelSlug - The hotel slug
+ * @param {string} app - The app name (e.g., 'room_services', 'staff', 'bookings')
+ * @param {string} path - Additional path after app (optional)
+ * @returns {string} - Formatted URL path
+ */
+export function buildStaffURL(hotelSlug, app, path = '') {
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `/staff/hotels/${hotelSlug}/${app}${cleanPath}`;
+}
+
+/**
+ * Helper to get hotel slug from stored user data
+ * @returns {string|null}
+ */
+export function getHotelSlug() {
+  const storedUser = localStorage.getItem('user');
+  const userData = storedUser ? JSON.parse(storedUser) : null;
+  return userData?.hotel_slug || null;
+}
+
 export default api;

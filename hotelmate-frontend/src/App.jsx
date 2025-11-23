@@ -173,6 +173,14 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
   // Check if current page is a guest route (should also hide sidebar/navbar)
   const isGuestPage = isGuestRoute(location.pathname);
   
+  // Public landing pages - hide navbar/sidebar
+  const isPublicLandingPage = location.pathname === "/" || 
+                              location.pathname.startsWith("/h/") ||
+                              location.pathname === "/staff/login";
+  
+  // Determine if navbar/sidebar should be hidden
+  const hideNavigation = isClockInPage || isAuthPage || isGuestPage || isPublicLandingPage;
+  
   const { user } = useAuth();
 
   const [selectedRoom, setSelectedRoom] = useState(null);
@@ -214,7 +222,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
     return <Register />;
   };
 
-  const sidebar = !isMobile && !isClockInPage && !isAuthPage && !isGuestPage && (
+  const sidebar = !isMobile && !hideNavigation && (
     <div className={`sidebar-wrapper ${collapsed ? "collapsed" : ""}`}>
       <BigScreenNavbar
         collapsed={collapsed}
@@ -229,16 +237,16 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
 
   // Show floating button - position based on screen size and not on staff chat page
   const isStaffChatPage = location.pathname.includes('/staff-chat');
-  const showFloatingButton = user && !isClockInPage && !isAuthPage && !isGuestPage && !isStaffChatPage;
+  const showFloatingButton = user && !hideNavigation && !isStaffChatPage;
 
   return (
     <>
-      {isMobile && !isClockInPage && !isAuthPage && !isGuestPage && <MobileNavbar />}
+      {isMobile && !hideNavigation && <MobileNavbar />}
       <div className="d-flex min-vh-100 min-vw-100 app-container">
         {sidebar}
         <div className={layoutClass}>
           <div className="main-content-area d-flex flex-column">
-            {!isClockInPage && !isAuthPage && !isGuestPage && <LogoBanner />}
+            {!hideNavigation && <LogoBanner />}
             <Routes>
               {/* Public Routes - Always Accessible */}
               <Route path="/login" element={<Login />} />
@@ -259,8 +267,8 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               {/* Staff Login - Public */}
               <Route path="/staff/login" element={<StaffLoginPage />} />
               
-              {/* Legacy Home (Feed) - Keep for now, move to staff-only route later */}
-              <Route path="/staff/feed" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+              {/* Staff Feed - Requires hotel slug */}
+              <Route path="/staff/:hotelSlug/feed" element={<ProtectedRoute><Home /></ProtectedRoute>} />
               
               {/* Protected Routes - Require Authentication */}
               <Route path="/reception" element={<ProtectedRoute><Reception /></ProtectedRoute>} />
@@ -417,7 +425,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
       )}
 
       {/* Global Quick Notifications - Always visible when logged in */}
-      {user && !isClockInPage && !isAuthPage && !isGuestPage && (
+      {user && !hideNavigation && (
         <GlobalQuickNotifications />
       )}
     </>

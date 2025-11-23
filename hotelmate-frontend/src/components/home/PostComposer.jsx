@@ -50,7 +50,7 @@ export default function PostComposer({ hotelSlug, onPostCreated }) {
     setError(null);
 
     try {
-      await api.post(`home/${hotelSlug}/posts/`, formData, {
+      await api.post(`/staff/hotels/${hotelSlug}/home/posts/`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

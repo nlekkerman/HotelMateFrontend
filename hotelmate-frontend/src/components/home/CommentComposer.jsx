@@ -38,7 +38,7 @@ export default function CommentComposer({
       if (comment) {
         // —— EDIT existing comment ——
         res = await api.patch(
-          `/home/${hotelSlug}/posts/${postId}/comments/${comment.id}/`,
+          `/staff/hotels/${hotelSlug}/home/posts/${postId}/comments/${comment.id}/`,
           formData,
           { headers: { "Content-Type": "multipart/form-data" } }
         );
@@ -46,7 +46,7 @@ export default function CommentComposer({
       } else {
         // —— NEW comment or reply ——
         res = await api.post(
-          `/home/${hotelSlug}/posts/${postId}/comments/`,
+          `/staff/hotels/${hotelSlug}/home/posts/${postId}/comments/`,
           formData,
           { headers: { "Content-Type": "multipart/form-data" } }
         );

@@ -44,7 +44,7 @@ export default function Post({ post, onPostUpdated }) {
     setIsLiking(true);
     try {
       const { data } = await api.post(
-        `/home/${post.hotel_slug}/posts/${post.id}/like/`
+        `/staff/hotels/${post.hotel_slug}/home/posts/${post.id}/like/`
       );
       setLikeCount(data.like_count ?? likeCount + 1);
       setLiked((v) => !v);
@@ -64,7 +64,7 @@ export default function Post({ post, onPostUpdated }) {
 
     setIsUpdating(true);
     try {
-      await api.patch(`/home/${post.hotel_slug}/posts/${post.id}/`, form, {
+      await api.patch(`/staff/hotels/${post.hotel_slug}/home/posts/${post.id}/`, form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setEditing(false);
@@ -78,7 +78,7 @@ export default function Post({ post, onPostUpdated }) {
 
   const handleDeleteConfirm = async () => {
     try {
-      await api.delete(`/home/${post.hotel_slug}/posts/${post.id}/`);
+      await api.delete(`/staff/hotels/${post.hotel_slug}/home/posts/${post.id}/`);
       setShowDeleteModal(false);
       onPostUpdated?.();
     } catch (err) {

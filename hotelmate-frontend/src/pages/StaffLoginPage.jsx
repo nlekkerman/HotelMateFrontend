@@ -2,26 +2,23 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
 import { useAuth } from '@/context/AuthContext';
+import useLogin from '@/hooks/useLogin';
 
 /**
  * StaffLoginPage - Staff authentication page
- * Currently implements fake auth for development
- * Will be replaced with real JWT/session auth in Phase 2
+ * Integrates with backend API for real JWT authentication
  */
 const StaffLoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { loginAsStaff } = useAuth();
+  const { user } = useAuth();
+  const { loginUser, loading, error: loginError } = useLogin();
 
   const [formData, setFormData] = useState({
     username: '',
     password: ''
   });
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  // Get redirect path from location state
-  const from = location.state?.from?.pathname || '/';
+  const [localError, setLocalError] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -33,69 +30,39 @@ const StaffLoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
-    setLoading(true);
+    setLocalError(null);
 
     try {
       // Validation
       if (!formData.username || !formData.password) {
-        throw new Error('Please enter both username and password');
+        setLocalError('Please enter both username and password');
+        return;
       }
 
-      // TODO: Replace with real API call to backend auth endpoint
-      // For now, simulate successful login
-      console.log('[StaffLogin] Simulating login for:', formData.username);
+      console.log('[StaffLogin] Attempting login for:', formData.username);
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Call real login API
+      const response = await loginUser(formData.username, formData.password);
 
-      // Fake staff user data
-      // In production, this will come from the backend API response
-      const fakeStaffUser = {
-        id: 1,
-        staff_id: 1,
-        username: formData.username,
-        is_staff: true,
-        is_superuser: false,
-        access_level: 'manager',
-        department: 'Reception',
-        role: 'Manager',
-        allowed_navs: [
-          'home',
-          'reception',
-          'rooms',
-          'guests',
-          'bookings',
-          'restaurants',
-          'room_service',
-          'breakfast',
-          'hotel_info',
-          'staff',
-          'roster',
-          'maintenance',
-          'chat',
-          'stock_tracker',
-          'games'
-        ],
-        hotel_id: 1,
-        hotel_name: 'Hotel Killarney',
-        hotel_slug: 'hotel-killarney',
-        token: 'fake-jwt-token-' + Date.now()
-      };
+      console.log('[StaffLogin] Login successful:', response);
 
-      // Call loginAsStaff from AuthContext
-      loginAsStaff(fakeStaffUser);
-
-      // Redirect to original destination or home
+      // Get hotel slug from response or user context
+      const hotelSlug = response.hotel_slug || response.user?.hotel_slug;
+      
+      // Get redirect path from location state or default to staff feed with hotel slug
+      const from = location.state?.from?.pathname || (hotelSlug ? `/staff/${hotelSlug}/feed` : '/staff/login');
+      
+      // Redirect to staff feed or original destination
       navigate(from, { replace: true });
 
     } catch (err) {
       console.error('[StaffLogin] Login error:', err);
-      setError(err.message || 'Login failed. Please try again.');
-    } finally {
-      setLoading(false);
+      setLocalError(err.response?.data?.detail || err.message || 'Login failed. Please check your credentials.');
     }
   };
+
+  // Combine errors
+  const error = localError || loginError;
 
   return (
     <div className="staff-login-page min-vh-100 d-flex align-items-center bg-light">
