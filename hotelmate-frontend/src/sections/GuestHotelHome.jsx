@@ -1,10 +1,16 @@
 import React from 'react';
 import { Container, Row, Col, Card } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
+import HeroSection from '@/components/hotels/HeroSection';
+import RoomTypesSection from '@/components/hotels/RoomTypesSection';
+import OffersSection from '@/components/hotels/OffersSection';
+import LeisureActivitiesSection from '@/components/hotels/LeisureActivitiesSection';
+import LocationContactSection from '@/components/hotels/LocationContactSection';
+import GuestPortalStub from '@/components/hotels/GuestPortalStub';
 
 /**
  * GuestHotelHome - Guest view of the hotel portal
- * Displays welcome message and guest-facing features
+ * Displays public hotel page with booking functionality
  */
 const GuestHotelHome = ({ hotel }) => {
   if (!hotel) {
@@ -63,8 +69,24 @@ const GuestHotelHome = ({ hotel }) => {
   ];
 
   return (
-    <div className="guest-hotel-home py-5 bg-light min-vh-100">
-      <Container>
+    <div className="guest-hotel-home bg-light min-vh-100">
+      {/* Hero Section with Booking CTAs */}
+      <HeroSection hotel={hotel} />
+
+      {/* Room Types with Pricing */}
+      <RoomTypesSection hotel={hotel} />
+
+      {/* Special Offers & Packages */}
+      <OffersSection hotel={hotel} />
+
+      {/* Leisure Activities & Facilities */}
+      <LeisureActivitiesSection hotel={hotel} />
+
+      {/* Location & Contact Information */}
+      <LocationContactSection hotel={hotel} />
+
+      {/* Legacy Guest Services Section (keep for internal guest features) */}
+      <Container className="py-5">
         {/* Welcome Section */}
         <Row className="mb-5">
           <Col>
@@ -142,7 +164,7 @@ const GuestHotelHome = ({ hotel }) => {
         {/* Additional Info */}
         <Row>
           <Col>
-            <Card className="bg-primary text-white">
+            <Card className="bg-secondary text-white">
               <Card.Body className="text-center p-4">
                 <h4 className="mb-3">
                   <i className="bi bi-wifi me-2"></i>
@@ -157,6 +179,9 @@ const GuestHotelHome = ({ hotel }) => {
           </Col>
         </Row>
       </Container>
+
+      {/* Guest Portal Access Stub */}
+      <GuestPortalStub hotel={hotel} />
     </div>
   );
 };

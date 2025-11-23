@@ -28,8 +28,8 @@ const HotelPortalPage = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch hotel details from public endpoint
-      const response = await api.get(`/hotel/${hotelSlug}/`);
+      // Fetch hotel details from public endpoint with full booking data
+      const response = await api.get(`/api/hotels/${hotelSlug}/public/`);
       
       if (!response.data) {
         throw new Error('Hotel not found');
