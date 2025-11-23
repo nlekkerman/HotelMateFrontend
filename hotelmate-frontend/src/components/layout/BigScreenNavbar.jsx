@@ -40,6 +40,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
   const servicesRef = useRef(null);
   const [openCategoryId, setOpenCategoryId] = useState(null);
   const categoryRefs = useRef({});
+  const hoverTimeoutRef = useRef(null);
   
   // Detect current section for contextual navigation
   const getCurrentSection = () => {
@@ -123,22 +124,14 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
     }
   }, [collapsed]);
 
-  // Close flyout and category dropdowns if clicked outside
+  // Close flyout if clicked outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (servicesRef.current && !servicesRef.current.contains(event.target)) {
         setFlyoutOpen(false);
       }
-      
-      // Close category dropdowns if clicked outside
-      const clickedInsideCategory = Object.values(categoryRefs.current).some(
-        ref => ref && ref.contains(event.target)
-      );
-      if (!clickedInsideCategory && openCategoryId) {
-        setOpenCategoryId(null);
-      }
     }
-    if (flyoutOpen || openCategoryId) {
+    if (flyoutOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     } else {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -146,7 +139,16 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [flyoutOpen, openCategoryId]);
+  }, [flyoutOpen]);
+
+  // Cleanup hover timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleLogout = () => {
     setShowLogoutConfirm(true);
@@ -189,7 +191,24 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
     return false;
   };
 
-  // Toggle category dropdown
+  // Handle hover enter with delay
+  const handleCategoryHoverEnter = (categoryId) => {
+    // Clear any existing timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    setOpenCategoryId(categoryId);
+  };
+
+  // Handle hover leave with delay
+  const handleCategoryHoverLeave = () => {
+    // Set a delay before closing
+    hoverTimeoutRef.current = setTimeout(() => {
+      setOpenCategoryId(null);
+    }, 200); // 200ms delay before closing
+  };
+
+  // Toggle category dropdown (for click)
   const toggleCategory = (categoryId) => {
     setOpenCategoryId(openCategoryId === categoryId ? null : categoryId);
   };
@@ -528,9 +547,11 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                     key={category.id}
                     className="position-relative category-nav-wrapper"
                     ref={(el) => (categoryRefs.current[category.id] = el)}
+                    onMouseEnter={() => handleCategoryHoverEnter(category.id)}
+                    onMouseLeave={handleCategoryHoverLeave}
                   >
                     <div
-                      className={`top-nav-link category-toggle ${isActive ? "active" : ""}`}
+                      className={`top-nav-link category-toggle ${isActive ? "active" : ""} ${isOpen ? "open" : ""}`}
                       title={category.name}
                     >
                       <div className="top-nav-item position-relative">
@@ -544,7 +565,15 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                     </div>
 
                     {/* Dropdown menu for category items - shows on hover */}
-                    <div className="category-dropdown category-dropdown-hover">
+                    {isOpen && (
+                      <div 
+                        className="category-dropdown"
+                        style={{
+                          background: mainColor 
+                            ? `linear-gradient(135deg, ${mainColor}f5 0%, ${mainColor}f8 100%)`
+                            : 'linear-gradient(135deg, rgba(30, 30, 30, 0.98) 0%, rgba(40, 40, 40, 0.98) 100%)'
+                        }}
+                      >
                         {category.items.map((item) => {
                           const orderCount = getOrderCountForItem(item);
                           const showNewBadge = hasNewBadgeForItem(item);
@@ -570,7 +599,8 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                             </Link>
                           );
                         })}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

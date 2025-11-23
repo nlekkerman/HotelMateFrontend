@@ -660,12 +660,20 @@ body {
 
 .category-dropdown-hover {
   display: none;
+  pointer-events: none;
 }
 
 .category-nav-wrapper:hover .category-dropdown-hover {
   display: block;
+  pointer-events: auto;
 }
 
+.category-dropdown-hover:hover {
+  display: block;
+  pointer-events: auto;
+}
+
+.category-dropdown,
 .category-dropdown-hover {
   position: absolute;
   top: 100%;
@@ -2152,5 +2160,94 @@ body.terminal-mode,
     background-color: rgba(255, 215, 0, 0.2);
     border-left: 2px solid #FFD700;
     padding-left: calc(1rem - 2px);
+  }
+}
+
+/* ===================================================================
+   PHASE 1: Hotels Landing & Portal Styles
+   =================================================================== */
+
+/* Hotels Landing Page */
+.hotels-landing-page {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.hotel-card {
+  transition: all 0.3s ease;
+  border: none;
+  border-radius: 12px;
+  overflow: hidden;
+  background: white;
+}
+
+.hotel-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important;
+}
+
+.hover-shadow-lg:hover {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Hotel Portal Page */
+.hotel-portal-page {
+  min-height: 100vh;
+  background: #f8f9fa;
+}
+
+/* Guest and Staff Home Views */
+.guest-hotel-home,
+.staff-hotel-home {
+  min-height: calc(100vh - 80px);
+}
+
+/* Floating action buttons */
+.btn-floating {
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.btn-floating:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Staff Login Page */
+.staff-login-page {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.staff-login-page .card {
+  border-radius: 16px;
+}
+
+/* Smooth transitions */
+.transition-all {
+  transition: all 0.3s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .hotel-card {
+    margin-bottom: 1rem;
+  }
+  
+  .hotels-landing-page h2 {
+    font-size: 1.5rem;
+  }
+  
+  .guest-hotel-home h1,
+  .staff-hotel-home h1 {
+    font-size: 1.8rem;
   }
 }

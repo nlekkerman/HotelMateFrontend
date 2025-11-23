@@ -32,6 +32,9 @@ import GlobalQuickNotifications from "@/staff_chat/components/GlobalQuickNotific
 
 // Pages + Components
 import Home from "@/pages/home/Home";
+import HotelsLandingPage from "@/pages/hotels/HotelsLandingPage";
+import HotelPortalPage from "@/pages/HotelPortalPage";
+import StaffLoginPage from "@/pages/StaffLoginPage";
 import Reception from "@/components/Reception";
 import Login from "@/components/auth/Login";
 import Register from "@/components/auth/Register";
@@ -246,8 +249,18 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/reset-password/:uid/:token/" element={<ResetPassword />} />
               <Route path="/no-internet" element={<NoInternet />} />
               
-              {/* Home - Redirect to login if not authenticated */}
-              <Route path="/" element={<HomeRedirect />} />
+              {/* NEW PHASE 1 ROUTES */}
+              {/* Hotels Landing - Public */}
+              <Route path="/" element={<HotelsLandingPage />} />
+              
+              {/* Hotel Portal - Public (guest view) or Staff (with toggle) */}
+              <Route path="/h/:hotelSlug" element={<HotelPortalPage />} />
+              
+              {/* Staff Login - Public */}
+              <Route path="/staff/login" element={<StaffLoginPage />} />
+              
+              {/* Legacy Home (Feed) - Keep for now, move to staff-only route later */}
+              <Route path="/staff/feed" element={<ProtectedRoute><Home /></ProtectedRoute>} />
               
               {/* Protected Routes - Require Authentication */}
               <Route path="/reception" element={<ProtectedRoute><Reception /></ProtectedRoute>} />
