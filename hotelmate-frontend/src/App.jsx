@@ -38,6 +38,7 @@ import BookingPage from "@/pages/bookings/BookingPage";
 import BookingConfirmation from "@/pages/bookings/BookingConfirmation";
 import BookingPaymentSuccess from "@/pages/bookings/BookingPaymentSuccess";
 import BookingPaymentCancel from "@/pages/bookings/BookingPaymentCancel";
+import MyBookingsPage from "@/pages/bookings/MyBookingsPage";
 import StaffLoginPage from "@/pages/StaffLoginPage";
 import Reception from "@/components/Reception";
 import Login from "@/components/auth/Login";
@@ -181,6 +182,8 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
   const isPublicLandingPage = location.pathname === "/" || 
                               /^\/[a-z0-9-]+$/.test(location.pathname) ||
                               /^\/[a-z0-9-]+\/book/.test(location.pathname) ||
+                              /^\/[a-z0-9-]+\/my-bookings/.test(location.pathname) ||
+                              /^\/my-bookings/.test(location.pathname) ||
                               /^\/booking\/confirmation\//.test(location.pathname) ||
                               /^\/booking\/payment\//.test(location.pathname) ||
                               location.pathname === "/staff/login";
@@ -271,6 +274,8 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               {/* Hotel Portal - Public (guest view) or Staff (with toggle) */}
               <Route path="/:hotelSlug" element={<HotelPortalPage />} />
               <Route path="/:hotelSlug/book" element={<BookingPage />} />
+              <Route path="/:hotelSlug/my-bookings" element={<MyBookingsPage />} />
+              <Route path="/my-bookings" element={<MyBookingsPage />} />
               <Route path="/booking/confirmation/:bookingId" element={<BookingConfirmation />} />
               <Route path="/booking/payment/success" element={<BookingPaymentSuccess />} />
               <Route path="/booking/payment/cancel" element={<BookingPaymentCancel />} />

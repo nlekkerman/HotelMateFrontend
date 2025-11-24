@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 const HeroSection = ({ hotel }) => {
   const navigate = useNavigate();
   const [mounted, setMounted] = useState(false);
+  const [hasBookings, setHasBookings] = useState(false);
   const { scrollY } = useScroll();
   
   // Parallax effect for background
@@ -18,6 +19,10 @@ const HeroSection = ({ hotel }) => {
 
   useEffect(() => {
     setMounted(true);
+    
+    // Check if user has any bookings in localStorage
+    const bookings = JSON.parse(localStorage.getItem('myBookings') || '[]');
+    setHasBookings(bookings.length > 0);
   }, []);
 
   if (!hotel) return null;
@@ -143,13 +148,15 @@ const HeroSection = ({ hotel }) => {
                 {primaryCtaLabel}
               </button>
 
-              <button
-                className="hero-btn-outline"
-                onClick={() => navigate(`/${slug}/my-bookings`)}
-              >
-                <i className="bi bi-clipboard-check"></i>
-                My Bookings
-              </button>
+              {hasBookings && (
+                <button
+                  className="hero-btn-outline"
+                  onClick={() => navigate(`/${slug}/my-bookings`)}
+                >
+                  <i className="bi bi-clipboard-check"></i>
+                  My Bookings
+                </button>
+              )}
 
               {secondaryCtaPhone && (
                 <a

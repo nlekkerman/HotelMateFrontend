@@ -35,6 +35,27 @@ const BookingPaymentSuccess = () => {
       const response = await api.get(`/bookings/${bookingId}/`);
       setBooking(response.data);
       setError(null);
+      
+      // Store booking in localStorage for My Bookings feature
+      const existingBookings = JSON.parse(localStorage.getItem('myBookings') || '[]');
+      const bookingExists = existingBookings.some(b => b.booking_id === response.data.booking_id);
+      
+      if (!bookingExists) {
+        existingBookings.push({
+          booking_id: response.data.booking_id,
+          confirmation_number: response.data.confirmation_number,
+          hotel_slug: response.data.hotel?.slug,
+          hotel_name: response.data.hotel?.name,
+          check_in: response.data.dates?.check_in,
+          check_out: response.data.dates?.check_out,
+          room_type: response.data.room?.type,
+          total: response.data.pricing?.total,
+          status: response.data.status || 'PAYMENT_COMPLETE',
+          payment_completed: true,
+          created_at: new Date().toISOString()
+        });
+        localStorage.setItem('myBookings', JSON.stringify(existingBookings));
+      }
     } catch (err) {
       console.error('Failed to fetch booking:', err);
       // Set a generic success message if we can't fetch details
