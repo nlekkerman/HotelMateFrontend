@@ -151,6 +151,40 @@ const BookingPage = () => {
     }
   };
 
+  // Step 4: Process Payment
+  const processPayment = async (e) => {
+    e.preventDefault();
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await api.post(
+        `/hotel/${hotelSlug}/bookings/${bookingData.booking_id}/payment/`,
+        {
+          booking: bookingData,
+          payment_method: 'stripe',
+          success_url: `${window.location.origin}/booking/payment/success?booking_id=${bookingData.booking_id}`,
+          cancel_url: `${window.location.origin}/booking/payment/cancel?booking_id=${bookingData.booking_id}`
+        }
+      );
+      
+      // Redirect to Stripe Checkout
+      if (response.data.payment_url) {
+        window.location.href = response.data.payment_url;
+      } else if (response.data.checkout_url) {
+        window.location.href = response.data.checkout_url;
+      } else {
+        setError('Payment URL not provided');
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || err.response?.data?.detail || 'Failed to process payment');
+      console.error('Payment error:', err.response?.data || err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading && !hotel) {
     return (
       <Container className="py-5 text-center">
@@ -221,6 +255,9 @@ const BookingPage = () => {
                       onChange={(e) => setDates({ ...dates, checkIn: e.target.value })}
                       min={new Date().toISOString().split('T')[0]}
                       required
+                      style={{
+                        colorScheme: 'light'
+                      }}
                     />
                   </Form.Group>
                 </Col>
@@ -233,6 +270,9 @@ const BookingPage = () => {
                       onChange={(e) => setDates({ ...dates, checkOut: e.target.value })}
                       min={dates.checkIn || new Date().toISOString().split('T')[0]}
                       required
+                      style={{
+                        colorScheme: 'light'
+                      }}
                     />
                   </Form.Group>
                 </Col>

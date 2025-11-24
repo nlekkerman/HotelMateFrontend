@@ -1,10 +1,14 @@
 import React from 'react';
-import { Container, Row, Col, Card, Badge, Button } from 'react-bootstrap';
+import { Container, Row, Col } from 'react-bootstrap';
+import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 /**
- * OffersSection - Display special offers and packages
+ * OffersSection - Modern display of special offers and packages
+ * Uses theme colors from staff settings
  */
 const OffersSection = ({ hotel }) => {
+  const navigate = useNavigate();
   const offers = hotel?.offers || [];
 
   if (offers.length === 0) return null;
@@ -12,89 +16,118 @@ const OffersSection = ({ hotel }) => {
   const formatDateRange = (validFrom, validTo) => {
     if (!validFrom || !validTo) return null;
 
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    const options = { month: 'short', day: 'numeric', year: 'numeric' };
     const fromDate = new Date(validFrom).toLocaleDateString('en-US', options);
     const toDate = new Date(validTo).toLocaleDateString('en-US', options);
 
-    return `Valid ${fromDate} - ${toDate}`;
+    return `${fromDate} - ${toDate}`;
   };
 
-  const getBadgeVariant = (tag) => {
-    const tagLower = tag?.toLowerCase() || '';
-    if (tagLower.includes('popular')) return 'warning';
-    if (tagLower.includes('limited')) return 'danger';
-    if (tagLower.includes('new')) return 'success';
-    if (tagLower.includes('best')) return 'primary';
-    return 'info';
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.15 },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
   };
 
   return (
-    <section className="offers-section py-5" style={{ background: 'linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)' }}>
+    <section className="modern-offers-section">
       <Container>
-        <div className="text-center mb-5">
-          <h2 className="display-5 fw-bold mb-2">Special Offers & Packages</h2>
-          <p className="text-muted">Discover our exclusive deals and packages</p>
-        </div>
+        {/* Section Header */}
+        <motion.div
+          className="text-center mb-5"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <h2 className="section-heading mb-3">Special Offers & Packages</h2>
+          <p className="section-subheading">
+            Discover our exclusive deals and limited-time offers
+          </p>
+        </motion.div>
 
-        <Row xs={1} md={2} className="g-4">
-          {offers.map((offer) => (
-            <Col key={offer.id}>
-              <Card className="h-100 shadow-sm border-0 hover-lift" style={{ transition: 'all 0.3s ease' }}>
-                {offer.photo_url && (
-                  <Card.Img
-                    variant="top"
-                    src={offer.photo_url}
-                    alt={offer.title}
-                    style={{ height: '200px', objectFit: 'cover' }}
-                  />
-                )}
-                <Card.Body className="d-flex flex-column p-4">
-                  <div className="d-flex justify-content-between align-items-start mb-3">
-                    <Card.Title className="h4 mb-0 flex-grow-1">{offer.title}</Card.Title>
+        {/* Offers Grid */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+        >
+          <Row xs={1} md={2} className="g-4">
+            {offers.map((offer) => (
+              <Col key={offer.id}>
+                <motion.div
+                  className="modern-offer-card"
+                  variants={itemVariants}
+                  whileHover={{ y: -8 }}
+                >
+                  {/* Offer Image */}
+                  <div className="modern-offer-image">
+                    {offer.photo_url ? (
+                      <img
+                        src={offer.photo_url}
+                        alt={offer.title}
+                        loading="lazy"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        }}
+                      />
+                    )}
+
+                    {/* Offer Tag */}
                     {offer.tag && (
-                      <Badge bg={getBadgeVariant(offer.tag)} className="ms-2">
-                        {offer.tag}
-                      </Badge>
+                      <div className="modern-offer-tag">{offer.tag}</div>
                     )}
                   </div>
 
-                  {offer.short_description && (
-                    <Card.Text className="text-muted flex-grow-1 mb-3">{offer.short_description}</Card.Text>
-                  )}
+                  {/* Offer Content */}
+                  <div className="modern-offer-content">
+                    <h3 className="modern-offer-title">{offer.title}</h3>
 
-                  {formatDateRange(offer.valid_from, offer.valid_to) && (
-                    <div className="text-muted small mb-3">
-                      <i className="bi bi-calendar-event me-2"></i>
-                      {formatDateRange(offer.valid_from, offer.valid_to)}
-                    </div>
-                  )}
+                    {offer.short_description && (
+                      <p className="modern-room-description">
+                        {offer.short_description}
+                      </p>
+                    )}
 
-                  <Button
-                    variant="success"
-                    size="lg"
-                    className="w-100 mt-auto"
-                    disabled
-                  >
-                    <i className="bi bi-cart-check me-2"></i>
-                    Book now (Coming Soon)
-                  </Button>
-                </Card.Body>
-              </Card>
-            </Col>
-          ))}
-        </Row>
+                    {/* Valid Dates */}
+                    {formatDateRange(offer.valid_from, offer.valid_to) && (
+                      <div className="modern-offer-dates">
+                        <i className="bi bi-calendar-event"></i>
+                        <span>{formatDateRange(offer.valid_from, offer.valid_to)}</span>
+                      </div>
+                    )}
+
+                    {/* Book Button */}
+                    <button
+                      className="modern-room-cta mt-3"
+                      onClick={() => navigate(`/${hotel.slug}/book`)}
+                    >
+                      <i className="bi bi-gift"></i>
+                      Book This Offer
+                    </button>
+                  </div>
+                </motion.div>
+              </Col>
+            ))}
+          </Row>
+        </motion.div>
       </Container>
-
-      <style jsx>{`
-        .hover-lift {
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .hover-lift:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
-        }
-      `}</style>
     </section>
   );
 };

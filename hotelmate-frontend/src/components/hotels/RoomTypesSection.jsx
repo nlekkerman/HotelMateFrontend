@@ -1,101 +1,160 @@
 import React from 'react';
-import { Container, Row, Col, Card, Button, Badge } from 'react-bootstrap';
+import { Container, Row, Col } from 'react-bootstrap';
+import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { formatFromPrice } from '@/utils/formatCurrency';
 
 /**
- * RoomTypesSection - Display room types with pricing and booking CTAs
+ * RoomTypesSection - Modern room display with cards and animations
+ * Uses theme colors from staff settings
  */
 const RoomTypesSection = ({ hotel }) => {
+  const navigate = useNavigate();
   const roomTypes = hotel?.room_types || [];
 
   if (roomTypes.length === 0) return null;
 
-  const bookingFallbackUrl = hotel?.booking_options?.primary_cta_url;
+  const handleBookRoom = (roomCode) => {
+    navigate(`/${hotel.slug}/book?room=${roomCode}`);
+  };
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.15,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+      },
+    },
+  };
 
   return (
-    <section className="room-types-section py-5 bg-white">
+    <section className="modern-room-section">
       <Container>
-        <div className="text-center mb-5">
-          <h2 className="display-5 fw-bold mb-2">Rooms & Suites</h2>
-          <p className="text-muted">Choose from our selection of comfortable accommodations</p>
-        </div>
+        {/* Section Header */}
+        <motion.div
+          className="text-center mb-5"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <h2 className="section-heading mb-3">Rooms & Suites</h2>
+          <p className="section-subheading">
+            Choose from our selection of beautifully designed accommodations
+          </p>
+        </motion.div>
 
-        <Row xs={1} md={2} lg={3} className="g-4">
-          {roomTypes.map((room) => (
-            <Col key={room.id}>
-              <Card className="h-100 shadow-sm hover-shadow-lg border-0" style={{ transition: 'all 0.3s ease' }}>
-                {room.photo_url && (
-                  <Card.Img
-                    variant="top"
-                    src={room.photo_url}
-                    alt={room.name}
-                    style={{ height: '200px', objectFit: 'cover' }}
-                  />
-                )}
-
-                <Card.Body className="d-flex flex-column">
-                  <div className="mb-auto">
-                    <div className="d-flex justify-content-between align-items-start mb-2">
-                      <Card.Title className="fw-bold mb-0">{room.name}</Card.Title>
-                      {room.availability_message && (
-                        <Badge bg="warning" text="dark" className="ms-2">
-                          {room.availability_message}
-                        </Badge>
-                      )}
-                    </div>
-
-                    {room.short_description && (
-                      <Card.Text className="text-muted mb-3">{room.short_description}</Card.Text>
+        {/* Room Cards Grid */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+        >
+          <Row xs={1} md={2} lg={3} className="g-4">
+            {roomTypes.map((room) => (
+              <Col key={room.id}>
+                <motion.div
+                  className="modern-room-card"
+                  variants={itemVariants}
+                  whileHover={{ y: -8 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {/* Room Image */}
+                  <div className="modern-room-image">
+                    {room.photo_url ? (
+                      <img
+                        src={room.photo_url}
+                        alt={room.name}
+                        loading="lazy"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        }}
+                      />
                     )}
 
-                    <div className="room-details text-muted small mb-3">
+                    {/* Availability Badge */}
+                    {room.availability_message && (
+                      <div className="modern-room-badge">
+                        {room.availability_message}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Room Content */}
+                  <div className="modern-room-content">
+                    <h3 className="modern-room-title">{room.name}</h3>
+
+                    {room.short_description && (
+                      <p className="modern-room-description">
+                        {room.short_description}
+                      </p>
+                    )}
+
+                    {/* Room Details */}
+                    <div className="modern-room-details">
                       {room.max_occupancy && (
-                        <div className="mb-1">
-                          <i className="bi bi-people me-2"></i>
-                          Up to {room.max_occupancy} {room.max_occupancy === 1 ? 'guest' : 'guests'}
+                        <div className="modern-room-detail-item">
+                          <i className="bi bi-people"></i>
+                          <span>
+                            Up to {room.max_occupancy} {room.max_occupancy === 1 ? 'guest' : 'guests'}
+                          </span>
                         </div>
                       )}
                       {room.bed_setup && (
-                        <div>
-                          <i className="bi bi-moon me-2"></i>
-                          {room.bed_setup}
+                        <div className="modern-room-detail-item">
+                          <i className="bi bi-moon"></i>
+                          <span>{room.bed_setup}</span>
                         </div>
                       )}
                     </div>
-                  </div>
 
-                  <div className="mt-3 pt-3 border-top">
+                    {/* Price */}
                     {room.starting_price_from && (
-                      <div className="mb-3">
-                        <strong className="text-primary fs-4">
+                      <div className="modern-room-price">
+                        <span className="modern-room-price-amount">
                           {formatFromPrice(room.starting_price_from, room.currency)}
-                        </strong>
-                        <small className="text-muted d-block">per night</small>
+                        </span>
+                        <span className="modern-room-price-period">per night</span>
                       </div>
                     )}
 
-                    <Button
-                      variant="primary"
-                      className="w-100"
-                      onClick={() => window.location.href = `/${hotel.slug}/book?room=${room.code}`}
+                    {/* Book Button */}
+                    <button
+                      className="modern-room-cta"
+                      onClick={() => handleBookRoom(room.code)}
                     >
-                      <i className="bi bi-calendar-check me-2"></i>
+                      <i className="bi bi-calendar-check"></i>
                       Book this room
-                    </Button>
+                    </button>
                   </div>
-                </Card.Body>
-              </Card>
-            </Col>
-          ))}
-        </Row>
+                </motion.div>
+              </Col>
+            ))}
+          </Row>
+        </motion.div>
       </Container>
-
-      <style jsx>{`
-        .hover-shadow-lg:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important;
-        }
-      `}</style>
     </section>
   );
 };

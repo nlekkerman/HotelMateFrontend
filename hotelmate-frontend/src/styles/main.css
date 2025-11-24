@@ -1,3 +1,6 @@
+/* Import public pages modern design system */
+@import './publicPages.css';
+
 :root {
   --main-color: #3498db;
   --secondary-color: #2ecc71;

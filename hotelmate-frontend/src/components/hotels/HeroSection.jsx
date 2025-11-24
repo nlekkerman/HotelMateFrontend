@@ -1,10 +1,25 @@
-import React from 'react';
-import { Container, Button } from 'react-bootstrap';
+import React, { useEffect, useState } from 'react';
+import { Container } from 'react-bootstrap';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 /**
- * HeroSection - Full-width hero with hotel branding and booking CTAs
+ * HeroSection - Modern full-viewport hero with parallax and animations
+ * Uses theme colors from staff settings
  */
 const HeroSection = ({ hotel }) => {
+  const navigate = useNavigate();
+  const [mounted, setMounted] = useState(false);
+  const { scrollY } = useScroll();
+  
+  // Parallax effect for background
+  const y = useTransform(scrollY, [0, 500], [0, 150]);
+  const opacity = useTransform(scrollY, [0, 300], [1, 0]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   if (!hotel) return null;
 
   const {
@@ -15,110 +30,150 @@ const HeroSection = ({ hotel }) => {
     short_description,
     booking_options,
     contact,
+    slug,
   } = hotel;
 
-  const primaryCtaLabel = booking_options?.primary_cta_label || 'Book a Room';
-  const primaryCtaUrl = booking_options?.primary_cta_url || contact?.booking_url;
+  const primaryCtaLabel = booking_options?.primary_cta_label || 'Book Your Stay';
   const secondaryCtaPhone = booking_options?.secondary_cta_phone;
-  const websiteUrl = contact?.website_url;
+
+  const handleBookNow = () => {
+    navigate(`/${slug}/book`);
+  };
 
   return (
-    <section className="hero-section">
-      <div
-        className="hero-background"
-        style={{
-          backgroundImage: hero_image_url ? `url(${hero_image_url})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
+    <section className="modern-hero-section">
+      {/* Parallax Background */}
+      <motion.div 
+        className="modern-hero-background"
+        style={{ y: mounted ? y : 0 }}
       >
-        <div className="hero-overlay">
-          <Container>
-            <div className="hero-content text-center text-white">
-              {logo_url && (
-                <img
-                  src={logo_url}
-                  alt={`${name} logo`}
-                  className="hero-logo mb-4"
-                  style={{
-                    maxWidth: '200px',
-                    maxHeight: '150px',
-                    objectFit: 'contain',
-                  }}
-                  onError={(e) => {
-                    console.error('Logo failed to load:', logo_url);
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
+        {hero_image_url ? (
+          <img
+            src={hero_image_url}
+            alt={name}
+            loading="eager"
+            onError={(e) => {
+              console.error('Hero image failed to load:', hero_image_url);
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            }}
+          />
+        )}
+      </motion.div>
+
+      {/* Gradient Overlay */}
+      <div className="modern-hero-overlay" />
+
+      {/* Content */}
+      <motion.div 
+        className="modern-hero-content"
+        style={{ opacity: mounted ? opacity : 1 }}
+      >
+        <Container>
+          <div className="text-center">
+            {/* Animated Logo */}
+            {logo_url && (
+              <motion.img
+                src={logo_url}
+                alt={`${name} logo`}
+                className="modern-hero-logo"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                onError={(e) => {
+                  console.error('Logo failed to load:', logo_url);
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            )}
+
+            {/* Animated Hotel Name */}
+            <motion.h1
+              className="modern-hero-title"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              {name}
+            </motion.h1>
+
+            {/* Animated Tagline */}
+            {tagline && (
+              <motion.h2
+                className="modern-hero-tagline"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+              >
+                {tagline}
+              </motion.h2>
+            )}
+
+            {/* Animated Description */}
+            {short_description && (
+              <motion.p
+                className="modern-hero-description"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.5 }}
+              >
+                {short_description}
+              </motion.p>
+            )}
+
+            {/* Animated CTAs */}
+            <motion.div
+              className="modern-hero-cta"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+            >
+              <button
+                className="hero-btn-primary"
+                onClick={handleBookNow}
+              >
+                <i className="bi bi-calendar-check"></i>
+                {primaryCtaLabel}
+              </button>
+
+              <button
+                className="hero-btn-outline"
+                onClick={() => navigate(`/${slug}/my-bookings`)}
+              >
+                <i className="bi bi-clipboard-check"></i>
+                My Bookings
+              </button>
+
+              {secondaryCtaPhone && (
+                <a
+                  href={`tel:${secondaryCtaPhone}`}
+                  className="hero-btn-secondary"
+                >
+                  <i className="bi bi-telephone"></i>
+                  Call Us: {secondaryCtaPhone}
+                </a>
               )}
+            </motion.div>
+          </div>
+        </Container>
+      </motion.div>
 
-              <h1 className="display-3 fw-bold mb-3">{name}</h1>
-
-              {tagline && <h2 className="h4 fw-light mb-3">{tagline}</h2>}
-
-              {short_description && (
-                <p className="lead mb-4" style={{ maxWidth: '800px', margin: '0 auto' }}>
-                  {short_description}
-                </p>
-              )}
-
-              <p className="h5 fw-light mb-4">Your Gateway to Comfort</p>
-
-              <div className="hero-cta-buttons d-flex flex-wrap justify-content-center gap-3 mt-4">
-                {secondaryCtaPhone && (
-                  <Button
-                    variant="light"
-                    size="lg"
-                    href={`tel:${secondaryCtaPhone}`}
-                    className="px-5 py-3 fw-bold"
-                  >
-                    <i className="bi bi-telephone me-2"></i>
-                    Call to Book
-                  </Button>
-                )}
-              </div>
-            </div>
-          </Container>
-        </div>
-      </div>
-
-      <style jsx>{`
-        .hero-section {
-          position: relative;
-          width: 100%;
-          min-height: 60vh;
-        }
-
-        .hero-background {
-          height: 100%;
-          width: 100%;
-        }
-
-        .hero-overlay {
-          background: rgba(0, 0, 0, 0.4);
-          min-height: 60vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 4rem 0;
-        }
-
-        @media (max-width: 768px) {
-          .hero-overlay {
-            min-height: 50vh;
-            padding: 3rem 0;
-          }
-
-          .hero-logo {
-            max-width: 150px !important;
-          }
-
-          .display-3 {
-            font-size: 2.5rem !important;
-          }
-        }
-      `}</style>
+      {/* Scroll Indicator */}
+      <motion.div
+        className="hero-scroll-indicator"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1, delay: 1 }}
+      >
+        <i className="bi bi-chevron-down" style={{ fontSize: '2rem' }}></i>
+      </motion.div>
     </section>
   );
 };

@@ -1,6 +1,7 @@
 // src/main.jsx
 import React from "react";
 import ReactDOM from "react-dom/client";
+import "./index.css"; // Import base styles including publicPages.css
 import App from "./App";
 import { OrderCountProvider } from "@/hooks/useOrderCount.jsx";
 import { listenForFirebaseMessages } from "@/utils/firebaseNotifications";

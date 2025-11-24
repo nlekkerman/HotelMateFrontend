@@ -179,8 +179,8 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
   
   // Public landing pages - hide navbar/sidebar
   const isPublicLandingPage = location.pathname === "/" || 
-                              /^/[a-z0-9-]+$/.test(location.pathname) ||
-                              /^/[a-z0-9-]+\/book/.test(location.pathname) ||
+                              /^\/[a-z0-9-]+$/.test(location.pathname) ||
+                              /^\/[a-z0-9-]+\/book/.test(location.pathname) ||
                               /^\/booking\/confirmation\//.test(location.pathname) ||
                               /^\/booking\/payment\//.test(location.pathname) ||
                               location.pathname === "/staff/login";

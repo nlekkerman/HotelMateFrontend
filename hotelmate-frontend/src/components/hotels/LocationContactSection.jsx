@@ -1,13 +1,18 @@
 import React from 'react';
-import { Container, Row, Col, Button, Card } from 'react-bootstrap';
+import { Container, Row, Col } from 'react-bootstrap';
+import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 /**
- * LocationContactSection - Display location, contact info, and footer booking CTA
+ * LocationContactSection - Modern location, contact info, and CTA banner
+ * Uses theme colors from staff settings
  */
 const LocationContactSection = ({ hotel }) => {
+  const navigate = useNavigate();
+
   if (!hotel) return null;
 
-  const { city, country, address, location, contact, booking_options, name } = hotel;
+  const { city, country, address, location, contact, booking_options, name, slug } = hotel;
 
   const getGoogleMapsUrl = () => {
     if (location?.latitude && location?.longitude) {
@@ -28,120 +33,144 @@ const LocationContactSection = ({ hotel }) => {
       .join(', ');
   };
 
-  const bookingUrl = booking_options?.primary_cta_url || contact?.booking_url;
   const bookingLabel = booking_options?.primary_cta_label || 'Book Your Stay';
 
+  const handleBookNow = () => {
+    navigate(`/${slug}/book`);
+  };
+
   return (
-    <section className="location-contact-section py-5" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%)' }}>
+    <section className="modern-location-section">
       <Container>
-        {/* Location & Contact */}
-        <Row className="mb-5">
-          <Col lg={6} className="mb-4 mb-lg-0">
-            <h3 className="mb-4">
-              <i className="bi bi-geo-alt me-2 text-primary"></i>
-              Location
-            </h3>
+        {/* Location & Contact Grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <Row className="g-4 mb-5">
+            {/* Location Info */}
+            <Col lg={6}>
+              <div className="mb-4">
+                <h3 className="section-heading mb-4">
+                  <i className="bi bi-geo-alt me-2" style={{ color: 'var(--main-color, #3498db)' }}></i>
+                  Location
+                </h3>
 
-            {(city || country) && (
-              <h5 className="mb-3 fw-bold">
-                {city}
-                {city && country && ', '}
-                {country}
-              </h5>
-            )}
+                {(city || country) && (
+                  <h5 className="mb-3 fw-bold" style={{ color: 'var(--text-dark, #1a202c)' }}>
+                    {city}
+                    {city && country && ', '}
+                    {country}
+                  </h5>
+                )}
 
-            {formatAddress() && <p className="text-muted mb-3">{formatAddress()}</p>}
+                {formatAddress() && (
+                  <p className="body-large mb-4" style={{ color: 'var(--text-gray, #4a5568)' }}>
+                    {formatAddress()}
+                  </p>
+                )}
 
-            {getGoogleMapsUrl() && (
-              <Button variant="outline-primary" href={getGoogleMapsUrl()} target="_blank" rel="noopener noreferrer">
-                <i className="bi bi-map me-2"></i>
-                View on Map
-              </Button>
-            )}
-          </Col>
+                {getGoogleMapsUrl() && (
+                  <a
+                    href={getGoogleMapsUrl()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hero-btn-secondary"
+                    style={{ display: 'inline-flex', border: '2px solid var(--main-color, #3498db)', color: 'var(--main-color, #3498db)', background: 'transparent' }}
+                  >
+                    <i className="bi bi-map"></i>
+                    View on Map
+                  </a>
+                )}
+              </div>
+            </Col>
 
-          <Col lg={6}>
-            <h3 className="mb-4">
-              <i className="bi bi-telephone me-2 text-primary"></i>
-              Contact Us
-            </h3>
+            {/* Contact Cards */}
+            <Col lg={6}>
+              <h3 className="section-heading mb-4">
+                <i className="bi bi-telephone me-2" style={{ color: 'var(--main-color, #3498db)' }}></i>
+                Get in Touch
+              </h3>
 
-            <div className="d-flex flex-column gap-3">
-              {contact?.phone && (
-                <Card className="border-0 bg-light">
-                  <Card.Body>
-                    <h6 className="mb-2">
-                      <i className="bi bi-telephone-fill me-2 text-primary"></i>
-                      Phone
-                    </h6>
-                    <a href={`tel:${contact.phone}`} className="text-decoration-none fs-5 text-dark">
-                      {contact.phone}
-                    </a>
-                  </Card.Body>
-                </Card>
-              )}
+              <Row className="g-3">
+                {contact?.phone && (
+                  <Col md={6}>
+                    <motion.a
+                      href={`tel:${contact.phone}`}
+                      className="modern-contact-card text-decoration-none"
+                      whileHover={{ y: -5 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="modern-contact-icon">
+                        <i className="bi bi-telephone-fill"></i>
+                      </div>
+                      <div className="modern-contact-title">Phone</div>
+                      <div className="modern-contact-value">{contact.phone}</div>
+                    </motion.a>
+                  </Col>
+                )}
 
-              {contact?.email && (
-                <Card className="border-0 bg-light">
-                  <Card.Body>
-                    <h6 className="mb-2">
-                      <i className="bi bi-envelope-fill me-2 text-primary"></i>
-                      Email
-                    </h6>
-                    <a href={`mailto:${contact.email}`} className="text-decoration-none fs-5 text-dark">
-                      {contact.email}
-                    </a>
-                  </Card.Body>
-                </Card>
-              )}
+                {contact?.email && (
+                  <Col md={6}>
+                    <motion.a
+                      href={`mailto:${contact.email}`}
+                      className="modern-contact-card text-decoration-none"
+                      whileHover={{ y: -5 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="modern-contact-icon">
+                        <i className="bi bi-envelope-fill"></i>
+                      </div>
+                      <div className="modern-contact-title">Email</div>
+                      <div className="modern-contact-value" style={{ fontSize: '0.95rem' }}>
+                        {contact.email}
+                      </div>
+                    </motion.a>
+                  </Col>
+                )}
 
-              {contact?.website_url && (
-                <Card className="border-0 bg-light">
-                  <Card.Body>
-                    <h6 className="mb-2">
-                      <i className="bi bi-globe me-2 text-primary"></i>
-                      Website
-                    </h6>
-                    <a
+                {contact?.website_url && (
+                  <Col md={12}>
+                    <motion.a
                       href={contact.website_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-decoration-none fs-5 text-dark"
+                      className="modern-contact-card text-decoration-none"
+                      whileHover={{ y: -5 }}
+                      transition={{ duration: 0.2 }}
                     >
-                      Visit our website
-                      <i className="bi bi-box-arrow-up-right ms-2 small"></i>
-                    </a>
-                  </Card.Body>
-                </Card>
-              )}
-            </div>
-          </Col>
-        </Row>
-
-        {/* Footer Booking CTA */}
-        {bookingUrl && (
-          <Row>
-            <Col>
-              <Card className="bg-primary text-white text-center border-0 shadow-lg">
-                <Card.Body className="py-5 px-4">
-                  <h2 className="mb-3 fw-bold">Ready to experience {name}?</h2>
-                  <p className="lead mb-4">Book your stay today and enjoy our exceptional hospitality</p>
-                  <Button
-                    variant="light"
-                    size="lg"
-                    href={bookingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-5 py-3 fw-bold"
-                  >
-                    <i className="bi bi-calendar-check me-2"></i>
-                    {bookingLabel}
-                  </Button>
-                </Card.Body>
-              </Card>
+                      <div className="modern-contact-icon">
+                        <i className="bi bi-globe"></i>
+                      </div>
+                      <div className="modern-contact-title">Website</div>
+                      <div className="modern-contact-value">
+                        Visit our website <i className="bi bi-box-arrow-up-right ms-2"></i>
+                      </div>
+                    </motion.a>
+                  </Col>
+                )}
+              </Row>
             </Col>
           </Row>
-        )}
+        </motion.div>
+
+        {/* Modern CTA Banner */}
+        <motion.div
+          className="modern-cta-banner"
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <h3>Ready to experience {name}?</h3>
+          <p>Book your stay today and enjoy our exceptional hospitality</p>
+          <button className="modern-cta-btn" onClick={handleBookNow}>
+            <i className="bi bi-calendar-check"></i>
+            {bookingLabel}
+          </button>
+        </motion.div>
       </Container>
     </section>
   );
