@@ -24,10 +24,10 @@ const RoomTypesSection = ({ hotel }) => {
           {roomTypes.map((room) => (
             <Col key={room.id}>
               <Card className="h-100 shadow-sm hover-shadow-lg border-0" style={{ transition: 'all 0.3s ease' }}>
-                {room.image_url && (
+                {room.photo_url && (
                   <Card.Img
                     variant="top"
-                    src={room.image_url}
+                    src={room.photo_url}
                     alt={room.name}
                     style={{ height: '200px', objectFit: 'cover' }}
                   />
@@ -70,16 +70,14 @@ const RoomTypesSection = ({ hotel }) => {
                         <strong className="text-primary fs-4">
                           {formatFromPrice(room.starting_price_from, room.currency)}
                         </strong>
+                        <small className="text-muted d-block">per night</small>
                       </div>
                     )}
 
                     <Button
                       variant="primary"
                       className="w-100"
-                      href={room.booking_url || bookingFallbackUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      disabled={!room.booking_url && !bookingFallbackUrl}
+                      onClick={() => window.location.href = `/${hotel.slug}/book?room=${room.code}`}
                     >
                       <i className="bi bi-calendar-check me-2"></i>
                       Book this room

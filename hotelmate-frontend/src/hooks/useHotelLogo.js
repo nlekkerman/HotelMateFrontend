@@ -17,13 +17,13 @@ export default function useHotelLogo(slug) {
 
       try {
         // Call the new public slug endpoint
-        const res = await api.get(`/hotel/${slug}/`);
+        const res = await api.get(`/hotel/public/${slug}/`);
         const hotel = res.data;
 
-        if (hotel?.logo) {
-          const url = hotel.logo.startsWith("http")
-            ? hotel.logo
-            : CLOUDINARY_BASE + hotel.logo;
+        if (hotel?.logo_url) {
+          const url = hotel.logo_url.startsWith("http")
+            ? hotel.logo_url
+            : CLOUDINARY_BASE + hotel.logo_url;
           setLogoUrl(url);
         } else {
         }

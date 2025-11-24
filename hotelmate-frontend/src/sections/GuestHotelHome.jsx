@@ -85,8 +85,8 @@ const GuestHotelHome = ({ hotel }) => {
       {/* Location & Contact Information */}
       <LocationContactSection hotel={hotel} />
 
-      {/* Legacy Guest Services Section (keep for internal guest features) */}
-      <Container className="py-5">
+      {/* Legacy Guest Services Section (keep for internal guest features) - HIDDEN FOR NOW */}
+      {false && <Container className="py-5">
         {/* Welcome Section */}
         <Row className="mb-5">
           <Col>
@@ -178,7 +178,7 @@ const GuestHotelHome = ({ hotel }) => {
             </Card>
           </Col>
         </Row>
-      </Container>
+      </Container>}
 
       {/* Guest Portal Access Stub */}
       <GuestPortalStub hotel={hotel} />

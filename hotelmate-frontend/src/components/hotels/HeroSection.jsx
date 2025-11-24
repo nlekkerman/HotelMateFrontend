@@ -39,12 +39,16 @@ const HeroSection = ({ hotel }) => {
               {logo_url && (
                 <img
                   src={logo_url}
-                  alt={name}
+                  alt={`${name} logo`}
                   className="hero-logo mb-4"
                   style={{
                     maxWidth: '200px',
                     maxHeight: '150px',
                     objectFit: 'contain',
+                  }}
+                  onError={(e) => {
+                    console.error('Logo failed to load:', logo_url);
+                    e.currentTarget.style.display = 'none';
                   }}
                 />
               )}
@@ -59,24 +63,12 @@ const HeroSection = ({ hotel }) => {
                 </p>
               )}
 
+              <p className="h5 fw-light mb-4">Your Gateway to Comfort</p>
+
               <div className="hero-cta-buttons d-flex flex-wrap justify-content-center gap-3 mt-4">
-                {primaryCtaUrl && (
+                {secondaryCtaPhone && (
                   <Button
                     variant="light"
-                    size="lg"
-                    href={primaryCtaUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-5 py-3 fw-bold"
-                  >
-                    <i className="bi bi-calendar-check me-2"></i>
-                    {primaryCtaLabel}
-                  </Button>
-                )}
-
-                {secondaryCtaPhone ? (
-                  <Button
-                    variant="outline-light"
                     size="lg"
                     href={`tel:${secondaryCtaPhone}`}
                     className="px-5 py-3 fw-bold"
@@ -84,20 +76,6 @@ const HeroSection = ({ hotel }) => {
                     <i className="bi bi-telephone me-2"></i>
                     Call to Book
                   </Button>
-                ) : (
-                  websiteUrl && (
-                    <Button
-                      variant="outline-light"
-                      size="lg"
-                      href={websiteUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-5 py-3 fw-bold"
-                    >
-                      <i className="bi bi-globe me-2"></i>
-                      Visit Website
-                    </Button>
-                  )
                 )}
               </div>
             </div>

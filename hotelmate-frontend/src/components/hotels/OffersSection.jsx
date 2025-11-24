@@ -40,6 +40,14 @@ const OffersSection = ({ hotel }) => {
           {offers.map((offer) => (
             <Col key={offer.id}>
               <Card className="h-100 shadow-sm border-0 hover-lift" style={{ transition: 'all 0.3s ease' }}>
+                {offer.photo_url && (
+                  <Card.Img
+                    variant="top"
+                    src={offer.photo_url}
+                    alt={offer.title}
+                    style={{ height: '200px', objectFit: 'cover' }}
+                  />
+                )}
                 <Card.Body className="d-flex flex-column p-4">
                   <div className="d-flex justify-content-between align-items-start mb-3">
                     <Card.Title className="h4 mb-0 flex-grow-1">{offer.title}</Card.Title>
@@ -61,19 +69,15 @@ const OffersSection = ({ hotel }) => {
                     </div>
                   )}
 
-                  {offer.book_now_url && (
-                    <Button
-                      variant="success"
-                      size="lg"
-                      href={offer.book_now_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-100 mt-auto"
-                    >
-                      <i className="bi bi-cart-check me-2"></i>
-                      Book now
-                    </Button>
-                  )}
+                  <Button
+                    variant="success"
+                    size="lg"
+                    className="w-100 mt-auto"
+                    disabled
+                  >
+                    <i className="bi bi-cart-check me-2"></i>
+                    Book now (Coming Soon)
+                  </Button>
                 </Card.Body>
               </Card>
             </Col>

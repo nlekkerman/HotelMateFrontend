@@ -34,6 +34,8 @@ import GlobalQuickNotifications from "@/staff_chat/components/GlobalQuickNotific
 import Home from "@/pages/home/Home";
 import HotelsLandingPage from "@/pages/hotels/HotelsLandingPage";
 import HotelPortalPage from "@/pages/HotelPortalPage";
+import BookingPage from "@/pages/bookings/BookingPage";
+import BookingConfirmation from "@/pages/bookings/BookingConfirmation";
 import StaffLoginPage from "@/pages/StaffLoginPage";
 import Reception from "@/components/Reception";
 import Login from "@/components/auth/Login";
@@ -175,7 +177,9 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
   
   // Public landing pages - hide navbar/sidebar
   const isPublicLandingPage = location.pathname === "/" || 
-                              location.pathname.startsWith("/h/") ||
+                              /^\/[a-z0-9-]+$/.test(location.pathname) ||
+                              /^\/[a-z0-9-]+\/book/.test(location.pathname) ||
+                              /^\/booking\/confirmation\//.test(location.pathname) ||
                               location.pathname === "/staff/login";
   
   // Determine if navbar/sidebar should be hidden
@@ -262,7 +266,9 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/" element={<HotelsLandingPage />} />
               
               {/* Hotel Portal - Public (guest view) or Staff (with toggle) */}
-              <Route path="/h/:hotelSlug" element={<HotelPortalPage />} />
+              <Route path="/:hotelSlug" element={<HotelPortalPage />} />
+              <Route path="/:hotelSlug/book" element={<BookingPage />} />
+              <Route path="/booking/confirmation/:bookingId" element={<BookingConfirmation />} />
               
               {/* Staff Login - Public */}
               <Route path="/staff/login" element={<StaffLoginPage />} />

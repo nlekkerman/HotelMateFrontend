@@ -17,7 +17,7 @@ const HotelCard = ({ hotel }) => {
     .toUpperCase();
 
   return (
-    <Link to={`/h/${hotel.slug}`} className="text-decoration-none">
+    <Link to={`/${hotel.slug}`} className="text-decoration-none">
       <Card className="hotel-card h-100 shadow-sm hover-shadow-lg transition-all">
         <Card.Body className="d-flex flex-column">
           {/* Hotel Logo */}
