@@ -36,6 +36,8 @@ import HotelsLandingPage from "@/pages/hotels/HotelsLandingPage";
 import HotelPortalPage from "@/pages/HotelPortalPage";
 import BookingPage from "@/pages/bookings/BookingPage";
 import BookingConfirmation from "@/pages/bookings/BookingConfirmation";
+import BookingPaymentSuccess from "@/pages/bookings/BookingPaymentSuccess";
+import BookingPaymentCancel from "@/pages/bookings/BookingPaymentCancel";
 import StaffLoginPage from "@/pages/StaffLoginPage";
 import Reception from "@/components/Reception";
 import Login from "@/components/auth/Login";
@@ -177,9 +179,10 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
   
   // Public landing pages - hide navbar/sidebar
   const isPublicLandingPage = location.pathname === "/" || 
-                              /^\/[a-z0-9-]+$/.test(location.pathname) ||
-                              /^\/[a-z0-9-]+\/book/.test(location.pathname) ||
+                              /^/[a-z0-9-]+$/.test(location.pathname) ||
+                              /^/[a-z0-9-]+\/book/.test(location.pathname) ||
                               /^\/booking\/confirmation\//.test(location.pathname) ||
+                              /^\/booking\/payment\//.test(location.pathname) ||
                               location.pathname === "/staff/login";
   
   // Determine if navbar/sidebar should be hidden
@@ -269,6 +272,8 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/:hotelSlug" element={<HotelPortalPage />} />
               <Route path="/:hotelSlug/book" element={<BookingPage />} />
               <Route path="/booking/confirmation/:bookingId" element={<BookingConfirmation />} />
+              <Route path="/booking/payment/success" element={<BookingPaymentSuccess />} />
+              <Route path="/booking/payment/cancel" element={<BookingPaymentCancel />} />
               
               {/* Staff Login - Public */}
               <Route path="/staff/login" element={<StaffLoginPage />} />

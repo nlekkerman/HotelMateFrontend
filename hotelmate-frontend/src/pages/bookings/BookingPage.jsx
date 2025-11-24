@@ -38,6 +38,7 @@ const BookingPage = () => {
     phone: '',
     specialRequests: ''
   });
+  const [bookingData, setBookingData] = useState(null);
 
   // Fetch hotel data
   useEffect(() => {
@@ -139,16 +140,9 @@ const BookingPage = () => {
         special_requests: guestInfo.specialRequests
       });
       
-      // Navigate to confirmation with booking data
-      navigate(`/booking/confirmation/${response.data.booking_id}`, {
-        state: {
-          booking: response.data,
-          hotel: hotel,
-          room: quote,
-          dates: dates,
-          guests: guests,
-        }
-      });
+      // Store booking data and move to payment step
+      setBookingData(response.data);
+      setStep(4);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create booking');
       console.error(err);
@@ -196,6 +190,10 @@ const BookingPage = () => {
             <div className={`step-indicator ${step >= 3 ? 'active' : ''}`}>
               <span className="step-number">3</span>
               <span className="step-label">Details</span>
+            </div>
+            <div className={`step-indicator ${step >= 4 ? 'active' : ''}`}>
+              <span className="step-number">4</span>
+              <span className="step-label">Payment</span>
             </div>
           </div>
         </Col>
@@ -422,6 +420,75 @@ const BookingPage = () => {
                   <strong>Total:</strong>
                   <strong className="fs-4 text-primary">€{quote.breakdown?.total}</strong>
                 </div>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      )}
+
+      {/* Step 4: Payment */}
+      {step === 4 && bookingData && quote && (
+        <Row className="justify-content-center">
+          <Col lg={8}>
+            <Card className="mb-4">
+              <Card.Body className="p-4">
+                <h4 className="mb-4">Complete Payment</h4>
+                
+                {/* Booking Summary */}
+                <div className="mb-4 p-4 bg-light rounded">
+                  <h5 className="mb-3">Booking Summary</h5>
+                  <Row>
+                    <Col md={6}>
+                      <p className="mb-2"><strong>Hotel:</strong> {hotel.name}</p>
+                      <p className="mb-2"><strong>Room:</strong> {quote.room_type_name}</p>
+                      <p className="mb-2"><strong>Check-in:</strong> {new Date(dates.checkIn).toLocaleDateString()}</p>
+                      <p className="mb-2"><strong>Check-out:</strong> {new Date(dates.checkOut).toLocaleDateString()}</p>
+                    </Col>
+                    <Col md={6}>
+                      <p className="mb-2"><strong>Guests:</strong> {guests.adults} Adults, {guests.children} Children</p>
+                      <p className="mb-2"><strong>Nights:</strong> {quote.breakdown?.number_of_nights}</p>
+                      <p className="mb-2"><strong>Guest:</strong> {guestInfo.firstName} {guestInfo.lastName}</p>
+                      <p className="mb-2"><strong>Email:</strong> {guestInfo.email}</p>
+                    </Col>
+                  </Row>
+                  <hr />
+                  <div className="d-flex justify-content-between align-items-center">
+                    <h5 className="mb-0">Total Amount:</h5>
+                    <h3 className="mb-0 text-primary">€{parseFloat(quote.breakdown?.total).toFixed(2)}</h3>
+                  </div>
+                </div>
+
+                <Alert variant="info" className="mb-4">
+                  <i className="bi bi-shield-check me-2"></i>
+                  Your payment is secured by Stripe. You'll be redirected to a secure checkout page.
+                </Alert>
+
+                <Alert variant="warning" className="mb-4">
+                  <i className="bi bi-info-circle me-2"></i>
+                  <strong>Booking Reference:</strong> {bookingData.booking_id}
+                </Alert>
+
+                <Form onSubmit={processPayment}>
+                  <Button 
+                    type="submit" 
+                    variant="primary" 
+                    size="lg" 
+                    className="w-100"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Spinner animation="border" size="sm" className="me-2" />
+                        Redirecting to Stripe...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-credit-card me-2"></i>
+                        Proceed to Secure Payment
+                      </>
+                    )}
+                  </Button>
+                </Form>
               </Card.Body>
             </Card>
           </Col>
