@@ -54,16 +54,27 @@ const HotelPortalPage = () => {
     try {
       // Fetch public settings for customizable content
       const response = await getHotelPublicSettings(hotelSlug);
+      console.log('[HotelPortal] ⭐ Full response object:', response);
+      console.log('[HotelPortal] ⭐ Response.data:', response.data);
       console.log('[HotelPortal] Public settings fetched:', response.data);
       console.log('[HotelPortal] Hero image:', response.data?.hero_image);
       console.log('[HotelPortal] Welcome message:', response.data?.welcome_message);
       console.log('[HotelPortal] Gallery:', response.data?.gallery);
       console.log('[HotelPortal] Amenities:', response.data?.amenities);
-      setSettings(response.data);
+      
+      if (response && response.data) {
+        console.log('[HotelPortal] ✅ Setting settings state with:', response.data);
+        setSettings(response.data);
+      } else {
+        console.warn('[HotelPortal] ⚠️ Response or response.data is missing');
+        setSettings(null);
+      }
     } catch (err) {
-      console.error('[HotelPortal] Failed to fetch public settings:', err);
+      console.error('[HotelPortal] ❌ Failed to fetch public settings:', err);
+      console.error('[HotelPortal] Error details:', err.response?.data || err.message);
       // Settings are optional - don't set error, just log it
       // Hotel can still render with default content
+      setSettings(null);
     }
   };
 

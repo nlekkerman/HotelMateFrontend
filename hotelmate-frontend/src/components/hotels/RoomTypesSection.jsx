@@ -65,8 +65,8 @@ const RoomTypesSection = ({ hotel }) => {
           viewport={{ once: true, margin: "-100px" }}
         >
           <Row xs={1} md={2} lg={3} className="g-4">
-            {roomTypes.map((room) => (
-              <Col key={room.id}>
+            {roomTypes.map((room, index) => (
+              <Col key={room.id || room.code || `room-${index}`}>
                 <motion.div
                   className="modern-room-card"
                   variants={itemVariants}
@@ -75,21 +75,25 @@ const RoomTypesSection = ({ hotel }) => {
                 >
                   {/* Room Image */}
                   <div className="modern-room-image">
-                    {room.photo_url ? (
+                    {room.photo_url || room.photo ? (
                       <img
-                        src={room.photo_url}
+                        src={room.photo_url || room.photo}
                         alt={room.name}
                         loading="lazy"
                         onError={(e) => {
-                          e.currentTarget.style.display = 'none';
+                          // Fallback to sample hotel room image
+                          e.currentTarget.src = `https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800`;
                         }}
                       />
                     ) : (
-                      <div
+                      <img
+                        src={`https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800`}
+                        alt={room.name}
+                        loading="lazy"
                         style={{
                           width: '100%',
                           height: '100%',
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          objectFit: 'cover',
                         }}
                       />
                     )}

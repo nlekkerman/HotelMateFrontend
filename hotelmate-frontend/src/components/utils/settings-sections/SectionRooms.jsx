@@ -6,6 +6,9 @@ import api from "@/services/api";
 export default function SectionRooms({ hotelSlug, roomTypes, onRoomsUpdate }) {
   const [showModal, setShowModal] = useState(false);
   const [editingRoom, setEditingRoom] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -17,8 +20,33 @@ export default function SectionRooms({ hotelSlug, roomTypes, onRoomsUpdate }) {
     currency: 'EUR',
   });
 
+  // Debug: Log room data to check for missing IDs
+  React.useEffect(() => {
+    console.log('[SectionRooms] 🏨 Received roomTypes prop:', roomTypes);
+    console.log('[SectionRooms] 🏨 roomTypes is array?', Array.isArray(roomTypes));
+    console.log('[SectionRooms] 🏨 roomTypes length:', roomTypes?.length);
+    console.log('[SectionRooms] 🏨 roomTypes type:', typeof roomTypes);
+    
+    if (roomTypes?.length > 0) {
+      console.log('[SectionRooms] 🏨 First room:', roomTypes[0]);
+      console.log('[SectionRooms] Room types data:', roomTypes);
+      const roomsWithoutIds = roomTypes.filter(room => !room.id);
+      if (roomsWithoutIds.length > 0) {
+        console.warn('[SectionRooms] ⚠️ Rooms without IDs:', roomsWithoutIds);
+      }
+    }
+  }, [roomTypes]);
+
   const handleEdit = (room) => {
+    if (!room.id) {
+      toast.error('Cannot edit this room - missing ID. Please refresh the page and try again.');
+      console.error('Room data:', room);
+      return;
+    }
+    
     setEditingRoom(room);
+    setSelectedFile(null);
+    setPreviewUrl(null);
     setFormData({
       name: room.name || '',
       code: room.code || '',
@@ -34,6 +62,8 @@ export default function SectionRooms({ hotelSlug, roomTypes, onRoomsUpdate }) {
 
   const handleCreate = () => {
     setEditingRoom(null);
+    setSelectedFile(null);
+    setPreviewUrl(null);
     setFormData({
       name: '',
       code: '',
@@ -53,7 +83,7 @@ export default function SectionRooms({ hotelSlug, roomTypes, onRoomsUpdate }) {
     }
     
     try {
-      await api.delete(`/staff/hotel/${hotelSlug}/staff/room-types/${room.id}/`);
+      await api.delete(`/staff/hotel/${hotelSlug}/room-types/${roomId}/`);
       toast.success('Room type deleted successfully!');
       if (onRoomsUpdate) {
         onRoomsUpdate();
@@ -64,30 +94,105 @@ export default function SectionRooms({ hotelSlug, roomTypes, onRoomsUpdate }) {
     }
   };
 
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      e.target.value = '';
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      e.target.value = '';
+      return;
+    }
+
+    // Store file and create preview
+    setSelectedFile(file);
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setPreviewUrl(event.target.result);
+    };
+    reader.readAsDataURL(file);
+    
+    e.target.value = ''; // Reset so same file can be selected again
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+  };
+
   const handleSave = async () => {
+    setUploadingImage(true);
     try {
-      if (editingRoom) {
-        // Update existing room type
-        await api.patch(
-          `/staff/hotel/${hotelSlug}/staff/room-types/${editingRoom.id}/`,
+      let roomId = editingRoom?.id;
+      
+      // Step 1: Save/create the room first
+      if (editingRoom && editingRoom.id) {
+        // Updating existing room - ensure ID exists
+        const response = await api.patch(
+          `/staff/hotel/${hotelSlug}/room-types/${editingRoom.id}/`,
           formData
         );
-        toast.success('Room type updated successfully!');
+        roomId = response.data.id || editingRoom.id;
       } else {
-        // Create new room type
-        await api.post(
-          `/staff/hotel/${hotelSlug}/staff/room-types/`,
+        // Creating new room
+        const response = await api.post(
+          `/staff/hotel/${hotelSlug}/room-types/`,
           formData
         );
-        toast.success('Room type created successfully!');
+        roomId = response.data.id; // Get the new room ID
       }
+
+      // Step 2: Upload image if file was selected
+      if (selectedFile && roomId) {
+        try {
+          const uploadFormData = new FormData();
+          uploadFormData.append('photo', selectedFile);
+          
+          const response = await api.post(
+            `/staff/hotel/${hotelSlug}/room-types/${roomId}/upload-image/`,
+            uploadFormData,
+            {
+              headers: { 'Content-Type': 'multipart/form-data' },
+            }
+          );
+          
+          if (!response.data.photo_url) {
+            toast.warning('Room saved but image upload failed. Please try again.');
+          }
+        } catch (imageError) {
+          console.error('Image upload failed:', imageError);
+          toast.warning('Room saved but image upload failed. You can edit the room to add an image later.');
+        }
+      }
+
+      toast.success(editingRoom ? 'Room type updated successfully!' : 'Room type created successfully!');
       setShowModal(false);
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      setEditingRoom(null);
+      
       if (onRoomsUpdate) {
+        // Force refresh to get updated room data with IDs
         onRoomsUpdate();
       }
     } catch (error) {
       console.error('Failed to save room:', error);
-      toast.error(error.response?.data?.message || 'Failed to save room type');
+      const errorMessage = error.response?.data?.detail 
+        || error.response?.data?.message 
+        || error.response?.data?.error
+        || 'Failed to save room type. Please check all required fields.';
+      toast.error(errorMessage);
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -115,8 +220,16 @@ export default function SectionRooms({ hotelSlug, roomTypes, onRoomsUpdate }) {
           
           {roomTypes && roomTypes.length > 0 ? (
             <Row className="g-3">
-              {roomTypes.map((room) => (
-                <Col md={6} lg={4} key={room.id || room.code}>
+              {roomTypes.map((room, index) => {
+                // Generate a stable unique key
+                const uniqueKey = room.id 
+                  ? `room-id-${room.id}` 
+                  : room.code && room.code.trim() 
+                    ? `room-code-${room.code}` 
+                    : `room-idx-${index}-${room.name?.substring(0, 10) || 'unnamed'}`;
+                
+                return (
+                <Col md={6} lg={4} key={uniqueKey}>
                   <Card className="h-100 shadow-sm">
                     {room.photo_url && (
                       <Card.Img 
@@ -164,12 +277,21 @@ export default function SectionRooms({ hotelSlug, roomTypes, onRoomsUpdate }) {
                         )}
                       </div>
                       
+                      {!room.id && (
+                        <div className="alert alert-warning py-2 px-2 mb-2 small">
+                          <i className="bi bi-exclamation-triangle me-1"></i>
+                          Room missing ID - refresh page to edit
+                        </div>
+                      )}
+                      
                       <div className="d-flex gap-2">
                         <Button 
                           variant="outline-primary" 
                           size="sm"
                           onClick={() => handleEdit(room)}
                           className="flex-grow-1"
+                          disabled={!room.id}
+                          title={!room.id ? 'Room ID missing - please refresh the page' : 'Edit room'}
                         >
                           <i className="bi bi-pencil me-1"></i>
                           Edit
@@ -178,6 +300,8 @@ export default function SectionRooms({ hotelSlug, roomTypes, onRoomsUpdate }) {
                           variant="outline-danger" 
                           size="sm"
                           onClick={() => handleDelete(room)}
+                          disabled={!room.id}
+                          title={!room.id ? 'Room ID missing - cannot delete' : 'Delete room'}
                         >
                           <i className="bi bi-trash"></i>
                         </Button>
@@ -185,7 +309,8 @@ export default function SectionRooms({ hotelSlug, roomTypes, onRoomsUpdate }) {
                     </Card.Body>
                   </Card>
                 </Col>
-              ))}
+              );
+              })}
             </Row>
           ) : (
             <div className="text-center py-5 bg-light rounded">
@@ -251,21 +376,81 @@ export default function SectionRooms({ hotelSlug, roomTypes, onRoomsUpdate }) {
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label className="fw-bold">Photo URL</Form.Label>
+              <Form.Label className="fw-bold">Room Photo</Form.Label>
+              
+              {/* File Upload Button */}
+              <div className="mb-3">
+                <div className="d-flex gap-2 align-items-center">
+                  <Button
+                    variant="outline-primary"
+                    onClick={() => document.getElementById('room-image-upload').click()}
+                  >
+                    <i className="bi bi-upload me-2"></i>
+                    Choose Image
+                  </Button>
+                  {selectedFile && (
+                    <Button
+                      variant="outline-danger"
+                      size="sm"
+                      onClick={handleRemoveFile}
+                    >
+                      <i className="bi bi-x-lg"></i>
+                    </Button>
+                  )}
+                  <Form.Text className="text-muted">
+                    {selectedFile ? `Selected: ${selectedFile.name}` : 'or enter URL below'}
+                  </Form.Text>
+                </div>
+                <input
+                  id="room-image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  style={{ display: 'none' }}
+                />
+              </div>
+
+              {/* URL Input */}
               <Form.Control
                 type="url"
                 placeholder="https://example.com/room-photo.jpg"
                 value={formData.photo_url}
                 onChange={(e) => setFormData({ ...formData, photo_url: e.target.value })}
+                disabled={uploadingImage}
               />
-              {formData.photo_url && (
-                <div className="mt-2">
-                  <img
-                    src={formData.photo_url}
-                    alt="Preview"
-                    style={{ maxHeight: '150px', width: '100%', objectFit: 'cover', borderRadius: '8px' }}
-                    onError={(e) => e.target.style.display = 'none'}
-                  />
+              <Form.Text className="text-muted">
+                Paste Cloudinary URL or choose file to upload
+              </Form.Text>
+              
+              {/* Image Preview */}
+              {(previewUrl || formData.photo_url) && (
+                <div className="mt-3">
+                  <small className="text-muted d-block mb-2">Preview</small>
+                  <div className="position-relative" style={{ maxHeight: '200px', overflow: 'hidden' }}>
+                    <img
+                      src={previewUrl || formData.photo_url}
+                      alt="Room preview"
+                      style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '8px' }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                    <div 
+                      className="d-none align-items-center justify-content-center bg-light rounded"
+                      style={{ height: '200px' }}
+                    >
+                      <div className="text-center text-muted">
+                        <i className="bi bi-image fs-1 d-block mb-2"></i>
+                        <small>Preview not available</small>
+                      </div>
+                    </div>
+                    {previewUrl && (
+                      <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.6)', padding: '5px 10px', borderRadius: '4px' }}>
+                        <small className="text-white">New image selected</small>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </Form.Group>
@@ -334,10 +519,19 @@ export default function SectionRooms({ hotelSlug, roomTypes, onRoomsUpdate }) {
           <Button 
             variant="primary" 
             onClick={handleSave}
-            disabled={!formData.name || !formData.code}
+            disabled={!formData.name || (!editingRoom && !formData.code) || uploadingImage}
           >
-            <i className="bi bi-save me-2"></i>
-            {editingRoom ? 'Save Changes' : 'Create Room Type'}
+            {uploadingImage ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <i className="bi bi-save me-2"></i>
+                {editingRoom ? 'Save Changes' : 'Create Room Type'}
+              </>
+            )}
           </Button>
         </Modal.Footer>
       </Modal>

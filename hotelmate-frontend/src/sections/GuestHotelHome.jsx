@@ -74,15 +74,28 @@ const GuestHotelHome = ({ hotel, settings, editorMode = 'view', canEdit = false 
     }
   ];
 
+  // Sample gallery - replace with your actual images
+  const sampleGallery = {
+    gallery: [
+      "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
+      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800",
+      "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800",
+      "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800",
+      "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800",
+      "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800"
+    ]
+  };
+
   return (
     <div className="guest-hotel-home bg-light min-vh-100">
       {/* Hero Section with Booking CTAs */}
       <HeroSection hotel={hotel} settings={settings} />
 
-      {/* Gallery from Settings */}
-      {settings?.gallery && settings.gallery.length > 0 && (
-        <GallerySection settings={settings} hotelName={hotel.name} />
-      )}
+      {/* Gallery - Always show */}
+      <GallerySection 
+        settings={settings?.gallery && settings.gallery.length > 0 ? settings : sampleGallery} 
+        hotelName={hotel.name} 
+      />
 
       {/* Room Types with Pricing */}
       <RoomTypesSection hotel={hotel} />

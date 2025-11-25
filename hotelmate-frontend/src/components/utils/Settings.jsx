@@ -66,7 +66,25 @@ export default function Settings() {
 
   const [hasChanges, setHasChanges] = useState(false);
   
-  // Fetch hotel data with room types
+  // Debug: Log user data from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    const storedStaff = localStorage.getItem('staff');
+    const userData = storedUser ? JSON.parse(storedUser) : null;
+    const staffData = storedStaff ? JSON.parse(storedStaff) : null;
+    
+    console.log('🔵🔵🔵 USER DATA FROM LOCALSTORAGE 🔵🔵🔵', userData);
+    console.log('🔵 user.hotel_slug:', userData?.hotel_slug);
+    console.log('🔵 user.hotel_id:', userData?.hotel_id);
+    console.log('🔵 user.token:', userData?.token);
+    
+    console.log('🟢🟢🟢 STAFF DATA FROM LOCALSTORAGE 🟢🟢🟢', staffData);
+    console.log('🟢 staff.hotel_slug:', staffData?.hotel_slug);
+    console.log('🟢 staff.hotel_id:', staffData?.hotel_id);
+    console.log('🟢 staff.token:', staffData?.token);
+  }, []);
+  
+  // Fetch hotel data with room types from PUBLIC endpoint (for general display)
   const { data: hotelData, isLoading: hotelLoading } = useQuery({
     queryKey: ['hotelPublicPage', hotelSlug],
     queryFn: async () => {
@@ -75,6 +93,38 @@ export default function Settings() {
       return response.data;
     },
     enabled: !!hotelSlug && canEdit,
+  });
+
+  // Fetch room types from STAFF endpoint (includes IDs for editing)
+  const { data: staffRoomTypes, isLoading: staffRoomTypesLoading, error: staffRoomTypesError } = useQuery({
+    queryKey: ['staffRoomTypes', hotelSlug],
+    queryFn: async () => {
+      try {
+        const response = await api.get(`/staff/hotel/${hotelSlug}/room-types/`);
+        console.log('[Settings] 🏨 Staff room types RAW response:', response);
+        console.log('[Settings] 🏨 Staff room types data:', response.data);
+        console.log('[Settings] 🏨 Response status:', response.status);
+        console.log('[Settings] 🏨 Is array?', Array.isArray(response.data));
+        console.log('[Settings] 🏨 Has results?', response.data?.results);
+        
+        // Handle both array response and paginated response
+        const roomTypesData = Array.isArray(response.data) 
+          ? response.data 
+          : response.data?.results || [];
+        
+        console.log('[Settings] 🏨 Final room types array:', roomTypesData);
+        console.log('[Settings] 🏨 Room count:', roomTypesData.length);
+        return roomTypesData;
+      } catch (error) {
+        console.error('[Settings] ❌ Failed to fetch room types:', error);
+        console.error('[Settings] ❌ Error response:', error.response);
+        throw error;
+      }
+    },
+    enabled: !!hotelSlug && canEdit,
+    onError: (error) => {
+      console.error('[Settings] ❌ Room types query error:', error);
+    },
   });
 
   // Fetch hotel settings
@@ -138,6 +188,8 @@ export default function Settings() {
         logo: settings.logo_display || settings.logo || '',
         favicon: settings.favicon || '',
         slogan: settings.slogan || '',
+        website: settings.website || '',
+        google_maps_link: settings.google_maps_link || '',
         // Theme fields - load from backend or use defaults
         primary_color: settings.primary_color || '#3498db',
         secondary_color: settings.secondary_color || '#10B981',
@@ -150,12 +202,6 @@ export default function Settings() {
         border_color: settings.border_color || '#e5e7eb',
         link_color: settings.link_color || '#007bff',
         link_hover_color: settings.link_hover_color || '#0056b3',
-        // Note: These fields don't exist in backend yet - will be undefined
-        website: settings.website || '',
-        google_maps_link: settings.google_maps_link || '',
-        logo: settings.logo || '',
-        favicon: settings.favicon || '',
-        slogan: settings.slogan || '',
       }));
     } else {
       console.log('[Settings] No settings data available yet');
@@ -241,8 +287,9 @@ export default function Settings() {
         document.documentElement.style.setProperty('--link-hover-color', data.link_hover_color || '#0056b3');
       }
       
-      // Invalidate queries to refetch
+      // Invalidate queries to refetch both settings and public page
       queryClient.invalidateQueries(['hotelPublicSettings', hotelSlug]);
+      queryClient.invalidateQueries(['hotelPublicPage', hotelSlug]);
     },
     onError: (error) => {
       console.error('Failed to save settings:', error);
@@ -348,6 +395,7 @@ export default function Settings() {
           <SectionImages 
             formData={formData}
             onChange={handleFieldChange}
+            hotelSlug={hotelSlug}
           />
 
           {/* 4. Amenities */}
@@ -377,8 +425,9 @@ export default function Settings() {
           {/* 8. Rooms & Suites */}
           <SectionRooms 
             hotelSlug={hotelSlug}
-            roomTypes={hotelData?.room_types || []}
+            roomTypes={staffRoomTypes || hotelData?.room_types || []}
             onRoomsUpdate={() => {
+              queryClient.invalidateQueries(['staffRoomTypes', hotelSlug]);
               queryClient.invalidateQueries(['hotelPublicPage', hotelSlug]);
             }}
           />

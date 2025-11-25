@@ -3,12 +3,13 @@ import { Card, Form, Button, InputGroup, ListGroup, Spinner } from "react-bootst
 import api from "@/services/api";
 import { toast } from "react-toastify";
 
-export default function SectionImages({ formData, onChange }) {
+export default function SectionImages({ formData, onChange, hotelSlug }) {
   console.log('[SectionImages] Rendering with formData.hero_image:', formData?.hero_image);
   console.log('[SectionImages] Full formData:', formData);
   
   const [newGalleryUrl, setNewGalleryUrl] = useState('');
   const [uploadingHero, setUploadingHero] = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
   
   const handleHeroImageUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -28,12 +29,14 @@ export default function SectionImages({ formData, onChange }) {
 
     setUploadingHero(true);
     try {
-      const formData = new FormData();
-      formData.append('image', file);
+      const uploadFormData = new FormData();
+      uploadFormData.append('image', file);
       
-      const response = await api.post('/hotel/upload-image/', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const response = await api.post(
+        `/staff/hotel/${hotelSlug}/settings/gallery/upload/`,
+        uploadFormData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
       
       console.log('[SectionImages] Upload response:', response.data);
       
@@ -44,29 +47,104 @@ export default function SectionImages({ formData, onChange }) {
       }
     } catch (error) {
       console.error('[SectionImages] Upload error:', error);
-      toast.error(error.response?.data?.message || 'Failed to upload image');
+      toast.error(error.response?.data?.error || error.response?.data?.message || 'Failed to upload image');
     } finally {
       setUploadingHero(false);
     }
   };
   
-  const handleAddGalleryImage = () => {
+  const handleGalleryImageUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setUploadingGallery(true);
+    const uploadedUrls = [];
+    
+    try {
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) {
+          toast.error(`Skipped ${file.name}: Not an image file`);
+          continue;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error(`Skipped ${file.name}: File too large (max 5MB)`);
+          continue;
+        }
+
+        const uploadFormData = new FormData();
+        uploadFormData.append('image', file);
+        
+        const response = await api.post(
+          `/staff/hotel/${hotelSlug}/settings/gallery/upload/`,
+          uploadFormData,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+        
+        if (response.data.url) {
+          uploadedUrls.push(response.data.url);
+        }
+      }
+      
+      if (uploadedUrls.length > 0) {
+        onChange('gallery', [...(formData.gallery || []), ...uploadedUrls]);
+        toast.success(`${uploadedUrls.length} image(s) uploaded successfully!`);
+      }
+    } catch (error) {
+      console.error('[SectionImages] Gallery upload error:', error);
+      toast.error(error.response?.data?.error || error.response?.data?.message || 'Failed to upload images');
+    } finally {
+      setUploadingGallery(false);
+      e.target.value = '';
+    }
+  };
+  
+  const handleAddGalleryUrl = () => {
     if (newGalleryUrl.trim()) {
       onChange('gallery', [...(formData.gallery || []), newGalleryUrl.trim()]);
       setNewGalleryUrl('');
+      toast.success('Gallery image added!');
     }
   };
 
-  const handleRemoveGalleryImage = (index) => {
-    onChange('gallery', (formData.gallery || []).filter((_, i) => i !== index));
+  const handleRemoveGalleryImage = async (index) => {
+    const urlToRemove = (formData.gallery || [])[index];
+    if (!urlToRemove) return;
+
+    try {
+      // Call backend remove endpoint
+      await api.delete(`/staff/hotel/${hotelSlug}/settings/gallery/remove/`, {
+        data: { url: urlToRemove }
+      });
+      
+      // Update local state
+      onChange('gallery', (formData.gallery || []).filter((_, i) => i !== index));
+      toast.success('Image removed from gallery');
+    } catch (error) {
+      console.error('[SectionImages] Remove error:', error);
+      toast.error(error.response?.data?.error || 'Failed to remove image');
+    }
   };
 
-  const handleMoveImage = (index, direction) => {
+  const handleMoveImage = async (index, direction) => {
     const gallery = [...(formData.gallery || [])];
     const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex >= 0 && newIndex < gallery.length) {
-      [gallery[index], gallery[newIndex]] = [gallery[newIndex], gallery[index]];
+    if (newIndex < 0 || newIndex >= gallery.length) return;
+
+    // Swap images
+    [gallery[index], gallery[newIndex]] = [gallery[newIndex], gallery[index]];
+    
+    try {
+      // Call backend reorder endpoint
+      await api.post(`/staff/hotel/${hotelSlug}/settings/gallery/reorder/`, {
+        gallery: gallery
+      });
+      
+      // Update local state
       onChange('gallery', gallery);
+      toast.success('Gallery reordered');
+    } catch (error) {
+      console.error('[SectionImages] Reorder error:', error);
+      toast.error(error.response?.data?.error || 'Failed to reorder gallery');
     }
   };
 
@@ -157,31 +235,64 @@ export default function SectionImages({ formData, onChange }) {
             <Form.Label className="fw-bold">
               Gallery Images ({(formData.gallery || []).length})
             </Form.Label>
+            
+            {/* File Upload */}
+            <div className="mb-3">
+              <div className="d-flex gap-2">
+                <Form.Control
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleGalleryImageUpload}
+                  disabled={uploadingGallery}
+                />
+                {uploadingGallery && (
+                  <Button variant="primary" disabled>
+                    <Spinner animation="border" size="sm" className="me-2" />
+                    Uploading...
+                  </Button>
+                )}
+              </div>
+              <Form.Text className="text-muted">
+                Upload multiple images (max 5MB each) or add URLs below
+              </Form.Text>
+            </div>
+            
+            {/* URL Input */}
             <InputGroup className="mb-3">
               <Form.Control
                 type="url"
                 placeholder="https://example.com/image.jpg"
                 value={newGalleryUrl}
                 onChange={(e) => setNewGalleryUrl(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddGalleryImage())}
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddGalleryUrl())}
+                disabled={uploadingGallery}
               />
-              <Button variant="primary" onClick={handleAddGalleryImage}>
-                <i className="bi bi-plus-lg me-1"></i> Add
+              <Button variant="primary" onClick={handleAddGalleryUrl} disabled={uploadingGallery}>
+                <i className="bi bi-plus-lg me-1"></i> Add URL
               </Button>
             </InputGroup>
             
             <ListGroup style={{ maxHeight: '400px', overflowY: 'auto' }}>
               {(formData.gallery || []).map((url, index) => (
-                <ListGroup.Item key={index} className="d-flex align-items-center gap-3 p-3">
-                  <img 
-                    src={url} 
-                    alt={`Gallery ${index + 1}`}
-                    className="rounded"
-                    style={{ width: '80px', height: '80px', objectFit: 'cover' }}
-                    onError={(e) => e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Crect fill="%23ddd" width="80" height="80"/%3E%3C/svg%3E'}
-                  />
-                  <small className="flex-grow-1 text-truncate">{url}</small>
-                  <div className="d-flex gap-1">
+                <ListGroup.Item key={`gallery-settings-${index}-${url}`} className="d-flex align-items-center gap-3 p-3">
+                  <div style={{ width: '100px', height: '80px', flexShrink: 0, overflow: 'hidden', borderRadius: '8px', backgroundColor: '#f5f5f5' }}>
+                    <img 
+                      src={url} 
+                      alt={`Gallery ${index + 1}`}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      onError={(e) => {
+                        console.error('Failed to load gallery image:', url);
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:12px;">No image</div>';
+                      }}
+                    />
+                  </div>
+                  <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                    <small className="d-block fw-bold text-muted mb-1">Gallery {index + 1}</small>
+                    <small className="d-block text-truncate" style={{ fontSize: '11px', color: '#6c757d' }}>{url}</small>
+                  </div>
+                  <div className="d-flex gap-1" style={{ flexShrink: 0 }}>
                     <Button 
                       variant="outline-secondary" 
                       size="sm"
