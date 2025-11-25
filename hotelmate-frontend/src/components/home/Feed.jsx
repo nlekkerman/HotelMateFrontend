@@ -28,7 +28,7 @@ export default function Feed() {
   const fetchPosts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/staff/hotels/${hotelSlug}/home/posts/`);
+      const res = await api.get(`/staff/hotel/${hotelSlug}/home/posts/`);
       const data = Array.isArray(res.data) ? res.data : res.data.results || [];
       setPosts(data);
       setError(null);

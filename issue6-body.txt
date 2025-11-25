@@ -1,0 +1,29 @@
+**Goal:** Persist editor changes via the staff API.
+
+**Tasks:**
+- Add a **Save** button in the editor panel
+- On click:
+  - Build a payload from the form state matching backend fields
+  - Send `PUT /api/staff/hotels/<hotel_slug>/settings/`
+  - While saving, show a loading state on the button
+  - On success:
+    - Update the main `settings` state with returned data
+    - Optionally keep editor open and show a success toast
+  - On error:
+    - Display an error message/toast
+
+**Optional:**
+- Disable Save if no changes have been made since last load
+- Show "Unsaved changes" indicator
+
+**Deliverable:** Editor save flow fully wired to backend
+
+**Related Files:**
+- `src/components/hotels/HotelSettingsEditorPanel.jsx`
+- `src/services/api.js`
+
+**API Endpoint:** `PUT /api/staff/hotels/<hotel_slug>/settings/`
+
+**Libraries:** React Query (useMutation), react-toastify
+
+**Dependencies:** Issue #5

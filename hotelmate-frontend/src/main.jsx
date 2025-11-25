@@ -31,7 +31,7 @@ async function applySavedTheme() {
     const token = userData?.token;
     if (!token) return; // No token, skip theme
     
-    const res = await fetch(`/api/staff/hotels/${hotel_slug}/common/theme/`, {
+    const res = await fetch(`/api/common/${hotel_slug}/theme/`, {
       credentials: "include",
       headers: { 
         Accept: "application/json",

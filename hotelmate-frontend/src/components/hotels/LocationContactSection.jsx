@@ -7,21 +7,19 @@ import { useNavigate } from 'react-router-dom';
  * LocationContactSection - Modern location, contact info, and CTA banner
  * Uses theme colors from staff settings
  */
-const LocationContactSection = ({ hotel }) => {
+const LocationContactSection = ({ hotel, settings }) => {
   const navigate = useNavigate();
 
   if (!hotel) return null;
 
   const { city, country, address, location, contact, booking_options, name, slug } = hotel;
 
-  const getGoogleMapsUrl = () => {
-    if (location?.latitude && location?.longitude) {
-      return `https://www.google.com/maps?q=${location.latitude},${location.longitude}`;
-    }
-    return null;
-  };
+  // Use settings contact info if available, fallback to hotel data
+  const contactEmail = settings?.contact_email || contact?.email;
+  const contactPhone = settings?.contact_phone || contact?.phone;
+  const contactAddress = settings?.contact_address || formatAddress();
 
-  const formatAddress = () => {
+  function formatAddress() {
     if (!address) return null;
     return [
       address.street,
@@ -31,6 +29,13 @@ const LocationContactSection = ({ hotel }) => {
     ]
       .filter(Boolean)
       .join(', ');
+  }
+
+  const getGoogleMapsUrl = () => {
+    if (location?.latitude && location?.longitude) {
+      return `https://www.google.com/maps?q=${location.latitude},${location.longitude}`;
+    }
+    return null;
   };
 
   const bookingLabel = booking_options?.primary_cta_label || 'Book Your Stay';
@@ -66,9 +71,9 @@ const LocationContactSection = ({ hotel }) => {
                   </h5>
                 )}
 
-                {formatAddress() && (
+                {contactAddress && (
                   <p className="body-large mb-4" style={{ color: 'var(--text-gray, #4a5568)' }}>
-                    {formatAddress()}
+                    {contactAddress}
                   </p>
                 )}
 
@@ -95,10 +100,10 @@ const LocationContactSection = ({ hotel }) => {
               </h3>
 
               <Row className="g-3">
-                {contact?.phone && (
+                {contactPhone && (
                   <Col md={6}>
                     <motion.a
-                      href={`tel:${contact.phone}`}
+                      href={`tel:${contactPhone}`}
                       className="modern-contact-card text-decoration-none"
                       whileHover={{ y: -5 }}
                       transition={{ duration: 0.2 }}
@@ -107,15 +112,15 @@ const LocationContactSection = ({ hotel }) => {
                         <i className="bi bi-telephone-fill"></i>
                       </div>
                       <div className="modern-contact-title">Phone</div>
-                      <div className="modern-contact-value">{contact.phone}</div>
+                      <div className="modern-contact-value">{contactPhone}</div>
                     </motion.a>
                   </Col>
                 )}
 
-                {contact?.email && (
+                {contactEmail && (
                   <Col md={6}>
                     <motion.a
-                      href={`mailto:${contact.email}`}
+                      href={`mailto:${contactEmail}`}
                       className="modern-contact-card text-decoration-none"
                       whileHover={{ y: -5 }}
                       transition={{ duration: 0.2 }}
@@ -125,7 +130,7 @@ const LocationContactSection = ({ hotel }) => {
                       </div>
                       <div className="modern-contact-title">Email</div>
                       <div className="modern-contact-value" style={{ fontSize: '0.95rem' }}>
-                        {contact.email}
+                        {contactEmail}
                       </div>
                     </motion.a>
                   </Col>

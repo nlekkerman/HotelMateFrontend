@@ -7,12 +7,18 @@ import OffersSection from '@/components/hotels/OffersSection';
 import LeisureActivitiesSection from '@/components/hotels/LeisureActivitiesSection';
 import LocationContactSection from '@/components/hotels/LocationContactSection';
 import GuestPortalStub from '@/components/hotels/GuestPortalStub';
+import GallerySection from '@/components/hotels/GallerySection';
+import AmenitiesSection from '@/components/hotels/AmenitiesSection';
 
 /**
  * GuestHotelHome - Guest view of the hotel portal
  * Displays public hotel page with booking functionality
+ * @param {Object} hotel - Hotel data
+ * @param {Object} settings - Public settings data
+ * @param {String} editorMode - 'view' or 'edit' mode
+ * @param {Boolean} canEdit - Whether user can edit settings
  */
-const GuestHotelHome = ({ hotel }) => {
+const GuestHotelHome = ({ hotel, settings, editorMode = 'view', canEdit = false }) => {
   if (!hotel) {
     return (
       <Container className="py-5">
@@ -71,7 +77,12 @@ const GuestHotelHome = ({ hotel }) => {
   return (
     <div className="guest-hotel-home bg-light min-vh-100">
       {/* Hero Section with Booking CTAs */}
-      <HeroSection hotel={hotel} />
+      <HeroSection hotel={hotel} settings={settings} />
+
+      {/* Gallery from Settings */}
+      {settings?.gallery && settings.gallery.length > 0 && (
+        <GallerySection settings={settings} hotelName={hotel.name} />
+      )}
 
       {/* Room Types with Pricing */}
       <RoomTypesSection hotel={hotel} />
@@ -79,11 +90,16 @@ const GuestHotelHome = ({ hotel }) => {
       {/* Special Offers & Packages */}
       <OffersSection hotel={hotel} />
 
+      {/* Amenities from Settings */}
+      {settings?.amenities && settings.amenities.length > 0 && (
+        <AmenitiesSection settings={settings} />
+      )}
+
       {/* Leisure Activities & Facilities */}
       <LeisureActivitiesSection hotel={hotel} />
 
       {/* Location & Contact Information */}
-      <LocationContactSection hotel={hotel} />
+      <LocationContactSection hotel={hotel} settings={settings} />
 
       {/* Legacy Guest Services Section (keep for internal guest features) - HIDDEN FOR NOW */}
       {false && <Container className="py-5">

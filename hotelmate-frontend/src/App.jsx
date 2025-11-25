@@ -81,6 +81,7 @@ import DinnerBookingForm from "@/components/bookings/DinnerBookingForm";
 import DinnerBookingList from "@/components/bookings/DinnerBookingList";
 import Bookings from "@/components/bookings/Bookings";
 import RestaurantManagementDashboard from "@/pages/bookings/RestaurantManagementDashboard";
+import StaffBookingsPage from "@/pages/bookings/StaffBookingsPage";
 import Restaurant from "@/components/restaurants/Restaurant";
 import HotelInfo from "@/pages/hotel_info/HotelInfo";
 import GoodToKnow from "@/components/hotel_info/GoodToKnow";
@@ -295,7 +296,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/pusher-debug" element={<ProtectedRoute><PusherDebugger /></ProtectedRoute>} />
 
               {/* Settings */}
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/staff/:hotelSlug/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
               {/* Maintenance */}
               <Route path="/maintenance" element={<ProtectedRoute><Maintenance /></ProtectedRoute>} />
@@ -354,6 +355,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
 
               {/* Bookings */}
               <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
+              <Route path="/staff/hotel/:hotelSlug/bookings" element={<ProtectedRoute><StaffBookingsPage /></ProtectedRoute>} />
 
               {/* Hotel Info */}
               <Route path="/hotel_info/:hotel_slug" element={<ProtectedRoute><HotelInfo /></ProtectedRoute>} />

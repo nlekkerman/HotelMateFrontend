@@ -2172,15 +2172,19 @@ body.terminal-mode,
 
 /* Hotels Landing Page */
 .hotels-landing-page {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: linear-gradient(135deg, #f5f6f8 0%, #feffff 100%) !important;
 }
 
 .hotel-card {
   transition: all 0.3s ease;
   border: none;
-  border-radius: 12px;
   overflow: hidden;
-  background: white;
+  background: transparent !important;
+}
+.modern-hotel-card{
+  background: transparent !important;
+    border-radius: 10px !important;
+
 }
 
 .hotel-card:hover {

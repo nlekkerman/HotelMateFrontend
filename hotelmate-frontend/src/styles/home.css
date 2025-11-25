@@ -56,6 +56,38 @@
   min-height: 100vh;
 }
 
+/* View Mode Toggle */
+.view-mode-toggle-container {
+  margin-bottom: 1rem;
+}
+
+.view-mode-toggle-container .btn {
+  transition: all var(--transition-fast);
+}
+
+.view-mode-toggle-container .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Editor Controls Bar */
+.editor-controls-bar {
+  animation: slideDown 0.3s ease;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--social-border) !important;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Feed Wrapper */
 .feed {
   display: flex;

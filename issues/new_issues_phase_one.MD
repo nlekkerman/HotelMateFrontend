@@ -1,24 +1,40 @@
-# Phase 1 – Frontend Issues: Public Hotel Page + Staff Bookings
+# Phase 1 – Frontend Issues: Hotel Settings + Staff Bookings
 
-Context:
+**Last Updated:** November 24, 2025  
+**Status:** Partially Complete ✅
+
+## Implementation Overview
+
+### ✅ Completed (Hotel Settings)
+Issues 2, 5, 6, 7, 8 - Hotel Settings refactored into clean section-based layout
+
+### ⏳ Pending (Bookings Management)
+Issues 9, 10, 11 - Staff bookings dashboard and confirmation system
+
+---
+
+## Context
 - Frontend and backend are separated.
 - Staff auth is already implemented (login, JWT or session).
-- We have or will have:
-  - `GET /api/public/hotels/<hotel_slug>/settings/`
-  - `PUT /api/staff/hotels/<hotel_slug>/settings/`
-  - `GET /api/auth/me/`
-  - `GET /api/staff/hotels/<hotel_slug>/bookings/`
-  - `POST /api/staff/hotels/<hotel_slug>/bookings/<booking_id>/confirm/`
+- Backend API Endpoints:
+  - ✅ `GET /api/public/hotels/<hotel_slug>/settings/`
+  - ✅ `PATCH /api/staff/hotel/<hotel_slug>/settings/` (singular "hotel")
+  - ✅ `PATCH /api/common/<hotel_slug>/theme/`
+  - ✅ `GET /api/auth/me/`
+  - ✅ `GET /api/staff/hotels/<hotel_slug>/bookings/`
+  - ✅ `POST /api/staff/hotel/<hotel_slug>/bookings/<booking_id>/confirm/`
 
-Goal:
-- Render public hotel page from backend settings.
-- Allow staff to toggle “Customize” mode on that page and edit content/branding.
-- Show bookings in staff area and allow staff to confirm them.
-- After confirmation, backend sends email, but frontend must show clear feedback.
+## Goals
+- ✅ Render public hotel page from backend settings
+- ✅ Allow staff to edit hotel settings (content/branding/theme)
+- ⏳ Show bookings in staff area and allow staff to confirm them
+- ⏳ After confirmation, backend sends email, frontend shows clear feedback
 
 ---
 
 ## Issue 1 – [Frontend] Load HotelPublicSettings on public hotel page
+
+**Status:** ⏳ PENDING (Low Priority - Public page already exists)
 
 Goal:
 The public hotel page should render using data from the backend settings API.
@@ -38,26 +54,26 @@ Tasks:
 Deliverable:
 - Updated public hotel page component wired to backend.
 
+**Note:** Public hotel page already exists. This will update it to use new settings API.
+
 ---
 
-## Issue 2 – [Frontend] Determine if current user can edit this hotel’s public page
+## Issue 2 – [Frontend] Determine if current user can edit this hotel's public page
 
-Goal:
-Know if the current viewer is allowed to edit the public page for this hotel.
+**Status:** ✅ COMPLETED
 
-Tasks:
-- Create helper hook `useHotelPublicEditPermission(hotelSlug)`:
-  - Calls `GET /api/auth/me/` once (or uses global auth state if already present).
-  - Derives:
-    - `isAuthenticated`
-    - `isStaffMember` (from presence of staff_profile info)
-    - whether `user.hotel_slug === hotelSlug` or equivalent
-    - whether their `access_level` or `role_slug` qualifies them to edit (same logic as backend).
-  - Returns `{ canEdit, loading }`.
-- Use this hook inside the public hotel page component to decide if "Customize" UI should show.
+Implementation:
+- ✅ Hook `useHotelPublicEditPermission(hotelSlug)` already exists
+- ✅ Integrated into Settings.jsx
+- ✅ Returns `{ canEdit, loading }`
+- ✅ Guards entire settings page with permission checks
+
+Files:
+- `hotelmate-frontend/src/hooks/useHotelPublicEditPermission.js`
+- `hotelmate-frontend/src/components/utils/Settings.jsx`
 
 Deliverable:
-- Reusable hook/utility and its integration on the page.
+- ✅ Reusable hook implemented and integrated
 
 ---
 

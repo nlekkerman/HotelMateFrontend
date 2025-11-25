@@ -6,12 +6,25 @@
 
 /* ========== CSS VARIABLES ========== */
 :root {
-  /* Theme colors are set by ThemeContext from staff settings */
-  /* --main-color: set dynamically */
-  /* --secondary-color: set dynamically */
-  /* --button-color: set dynamically */
-  /* --button-text-color: set dynamically */
-  /* --button-hover-color: set dynamically */
+  /* Theme colors are set dynamically from hotel settings via useHotelTheme hook */
+  /* Backend field: primary_color → Frontend vars: --main-color, --primary-color */
+  /* Backend field: secondary_color → Frontend var: --secondary-color */
+  /* Backend field: button_color → Frontend var: --button-color */
+  /* Backend field: background_color → Frontend var: --background-color */
+  /* Calculated: --button-hover-color (15% darker than button_color) */
+  /* Hardcoded: --button-text-color (white) */
+  
+  /* Standard UI action colors (not customizable - good UX practice) */
+  --color-success: #10B981;
+  --color-success-hover: #059669;
+  --color-danger: #EF4444;
+  --color-danger-hover: #DC2626;
+  --color-warning: #F59E0B;
+  --color-warning-hover: #D97706;
+  --color-info: #3B82F6;
+  --color-info-hover: #2563EB;
+  --color-gray: #6B7280;
+  --color-gray-hover: #4B5563;
   
   /* Extended color palette */
   --bg-light: #f7f9fc;
@@ -172,21 +185,22 @@
   font-weight: 600;
   border-radius: var(--radius-lg);
   border: none;
-  background: var(--main-color, #3498db);
-  color: white;
+  background: var(--button-color, var(--main-color, #3B82F6));
+  color: var(--button-text-color, white);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   transition: all var(--transition-base);
   box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.2);
+  cursor: pointer;
 }
 
 .hero-btn-primary:hover {
-  background: var(--button-hover-color, #2980b9);
+  background: var(--button-hover-color, var(--main-color, #2563EB));
   transform: translateY(-2px);
   box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.3);
-  color: white;
+  color: var(--button-text-color, white);
 }
 
 .hero-btn-outline {
@@ -226,11 +240,12 @@
   align-items: center;
   gap: 0.5rem;
   transition: all var(--transition-base);
+  cursor: pointer;
 }
 
 .hero-btn-secondary:hover {
   background: white;
-  color: var(--main-color, #3498db);
+  color: var(--button-color, var(--main-color, #3B82F6));
   transform: translateY(-2px);
 }
 
@@ -255,6 +270,358 @@
   60% {
     transform: translateX(-50%) translateY(-5px);
   }
+}
+
+/* ========== COMPREHENSIVE BUTTON SYSTEM ========== */
+
+/* Base button styles */
+.btn-base {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: none;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all var(--transition-base);
+  cursor: pointer;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.btn-base:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Size variants */
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.btn-lg {
+  padding: 1rem 2rem;
+  font-size: 1.125rem;
+}
+
+.btn-xl {
+  padding: 1.25rem 2.5rem;
+  font-size: 1.25rem;
+}
+
+/* Primary button - uses theme button_color */
+.btn-primary {
+  background: var(--button-color, var(--main-color, #3B82F6));
+  color: var(--button-text-color, white);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--button-hover-color, #2563EB);
+  color: var(--button-text-color, white);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Secondary button - uses theme secondary_color */
+.btn-secondary {
+  background: var(--secondary-color, #10B981);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #059669;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-secondary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Success button - standard green for positive actions */
+.btn-success {
+  background: var(--color-success);
+  color: white;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: var(--color-success-hover);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Danger button - standard red for destructive actions */
+.btn-danger {
+  background: var(--color-danger);
+  color: white;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--color-danger-hover);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Warning button - standard orange/yellow for warnings */
+.btn-warning {
+  background: var(--color-warning);
+  color: white;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
+}
+
+.btn-warning:hover:not(:disabled) {
+  background: var(--color-warning-hover);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+/* Info button - standard blue for informational actions */
+.btn-info {
+  background: var(--color-info);
+  color: white;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.btn-info:hover:not(:disabled) {
+  background: var(--color-info-hover);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Outline variants - borders use theme colors */
+.btn-outline-primary {
+  background: transparent;
+  color: var(--button-color, var(--main-color, #3B82F6));
+  border: 2px solid var(--button-color, var(--main-color, #3B82F6));
+  box-shadow: none;
+}
+
+.btn-outline-primary:hover:not(:disabled) {
+  background: var(--button-color, var(--main-color, #3B82F6));
+  color: var(--button-text-color, white);
+  border-color: var(--button-color, var(--main-color, #3B82F6));
+  transform: translateY(-1px);
+}
+
+.btn-outline-secondary {
+  background: transparent;
+  color: var(--secondary-color, #10B981);
+  border: 2px solid var(--secondary-color, #10B981);
+  box-shadow: none;
+}
+
+.btn-outline-secondary:hover:not(:disabled) {
+  background: var(--secondary-color, #10B981);
+  color: white;
+  border-color: var(--secondary-color, #10B981);
+  transform: translateY(-1px);
+}
+
+.btn-outline-success {
+  background: transparent;
+  color: var(--color-success);
+  border: 2px solid var(--color-success);
+  box-shadow: none;
+}
+
+.btn-outline-success:hover:not(:disabled) {
+  background: var(--color-success);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.btn-outline-danger {
+  background: transparent;
+  color: var(--color-danger);
+  border: 2px solid var(--color-danger);
+  box-shadow: none;
+}
+
+.btn-outline-danger:hover:not(:disabled) {
+  background: var(--color-danger);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.btn-outline-warning {
+  background: transparent;
+  color: var(--color-warning);
+  border: 2px solid var(--color-warning);
+  box-shadow: none;
+}
+
+.btn-outline-warning:hover:not(:disabled) {
+  background: var(--color-warning);
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* Ghost/Text buttons - minimal style */
+.btn-ghost {
+  background: transparent;
+  color: var(--button-color, var(--main-color, #3B82F6));
+  border: none;
+  box-shadow: none;
+  padding: 0.5rem 1rem;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.1);
+  transform: none;
+}
+
+.btn-ghost-danger {
+  background: transparent;
+  color: var(--color-danger);
+  border: none;
+  box-shadow: none;
+  padding: 0.5rem 1rem;
+}
+
+.btn-ghost-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1);
+  transform: none;
+}
+
+/* Link style buttons */
+.btn-link {
+  background: transparent;
+  color: var(--button-color, var(--main-color, #3B82F6));
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.btn-link:hover:not(:disabled) {
+  color: var(--button-hover-color, #2563EB);
+  transform: none;
+}
+
+/* Close/Cancel buttons */
+.btn-close {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: var(--color-gray);
+  color: white;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close:hover:not(:disabled) {
+  background: var(--color-gray-hover);
+  transform: scale(1.05);
+}
+
+.btn-close-light {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close-light:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+/* Icon buttons */
+.btn-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+}
+
+.btn-icon-sm {
+  width: 2rem;
+  height: 2rem;
+  font-size: 0.875rem;
+}
+
+.btn-icon-lg {
+  width: 3rem;
+  height: 3rem;
+  font-size: 1.25rem;
+}
+
+/* Full width button */
+.btn-block {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Button groups */
+.btn-group {
+  display: inline-flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-group-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Loading state */
+.btn-loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.btn-loading::after {
+  content: "";
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  top: 50%;
+  left: 50%;
+  margin-left: -0.5rem;
+  margin-top: -0.5rem;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  border-right-color: transparent;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ========== ROOM TYPES MODERN LAYOUT ========== */
@@ -370,13 +737,15 @@
   font-weight: 600;
   border-radius: var(--radius-md);
   border: none;
-  background: var(--main-color, #3498db);
-  color: white;
+  background: var(--button-color, var(--main-color, #3B82F6));
+  color: var(--button-text-color, white);
   transition: all var(--transition-base);
+  cursor: pointer;
 }
 
 .modern-room-cta:hover {
-  background: var(--button-hover-color, #2980b9);
+  background: var(--button-hover-color, #2563EB);
+  color: var(--button-text-color, white);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
@@ -475,8 +844,8 @@
   top: var(--spacing-md);
   left: var(--spacing-md);
   padding: 0.5rem 1.25rem;
-  background: var(--main-color, #3498db);
-  color: white;
+  background: var(--button-color, var(--main-color, #3B82F6));
+  color: var(--button-text-color, white);
   border-radius: var(--radius-lg);
   font-size: 0.875rem;
   font-weight: 700;
@@ -547,8 +916,8 @@
 
 .modern-activity-card:hover .modern-activity-icon {
   transform: scale(1.1) rotate(5deg);
-  background: var(--main-color, #3498db);
-  color: white;
+  background: var(--button-color, var(--main-color, #3B82F6));
+  color: var(--button-text-color, white);
 }
 
 .modern-activity-title {
@@ -604,7 +973,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--main-color, #3498db);
+  background: var(--primary-color, var(--main-color, #3B82F6));
   color: white;
   font-size: 1.5rem;
 }
@@ -775,8 +1144,8 @@
 }
 
 .modern-hotel-explore-btn:hover {
-  background: var(--main-color, #3498db);
-  color: white;
+  background: var(--button-color, var(--main-color, #3B82F6));
+  color: var(--button-text-color, white);
   transform: translateY(-2px);
 }
 
@@ -837,6 +1206,78 @@
   
   .modern-hotel-card-image {
     height: 240px;
+  }
+}
+
+/* ========== HOTELS FILTERS BAR ========== */
+.hotels-filters-bar {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.filter-tag-chip {
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.filter-tag-chip:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.filter-tag-chip:active {
+  transform: translateY(0);
+}
+
+.hotels-filters-bar .form-control,
+.hotels-filters-bar .form-select {
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hotels-filters-bar .form-control:focus,
+.hotels-filters-bar .form-select:focus {
+  border-color: var(--main-color, #0d6efd);
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+
+.hotels-filters-bar .input-group-text {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+}
+
+.hotels-filters-bar .input-group .form-control {
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+}
+
+/* Hotels List Animations */
+.hotels-list {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* Responsive filters */
+@media (max-width: 768px) {
+  .hotels-filters-bar {
+    padding: 1rem !important;
+  }
+  
+  .filter-tag-chip {
+    font-size: 0.75rem !important;
+    padding: 0.375rem 0.625rem !important;
   }
 }
 

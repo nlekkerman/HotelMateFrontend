@@ -85,7 +85,7 @@ publicAPI.interceptors.response.use(
 
 /**
  * Helper function to build staff API URLs with new pattern
- * /api/staff/hotels/<hotel_slug>/<app>/
+ * /api/staff/hotel/<hotel_slug>/<app>/
  * @param {string} hotelSlug - The hotel slug
  * @param {string} app - The app name (e.g., 'room_services', 'staff', 'bookings')
  * @param {string} path - Additional path after app (optional)
@@ -93,7 +93,7 @@ publicAPI.interceptors.response.use(
  */
 export function buildStaffURL(hotelSlug, app, path = '') {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  return `/staff/hotels/${hotelSlug}/${app}${cleanPath}`;
+  return `/staff/hotel/${hotelSlug}/${app}${cleanPath}`;
 }
 
 /**
@@ -104,6 +104,29 @@ export function getHotelSlug() {
   const storedUser = localStorage.getItem('user');
   const userData = storedUser ? JSON.parse(storedUser) : null;
   return userData?.hotel_slug || null;
+}
+
+/**
+ * Fetch public hotel settings
+ * @param {string} hotelSlug - The hotel slug
+ * @returns {Promise} - Axios response with settings data
+ */
+export async function getHotelPublicSettings(hotelSlug) {
+  return publicAPI.get(`/public/hotels/${hotelSlug}/settings/`);
+}
+
+/**
+ * Update hotel public settings (staff only)
+ * @param {string} hotelSlug - The hotel slug
+ * @param {object} settingsData - Settings data to update
+ * @param {string} method - HTTP method ('PATCH' or 'PUT'), defaults to 'PATCH'
+ * @returns {Promise} - Axios response with updated settings
+ */
+export async function updateHotelPublicSettings(hotelSlug, settingsData, method = 'PATCH') {
+  const url = buildStaffURL(hotelSlug, 'hotels', '/settings/');
+  return method === 'PUT' 
+    ? api.put(url, settingsData)
+    : api.patch(url, settingsData);
 }
 
 export default api;

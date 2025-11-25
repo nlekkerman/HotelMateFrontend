@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
  * HeroSection - Modern full-viewport hero with parallax and animations
  * Uses theme colors from staff settings
  */
-const HeroSection = ({ hotel }) => {
+const HeroSection = ({ hotel, settings }) => {
   const navigate = useNavigate();
   const [mounted, setMounted] = useState(false);
   const [hasBookings, setHasBookings] = useState(false);
@@ -38,6 +38,11 @@ const HeroSection = ({ hotel }) => {
     slug,
   } = hotel;
 
+  // Use settings data if available, fallback to hotel data
+  const heroImage = settings?.hero_image || hero_image_url;
+  const welcomeMessage = settings?.welcome_message;
+  const displayDescription = settings?.short_description || short_description;
+
   const primaryCtaLabel = booking_options?.primary_cta_label || 'Book Your Stay';
   const secondaryCtaPhone = booking_options?.secondary_cta_phone;
 
@@ -52,13 +57,13 @@ const HeroSection = ({ hotel }) => {
         className="modern-hero-background"
         style={{ y: mounted ? y : 0 }}
       >
-        {hero_image_url ? (
+        {heroImage ? (
           <img
-            src={hero_image_url}
+            src={heroImage}
             alt={name}
             loading="eager"
             onError={(e) => {
-              console.error('Hero image failed to load:', hero_image_url);
+              console.error('Hero image failed to load:', heroImage);
               e.currentTarget.style.display = 'none';
             }}
           />
@@ -121,15 +126,28 @@ const HeroSection = ({ hotel }) => {
               </motion.h2>
             )}
 
+            {/* Welcome Message */}
+            {welcomeMessage && (
+              <motion.p
+                className="modern-hero-description"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.45 }}
+                style={{ fontWeight: '500', fontSize: '1.1rem' }}
+              >
+                {welcomeMessage}
+              </motion.p>
+            )}
+
             {/* Animated Description */}
-            {short_description && (
+            {displayDescription && (
               <motion.p
                 className="modern-hero-description"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.5 }}
               >
-                {short_description}
+                {displayDescription}
               </motion.p>
             )}
 

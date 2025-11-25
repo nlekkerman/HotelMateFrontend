@@ -45,7 +45,7 @@ export default function HotelInfo() {
     setLoadingCategories(true);
     setErrorCategories(null);
     try {
-      const res = await api.get(`/staff/hotels/${hotelSlug}/hotel_info/categories/`);
+      const res = await api.get(`/staff/hotel/${hotelSlug}/hotel_info/categories/`);
       setCategories(res.data.results || []);
     } catch {
       setErrorCategories("Failed to load categories.");
@@ -65,7 +65,7 @@ export default function HotelInfo() {
     setErrorCategoryData(null);
 
     try {
-      const infoRes = await api.get(`/staff/hotels/${hotelSlug}/hotel_info/hotelinfo/`, {
+      const infoRes = await api.get(`/staff/hotel/${hotelSlug}/hotel_info/hotelinfo/`, {
         params: { category__slug: activeCategory },
       });
       const items = Array.isArray(infoRes.data)

@@ -27,12 +27,10 @@ export const StaffChatProvider = ({ children }) => {
    */
   const subscribeToMessages = useCallback((callback) => {
     messageListenersRef.current.add(callback);
-    console.log('📢 [StaffChatContext] Message listener registered. Total:', messageListenersRef.current.size);
     
     // Return unsubscribe function
     return () => {
       messageListenersRef.current.delete(callback);
-      console.log('📢 [StaffChatContext] Message listener removed. Total:', messageListenersRef.current.size);
     };
   }, []);
   
@@ -42,12 +40,10 @@ export const StaffChatProvider = ({ children }) => {
    */
   const subscribeToConversationUpdates = useCallback((callback) => {
     conversationUpdateListenersRef.current.add(callback);
-    console.log('📢 [StaffChatContext] Conversation update listener registered. Total:', conversationUpdateListenersRef.current.size);
     
     // Return unsubscribe function
     return () => {
       conversationUpdateListenersRef.current.delete(callback);
-      console.log('📢 [StaffChatContext] Conversation update listener removed. Total:', conversationUpdateListenersRef.current.size);
     };
   }, []);
   
@@ -55,7 +51,6 @@ export const StaffChatProvider = ({ children }) => {
    * Broadcast new message to all listeners
    */
   const broadcastMessage = useCallback((message) => {
-    console.log('📣 [StaffChatContext] Broadcasting message to', messageListenersRef.current.size, 'listeners');
     messageListenersRef.current.forEach(callback => {
       try {
         callback(message);
@@ -100,10 +95,7 @@ export const StaffChatProvider = ({ children }) => {
   useEffect(() => {
     if (!hotelSlug || !staffId) return;
 
-    console.log('🔌 [STAFF-TO-STAFF CHAT] Initializing Pusher for STAFF-TO-STAFF chat');
-    console.log('🔌 [STAFF-TO-STAFF CHAT] Hotel:', hotelSlug, 'Staff ID:', staffId);
-    console.log('🔌 [STAFF-TO-STAFF CHAT] ⚠️ Channel format: {hotel}-staff-conversation-{id} (NO -chat suffix!)');
-    console.log('🔌 [STAFF-TO-STAFF CHAT] ⚠️ Notification channel: {hotel}-staff-{id}-notifications (NOT -chat!)');
+   
 
     const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
       cluster: import.meta.env.VITE_PUSHER_CLUSTER,
@@ -111,20 +103,13 @@ export const StaffChatProvider = ({ children }) => {
     });
     pusherRef.current = pusher;
 
-    pusher.connection.bind("connected", () => {
-      console.log("✅ [STAFF-TO-STAFF] Pusher connected for staff-to-staff chat");
-      console.log("✅ [STAFF-TO-STAFF] Connection state:", pusher.connection.state);
-    });
+   
 
-    pusher.connection.bind("error", (err) => {
-      console.error("❌ [STAFF-TO-STAFF] Pusher connection error:", err);
-    });
+   
 
     // Subscribe to personal staff notifications channel
     // Format for staff-to-STAFF: {hotel_slug}-staff-{staff_id}-notifications (NOT -chat!)
     const staffNotificationsChannel = `${hotelSlug}-staff-${staffId}-notifications`;
-    console.log('📡 [STAFF-TO-STAFF CHAT] Subscribing to personal notifications:', staffNotificationsChannel);
-    console.log('📡 [STAFF-TO-STAFF CHAT] NOTE: This is staff-to-staff, not staff-to-guest!');
     
     const notifChannel = pusher.subscribe(staffNotificationsChannel);
     
@@ -142,11 +127,7 @@ export const StaffChatProvider = ({ children }) => {
 
     // Listen for mentions (this IS sent to notification channel)
     notifChannel.bind("message-mention", (data) => {
-      console.log("🔔 [STAFF-TO-STAFF] ==================== MENTION NOTIFICATION ====================");
-      console.log("🔔 [STAFF-TO-STAFF] Channel:", staffNotificationsChannel);
-      console.log("🔔 [STAFF-TO-STAFF] Event: message-mention");
-      console.log("🔔 [STAFF-TO-STAFF] Data:", JSON.stringify(data, null, 2));
-      
+     
       // Refresh conversations
       fetchStaffConversations();
 
@@ -165,10 +146,7 @@ export const StaffChatProvider = ({ children }) => {
 
     // Listen for new conversation invites (this IS sent to notification channel)
     notifChannel.bind("new-conversation", (data) => {
-      console.log("📬 [STAFF-TO-STAFF] ==================== NEW CONVERSATION ====================");
-      console.log("📬 [STAFF-TO-STAFF] Channel:", staffNotificationsChannel);
-      console.log("📬 [STAFF-TO-STAFF] Event: new-conversation");
-      console.log("📬 [STAFF-TO-STAFF] Data:", JSON.stringify(data, null, 2));
+      
       
       // Refresh to show new conversation
       fetchStaffConversations();
@@ -209,14 +187,11 @@ export const StaffChatProvider = ({ children }) => {
 
       // Format for staff-to-STAFF: {hotel_slug}-staff-conversation-{conversation_id} (NO -chat suffix!)
       const channelName = `${hotelSlug}-staff-conversation-${conv.id}`;
-      console.log('📡 [STAFF-TO-STAFF CHAT] Subscribing to conversation channel:', channelName);
-      console.log('📡 [STAFF-TO-STAFF CHAT] Conv ID:', conv.id, 'Title:', conv.title);
+     
       
       const channel = pusherRef.current.subscribe(channelName);
 
-      channel.bind('pusher:subscription_succeeded', () => {
-        console.log(`✅ [STAFF CHAT] Successfully subscribed to conversation: ${channelName}`);
-      });
+    
 
       channel.bind('pusher:subscription_error', (error) => {
         console.error(`❌ [STAFF CHAT] Subscription error for ${channelName}:`, error);
@@ -225,18 +200,7 @@ export const StaffChatProvider = ({ children }) => {
       // ✅ THIS IS WHERE ALL "new-message" EVENTS COME FROM
       // Backend calls broadcast_new_message() which triggers this event
       channel.bind("new-message", (msg) => {
-        console.log("📨 [STAFF-TO-STAFF] ==================== NEW MESSAGE IN CONVERSATION ====================");
-        console.log("📨 [STAFF-TO-STAFF] Channel:", channelName);
-        console.log("📨 [STAFF-TO-STAFF] Conversation ID:", conv.id);
-        console.log("📨 [STAFF-TO-STAFF] Message ID:", msg.id);
-        // Backend sends sender as plain number, not nested object
-        const senderId = msg.sender_info?.id || msg.sender;
-        console.log("📨 [STAFF-TO-STAFF] Sender ID:", senderId, "(from msg.sender)");
-        console.log("📨 [STAFF-TO-STAFF] My ID:", staffId);
-        console.log("📨 [STAFF-TO-STAFF] Current conversation:", currentConversationId);
-        console.log("📨 [STAFF-TO-STAFF] Full message data:", JSON.stringify(msg, null, 2));
-        console.log("=================================================================");
-        
+      
         // 🔥 BROADCAST MESSAGE TO ALL LISTENERS (ChatWindowPopup, QuickNotifications, etc.)
         broadcastMessage(msg);
         
@@ -246,13 +210,7 @@ export const StaffChatProvider = ({ children }) => {
               const isMyMessage = senderId === staffId;
               const isCurrentConv = c.id === currentConversationId;
               
-              console.log("📨 [STAFF-TO-STAFF] Updating conversation:", {
-                convId: c.id,
-                isMyMessage,
-                isCurrentConv,
-                oldUnread: c.unread_count,
-                willIncrement: !isCurrentConv && !isMyMessage
-              });
+             
               
               const updatedConv = {
                 ...c,

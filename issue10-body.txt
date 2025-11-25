@@ -1,0 +1,30 @@
+**Goal:** Allow staff to open a single booking and confirm it.
+
+**Tasks:**
+- From the bookings list:
+  - Clicking a row opens a detail panel/page:
+    - Show all booking info: guest details, room, dates, amounts, notes, payment info if available
+- If booking is in a pending/confirmable state:
+  - Show **"Confirm booking"** button
+  - On click:
+    - Call `POST /api/staff/hotels/<hotel_slug>/bookings/<booking_id>/confirm/`
+    - Show loading state
+    - On success:
+      - Update booking status in the list + detail view
+      - Show success toast: e.g. "Booking confirmed. Confirmation email has been sent to the guest."
+- Handle server errors gracefully (e.g. already confirmed, cancelled)
+
+**Deliverable:** Booking detail + confirm UX wired to backend
+
+**Related Files:**
+- `src/components/bookings/BookingDetailModal.jsx` (new)
+- `src/pages/bookings/StaffBookingsPage.jsx`
+- `src/services/api.js`
+
+**API Endpoint:** `POST /api/staff/hotels/<hotel_slug>/bookings/<booking_id>/confirm/`
+
+**UI Components:** React Bootstrap Modal, Button, Spinner, Badge
+
+**Libraries:** React Query (useMutation), react-toastify
+
+**Dependencies:** Issue #9

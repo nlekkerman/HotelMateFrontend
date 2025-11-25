@@ -3,7 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Spinner, Alert, Dropdown } from 'react-bootstrap';
 import { useAuth } from '@/context/AuthContext';
 import HotelCard from '@/components/hotels/HotelCard';
+import HotelsFiltersBar from '@/components/hotels/HotelsFiltersBar';
+import HotelsList from '@/components/hotels/HotelsList';
 import { publicAPI } from '@/services/api';
+import heroImage from '@/assets/images/landing-page-hero.png';
+import logo from '@/assets/images/hotels-logo.png';
 
 const HotelsLandingPage = () => {
   const { user, isStaff, logout } = useAuth();
@@ -12,11 +16,30 @@ const HotelsLandingPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  
+  // Filter state
+  const [filters, setFilters] = useState({
+    q: '',
+    city: '',
+    country: '',
+    hotel_type: '',
+    sort: 'featured',
+  });
+  
+  // Filter options from backend
+  const [filterOptions, setFilterOptions] = useState({
+    cities: [],
+    countries: [],
+    hotel_types: [],
+  });
 
-  // Redirect logged-in staff to staff homepage
+  // Redirect logged-in staff to staff feed ONLY if they didn't explicitly want to see all hotels
   useEffect(() => {
-    if (user && isStaff) {
-      // Redirect to staff feed with hotel slug if available
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewAllHotels = urlParams.get('view') === 'all';
+    
+    if (user && isStaff && !viewAllHotels) {
+      // Redirect staff to their feed unless they explicitly want to view all hotels
       const hotelSlug = user?.hotel_slug;
       if (hotelSlug) {
         navigate(`/staff/${hotelSlug}/feed`, { replace: true });
@@ -26,34 +49,66 @@ const HotelsLandingPage = () => {
     }
   }, [user, isStaff, navigate]);
 
+  // Fetch filter options once on mount
   useEffect(() => {
-    fetchHotels();
+    fetchFilterOptions();
   }, []);
+
+  // Fetch hotels when filters change
+  useEffect(() => {
+    console.log('[HotelsLanding] Filters changed:', filters);
+    fetchHotels();
+  }, [filters]);
+
+  const fetchFilterOptions = async () => {
+    try {
+      const response = await publicAPI.get('/hotel/public/filters/');
+      setFilterOptions({
+        cities: response.data.cities || [],
+        countries: response.data.countries || [],
+        hotel_types: response.data.hotel_types || [],
+      });
+    } catch (err) {
+      console.error('[HotelsLanding] Failed to fetch filter options:', err);
+      // Fallback to empty arrays - filters will still work with manual input
+    }
+  };
 
   const fetchHotels = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Fetch hotels from public API endpoint
-      const response = await publicAPI.get('/hotel/public/');
+      // Build query params from filters
+      const params = new URLSearchParams();
+      if (filters.q) params.set('q', filters.q);
+      if (filters.city) params.set('city', filters.city);
+      if (filters.country) params.set('country', filters.country);
+      if (filters.hotel_type) params.set('hotel_type', filters.hotel_type);
+      if (filters.sort && filters.sort !== 'featured') params.set('sort', filters.sort);
       
-      // Extract hotels from paginated response
+      const queryString = params.toString();
+      const url = `/hotel/public/${queryString ? `?${queryString}` : ''}`;
+      
+      console.log('[HotelsLanding] Fetching hotels with URL:', url);
+      console.log('[HotelsLanding] Query params:', Object.fromEntries(params));
+      
+      // Fetch hotels from public API endpoint with filters
+      const response = await publicAPI.get(url);
+      
+      // Extract hotels from response (backend handles filtering and sorting)
       const hotelsData = response.data.results || response.data;
       
-      // Filter only active hotels (if is_active field exists) and sort by sort_order
+      // Set hotels directly - backend does all the filtering and sorting
       const activeHotels = Array.isArray(hotelsData) 
-        ? hotelsData
-            .filter(hotel => hotel.is_active !== false)
-            .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+        ? hotelsData.filter(hotel => hotel.is_active !== false)
         : [];
       
       setHotels(activeHotels);
+      
     } catch (err) {
       console.error('[HotelsLanding] Failed to fetch hotels:', err);
       setError('Failed to load hotels. Please try again later.');
-      
-      // Fallback: If endpoint doesn't exist yet, show empty state
       setHotels([]);
     } finally {
       setLoading(false);
@@ -68,17 +123,16 @@ const HotelsLandingPage = () => {
   return (
     <div className="hotels-landing-page min-vh-100 bg-light">
       {/* Header */}
-      <header className="bg-white shadow-sm py-3 mb-4 position-relative" style={{ zIndex: 1060 }}>
+      <header className="bg-white shadow-sm mb-4 position-relative " style={{ zIndex: 1060 }}>
         <Container>
-          <div className="d-flex justify-content-between align-items-center">
-            {/* Brand */}
-            <h1 className="mb-0 fw-bold text-primary">
-              <i className="bi bi-building me-2"></i>
-              HotelsMate
-            </h1>
+          <div className="position-relative" style={{ padding: '20px' }}>
+            {/* Centered Logo */}
+            <div className="d-flex justify-content-center">
+              <img src={logo} alt="HotelsMate" style={{ height: '120px' }} />
+            </div>
 
-            {/* User Actions */}
-            <div className="d-flex align-items-center gap-3">
+            {/* User Actions - Position Absolute Top Right */}
+            <div className="position-absolute top-0 end-0 d-flex align-items-center gap-3" style={{ paddingTop: '20px', paddingRight: '20px' }}>
               {/* Desktop View */}
               {isStaff && user ? (
                 <div className="d-none d-md-flex align-items-center gap-3">
@@ -166,8 +220,20 @@ const HotelsLandingPage = () => {
         </Container>
       </header>
 
+      {/* Hero Section */}
+      <div 
+        className="hero-section" 
+        style={{
+          backgroundImage: `url(${heroImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          minHeight: '500px',
+          marginBottom: '3rem'
+        }}
+      />
+
       {/* Main Content */}
-      <Container className="py-5">
+      <Container className="py-4">
         <Row className="mb-4">
           <Col>
             <h2 className="text-center fw-bold mb-2">Select Your Hotel</h2>
@@ -177,45 +243,17 @@ const HotelsLandingPage = () => {
           </Col>
         </Row>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="text-center py-5">
-            <Spinner animation="border" role="status" variant="primary">
-              <span className="visually-hidden">Loading hotels...</span>
-            </Spinner>
-            <p className="text-muted mt-3">Loading hotels...</p>
-          </div>
-        )}
+        {/* Filters Bar - Positioned right below the header */}
+        <HotelsFiltersBar
+          filters={filters}
+          onChange={setFilters}
+          cities={filterOptions.cities}
+          countries={filterOptions.countries}
+          hotelTypes={filterOptions.hotel_types}
+        />
 
-        {/* Error State */}
-        {error && !loading && (
-          <Alert variant="danger" className="text-center">
-            <i className="bi bi-exclamation-triangle me-2"></i>
-            {error}
-          </Alert>
-        )}
-
-        {/* Hotels Grid */}
-        {!loading && !error && hotels.length > 0 && (
-          <Row xs={1} sm={2} md={3} lg={4} className="g-4">
-            {hotels.map((hotel) => (
-              <Col key={hotel.id}>
-                <HotelCard hotel={hotel} />
-              </Col>
-            ))}
-          </Row>
-        )}
-
-        {/* Empty State */}
-        {!loading && !error && hotels.length === 0 && (
-          <div className="text-center py-5">
-            <i className="bi bi-building-slash text-muted" style={{ fontSize: '4rem' }}></i>
-            <h4 className="mt-3 text-muted">No Hotels Available</h4>
-            <p className="text-muted">
-              Please check back later or contact support.
-            </p>
-          </div>
-        )}
+        {/* Hotels List with Loading/Error States */}
+        <HotelsList hotels={hotels} loading={loading} error={error} />
       </Container>
 
       {/* Footer */}

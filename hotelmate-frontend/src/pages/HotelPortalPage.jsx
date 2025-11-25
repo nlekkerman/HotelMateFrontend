@@ -1,26 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Container, Spinner, Alert, Button, ButtonGroup } from 'react-bootstrap';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Container, Spinner, Alert, Button } from 'react-bootstrap';
 import { useAuth } from '@/context/AuthContext';
 import GuestHotelHome from '@/sections/GuestHotelHome';
-import StaffHotelHome from '@/sections/StaffHotelHome';
-import api from '@/services/api';
+import api, { getHotelPublicSettings } from '@/services/api';
+import useHotelTheme from '@/hooks/useHotelTheme';
 
 /**
- * HotelPortalPage - Main hotel portal that displays guest or staff view
- * Staff can toggle between guest and staff views
+ * HotelPortalPage - Public hotel page for guests
+ * Displays hotel information, rooms, amenities, and booking options
  */
 const HotelPortalPage = () => {
   const { hotelSlug } = useParams();
   const navigate = useNavigate();
-  const { user, isStaff, viewMode, setViewMode, logout, selectHotel } = useAuth();
+  const { selectHotel, isStaff, user } = useAuth();
 
   const [hotel, setHotel] = useState(null);
+  const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Apply hotel theme from settings
+  useHotelTheme(settings);
+
   useEffect(() => {
     fetchHotelDetails();
+    fetchPublicSettings();
   }, [hotelSlug]);
 
   const fetchHotelDetails = async () => {
@@ -45,13 +50,21 @@ const HotelPortalPage = () => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
-  const handleViewToggle = (mode) => {
-    setViewMode(mode);
+  const fetchPublicSettings = async () => {
+    try {
+      // Fetch public settings for customizable content
+      const response = await getHotelPublicSettings(hotelSlug);
+      console.log('[HotelPortal] Public settings fetched:', response.data);
+      console.log('[HotelPortal] Hero image:', response.data?.hero_image);
+      console.log('[HotelPortal] Welcome message:', response.data?.welcome_message);
+      console.log('[HotelPortal] Gallery:', response.data?.gallery);
+      console.log('[HotelPortal] Amenities:', response.data?.amenities);
+      setSettings(response.data);
+    } catch (err) {
+      console.error('[HotelPortal] Failed to fetch public settings:', err);
+      // Settings are optional - don't set error, just log it
+      // Hotel can still render with default content
+    }
   };
 
   // Loading state
@@ -84,9 +97,6 @@ const HotelPortalPage = () => {
     );
   }
 
-  // Determine effective view mode (non-staff always see guest view)
-  const effectiveViewMode = isStaff ? viewMode : 'guest';
-
   return (
     <div className="hotel-portal-page">
       {/* Hotel Header with Navigation */}
@@ -95,7 +105,7 @@ const HotelPortalPage = () => {
           <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
             {/* Hotel Info */}
             <div className="d-flex align-items-center gap-3">
-              <Link to="/" className="btn btn-outline-secondary btn-sm">
+              <Link to="/?view=all" className="btn btn-outline-secondary btn-sm">
                 <i className="bi bi-arrow-left me-1"></i>
                 All Hotels
               </Link>
@@ -129,35 +139,16 @@ const HotelPortalPage = () => {
                   }}
                 />
               )}
-              {/* View Mode Toggle (Staff Only) */}
-              {isStaff && (
-                <ButtonGroup size="sm">
-                  <Button
-                    variant={effectiveViewMode === 'guest' ? 'primary' : 'outline-primary'}
-                    onClick={() => handleViewToggle('guest')}
-                  >
-                    <i className="bi bi-person me-1"></i>
-                    Guest View
-                  </Button>
-                  <Button
-                    variant={effectiveViewMode === 'staff' ? 'primary' : 'outline-primary'}
-                    onClick={() => handleViewToggle('staff')}
-                  >
-                    <i className="bi bi-person-badge me-1"></i>
-                    Staff View
-                  </Button>
-                </ButtonGroup>
-              )}
-
-              {/* Logout (Staff Only) */}
-              {isStaff && (
+              
+              {/* Back to Staff Feed Button (Staff Only) */}
+              {isStaff && user?.hotel_slug === hotelSlug && (
                 <Button
-                  variant="outline-secondary"
+                  variant="primary"
                   size="sm"
-                  onClick={handleLogout}
+                  onClick={() => navigate(`/staff/${hotelSlug}/feed`)}
                 >
-                  <i className="bi bi-box-arrow-right me-1"></i>
-                  Logout
+                  <i className="bi bi-arrow-left me-1"></i>
+                  Back to Staff Feed
                 </Button>
               )}
             </div>
@@ -165,12 +156,8 @@ const HotelPortalPage = () => {
         </Container>
       </header>
 
-      {/* Render Guest or Staff View */}
-      {effectiveViewMode === 'guest' ? (
-        <GuestHotelHome hotel={hotel} />
-      ) : (
-        <StaffHotelHome hotel={hotel} />
-      )}
+      {/* Render Public Guest View ONLY */}
+      <GuestHotelHome hotel={hotel} settings={settings} editorMode="view" canEdit={false} />
     </div>
   );
 };

@@ -23,7 +23,7 @@ const DEFAULT_NAV_ITEMS = [
   { slug: 'good_to_know', name: 'Good to Know', path: '/good_to_know_console/{hotelSlug}', icon: 'book' },
   { slug: 'stock_tracker', name: 'Stock Dashboard', path: '/stock_tracker/{hotelSlug}', icon: 'graph-up' },
   { slug: 'games', name: 'Games', path: '/games/?hotel={hotelSlug}', icon: 'controller' },
-  { slug: 'settings', name: 'Settings', path: '/settings', icon: 'gear' },
+  { slug: 'settings', name: 'Settings', path: '/staff/{hotelSlug}/settings', icon: 'gear', requiresHotelSlug: true },
   { slug: 'room_service', name: 'Room Service', path: '/room_services/{hotelSlug}/orders-management', icon: 'box' },
   { slug: 'breakfast', name: 'Breakfast', path: '/room_services/{hotelSlug}/breakfast-orders', icon: 'egg-fried' },
 ];
@@ -102,16 +102,6 @@ export function useNavigation() {
     }))
     .filter(category => category.items.length > 0); // Only show categories with items
 
-  // Debug logging to compare available vs visible
-  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-    console.group('🔍 Navigation Comparison');
-    console.log('All Available Items:', allNavItems.map(i => i.slug));
-    console.log('Visible Items:', visibleNavItems.map(i => i.slug));
-    console.log('Hidden Items:', allNavItems.filter(i => !visibleNavItems.includes(i)).map(i => i.slug));
-    console.log('Categories:', categories.map(c => `${c.name} (${c.items.length} items)`));
-    console.log('Uncategorized:', uncategorized.map(i => i.slug));
-    console.groupEnd();
-  }
 
   return { 
     visibleNavItems, 
