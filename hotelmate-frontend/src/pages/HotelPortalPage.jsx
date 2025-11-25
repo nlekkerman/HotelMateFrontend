@@ -168,7 +168,7 @@ const HotelPortalPage = () => {
       </header>
 
       {/* Render Public Guest View ONLY */}
-      <GuestHotelHome hotel={hotel} settings={settings} editorMode="view" canEdit={false} />
+      <GuestHotelHome hotel={hotel} settings={settings} editorMode="view" canEdit={false} user={user} />
     </div>
   );
 };

@@ -18,13 +18,31 @@ import AmenitiesSection from '@/components/hotels/AmenitiesSection';
  * @param {String} editorMode - 'view' or 'edit' mode
  * @param {Boolean} canEdit - Whether user can edit settings
  */
-const GuestHotelHome = ({ hotel, settings, editorMode = 'view', canEdit = false }) => {
+const GuestHotelHome = ({ hotel, settings, editorMode = 'view', canEdit = false, user = null }) => {
   if (!hotel) {
     return (
       <Container className="py-5">
         <p className="text-muted">Loading hotel information...</p>
       </Container>
     );
+  }
+  
+  // Check if user is authenticated staff - check localStorage if user prop not passed
+  let isStaff = false;
+  
+  if (user) {
+    isStaff = user.is_staff || user.is_staff_member || user.role === 'staff' || user.staff_id;
+  } else {
+    // Fallback to localStorage
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        isStaff = userData.is_staff || userData.is_staff_member || userData.role === 'staff' || userData.staff_id;
+      }
+    } catch (error) {
+      console.error('[GuestHotelHome] Error reading user from localStorage:', error);
+    }
   }
 
   // Guest features to display
@@ -74,27 +92,23 @@ const GuestHotelHome = ({ hotel, settings, editorMode = 'view', canEdit = false 
     }
   ];
 
-  // Sample gallery - replace with your actual images
-  const sampleGallery = {
-    gallery: [
-      "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
-      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800",
-      "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800",
-      "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800",
-      "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800",
-      "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800"
-    ]
-  };
+  // Debug gallery and user data
+  console.log('[GuestHotelHome] Settings:', settings);
+  console.log('[GuestHotelHome] Gallery:', settings?.gallery);
+  console.log('[GuestHotelHome] User prop:', user);
+  console.log('[GuestHotelHome] isStaff:', isStaff);
+  console.log('[GuestHotelHome] Should show placeholder:', !settings?.gallery || settings.gallery.length === 0, '&& isStaff:', isStaff);
 
   return (
     <div className="guest-hotel-home bg-light min-vh-100">
       {/* Hero Section with Booking CTAs */}
       <HeroSection hotel={hotel} settings={settings} />
 
-      {/* Gallery - Always show */}
+      {/* Gallery - Now uses new gallery system API */}
       <GallerySection 
-        settings={settings?.gallery && settings.gallery.length > 0 ? settings : sampleGallery} 
-        hotelName={hotel.name} 
+        hotelSlug={hotel.slug} 
+        hotelName={hotel.name}
+        isStaff={isStaff}
       />
 
       {/* Room Types with Pricing */}

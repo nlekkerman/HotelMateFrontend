@@ -1,334 +1,574 @@
 import React, { useState } from "react";
-import { Card, Form, Button, InputGroup, ListGroup, Spinner } from "react-bootstrap";
-import api from "@/services/api";
+import { Card, Form, Button, InputGroup, ListGroup, Spinner, Accordion, Badge, Modal } from "react-bootstrap";
 import { toast } from "react-toastify";
+import { useHotelGalleries } from "@/hooks/useHotelGalleries";
 
-export default function SectionImages({ formData, onChange, hotelSlug }) {
-  console.log('[SectionImages] Rendering with formData.hero_image:', formData?.hero_image);
-  console.log('[SectionImages] Full formData:', formData);
+export default function SectionImages({ formData, onChange, hotelSlug, onSaved }) {
+  console.log('[SectionImages] Rendering with hotelSlug:', hotelSlug);
   
-  const [newGalleryUrl, setNewGalleryUrl] = useState('');
-  const [uploadingHero, setUploadingHero] = useState(false);
-  const [uploadingGallery, setUploadingGallery] = useState(false);
-  
-  const handleHeroImageUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Use the new gallery system hook
+  const {
+    galleries,
+    loading: galleriesLoading,
+    createGallery,
+    updateGallery,
+    deleteGallery,
+    uploadImage,
+    deleteImage,
+    updateImage,
+    reorderImages,
+  } = useHotelGalleries(hotelSlug);
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
+  // Local state
+  const [selectedGallery, setSelectedGallery] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newGalleryName, setNewGalleryName] = useState('');
+  const [newGalleryCategory, setNewGalleryCategory] = useState('rooms');
+  const [newGalleryDescription, setNewGalleryDescription] = useState('');
+  const [uploadingToGallery, setUploadingToGallery] = useState(null);
+  const [editingCaption, setEditingCaption] = useState(null);
+  const [captionValue, setCaptionValue] = useState('');
+  
+  // Image preview/upload modal state
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [pendingImages, setPendingImages] = useState([]);
+  const [currentGalleryId, setCurrentGalleryId] = useState(null);
+  
+  // Gallery categories
+  const categoryOptions = [
+    { value: 'rooms', label: 'Rooms', icon: 'door-closed' },
+    { value: 'facilities', label: 'Facilities', icon: 'building' },
+    { value: 'dining', label: 'Dining', icon: 'cup-hot' },
+    { value: 'spa', label: 'Spa & Wellness', icon: 'water' },
+    { value: 'events', label: 'Events', icon: 'calendar-event' },
+    { value: 'exterior', label: 'Exterior', icon: 'house' },
+    { value: 'activities', label: 'Activities', icon: 'bicycle' },
+    { value: 'other', label: 'Other', icon: 'images' },
+  ];
+
+  // Create new gallery
+  const handleCreateGallery = async () => {
+    if (!newGalleryName.trim()) {
+      toast.error('Please enter a gallery name');
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size must be less than 5MB');
-      return;
-    }
-
-    setUploadingHero(true);
     try {
-      const uploadFormData = new FormData();
-      uploadFormData.append('image', file);
+      await createGallery({
+        name: newGalleryName,
+        category: newGalleryCategory,
+        description: newGalleryDescription,
+        is_active: true,
+        display_order: galleries.length,
+      });
       
-      const response = await api.post(
-        `/staff/hotel/${hotelSlug}/settings/gallery/upload/`,
-        uploadFormData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
-      );
-      
-      console.log('[SectionImages] Upload response:', response.data);
-      
-      // Update hero image with uploaded URL
-      if (response.data.url) {
-        onChange('hero_image', response.data.url);
-        toast.success('Hero image uploaded successfully!');
+      toast.success('Gallery created successfully!');
+      setShowCreateModal(false);
+      setNewGalleryName('');
+      setNewGalleryCategory('rooms');
+      setNewGalleryDescription('');
+    } catch (error) {
+      console.error('[SectionImages] Create gallery error:', error);
+      toast.error('Failed to create gallery');
+    }
+  };
+
+  // Handle file selection - show preview modal
+  const handleFileSelect = (galleryId, files) => {
+    if (!files || files.length === 0) return;
+
+    const validImages = [];
+    
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        toast.error(`Skipped ${file.name}: Not an image file`);
+        continue;
       }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`Skipped ${file.name}: File too large (max 10MB)`);
+        continue;
+      }
+
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      validImages.push({
+        file,
+        previewUrl,
+        caption: '',
+        filename: file.name,
+      });
+    }
+
+    if (validImages.length > 0) {
+      setPendingImages(validImages);
+      setCurrentGalleryId(galleryId);
+      setShowUploadModal(true);
+    }
+  };
+
+  // Update caption for pending image
+  const handleUpdatePendingCaption = (index, caption) => {
+    setPendingImages(prev => 
+      prev.map((img, i) => i === index ? { ...img, caption } : img)
+    );
+  };
+
+  // Remove pending image
+  const handleRemovePendingImage = (index) => {
+    setPendingImages(prev => {
+      const newImages = prev.filter((_, i) => i !== index);
+      // Clean up object URL
+      URL.revokeObjectURL(prev[index].previewUrl);
+      return newImages;
+    });
+  };
+
+  // Actually upload the images
+  const handleConfirmUpload = async () => {
+    if (pendingImages.length === 0) return;
+
+    setUploadingToGallery(currentGalleryId);
+    let successCount = 0;
+
+    try {
+      for (const { file, caption } of pendingImages) {
+        await uploadImage(currentGalleryId, file, caption || file.name, caption || file.name, false);
+        successCount++;
+      }
+
+      if (successCount > 0) {
+        toast.success(`${successCount} image(s) uploaded successfully!`);
+      }
+
+      // Clean up
+      pendingImages.forEach(img => URL.revokeObjectURL(img.previewUrl));
+      setPendingImages([]);
+      setShowUploadModal(false);
+      setCurrentGalleryId(null);
     } catch (error) {
       console.error('[SectionImages] Upload error:', error);
-      toast.error(error.response?.data?.error || error.response?.data?.message || 'Failed to upload image');
+      toast.error('Failed to upload images');
     } finally {
-      setUploadingHero(false);
+      setUploadingToGallery(null);
     }
   };
-  
-  const handleGalleryImageUpload = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
 
-    setUploadingGallery(true);
-    const uploadedUrls = [];
+  // Cancel upload
+  const handleCancelUpload = () => {
+    pendingImages.forEach(img => URL.revokeObjectURL(img.previewUrl));
+    setPendingImages([]);
+    setShowUploadModal(false);
+    setCurrentGalleryId(null);
+  };
+
+  // Delete gallery
+  const handleDeleteGallery = async (galleryId, galleryName) => {
+    if (!confirm(`Delete gallery "${galleryName}"? This will remove all images in the gallery.`)) {
+      return;
+    }
+
+    try {
+      await deleteGallery(galleryId);
+      toast.success('Gallery deleted successfully!');
+    } catch (error) {
+      console.error('[SectionImages] Delete gallery error:', error);
+      toast.error('Failed to delete gallery');
+    }
+  };
+
+  // Delete image
+  const handleDeleteImage = async (imageId, galleryName) => {
+    if (!confirm(`Remove this image from "${galleryName}"?`)) {
+      return;
+    }
+
+    try {
+      await deleteImage(imageId);
+      toast.success('Image removed successfully!');
+    } catch (error) {
+      console.error('[SectionImages] Delete image error:', error);
+      toast.error('Failed to remove image');
+    }
+  };
+
+  // Update image caption
+  const handleSaveCaption = async (imageId) => {
+    try {
+      await updateImage(imageId, { 
+        caption: captionValue,
+        alt_text: captionValue 
+      });
+      toast.success('Caption updated!');
+      setEditingCaption(null);
+    } catch (error) {
+      console.error('[SectionImages] Update caption error:', error);
+      toast.error('Failed to update caption');
+    }
+  };
+
+  // Toggle gallery active status
+  const handleToggleActive = async (gallery) => {
+    try {
+      await updateGallery(gallery.id, { is_active: !gallery.is_active });
+      toast.success(`Gallery ${gallery.is_active ? 'hidden' : 'shown'} on public page`);
+    } catch (error) {
+      console.error('[SectionImages] Toggle active error:', error);
+      toast.error('Failed to update gallery');
+    }
+  };
+
+  // Move image within gallery
+  const handleMoveImage = async (gallery, imageIndex, direction) => {
+    const images = [...gallery.images];
+    const newIndex = direction === 'up' ? imageIndex - 1 : imageIndex + 1;
+    
+    if (newIndex < 0 || newIndex >= images.length) return;
+
+    // Swap
+    [images[imageIndex], images[newIndex]] = [images[newIndex], images[imageIndex]];
     
     try {
-      for (const file of files) {
-        if (!file.type.startsWith('image/')) {
-          toast.error(`Skipped ${file.name}: Not an image file`);
-          continue;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error(`Skipped ${file.name}: File too large (max 5MB)`);
-          continue;
-        }
-
-        const uploadFormData = new FormData();
-        uploadFormData.append('image', file);
-        
-        const response = await api.post(
-          `/staff/hotel/${hotelSlug}/settings/gallery/upload/`,
-          uploadFormData,
-          { headers: { 'Content-Type': 'multipart/form-data' } }
-        );
-        
-        if (response.data.url) {
-          uploadedUrls.push(response.data.url);
-        }
-      }
-      
-      if (uploadedUrls.length > 0) {
-        onChange('gallery', [...(formData.gallery || []), ...uploadedUrls]);
-        toast.success(`${uploadedUrls.length} image(s) uploaded successfully!`);
-      }
-    } catch (error) {
-      console.error('[SectionImages] Gallery upload error:', error);
-      toast.error(error.response?.data?.error || error.response?.data?.message || 'Failed to upload images');
-    } finally {
-      setUploadingGallery(false);
-      e.target.value = '';
-    }
-  };
-  
-  const handleAddGalleryUrl = () => {
-    if (newGalleryUrl.trim()) {
-      onChange('gallery', [...(formData.gallery || []), newGalleryUrl.trim()]);
-      setNewGalleryUrl('');
-      toast.success('Gallery image added!');
-    }
-  };
-
-  const handleRemoveGalleryImage = async (index) => {
-    const urlToRemove = (formData.gallery || [])[index];
-    if (!urlToRemove) return;
-
-    try {
-      // Call backend remove endpoint
-      await api.delete(`/staff/hotel/${hotelSlug}/settings/gallery/remove/`, {
-        data: { url: urlToRemove }
-      });
-      
-      // Update local state
-      onChange('gallery', (formData.gallery || []).filter((_, i) => i !== index));
-      toast.success('Image removed from gallery');
-    } catch (error) {
-      console.error('[SectionImages] Remove error:', error);
-      toast.error(error.response?.data?.error || 'Failed to remove image');
-    }
-  };
-
-  const handleMoveImage = async (index, direction) => {
-    const gallery = [...(formData.gallery || [])];
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= gallery.length) return;
-
-    // Swap images
-    [gallery[index], gallery[newIndex]] = [gallery[newIndex], gallery[index]];
-    
-    try {
-      // Call backend reorder endpoint
-      await api.post(`/staff/hotel/${hotelSlug}/settings/gallery/reorder/`, {
-        gallery: gallery
-      });
-      
-      // Update local state
-      onChange('gallery', gallery);
-      toast.success('Gallery reordered');
+      await reorderImages(gallery.id, images.map(img => img.id));
+      toast.success('Images reordered');
     } catch (error) {
       console.error('[SectionImages] Reorder error:', error);
-      toast.error(error.response?.data?.error || 'Failed to reorder gallery');
+      toast.error('Failed to reorder images');
     }
   };
 
+  if (galleriesLoading) {
+    return (
+      <Card className="shadow-sm mb-4">
+        <Card.Body className="p-4 text-center">
+          <Spinner animation="border" />
+          <p className="mt-2 text-muted">Loading galleries...</p>
+        </Card.Body>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="shadow-sm mb-4">
-      <Card.Body className="p-4">
-        <h4 className="mb-1">
-          <i className="bi bi-images me-2"></i>
-          Images
-        </h4>
-        <p className="text-muted mb-3">
-          Upload and manage your hotel's visual content
-        </p>
-        
-        <hr className="my-3" />
-        
-        <Form>
-          <Form.Group className="mb-4">
-            <Form.Label className="fw-bold">Hero Image</Form.Label>
-            
-            {/* File Upload */}
-            <div className="mb-3">
-              <div className="d-flex gap-2">
-                <Form.Control
-                  type="file"
-                  accept="image/*"
-                  onChange={handleHeroImageUpload}
-                  disabled={uploadingHero}
-                />
-                {uploadingHero && (
-                  <Button variant="primary" disabled>
-                    <Spinner animation="border" size="sm" className="me-2" />
-                    Uploading...
-                  </Button>
-                )}
-              </div>
-              <Form.Text className="text-muted">
-                Upload an image (max 5MB) or enter URL below
-              </Form.Text>
+    <>
+      <Card className="shadow-sm mb-4">
+        <Card.Body className="p-4">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h4 className="mb-1">
+                <i className="bi bi-images me-2"></i>
+                Gallery Management
+              </h4>
+              <p className="text-muted mb-0">
+                Organize your hotel images into galleries by category
+              </p>
             </div>
+            <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+              <i className="bi bi-plus-lg me-2"></i>
+              Create Gallery
+            </Button>
+          </div>
 
-            {/* URL Input */}
-            <Form.Control
-              type="url"
-              placeholder="https://example.com/hero-image.jpg"
-              value={formData?.hero_image || ''}
-              onChange={(e) => onChange('hero_image', e.target.value)}
-              disabled={uploadingHero}
-            />
-            <Form.Text className="text-muted">
-              Main banner image displayed at the top of your page
-            </Form.Text>
-            
-            {/* Preview */}
-            {formData.hero_image && (
-              <div className="mt-3">
-                <small className="text-muted d-block mb-2">Hero preview</small>
-                <div className="position-relative" style={{ maxHeight: '200px', overflow: 'hidden' }}>
-                  <img 
-                    src={formData.hero_image} 
-                    alt="Hero preview" 
-                    className="img-fluid rounded w-100"
-                    style={{ height: '200px', objectFit: 'cover' }}
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
-                  />
-                  <div 
-                    className="d-none align-items-center justify-content-center bg-light rounded"
-                    style={{ height: '200px' }}
-                  >
-                    <div className="text-center text-muted">
-                      <i className="bi bi-image fs-1 d-block mb-2"></i>
-                      <small>Preview not available</small>
-                      <br />
-                      <small className="text-truncate d-block" style={{ maxWidth: '300px' }}>
-                        {formData.hero_image}
-                      </small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </Form.Group>
+          <hr className="my-3" />
 
-          <Form.Group className="mb-0">
-            <Form.Label className="fw-bold">
-              Gallery Images ({(formData.gallery || []).length})
-            </Form.Label>
-            
-            {/* File Upload */}
-            <div className="mb-3">
-              <div className="d-flex gap-2">
-                <Form.Control
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleGalleryImageUpload}
-                  disabled={uploadingGallery}
-                />
-                {uploadingGallery && (
-                  <Button variant="primary" disabled>
-                    <Spinner animation="border" size="sm" className="me-2" />
-                    Uploading...
-                  </Button>
-                )}
-              </div>
-              <Form.Text className="text-muted">
-                Upload multiple images (max 5MB each) or add URLs below
-              </Form.Text>
-            </div>
-            
-            {/* URL Input */}
-            <InputGroup className="mb-3">
-              <Form.Control
-                type="url"
-                placeholder="https://example.com/image.jpg"
-                value={newGalleryUrl}
-                onChange={(e) => setNewGalleryUrl(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddGalleryUrl())}
-                disabled={uploadingGallery}
-              />
-              <Button variant="primary" onClick={handleAddGalleryUrl} disabled={uploadingGallery}>
-                <i className="bi bi-plus-lg me-1"></i> Add URL
+          {!galleries || galleries.length === 0 ? (
+            <div className="text-center py-5">
+              <i className="bi bi-images fs-1 text-muted d-block mb-3"></i>
+              <h5 className="text-muted">No galleries yet</h5>
+              <p className="text-muted">Create your first gallery to organize hotel images</p>
+              <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+                <i className="bi bi-plus-lg me-2"></i>
+                Create Gallery
               </Button>
-            </InputGroup>
-            
-            <ListGroup style={{ maxHeight: '400px', overflowY: 'auto' }}>
-              {(formData.gallery || []).map((url, index) => (
-                <ListGroup.Item key={`gallery-settings-${index}-${url}`} className="d-flex align-items-center gap-3 p-3">
-                  <div style={{ width: '100px', height: '80px', flexShrink: 0, overflow: 'hidden', borderRadius: '8px', backgroundColor: '#f5f5f5' }}>
-                    <img 
-                      src={url} 
-                      alt={`Gallery ${index + 1}`}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                      onError={(e) => {
-                        console.error('Failed to load gallery image:', url);
-                        e.target.style.display = 'none';
-                        e.target.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:12px;">No image</div>';
-                      }}
-                    />
-                  </div>
-                  <div className="flex-grow-1" style={{ minWidth: 0 }}>
-                    <small className="d-block fw-bold text-muted mb-1">Gallery {index + 1}</small>
-                    <small className="d-block text-truncate" style={{ fontSize: '11px', color: '#6c757d' }}>{url}</small>
-                  </div>
-                  <div className="d-flex gap-1" style={{ flexShrink: 0 }}>
-                    <Button 
-                      variant="outline-secondary" 
-                      size="sm"
-                      onClick={() => handleMoveImage(index, 'up')}
-                      disabled={index === 0}
-                    >
-                      <i className="bi bi-arrow-up"></i>
-                    </Button>
-                    <Button 
-                      variant="outline-secondary" 
-                      size="sm"
-                      onClick={() => handleMoveImage(index, 'down')}
-                      disabled={index === (formData.gallery || []).length - 1}
-                    >
-                      <i className="bi bi-arrow-down"></i>
-                    </Button>
-                    <Button 
-                      variant="outline-danger" 
-                      size="sm"
-                      onClick={() => handleRemoveGalleryImage(index)}
-                    >
-                      <i className="bi bi-trash"></i>
-                    </Button>
-                  </div>
-                </ListGroup.Item>
+            </div>
+          ) : (
+            <Accordion>
+              {galleries.map((gallery) => (
+                <Accordion.Item eventKey={gallery.id.toString()} key={gallery.id}>
+                  <Accordion.Header>
+                    <div className="d-flex align-items-center justify-content-between w-100 me-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <i className={`bi bi-${categoryOptions.find(c => c.value === gallery.category)?.icon || 'images'}`}></i>
+                        <strong>{gallery.name}</strong>
+                        <Badge bg={gallery.is_active ? 'success' : 'secondary'}>
+                          {gallery.is_active ? 'Active' : 'Hidden'}
+                        </Badge>
+                        <Badge bg="info">{gallery.image_count} images</Badge>
+                      </div>
+                    </div>
+                  </Accordion.Header>
+                  <Accordion.Body>
+                    {/* Gallery Controls */}
+                    <div className="d-flex gap-2 mb-3">
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => handleToggleActive(gallery)}
+                      >
+                        <i className={`bi bi-eye${gallery.is_active ? '-slash' : ''} me-1`}></i>
+                        {gallery.is_active ? 'Hide' : 'Show'} on Public Page
+                      </Button>
+                      <Button
+                        variant="outline-danger"
+                        size="sm"
+                        onClick={() => handleDeleteGallery(gallery.id, gallery.name)}
+                      >
+                        <i className="bi bi-trash me-1"></i>
+                        Delete Gallery
+                      </Button>
+                    </div>
+
+                    {/* Upload Images */}
+                    <div className="mb-3">
+                      <Form.Label className="fw-bold">Upload Images</Form.Label>
+                      <Form.Control
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={(e) => handleFileSelect(gallery.id, Array.from(e.target.files))}
+                        disabled={uploadingToGallery === gallery.id}
+                      />
+                      <Form.Text className="text-muted">
+                        Select images to preview and add captions before uploading (max 10MB each)
+                      </Form.Text>
+                      {uploadingToGallery === gallery.id && (
+                        <div className="mt-2">
+                          <Spinner animation="border" size="sm" className="me-2" />
+                          <small>Uploading...</small>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Gallery Images */}
+                    {gallery.images && gallery.images.length > 0 ? (
+                      <div className="row g-3">
+                        {gallery.images.map((image, index) => (
+                          <div key={image.id} className="col-md-6 col-lg-4">
+                            <Card className="h-100">
+                              <Card.Img
+                                variant="top"
+                                src={image.image_url}
+                                alt={image.alt_text || image.caption}
+                                style={{ height: '200px', objectFit: 'cover' }}
+                              />
+                              <Card.Body className="p-2">
+                                {editingCaption === image.id ? (
+                                  <InputGroup size="sm">
+                                    <Form.Control
+                                      value={captionValue}
+                                      onChange={(e) => setCaptionValue(e.target.value)}
+                                      placeholder="Enter caption..."
+                                    />
+                                    <Button
+                                      variant="success"
+                                      onClick={() => handleSaveCaption(image.id)}
+                                    >
+                                      <i className="bi bi-check"></i>
+                                    </Button>
+                                    <Button
+                                      variant="secondary"
+                                      onClick={() => setEditingCaption(null)}
+                                    >
+                                      <i className="bi bi-x"></i>
+                                    </Button>
+                                  </InputGroup>
+                                ) : (
+                                  <div
+                                    className="small text-truncate cursor-pointer"
+                                    onClick={() => {
+                                      setEditingCaption(image.id);
+                                      setCaptionValue(image.caption || '');
+                                    }}
+                                    title="Click to edit caption"
+                                  >
+                                    {image.caption || 'No caption (click to add)'}
+                                  </div>
+                                )}
+                                <div className="d-flex gap-1 mt-2">
+                                  <Button
+                                    variant="outline-secondary"
+                                    size="sm"
+                                    onClick={() => handleMoveImage(gallery, index, 'up')}
+                                    disabled={index === 0}
+                                  >
+                                    <i className="bi bi-arrow-up"></i>
+                                  </Button>
+                                  <Button
+                                    variant="outline-secondary"
+                                    size="sm"
+                                    onClick={() => handleMoveImage(gallery, index, 'down')}
+                                    disabled={index === gallery.images.length - 1}
+                                  >
+                                    <i className="bi bi-arrow-down"></i>
+                                  </Button>
+                                  <Button
+                                    variant="outline-danger"
+                                    size="sm"
+                                    className="ms-auto"
+                                    onClick={() => handleDeleteImage(image.id, gallery.name)}
+                                  >
+                                    <i className="bi bi-trash"></i>
+                                  </Button>
+                                </div>
+                              </Card.Body>
+                            </Card>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-5 bg-light rounded border border-2 border-dashed">
+                        <i className="bi bi-cloud-upload fs-1 text-primary d-block mb-3" style={{ opacity: 0.5 }}></i>
+                        <h5 className="text-muted mb-2">Gallery ready for images!</h5>
+                        <p className="text-muted mb-3">
+                          Upload images using the button above to populate this gallery.
+                        </p>
+                        <p className="text-muted small mb-0">
+                          <i className="bi bi-info-circle me-1"></i>
+                          Gallery will appear on public page once images are added
+                        </p>
+                      </div>
+                    )}
+                  </Accordion.Body>
+                </Accordion.Item>
               ))}
-              {(formData.gallery || []).length === 0 && (
-                <ListGroup.Item className="text-center text-muted py-4">
-                  <i className="bi bi-images fs-1 d-block mb-2"></i>
-                  No gallery images yet
-                </ListGroup.Item>
-              )}
-            </ListGroup>
-          </Form.Group>
-        </Form>
-      </Card.Body>
-    </Card>
+            </Accordion>
+          )}
+        </Card.Body>
+      </Card>
+
+      {/* Create Gallery Modal */}
+      <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Create New Gallery</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group className="mb-3">
+              <Form.Label>Gallery Name</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="e.g., Luxury Rooms, Pool Area"
+                value={newGalleryName}
+                onChange={(e) => setNewGalleryName(e.target.value)}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Category</Form.Label>
+              <Form.Select
+                value={newGalleryCategory}
+                onChange={(e) => setNewGalleryCategory(e.target.value)}
+              >
+                {categoryOptions.map((cat) => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Description (Optional)</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                placeholder="Brief description of this gallery..."
+                value={newGalleryDescription}
+                onChange={(e) => setNewGalleryDescription(e.target.value)}
+              />
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowCreateModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleCreateGallery}>
+            <i className="bi bi-plus-lg me-2"></i>
+            Create Gallery
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Upload Preview Modal */}
+      <Modal show={showUploadModal} onHide={handleCancelUpload} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>
+            <i className="bi bi-upload me-2"></i>
+            Preview & Add Captions
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+          {pendingImages.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-muted">No images to upload</p>
+            </div>
+          ) : (
+            <div className="row g-3">
+              {pendingImages.map((img, index) => (
+                <div key={index} className="col-md-6">
+                  <Card>
+                    <div style={{ position: 'relative' }}>
+                      <Card.Img
+                        variant="top"
+                        src={img.previewUrl}
+                        alt={img.filename}
+                        style={{ height: '200px', objectFit: 'cover' }}
+                      />
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        style={{
+                          position: 'absolute',
+                          top: '10px',
+                          right: '10px',
+                        }}
+                        onClick={() => handleRemovePendingImage(index)}
+                      >
+                        <i className="bi bi-x-lg"></i>
+                      </Button>
+                    </div>
+                    <Card.Body>
+                      <Form.Group>
+                        <Form.Label className="small fw-bold">Caption</Form.Label>
+                        <Form.Control
+                          type="text"
+                          placeholder="Enter image caption..."
+                          value={img.caption}
+                          onChange={(e) => handleUpdatePendingCaption(index, e.target.value)}
+                        />
+                        <Form.Text className="text-muted">
+                          {img.filename}
+                        </Form.Text>
+                      </Form.Group>
+                    </Card.Body>
+                  </Card>
+                </div>
+              ))}
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCancelUpload}>
+            Cancel
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={handleConfirmUpload}
+            disabled={pendingImages.length === 0 || uploadingToGallery}
+          >
+            {uploadingToGallery ? (
+              <>
+                <Spinner animation="border" size="sm" className="me-2" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <i className="bi bi-cloud-upload me-2"></i>
+                Upload {pendingImages.length} Image{pendingImages.length !== 1 ? 's' : ''}
+              </>
+            )}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </>
   );
 }

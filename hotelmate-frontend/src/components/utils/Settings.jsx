@@ -21,6 +21,7 @@ import SectionStaffRegistration from "./settings-sections/SectionStaffRegistrati
 import SectionRooms from "./settings-sections/SectionRooms";
 import SectionOffers from "./settings-sections/SectionOffers";
 import SectionLeisure from "./settings-sections/SectionLeisure";
+import useHotelRealtime from "@/hooks/useHotelRealtime";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -65,6 +66,45 @@ export default function Settings() {
   });
 
   const [hasChanges, setHasChanges] = useState(false);
+  
+  // Real-time updates via Pusher
+  useHotelRealtime(
+    hotelSlug,
+    // Settings updated
+    (data) => {
+      console.log('[Settings] 🔄 Real-time settings update:', data);
+      setFormData(prev => ({
+        ...prev,
+        hero_image: data.hero_image_display || data.hero_image || prev.hero_image,
+        logo: data.logo_display || data.logo || prev.logo,
+        favicon: data.favicon || prev.favicon,
+        slogan: data.slogan || prev.slogan,
+        gallery: data.gallery || prev.gallery,
+      }));
+      queryClient.invalidateQueries(['hotelPublicSettings', hotelSlug]);
+    },
+    // Gallery updated
+    (update) => {
+      console.log('[Settings] 🖼️ Real-time gallery update:', update);
+      if (update.type === 'add') {
+        setFormData(prev => ({
+          ...prev,
+          gallery: [...(prev.gallery || []), update.url],
+        }));
+      } else if (update.type === 'reorder') {
+        setFormData(prev => ({
+          ...prev,
+          gallery: update.gallery,
+        }));
+      }
+    },
+    // Room type updated
+    (data) => {
+      console.log('[Settings] 🛏️ Real-time room type update:', data);
+      queryClient.invalidateQueries(['staffRoomTypes', hotelSlug]);
+      queryClient.invalidateQueries(['hotelPublicPage', hotelSlug]);
+    }
+  );
   
   // Debug: Log user data from localStorage
   useEffect(() => {
@@ -180,7 +220,6 @@ export default function Settings() {
         short_description: settings.short_description || '',
         long_description: settings.long_description || '',
         hero_image: settings.hero_image_display || settings.hero_image || '',
-        gallery: settings.gallery || [],
         contact_email: settings.contact_email || '',
         contact_phone: settings.contact_phone || '',
         contact_address: settings.contact_address || '',
@@ -229,7 +268,6 @@ export default function Settings() {
         short_description: formData.short_description,
         long_description: formData.long_description,
         hero_image: formData.hero_image,
-        gallery: formData.gallery,
         contact_email: formData.contact_email,
         contact_phone: formData.contact_phone,
         contact_address: formData.contact_address,
@@ -389,6 +427,11 @@ export default function Settings() {
           <SectionContent 
             formData={formData}
             onChange={handleFieldChange}
+            hotelSlug={hotelSlug}
+            onSaved={() => {
+              queryClient.invalidateQueries(['hotelPublicSettings', hotelSlug]);
+              queryClient.invalidateQueries(['hotelPublicPage', hotelSlug]);
+            }}
           />
 
           {/* 3. Images */}
@@ -396,6 +439,10 @@ export default function Settings() {
             formData={formData}
             onChange={handleFieldChange}
             hotelSlug={hotelSlug}
+            onSaved={() => {
+              queryClient.invalidateQueries(['hotelPublicSettings', hotelSlug]);
+              queryClient.invalidateQueries(['hotelPublicPage', hotelSlug]);
+            }}
           />
 
           {/* 4. Amenities */}
@@ -414,6 +461,7 @@ export default function Settings() {
           <SectionBranding 
             formData={formData}
             onChange={handleFieldChange}
+            hotelSlug={hotelSlug}
           />
 
           {/* 7. Theme Settings */}
