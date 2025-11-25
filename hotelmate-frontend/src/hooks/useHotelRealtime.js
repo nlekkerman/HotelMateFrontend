@@ -25,7 +25,21 @@ export const useHotelRealtime = (hotelSlug, onSettingsUpdate, onGalleryUpdate, o
     // Settings updates (hero image, general settings)
     channel.bind('settings-updated', (data) => {
       console.log('[Pusher] 🔄 Settings updated:', data);
+      console.log('[Pusher] 🔍 Settings data keys:', Object.keys(data));
+      console.log('[Pusher] 🔍 Has hero_image?', 'hero_image' in data);
+      console.log('[Pusher] 🔍 Has hero_image_display?', 'hero_image_display' in data);
+      console.log('[Pusher] 🔍 Has logo?', 'logo' in data);
+      console.log('[Pusher] 🔍 Has logo_display?', 'logo_display' in data);
       onSettingsUpdate?.(data);
+    });
+    
+    // Debug: Log when channel is ready
+    channel.bind('pusher:subscription_succeeded', () => {
+      console.log('[Pusher] ✅ Successfully subscribed to:', channelName);
+    });
+    
+    channel.bind('pusher:subscription_error', (error) => {
+      console.error('[Pusher] ❌ Subscription error:', error);
     });
 
     // Gallery image uploaded

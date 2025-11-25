@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Container, Spinner, Alert, Button } from 'react-bootstrap';
-import { useAuth } from '@/context/AuthContext';
-import GuestHotelHome from '@/sections/GuestHotelHome';
-import api, { getHotelPublicSettings } from '@/services/api';
-import useHotelTheme from '@/hooks/useHotelTheme';
+import React, { useState, useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { Container, Spinner, Alert, Button } from "react-bootstrap";
+import { useAuth } from "@/context/AuthContext";
+import GuestHotelHome from "@/sections/GuestHotelHome";
+import api, { getHotelPublicSettings } from "@/services/api";
+import useHotelTheme from "@/hooks/useHotelTheme";
+import useHotelRealtime from "@/hooks/useHotelRealtime";
 
 /**
  * HotelPortalPage - Public hotel page for guests
@@ -23,6 +24,18 @@ const HotelPortalPage = () => {
   // Apply hotel theme from settings
   useHotelTheme(settings);
 
+  // Real-time updates for settings changes
+  useHotelRealtime(hotelSlug, (updatedData) => {
+    console.log("[HotelPortal] 🔄 Real-time settings update received");
+    console.log("[HotelPortal] 📸 Hero image:", updatedData.hero_image_display);
+    
+    // Update settings state directly from Pusher data
+    setSettings(prev => ({
+      ...prev,
+      ...updatedData
+    }));
+  });
+
   useEffect(() => {
     fetchHotelDetails();
     fetchPublicSettings();
@@ -35,16 +48,16 @@ const HotelPortalPage = () => {
 
       // Fetch hotel details from public endpoint with full booking data
       const response = await api.get(`/hotel/public/page/${hotelSlug}/`);
-      
+
       if (!response.data) {
-        throw new Error('Hotel not found');
+        throw new Error("Hotel not found");
       }
 
       setHotel(response.data);
       selectHotel(response.data); // Store in auth context
     } catch (err) {
-      console.error('[HotelPortal] Failed to fetch hotel:', err);
-      setError('Hotel not found or unavailable');
+      console.error("[HotelPortal] Failed to fetch hotel:", err);
+      setError("Hotel not found or unavailable");
     } finally {
       setLoading(false);
     }
@@ -54,24 +67,35 @@ const HotelPortalPage = () => {
     try {
       // Fetch public settings for customizable content
       const response = await getHotelPublicSettings(hotelSlug);
-      console.log('[HotelPortal] ⭐ Full response object:', response);
-      console.log('[HotelPortal] ⭐ Response.data:', response.data);
-      console.log('[HotelPortal] Public settings fetched:', response.data);
-      console.log('[HotelPortal] Hero image:', response.data?.hero_image);
-      console.log('[HotelPortal] Welcome message:', response.data?.welcome_message);
-      console.log('[HotelPortal] Gallery:', response.data?.gallery);
-      console.log('[HotelPortal] Amenities:', response.data?.amenities);
-      
+      console.log("[HotelPortal] ⭐ Full response object:", response);
+      console.log("[HotelPortal] ⭐ Response.data:", response.data);
+      console.log("[HotelPortal] Public settings fetched:", response.data);
+      console.log("[HotelPortal] 🔍 hero_image_display:", response.data?.hero_image_display);
+      console.log("[HotelPortal] 🔍 hero_image:", response.data?.hero_image);
+      console.log("[HotelPortal] Hero image:", response.data?.hero_image);
+      console.log(
+        "[HotelPortal] Welcome message:",
+        response.data?.welcome_message
+      );
+      console.log("[HotelPortal] Gallery:", response.data?.gallery);
+      console.log("[HotelPortal] Amenities:", response.data?.amenities);
+
       if (response && response.data) {
-        console.log('[HotelPortal] ✅ Setting settings state with:', response.data);
+        console.log(
+          "[HotelPortal] ✅ Setting settings state with:",
+          response.data
+        );
         setSettings(response.data);
       } else {
-        console.warn('[HotelPortal] ⚠️ Response or response.data is missing');
+        console.warn("[HotelPortal] ⚠️ Response or response.data is missing");
         setSettings(null);
       }
     } catch (err) {
-      console.error('[HotelPortal] ❌ Failed to fetch public settings:', err);
-      console.error('[HotelPortal] Error details:', err.response?.data || err.message);
+      console.error("[HotelPortal] ❌ Failed to fetch public settings:", err);
+      console.error(
+        "[HotelPortal] Error details:",
+        err.response?.data || err.message
+      );
       // Settings are optional - don't set error, just log it
       // Hotel can still render with default content
       setSettings(null);
@@ -96,7 +120,7 @@ const HotelPortalPage = () => {
       <Container className="py-5">
         <Alert variant="danger" className="text-center">
           <i className="bi bi-exclamation-triangle me-2"></i>
-          {error || 'Hotel not found'}
+          {error || "Hotel not found"}
         </Alert>
         <div className="text-center mt-4">
           <Link to="/" className="btn btn-primary">
@@ -116,7 +140,10 @@ const HotelPortalPage = () => {
           <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
             {/* Hotel Info */}
             <div className="d-flex align-items-center gap-3">
-              <Link to="/?view=all" className="btn btn-outline-secondary btn-sm">
+              <Link
+                to="/?view=all"
+                className="btn btn-outline-secondary btn-sm"
+              >
                 <i className="bi bi-arrow-left me-1"></i>
                 All Hotels
               </Link>
@@ -140,17 +167,17 @@ const HotelPortalPage = () => {
                   src={hotel.logo_url}
                   alt={`${hotel.name} logo`}
                   style={{
-                    maxHeight: '40px',
-                    maxWidth: '120px',
-                    objectFit: 'contain',
+                    maxHeight: "40px",
+                    maxWidth: "120px",
+                    objectFit: "contain",
                   }}
                   onError={(e) => {
-                    console.error('Logo failed to load:', hotel.logo_url);
-                    e.currentTarget.style.display = 'none';
+                    console.error("Logo failed to load:", hotel.logo_url);
+                    e.currentTarget.style.display = "none";
                   }}
                 />
               )}
-              
+
               {/* Back to Staff Feed Button (Staff Only) */}
               {isStaff && user?.hotel_slug === hotelSlug && (
                 <Button
@@ -168,7 +195,13 @@ const HotelPortalPage = () => {
       </header>
 
       {/* Render Public Guest View ONLY */}
-      <GuestHotelHome hotel={hotel} settings={settings} editorMode="view" canEdit={false} user={user} />
+      <GuestHotelHome
+        hotel={hotel}
+        settings={settings}
+        editorMode="view"
+        canEdit={false}
+        user={user}
+      />
     </div>
   );
 };

@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { Card, Form, Row, Col, Button, Spinner, Badge } from "react-bootstrap";
 import { toast } from "react-toastify";
+import { useQueryClient } from "@tanstack/react-query";
 import api from "@/services/api";
 
 export default function SectionBranding({ formData, onChange, hotelSlug }) {
+  const queryClient = useQueryClient();
   const [savingBranding, setSavingBranding] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState({
     hero_image: null,
@@ -78,17 +80,26 @@ export default function SectionBranding({ formData, onChange, hotelSlug }) {
       }
       formDataToSend.append('slogan', formData.slogan || '');
 
+      console.log('[SectionBranding] 📤 Saving branding...');
       const response = await api.patch(`/staff/hotel/${hotelSlug}/settings/`, formDataToSend);
+      console.log('[SectionBranding] ✅ Branding saved, response:', response.data);
       
       // Update form data with new URLs from response
       if (response.data.hero_image_display) {
+        console.log('[SectionBranding] Updating hero_image:', response.data.hero_image_display);
         onChange('hero_image', response.data.hero_image_display);
       }
       if (response.data.logo_display) {
+        console.log('[SectionBranding] Updating logo:', response.data.logo_display);
         onChange('logo', response.data.logo_display);
       }
       if (response.data.favicon) {
+        console.log('[SectionBranding] Updating favicon:', response.data.favicon);
         onChange('favicon', response.data.favicon);
+      }
+      if (response.data.slogan) {
+        console.log('[SectionBranding] Updating slogan:', response.data.slogan);
+        onChange('slogan', response.data.slogan);
       }
 
       // Clear selected files and previews
@@ -103,9 +114,14 @@ export default function SectionBranding({ formData, onChange, hotelSlug }) {
         favicon: null
       });
 
+      // Invalidate queries to refetch fresh data
+      queryClient.invalidateQueries(['hotelPublicSettings', hotelSlug]);
+      console.log('[SectionBranding] 🔄 Invalidated settings query cache');
+
       toast.success('Branding saved successfully!');
     } catch (error) {
-      console.error('Failed to save branding:', error);
+      console.error('[SectionBranding] ❌ Failed to save branding:', error);
+      console.error('[SectionBranding] Error response:', error.response?.data);
       toast.error(error.response?.data?.error || 'Failed to save branding');
     } finally {
       setSavingBranding(false);

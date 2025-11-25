@@ -92,12 +92,7 @@ const GuestHotelHome = ({ hotel, settings, editorMode = 'view', canEdit = false,
     }
   ];
 
-  // Debug gallery and user data
-  console.log('[GuestHotelHome] Settings:', settings);
-  console.log('[GuestHotelHome] Gallery:', settings?.gallery);
-  console.log('[GuestHotelHome] User prop:', user);
-  console.log('[GuestHotelHome] isStaff:', isStaff);
-  console.log('[GuestHotelHome] Should show placeholder:', !settings?.gallery || settings.gallery.length === 0, '&& isStaff:', isStaff);
+  
 
   return (
     <div className="guest-hotel-home bg-light min-vh-100">

@@ -39,7 +39,7 @@ const HeroSection = ({ hotel, settings }) => {
   } = hotel;
 
   // Use settings data if available, fallback to hotel data
-  const heroImage = settings?.hero_image || hero_image_url;
+  const heroImage = settings?.hero_image_display || settings?.hero_image || hero_image_url;
   const welcomeMessage = settings?.welcome_message;
   const displayDescription = settings?.short_description || short_description;
 
@@ -87,7 +87,7 @@ const HeroSection = ({ hotel, settings }) => {
         style={{ opacity: mounted ? opacity : 1 }}
       >
         <Container>
-          <div className="text-center">
+          <div className="text-center vw-100">
             {/* Animated Logo */}
             {logo_url && (
               <motion.img
