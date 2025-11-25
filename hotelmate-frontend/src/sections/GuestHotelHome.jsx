@@ -17,8 +17,9 @@ import AmenitiesSection from '@/components/hotels/AmenitiesSection';
  * @param {Object} settings - Public settings data
  * @param {String} editorMode - 'view' or 'edit' mode
  * @param {Boolean} canEdit - Whether user can edit settings
+ * @param {Function} onRefreshNeeded - Callback to refresh hotel data
  */
-const GuestHotelHome = ({ hotel, settings, editorMode = 'view', canEdit = false, user = null }) => {
+const GuestHotelHome = ({ hotel, settings, editorMode = 'view', canEdit = false, user = null, onRefreshNeeded }) => {
   if (!hotel) {
     return (
       <Container className="py-5">
@@ -110,7 +111,7 @@ const GuestHotelHome = ({ hotel, settings, editorMode = 'view', canEdit = false,
       <RoomTypesSection hotel={hotel} />
 
       {/* Special Offers & Packages */}
-      <OffersSection hotel={hotel} />
+      <OffersSection hotel={hotel} onRefreshNeeded={onRefreshNeeded} />
 
       {/* Amenities from Settings */}
       {settings?.amenities && settings.amenities.length > 0 && (

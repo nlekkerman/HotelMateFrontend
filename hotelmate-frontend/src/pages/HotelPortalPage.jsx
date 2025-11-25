@@ -201,6 +201,7 @@ const HotelPortalPage = () => {
         editorMode="view"
         canEdit={false}
         user={user}
+        onRefreshNeeded={fetchHotelDetails}
       />
     </div>
   );
