@@ -140,11 +140,16 @@ export default function SectionOffers({ hotelSlug, offers, onOffersUpdate }) {
           // If there's a file to upload, use FormData
           const formDataUpload = new FormData();
           Object.keys(formData).forEach(key => {
-            if (formData[key] !== null && formData[key] !== '') {
-              formDataUpload.append(key, formData[key]);
+            const value = formData[key];
+            // Include booleans, numbers (including 0), and non-empty strings
+            if (typeof value === 'boolean' || typeof value === 'number' || (value !== null && value !== undefined && value !== '')) {
+              formDataUpload.append(key, value);
             }
           });
           formDataUpload.append('photo', selectedFile);
+          
+          console.log('[SectionOffers] 📤 EDIT (with file) - FormData keys:', Array.from(formDataUpload.keys()));
+          console.log('[SectionOffers] 📤 is_active in FormData:', formDataUpload.get('is_active'), 'original:', formData.is_active);
           
           response = await api.patch(
             `/staff/hotel/${hotelSlug}/offers/${editingOffer.id}/`,
@@ -153,9 +158,22 @@ export default function SectionOffers({ hotelSlug, offers, onOffersUpdate }) {
           );
         } else {
           // No file, just update JSON data
+          // Clean the data object, keeping booleans and numbers explicitly
+          const cleanData = {};
+          Object.keys(formData).forEach(key => {
+            const value = formData[key];
+            // Include booleans, numbers (including 0), and non-empty strings
+            if (typeof value === 'boolean' || typeof value === 'number' || (value !== null && value !== undefined && value !== '')) {
+              cleanData[key] = value;
+            }
+          });
+          
+          console.log('[SectionOffers] 📤 EDIT (no file) - Sending cleanData:', cleanData);
+          console.log('[SectionOffers] 📤 is_active value:', cleanData.is_active, 'type:', typeof cleanData.is_active);
+          
           response = await api.patch(
             `/staff/hotel/${hotelSlug}/offers/${editingOffer.id}/`,
-            formData
+            cleanData
           );
         }
         
@@ -173,11 +191,16 @@ export default function SectionOffers({ hotelSlug, offers, onOffersUpdate }) {
           // If there's a file, use FormData
           const formDataUpload = new FormData();
           Object.keys(formData).forEach(key => {
-            if (formData[key] !== null && formData[key] !== '') {
-              formDataUpload.append(key, formData[key]);
+            const value = formData[key];
+            // Include booleans, numbers (including 0), and non-empty strings
+            if (typeof value === 'boolean' || typeof value === 'number' || (value !== null && value !== undefined && value !== '')) {
+              formDataUpload.append(key, value);
             }
           });
           formDataUpload.append('photo', selectedFile);
+          
+          console.log('[SectionOffers] 📤 CREATE (with file) - FormData keys:', Array.from(formDataUpload.keys()));
+          console.log('[SectionOffers] 📤 is_active in FormData:', formDataUpload.get('is_active'), 'original:', formData.is_active);
           
           response = await api.post(
             `/staff/hotel/${hotelSlug}/offers/`,
@@ -186,9 +209,22 @@ export default function SectionOffers({ hotelSlug, offers, onOffersUpdate }) {
           );
         } else {
           // No file, just send JSON
+          // Clean the data object, keeping booleans and numbers explicitly
+          const cleanData = {};
+          Object.keys(formData).forEach(key => {
+            const value = formData[key];
+            // Include booleans, numbers (including 0), and non-empty strings
+            if (typeof value === 'boolean' || typeof value === 'number' || (value !== null && value !== undefined && value !== '')) {
+              cleanData[key] = value;
+            }
+          });
+          
+          console.log('[SectionOffers] 📤 CREATE (no file) - Sending cleanData:', cleanData);
+          console.log('[SectionOffers] 📤 is_active value:', cleanData.is_active, 'type:', typeof cleanData.is_active);
+          
           response = await api.post(
             `/staff/hotel/${hotelSlug}/offers/`,
-            formData
+            cleanData
           );
         }
         
@@ -245,13 +281,17 @@ export default function SectionOffers({ hotelSlug, offers, onOffersUpdate }) {
 
     const channel = pusher.subscribe(`hotel-${hotelSlug}`);
 
-    // Listen for new offer creation
+    // Listen for new offer creation (from OTHER users only)
     channel.bind('offer-created', (data) => {
-      console.log('[SectionOffers] ✅ Offer created:', data);
+      console.log('[SectionOffers] 🔔 Pusher offer-created event:', data);
       setLocalOffers(prevOffers => {
-        // Avoid duplicates
+        // Check if already exists (avoid duplicates from our own creates)
         const exists = prevOffers.some(o => o.id === data.offer.id);
-        if (exists) return prevOffers;
+        if (exists) {
+          console.log('[SectionOffers] ⏭️ Offer already exists, skipping Pusher add');
+          return prevOffers;
+        }
+        console.log('[SectionOffers] ➕ Adding offer from Pusher');
         return [data.offer, ...prevOffers];
       });
       toast.info(`New offer: ${data.offer.title}`);

@@ -11,19 +11,15 @@ import Pusher from 'pusher-js';
  */
 const OffersSection = ({ hotel, onRefreshNeeded }) => {
   const navigate = useNavigate();
-  const [offers, setOffers] = useState(hotel?.offers || []);
+  const [offers, setOffers] = useState([]);
 
-  // Update local state when hotel prop changes
+  // Update local state when hotel prop changes - ONLY show active offers on public page
   useEffect(() => {
-    console.log('[OffersSection] 🔄 Hotel prop changed, updating offers:', hotel?.offers?.length);
-    setOffers(hotel?.offers || []);
+    const activeOffers = (hotel?.offers || []).filter(offer => offer.is_active === true);
+    setOffers(activeOffers);
   }, [hotel?.offers]);
 
-  // Debug offers state changes
-  useEffect(() => {
-    console.log('[OffersSection] 📊 Offers state updated. Count:', offers.length);
-    console.log('[OffersSection] 📊 Offers:', offers);
-  }, [offers]);
+
 
   // Pusher real-time updates
   useEffect(() => {
@@ -37,52 +33,36 @@ const OffersSection = ({ hotel, onRefreshNeeded }) => {
 
     // Listen for new offer creation
     channel.bind('offer-created', (data) => {
-      console.log('[OffersSection] ✅ Offer created:', data);
-      console.log('[OffersSection] Current offers count:', offers.length);
-      console.log('[OffersSection] New offer is_active:', data.offer?.is_active);
-      
       setOffers(prevOffers => {
         // Avoid duplicates
         const exists = prevOffers.some(o => o.id === data.offer.id);
-        if (exists) {
-          console.log('[OffersSection] ⚠️ Offer already exists, skipping');
-          return prevOffers;
-        }
+        if (exists) return prevOffers;
         
         // Only add active offers to public page
         if (data.offer?.is_active) {
-          console.log('[OffersSection] ➕ Adding new active offer to list');
           return [data.offer, ...prevOffers];
-        } else {
-          console.log('[OffersSection] ⏭️ Skipping inactive offer');
-          return prevOffers;
         }
+        return prevOffers;
       });
     });
 
     // Listen for offer updates
     channel.bind('offer-updated', (data) => {
-      console.log('[OffersSection] 🔄 Offer updated:', data);
-      console.log('[OffersSection] Updated offer is_active:', data.offer?.is_active);
-      
       setOffers(prevOffers => {
         const offerExists = prevOffers.some(o => o.id === data.offer.id);
         
         // If offer became inactive, remove it from public view
         if (!data.offer?.is_active && offerExists) {
-          console.log('[OffersSection] 🚫 Removing inactive offer from public view');
           return prevOffers.filter(o => o.id !== data.offer.id);
         }
         
         // If offer became active, add it
         if (data.offer?.is_active && !offerExists) {
-          console.log('[OffersSection] ➕ Adding newly activated offer');
           return [data.offer, ...prevOffers];
         }
         
         // If offer is active and exists, update it
         if (data.offer?.is_active && offerExists) {
-          console.log('[OffersSection] ♻️ Updating active offer');
           return prevOffers.map(offer => {
             if (offer.id === data.offer.id) {
               // If photo_url changed, add cache buster
@@ -102,7 +82,6 @@ const OffersSection = ({ hotel, onRefreshNeeded }) => {
 
     // Listen for offer deletion
     channel.bind('offer-deleted', (data) => {
-      console.log('[OffersSection] 🗑️ Offer deleted:', data);
       setOffers(prevOffers => 
         prevOffers.filter(offer => offer.id !== data.offer_id)
       );
@@ -110,7 +89,6 @@ const OffersSection = ({ hotel, onRefreshNeeded }) => {
 
     // Listen for image updates
     channel.bind('offer-image-updated', (data) => {
-      console.log('[OffersSection] 🖼️ Offer image updated:', data);
       setOffers(prevOffers => 
         prevOffers.map(offer => 
           offer.id === data.offer_id 
@@ -122,7 +100,6 @@ const OffersSection = ({ hotel, onRefreshNeeded }) => {
 
     // Listen for generic offers-updated (fallback/refresh trigger)
     channel.bind('offers-updated', (data) => {
-      console.log('[OffersSection] 🔄 Generic offers-updated sync:', data);
       // Trigger parent refresh to get updated offers
       if (onRefreshNeeded) {
         onRefreshNeeded();
@@ -186,9 +163,7 @@ const OffersSection = ({ hotel, onRefreshNeeded }) => {
           viewport={{ once: true, margin: "-100px" }}
         >
           <Row xs={1} md={2} className="g-4">
-            {offers.map((offer) => {
-              console.log('[OffersSection] Rendering offer:', offer.id, offer.title, offer);
-              return (
+            {offers.map((offer) => (
               <Col key={offer.id}>
                 <motion.div
                   className="modern-offer-card"
@@ -224,10 +199,8 @@ const OffersSection = ({ hotel, onRefreshNeeded }) => {
                   </div>
 
                   {/* Offer Content */}
-                  <div className="modern-offer-content" style={{ backgroundColor: 'rgba(255, 0, 0, 0.05)' }}>
-                    <h3 className="modern-offer-title" style={{ backgroundColor: 'rgba(0, 255, 0, 0.1)' }}>
-                      {offer.title || '[NO TITLE]'}
-                    </h3>
+                  <div className="modern-offer-content">
+                    <h3 className="modern-offer-title">{offer.title}</h3>
 
                     {offer.short_description && (
                       <p className="modern-room-description">
@@ -254,8 +227,7 @@ const OffersSection = ({ hotel, onRefreshNeeded }) => {
                   </div>
                 </motion.div>
               </Col>
-            );
-            })}
+            ))}
           </Row>
         </motion.div>
       </Container>

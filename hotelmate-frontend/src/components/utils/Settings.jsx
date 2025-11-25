@@ -167,6 +167,17 @@ export default function Settings() {
     },
   });
 
+  // Fetch ALL offers from STAFF endpoint (includes both active and inactive)
+  const { data: staffOffers, isLoading: offersLoading } = useQuery({
+    queryKey: ['staffOffers', hotelSlug],
+    queryFn: async () => {
+      const response = await api.get(`/staff/hotel/${hotelSlug}/offers/`);
+      console.log('[Settings] 🎁 Staff offers (all - active + inactive):', response.data);
+      return response.data;
+    },
+    enabled: !!hotelSlug && canEdit,
+  });
+
   // Fetch hotel settings
   const { data: settings, isLoading: settingsLoading, error: settingsError } = useQuery({
     queryKey: ['hotelPublicSettings', hotelSlug],
@@ -481,15 +492,14 @@ export default function Settings() {
           />
 
           {/* 9. Offers & Packages */}
-          <SectionOffers 
-            hotelSlug={hotelSlug}
-            offers={hotelData?.offers || []}
-            onOffersUpdate={() => {
-              queryClient.invalidateQueries(['hotelPublicPage', hotelSlug]);
-            }}
-          />
-
-          {/* 10. Leisure & Facilities */}
+              <SectionOffers 
+                hotelSlug={hotelSlug}
+                offers={staffOffers || []}
+                onOffersUpdate={() => {
+                  queryClient.invalidateQueries(['staffOffers', hotelSlug]);
+                  queryClient.invalidateQueries(['hotelPublicPage', hotelSlug]);
+                }}
+              />          {/* 10. Leisure & Facilities */}
           <SectionLeisure 
             hotelSlug={hotelSlug}
             activities={hotelData?.leisure_activities || []}
