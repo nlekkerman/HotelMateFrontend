@@ -107,26 +107,12 @@ export function getHotelSlug() {
 }
 
 /**
- * Fetch public hotel settings
+ * Fetch public hotel settings (read-only for landing page)
  * @param {string} hotelSlug - The hotel slug
  * @returns {Promise} - Axios response with settings data
  */
 export async function getHotelPublicSettings(hotelSlug) {
   return publicAPI.get(`/public/hotels/${hotelSlug}/settings/`);
-}
-
-/**
- * Update hotel public settings (staff only)
- * @param {string} hotelSlug - The hotel slug
- * @param {object} settingsData - Settings data to update
- * @param {string} method - HTTP method ('PATCH' or 'PUT'), defaults to 'PATCH'
- * @returns {Promise} - Axios response with updated settings
- */
-export async function updateHotelPublicSettings(hotelSlug, settingsData, method = 'PATCH') {
-  const url = buildStaffURL(hotelSlug, 'hotels', '/settings/');
-  return method === 'PUT' 
-    ? api.put(url, settingsData)
-    : api.patch(url, settingsData);
 }
 
 export default api;

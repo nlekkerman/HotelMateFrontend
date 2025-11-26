@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import HotelCard from '@/components/hotels/HotelCard';
 import HotelsFiltersBar from '@/components/hotels/HotelsFiltersBar';
 import HotelsList from '@/components/hotels/HotelsList';
-import { publicAPI } from '@/services/api';
+import { publicHotelPageAPI } from '@/services/publicApi';
 import heroImage from '@/assets/images/landing-page-hero.png';
 import logo from '@/assets/images/hotels-logo.png';
 
@@ -62,11 +62,11 @@ const HotelsLandingPage = () => {
 
   const fetchFilterOptions = async () => {
     try {
-      const response = await publicAPI.get('/hotel/public/filters/');
+      const response = await publicHotelPageAPI.getFilterOptions();
       setFilterOptions({
-        cities: response.data.cities || [],
-        countries: response.data.countries || [],
-        hotel_types: response.data.hotel_types || [],
+        cities: response.cities || [],
+        countries: response.countries || [],
+        hotel_types: response.hotel_types || [],
       });
     } catch (err) {
       console.error('[HotelsLanding] Failed to fetch filter options:', err);
@@ -79,25 +79,21 @@ const HotelsLandingPage = () => {
       setLoading(true);
       setError(null);
       
-      // Build query params from filters
-      const params = new URLSearchParams();
-      if (filters.q) params.set('q', filters.q);
-      if (filters.city) params.set('city', filters.city);
-      if (filters.country) params.set('country', filters.country);
-      if (filters.hotel_type) params.set('hotel_type', filters.hotel_type);
-      if (filters.sort && filters.sort !== 'featured') params.set('sort', filters.sort);
+      // Build query params object from filters
+      const params = {};
+      if (filters.q) params.q = filters.q;
+      if (filters.city) params.city = filters.city;
+      if (filters.country) params.country = filters.country;
+      if (filters.hotel_type) params.hotel_type = filters.hotel_type;
+      if (filters.sort && filters.sort !== 'featured') params.sort_by = filters.sort;
       
-      const queryString = params.toString();
-      const url = `/hotel/public/${queryString ? `?${queryString}` : ''}`;
-      
-      console.log('[HotelsLanding] Fetching hotels with URL:', url);
-      console.log('[HotelsLanding] Query params:', Object.fromEntries(params));
+      console.log('[HotelsLanding] Fetching hotels with params:', params);
       
       // Fetch hotels from public API endpoint with filters
-      const response = await publicAPI.get(url);
+      const response = await publicHotelPageAPI.getHotels(params);
       
       // Extract hotels from response (backend handles filtering and sorting)
-      const hotelsData = response.data.results || response.data;
+      const hotelsData = response.results || response;
       
       // Set hotels directly - backend does all the filtering and sorting
       const activeHotels = Array.isArray(hotelsData) 

@@ -504,6 +504,30 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                   </Link>
                 );
               })()}
+
+              {/* Toggle between Staff Feed and Public Hotel Page */}
+              {hotelIdentifier && (() => {
+                const isOnPublicPage = location.pathname === `/hotel/${hotelIdentifier}`;
+                const targetPath = isOnPublicPage ? `/staff/${hotelIdentifier}/feed` : `/hotel/${hotelIdentifier}`;
+                const buttonLabel = isOnPublicPage ? "Staff View" : "Public Page";
+                const buttonIcon = isOnPublicPage ? "person-badge" : "globe";
+                
+                return (
+                  <Link
+                    className="btn btn-light btn-sm top-nav-btn"
+                    to={targetPath}
+                    title={buttonLabel}
+                    style={{
+                      borderRadius: '50px',
+                      padding: '6px 16px',
+                      marginLeft: '10px'
+                    }}
+                  >
+                    <i className={`bi bi-${buttonIcon} me-1`} />
+                    <span className="btn-label">{buttonLabel}</span>
+                  </Link>
+                );
+              })()}
             </div>
 
             {/* Right side: Main Navigation Items - Categories & Uncategorized */}

@@ -33,7 +33,10 @@ import GlobalQuickNotifications from "@/staff_chat/components/GlobalQuickNotific
 // Pages + Components
 import Home from "@/pages/home/Home";
 import HotelsLandingPage from "@/pages/hotels/HotelsLandingPage";
+import HotelPublicPage from "@/pages/hotels/HotelPublicPage";
 import HotelPortalPage from "@/pages/HotelPortalPage";
+import SectionEditorPage from "@/pages/sections/SectionEditorPage";
+import SectionBasedPublicPage from "@/pages/sections/SectionBasedPublicPage";
 import BookingPage from "@/pages/bookings/BookingPage";
 import BookingConfirmation from "@/pages/bookings/BookingConfirmation";
 import BookingPaymentSuccess from "@/pages/bookings/BookingPaymentSuccess";
@@ -181,6 +184,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
   
   // Public landing pages - hide navbar/sidebar
   const isPublicLandingPage = location.pathname === "/" || 
+                              /^\/hotel\/[a-z0-9-]+$/.test(location.pathname) || // Public hotel pages
                               /^\/[a-z0-9-]+$/.test(location.pathname) ||
                               /^\/[a-z0-9-]+\/book/.test(location.pathname) ||
                               /^\/[a-z0-9-]+\/my-bookings/.test(location.pathname) ||
@@ -271,6 +275,15 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               {/* NEW PHASE 1 ROUTES */}
               {/* Hotels Landing - Public */}
               <Route path="/" element={<HotelsLandingPage />} />
+              
+              {/* Hotel Dynamic Public Page - Public (uses page builder) */}
+              <Route path="/hotel/:slug" element={<HotelPublicPage />} />
+              
+              {/* Section-Based Public Page - Public (new section-based system) */}
+              <Route path="/hotel/:slug/sections" element={<SectionBasedPublicPage />} />
+              
+              {/* Section Editor - Staff only */}
+              <Route path="/staff/:hotelSlug/section-editor" element={<ProtectedRoute><SectionEditorPage /></ProtectedRoute>} />
               
               {/* Hotel Portal - Public (guest view) or Staff (with toggle) */}
               <Route path="/:hotelSlug" element={<HotelPortalPage />} />

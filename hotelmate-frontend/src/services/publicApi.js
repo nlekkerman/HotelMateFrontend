@@ -3,8 +3,8 @@ import axios from "axios";
 // Public API service for tournament QR code access - no authentication required
 const baseURL =
   window.location.hostname === "localhost"
-    ? "http://localhost:8000/api/" // Local dev
-    : import.meta.env.VITE_API_URL;
+    ? "http://127.0.0.1:8000/api/" // Local dev
+    : import.meta.env.VITE_API_URL || "https://hotel-porter-d25ad83b12cf.herokuapp.com/api/";
 
 const publicApi = axios.create({
   baseURL,
@@ -35,5 +35,52 @@ publicApi.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+// API Methods for Public Hotel Page
+export const publicHotelPageAPI = {
+  /**
+   * Fetch all active hotels for landing page
+   * @param {Object} params - Query parameters (city, country, hotel_type, tags, sort_by)
+   * @returns {Promise} List of hotels
+   */
+  getHotels: async (params = {}) => {
+    try {
+      const response = await publicApi.get('/public/hotels/', { params });
+      return response.data;
+    } catch (error) {
+      console.error('[PublicAPI] Failed to fetch hotels:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch filter options for hotel search
+   * @returns {Promise} Available filter options
+   */
+  getFilterOptions: async () => {
+    try {
+      const response = await publicApi.get('/public/hotels/filters/');
+      return response.data;
+    } catch (error) {
+      console.error('[PublicAPI] Failed to fetch filter options:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch dynamic hotel public page data
+   * @param {string} slug - Hotel slug
+   * @returns {Promise} Hotel page data with sections
+   */
+  getHotelPage: async (slug) => {
+    try {
+      const response = await publicApi.get(`/public/hotel/${slug}/page/`);
+      return response.data;
+    } catch (error) {
+      console.error(`[PublicAPI] Failed to fetch hotel page for ${slug}:`, error);
+      throw error;
+    }
+  },
+};
 
 export default publicApi;

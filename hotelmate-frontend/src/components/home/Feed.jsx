@@ -1,7 +1,7 @@
 // src/components/home/Feed.jsx
 
 import React, { useEffect, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import api from "@/services/api";
 import Post from "@/components/home/Post";
 import PostComposer from "@/components/home/PostComposer";
@@ -57,6 +57,23 @@ export default function Feed() {
 
   return (
     <div className="feed">
+      {/* All hotels landing page toggle button */}
+      {hotelSlug && (
+        <div className="mb-3">
+          <Link 
+            to="/?view=all"
+            className="btn btn-primary btn-sm"
+            style={{ 
+              borderRadius: '50px',
+              padding: '8px 20px'
+            }}
+          >
+            <i className="bi bi-buildings me-2"></i>
+            All Hotels
+          </Link>
+        </div>
+      )}
+      
       {hotelSlug && (
         <PostComposer hotelSlug={hotelSlug} onPostCreated={handleNewPost} />
       )}

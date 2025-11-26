@@ -1,0 +1,92 @@
+/* Section-Based Page Builder Styles */
+
+/* Hero Section */
+.hero-section-view {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Gallery Section */
+.gallery-section-view {
+  background-color: #f8f9fa;
+}
+
+.gallery-image-wrapper img {
+  transition: transform 0.3s ease;
+}
+
+.gallery-image-wrapper:hover img {
+  transform: scale(1.05);
+}
+
+/* List Section */
+.list-section-view .hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.list-section-view .hover-lift:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* News Section */
+.news-section-view {
+  background-color: #f8f9fa;
+}
+
+.news-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.25rem;
+}
+
+.news-content p {
+  line-height: 1.8;
+  margin-bottom: 1rem;
+}
+
+/* Section Editor Styles */
+.section-editor-drag-handle {
+  cursor: grab;
+}
+
+.section-editor-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .hero-section-view {
+    min-height: 300px !important;
+  }
+  
+  .hero-section-view h1 {
+    font-size: 2rem !important;
+  }
+  
+  .news-content img[style*="float"] {
+    float: none !important;
+    max-width: 100% !important;
+    margin: 0 0 1rem 0 !important;
+  }
+}
+
+/* Loading states */
+.section-loading {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Empty states */
+.section-empty-state {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: #6c757d;
+}
+
+.section-empty-state i {
+  font-size: 3rem;
+  opacity: 0.3;
+}

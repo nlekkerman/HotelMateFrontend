@@ -82,9 +82,13 @@ export function ThemeProvider({ children }) {
     },
     enabled: !!hotelSlug,
     refetchOnWindowFocus: false,
-    retry: 1, // Only retry once
+    retry: false, // Don't retry on failure
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     onError: (error) => {
       console.warn('Theme fetch failed, using defaults:', error);
+      // Remove splash screen even on error
+      const splash = document.getElementById("splash");
+      if (splash) splash.remove();
     }
   });
 
@@ -136,12 +140,16 @@ export function ThemeProvider({ children }) {
 
   // 3️⃣ Apply on load
 useEffect(() => {
-  if (!user || (!isLoading && data)) {
-    if (data) applyTheme(data);
-    const splash = document.getElementById("splash");
-    if (splash) splash.remove();
-  }
-}, [isLoading, data, user]);
+    if (data) {
+      applyTheme(data);
+    }
+    
+    // Always remove splash screen after theme attempt (even if it fails)
+    if (!isLoading) {
+      const splash = document.getElementById("splash");
+      if (splash) splash.remove();
+    }
+}, [isLoading, data]);
 
 
   // 4️⃣ Save - Update to use settings endpoint

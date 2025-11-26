@@ -18,7 +18,7 @@ const HotelCard = ({ hotel }) => {
     .toUpperCase();
 
   return (
-    <Link to={`/${hotel.slug}`} className="text-decoration-none">
+    <Link to={`/hotel/${hotel.slug}`} className="text-decoration-none">
       <motion.div
         className="modern-hotel-card"
         whileHover={{ y: -10 }}
