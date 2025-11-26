@@ -1,12 +1,77 @@
-import React from 'react';
-import { Container } from 'react-bootstrap';
+import React, { useState } from 'react';
+import { Container, Button, Modal, Form, Spinner } from 'react-bootstrap';
+import { useAuth } from '@/context/AuthContext';
+import { toast } from 'react-toastify';
+import { updateHeroSection, uploadHeroImage, uploadHeroLogo } from '@/services/sectionEditorApi';
 import '@/styles/sections.css';
 
 /**
- * HeroSectionView - Public view for hero section
+ * HeroSectionView - Public view for hero section with inline editing
  */
-const HeroSectionView = ({ section }) => {
+const HeroSectionView = ({ section, hotel, onUpdate }) => {
+  const { isStaff } = useAuth();
   const heroData = section.hero_data || {};
+  
+  const [showModal, setShowModal] = useState(false);
+  const [title, setTitle] = useState(heroData.hero_title || '');
+  const [text, setText] = useState(heroData.hero_text || '');
+  const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  const handleSave = async () => {
+    if (!heroData.id) return;
+    
+    try {
+      setSaving(true);
+      await updateHeroSection(hotel.slug, heroData.id, {
+        hero_title: title,
+        hero_text: text,
+      });
+      toast.success('Hero updated successfully');
+      if (onUpdate) onUpdate();
+      setShowModal(false);
+    } catch (error) {
+      console.error('Failed to update hero:', error);
+      toast.error('Failed to update hero');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !heroData.id) return;
+
+    try {
+      setUploadingImage(true);
+      await uploadHeroImage(hotel.slug, heroData.id, file);
+      toast.success('Hero image uploaded');
+      if (onUpdate) onUpdate();
+    } catch (error) {
+      console.error('Failed to upload image:', error);
+      toast.error('Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleLogoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !heroData.id) return;
+
+    try {
+      setUploadingLogo(true);
+      await uploadHeroLogo(hotel.slug, heroData.id, file);
+      toast.success('Logo uploaded');
+      if (onUpdate) onUpdate();
+    } catch (error) {
+      console.error('Failed to upload logo:', error);
+      toast.error('Failed to upload logo');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
   
   return (
     <section 
@@ -36,6 +101,25 @@ const HeroSectionView = ({ section }) => {
       )}
       
       <Container className="position-relative" style={{ zIndex: 1 }}>
+        {/* Staff Edit Button */}
+        {isStaff && hotel && (
+          <div className="text-end mb-3">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setTitle(heroData.hero_title || '');
+                setText(heroData.hero_text || '');
+                setShowModal(true);
+              }}
+              className="shadow"
+            >
+              <i className="bi bi-pencil-square me-2"></i>
+              Edit Hero
+            </Button>
+          </div>
+        )}
+        
         <div className="text-center">
           {heroData.hero_logo_url && (
             <img 
@@ -72,6 +156,85 @@ const HeroSectionView = ({ section }) => {
           </p>
         </div>
       </Container>
+
+      {/* Edit Modal */}
+      <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Edit Hero Section</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group className="mb-3">
+            <Form.Label>Title</Form.Label>
+            <Form.Control
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter hero title"
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Text</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={3}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Enter hero description"
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Background Image</Form.Label>
+            <div className="d-flex gap-2 align-items-center">
+              <Form.Control
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                disabled={uploadingImage}
+              />
+              {uploadingImage && <Spinner animation="border" size="sm" />}
+            </div>
+            {heroData.hero_image_url && (
+              <img 
+                src={heroData.hero_image_url} 
+                alt="Current" 
+                className="mt-2"
+                style={{ maxHeight: '100px', borderRadius: '8px' }}
+              />
+            )}
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Logo</Form.Label>
+            <div className="d-flex gap-2 align-items-center">
+              <Form.Control
+                type="file"
+                accept="image/*"
+                onChange={handleLogoUpload}
+                disabled={uploadingLogo}
+              />
+              {uploadingLogo && <Spinner animation="border" size="sm" />}
+            </div>
+            {heroData.hero_logo_url && (
+              <img 
+                src={heroData.hero_logo_url} 
+                alt="Current logo" 
+                className="mt-2"
+                style={{ maxHeight: '60px', borderRadius: '8px' }}
+              />
+            )}
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleSave} disabled={saving}>
+            {saving ? <><Spinner animation="border" size="sm" className="me-2" /> Saving...</> : 'Save Changes'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </section>
   );
 };

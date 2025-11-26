@@ -100,13 +100,13 @@ const HotelPublicPage = () => {
     try {
       switch (section.section_type) {
         case 'hero':
-          return <HeroSectionView key={section.id} section={section} hotel={pageData.hotel} />;
+          return <HeroSectionView key={section.id} section={section} hotel={pageData.hotel} onUpdate={fetchPageData} />;
         
         case 'gallery':
-          return <GallerySectionView key={section.id} section={section} />;
+          return <GallerySectionView key={section.id} section={section} onUpdate={fetchPageData} />;
         
         case 'list':
-          return <ListSectionView key={section.id} section={section} />;
+          return <ListSectionView key={section.id} section={section} onUpdate={fetchPageData} />;
         
         case 'news':
           return <NewsSectionView key={section.id} section={section} />;

@@ -1,0 +1,232 @@
+import React, { useState } from 'react';
+import { Container, Row, Col, Modal, Button, Alert, Form, Spinner } from 'react-bootstrap';
+import { useAuth } from '@/context/AuthContext';
+import { useParams } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { createGalleryContainer, bulkUploadGalleryImages } from '@/services/sectionEditorApi';
+
+/**
+ * GallerySectionView - Public view for gallery section with inline editing
+ */
+const GallerySectionView = ({ section, onUpdate }) => {
+  const { isStaff } = useAuth();
+  const { slug } = useParams();
+  const galleries = section.galleries || [];
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [showHover, setShowHover] = useState(false);
+  const [showNewGallery, setShowNewGallery] = useState(false);
+  const [newGalleryName, setNewGalleryName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [uploadingTo, setUploadingTo] = useState(null);
+
+  if (galleries.length === 0) {
+    return null;
+  }
+
+  const hasImages = galleries.some(g => g.images && g.images.length > 0);
+
+  const handleCreateGallery = async () => {
+    if (!newGalleryName.trim()) {
+      toast.error('Please enter a gallery name');
+      return;
+    }
+
+    try {
+      setCreating(true);
+      await createGalleryContainer(slug, {
+        section: section.id,
+        name: newGalleryName,
+        sort_order: galleries.length,
+      });
+      toast.success('Gallery created successfully');
+        {galleries.map((gallery) => (
+          <div key={gallery.id} className="mb-5">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+              {galleries.length > 1 ? (
+                <h3 className="mb-0">{gallery.name}</h3>
+              ) : (
+                <div></div>
+              )}
+              
+              {/* Add Images Button for Staff */}
+              {isStaff && (
+                <div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => handleImageUpload(gallery.id, e)}
+                    style={{ display: 'none' }}
+                    id={`gallery-upload-${gallery.id}`}
+                    disabled={uploadingTo === gallery.id}
+                  />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => document.getElementById(`gallery-upload-${gallery.id}`).click()}
+                    disabled={uploadingTo === gallery.id}
+                  >
+                    {uploadingTo === gallery.id ? (
+                      <>
+                        <Spinner animation="border" size="sm" className="me-2" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-plus-circle me-2"></i>
+                        Add Images
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+            
+            {gallery.images && gallery.images.length > 0 ? (
+      setCreating(false);
+    }
+  };
+
+  const handleImageUpload = async (galleryId, event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    if (files.length > 20) {
+      toast.error('Maximum 20 images at once');
+      return;
+    }
+
+    try {
+      setUploadingTo(galleryId);
+      await bulkUploadGalleryImages(slug, galleryId, files);
+      toast.success(`${files.length} image(s) uploaded successfully`);
+      if (onUpdate) onUpdate();
+    } catch (error) {
+      console.error('Failed to upload images:', error);
+      toast.error('Failed to upload images');
+    } finally {
+      setUploadingTo(null);
+    }
+  };
+
+  return (
+    <section 
+      className="gallery-section-view py-5 bg-light position-relative"
+      onMouseEnter={() => setShowHover(true)}
+      onMouseLeave={() => setShowHover(false)}
+    >
+      <Container>
+        <h2 className="text-center mb-5">{section.name}</h2>
+        
+        {/* Empty state for staff */}
+        {isStaff && !hasImages && (
+          <Alert variant="info" className="text-center" style={{ maxWidth: '600px', margin: '0 auto' }}>
+            <i className="bi bi-images fs-1 d-block mb-3"></i>
+            <h5>No Images Yet</h5>
+            <p>Use the "Edit Sections" button to manage this gallery section.</p>
+          </Alert>
+        )}
+        
+        {galleries.map((gallery) => (
+          <div key={gallery.id} className="mb-5">
+            {galleries.length > 1 && (
+              <h3 className="mb-4">{gallery.name}</h3>
+            )}
+            
+            {gallery.images && gallery.images.length > 0 ? (
+              <Row>
+                {gallery.images.map((image) => (
+                  <Col key={image.id} xs={6} md={4} lg={3} className="mb-4">
+                    <div 
+                      className="gallery-image-wrapper"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setSelectedImage(image)}
+                    >
+                      <img
+                        src={image.image_url}
+                        alt={image.caption || 'Gallery image'}
+                        className="w-100 rounded shadow-sm"
+                        style={{
+                          height: '200px',
+                          objectFit: 'cover',
+                          transition: 'transform 0.2s',
+                        }}
+                        onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+                        onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                      />
+                      {image.caption && (
+                        <p className="text-center mt-2 small text-muted">
+                          {image.caption}
+                        </p>
+          )}
+        </Modal.Body>
+      </Modal>
+
+      {/* New Gallery Modal */}
+      <Modal show={showNewGallery} onHide={() => setShowNewGallery(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Create New Gallery</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group>
+            <Form.Label>Gallery Name</Form.Label>
+            <Form.Control
+              type="text"
+              value={newGalleryName}
+              onChange={(e) => setNewGalleryName(e.target.value)}
+              placeholder="e.g., Dining Area, Pool, Lobby"
+              autoFocus
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowNewGallery(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleCreateGallery} disabled={creating}>
+            {creating ? <><Spinner animation="border" size="sm" className="me-2" /> Creating...</> : 'Create Gallery'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </section>
+  );
+};
+
+export default GallerySectionView;i-image fs-3 d-block mb-2 text-muted"></i>
+                <p className="mb-0">No images in <strong>{gallery.name}</strong> yet</p>
+              </Alert>
+            ) : null}
+          </div>
+        ))}
+      </Container>
+
+      {/* Image Modal */}
+      <Modal 
+        show={!!selectedImage} 
+        onHide={() => setSelectedImage(null)}
+        size="xl"
+        centered
+      >
+        <Modal.Body className="p-0">
+          {selectedImage && (
+            <>
+              <img
+                src={selectedImage.image_url}
+                alt={selectedImage.caption || 'Gallery image'}
+                className="w-100"
+                style={{ maxHeight: '90vh', objectFit: 'contain' }}
+              />
+              {selectedImage.caption && (
+                <div className="p-3 bg-dark text-white">
+                  {selectedImage.caption}
+                </div>
+              )}
+            </>
+          )}
+        </Modal.Body>
+      </Modal>
+    </section>
+  );
+};
+
+export default GallerySectionView;

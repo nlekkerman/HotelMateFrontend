@@ -1,16 +1,20 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
-import { Button, Offcanvas, Card, Badge, ListGroup } from 'react-bootstrap';
+import { Button, Offcanvas, Card, Badge, ListGroup, Modal, Form } from 'react-bootstrap';
 import { createSection, deleteSection, updateSection } from '@/services/sectionEditorApi';
 import { toast } from 'react-toastify';
 
 /**
- * InlinePageBuilder - NEW Section-based builder overlay
+ * InlinePageBuilder - Section-based builder overlay
  * Only visible to super staff admins
  */
 function InlinePageBuilder({ hotel, sections, onUpdate }) {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showNewSectionModal, setShowNewSectionModal] = useState(false);
+  const [selectedSectionType, setSelectedSectionType] = useState(null);
+  const [sectionName, setSectionName] = useState('');
+  const [containerName, setContainerName] = useState('');
 
   const sectionTypes = [
     { key: 'hero', label: 'Hero Section', icon: '🎯', section_type: 'hero', description: 'Welcome banner with images' },
@@ -20,16 +24,64 @@ function InlinePageBuilder({ hotel, sections, onUpdate }) {
   ];
 
   const handleAddSection = async (sectionType) => {
+    // For hero and news sections, create directly without modal
+    if (sectionType.section_type === 'hero' || sectionType.section_type === 'news') {
+      setLoading(true);
+      try {
+        const newSection = await createSection(hotel.slug, {
+          section_type: sectionType.section_type
+        });
+        
+        console.log('[InlinePageBuilder] ✅ Section created:', newSection);
+        toast.success(`${sectionType.label} created successfully!`);
+        
+        // Refresh to show new section
+        await onUpdate();
+      } catch (err) {
+        console.error('[InlinePageBuilder] Error creating section:', err);
+        toast.error('Failed to create section');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // For gallery and list sections, show modal
+    setSelectedSectionType(sectionType);
+    setSectionName('');
+    setContainerName('');
+    setShowNewSectionModal(true);
+  };
+
+  const handleCreateSectionWithContainer = async () => {
     setLoading(true);
     try {
-      const newSection = await createSection(hotel.slug, {
-        section_type: sectionType.section_type,
-        name: sectionType.label,
-        position: sections.length
-      });
+      // Build payload - backend will use defaults for empty fields
+      const payload = {
+        section_type: selectedSectionType.section_type
+      };
+
+      // Only add name if provided
+      if (sectionName.trim()) {
+        payload.name = sectionName.trim();
+      }
+
+      // Only add container_name if provided
+      if (containerName.trim()) {
+        payload.container_name = containerName.trim();
+      }
+
+      // Backend creates section and first container automatically
+      const newSection = await createSection(hotel.slug, payload);
       
-      console.log('[InlinePageBuilder] ✅ Section created:', newSection);
-      toast.success(`${sectionType.label} created successfully!`);
+      console.log('[InlinePageBuilder] ✅ Section created with container:', newSection);
+      toast.success(`${selectedSectionType.label} created successfully!`);
+      
+      // Reset and close
+      setShowNewSectionModal(false);
+      setSelectedSectionType(null);
+      setSectionName('');
+      setContainerName('');
       
       // Refresh to show new section
       await onUpdate();
@@ -86,17 +138,6 @@ function InlinePageBuilder({ hotel, sections, onUpdate }) {
           {sections.length > 0 && (
             <Badge bg="light" text="dark" className="ms-2">{sections.length}</Badge>
           )}
-        </Button>
-
-        {/* Full Editor Button */}
-        <Button 
-          variant="success" 
-          href={`/staff/${hotel.slug}/section-editor`}
-          className="shadow-lg"
-          style={{ borderRadius: '50px', padding: '12px 24px' }}
-        >
-          <i className="bi bi-tools me-2"></i>
-          Full Editor
         </Button>
 
         {/* Toggle to Staff Feed */}
@@ -218,22 +259,81 @@ function InlinePageBuilder({ hotel, sections, onUpdate }) {
               </ListGroup>
 
               <div className="mt-3 text-center">
-                <Button
-                  variant="primary"
-                  href={`/staff/${hotel.slug}/section-editor`}
-                  className="w-100"
-                >
-                  <i className="bi bi-pencil-square me-2"></i>
-                  Open Full Editor
-                </Button>
-                <small className="text-muted d-block mt-2">
-                  Edit content, reorder sections, and more
+                <small className="text-muted d-block">
+                  Click sections below to edit content
                 </small>
               </div>
             </>
           )}
         </Offcanvas.Body>
       </Offcanvas>
+
+      {/* New Section Modal - Only for Gallery and List */}
+      <Modal show={showNewSectionModal} onHide={() => {
+        setShowNewSectionModal(false);
+        setSelectedSectionType(null);
+        setSectionName('');
+        setContainerName('');
+      }}>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            {selectedSectionType?.icon} Create {selectedSectionType?.label}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group className="mb-3">
+            <Form.Label>Section Name (optional)</Form.Label>
+            <Form.Control
+              type="text"
+              value={sectionName}
+              onChange={(e) => setSectionName(e.target.value)}
+              placeholder={
+                selectedSectionType?.section_type === 'gallery'
+                  ? 'e.g., Hotel Photos'
+                  : 'e.g., Hotel Amenities'
+              }
+              autoFocus
+            />
+            <Form.Text className="text-muted">
+              Leave empty to use default: "{selectedSectionType?.label}"
+            </Form.Text>
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>
+              First {selectedSectionType?.section_type === 'gallery' ? 'Gallery' : 'List'} Name (optional)
+            </Form.Label>
+            <Form.Control
+              type="text"
+              value={containerName}
+              onChange={(e) => setContainerName(e.target.value)}
+              placeholder={
+                selectedSectionType?.section_type === 'gallery' 
+                  ? 'e.g., Lobby & Reception' 
+                  : 'e.g., Room Features'
+              }
+            />
+            <Form.Text className="text-muted">
+              {selectedSectionType?.section_type === 'gallery' 
+                ? 'Leave empty to use default: "Gallery 1"' 
+                : 'Leave empty for no title'}
+            </Form.Text>
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => {
+            setShowNewSectionModal(false);
+            setSelectedSectionType(null);
+            setSectionName('');
+            setContainerName('');
+          }}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleCreateSectionWithContainer} disabled={loading}>
+            {loading ? 'Creating...' : 'Create Section'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
 }
