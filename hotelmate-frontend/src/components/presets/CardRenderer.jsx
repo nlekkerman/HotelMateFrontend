@@ -7,7 +7,7 @@ import React from 'react';
 const CardRenderer = ({ card, onCardClick, variant = 1 }) => {
   // Simple card rendering - styling handled by CSS based on parent section variant
   return (
-    <div className="list-card" onClick={() => onCardClick?.(card)}>
+    <div className="list-card">
       {card.image_url && (
         <div className="list-card__image-wrapper">
           <img 
@@ -26,6 +26,16 @@ const CardRenderer = ({ card, onCardClick, variant = 1 }) => {
         )}
         {card.description && (
           <p className={`list-card__description font-preset-${variant}-body`}>{card.description}</p>
+        )}
+        
+        {/* Card action button - styled by preset */}
+        {onCardClick && (
+          <button 
+            className="btn btn-hm btn-card mt-3"
+            onClick={() => onCardClick(card)}
+          >
+            View Details
+          </button>
         )}
       </div>
     </div>

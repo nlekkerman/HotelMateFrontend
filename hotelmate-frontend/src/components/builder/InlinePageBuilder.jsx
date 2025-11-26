@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, forwardRef, useImperativeHandle } from 'react';
 import PropTypes from 'prop-types';
 import { Button, Offcanvas, Card, Badge, ListGroup, Modal, Form } from 'react-bootstrap';
 import { createSection, deleteSection, updateSection } from '@/services/sectionEditorApi';
@@ -8,8 +8,15 @@ import { toast } from 'react-toastify';
  * InlinePageBuilder - Section-based builder overlay
  * Only visible to super staff admins
  */
-function InlinePageBuilder({ hotel, sections, onUpdate }) {
+const InlinePageBuilder = forwardRef(({ hotel, sections, onUpdate }, ref) => {
   const [show, setShow] = useState(false);
+  
+  // Expose setShow to parent components
+  useImperativeHandle(ref, () => ({
+    open: () => setShow(true),
+    close: () => setShow(false),
+    toggle: () => setShow(prev => !prev)
+  }));
   const [loading, setLoading] = useState(false);
   const [showNewSectionModal, setShowNewSectionModal] = useState(false);
   const [selectedSectionType, setSelectedSectionType] = useState(null);
@@ -121,37 +128,6 @@ function InlinePageBuilder({ hotel, sections, onUpdate }) {
 
   return (
     <>
-      {/* Floating Buttons */}
-      <div 
-        className="position-fixed d-flex flex-column gap-2" 
-        style={{ top: '20px', right: '20px', zIndex: 1050 }}
-      >
-        {/* Page Builder Button */}
-        <Button 
-          variant="primary" 
-          onClick={() => setShow(true)}
-          className="shadow-lg"
-          style={{ borderRadius: '50px', padding: '12px 24px' }}
-        >
-          <i className="bi bi-pencil-square me-2"></i>
-          Edit Sections
-          {sections.length > 0 && (
-            <Badge bg="light" text="dark" className="ms-2">{sections.length}</Badge>
-          )}
-        </Button>
-
-        {/* Toggle to Staff Feed */}
-        <Button 
-          variant="dark" 
-          href={`/staff/${hotel.slug}/feed`}
-          className="shadow-lg"
-          style={{ borderRadius: '50px', padding: '12px 24px' }}
-        >
-          <i className="bi bi-person-badge me-2"></i>
-          Staff View
-        </Button>
-      </div>
-
       {/* Builder Sidebar */}
       <Offcanvas show={show} onHide={() => setShow(false)} placement="end" style={{ width: '450px' }}>
         <Offcanvas.Header closeButton className="bg-gradient text-white" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
@@ -336,7 +312,7 @@ function InlinePageBuilder({ hotel, sections, onUpdate }) {
       </Modal>
     </>
   );
-}
+});
 
 InlinePageBuilder.propTypes = {
   hotel: PropTypes.shape({
@@ -349,5 +325,7 @@ InlinePageBuilder.propTypes = {
   sections: PropTypes.array.isRequired,
   onUpdate: PropTypes.func.isRequired
 };
+
+InlinePageBuilder.displayName = 'InlinePageBuilder';
 
 export default InlinePageBuilder;

@@ -64,17 +64,19 @@
 /* Full viewport width container with small side margins */
 .section-container {
   width: 100%;
-  padding-left: 10px;
-  padding-right: 10px;
+  padding-left: 60px;
+  padding-right: 60px;
+  margin-top: 20px;
   margin-left: auto;
   margin-right: auto;
 }
 
+
 /* On mobile, use slightly larger padding for better touch targets */
 @media (max-width: 768px) {
   .section-container {
-    padding-left: 15px;
-    padding-right: 15px;
+    padding-left: 20px;
+    padding-right: 20px;
   }
 }
 
@@ -1617,4 +1619,111 @@ section:not(:first-of-type)::before {
     var(--main-color, #3498db) 0%,
     var(--button-hover-color, #2980b9) 100%
   );
+}
+
+/* ========== SECTION HEADER STYLES ========== */
+.section-header {
+  margin-bottom: 3rem;
+  padding: 1.5rem 2rem;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.section-header__content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.section-header__title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0;
+  flex-grow: 1;
+}
+
+/* Preset 1: Clean & Modern - Light blue subtle background */
+.section-header--preset-1 {
+  background: linear-gradient(135deg, rgba(59, 169, 255, 0.08), rgba(95, 224, 255, 0.05));
+  border-left: 4px solid #3ba9ff;
+  box-shadow: 0 2px 8px rgba(59, 169, 255, 0.1);
+}
+
+.section-header--preset-1 .section-header__title {
+  color: #1a2332;
+}
+
+/* Preset 2: Dark & Elegant - Dark with gold accent */
+.section-header--preset-2 {
+  background: linear-gradient(135deg, rgba(10, 14, 22, 0.95), rgba(5, 7, 10, 0.9));
+  border-left: 4px solid var(--gold);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.section-header--preset-2 .section-header__title {
+  color: var(--gold);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Preset 3: Minimal & Sleek - Subtle border only */
+.section-header--preset-3 {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-left: 3px solid rgba(255, 255, 255, 0.3);
+  padding: 1.25rem 2rem;
+}
+
+.section-header--preset-3 .section-header__title {
+  color: var(--text-main);
+  font-weight: 300;
+  letter-spacing: 2px;
+}
+
+/* Preset 4: Vibrant & Playful - Colorful gradient */
+.section-header--preset-4 {
+  background: linear-gradient(135deg, rgba(255, 93, 200, 0.15), rgba(255, 179, 71, 0.1));
+  border-left: 4px solid #ff5dc8;
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(255, 93, 200, 0.2);
+  transform: rotate(-0.5deg);
+}
+
+.section-header--preset-4 .section-header__title {
+  color: #ffe9fb;
+  transform: rotate(0.5deg);
+}
+
+/* Preset 5: Professional & Structured - Green accent */
+.section-header--preset-5 {
+  background: rgba(14, 19, 31, 0.95);
+  border-top: 3px solid var(--accent-green);
+  border-bottom: 1px solid rgba(48, 225, 124, 0.2);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+.section-header--preset-5 .section-header__title {
+  color: var(--accent-green);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 1.75rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .section-header {
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .section-header__content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .section-header__title {
+    font-size: 1.5rem;
+  }
 }

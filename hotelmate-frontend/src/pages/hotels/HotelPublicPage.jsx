@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Container, Spinner, Alert } from 'react-bootstrap';
-import { getPublicHotelPage, listSections } from '@/services/sectionEditorApi';
+import { getPublicHotelPage, listSections, updatePageStyle } from '@/services/sectionEditorApi';
 import { useAuth } from '@/context/AuthContext';
 import HeroSectionPreset from '@/components/presets/HeroSectionPreset';
 import GallerySectionPreset from '@/components/presets/GallerySectionPreset';
@@ -9,6 +9,7 @@ import ListSectionPreset from '@/components/presets/ListSectionPreset';
 import NewsSectionPreset from '@/components/presets/NewsSectionPreset';
 import FooterSectionPreset from '@/components/presets/FooterSectionPreset';
 import InlinePageBuilder from '@/components/builder/InlinePageBuilder';
+import PresetSelector from '@/components/presets/PresetSelector';
 import '@/styles/hotelPublicPage.css';
 
 /**
@@ -23,28 +24,20 @@ const HotelPublicPage = () => {
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [updatingStyle, setUpdatingStyle] = useState(false);
 
   const fetchPageData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log(`[HotelPublicPage] Fetching NEW section-based page for: ${slug}`);
-      console.log(`[HotelPublicPage] User is staff: ${isStaff}`);
-      
+     
       // Get basic page data
       const data = await getPublicHotelPage(slug);
       
-      console.log('[HotelPublicPage] ✅ Public page data received:', data);
-      console.log('[HotelPublicPage] Hotel:', data?.hotel);
-      console.log('[HotelPublicPage] Public sections count:', data?.sections?.length);
-      
       // If staff, fetch ALL sections (including inactive) using staff endpoint
       if (isStaff) {
-        console.log('[HotelPublicPage] 👤 Staff user - fetching ALL sections from staff endpoint');
         const allSections = await listSections(slug);
-        console.log('[HotelPublicPage] ✅ Staff sections received:', allSections);
-        console.log('[HotelPublicPage] Staff sections count:', allSections?.length);
         // Ensure we have an array
         data.sections = Array.isArray(allSections) ? allSections : [];
       }
@@ -56,6 +49,7 @@ const HotelPublicPage = () => {
       }
       
       console.log('[HotelPublicPage] Final sections count:', data?.sections?.length);
+      console.log('[HotelPublicPage] First section after processing:', data.sections?.[0]);
       
       setPageData(data);
       
@@ -86,6 +80,114 @@ const HotelPublicPage = () => {
     fetchPageData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, isStaff]); // Re-run when slug or staff status changes
+
+  // Debug: Check DOM attribute after render
+  useEffect(() => {
+    const pageElement = document.querySelector('.hotel-public-page');
+    if (pageElement && pageData) {
+      const attrValue = pageElement.getAttribute('data-preset');
+      console.log('[HotelPublicPage] 🔍 DOM Check - data-preset attribute value:', attrValue);
+      console.log('[HotelPublicPage] 🔍 DOM Check - getCurrentVariant():', getCurrentVariant());
+    }
+  }, [pageData]); // Check whenever pageData changes
+
+  /**
+   * Handle style preset change
+   */
+  const handleStyleChange = async (newVariant) => {
+    try {
+      setUpdatingStyle(true);
+      console.log('[HotelPublicPage] 🎨 Updating page style to variant:', newVariant);
+      console.log('[HotelPublicPage] 📊 Before change - Current preset:', getCurrentVariant());
+      console.log('[HotelPublicPage] 📊 Page root element data-preset:', document.querySelector('.hotel-public-page')?.getAttribute('data-preset'));
+      
+      const result = await updatePageStyle(slug, newVariant);
+      console.log('[HotelPublicPage] ✅ Update result from backend:', result);
+      
+      // Refresh page data to get updated sections
+      await fetchPageData();
+      
+      console.log('[HotelPublicPage] ✅ Page style updated successfully');
+      console.log('[HotelPublicPage] 📊 After change - New current variant:', getCurrentVariant());
+      console.log('[HotelPublicPage] 📊 Page root element data-preset:', document.querySelector('.hotel-public-page')?.getAttribute('data-preset'));
+      
+      // Debug button styling
+      setTimeout(() => {
+        const pageRoot = document.querySelector('.hotel-public-page');
+        console.log('[HotelPublicPage] 🔍 Page root data-preset:', pageRoot?.getAttribute('data-preset'));
+        
+        const heroBtn = document.querySelector('.hero-edit');
+        if (heroBtn) {
+          const styles = window.getComputedStyle(heroBtn);
+          console.log('[HotelPublicPage] 🔍 Hero button found:', heroBtn);
+          console.log('[HotelPublicPage] 🔍 Hero button classes:', heroBtn.className);
+          console.log('[HotelPublicPage] 🔍 Hero button computed styles:');
+          console.log('  - background:', styles.background);
+          console.log('  - backgroundColor:', styles.backgroundColor);
+          console.log('  - border:', styles.border);
+          console.log('  - borderColor:', styles.borderColor);
+          console.log('  - color:', styles.color);
+          console.log('  - boxShadow:', styles.boxShadow);
+          
+          // Check CSS selector specificity
+          console.log('[HotelPublicPage] 🔍 Testing CSS selector: [data-preset="' + newVariant + '"] .hero-edit');
+          const matchingRule = Array.from(document.styleSheets)
+            .flatMap(sheet => {
+              try { return Array.from(sheet.cssRules || []); } 
+              catch(e) { return []; }
+            })
+            .find(rule => rule.selectorText?.includes(`[data-preset="${newVariant}"] .hero-edit`));
+          console.log('[HotelPublicPage] 🔍 Matching CSS rule:', matchingRule?.cssText);
+        } else {
+          console.log('[HotelPublicPage] ⚠️ Hero button NOT FOUND');
+        }
+        
+        const listBtn = document.querySelector('.list-section-add-list');
+        if (listBtn) {
+          const styles = window.getComputedStyle(listBtn);
+          console.log('[HotelPublicPage] 🔍 List button found:', listBtn);
+          console.log('[HotelPublicPage] 🔍 List button classes:', listBtn.className);
+          console.log('[HotelPublicPage] 🔍 List button parent:', listBtn.parentElement);
+          console.log('[HotelPublicPage] 🔍 List button ancestor with data-preset:', listBtn.closest('[data-preset]'));
+          console.log('[HotelPublicPage] 🔍 Selector test - [data-preset="' + newVariant + '"] .list-section-add-list matches:', document.querySelector('[data-preset="' + newVariant + '"] .list-section-add-list'));
+          console.log('[HotelPublicPage] 🔍 List button computed styles:');
+          console.log('  - background:', styles.background);
+          console.log('  - border:', styles.border);
+          console.log('  - color:', styles.color);
+          
+          // Check all matching stylesheets
+          const allRules = Array.from(document.styleSheets)
+            .flatMap(sheet => {
+              try { return Array.from(sheet.cssRules || []); } 
+              catch(e) { return []; }
+            })
+            .filter(rule => rule.selectorText?.includes('.list-section-add-list'))
+            .map(rule => ({ selector: rule.selectorText, style: rule.style.cssText }));
+          console.log('[HotelPublicPage] 🔍 All CSS rules for .list-section-add-list:', allRules);
+        } else {
+          console.log('[HotelPublicPage] ⚠️ List button NOT FOUND');
+        }
+      }, 100);
+
+    } catch (err) {
+      console.error('[HotelPublicPage] ❌ Failed to update page style:', err);
+      alert('Failed to update page style. Please try again.');
+    } finally {
+      setUpdatingStyle(false);
+    }
+  };
+
+  /**
+   * Get current page style variant (from first section or default to 1)
+   */
+  const getCurrentVariant = () => {
+    if (!pageData?.sections || pageData.sections.length === 0) {
+      return 1;
+    }
+    const variant = pageData.sections[0]?.style_variant || 1;
+    console.log('[HotelPublicPage] getCurrentVariant returning:', variant, 'from section:', pageData.sections[0]?.name);
+    return variant;
+  };
 
   /**
    * Render section based on NEW section type
@@ -207,11 +309,27 @@ const HotelPublicPage = () => {
   
   // Render page
   console.log('[HotelPublicPage] RENDERING: Full page with', pageData.sections.length, 'sections');
+  const currentPreset = getCurrentVariant();
+  console.log('[HotelPublicPage] 🎯 Rendering page with data-preset:', currentPreset);
+  console.log('[HotelPublicPage] 🎯 Type of currentPreset:', typeof currentPreset, 'Value:', currentPreset);
+  console.log('[HotelPublicPage] 📋 All sections:', pageData.sections.map(s => ({ name: s.name, variant: s.style_variant })));
+  
+  // Force string conversion for data attribute
+  const presetValue = String(currentPreset);
+  console.log('[HotelPublicPage] 🎯 Setting data-preset to:', presetValue);
+  
   return (
-    <div className="hotel-public-page">
-      {/* Inline Builder - Only for staff */}
+    <div 
+      className={`hotel-public-page ${isStaff && user ? 'has-preset-selector' : ''}`}
+      data-preset={presetValue}
+    >
+      {/* Preset Selector with Inline Builder - Only for authenticated staff on public page */}
       {isStaff && user && (
-        <InlinePageBuilder 
+        <PresetSelector 
+          currentVariant={getCurrentVariant()}
+          onVariantChange={handleStyleChange}
+          hotelSlug={slug}
+          loading={updatingStyle}
           hotel={pageData.hotel}
           sections={pageData.sections}
           onUpdate={fetchPageData}
@@ -219,7 +337,7 @@ const HotelPublicPage = () => {
       )}
 
       {/* Back button (top-left) */}
-      <div className="position-fixed" style={{ top: '20px', left: '20px', zIndex: 1000 }}>
+      <div className="position-fixed" style={{ top: '120px', left: '20px', zIndex: 1000 }}>
         <Link 
           to="/?view=all" 
           className="btn btn-light shadow"

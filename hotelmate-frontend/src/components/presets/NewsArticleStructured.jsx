@@ -142,9 +142,8 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
         onMouseLeave={() => isStaff && setHoveredPart(null)}
       >
         {isStaff && hoveredPart === 'top' && (
-          <Button
-            variant="primary"
-            size="sm"
+          <button
+            className="btn btn-hm btn-hm-editor"
             style={{
               position: 'absolute',
               top: '10px',
@@ -156,7 +155,7 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
           >
             <i className="bi bi-pencil me-2"></i>
             Edit Part 1
-          </Button>
+          </button>
         )}
         {heroImage && (
           <div className="article-hero-image" style={{ marginBottom: '1rem' }}>
@@ -196,9 +195,8 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
         onMouseLeave={() => isStaff && setHoveredPart(null)}
       >
         {isStaff && hoveredPart === 'middle' && (
-          <Button
-            variant="primary"
-            size="sm"
+          <button
+            className="btn btn-hm btn-hm-editor"
             style={{
               position: 'absolute',
               top: '10px',
@@ -210,7 +208,7 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
           >
             <i className="bi bi-pencil me-2"></i>
             Edit Part 2
-          </Button>
+          </button>
         )}
         <div className="article-text-with-image">
           {inlineImage && (
@@ -247,9 +245,8 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
         onMouseLeave={() => isStaff && setHoveredPart(null)}
       >
         {isStaff && hoveredPart === 'bottom' && (
-          <Button
-            variant="primary"
-            size="sm"
+          <button
+            className="btn btn-hm btn-hm-editor"
             style={{
               position: 'fixed',
               top: '50%',
@@ -262,7 +259,7 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
           >
             <i className="bi bi-pencil me-2"></i>
             Edit Part 3
-          </Button>
+          </button>
         )}
         <div className="article-author-section" style={{ padding: '0 20px', marginTop: '2rem' }}>
           <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -355,9 +352,9 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setEditingPart(null)}>Cancel</Button>
-          <Button variant="primary" onClick={handleSavePart} disabled={saving}>
+          <button className="btn btn-hm btn-hm-primary" onClick={handleSavePart} disabled={saving}>
             {saving ? 'Saving...' : 'Save Changes'}
-          </Button>
+          </button>
         </Modal.Footer>
       </Modal>
 
@@ -414,9 +411,9 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setEditingPart(null)}>Cancel</Button>
-          <Button variant="primary" onClick={handleSavePart} disabled={saving}>
+          <button className="btn btn-hm btn-hm-primary" onClick={handleSavePart} disabled={saving}>
             {saving ? 'Saving...' : 'Save Changes'}
-          </Button>
+          </button>
         </Modal.Footer>
       </Modal>
 
@@ -473,9 +470,9 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setEditingPart(null)}>Cancel</Button>
-          <Button variant="primary" onClick={handleSavePart} disabled={saving}>
+          <button className="btn btn-hm btn-hm-primary" onClick={handleSavePart} disabled={saving}>
             {saving ? 'Saving...' : 'Save Changes'}
-          </Button>
+          </button>
         </Modal.Footer>
       </Modal>
     </article>

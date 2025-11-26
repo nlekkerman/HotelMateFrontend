@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Row, Col, Button, ButtonGroup } from 'react-bootstrap';
+import { Row, Col, Button, ButtonGroup, Modal, Form } from 'react-bootstrap';
 import { useAuth } from '@/context/AuthContext';
 import { useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import GalleryImageRenderer from './GalleryImageRenderer';
 import { useGalleryScroll } from './useGalleryScroll';
-import { bulkUploadGalleryImages } from '@/services/sectionEditorApi';
+import { bulkUploadGalleryImages, createGalleryContainer } from '@/services/sectionEditorApi';
 
 /**
  * GallerySectionPreset - Renders gallery section based on numeric style_variant (1-5)
@@ -28,6 +28,9 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
   const [showAddImageModal, setShowAddImageModal] = useState(false);
   const [showHover, setShowHover] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [showAddGallery, setShowAddGallery] = useState(false);
+  const [newGalleryName, setNewGalleryName] = useState('');
+  const [creating, setCreating] = useState(false);
   const fileInputRef = useRef(null);
 
   if (galleries.length === 0) {
@@ -109,7 +112,30 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
     console.log('Add image clicked for gallery:', selectedGalleryId);
   };
 
+  const handleCreateGallery = async () => {
+    if (!newGalleryName.trim()) {
+      toast.error('Please enter a gallery name');
+      return;
+    }
 
+    try {
+      setCreating(true);
+      await createGalleryContainer(slug, {
+        section: section.id,
+        name: newGalleryName,
+        sort_order: galleries.length,
+      });
+      toast.success('Gallery created successfully');
+      setNewGalleryName('');
+      setShowAddGallery(false);
+      if (onUpdate) onUpdate();
+    } catch (error) {
+      console.error('Failed to create gallery:', error);
+      toast.error('Failed to create gallery');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   // Render gallery filter buttons
   const renderGalleryFilters = () => {
@@ -118,20 +144,20 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
     return (
       <div className="gallery__filters text-center mb-4">
         <ButtonGroup>
-          <Button 
-            variant={selectedGalleryId === 'all' ? 'primary' : 'outline-primary'}
+          <button 
+            className={`gallery-filter-all ${selectedGalleryId === 'all' ? 'active' : ''}`}
             onClick={() => setSelectedGalleryId('all')}
           >
             All Images ({allImages.length})
-          </Button>
+          </button>
           {galleries.map(gallery => (
-            <Button
+            <button
               key={gallery.id}
-              variant={selectedGalleryId === gallery.id ? 'primary' : 'outline-primary'}
+              className={`gallery-filter-specific ${selectedGalleryId === gallery.id ? 'active' : ''}`}
               onClick={() => setSelectedGalleryId(gallery.id)}
             >
               {gallery.name} ({gallery.images?.length || 0})
-            </Button>
+            </button>
           ))}
         </ButtonGroup>
       </div>
@@ -142,7 +168,20 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
   const renderGalleryLayout = () => {
     return (
       <>
-        <h2 className={`gallery__title text-center mb-5 font-preset-${variant}-heading`}>{section.name}</h2>
+        <div className={`section-header section-header--preset-${variant}`}>
+          <div className="section-header__content">
+            <h2 className={`section-header__title font-preset-${variant}-heading`}>{section.name}</h2>
+            {isStaff && (
+              <button
+                className="gallery-add-gallery"
+                onClick={() => setShowAddGallery(true)}
+              >
+                <i className="bi bi-plus-circle me-2"></i>
+                Add Gallery
+              </button>
+            )}
+          </div>
+        </div>
         {renderGalleryFilters()}
         
         <div 
@@ -153,6 +192,7 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
           {/* Left Arrow */}
           {scrollPosition > 0 && showHover && (
             <button
+              className="gallery-scroll-left"
               onClick={() => handleScroll('left')}
               style={{
                 position: 'absolute',
@@ -296,6 +336,7 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
           {/* Right Arrow */}
           {scrollPosition < maxScroll - 10 && showHover && (
             <button
+              className="gallery-scroll-right"
               onClick={() => handleScroll('right')}
               style={{
                 position: 'absolute',
@@ -335,72 +376,125 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
   // Preset 1: Clean & Modern - Horizontal scroll
   if (variant === 1) {
     return (
-      <section className={`gallery gallery--preset-1 ${section.is_active === false ? 'section-inactive' : ''}`}>
-        <div className="section-container">
-          {renderGalleryLayout()}
-        </div>
-        {renderLightbox()}
-      </section>
+      <>
+        <section className={`gallery gallery--preset-1 ${section.is_active === false ? 'section-inactive' : ''}`}>
+          <div className="section-container">
+            {renderGalleryLayout()}
+          </div>
+          {renderLightbox()}
+        </section>
+        {renderAddGalleryModal()}
+      </>
     );
   }
 
   // Preset 2: Dark & Elegant - Horizontal scroll
   if (variant === 2) {
     return (
-      <section className={`gallery gallery--preset-2 ${section.is_active === false ? 'section-inactive' : ''}`}>
-        <div className="section-container">
-          {renderGalleryLayout()}
-        </div>
-        {renderLightbox()}
-      </section>
+      <>
+        <section className={`gallery gallery--preset-2 ${section.is_active === false ? 'section-inactive' : ''}`}>
+          <div className="section-container">
+            {renderGalleryLayout()}
+          </div>
+          {renderLightbox()}
+        </section>
+        {renderAddGalleryModal()}
+      </>
     );
   }
 
   // Preset 3: Minimal & Sleek - Horizontal scroll
   if (variant === 3) {
     return (
-      <section className={`gallery gallery--preset-3 ${section.is_active === false ? 'section-inactive' : ''}`}>
-        <div className="section-container">
-          {renderGalleryLayout()}
-        </div>
-        {renderLightbox()}
-      </section>
+      <>
+        <section className={`gallery gallery--preset-3 ${section.is_active === false ? 'section-inactive' : ''}`}>
+          <div className="section-container">
+            {renderGalleryLayout()}
+          </div>
+          {renderLightbox()}
+        </section>
+        {renderAddGalleryModal()}
+      </>
     );
   }
 
   // Preset 4: Vibrant & Playful - Horizontal scroll
   if (variant === 4) {
     return (
-      <section className={`gallery gallery--preset-4 ${section.is_active === false ? 'section-inactive' : ''}`}>
-        <div className="section-container">
-          {renderGalleryLayout()}
-        </div>
-        {renderLightbox()}
-      </section>
+      <>
+        <section className={`gallery gallery--preset-4 ${section.is_active === false ? 'section-inactive' : ''}`}>
+          <div className="section-container">
+            {renderGalleryLayout()}
+          </div>
+          {renderLightbox()}
+        </section>
+        {renderAddGalleryModal()}
+      </>
     );
   }
 
   // Preset 5: Professional & Structured - Horizontal scroll
   if (variant === 5) {
     return (
-      <section className={`gallery gallery--preset-5 ${section.is_active === false ? 'section-inactive' : ''}`}>
-        <div className="section-container">
-          {renderGalleryLayout()}
-        </div>
-        {renderLightbox()}
-      </section>
+      <>
+        <section className={`gallery gallery--preset-5 ${section.is_active === false ? 'section-inactive' : ''}`}>
+          <div className="section-container">
+            {renderGalleryLayout()}
+          </div>
+          {renderLightbox()}
+        </section>
+        {renderAddGalleryModal()}
+      </>
     );
   }
 
   // Fallback to Preset 1
   return (
-    <section className={`gallery gallery--preset-1 ${section.is_active === false ? 'section-inactive' : ''}`}>
-      <div className="section-container">
-        {renderGalleryLayout()}
-      </div>
-      {renderLightbox()}
-    </section>
+    <>
+      <section className={`gallery gallery--preset-1 ${section.is_active === false ? 'section-inactive' : ''}`}>
+        <div className="section-container">
+          {renderGalleryLayout()}
+        </div>
+        {renderLightbox()}
+      </section>
+      {renderAddGalleryModal()}
+    </>
   );
+
+  function renderAddGalleryModal() {
+    return (
+      <Modal show={showAddGallery} onHide={() => setShowAddGallery(false)} data-preset={variant}>
+        <Modal.Header closeButton>
+          <Modal.Title>Add New Gallery</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group>
+            <Form.Label>Gallery Name</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Enter gallery name"
+              value={newGalleryName}
+              onChange={(e) => setNewGalleryName(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleCreateGallery();
+                }
+              }}
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <button className="gallery-modal-cancel" onClick={() => setShowAddGallery(false)}>
+            Cancel
+          </button>
+          <button className="gallery-modal-create" onClick={handleCreateGallery} disabled={creating}>
+            {creating ? 'Creating...' : 'Create Gallery'}
+          </button>
+        </Modal.Footer>
+      </Modal>
+    );
+  }
 
   function renderLightbox() {
     if (!selectedImage) return null;
@@ -424,6 +518,7 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
       >
         {/* Close Button */}
         <button 
+          className="gallery-lightbox-close"
           onClick={closeLightbox}
           style={{
             position: 'absolute',
@@ -464,6 +559,7 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
           {/* Previous Arrow */}
           {displayedImages.length > 1 && (
             <button 
+              className="gallery-lightbox-prev"
               onClick={(e) => { e.stopPropagation(); navigateImage('prev'); }}
               style={{
                 position: 'absolute',
@@ -511,6 +607,7 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
           {/* Next Arrow */}
           {displayedImages.length > 1 && (
             <button 
+              className="gallery-lightbox-next"
               onClick={(e) => { e.stopPropagation(); navigateImage('next'); }}
               style={{
                 position: 'absolute',

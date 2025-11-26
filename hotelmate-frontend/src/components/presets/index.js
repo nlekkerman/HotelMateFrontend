@@ -13,3 +13,4 @@ export { default as FooterSectionPreset } from './FooterSectionPreset';
 export { default as CardRenderer } from './CardRenderer';
 export { default as GalleryImageRenderer } from './GalleryImageRenderer';
 export { default as NewsBlockRenderer } from './NewsBlockRenderer';
+export { default as PresetSelector } from './PresetSelector';

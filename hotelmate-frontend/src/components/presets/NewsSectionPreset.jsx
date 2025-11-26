@@ -1,5 +1,6 @@
 import React from 'react';
 import { Row, Col } from 'react-bootstrap';
+import { useAuth } from '@/context/AuthContext';
 import NewsBlockRenderer from './NewsBlockRenderer';
 import NewsArticleStructured from './NewsArticleStructured';
 
@@ -13,8 +14,14 @@ import NewsArticleStructured from './NewsArticleStructured';
  * Preset 5: Grid layout (Professional & Structured)
  */
 const NewsSectionPreset = ({ section, onUpdate }) => {
+  const { isStaff } = useAuth();
   const variant = section.style_variant ?? 1; // Default to Preset 1
   const newsItems = section.news_items || [];
+
+  const handleAddArticle = () => {
+    // TODO: Implement add article modal
+    console.log('Add article clicked');
+  };
 
   if (newsItems.length === 0) {
     return null;
@@ -25,7 +32,17 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
     return (
       <section className={`news-section news-section--preset-1 ${section.is_active === false ? 'section-inactive' : ''}`}>
         <div className="section-container">
-          <h2 className={`news-section__title text-center mb-5 font-preset-${variant}-heading`}>{section.name}</h2>
+          <div className={`section-header section-header--preset-${variant}`}>
+            <div className="section-header__content">
+              <h2 className={`section-header__title font-preset-${variant}-heading`}>{section.name}</h2>
+              {isStaff && (
+                <button className="news-section-add-article" onClick={handleAddArticle}>
+                  <i className="bi bi-plus-circle me-2"></i>
+                  Add Article
+                </button>
+              )}
+            </div>
+          </div>
           {newsItems.map((newsItem) => (
             <NewsArticleStructured key={newsItem.id} newsItem={newsItem} onUpdate={onUpdate} />
           ))}
@@ -40,7 +57,17 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
     return (
       <section className={`news-section news-section--preset-2 ${section.is_active === false ? 'section-inactive' : ''}`}>
         <div className="section-container">
-          <h2 className={`news-section__title text-center mb-5 font-preset-${variant}-heading`}>{section.name}</h2>
+          <div className={`section-header section-header--preset-${variant}`}>
+            <div className="section-header__content">
+              <h2 className={`section-header__title font-preset-${variant}-heading`}>{section.name}</h2>
+              {isStaff && (
+                <button className="news-section-add-article" onClick={handleAddArticle}>
+                  <i className="bi bi-plus-circle me-2"></i>
+                  Add Article
+                </button>
+              )}
+            </div>
+          </div>
           
           {/* Featured Article */}
           {featuredItem && (
@@ -100,7 +127,17 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
     return (
       <section className={`news-section news-section--preset-3 ${section.is_active === false ? 'section-inactive' : ''}`}>
         <div className="section-container">
-          <h2 className={`news-section__title text-center mb-5 font-preset-${variant}-heading`}>{section.name}</h2>
+          <div className={`section-header section-header--preset-${variant}`}>
+            <div className="section-header__content">
+              <h2 className={`section-header__title font-preset-${variant}-heading`}>{section.name}</h2>
+              {isStaff && (
+                <button className="news-section-add-article" onClick={handleAddArticle}>
+                  <i className="bi bi-plus-circle me-2"></i>
+                  Add Article
+                </button>
+              )}
+            </div>
+          </div>
           <div className="news-article__compact-list">
             {newsItems.map((newsItem) => (
               <article key={newsItem.id} className="news-article news-article--compact">
@@ -124,7 +161,17 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
     return (
       <section className={`news-section news-section--preset-4 ${section.is_active === false ? 'section-inactive' : ''}`}>
         <div className="section-container">
-          <h2 className={`news-section__title text-center mb-5 font-preset-${variant}-heading`}>{section.name}</h2>
+          <div className={`section-header section-header--preset-${variant}`}>
+            <div className="section-header__content">
+              <h2 className={`section-header__title font-preset-${variant}-heading`}>{section.name}</h2>
+              {isStaff && (
+                <button className="news-section-add-article" onClick={handleAddArticle}>
+                  <i className="bi bi-plus-circle me-2"></i>
+                  Add Article
+                </button>
+              )}
+            </div>
+          </div>
           <Row className="g-4">
             {newsItems.map((newsItem, index) => {
               const colSize = index === 0 ? { xs: 12, md: 8 } : { xs: 12, md: 4 };
@@ -162,9 +209,19 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
   if (variant === 5) {
     return (
       <section className={`news-section news-section--preset-5 ${section.is_active === false ? 'section-inactive' : ''}`}>
-      <div className="section-container">
-        <h2 className={`news-section__title text-center mb-5 font-preset-${variant}-heading`}>{section.name}</h2>
-        <Row className="g-4">
+        <div className="section-container">
+          <div className={`section-header section-header--preset-${variant}`}>
+            <div className="section-header__content">
+              <h2 className={`section-header__title font-preset-${variant}-heading`}>{section.name}</h2>
+              {isStaff && (
+                <button className="news-section-add-article" onClick={handleAddArticle}>
+                  <i className="bi bi-plus-circle me-2"></i>
+                  Add Article
+                </button>
+              )}
+            </div>
+          </div>
+          <Row className="g-4">
           {newsItems.map((newsItem) => (
             <Col key={newsItem.id} xs={12} md={6} lg={4}>
               <article className="news-article news-article--grid">

@@ -170,11 +170,9 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
               
               {/* Edit button on hover with alpha transition */}
               {isStaff && hotel && (
-                <Button 
-                  variant="primary" 
-                  size="sm" 
+                <button 
                   onClick={() => setShowModal(true)}
-                  className="hero__edit-btn"
+                  className="hero-edit"
                   style={{
                     position: 'absolute',
                     top: '20px',
@@ -187,7 +185,7 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
                   onMouseLeave={(e) => e.currentTarget.style.opacity = '0.5'}
                 >
                   <i className="bi bi-pencil-square me-2"></i>Edit Hero
-                </Button>
+                </button>
               )}
           </div>
         ) : (
@@ -195,9 +193,9 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
             {/* Fallback if no image */}
             {isStaff && hotel && (
               <div className="text-end mb-3">
-                <Button variant="primary" size="sm" onClick={() => setShowModal(true)} className="shadow">
+                <button className="hero-edit" onClick={() => setShowModal(true)}>
                   <i className="bi bi-pencil-square me-2"></i>Edit Hero
-                </Button>
+                </button>
               </div>
             )}
             <div className="text-center py-5">
@@ -306,7 +304,7 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
 
   function renderEditModal() {
     return (
-      <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
+      <Modal show={showModal} onHide={() => setShowModal(false)} size="lg" data-preset={variant}>
         <Modal.Header closeButton>
           <Modal.Title>Edit Hero Section</Modal.Title>
         </Modal.Header>
@@ -375,12 +373,12 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
+          <button className="hero-modal-cancel" onClick={() => setShowModal(false)}>
             Cancel
-          </Button>
-          <Button variant="primary" onClick={handleSave} disabled={saving}>
+          </button>
+          <button className="hero-modal-save" onClick={handleSave} disabled={saving}>
             {saving ? <><Spinner animation="border" size="sm" className="me-2" /> Saving...</> : 'Save Changes'}
-          </Button>
+          </button>
         </Modal.Footer>
       </Modal>
     );

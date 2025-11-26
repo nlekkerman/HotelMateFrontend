@@ -65,6 +65,20 @@ export const updateSection = async (hotelSlug, sectionId, updates) => {
 };
 
 /**
+ * Update style_variant for all sections on the page
+ * @param {string} hotelSlug - Hotel slug
+ * @param {number} styleVariant - Style variant (1-5)
+ * @returns {Promise<Object>} Update result
+ */
+export const updatePageStyle = async (hotelSlug, styleVariant) => {
+  const response = await api.post(
+    buildSectionURL(hotelSlug, 'public-page/apply-page-style/'),
+    { style_variant: styleVariant }
+  );
+  return response.data;
+};
+
+/**
  * Delete a section
  * @param {string} hotelSlug - Hotel slug
  * @param {number} sectionId - Section ID
@@ -519,6 +533,7 @@ export default {
   listSections,
   updateSection,
   deleteSection,
+  updatePageStyle,
   
   // Hero
   updateHeroSection,
