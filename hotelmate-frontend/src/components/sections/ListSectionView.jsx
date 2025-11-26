@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Container, Row, Col, Card, Button, Alert, Modal, Form, Spinner } from 'react-bootstrap';
+import React from 'react';
+import { Container, Row, Col, Card, Alert, Modal, Form, Button, Spinner } from 'react-bootstrap';
 import { useAuth } from '@/context/AuthContext';
 import { useParams } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import { createListContainer, createCard, uploadCardImage } from '@/services/sectionEditorApi';
+import { useListSectionActions } from '@/hooks/useListSectionActions';
+import '@/styles/sections.css';
 
 /**
  * ListSectionView - Public view for list/cards section with inline editing
@@ -12,52 +12,31 @@ const ListSectionView = ({ section, onUpdate }) => {
   const { isStaff } = useAuth();
   const { slug } = useParams();
   const lists = section.lists || [];
-  const [showNewCard, setShowNewCard] = useState(false);
-  const [selectedList, setSelectedList] = useState(null);
-  const [cardForm, setCardForm] = useState({ title: '', subtitle: '', description: '' });
-  const [cardImage, setCardImage] = useState(null);
-  const [saving, setSaving] = useState(false);
+  
+  const {
+    showAddCard,
+    selectedList,
+    cardForm,
+    setCardForm,
+    cardImage,
+    setCardImage,
+    handleCreateCard,
+    openAddCard,
+    closeCardModal,
+    saving,
+  } = useListSectionActions(slug, section, onUpdate);
+
+  console.log('ListSectionView - showAddCard:', showAddCard);
+  console.log('ListSectionView - selectedList:', selectedList);
+  console.log('ListSectionView - isStaff:', isStaff);
+  console.log('ListSectionView - lists:', lists);
 
   if (lists.length === 0) {
     return null;
   }
 
   const hasCards = lists.some(l => l.cards && l.cards.length > 0);
-
-  const handleCreateCard = async () => {
-    if (!cardForm.title.trim()) {
-      toast.error('Please enter a card title');
-      return;
-    }
-
-    try {
-      setSaving(true);
-      const newCard = await createCard(slug, {
-        list_container: selectedList.id,
-        title: cardForm.title,
-        subtitle: cardForm.subtitle,
-        description: cardForm.description,
-        sort_order: selectedList.cards?.length || 0,
-      });
-
-      // Upload image if provided
-      if (cardImage) {
-        await uploadCardImage(slug, newCard.id, cardImage);
-      }
-
-      toast.success('Card created successfully');
-      setCardForm({ title: '', subtitle: '', description: '' });
-      setCardImage(null);
-      setShowNewCard(false);
-      setSelectedList(null);
-      if (onUpdate) onUpdate();
-    } catch (error) {
-      console.error('Failed to create card:', error);
-      toast.error('Failed to create card');
-    } finally {
-      setSaving(false);
-    }
-  };
+  console.log('ListSectionView - hasCards:', hasCards);
 
   return (
     <section className="list-section-view py-5">
@@ -81,36 +60,14 @@ const ListSectionView = ({ section, onUpdate }) => {
               {/* Add Card Placeholder - For Staff */}
               {isStaff && (
                 <Col xs={12} md={6} lg={4} className="mb-4">
-                  <Card 
-                    className="h-100 shadow-sm"
-                    style={{ 
-                      cursor: 'pointer',
-                      border: '2px dashed #dee2e6',
-                      backgroundColor: '#f8f9fa',
-                      minHeight: '300px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.2s',
-                    }}
-                    onClick={() => {
-                      setSelectedList(list);
-                      setShowNewCard(true);
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#e9ecef';
-                      e.currentTarget.style.borderColor = '#adb5bd';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f8f9fa';
-                      e.currentTarget.style.borderColor = '#dee2e6';
-                    }}
-                  >
-                    <Card.Body className="text-center">
-                      <i className="bi bi-plus-circle" style={{ fontSize: '3rem', color: '#6c757d' }}></i>
-                      <p className="mt-3 mb-0 text-muted">Add Card</p>
-                    </Card.Body>
-                  </Card>
+                  <div className="placeholder-add-card" onClick={() => {
+                    console.log('Placeholder clicked, list:', list);
+                    console.log('openAddCard function:', openAddCard);
+                    openAddCard(list);
+                  }}>
+                    <i className="bi bi-plus-circle"></i>
+                    <p className="mt-3 mb-0 text-muted">Add Card</p>
+                  </div>
                 </Col>
               )}
               
@@ -124,7 +81,7 @@ const ListSectionView = ({ section, onUpdate }) => {
                         src={card.image_url} 
                         alt={card.title}
                         style={{ height: '200px', objectFit: 'cover' }}
-                      />
+                      /> 
                     )}
                     <Card.Body>
                       <Card.Title>{card.title}</Card.Title>
@@ -145,13 +102,8 @@ const ListSectionView = ({ section, onUpdate }) => {
         ))}
       </Container>
 
-      {/* New Card Modal */}
-      <Modal show={showNewCard} onHide={() => {
-        setShowNewCard(false);
-        setSelectedList(null);
-        setCardForm({ title: '', subtitle: '', description: '' });
-        setCardImage(null);
-      }} size="lg">
+      {/* Add Card Modal */}
+      <Modal show={showAddCard} onHide={closeCardModal} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>Add Card to {selectedList?.title}</Modal.Title>
         </Modal.Header>
@@ -195,15 +147,16 @@ const ListSectionView = ({ section, onUpdate }) => {
               accept="image/*"
               onChange={(e) => setCardImage(e.target.files?.[0] || null)}
             />
+            {cardImage && (
+              <Form.Text className="text-muted">
+                <i className="bi bi-check-circle text-success me-1"></i>
+                {cardImage.name}
+              </Form.Text>
+            )}
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => {
-            setShowNewCard(false);
-            setSelectedList(null);
-            setCardForm({ title: '', subtitle: '', description: '' });
-            setCardImage(null);
-          }}>
+          <Button variant="secondary" onClick={closeCardModal}>
             Cancel
           </Button>
           <Button variant="primary" onClick={handleCreateCard} disabled={saving}>
@@ -211,18 +164,6 @@ const ListSectionView = ({ section, onUpdate }) => {
           </Button>
         </Modal.Footer>
       </Modal>
-
-      <style>
-        {`
-          .hover-lift {
-            transition: transform 0.2s, box-shadow 0.2s;
-          }
-          .hover-lift:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.15) !important;
-          }
-        `}
-      </style>
     </section>
   );
 };

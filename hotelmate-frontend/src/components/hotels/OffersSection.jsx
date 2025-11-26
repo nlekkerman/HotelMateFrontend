@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
+import { Row, Col } from 'react-bootstrap';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Pusher from 'pusher-js';
@@ -140,7 +140,7 @@ const OffersSection = ({ hotel, onRefreshNeeded }) => {
 
   return (
     <section className="modern-offers-section">
-      <Container>
+      <div className="section-container">
         {/* Section Header */}
         <motion.div
           className="text-center mb-5"
@@ -230,7 +230,7 @@ const OffersSection = ({ hotel, onRefreshNeeded }) => {
             ))}
           </Row>
         </motion.div>
-      </Container>
+      </div>
     </section>
   );
 };

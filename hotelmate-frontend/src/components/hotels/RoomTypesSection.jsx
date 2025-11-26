@@ -1,5 +1,5 @@
 import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
+import { Row, Col } from 'react-bootstrap';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { formatFromPrice } from '@/utils/formatCurrency';
@@ -42,7 +42,7 @@ const RoomTypesSection = ({ hotel }) => {
 
   return (
     <section className="modern-room-section">
-      <Container>
+      <div className="section-container">
         {/* Section Header */}
         <motion.div
           className="text-center mb-5"
@@ -158,7 +158,7 @@ const RoomTypesSection = ({ hotel }) => {
             ))}
           </Row>
         </motion.div>
-      </Container>
+      </div>
     </section>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Container, Card, Button, Modal } from 'react-bootstrap';
+import { Card, Button, Modal } from 'react-bootstrap';
 
 /**
  * GuestPortalStub - Placeholder for guest portal access (PIN required)
@@ -10,7 +10,7 @@ const GuestPortalStub = ({ hotel }) => {
   return (
     <>
       <section className="guest-portal-stub py-4 bg-light border-top">
-        <Container>
+        <div className="section-container">
           <Card className="text-center border-0 shadow-sm" style={{ maxWidth: '600px', margin: '0 auto' }}>
             <Card.Body className="py-4">
               <h5 className="mb-2 fw-bold">Already staying with us?</h5>
@@ -21,7 +21,7 @@ const GuestPortalStub = ({ hotel }) => {
               </Button>
             </Card.Body>
           </Card>
-        </Container>
+        </div>
       </section>
 
       {/* Coming Soon Modal */}

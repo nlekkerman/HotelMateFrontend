@@ -29,6 +29,37 @@
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15) !important;
 }
 
+/* Placeholder Add Card */
+.placeholder-add-card {
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+  padding: 3rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  background-color: #f8f9fa;
+  transition: all 0.3s;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder-add-card:hover {
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.placeholder-add-card i {
+  font-size: 3rem;
+  color: #6c757d;
+}
+
+.placeholder-add-card p {
+  color: #6c757d;
+  margin: 0;
+}
+
 /* News Section */
 .news-section-view {
   background-color: #f8f9fa;

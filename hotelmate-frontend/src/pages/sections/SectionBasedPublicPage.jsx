@@ -19,31 +19,31 @@ const SectionBasedPublicPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const fetchPageData = async () => {
+    if (!slug) {
+      setError('No hotel slug provided');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getPublicHotelPage(slug);
+      setPageData(data);
+    } catch (err) {
+      console.error('Failed to fetch page data:', err);
+      if (err.response?.status === 404) {
+        setError('Hotel not found');
+      } else {
+        setError('Failed to load hotel page');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchPageData = async () => {
-      if (!slug) {
-        setError('No hotel slug provided');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getPublicHotelPage(slug);
-        setPageData(data);
-      } catch (err) {
-        console.error('Failed to fetch page data:', err);
-        if (err.response?.status === 404) {
-          setError('Hotel not found');
-        } else {
-          setError('Failed to load hotel page');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchPageData();
   }, [slug]);
 
@@ -59,7 +59,7 @@ const SectionBasedPublicPage = () => {
       case 'gallery':
         return <GallerySectionView key={section.id} section={section} />;
       case 'list':
-        return <ListSectionView key={section.id} section={section} />;
+        return <ListSectionView key={section.id} section={section} onUpdate={fetchPageData} />;
       case 'news':
         return <NewsSectionView key={section.id} section={section} />;
       default:

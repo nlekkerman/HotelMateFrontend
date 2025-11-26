@@ -1,62 +1,46 @@
 import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
-import { NEWS_VARIANTS } from '@/types/presets';
+import { Row, Col } from 'react-bootstrap';
 import NewsBlockRenderer from './NewsBlockRenderer';
+import NewsArticleStructured from './NewsArticleStructured';
 
 /**
- * NewsSectionPreset - Renders news section based on layout_preset.key
+ * NewsSectionPreset - Renders news section based on numeric style_variant (1-5)
  * 
- * Supported variants:
- * - news_timeline (default)
- * - news_grid
- * - news_featured
- * - news_compact
- * - news_magazine
+ * Preset 1: Structured article layout (3 parts: top, middle, bottom)
+ * Preset 2: Featured with large first item (Dark & Elegant)
+ * Preset 3: Compact list (Minimal & Sleek)
+ * Preset 4: Magazine grid layout (Vibrant & Playful)
+ * Preset 5: Grid layout (Professional & Structured)
  */
 const NewsSectionPreset = ({ section, onUpdate }) => {
-  const variantKey = section.layout_preset?.key ?? NEWS_VARIANTS.TIMELINE;
+  const variant = section.style_variant ?? 1; // Default to Preset 1
   const newsItems = section.news_items || [];
 
   if (newsItems.length === 0) {
     return null;
   }
 
-  // Grid Layout
-  if (variantKey === NEWS_VARIANTS.GRID) {
+  // Preset 1: Structured Article - 3 Parts (TOP, MIDDLE, BOTTOM)
+  if (variant === 1) {
     return (
-      <section className={`news-section news-section--grid ${section.is_active === false ? 'section-inactive' : ''}`}>
-        <Container>
-          <h2 className="news-section__title text-center mb-5">{section.name}</h2>
-          <Row className="g-4">
-            {newsItems.map((newsItem) => (
-              <Col key={newsItem.id} xs={12} md={6} lg={4}>
-                <article className="news-article news-article--grid">
-                  <h3 className="news-article__title">{newsItem.title}</h3>
-                  <p className="news-article__date">{new Date(newsItem.date).toLocaleDateString()}</p>
-                  {newsItem.summary && (
-                    <p className="news-article__summary">{newsItem.summary}</p>
-                  )}
-                  <div className="news-article__content">
-                    {newsItem.content_blocks?.map((block) => (
-                      <NewsBlockRenderer key={block.id} block={block} />
-                    ))}
-                  </div>
-                </article>
-              </Col>
-            ))}
-          </Row>
-        </Container>
+      <section className={`news-section news-section--preset-1 ${section.is_active === false ? 'section-inactive' : ''}`}>
+        <div className="section-container">
+          <h2 className={`news-section__title text-center mb-5 font-preset-${variant}-heading`}>{section.name}</h2>
+          {newsItems.map((newsItem) => (
+            <NewsArticleStructured key={newsItem.id} newsItem={newsItem} onUpdate={onUpdate} />
+          ))}
+        </div>
       </section>
     );
   }
 
-  // Featured Layout
-  if (variantKey === NEWS_VARIANTS.FEATURED) {
+  // Preset 2: Dark & Elegant - Featured Layout
+  if (variant === 2) {
     const [featuredItem, ...restItems] = newsItems;
     return (
-      <section className={`news-section news-section--featured ${section.is_active === false ? 'section-inactive' : ''}`}>
-        <Container>
-          <h2 className="news-section__title text-center mb-5">{section.name}</h2>
+      <section className={`news-section news-section--preset-2 ${section.is_active === false ? 'section-inactive' : ''}`}>
+        <div className="section-container">
+          <h2 className={`news-section__title text-center mb-5 font-preset-${variant}-heading`}>{section.name}</h2>
           
           {/* Featured Article */}
           {featuredItem && (
@@ -74,10 +58,10 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
                 </Col>
                 <Col xs={12} md={6}>
                   <div className="news-article__featured-content">
-                    <h3 className="news-article__title-featured">{featuredItem.title}</h3>
-                    <p className="news-article__date">{new Date(featuredItem.date).toLocaleDateString()}</p>
+                    <h3 className={`news-article__title-featured font-preset-${variant}-heading`}>{featuredItem.title}</h3>
+                    <p className={`news-article__date font-preset-${variant}-body`}>{new Date(featuredItem.date).toLocaleDateString()}</p>
                     {featuredItem.summary && (
-                      <p className="news-article__summary-featured">{featuredItem.summary}</p>
+                      <p className={`news-article__summary-featured font-preset-${variant}-body`}>{featuredItem.summary}</p>
                     )}
                     <div className="news-article__content">
                       {featuredItem.content_blocks?.filter(b => b.block_type === 'text').slice(0, 2).map((block) => (
@@ -96,51 +80,51 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
               {restItems.map((newsItem) => (
                 <Col key={newsItem.id} xs={12} sm={6} md={4}>
                   <article className="news-article news-article--card">
-                    <h4 className="news-article__title-small">{newsItem.title}</h4>
-                    <p className="news-article__date-small">{new Date(newsItem.date).toLocaleDateString()}</p>
+                    <h4 className={`news-article__title-small font-preset-${variant}-subtitle`}>{newsItem.title}</h4>
+                    <p className={`news-article__date-small font-preset-${variant}-body`}>{new Date(newsItem.date).toLocaleDateString()}</p>
                     {newsItem.summary && (
-                      <p className="news-article__summary-small">{newsItem.summary}</p>
+                      <p className={`news-article__summary-small font-preset-${variant}-body`}>{newsItem.summary}</p>
                     )}
                   </article>
                 </Col>
               ))}
             </Row>
           )}
-        </Container>
+        </div>
       </section>
     );
   }
 
-  // Compact Layout
-  if (variantKey === NEWS_VARIANTS.COMPACT) {
+  // Preset 3: Minimal & Sleek - Compact list
+  if (variant === 3) {
     return (
-      <section className={`news-section news-section--compact ${section.is_active === false ? 'section-inactive' : ''}`}>
-        <Container>
-          <h2 className="news-section__title text-center mb-5">{section.name}</h2>
+      <section className={`news-section news-section--preset-3 ${section.is_active === false ? 'section-inactive' : ''}`}>
+        <div className="section-container">
+          <h2 className={`news-section__title text-center mb-5 font-preset-${variant}-heading`}>{section.name}</h2>
           <div className="news-article__compact-list">
             {newsItems.map((newsItem) => (
               <article key={newsItem.id} className="news-article news-article--compact">
                 <div className="news-article__compact-header">
-                  <h4 className="news-article__title-compact">{newsItem.title}</h4>
-                  <p className="news-article__date-compact">{new Date(newsItem.date).toLocaleDateString()}</p>
+                  <h4 className={`news-article__title-compact font-preset-${variant}-subtitle`}>{newsItem.title}</h4>
+                  <p className={`news-article__date-compact font-preset-${variant}-body`}>{new Date(newsItem.date).toLocaleDateString()}</p>
                 </div>
                 {newsItem.summary && (
-                  <p className="news-article__summary-compact">{newsItem.summary}</p>
+                  <p className={`news-article__summary-compact font-preset-${variant}-body`}>{newsItem.summary}</p>
                 )}
               </article>
             ))}
           </div>
-        </Container>
+        </div>
       </section>
     );
   }
 
-  // Magazine Layout
-  if (variantKey === NEWS_VARIANTS.MAGAZINE) {
+  // Preset 4: Vibrant & Playful - Magazine grid
+  if (variant === 4) {
     return (
-      <section className={`news-section news-section--magazine ${section.is_active === false ? 'section-inactive' : ''}`}>
-        <Container>
-          <h2 className="news-section__title text-center mb-5">{section.name}</h2>
+      <section className={`news-section news-section--preset-4 ${section.is_active === false ? 'section-inactive' : ''}`}>
+        <div className="section-container">
+          <h2 className={`news-section__title text-center mb-5 font-preset-${variant}-heading`}>{section.name}</h2>
           <Row className="g-4">
             {newsItems.map((newsItem, index) => {
               const colSize = index === 0 ? { xs: 12, md: 8 } : { xs: 12, md: 4 };
@@ -156,12 +140,12 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
                       </div>
                     )}
                     <div className="news-article__magazine-content">
-                      <h3 className={index === 0 ? 'news-article__title-magazine-main' : 'news-article__title-magazine'}>
+                      <h3 className={`${index === 0 ? 'news-article__title-magazine-main' : 'news-article__title-magazine'} font-preset-${variant}-heading`}>
                         {newsItem.title}
                       </h3>
-                      <p className="news-article__date">{new Date(newsItem.date).toLocaleDateString()}</p>
+                      <p className={`news-article__date font-preset-${variant}-body`}>{new Date(newsItem.date).toLocaleDateString()}</p>
                       {newsItem.summary && (
-                        <p className="news-article__summary-magazine">{newsItem.summary}</p>
+                        <p className={`news-article__summary-magazine font-preset-${variant}-body`}>{newsItem.summary}</p>
                       )}
                     </div>
                   </article>
@@ -169,36 +153,49 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
               );
             })}
           </Row>
-        </Container>
+        </div>
       </section>
     );
   }
 
-  // Default: Timeline Layout
-  return (
-    <section className={`news-section news-section--timeline ${section.is_active === false ? 'section-inactive' : ''}`}>
-      <Container>
-        <h2 className="news-section__title text-center mb-5">{section.name}</h2>
-        <div className="news-timeline">
+  // Preset 5: Professional & Structured - Grid layout
+  if (variant === 5) {
+    return (
+      <section className={`news-section news-section--preset-5 ${section.is_active === false ? 'section-inactive' : ''}`}>
+      <div className="section-container">
+        <h2 className={`news-section__title text-center mb-5 font-preset-${variant}-heading`}>{section.name}</h2>
+        <Row className="g-4">
           {newsItems.map((newsItem) => (
-            <article key={newsItem.id} className="news-article news-article--timeline">
-              <div className="news-article__timeline-marker"></div>
-              <div className="news-article__timeline-content">
-                <p className="news-article__date-timeline">{new Date(newsItem.date).toLocaleDateString()}</p>
-                <h3 className="news-article__title">{newsItem.title}</h3>
+            <Col key={newsItem.id} xs={12} md={6} lg={4}>
+              <article className="news-article news-article--grid">
+                <h3 className={`news-article__title font-preset-${variant}-heading`}>{newsItem.title}</h3>
+                <p className={`news-article__date font-preset-${variant}-body`}>{new Date(newsItem.date).toLocaleDateString()}</p>
                 {newsItem.summary && (
-                  <p className="news-article__summary">{newsItem.summary}</p>
+                  <p className={`news-article__summary font-preset-${variant}-body`}>{newsItem.summary}</p>
                 )}
                 <div className="news-article__content">
                   {newsItem.content_blocks?.map((block) => (
                     <NewsBlockRenderer key={block.id} block={block} />
                   ))}
                 </div>
-              </div>
-            </article>
+              </article>
+            </Col>
           ))}
-        </div>
-      </Container>
+        </Row>
+      </div>
+    </section>
+    );
+  }
+
+  // Fallback to Preset 1 - Structured Article
+  return (
+    <section className={`news-section news-section--preset-1 ${section.is_active === false ? 'section-inactive' : ''}`}>
+      <div className="section-container">
+        <h2 className={`news-section__title text-center mb-5 font-preset-${variant}-heading`}>{section.name}</h2>
+        {newsItems.map((newsItem) => (
+          <NewsArticleStructured key={newsItem.id} newsItem={newsItem} onUpdate={onUpdate} />
+        ))}
+      </div>
     </section>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Modal, Badge, Spinner, Card } from 'react-bootstrap';
+import { Row, Col, Modal, Badge, Spinner, Card } from 'react-bootstrap';
 import { motion } from 'framer-motion';
 import Pusher from 'pusher-js';
 import api from '@/services/api';
@@ -126,10 +126,10 @@ const GallerySection = ({ hotelSlug, hotelName, isStaff = false }) => {
   if (loading) {
     return (
       <section className="gallery-section py-5 bg-light">
-        <Container className="text-center">
+        <div className="section-container text-center">
           <Spinner animation="border" />
           <p className="mt-2 text-muted">Loading gallery...</p>
-        </Container>
+        </div>
       </section>
     );
   }
@@ -139,7 +139,7 @@ const GallerySection = ({ hotelSlug, hotelName, isStaff = false }) => {
     if (isStaff) {
       return (
         <section className="gallery-section py-5 bg-light">
-          <Container>
+          <div className="section-container">
             <Card className="shadow-sm border-2 border-dashed" style={{ borderColor: '#3498db' }}>
               <Card.Body className="text-center py-5">
                 <div className="mb-3" style={{ fontSize: '4rem', color: '#3498db', opacity: 0.3 }}>
@@ -155,7 +155,7 @@ const GallerySection = ({ hotelSlug, hotelName, isStaff = false }) => {
                 </p>
               </Card.Body>
             </Card>
-          </Container>
+          </div>
         </section>
       );
     }
@@ -169,7 +169,7 @@ const GallerySection = ({ hotelSlug, hotelName, isStaff = false }) => {
     if (isStaff) {
       return (
         <section className="gallery-section py-5 bg-light">
-          <Container>
+          <div className="section-container">
             <Card className="shadow-sm border-2 border-dashed" style={{ borderColor: '#3498db' }}>
               <Card.Body className="text-center py-5">
                 <div className="mb-3" style={{ fontSize: '4rem', color: '#3498db', opacity: 0.3 }}>
@@ -185,7 +185,7 @@ const GallerySection = ({ hotelSlug, hotelName, isStaff = false }) => {
                 </p>
               </Card.Body>
             </Card>
-          </Container>
+          </div>
         </section>
       );
     }
@@ -195,7 +195,7 @@ const GallerySection = ({ hotelSlug, hotelName, isStaff = false }) => {
   return (
     <>
       <section className="gallery-section py-5 bg-light">
-        <Container fluid>
+        <div className="section-container">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -403,7 +403,7 @@ const GallerySection = ({ hotelSlug, hotelName, isStaff = false }) => {
               );
             })}
           </motion.div>
-        </Container>
+        </div>
       </section>
 
       {/* Lightbox Modal */}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
+import { Row, Col } from 'react-bootstrap';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
@@ -46,7 +46,7 @@ const LocationContactSection = ({ hotel, settings }) => {
 
   return (
     <section className="modern-location-section">
-      <Container>
+      <div className="section-container">
         {/* Location & Contact Grid */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -176,7 +176,7 @@ const LocationContactSection = ({ hotel, settings }) => {
             {bookingLabel}
           </button>
         </motion.div>
-      </Container>
+      </div>
     </section>
   );
 };

@@ -3,10 +3,11 @@ import { useParams, Link } from 'react-router-dom';
 import { Container, Spinner, Alert } from 'react-bootstrap';
 import { getPublicHotelPage, listSections } from '@/services/sectionEditorApi';
 import { useAuth } from '@/context/AuthContext';
-import HeroSectionView from '@/components/sections/HeroSectionView';
-import GallerySectionView from '@/components/sections/GallerySectionView';
-import ListSectionView from '@/components/sections/ListSectionView';
-import NewsSectionView from '@/components/sections/NewsSectionView';
+import HeroSectionPreset from '@/components/presets/HeroSectionPreset';
+import GallerySectionPreset from '@/components/presets/GallerySectionPreset';
+import ListSectionPreset from '@/components/presets/ListSectionPreset';
+import NewsSectionPreset from '@/components/presets/NewsSectionPreset';
+import FooterSectionPreset from '@/components/presets/FooterSectionPreset';
 import InlinePageBuilder from '@/components/builder/InlinePageBuilder';
 import '@/styles/hotelPublicPage.css';
 
@@ -100,16 +101,19 @@ const HotelPublicPage = () => {
     try {
       switch (section.section_type) {
         case 'hero':
-          return <HeroSectionView key={section.id} section={section} hotel={pageData.hotel} onUpdate={fetchPageData} />;
+          return <HeroSectionPreset key={section.id} section={section} hotel={pageData.hotel} onUpdate={fetchPageData} />;
         
         case 'gallery':
-          return <GallerySectionView key={section.id} section={section} onUpdate={fetchPageData} />;
+          return <GallerySectionPreset key={section.id} section={section} onUpdate={fetchPageData} />;
         
         case 'list':
-          return <ListSectionView key={section.id} section={section} onUpdate={fetchPageData} />;
+          return <ListSectionPreset key={section.id} section={section} onUpdate={fetchPageData} />;
         
         case 'news':
-          return <NewsSectionView key={section.id} section={section} />;
+          return <NewsSectionPreset key={section.id} section={section} onUpdate={fetchPageData} />;
+        
+        case 'footer':
+          return <FooterSectionPreset key={section.id} section={section} hotel={pageData.hotel} />;
         
         default:
           console.warn(`[HotelPublicPage] Unknown section type: ${section.section_type}`);
@@ -247,24 +251,10 @@ const HotelPublicPage = () => {
         .map((section) => renderSection(section))
       }
 
-      {/* Footer */}
-      <footer className="bg-dark text-white py-4 mt-5">
-        <Container>
-          <div className="row">
-            <div className="col-md-6">
-              <h5>{pageData.hotel.name}</h5>
-              <p className="text-muted mb-0">
-                {pageData.hotel.city}, {pageData.hotel.country}
-              </p>
-            </div>
-            <div className="col-md-6 text-md-end">
-              <p className="text-muted mb-0">
-                &copy; {new Date().getFullYear()} {pageData.hotel.name}. All rights reserved.
-              </p>
-            </div>
-          </div>
-        </Container>
-      </footer>
+      {/* Default Footer if no footer section exists */}
+      {!isEmpty && !pageData.sections.some(s => s.section_type === 'footer') && (
+        <FooterSectionPreset hotel={pageData.hotel} />
+      )}
     </div>
   );
 };

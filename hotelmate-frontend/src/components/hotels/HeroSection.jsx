@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Container } from 'react-bootstrap';
+
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
@@ -86,8 +86,8 @@ const HeroSection = ({ hotel, settings }) => {
         className="modern-hero-content"
         style={{ opacity: mounted ? opacity : 1 }}
       >
-        <Container>
-          <div className="text-center vw-100">
+        <div className="section-container">
+          <div className="text-center">
             {/* Animated Logo */}
             {logo_url && (
               <motion.img
@@ -187,7 +187,7 @@ const HeroSection = ({ hotel, settings }) => {
               )}
             </motion.div>
           </div>
-        </Container>
+        </div>
       </motion.div>
 
       {/* Scroll Indicator */}

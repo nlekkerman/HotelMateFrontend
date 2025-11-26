@@ -2,6 +2,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css"; // Import base styles including publicPages.css
+import "./styles/presets.css"; // Import preset styles (variants 1-5)
 import App from "./App";
 import { OrderCountProvider } from "@/hooks/useOrderCount.jsx";
 import { listenForFirebaseMessages } from "@/utils/firebaseNotifications";

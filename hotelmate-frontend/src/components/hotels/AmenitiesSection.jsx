@@ -1,5 +1,5 @@
 import React from 'react';
-import { Container, Row, Col, Badge } from 'react-bootstrap';
+import { Row, Col, Badge } from 'react-bootstrap';
 import { motion } from 'framer-motion';
 
 /**
@@ -12,7 +12,7 @@ const AmenitiesSection = ({ settings }) => {
 
   return (
     <section className="amenities-section py-5">
-      <Container>
+      <div className="section-container">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -55,7 +55,7 @@ const AmenitiesSection = ({ settings }) => {
             </Col>
           </Row>
         </motion.div>
-      </Container>
+      </div>
     </section>
   );
 };

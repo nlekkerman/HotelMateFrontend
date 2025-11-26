@@ -1,0 +1,977 @@
+/**
+ * Style Variant Presets (1-5)
+ * Each variant number represents a cohesive design family across ALL section types
+ * 
+ * Preset 1: Clean & Modern
+ * Preset 2: Dark & Elegant
+ * Preset 3: Minimal & Sleek
+ * Preset 4: Vibrant & Playful
+ * Preset 5: Professional & Structured
+ */
+
+/* ========================================
+   GLOBAL COMMON TOKENS
+   ======================================== */
+
+:root {
+  --gold: #f2c94c;
+  --accent-blue: #3ba9ff;
+  --accent-pink: #ff5dc8;
+  --accent-green: #30e17c;
+
+  --gray-soft: #0f1522;
+  --gray-mid: #161c2b;
+  --gray-dark: #0a0d14;
+
+  --text-main: #f8f9fa;
+  --text-soft: #b7bcc8;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 22px;
+  --radius-xl: 32px;
+
+  --shadow-soft: 0 10px 26px rgba(0, 0, 0, 0.25);
+  --shadow-mid: 0 14px 40px rgba(0, 0, 0, 0.45);
+  --shadow-strong: 0 22px 70px rgba(0, 0, 0, 0.85);
+
+  /* Font Families for Presets */
+  /* Preset 1: Clean & Modern */
+  --font-clean-heading: "Inter", system-ui, sans-serif;
+  --font-clean-subtitle: "Inter", system-ui, sans-serif;
+  --font-clean-body: "Inter", system-ui, sans-serif;
+
+  /* Preset 2: Dark & Elegant */
+  --font-elegant-heading: "Playfair Display", serif;
+  --font-elegant-subtitle: "Inter", sans-serif;
+  --font-elegant-body: "Inter", sans-serif;
+
+  /* Preset 3: Minimal & Sleek */
+  --font-minimal-heading: "Poppins", sans-serif;
+  --font-minimal-subtitle: "Poppins", sans-serif;
+  --font-minimal-body: "Poppins", sans-serif;
+
+  /* Preset 4: Vibrant & Playful */
+  --font-playful-heading: "Baloo 2", sans-serif;
+  --font-playful-subtitle: "Poppins", sans-serif;
+  --font-playful-body: "Poppins", sans-serif;
+
+  /* Preset 5: Professional & Structured */
+  --font-pro-heading: "Roboto Condensed", sans-serif;
+  --font-pro-subtitle: "Inter", sans-serif;
+  --font-pro-body: "Inter", sans-serif;
+}
+
+/* ========================================
+   FONT PRESET CLASSES
+   ======================================== */
+
+/* These font classes are applied dynamically in component JSX
+   based on the style_variant (1-5) of each section:
+   - Hero titles/text use font-preset-{variant}-heading/body
+   - Gallery titles use font-preset-{variant}-heading
+   - List section titles/subtitles use font-preset-{variant}-heading/subtitle
+   - Card titles/descriptions use font-preset-{variant}-heading/body via CardRenderer
+   - News article titles/text use font-preset-{variant}-heading/body
+*/
+
+/* Preset 1: Clean & Modern */
+.font-preset-1-heading { 
+  font-family: var(--font-clean-heading); 
+  font-weight: 700; 
+}
+
+.font-preset-1-subtitle { 
+  font-family: var(--font-clean-subtitle); 
+  font-weight: 500; 
+}
+
+.font-preset-1-body { 
+  font-family: var(--font-clean-body); 
+  font-weight: 400; 
+}
+
+/* Preset 2: Dark & Elegant */
+.font-preset-2-heading { 
+  font-family: var(--font-elegant-heading);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.font-preset-2-subtitle {
+  font-family: var(--font-elegant-subtitle);
+  font-weight: 500;
+}
+
+.font-preset-2-body {
+  font-family: var(--font-elegant-body);
+  font-weight: 400;
+}
+
+/* Preset 3: Minimal & Sleek */
+.font-preset-3-heading {
+  font-family: var(--font-minimal-heading);
+  font-weight: 600;
+}
+
+.font-preset-3-subtitle {
+  font-family: var(--font-minimal-subtitle);
+  font-weight: 500;
+}
+
+.font-preset-3-body {
+  font-family: var(--font-minimal-body);
+  font-weight: 300;
+}
+
+/* Preset 4: Vibrant & Playful */
+.font-preset-4-heading {
+  font-family: var(--font-playful-heading);
+  font-weight: 600;
+}
+
+.font-preset-4-subtitle {
+  font-family: var(--font-playful-subtitle);
+  font-weight: 500;
+}
+
+.font-preset-4-body {
+  font-family: var(--font-playful-body);
+  font-weight: 400;
+}
+
+/* Preset 5: Professional & Structured */
+.font-preset-5-heading {
+  font-family: var(--font-pro-heading);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.font-preset-5-subtitle {
+  font-family: var(--font-pro-subtitle);
+  font-weight: 500;
+}
+
+.font-preset-5-body {
+  font-family: var(--font-pro-body);
+  font-weight: 400;
+}
+
+/* ========================================
+   HERO SECTION (5 presets)
+   All use centered layout with same structure
+   ======================================== */
+
+/* Common hero content styling - ONLY for hero section */
+.hero .hero__content-centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 500px;
+  padding: 2rem;
+}
+
+.hero .hero__logo {
+  max-width: 150px;
+  height: auto;
+  margin-bottom: 2rem;
+  z-index: 10;
+}
+
+.hero .hero__image-wrapper {
+  position: relative;
+  width: 100%;
+  margin-top: 2rem;
+  min-height: 500px;
+}
+
+.hero .hero__image {
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+  object-fit: cover;
+}
+
+.hero .hero__text-overlay {
+  position: absolute;
+  z-index: 5;
+  color: white;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.hero .hero__title {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.hero .hero__text {
+  font-size: 1.25rem;
+  max-width: 600px;
+  color: white;
+  line-height: 1.6;
+}
+
+/* Apply fonts to hero sections by preset */
+.hero--preset-1 .hero__title { font-family: var(--font-clean-heading); font-weight: 700; }
+.hero--preset-1 .hero__text { font-family: var(--font-clean-body); font-weight: 400; }
+
+.hero--preset-2 .hero__title { font-family: var(--font-elegant-heading); font-weight: 700; letter-spacing: 0.03em; }
+.hero--preset-2 .hero__text { font-family: var(--font-elegant-body); font-weight: 400; }
+
+.hero--preset-3 .hero__title { font-family: var(--font-minimal-heading); font-weight: 600; }
+.hero--preset-3 .hero__text { font-family: var(--font-minimal-body); font-weight: 300; }
+
+.hero--preset-4 .hero__title { font-family: var(--font-playful-heading); font-weight: 600; }
+.hero--preset-4 .hero__text { font-family: var(--font-playful-body); font-weight: 400; }
+
+.hero--preset-5 .hero__title { font-family: var(--font-pro-heading); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.hero--preset-5 .hero__text { font-family: var(--font-pro-body); font-weight: 400; }
+
+/* Hero — Clean & Modern (1) */
+.hero--preset-1 {
+  background: linear-gradient(135deg, #1a2332, #0f1522);
+  color: var(--text-main);
+  box-shadow: var(--shadow-mid);
+  margin-bottom: 0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.hero.hero--preset-1 .hero__logo {
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+}
+
+.hero.hero--preset-1 .hero__image {
+  box-shadow: var(--shadow-mid);
+}
+
+/* Hero — Dark & Elegant (2) */
+.hero--preset-2 {
+  background: linear-gradient(180deg, #0a0e16, #05070a);
+  border-left: 4px solid var(--gold);
+  padding: 3rem 2rem;
+  box-shadow: var(--shadow-strong);
+  margin-bottom: 0;
+  border-bottom: 3px solid var(--gold);
+}
+
+.hero.hero--preset-2 .hero__logo {
+  border: 2px solid var(--gold);
+  padding: 1rem;
+}
+
+.hero.hero--preset-2 .hero__title {
+  color: var(--gold);
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+.hero.hero--preset-2 .hero__image {
+  border: 3px solid var(--gold);
+}
+
+/* Hero — Minimal & Sleek (3) */
+.hero--preset-3 {
+  background: #0e1219;
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 2.5rem 2rem;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.hero.hero--preset-3 .hero__logo {
+  opacity: 0.9;
+}
+
+.hero.hero--preset-3 .hero__text-overlay .hero__title {
+  font-weight: 300;
+  letter-spacing: 2px;
+}
+
+.hero.hero--preset-3 .hero__text-overlay .hero__text {
+  font-size: 1rem;
+  font-weight: 300;
+}
+
+.hero.hero--preset-3 .hero__image {
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Hero — Vibrant & Playful (4) */
+.hero--preset-4 {
+  background: radial-gradient(circle at top left, #2a4a8f, #0a0d14);
+  padding: 3rem 2.5rem;
+  box-shadow: var(--shadow-mid);
+  margin-bottom: 0;
+  border-bottom: 3px solid var(--accent-blue);
+}
+
+.hero.hero--preset-4 .hero__logo {
+  transform: rotate(-3deg);
+  transition: transform 0.3s;
+}
+
+.hero.hero--preset-4 .hero__logo:hover {
+  transform: rotate(3deg) scale(1.1);
+}
+
+.hero.hero--preset-4 .hero__image {
+  transform: rotate(1deg);
+  box-shadow: var(--shadow-strong);
+}
+
+/* Preset 4: Top-left text overlay with vibrant gradient - HERO ONLY */
+.hero.hero--preset-4 .hero__text-overlay {
+  top: 3rem;
+  left: 3rem;
+  text-align: left;
+  max-width: 50%;
+  padding: 2rem;
+  background: linear-gradient(135deg, rgba(59, 169, 255, 0.9), rgba(255, 93, 200, 0.8));
+  box-shadow: var(--shadow-strong);
+}
+
+.hero.hero--preset-4 .hero__text-overlay .hero__title {
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.hero.hero--preset-4 .hero__text-overlay .hero__text {
+  color: white;
+} text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+.hero--preset-2 .hero__image {
+  border: 3px solid var(--gold);
+}
+
+/* Hero — Minimal & Sleek (3) */
+.hero--preset-3 {
+  background: #0b0f17;
+  border: 1px solid rgba(255,255,255,0.08);
+/* Hero — Professional & Structured (5) */
+.hero--preset-5 {
+  background: #0e131f;
+  border-radius: var(--radius-sm);
+  border-top: 3px solid var(--accent-green);
+  padding: 2.5rem 2rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.hero--preset-5 .hero__logo {
+  border-bottom: 2px solid var(--accent-green);
+  padding-bottom: 1rem;
+}
+
+.hero--preset-5 .hero__title {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-weight: 600;
+  letter-spacing: -1px;
+}
+
+.hero--preset-5 .hero__image {
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* Preset 5: Bottom-right text overlay, structured and professional - HERO ONLY */
+.hero.hero--preset-5 .hero__text-overlay {
+  bottom: 3rem;
+  right: 3rem;
+  text-align: right;
+  max-width: 45%;
+  padding: 2rem;
+  background: rgba(14, 19, 31, 0.95);
+  border-top: 3px solid var(--accent-green);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.hero.hero--preset-5 .hero__text-overlay .hero__title {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-weight: 600;
+  letter-spacing: -1px;
+  color: white;
+}
+
+.hero.hero--preset-5 .hero__text-overlay .hero__text {
+  color: var(--text-soft);
+}* Hero — Vibrant & Playful (4) */
+.hero--preset-4 {
+  background: radial-gradient(circle at top left, var(--accent-blue), var(--gray-dark));
+  border-radius: var(--radius-xl);
+  padding: 3rem 2.5rem;
+  box-shadow: var(--shadow-mid);
+}
+
+.hero--preset-4 .hero__logo {
+  transform: rotate(-3deg);
+  transition: transform 0.3s;
+}
+
+.hero--preset-4 .hero__logo:hover {
+  transform: rotate(3deg) scale(1.1);
+}
+
+.hero--preset-4 .hero__title {
+  background: linear-gradient(45deg, var(--accent-blue), var(--accent-pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero--preset-4 .hero__image {
+  transform: rotate(1deg);
+  box-shadow: var(--shadow-strong);
+}
+
+/* Hero — Professional & Structured (5) */
+.hero--preset-5 {
+  background: #0e131f;
+  border-radius: var(--radius-sm);
+  border-top: 3px solid var(--accent-green);
+  padding: 2.5rem 2rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.hero--preset-5 .hero__logo {
+  border-bottom: 2px solid var(--accent-green);
+  padding-bottom: 1rem;
+}
+
+.hero--preset-5 .hero__title {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-weight: 600;
+  letter-spacing: -1px;
+}
+
+.hero--preset-5 .hero__image {
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* ========================================
+   GALLERY SECTION (5 presets)
+   ======================================== */
+
+/* Gallery — Clean & Modern (1) */
+.gallery--preset-1 {
+  background: #232936;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.gallery--preset-1 .gallery-image {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+}
+
+.gallery--preset-1 .gallery-image__img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Gallery — Dark & Elegant (2) */
+.gallery--preset-2 {
+  background: #0f1419;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid rgba(242, 201, 76, 0.3);
+}
+
+.gallery--preset-2 .gallery-image {
+  border-radius: var(--radius-md);
+  border: 2px solid rgba(242,201,76,0.35);
+  overflow: hidden;
+}
+
+.gallery--preset-2 .gallery-image__img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Gallery — Minimal & Sleek (3) */
+.gallery--preset-3 {
+  background: #12161e;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.gallery--preset-3 .gallery-image {
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,0.05);
+  overflow: hidden;
+}
+
+.gallery--preset-3 .gallery-image__img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Gallery — Vibrant & Playful (4) */
+.gallery--preset-4 {
+  background: linear-gradient(135deg, #1f2542, #12162b);
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid var(--accent-pink);
+}
+
+.gallery--preset-4 .gallery-image {
+  border-radius: var(--radius-xl);
+  border: 3px solid var(--accent-pink);
+  overflow: hidden;
+}
+
+.gallery--preset-4 .gallery-image__img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Gallery — Professional & Structured (5) */
+.gallery--preset-5 {
+  background: #161c28;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid rgba(48, 225, 124, 0.4);
+}
+
+.gallery--preset-5 .gallery-image {
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255,255,255,0.12);
+  background: #0f1522;
+  padding: 4px;
+}
+
+.gallery--preset-5 .gallery-image__img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ========================================
+   GALLERY HORIZONTAL SCROLL (All Presets)
+   ======================================== */
+
+.gallery__horizontal-wrapper {
+  position: relative;
+  overflow: hidden;
+  padding: 2rem 0;
+}
+
+.gallery__horizontal-scroll {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 1rem 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.3) transparent;
+}
+
+.gallery__horizontal-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.gallery__horizontal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.gallery__horizontal-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.3);
+  border-radius: 4px;
+}
+
+.gallery__horizontal-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.5);
+}
+
+.gallery__horizontal-item {
+  flex: 0 0 300px;
+  min-width: 300px;
+  display: inline-block;
+}
+
+.gallery__horizontal-item .gallery-image {
+  height: 250px;
+  width: 100%;
+}
+
+.gallery__horizontal-item .gallery-image__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Add Image Placeholder (Staff Only) */
+.gallery__add-placeholder {
+  width: 300px;
+  height: 250px;
+  background: rgba(59, 169, 255, 0.1);
+  border: 3px dashed var(--accent-blue);
+  border-radius: var(--radius-md);
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.gallery__add-placeholder:hover {
+  background: rgba(59, 169, 255, 0.2);
+  border-color: var(--gold);
+  transform: translateY(-5px);
+}
+
+.gallery__add-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  font-size: 2.5rem;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.gallery__add-placeholder:hover .gallery__add-icon {
+  background: var(--gold);
+  color: var(--gray-dark);
+  transform: scale(1.15) rotate(90deg);
+}
+
+.gallery__add-text {
+  color: var(--accent-blue);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  transition: color 0.3s ease;
+}
+
+.gallery__add-placeholder:hover .gallery__add-text {
+  color: var(--gold);
+}
+
+/* ========================================
+   LIST SECTION (cards) (5 presets)
+   ======================================== */
+
+/* List — Clean & Modern (1) */
+.list--preset-1 {
+  background: #1c232e;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.list--preset-1 .card {
+  border-radius: var(--radius-lg);
+  background: #111827;
+  box-shadow: var(--shadow-mid);
+  border: none;
+}
+
+/* List — Dark & Elegant (2) */
+.list--preset-2 {
+  background: #13171f;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid rgba(242, 201, 76, 0.3);
+}
+
+.list--preset-2 .card {
+  background: #05070a;
+  border: 1px solid var(--gold);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-strong);
+}
+
+/* List — Minimal & Sleek (3) */
+.list--preset-3 {
+  background: #161b24;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.list--preset-3 .card {
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,0.06);
+  background: #0b0f17;
+}
+
+/* List — Vibrant & Playful (4) */
+.list--preset-4 {
+  background: linear-gradient(135deg, #242a48, #141931);
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid var(--accent-blue);
+}
+
+.list--preset-4 .card {
+  border-radius: var(--radius-xl);
+  background: linear-gradient(145deg, #141b33, var(--accent-blue));
+  color: white;
+  border: none;
+}
+
+/* List — Professional & Structured (5) */
+.list--preset-5 {
+  background: #1a212e;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid rgba(48, 225, 124, 0.4);
+}
+
+.list--preset-5 .card {
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255,255,255,0.12);
+  background: #0e131f;
+}
+
+/* ========================================
+   NEWS SECTION (5 presets)
+   ======================================== */
+
+/* News — Clean & Modern (1) */
+.news-section--preset-1 {
+  background: #282f3d;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.news-section--preset-1 .news-article {
+  border-radius: var(--radius-md);
+  background: #111827;
+  padding: 1rem;
+  border: none;
+  margin-bottom: 2rem;
+}
+
+/* News — Dark & Elegant (2) */
+.news-section--preset-2 {
+  background: #181c25;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid rgba(242, 201, 76, 0.3);
+}
+
+.news-section--preset-2 .news-article {
+  border-left: 3px solid var(--gold);
+  padding-left: 1rem;
+  background: #05070a;
+  margin-bottom: 2rem;
+}
+
+/* News — Minimal & Sleek (3) */
+.news-section--preset-3 {
+  background: #1a1f29;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.news-section--preset-3 .news-article {
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding: 0.7rem 0;
+  margin-bottom: 1.5rem;
+}
+
+/* News — Vibrant & Playful (4) */
+.news-section--preset-4 {
+  background: linear-gradient(135deg, #29304e, #161c37);
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid var(--accent-pink);
+}
+
+.news-section--preset-4 .news-article {
+  border-radius: var(--radius-xl);
+  background: #141b33;
+  color: var(--accent-blue);
+  padding: 0.9rem 1.2rem;
+  margin-bottom: 2rem;
+}
+
+/* News — Professional & Structured (5) */
+.news-section--preset-5 {
+  background: #1e2533;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid rgba(48, 225, 124, 0.4);
+}
+
+.news-section--preset-5 .news-article {
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,0.12);
+  background: #0f1522;
+  padding: 1rem 1.25rem;
+  margin-bottom: 2rem;
+}
+
+/* ========================================
+   FOOTER SECTION (5 presets)
+   ======================================== */
+
+/* Footer — Clean & Modern (1) */
+.footer--preset-1 {
+  background: #0e131f;
+  border-top: 2px solid rgba(255,255,255,0.08);
+  padding: 2rem 0;
+  color: var(--text-main);
+}
+
+/* Footer — Dark & Elegant (2) */
+.footer--preset-2 {
+  background: #05070a;
+  border-top: 3px solid var(--gold);
+  padding: 2rem 0;
+}
+
+/* Footer — Minimal & Sleek (3) */
+.footer--preset-3 {
+  background: #0b0f17;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 1.5rem 0;
+}
+
+/* Footer — Vibrant & Playful (4) */
+.footer--preset-4 {
+  background: linear-gradient(135deg, #141b33, var(--accent-pink));
+  padding: 2rem 0;
+  color: white;
+}
+
+/* Footer — Professional & Structured (5) */
+.footer--preset-5 {
+  background: #0e131f;
+  border-top: 4px solid var(--accent-green);
+  padding: 2rem 0;
+  color: #cfd4dc;
+}
+
+/* ========================================
+   GALLERY LIGHTBOX WITH NAVIGATION
+   ======================================== */
+
+.gallery__lightbox {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.gallery__lightbox-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gallery__lightbox-image {
+  max-width: 100%;
+  max-height: 85vh;
+  object-fit: contain;
+}
+
+.gallery__lightbox-close {
+  position: absolute;
+  top: -50px;
+  right: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.gallery__lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.gallery__lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+  transition: background 0.3s;
+  z-index: 10;
+}
+
+.gallery__lightbox-nav:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.gallery__lightbox-nav--prev {
+  left: -80px;
+}
+
+.gallery__lightbox-nav--next {
+  right: -80px;
+}
+
+.gallery__lightbox-caption {
+  position: absolute;
+  bottom: -60px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: white;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.gallery__lightbox-counter {
+  position: absolute;
+  bottom: -90px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+/* ========================================
+   GLOBAL PAGE STYLE WRAPPER (Optional)
+   ======================================== */
+
+/* Apply to entire page for consistent styling */
+.page-style-1 { /* Clean & Modern */ }
+.page-style-2 { /* Dark & Elegant */ }
+.page-style-3 { /* Minimal & Sleek */ }
+.page-style-4 { /* Vibrant & Playful */ }
+.page-style-5 { /* Professional & Structured */ }
