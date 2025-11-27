@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { formatFromPrice } from '@/utils/formatCurrency';
 
+const CLOUDINARY_BASE = 'https://res.cloudinary.com/dg0ssec7u/';
+
 /**
  * RoomTypesSection - Modern room display with cards and animations
  * Uses theme colors from staff settings
@@ -80,22 +82,22 @@ const RoomTypesSection = ({ hotel }) => {
                         src={room.photo_url || room.photo}
                         alt={room.name}
                         loading="lazy"
-                        onError={(e) => {
-                          // Fallback to sample hotel room image
-                          e.currentTarget.src = `https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800`;
-                        }}
                       />
                     ) : (
-                      <img
-                        src={`https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800`}
-                        alt={room.name}
-                        loading="lazy"
+                      <div
                         style={{
                           width: '100%',
                           height: '100%',
-                          objectFit: 'cover',
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontSize: '1.2rem',
                         }}
-                      />
+                      >
+                        <i className="bi bi-image" style={{ fontSize: '3rem' }}></i>
+                      </div>
                     )}
 
                     {/* Availability Badge */}

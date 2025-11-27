@@ -145,7 +145,7 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
       <div className="gallery__filters text-center mb-4">
         <ButtonGroup>
           <button 
-            className={`gallery-filter-all ${selectedGalleryId === 'all' ? 'active' : ''}`}
+            className={`btn btn-hm btn-gallery gallery-filter-all ${selectedGalleryId === 'all' ? 'active' : ''}`}
             onClick={() => setSelectedGalleryId('all')}
           >
             All Images ({allImages.length})
@@ -153,7 +153,7 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
           {galleries.map(gallery => (
             <button
               key={gallery.id}
-              className={`gallery-filter-specific ${selectedGalleryId === gallery.id ? 'active' : ''}`}
+              className={`btn btn-hm btn-gallery gallery-filter-specific ${selectedGalleryId === gallery.id ? 'active' : ''}`}
               onClick={() => setSelectedGalleryId(gallery.id)}
             >
               {gallery.name} ({gallery.images?.length || 0})
@@ -173,7 +173,7 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
             <h2 className={`section-header__title font-preset-${variant}-heading`}>{section.name}</h2>
             {isStaff && (
               <button
-                className="gallery-add-gallery"
+                className="btn btn-hm btn-gallery gallery-add-gallery"
                 onClick={() => setShowAddGallery(true)}
               >
                 <i className="bi bi-plus-circle me-2"></i>
@@ -192,7 +192,7 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
           {/* Left Arrow */}
           {scrollPosition > 0 && showHover && (
             <button
-              className="gallery-scroll-left"
+              className="btn btn-hm btn-gallery gallery-scroll-left"
               onClick={() => handleScroll('left')}
               style={{
                 position: 'absolute',
@@ -336,7 +336,7 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
           {/* Right Arrow */}
           {scrollPosition < maxScroll - 10 && showHover && (
             <button
-              className="gallery-scroll-right"
+              className="btn btn-hm btn-gallery gallery-scroll-right"
               onClick={() => handleScroll('right')}
               style={{
                 position: 'absolute',

@@ -10,7 +10,7 @@ const CardRenderer = ({ card, onCardClick, onEdit, onDelete, variant = 1 }) => {
   
   // Simple card rendering - styling handled by CSS based on parent section variant
   return (
-    <div className="list-card">
+    <div className={`list-card card--preset-${variant}`}>
       {/* Staff Edit Overlay - Show on hover */}
       {isStaff && (
         <div className="list-card__edit-overlay">

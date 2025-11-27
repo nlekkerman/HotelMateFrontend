@@ -1,0 +1,547 @@
+/**
+ * Button System for Preset-Driven Sections
+ * Organized by section type and preset variant
+ * 
+ * NOTE: Uses .{section}--preset-{N} class selectors instead of [data-preset="N"]
+ * for consistency with BEM naming convention
+ */
+
+/* ========================================
+   ROOM CARD BOOKING BUTTONS (Universal)
+   ======================================== */
+
+.room-card-book-button {
+  font-weight: 600;
+  transition: var(--transition-properties) var(--transition-base);
+  border-radius: var(--radius-pill);  /* Pill shape for CTA buttons */
+  padding: 0.7rem 1.3rem;
+  padding-inline: 1.3rem;
+  padding-block: 0.7rem;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.room-card-book-button--primary {
+  background: var(--bs-primary, #fd750d);
+  border-color: var(--bs-primary, #0d6efd);
+  color: white;
+}
+
+.room-card-book-button--primary:hover {
+  opacity: 0.9;
+  transform: scale(1.03);
+  box-shadow: var(--shadow-card);
+}
+
+.room-card-book-button--primary:active {
+  transform: scale(0.98);
+}
+
+.room-card-book-button--outline {
+  background: transparent;
+  border: 2px solid var(--bs-primary, #0d6efd);
+  color: var(--bs-primary, #0d6efd);
+}
+
+.room-card-book-button--outline:hover {
+  background: var(--bs-primary, #0d6efd);
+  color: white;
+  transform: scale(1.02);
+}
+
+.room-card-book-button--text {
+  background: transparent;
+  border: none;
+  color: var(--bs-primary, #0d6efd);
+  text-decoration: underline;
+  padding: 0.5rem 1rem;
+}
+
+.room-card-book-button--text:hover {
+  text-decoration: none;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.room-card-book-button--secondary {
+  background: var(--bs-secondary, #6c757d);
+  border-color: var(--bs-secondary, #6c757d);
+  color: white;
+}
+
+.room-card-book-button--secondary:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.room-card-book-button--success {
+  background: var(--bs-success, #198754);
+  border-color: var(--bs-success, #198754);
+  color: white;
+}
+
+.room-card-book-button--success:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.room-card-book-button--dark {
+  background: #212529;
+  border-color: #212529;
+  color: white;
+}
+
+.room-card-book-button--dark:hover {
+  background: #1a1e21;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.room-card-book-button--light {
+  background: #f8f9fa;
+  border-color: #dee2e6;
+  color: #212529;
+}
+
+.room-card-book-button--light:hover {
+  background: #e9ecef;
+  transform: translateY(-2px);
+}
+
+
+
+/* ========================================
+   STAFF INTERFACE BUTTONS (Admin Only)
+   ======================================== */
+
+/* Preset Selector Buttons */
+.preset-selector-variant-1,
+.preset-selector-variant-2,
+.preset-selector-variant-3,
+.preset-selector-variant-4,
+.preset-selector-variant-5 {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.7);
+  padding-inline: 1rem;
+  padding-block: 0.5rem;
+  border-radius: var(--radius-input);  /* 8px for compact controls */
+  transition: var(--transition-properties) var(--transition-base);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.preset-selector-variant-1:hover,
+.preset-selector-variant-2:hover,
+.preset-selector-variant-3:hover,
+.preset-selector-variant-4:hover,
+.preset-selector-variant-5:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #ffffff;
+}
+
+.preset-selector-variant-1.active,
+.preset-selector-variant-3.active,
+.preset-selector-variant-4.active,
+.preset-selector-variant-5.active {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
+}
+
+.preset-selector-variant-2.active {
+  background: var(--preset-2-primary);
+  border-color: var(--preset-2-primary);
+  color: #05070a;
+}
+
+.preset-selector-edit-sections {
+  background: #0d6efd;
+  border: 1px solid #0d6efd;
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  transition: all var(--transition-base);
+  cursor: pointer;
+}
+
+.preset-selector-edit-sections:hover {
+  background: #0b5ed7;
+  border-color: #0a58ca;
+}
+
+.preset-selector-staff-view {
+  background: #212529;
+  border: 1px solid #212529;
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  transition: all var(--transition-base);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.preset-selector-staff-view:hover {
+  background: #1c1f23;
+  border-color: #1c1f23;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+/* ========================================
+   SECTION-SPECIFIC BUTTONS BY PRESET
+   NOTE: These use attribute selectors for backward compatibility
+   New implementations should use .{section}--preset-{N} classes
+   ======================================== */
+
+/* Base Button Styles */
+button[class*="-modal-"],
+button[class*="-section-"],
+button[class*="-lightbox-"],
+button[class*="-filter-"],
+button[class*="-scroll-"],
+button[class*="hero-"],
+button[class*="list-"],
+button[class*="gallery-"],
+button[class*="news-"],
+a[class*="footer-"] {
+  border-radius: var(--radius-button-alt);  /* 10px for alternative actions */
+  padding-inline: 1.1rem;
+  padding-block: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: var(--transition-properties) var(--transition-base);
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Hero Edit Buttons - Preset Specific */
+.hero--preset-1 .hero-edit,
+.hero--preset-1 .hero-modal-save {
+  background: linear-gradient(135deg, #9fcef2, #5fe0ff);
+  border-color: transparent;
+  color: #05070a;
+  box-shadow: 0 4px 12px rgba(59, 169, 255, 0.4);
+}
+
+.hero--preset-1 .hero-edit:hover,
+.hero--preset-1 .hero-modal-save:hover {
+  transform: scale(1.03);
+  box-shadow: 0 6px 18px rgba(59, 169, 255, 0.6);
+}
+
+.hero--preset-1 .hero-edit:active,
+.hero--preset-1 .hero-modal-save:active {
+  transform: scale(0.97);
+}
+
+.hero--preset-2 .hero-edit,
+.hero--preset-2 .hero-modal-save {
+  background: linear-gradient(135deg, var(--preset-2-primary), var(--preset-2-accent));
+  border-color: transparent;
+  color: #05070a;
+  box-shadow: 0 4px 14px rgba(242, 201, 76, 0.5);
+}
+
+.hero--preset-3 .hero-edit,
+.hero--preset-3 .hero-modal-save {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.hero--preset-4 .hero-edit,
+.hero--preset-4 .hero-modal-save {
+  background: linear-gradient(135deg, var(--preset-4-primary), var(--preset-4-accent));
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(255, 107, 157, 0.5);
+}
+
+.hero--preset-5 .hero-edit,
+.hero--preset-5 .hero-modal-save {
+  background: linear-gradient(135deg, var(--preset-5-primary), var(--preset-5-accent));
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.4);
+}
+
+/* Room Card Booking Buttons - Preset Specific (Page-level) */
+[data-preset="1"] .room-card-book-button,
+[data-preset="1"] .room-card-book-button--primary {
+  background: linear-gradient(135deg, #9fcef2, #5fe0ff);
+  border-color: transparent;
+  color: #05070a;
+  box-shadow: 0 4px 12px rgba(59, 169, 255, 0.3);
+}
+
+[data-preset="1"] .room-card-book-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(59, 169, 255, 0.5);
+}
+
+[data-preset="2"] .room-card-book-button,
+[data-preset="2"] .room-card-book-button--primary {
+  background: linear-gradient(135deg, var(--preset-2-primary), var(--preset-2-accent));
+  border-color: transparent;
+  color: #05070a;
+  box-shadow: 0 4px 14px rgba(242, 201, 76, 0.4);
+}
+
+[data-preset="2"] .room-card-book-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(242, 201, 76, 0.6);
+}
+
+[data-preset="3"] .room-card-book-button,
+[data-preset="3"] .room-card-book-button--primary {
+  background: #1a1a1a;
+  border-color: rgba(0, 0, 0, 0.15);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+[data-preset="3"] .room-card-book-button:hover {
+  background: #000000;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+[data-preset="4"] .room-card-book-button,
+[data-preset="4"] .room-card-book-button--primary {
+  background: linear-gradient(135deg, var(--preset-4-primary), var(--preset-4-accent));
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(255, 107, 157, 0.4);
+}
+
+[data-preset="4"] .room-card-book-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 157, 0.6);
+}
+
+[data-preset="5"] .room-card-book-button,
+[data-preset="5"] .room-card-book-button--primary {
+  background: linear-gradient(135deg, var(--preset-5-primary), var(--preset-5-accent));
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+}
+
+[data-preset="5"] .room-card-book-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(46, 204, 113, 0.5);
+}
+
+/* List Section Add Buttons - Placeholder Tiles */
+.list--preset-1 .list-section-add-list,
+.list--preset-1 .list-section-add-card {
+  border: 2px dashed rgba(59, 169, 255, 0.4);
+  border-radius: var(--radius-card);  /* 8px for card placeholders */
+  color: rgba(59, 169, 255, 0.8);
+  background: rgba(59, 169, 255, 0.05);
+  transition: var(--transition-properties) var(--transition-base);
+}
+
+.list--preset-1 .list-section-add-list:hover,
+.list--preset-1 .list-section-add-card:hover {
+  transform: translateY(-2px) scale(1.02);
+  border-color: rgba(59, 169, 255, 0.7);
+  background: rgba(59, 169, 255, 0.1);
+  box-shadow: var(--shadow-card);
+}
+
+.list--preset-2 .list-section-add-list,
+.list--preset-2 .list-section-add-card {
+  border: 2px dashed rgba(242, 201, 76, 0.4);
+  border-radius: var(--radius-card);
+  color: rgba(242, 201, 76, 0.9);
+  background: rgba(242, 201, 76, 0.05);
+  transition: var(--transition-properties) var(--transition-base);
+}
+
+.list--preset-2 .list-section-add-list:hover,
+.list--preset-2 .list-section-add-card:hover {
+  transform: translateY(-2px) scale(1.02);
+  border-color: rgba(242, 201, 76, 0.7);
+  background: rgba(242, 201, 76, 0.1);
+  box-shadow: var(--shadow-card);
+}
+
+.list--preset-3 .list-section-add-list,
+.list--preset-3 .list-section-add-card {
+  border: 2px dashed rgba(0, 0, 0, 0.2);
+  color: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.list--preset-4 .list-section-add-list,
+.list--preset-4 .list-section-add-card {
+  border: 3px dashed rgba(255, 107, 157, 0.5);
+  color: rgba(255, 107, 157, 0.9);
+  background: rgba(255, 107, 157, 0.08);
+}
+
+.list--preset-5 .list-section-add-list,
+.list--preset-5 .list-section-add-card {
+  border: 3px dashed rgba(46, 204, 113, 0.4);
+  color: rgba(46, 204, 113, 0.9);
+  background: rgba(46, 204, 113, 0.05);
+}
+
+/* Gallery Filter Buttons */
+.gallery--preset-1 .gallery-filter-all,
+.gallery--preset-1 .gallery-filter-specific {
+  background: rgba(59, 169, 255, 0.15);
+  border-color: rgba(59, 169, 255, 0.5);
+  border-radius: var(--radius-pill);  /* Pill shape for filter chips */
+  color: #5fe0ff;
+  transition: var(--transition-properties) var(--transition-base);
+}
+
+.gallery--preset-1 .gallery-filter-all:hover,
+.gallery--preset-1 .gallery-filter-specific:hover {
+  background: rgba(59, 169, 255, 0.25);
+  border-color: rgba(59, 169, 255, 0.7);
+  transform: scale(1.05);
+}
+
+.gallery--preset-1 .gallery-filter-all.active {
+  background: linear-gradient(135deg, #9fcef2, #5fe0ff);
+  color: #05070a;
+}
+
+.gallery--preset-2 .gallery-filter-all,
+.gallery--preset-2 .gallery-filter-specific {
+  background: rgba(242, 201, 76, 0.1);
+  border-color: rgba(242, 201, 76, 0.5);
+  color: var(--preset-2-primary);
+}
+
+.gallery--preset-2 .gallery-filter-all.active {
+  background: linear-gradient(135deg, var(--preset-2-primary), var(--preset-2-accent));
+  color: #05070a;
+}
+
+/* News Section Add Article Button */
+.news-section--preset-1 .news-section-add-article {
+  background: transparent;
+  border: 2px dashed rgba(59, 169, 255, 0.4);
+  border-radius: var(--radius-card);
+  color: rgba(59, 169, 255, 0.8);
+  transition: var(--transition-properties) var(--transition-base);
+}
+
+.news-section--preset-1 .news-section-add-article:hover {
+  transform: translateY(-2px) scale(1.03);
+  border-color: rgba(59, 169, 255, 0.7);
+  background: rgba(59, 169, 255, 0.05);
+  box-shadow: var(--shadow-card);
+}
+
+.news-section--preset-2 .news-section-add-article {
+  background: transparent;
+  border: 2px dashed rgba(242, 201, 76, 0.4);
+  color: rgba(242, 201, 76, 0.8);
+}
+
+.news-section--preset-3 .news-section-add-article {
+  background: transparent;
+  border: 1px dashed rgba(0, 0, 0, 0.3);
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.news-section--preset-4 .news-section-add-article {
+  background: transparent;
+  border: 2px dashed rgba(255, 107, 157, 0.5);
+  color: rgba(255, 107, 157, 0.9);
+}
+
+.news-section--preset-5 .news-section-add-article {
+  background: transparent;
+  border: 2px dashed rgba(46, 204, 113, 0.4);
+  color: rgba(46, 204, 113, 0.8);
+}
+
+/* Footer Links */
+.footer--preset-1 a,
+.footer--preset-2 a,
+.footer--preset-3 a,
+.footer--preset-4 a,
+.footer--preset-5 a {
+  background: transparent;
+  border: none;
+  padding: 0.3rem 0.6rem;
+  text-decoration: none;
+  transition: all var(--transition-base);
+}
+
+.footer--preset-1 a {
+  color: var(--preset-1-primary);
+}
+
+.footer--preset-2 a {
+  color: var(--preset-2-primary);
+}
+
+.footer--preset-3 a {
+  color: #000000;
+}
+
+.footer--preset-4 a {
+  color: var(--preset-4-primary);
+}
+
+.footer--preset-5 a {
+  color: var(--preset-5-primary);
+}
+
+/* ========================================
+   ACCESSIBILITY
+   ======================================== */
+
+.room-card:focus-within {
+  outline: 2px solid var(--preset-1-primary);
+  outline-offset: 2px;
+}
+
+.btn:focus-visible,
+.room-card-book-button:focus-visible,
+button[class*="-modal-"]:focus-visible,
+button[class*="-section-"]:focus-visible {
+  outline: 2px solid var(--preset-1-primary);
+  outline-offset: 2px;
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================== */
+
+@media (max-width: 768px) {
+  .room-card-book-button {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.95rem;
+  }
+  
+  button[class*="-section-"] {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .room-card-book-button {
+    width: 100%;
+    justify-content: center;
+  }
+}

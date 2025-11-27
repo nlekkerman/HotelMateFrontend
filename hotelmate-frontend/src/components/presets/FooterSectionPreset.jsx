@@ -64,9 +64,9 @@ const FooterSectionPreset = ({ section, hotel }) => {
             <Col xs={12} md={4}>
               <h6 className={`footer__section-title font-preset-${variant}-subtitle`}>Follow Us</h6>
               <div className="footer__social-links">
-                <a href="#" className="footer__social-link"><i className="bi bi-facebook"></i></a>
-                <a href="#" className="footer__social-link"><i className="bi bi-instagram"></i></a>
-                <a href="#" className="footer__social-link"><i className="bi bi-twitter"></i></a>
+                <a href="#" className="btn btn-hm btn-footer footer__social-link"><i className="bi bi-facebook"></i></a>
+                <a href="#" className="btn btn-hm btn-footer footer__social-link"><i className="bi bi-instagram"></i></a>
+                <a href="#" className="btn btn-hm btn-footer footer__social-link"><i className="bi bi-twitter"></i></a>
               </div>
             </Col>
           </Row>
@@ -158,10 +158,10 @@ const FooterSectionPreset = ({ section, hotel }) => {
             <Col xs={12} md={3}>
               <h6 className={`footer__heading font-preset-${variant}-heading`}>Quick Links</h6>
               <ul className="footer__links">
-                <li><a href="#" className={`footer__link font-preset-${variant}-body`}>Home</a></li>
-                <li><a href="#" className={`footer__link font-preset-${variant}-body`}>Rooms</a></li>
-                <li><a href="#" className={`footer__link font-preset-${variant}-body`}>Facilities</a></li>
-                <li><a href="#" className={`footer__link font-preset-${variant}-body`}>Contact</a></li>
+                <li><a href="#" className={`btn btn-hm btn-footer footer__link font-preset-${variant}-body`}>Home</a></li>
+                <li><a href="#" className={`btn btn-hm btn-footer footer__link font-preset-${variant}-body`}>Rooms</a></li>
+                <li><a href="#" className={`btn btn-hm btn-footer footer__link font-preset-${variant}-body`}>Facilities</a></li>
+                <li><a href="#" className={`btn btn-hm btn-footer footer__link font-preset-${variant}-body`}>Contact</a></li>
               </ul>
             </Col>
             <Col xs={12} md={3}>
@@ -180,10 +180,10 @@ const FooterSectionPreset = ({ section, hotel }) => {
             <Col xs={12} md={3}>
               <h6 className={`footer__heading font-preset-${variant}-heading`}>Connect</h6>
               <div className="footer__social-structured">
-                <a href="#" className="footer__social-btn"><i className="bi bi-facebook"></i></a>
-                <a href="#" className="footer__social-btn"><i className="bi bi-instagram"></i></a>
-                <a href="#" className="footer__social-btn"><i className="bi bi-twitter"></i></a>
-                <a href="#" className="footer__social-btn"><i className="bi bi-linkedin"></i></a>
+                <a href="#" className="btn btn-hm btn-footer footer__social-btn"><i className="bi bi-facebook"></i></a>
+                <a href="#" className="btn btn-hm btn-footer footer__social-btn"><i className="bi bi-instagram"></i></a>
+                <a href="#" className="btn btn-hm btn-footer footer__social-btn"><i className="bi bi-twitter"></i></a>
+                <a href="#" className="btn btn-hm btn-footer footer__social-btn"><i className="bi bi-linkedin"></i></a>
               </div>
             </Col>
           </Row>

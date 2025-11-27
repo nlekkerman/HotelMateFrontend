@@ -1,0 +1,100 @@
+/**
+ * Preset System - Modular CSS Architecture
+ * 
+ * IMPORT ORDER (by cascade specificity):
+ * 1. Base (variables, utilities, fonts)
+ * 2. Section Presets (hero, gallery, list, news, footer, rooms)
+ * 3. Component Presets (cards, room cards, images, news blocks)
+ * 4. Header Presets (section headers)
+ * 5. Theme Presets (page-wide themes)
+ * 6. Buttons (section-specific buttons)
+ * 
+ * PRECEDENCE RULE:
+ * Component-level classes override section-level classes
+ * Example: .room-card--preset-2 overrides .rooms--preset-1 .room-card
+ */
+
+/* Base Layer: Variables, Typography, Utilities */
+@import url('./base.css');
+
+/* Section Layer: Section-specific preset styling */
+@import url('./section-presets.css');
+
+/* Component Layer: Component-specific preset styling (higher precedence) */
+@import url('./component-presets.css');
+
+/* Header Layer: Universal section header presets */
+@import url('./header-presets.css');
+
+/* Theme Layer: Global page-level theming */
+@import url('./theme-presets.css');
+
+/* Button Layer: Interactive elements across all sections */
+@import url('./buttons.css');
+
+/* Modals & Placeholders: Global modal and placeholder components */
+@import url('./modals-placeholders.css');
+
+/**
+ * USAGE GUIDE:
+ * 
+ * 1. SECTION-LEVEL STYLING:
+ *    Apply preset class to section container:
+ *    <section className="hero hero--preset-2">
+ *      <!-- Hero content -->
+ *    </section>
+ * 
+ * 2. COMPONENT-LEVEL STYLING (overrides section):
+ *    Apply preset class to individual component:
+ *    <div className="room-card room-card--preset-3">
+ *      <!-- Room card content -->
+ *    </div>
+ * 
+ * 3. HEADER STYLING:
+ *    Apply preset to SectionHeader component:
+ *    <header className="section-header section-header--preset-1 section-header--left">
+ *      <h2 className="section-header__title section-title--large">Title</h2>
+ *    </header>
+ * 
+ * 4. PAGE THEMING:
+ *    Apply to body or root element:
+ *    <body className="page-style-2">
+ *      <!-- Entire page content -->
+ *    </body>
+ * 
+ * 5. BUTTON STYLING:
+ *    Use dedicated button classes:
+ *    <button className="room-card-book-button room-card-book-button--primary">
+ *      Book Now
+ *    </button>
+ * 
+ * PRESET VARIANTS (1-5):
+ * - Preset 1: Clean & Modern (Blue theme)
+ * - Preset 2: Dark & Elegant (Gold theme)
+ * - Preset 3: Minimal & Sleek (Black & White)
+ * - Preset 4: Vibrant & Playful (Pink/Orange gradients)
+ * - Preset 5: Professional & Structured (Green theme)
+ * 
+ * MIGRATION FROM OLD SYSTEM:
+ * Old: <div data-preset="1" className="gallery">
+ * New: <div className="gallery gallery--preset-1">
+ * 
+ * Benefit: Better CSS specificity control, easier debugging, improved maintainability
+ */
+
+/* ========================================
+   BACKWARD COMPATIBILITY NOTES
+   ======================================== */
+
+/**
+ * Legacy System Support:
+ * The old system uses [data-preset="N"] attribute selectors on page wrapper
+ * Example: <div className="hotel-public-page" data-preset="1">
+ * 
+ * New system supports both:
+ * - [data-preset="N"] selectors (for backward compatibility)
+ * - .{section}--preset-{N} BEM classes (for migration)
+ * 
+ * All preset CSS uses [data-preset] selectors to match the actual implementation
+ * Developers: Keep using data-preset on page wrapper as currently implemented
+ */

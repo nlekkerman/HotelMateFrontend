@@ -1581,40 +1581,7 @@ section:not(:first-of-type)::before {
   transform: translateY(-5px);
 }
 
-/* Placeholder Add Card */
-.placeholder-add-card {
-  border: 2px dashed #dee2e6;
-  border-radius: 8px;
-  padding: 3rem 1rem;
-  text-align: center;
-  cursor: pointer;
-  background-color: #f8f9fa;
-  transition: all 0.3s;
-  min-height: 400px;
-  max-height: 400px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  z-index: 1;
-  pointer-events: auto;
-}
-
-.placeholder-add-card:hover {
-  background-color: #e9ecef;
-  border-color: #adb5bd;
-}
-
-.placeholder-add-card i {
-  font-size: 3rem;
-  color: #6c757d;
-  pointer-events: none;
-}
-
-.placeholder-add-card p {
-  pointer-events: none;
-}
+/* Placeholder Add Card - removed (now in sections.css with neutral styling) */
 
 .text-gradient {
   background: linear-gradient(
@@ -1694,13 +1661,13 @@ section:not(:first-of-type)::before {
 /* Preset 3: Minimal & Sleek - Subtle border only */
 .section-header--preset-3 {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-left: 3px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-left: 3px solid rgba(0, 0, 0, 0.15);
   padding: 1.25rem 2rem;
 }
 
 .section-header--preset-3 .section-header__title {
-  color: var(--text-main);
+  color: #1a1a1a;
   font-weight: 300;
   letter-spacing: 2px;
 }

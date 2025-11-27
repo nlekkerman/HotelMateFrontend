@@ -1,42 +1,21 @@
-/* Section-Based Page Builder Styles */
+/* Section-Based Page Builder Styles - Layout only */
 
-/* Hero Section */
-.hero-section-view {
+/* Base section structure */
+.hero-section-view,
+.gallery-section-view,
+.list-section-view,
+.news-section-view {
   position: relative;
-  overflow: hidden;
 }
 
-/* Gallery Section */
-.gallery-section-view {
-  background-color: #f8f9fa;
-}
-
-.gallery-image-wrapper img {
-  transition: transform 0.3s ease;
-}
-
-.gallery-image-wrapper:hover img {
-  transform: scale(1.05);
-}
-
-/* List Section */
-.list-section-view .hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.list-section-view .hover-lift:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15) !important;
-}
-
-/* Placeholder Add Card */
+/* Placeholder Add Card - Neutral base (preset styles will override) */
 .placeholder-add-card {
-  border: 2px dashed #dee2e6;
+  border: 2px dashed var(--border-light, #dee2e6);
   border-radius: 8px;
   padding: 3rem 1rem;
   text-align: center;
   cursor: pointer;
-  background-color: #f8f9fa;
+  background-color: transparent;
   transition: all 0.3s;
   min-height: 400px;
   display: flex;
@@ -45,24 +24,12 @@
   justify-content: center;
 }
 
-.placeholder-add-card:hover {
-  background-color: #e9ecef;
-  border-color: #adb5bd;
-}
-
 .placeholder-add-card i {
   font-size: 3rem;
-  color: #6c757d;
 }
 
 .placeholder-add-card p {
-  color: #6c757d;
   margin: 0;
-}
-
-/* News Section */
-.news-section-view {
-  background-color: #f8f9fa;
 }
 
 .news-content img {

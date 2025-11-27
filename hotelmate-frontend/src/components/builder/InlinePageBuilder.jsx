@@ -27,12 +27,13 @@ const InlinePageBuilder = forwardRef(({ hotel, sections, onUpdate }, ref) => {
     { key: 'hero', label: 'Hero Section', icon: '🎯', section_type: 'hero', description: 'Welcome banner with images' },
     { key: 'gallery', label: 'Photo Gallery', icon: '🖼️', section_type: 'gallery', description: 'Multiple image galleries' },
     { key: 'list', label: 'Cards/Lists', icon: '📇', section_type: 'list', description: 'Offers, facilities, services' },
-    { key: 'news', label: 'News/Articles', icon: '📰', section_type: 'news', description: 'News with text and images' }
+    { key: 'news', label: 'News/Articles', icon: '📰', section_type: 'news', description: 'News with text and images' },
+    { key: 'rooms', label: 'Rooms Section', icon: '🏨', section_type: 'rooms', description: 'Display room types from PMS' }
   ];
 
   const handleAddSection = async (sectionType) => {
-    // For hero and news sections, create directly without modal
-    if (sectionType.section_type === 'hero' || sectionType.section_type === 'news') {
+    // For hero, news, and rooms sections, create directly without modal
+    if (sectionType.section_type === 'hero' || sectionType.section_type === 'news' || sectionType.section_type === 'rooms') {
       setLoading(true);
       try {
         const newSection = await createSection(hotel.slug, {

@@ -488,7 +488,7 @@ export default function HotelInfo() {
                           {items.map((item) => {
                             const img =
                               getFullImageUrl(item.image) ||
-                              "https://via.placeholder.com/400x250?text=No+Image";
+                              null;
 
                             // Helper function to format date dd/mm/yy
                             const formatDate = (dateStr) => {
@@ -545,15 +545,30 @@ export default function HotelInfo() {
                                         }`
                                       : "TBA"}
                                   </div>
-                                  <img
-                                    src={img}
-                                    className="card-img-top"
-                                    alt={item.title}
-                                    style={{
-                                      objectFit: "cover",
-                                      height: "200px",
-                                    }}
-                                  />
+                                  {img ? (
+                                    <img
+                                      src={img}
+                                      className="card-img-top"
+                                      alt={item.title}
+                                      style={{
+                                        objectFit: "cover",
+                                        height: "200px",
+                                      }}
+                                    />
+                                  ) : (
+                                    <div
+                                      className="card-img-top"
+                                      style={{
+                                        height: "200px",
+                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                      }}
+                                    >
+                                      <i className="bi bi-calendar-event" style={{ fontSize: '3rem', color: 'white' }}></i>
+                                    </div>
+                                  )}
                                   <div className="card-body d-flex flex-column">
                                     <h5 className="card-title">{item.title}</h5>
                                     <p className="card-text flex-grow-1">

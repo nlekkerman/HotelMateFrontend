@@ -8,17 +8,26 @@ import { updateSection } from '@/services/sectionEditorApi';
  * Rooms are auto-populated from PMS, only meta settings available
  */
 const RoomsSectionEditor = ({ section, hotelSlug, onUpdate }) => {
+  const roomsData = section.rooms_data || {};
+  
   const [name, setName] = useState(section.name || 'Our Rooms');
-  const [subtitle, setSubtitle] = useState(section.subtitle || '');
+  const [subtitle, setSubtitle] = useState(roomsData.subtitle || '');
+  const [description, setDescription] = useState(roomsData.description || '');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     try {
       setSaving(true);
+      
+      // Update section name at the section level
       await updateSection(hotelSlug, section.id, {
         name,
-        subtitle,
       });
+      
+      // If rooms_data exists, update subtitle and description
+      // Note: This might need a different endpoint depending on backend implementation
+      // For now, we'll just update the section name
+      
       toast.success('Rooms section updated successfully');
       onUpdate();
     } catch (error) {
@@ -60,16 +69,33 @@ const RoomsSectionEditor = ({ section, hotelSlug, onUpdate }) => {
         </Form.Group>
 
         {/* Subtitle */}
-        <Form.Group className="mb-4">
+        <Form.Group className="mb-3">
           <Form.Label>Subtitle (Optional)</Form.Label>
           <Form.Control
             type="text"
             value={subtitle}
             onChange={(e) => setSubtitle(e.target.value)}
             placeholder="e.g., Choose from our selection of comfortable accommodations"
+            disabled
           />
           <Form.Text className="text-muted">
-            Optional subtitle displayed below the section name.
+            Subtitle editing will be available in the full rooms section management page. Current value from backend.
+          </Form.Text>
+        </Form.Group>
+
+        {/* Description */}
+        <Form.Group className="mb-4">
+          <Form.Label>Description (Optional)</Form.Label>
+          <Form.Control
+            as="textarea"
+            rows={2}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Additional description for the rooms section"
+            disabled
+          />
+          <Form.Text className="text-muted">
+            Description editing will be available in the full rooms section management page.
           </Form.Text>
         </Form.Group>
 

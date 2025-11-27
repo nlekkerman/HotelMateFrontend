@@ -28,11 +28,10 @@ const GallerySectionView = ({ section, onUpdate }) => {
   if (galleries.length === 0 && isStaff) {
     return (
       <section 
-        className="gallery-section-view py-5" 
+        className="gallery-section-view" 
         style={{ 
           width: '100vw', 
-          marginLeft: 'calc(-50vw + 50%)',
-          backgroundColor: '#f8f9fa'
+          marginLeft: 'calc(-50vw + 50%)'
         }}
       >
         <Container fluid className="px-3 px-md-5">
@@ -171,7 +170,7 @@ const GallerySectionView = ({ section, onUpdate }) => {
 
   return (
     <section 
-      className="gallery-section-view py-5 bg-light position-relative"
+      className="gallery-section-view position-relative"
       onMouseEnter={() => setShowHover(true)}
       onMouseLeave={() => setShowHover(false)}
     >

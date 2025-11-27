@@ -1,0 +1,435 @@
+/**
+ * Page Theme Preset Styles
+ * 5 preset variants for global page-level styling
+ * 
+ * These apply site-wide effects including backgrounds, color schemes,
+ * typography, and spacing that affect the entire page
+ */
+
+/* ========================================
+   PRESET 1: CLEAN & MODERN THEME
+   ======================================== */
+
+.page-style-1 {
+  --page-text: #1a1a1a;
+  --page-link: var(--preset-1-primary);
+  --page-link-hover: var(--preset-1-accent);
+  --page-accent: var(--preset-1-primary);
+  
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-1-tint), 0.15),
+    rgba(var(--preset-1-tint), 0.075)
+  );
+  color: var(--page-text);
+  font-family: var(--font-clean-body);
+  min-height: 100vh;
+}
+
+.page-style-1 a {
+  color: var(--page-link);
+  transition: color var(--transition-base);
+}
+
+.page-style-1 a:hover {
+  color: var(--page-link-hover);
+}
+
+.page-style-1 h1,
+.page-style-1 h2,
+.page-style-1 h3,
+.page-style-1 h4,
+.page-style-1 h5,
+.page-style-1 h6 {
+  font-family: var(--font-clean-heading);
+  color: var(--page-text);
+}
+
+.page-style-1 ::selection {
+  background: var(--preset-1-primary);
+  color: white;
+}
+
+.page-style-1 ::-webkit-scrollbar {
+  width: 12px;
+}
+
+.page-style-1 ::-webkit-scrollbar-track {
+  background: rgba(var(--preset-1-tint), 0.1);
+}
+
+.page-style-1 ::-webkit-scrollbar-thumb {
+  background: var(--preset-1-primary);
+  border-radius: 6px;
+}
+
+.page-style-1 ::-webkit-scrollbar-thumb:hover {
+  background: var(--preset-1-accent);
+}
+
+/* ========================================
+   PRESET 2: DARK & ELEGANT THEME
+   ======================================== */
+
+.page-style-2 {
+  --page-text: #1a1a1a;
+  --page-link: var(--preset-2-primary);
+  --page-link-hover: var(--preset-2-accent);
+  --page-accent: var(--preset-2-primary);
+  
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-2-tint), 0.2),
+    rgba(var(--preset-2-tint), 0.1)
+  );
+  color: var(--page-text);
+  font-family: var(--font-elegant-body);
+  min-height: 100vh;
+  position: relative;
+}
+
+.page-style-2::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--preset-2-primary), var(--preset-2-accent));
+  z-index: 9999;
+}
+
+.page-style-2 a {
+  color: var(--page-link);
+  transition: color var(--transition-base);
+  text-decoration: none;
+}
+
+.page-style-2 a:hover {
+  color: var(--page-link-hover);
+  text-decoration: underline;
+}
+
+.page-style-2 h1,
+.page-style-2 h2,
+.page-style-2 h3 {
+  font-family: var(--font-elegant-heading);
+  color: #8b7136;
+  letter-spacing: 0.02em;
+}
+
+.page-style-2 h4,
+.page-style-2 h5,
+.page-style-2 h6 {
+  font-family: var(--font-elegant-subtitle);
+  color: #1a1a1a;
+}
+
+.page-style-2 ::selection {
+  background: var(--preset-2-primary);
+  color: #05070a;
+}
+
+.page-style-2 ::-webkit-scrollbar {
+  width: 14px;
+}
+
+.page-style-2 ::-webkit-scrollbar-track {
+  background: rgba(var(--preset-2-tint), 0.15);
+  border-left: 1px solid rgba(242, 201, 76, 0.3);
+}
+
+.page-style-2 ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--preset-2-primary), var(--preset-2-accent));
+  border-radius: 7px;
+  border: 2px solid rgba(var(--preset-2-tint), 0.3);
+}
+
+.page-style-2 ::-webkit-scrollbar-thumb:hover {
+  border-color: rgba(242, 201, 76, 0.3);
+}
+
+/* ========================================
+   PRESET 3: MINIMAL & SLEEK THEME
+   ======================================== */
+
+.page-style-3 {
+  --page-text: #000000;
+  --page-link: #000000;
+  --page-link-hover: #333333;
+  --page-accent: #000000;
+  
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-3-tint), 0.15),
+    rgba(var(--preset-3-tint), 0.075)
+  );
+  color: var(--page-text);
+  font-family: var(--font-minimal-body);
+  font-weight: 300;
+  min-height: 100vh;
+}
+
+.page-style-3 a {
+  color: var(--page-link);
+  transition: color var(--transition-fast);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.page-style-3 a:hover {
+  color: var(--page-link-hover);
+  border-bottom-color: var(--page-link-hover);
+}
+
+.page-style-3 h1,
+.page-style-3 h2,
+.page-style-3 h3,
+.page-style-3 h4,
+.page-style-3 h5,
+.page-style-3 h6 {
+  font-family: var(--font-minimal-heading);
+  color: var(--page-text);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.page-style-3 ::selection {
+  background: #000000;
+  color: #ffffff;
+}
+
+.page-style-3 ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.page-style-3 ::-webkit-scrollbar-track {
+  background: #f8f9fa;
+}
+
+.page-style-3 ::-webkit-scrollbar-thumb {
+  background: #000000;
+  border-radius: 4px;
+}
+
+.page-style-3 ::-webkit-scrollbar-thumb:hover {
+  background: #333333;
+}
+
+/* Light mode specific adjustments */
+.page-style-3 .card,
+.page-style-3 .modal-content {
+  background: white;
+  color: #000000;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* ========================================
+   PRESET 4: VIBRANT & PLAYFUL THEME
+   ======================================== */
+
+.page-style-4 {
+  --page-text: #1a1a1a;
+  --page-link: var(--preset-4-primary);
+  --page-link-hover: var(--preset-4-accent);
+  --page-accent: var(--preset-4-primary);
+  
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-4-tint), 0.2),
+    rgba(var(--preset-4-tint), 0.1)
+  );
+  color: var(--page-text);
+  font-family: var(--font-playful-body);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+
+
+.page-style-4 a {
+  color: var(--page-link);
+  transition: all var(--transition-base);
+  text-decoration: none;
+}
+
+.page-style-4 a:hover {
+  color: var(--page-link-hover);
+  transform: translateY(-2px);
+  text-shadow: 0 2px 8px rgba(255, 107, 157, 0.5);
+}
+
+.page-style-4 h1,
+.page-style-4 h2,
+.page-style-4 h3,
+.page-style-4 h4,
+.page-style-4 h5,
+.page-style-4 h6 {
+  font-family: var(--font-playful-heading);
+  color: var(--preset-4-primary);
+  text-shadow: none;
+}
+
+.page-style-4 ::selection {
+  background: var(--preset-4-primary);
+  color: white;
+}
+
+.page-style-4 ::-webkit-scrollbar {
+  width: 14px;
+}
+
+.page-style-4 ::-webkit-scrollbar-track {
+  background: rgba(var(--preset-4-tint), 0.15);
+  border-left: 2px solid rgba(255, 107, 157, 0.3);
+}
+
+.page-style-4 ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--preset-4-primary), var(--preset-4-accent));
+  border-radius: 7px;
+  border: 2px solid rgba(var(--preset-4-tint), 0.3);
+}
+
+.page-style-4 ::-webkit-scrollbar-thumb:hover {
+  transform: scaleX(1.1);
+}
+
+/* ========================================
+   PRESET 5: PROFESSIONAL & STRUCTURED THEME
+   ======================================== */
+
+.page-style-5 {
+  --page-text: #1a1a1a;
+  --page-link: var(--preset-5-primary);
+  --page-link-hover: var(--preset-5-accent);
+  --page-accent: var(--preset-5-primary);
+  
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-5-tint), 1.0),
+    rgba(var(--preset-5-tint), 1.0)
+  );
+  color: var(--page-text);
+  font-family: var(--font-pro-body);
+  min-height: 100vh;
+}
+
+.page-style-5 a {
+  color: var(--page-link);
+  transition: color var(--transition-base);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.page-style-5 a:hover {
+  color: var(--page-link-hover);
+  text-decoration: underline;
+}
+
+.page-style-5 h1,
+.page-style-5 h2,
+.page-style-5 h3,
+.page-style-5 h4,
+.page-style-5 h5,
+.page-style-5 h6 {
+  font-family: var(--font-pro-heading);
+  color: #0e131f;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.page-style-5 ::selection {
+  background: var(--preset-5-primary);
+  color: white;
+}
+
+.page-style-5 ::-webkit-scrollbar {
+  width: 10px;
+}
+
+.page-style-5 ::-webkit-scrollbar-track {
+  background: rgba(var(--preset-5-tint), 0.8);
+  border-left: 1px solid rgba(48, 225, 124, 0.3);
+}
+
+.page-style-5 ::-webkit-scrollbar-thumb {
+  background: var(--preset-5-primary);
+  border-radius: 5px;
+}
+
+.page-style-5 ::-webkit-scrollbar-thumb:hover {
+  background: var(--preset-5-accent);
+}
+
+.page-style-5 .container,
+.page-style-5 .container-fluid {
+  max-width: 1400px;
+}
+
+/* Professional grid structure */
+.page-style-5 section {
+  padding: var(--space-xl) 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.page-style-5 section:first-of-type {
+  border-top: none;
+}
+
+/* ========================================
+   RESPONSIVE THEME ADJUSTMENTS
+   ======================================== */
+
+@media (max-width: 768px) {
+  .page-style-1,
+  .page-style-2,
+  .page-style-3,
+  .page-style-4,
+  .page-style-5 {
+    font-size: 0.95rem;
+  }
+  
+  .page-style-1 ::-webkit-scrollbar,
+  .page-style-2 ::-webkit-scrollbar,
+  .page-style-3 ::-webkit-scrollbar,
+  .page-style-4 ::-webkit-scrollbar,
+  .page-style-5 ::-webkit-scrollbar {
+    width: 8px;
+  }
+}
+
+/* ========================================
+   DARK MODE SUPPORT (for light themes)
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+  .page-style-3 {
+    --page-bg: #0e1219;
+    --page-text: #f8f9fa;
+    --page-link: #ffffff;
+    --page-link-hover: #e9ecef;
+  }
+  
+  .page-style-3 .card,
+  .page-style-3 .modal-content {
+    background: #1a1f29;
+    color: #f8f9fa;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .page-style-5 {
+    --page-bg: #0e131f;
+    --page-text: #f8f9fa;
+  }
+  
+  .page-style-5 section {
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+}

@@ -5,6 +5,7 @@ import "./index.css"; // Import base styles including publicPages.css
 import "./styles/presets.css"; // Import preset styles (variants 1-5)
 import App from "./App";
 import { OrderCountProvider } from "@/hooks/useOrderCount.jsx";
+import { PresetsProvider } from "@/context/PresetsContext";
 import { listenForFirebaseMessages } from "@/utils/firebaseNotifications";
 
 
@@ -136,9 +137,11 @@ async function bootstrap() {
 
   ReactDOM.createRoot(document.getElementById("root")).render(
     <React.StrictMode>
-      <OrderCountProvider>
-        <App />
-      </OrderCountProvider>
+      <PresetsProvider>
+        <OrderCountProvider>
+          <App />
+        </OrderCountProvider>
+      </PresetsProvider>
     </React.StrictMode>
   );
 }

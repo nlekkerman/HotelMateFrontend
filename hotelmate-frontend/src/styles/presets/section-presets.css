@@ -1,0 +1,973 @@
+/**
+ * Section-Level Preset Styles
+ * 5 preset variants for Hero, Gallery, List, News, Footer, and Rooms sections
+ * 
+ * PRECEDENCE: Section presets < Component presets
+ * Component-level classes will override these section styles
+ */
+
+/* ========================================
+   CUSTOM CONTAINERS FOR PRESET SECTIONS
+   ======================================== */
+
+/* Custom container to replace Bootstrap Container for proper responsive layout */
+.rooms-container {
+  width: 100%;
+  padding-right: 15px;
+  padding-left: 15px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+/* Responsive max-widths optimized for card grid */
+@media (min-width: 576px) {
+  .rooms-container {
+    max-width: 540px; /* 1 card */
+  }
+}
+
+@media (min-width: 768px) {
+  .rooms-container {
+    max-width: 720px; /* 2 cards */
+  }
+}
+
+@media (min-width: 992px) {
+  .rooms-container {
+    max-width: 1100px; /* 3 cards fit nicely */
+  }
+}
+
+@media (min-width: 1200px) {
+  .rooms-container {
+    max-width: 1400px; /* 4 cards on desktop */
+  }
+}
+
+@media (min-width: 1400px) {
+  .rooms-container {
+    max-width: 1600px; /* 4 cards on large screens */
+  }
+}
+
+/* ========================================
+   HERO SECTION PRESETS (5 variants)
+   ======================================== */
+
+/* Common hero structure and elements */
+.hero .hero__content-centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 500px;
+  padding: 2rem;
+}
+
+.hero .hero__logo {
+  max-width: 150px;
+  height: auto;
+  margin-bottom: 2rem;
+  z-index: 10;
+}
+
+.hero .hero__image-wrapper {
+  position: relative;
+  width: 100%;
+  margin-top: 2rem;
+  min-height: 500px;
+}
+
+.hero .hero__image {
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+  object-fit: cover;
+}
+
+.hero .hero__text-overlay {
+  position: absolute;
+  left: 70%;
+  top: 70%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 5;
+  color: white;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.hero .hero__title {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.hero .hero__text {
+  font-size: 1.25rem;
+  max-width: 600px;
+  color: white;
+  line-height: 1.6;
+}
+
+/* Preset 1: Clean & Modern */
+.hero--preset-1 {
+  background: transparent;
+  color: #1a1a1a;
+  box-shadow: var(--shadow-card);
+  margin-bottom: 0;
+  border-bottom: 2px solid rgba(189, 220, 255, 0.3);
+  padding-block: var(--space-2xl);  /* 4rem */
+  padding-inline: clamp(1.5rem, 4vw, 4rem);
+}
+
+.hero--preset-1 .hero__title {
+  font-family: var(--font-clean-heading);
+  font-weight: 700;
+}
+
+.hero--preset-1 .hero__text {
+  font-family: var(--font-clean-body);
+  font-weight: 400;
+}
+
+.hero--preset-1 .hero__logo {
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+}
+
+.hero--preset-1 .hero__image {
+  box-shadow: var(--shadow-mid);
+}
+
+/* Preset 2: Dark & Elegant */
+.hero--preset-2 {
+  background: transparent;
+  border-left: 4px solid var(--gold);
+  padding: 3rem 0;
+  box-shadow: var(--shadow-strong);
+  margin-bottom: 0;
+  border-bottom: 3px solid rgba(242, 201, 76, 0.3);
+}
+
+.hero--preset-2 .hero__title {
+  font-family: var(--font-elegant-heading);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #8b7136;
+  text-shadow: none;
+}
+
+.hero--preset-2 .hero__text {
+  font-family: var(--font-elegant-body);
+  font-weight: 400;
+}
+
+.hero--preset-2 .hero__logo {
+  border: 2px solid var(--gold);
+  padding: 1rem;
+}
+
+.hero--preset-2 .hero__image {
+  border: 3px solid var(--gold);
+}
+
+/* Preset 3: Minimal & Sleek */
+.hero--preset-3 {
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.hero--preset-3 .hero__title {
+  font-family: var(--font-minimal-heading);
+  font-weight: 300;
+  letter-spacing: 2px;
+  color: #1a1a1a;
+}
+
+.hero--preset-3 .hero__text {
+  font-family: var(--font-minimal-body);
+  font-weight: 300;
+  font-size: 1rem;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.hero--preset-3 .hero__logo {
+  opacity: 0.9;
+}
+
+.hero--preset-3 .hero__image {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Preset 4: Vibrant & Playful */
+.hero--preset-4 {
+  background: transparent;
+  padding: 3rem 0;
+  box-shadow: var(--shadow-mid);
+  margin-bottom: 0;
+  border-bottom: 3px solid var(--accent-blue);
+}
+
+.hero--preset-4 .hero__title {
+  font-family: var(--font-playful-heading);
+  font-weight: 600;
+}
+
+.hero--preset-4 .hero__text {
+  font-family: var(--font-playful-body);
+  font-weight: 400;
+}
+
+.hero--preset-4 .hero__logo {
+  transition: transform var(--transition-base);
+}
+
+.hero--preset-4 .hero__logo:hover {
+  transform: scale(1.05);  /* Only scale, no rotation on most elements */
+}
+
+.hero--preset-4 .hero__image {
+  box-shadow: var(--shadow-mid);
+}
+
+.hero--preset-4 .hero__text-overlay {
+  padding: var(--space-lg);
+  background: transparent;
+  border-radius: var(--radius-panel);  /* 12px */
+  box-shadow: var(--shadow-mid);
+}
+
+.hero--preset-4 .hero__text-overlay .hero__title {
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.hero--preset-4 .hero__text-overlay .hero__text {
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* Preset 5: Professional & Structured */
+.hero--preset-5 {
+  background: transparent;
+  border-top: 3px solid var(--accent-green);
+  padding-block: var(--space-2xl);
+  padding-inline: clamp(1.5rem, 4vw, 4rem);
+  box-shadow: var(--shadow-soft);
+  margin-bottom: 0;
+  border-bottom: 3px solid rgba(48, 225, 124, 0.4);
+}
+
+.hero--preset-5 .hero__title {
+  font-family: var(--font-pro-heading);
+  font-weight: 600;
+  letter-spacing: -1px;
+}
+
+.hero--preset-5 .hero__text {
+  font-family: var(--font-pro-body);
+  font-weight: 400;
+  color: #1a1a1a;
+}
+
+.hero--preset-5 .hero__logo {
+  border-bottom: 2px solid var(--accent-green);
+  padding-bottom: 1rem;
+}
+
+.hero--preset-5 .hero__image {
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.hero--preset-5 .hero__text-overlay {
+  padding: var(--space-lg);
+  background: transparent;
+  border-top: 3px solid var(--accent-green);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-panel);  /* 12px */
+}
+
+/* ========================================
+   GALLERY SECTION PRESETS (5 variants)
+   ======================================== */
+
+/* Preset 1: Clean & Modern */
+.gallery--preset-1,
+[data-preset="1"] .gallery-section-view {
+  background: transparent;
+  padding-block: var(--space-2xl);
+  padding-inline: clamp(1.5rem, 4vw, 4rem);
+  margin-bottom: 0;
+  border-bottom: 2px solid rgba(189, 220, 255, 0.3);
+}
+
+.gallery--preset-1 .gallery-image {
+  border-radius: var(--radius-section);  /* 10px */
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+  transition: var(--transition-properties) var(--transition-base);
+}
+
+.gallery--preset-1 .gallery-image:hover {
+  box-shadow: var(--shadow-card);
+  transform: translateY(-2px);
+}
+
+.gallery--preset-1 .gallery-image__img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Preset 2: Dark & Elegant */
+.gallery--preset-2,
+[data-preset="2"] .gallery-section-view {
+  background: transparent;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid rgba(242, 201, 76, 0.3);
+}
+
+.gallery--preset-2 .gallery-image {
+  border-radius: var(--radius-md);
+  border: 2px solid rgba(242, 201, 76, 0.35);
+  overflow: hidden;
+}
+
+.gallery--preset-2 .gallery-image__img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Preset 3: Minimal & Sleek */
+.gallery--preset-3,
+[data-preset="3"] .gallery-section-view {
+  background: transparent;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.gallery--preset-3 .gallery-image {
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.gallery--preset-3 .gallery-image__img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Preset 4: Vibrant & Playful */
+.gallery--preset-4,
+[data-preset="4"] .gallery-section-view {
+  background: transparent;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid var(--accent-blue);
+}
+
+.gallery--preset-4 .gallery-image {
+  border-radius: var(--radius-xl);
+  border: 3px solid var(--accent-pink);
+  overflow: hidden;
+}
+
+.gallery--preset-4 .gallery-image__img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Preset 5: Professional & Structured */
+.gallery--preset-5,
+[data-preset="5"] .gallery-section-view {
+  background: transparent;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid rgba(48, 225, 124, 0.4);
+}
+
+.gallery--preset-5 .gallery-image {
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  padding: 4px;
+}
+
+.gallery--preset-5 .gallery-image__img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Gallery Horizontal Scroll - Common for all presets */
+.gallery__horizontal-wrapper {
+  position: relative;
+  overflow: hidden;
+  padding: 2rem 0;
+}
+
+.gallery__horizontal-scroll {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 1rem 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.gallery__horizontal-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.gallery__horizontal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.gallery__horizontal-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.gallery__horizontal-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.gallery__horizontal-item {
+  flex: 0 0 300px;
+  min-width: 300px;
+  display: inline-block;
+}
+
+.gallery__horizontal-item .gallery-image {
+  height: 250px;
+  width: 100%;
+}
+
+.gallery__horizontal-item .gallery-image__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Gallery Add Placeholder (Staff Only) */
+.gallery__add-placeholder {
+  width: 300px;
+  height: 250px;
+  background: rgba(59, 169, 255, 0.1);
+  border: 2px dashed var(--accent-blue);
+  border-radius: var(--radius-card);  /* 8px for card placeholders */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition-properties) var(--transition-base);
+}
+
+.gallery__add-placeholder:hover {
+  background: rgba(59, 169, 255, 0.2);
+  border-color: var(--gold);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--shadow-card);
+}
+
+.gallery__add-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  font-size: 2.5rem;
+  color: white;
+  transition: all var(--transition-base);
+}
+
+.gallery__add-placeholder:hover .gallery__add-icon {
+  background: var(--gold);
+  color: var(--gray-dark);
+  transform: scale(1.15) rotate(90deg);
+}
+
+.gallery__add-text {
+  color: var(--accent-blue);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  transition: color var(--transition-base);
+}
+
+.gallery__add-placeholder:hover .gallery__add-text {
+  color: var(--gold);
+}
+
+/* Gallery Lightbox with Navigation */
+.gallery__lightbox {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.gallery__lightbox-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gallery__lightbox-image {
+  max-width: 100%;
+  max-height: 85vh;
+  object-fit: contain;
+}
+
+.gallery__lightbox-close {
+  position: absolute;
+  top: -50px;
+  right: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: background var(--transition-base);
+}
+
+.gallery__lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.gallery__lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+  transition: background var(--transition-base);
+  z-index: 10;
+}
+
+.gallery__lightbox-nav:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.gallery__lightbox-nav--prev {
+  left: -80px;
+}
+
+.gallery__lightbox-nav--next {
+  right: -80px;
+}
+
+.gallery__lightbox-caption {
+  position: absolute;
+  bottom: -60px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: white;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.gallery__lightbox-counter {
+  position: absolute;
+  bottom: -90px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+/* ========================================
+   LIST SECTION PRESETS (5 variants)
+   ======================================== */
+
+/* Preset 1: Clean & Modern */
+.list--preset-1 {
+  background: transparent;
+  padding-block: var(--space-2xl);
+  padding-inline: clamp(1.5rem, 4vw, 4rem);
+  margin-bottom: 0;
+  border-bottom: 2px solid rgba(189, 220, 255, 0.3);
+}
+
+.list--preset-1 .card {
+  border-radius: var(--radius-card);  /* 8px */
+  background: transparent;
+  box-shadow: var(--shadow-card);
+  border: none;
+  padding: var(--space-lg);  /* Main cards get lg padding */
+}
+
+/* Preset 2: Dark & Elegant */
+.list--preset-2 {
+  background: transparent;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid rgba(242, 201, 76, 0.3);
+}
+
+.list--preset-2 .card {
+  background: transparent;
+  border: 1px solid var(--gold);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-strong);
+}
+
+/* Preset 3: Minimal & Sleek */
+.list--preset-3 {
+  background: transparent;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.list--preset-3 .card {
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: transparent;
+}
+
+/* Preset 4: Vibrant & Playful */
+.list--preset-4 {
+  background: transparent;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid var(--accent-blue);
+}
+
+.list--preset-4 .card {
+  border-radius: var(--radius-xl);
+  background: transparent;
+  color: white;
+  border: none;
+}
+
+/* Preset 5: Professional & Structured */
+.list--preset-5 {
+  background: transparent;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid rgba(48, 225, 124, 0.4);
+}
+
+.list--preset-5 .card {
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+}
+
+/* ========================================
+   NEWS SECTION PRESETS (5 variants)
+   ======================================== */
+
+/* Preset 1: Clean & Modern */
+.news-section--preset-1 {
+  background: transparent;
+  padding-block: var(--space-2xl);
+  padding-inline: clamp(1.5rem, 4vw, 4rem);
+  margin-bottom: 0;
+  border-bottom: 2px solid rgba(189, 220, 255, 0.3);
+}
+
+.news-section--preset-1 .news-article {
+  border-radius: var(--radius-card);  /* 8px */
+  background: transparent;
+  padding: var(--space-md);  /* Compact padding for news items */
+  border: none;
+  margin-bottom: var(--space-lg);
+  transition: var(--transition-properties) var(--transition-base);
+}
+
+.news-section--preset-1 .news-article:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+
+/* Preset 2: Dark & Elegant */
+.news-section--preset-2 {
+  background: transparent;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid rgba(242, 201, 76, 0.3);
+}
+
+.news-section--preset-2 .news-article {
+  border-left: 3px solid var(--gold);
+  padding-left: 1rem;
+  background: transparent;
+  margin-bottom: 2rem;
+}
+
+/* Preset 3: Minimal & Sleek */
+.news-section--preset-3 {
+  background: transparent;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.news-section--preset-3 .news-article {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 0.7rem 0;
+  margin-bottom: 1.5rem;
+}
+
+/* Preset 4: Vibrant & Playful */
+.news-section--preset-4 {
+  background: transparent;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid var(--accent-blue);
+}
+
+.news-section--preset-4 .news-article {
+  border-radius: var(--radius-xl);
+  background: transparent;
+  color: var(--accent-blue);
+  padding: 0.9rem 1.2rem;
+  margin-bottom: 2rem;
+}
+
+/* Preset 5: Professional & Structured */
+.news-section--preset-5 {
+  background: transparent;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid rgba(48, 225, 124, 0.4);
+}
+
+.news-section--preset-5 .news-article {
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  padding: 1rem 1.25rem;
+  margin-bottom: 2rem;
+}
+
+/* ========================================
+   FOOTER SECTION PRESETS (5 variants)
+   ======================================== */
+
+/* Preset 1: Clean & Modern */
+.footer--preset-1 {
+  background: transparent;
+  border-top: 2px solid rgba(189, 220, 255, 0.3);
+  padding: 2rem 0;
+  color: #1a1a1a;
+}
+
+/* Preset 2: Dark & Elegant */
+.footer--preset-2 {
+  background: transparent;
+  border-top: 3px solid rgba(242, 201, 76, 0.3);
+  padding: 2rem 0;
+  color: #1a1a1a;
+}
+
+/* Preset 3: Minimal & Sleek */
+.footer--preset-3 {
+  background: transparent;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 2rem 0;
+}
+
+/* Preset 4: Vibrant & Playful */
+.footer--preset-4 {
+  background: transparent;
+  border-top: 3px solid var(--accent-blue);
+  padding: 2rem 0;
+  color: #1a1a1a;
+}
+
+/* Preset 5: Professional & Structured */
+.footer--preset-5 {
+  background: transparent;
+  border-top: 3px solid rgba(48, 225, 124, 0.4);
+  padding: 2rem 0;
+  color: #1a1a1a;
+}
+
+/* ========================================
+   ROOMS SECTION PRESETS (5 variants)
+   ======================================== */
+
+/* Preset 1: Clean & Modern */
+[data-preset="1"] .rooms-section-view {
+  background: transparent;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 2px solid rgba(189, 220, 255, 0.3);
+}
+
+/* Preset 2: Dark & Elegant */
+[data-preset="2"] .rooms-section-view {
+  background: transparent;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid rgba(242, 201, 76, 0.3);
+}
+
+/* Preset 3: Minimal & Sleek */
+[data-preset="3"] .rooms-section-view {
+  background: transparent;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Preset 4: Vibrant & Playful */
+[data-preset="4"] .rooms-section-view {
+  background: transparent;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid var(--accent-blue);
+}
+
+/* Preset 5: Professional & Structured */
+[data-preset="5"] .rooms-section-view {
+  background: transparent;
+  padding: 3rem 0;
+  margin-bottom: 0;
+  border-bottom: 3px solid rgba(48, 225, 124, 0.4);
+}
+
+/* Default fallback */
+.rooms-section-view {
+  background: transparent;
+}
+
+.rooms-carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  gap: 1.5rem;
+  padding-bottom: 1rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.rooms-carousel > * {
+  flex: 0 0 auto;
+  width: 350px;
+  scroll-snap-align: start;
+}
+
+.rooms-carousel::-webkit-scrollbar {
+  height: 8px;
+}
+
+.rooms-carousel::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.rooms-carousel::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.rooms-carousel::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.rooms-luxury .room-card {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.rooms-luxury .room-card img {
+  height: 350px;
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================== */
+
+@media (max-width: 992px) {
+  .hero .hero__title {
+    font-size: 2.5rem;
+  }
+  
+  .hero .hero__text {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero .hero__content-centered {
+    min-height: 400px;
+    padding: 1.5rem;
+  }
+  
+  .hero .hero__title {
+    font-size: 2rem;
+  }
+  
+  .hero .hero__text {
+    font-size: 1rem;
+  }
+  
+  .hero .hero__image-wrapper,
+  .hero .hero__image {
+    min-height: 400px;
+  }
+  
+  .rooms-carousel > * {
+    width: 300px;
+  }
+  
+  .gallery__horizontal-item {
+    flex: 0 0 250px;
+    min-width: 250px;
+  }
+}
+
+@media (max-width: 576px) {
+  .hero .hero__content-centered {
+    min-height: 350px;
+    padding: 1rem;
+  }
+  
+  .hero .hero__title {
+    font-size: 1.75rem;
+  }
+  
+  .hero .hero__text {
+    font-size: 0.95rem;
+  }
+}

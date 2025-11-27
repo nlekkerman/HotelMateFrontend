@@ -1,0 +1,285 @@
+/**
+ * Base Preset Variables & Utilities
+ * Defines CSS custom properties and shared utilities for all preset modules
+ */
+
+/* ========================================
+   CSS CUSTOM PROPERTIES (Design Tokens)
+   ======================================== */
+
+:root {
+  /* Preset Color Palette */
+  --preset-1-primary: #3ba9ff;
+  --preset-1-secondary: #1a2332;
+  --preset-1-accent: #5fe0ff;
+  
+  --preset-2-primary: #f2c94c;
+  --preset-2-secondary: #05070a;
+  --preset-2-accent: #f8e29a;
+  
+  --preset-3-primary: #000000;
+  --preset-3-secondary: #0e1219;
+  --preset-3-accent: #333333;
+  
+  --preset-4-primary: #ff6b9d;
+  --preset-4-secondary: #2a4a8f;
+  --preset-4-accent: #ffa06b;
+  
+  --preset-5-primary: #30e17c;
+  --preset-5-secondary: #0e131f;
+  --preset-5-accent: #4fffaa;
+
+  /* Pastel Tint Colors (RGB values for alpha blending) */
+  --preset-1-tint: 189, 220, 255;   /* Pastel baby blue */
+  --preset-2-tint: 255, 240, 200;   /* Pastel champagne gold */
+  --preset-3-tint: 240, 242, 245;   /* Soft grey-white */
+  --preset-4-tint: 255, 220, 235;   /* Pastel rose-peach */
+  --preset-5-tint: 210, 250, 230;   /* Pastel mint */
+
+  /* Legacy Global Tokens (for backward compatibility) */
+  --gold: #f2c94c;
+  --accent-blue: #3ba9ff;
+  --accent-pink: #ff5dc8;
+  --accent-green: #30e17c;
+
+  --gray-soft: #0f1522;
+  --gray-mid: #161c2b;
+  --gray-dark: #0a0d14;
+
+  --text-main: #f8f9fa;
+  --text-soft: #b7bcc8;
+
+  /* Spacing Scale */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+  --space-2xl: 4rem;
+
+  /* Border Radius Scale - Modern 2025 */
+  --radius-card: 8px;         /* Cards, room cards, news cards */
+  --radius-section: 10px;     /* Sections, panels, wrappers */
+  --radius-panel: 12px;       /* Special panels, modals */
+  --radius-input: 8px;        /* Input fields */
+  --radius-button-alt: 10px;  /* Alternative buttons */
+  --radius-pill: 999px;       /* Pill buttons, chips, badges */
+  
+  /* Legacy support - will be phased out */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+
+  /* Shadow Scale - Tight & Modern 2025 */
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-card-hover: 0 6px 18px rgba(0, 0, 0, 0.35);
+  --shadow-mid: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --shadow-strong: 0 12px 32px rgba(0, 0, 0, 0.4);
+
+  /* Typography - Font Families by Preset */
+  /* Preset 1: Clean & Modern */
+  --font-clean-heading: "Inter", system-ui, sans-serif;
+  --font-clean-subtitle: "Inter", system-ui, sans-serif;
+  --font-clean-body: "Inter", system-ui, sans-serif;
+
+  /* Preset 2: Dark & Elegant */
+  --font-elegant-heading: "Playfair Display", serif;
+  --font-elegant-subtitle: "Inter", sans-serif;
+  --font-elegant-body: "Inter", sans-serif;
+
+  /* Preset 3: Minimal & Sleek */
+  --font-minimal-heading: "Poppins", sans-serif;
+  --font-minimal-subtitle: "Poppins", sans-serif;
+  --font-minimal-body: "Poppins", sans-serif;
+
+  /* Preset 4: Vibrant & Playful */
+  --font-playful-heading: "Baloo 2", sans-serif;
+  --font-playful-subtitle: "Poppins", sans-serif;
+  --font-playful-body: "Poppins", sans-serif;
+
+  /* Preset 5: Professional & Structured */
+  --font-pro-heading: "Roboto Condensed", sans-serif;
+  --font-pro-subtitle: "Inter", sans-serif;
+  --font-pro-body: "Inter", sans-serif;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.3s ease;
+  --transition-slow: 0.5s ease;
+  
+  /* Common transition properties */
+  --transition-properties: transform, box-shadow, background-color, color, border-color, opacity;
+}
+
+/* ========================================
+   TYPOGRAPHY UTILITIES
+   ======================================== */
+
+/* Font Preset Classes - Applied dynamically based on style_variant */
+
+/* Preset 1: Clean & Modern */
+.font-preset-1-heading {
+  font-family: var(--font-clean-heading);
+  font-weight: 700;
+  color: white;
+}
+
+.font-preset-1-subtitle {
+  font-family: var(--font-clean-subtitle);
+  font-weight: 500;
+}
+
+.font-preset-1-body {
+  font-family: var(--font-clean-body);
+  font-weight: 400;
+}
+
+/* Preset 2: Dark & Elegant */
+.font-preset-2-heading {
+  font-family: var(--font-elegant-heading);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.font-preset-2-subtitle {
+  font-family: var(--font-elegant-subtitle);
+  font-weight: 500;
+}
+
+.font-preset-2-body {
+  font-family: var(--font-elegant-body);
+  font-weight: 400;
+}
+
+/* Preset 3: Minimal & Sleek */
+.font-preset-3-heading {
+  font-family: var(--font-minimal-heading);
+  font-weight: 600;
+}
+
+.font-preset-3-subtitle {
+  font-family: var(--font-minimal-subtitle);
+  font-weight: 500;
+}
+
+.font-preset-3-body {
+  font-family: var(--font-minimal-body);
+  font-weight: 300;
+}
+
+/* Preset 4: Vibrant & Playful */
+.font-preset-4-heading {
+  font-family: var(--font-playful-heading);
+  font-weight: 600;
+}
+
+.font-preset-4-subtitle {
+  font-family: var(--font-playful-subtitle);
+  font-weight: 500;
+}
+
+.font-preset-4-body {
+  font-family: var(--font-playful-body);
+  font-weight: 400;
+}
+
+/* Preset 5: Professional & Structured */
+.font-preset-5-heading {
+  font-family: var(--font-pro-heading);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.font-preset-5-subtitle {
+  font-family: var(--font-pro-subtitle);
+  font-weight: 500;
+}
+
+.font-preset-5-body {
+  font-family: var(--font-pro-body);
+  font-weight: 400;
+}
+
+/* ========================================
+   SPACING UTILITIES
+   ======================================== */
+
+.mb-small { margin-bottom: var(--space-md); }
+.mb-medium { margin-bottom: var(--space-lg); }
+.mb-large { margin-bottom: var(--space-xl); }
+.mb-extra-large { margin-bottom: var(--space-2xl); }
+
+.p-small { padding: var(--space-md); }
+.p-medium { padding: var(--space-lg); }
+.p-large { padding: var(--space-xl); }
+.p-extra-large { padding: var(--space-2xl); }
+
+/* Gap Utilities */
+.g-2 { gap: var(--space-sm); }
+.g-3 { gap: var(--space-md); }
+.g-4 { gap: 1.5rem; }
+.g-5 { gap: var(--space-xl); }
+
+/* ========================================
+   HOVER EFFECTS (Universal)
+   ======================================== */
+
+.hover-lift {
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.hover-zoom {
+  overflow: hidden;
+  transition: transform var(--transition-base);
+}
+
+.hover-zoom img {
+  transition: transform var(--transition-slow);
+}
+
+.hover-zoom:hover img {
+  transform: scale(1.1);
+}
+
+.hover-opacity {
+  transition: opacity var(--transition-base);
+}
+
+.hover-opacity:hover {
+  opacity: 0.8;
+}
+
+/* ========================================
+   ACCESSIBILITY
+   ======================================== */
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Focus states */
+*:focus-visible {
+  outline: 2px solid var(--preset-1-primary);
+  outline-offset: 2px;
+}
+
+.card:focus-visible,
+.room-card:focus-visible {
+  outline: 2px solid var(--preset-1-primary);
+  outline-offset: 4px;
+}

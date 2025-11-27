@@ -1,0 +1,418 @@
+/**
+ * Section Header Preset Styles
+ * 5 preset variants for section headers across all section types
+ * 
+ * Headers are universal components that can be used in any section
+ * and styled independently via preset configurations
+ */
+
+/* ========================================
+   PRESET-SPECIFIC SECTION HEADERS
+   ======================================== */
+
+/* Preset 1: Clean & Modern */
+[data-preset="1"] .section-header-title {
+  font-family: var(--font-clean-heading);
+  color: var(--preset-1-primary);
+  font-weight: 700;
+}
+
+[data-preset="1"] .section-header-subtitle {
+  font-family: var(--font-clean-body);
+  color: var(--text-soft);
+}
+
+/* Preset 2: Dark & Elegant */
+[data-preset="2"] .section-header-title {
+  font-family: var(--font-elegant-heading);
+  color: var(--preset-2-primary);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+[data-preset="2"] .section-header-subtitle {
+  font-family: var(--font-elegant-body);
+  color: var(--text-soft);
+}
+
+/* Preset 3: Minimal & Sleek */
+[data-preset="3"] .section-header-title {
+  font-family: var(--font-minimal-heading);
+  color: #ffffff;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+[data-preset="3"] .section-header-subtitle {
+  font-family: var(--font-minimal-body);
+  color: rgba(255, 255, 255, 0.65);
+  font-weight: 300;
+}
+
+/* Preset 4: Vibrant & Playful */
+[data-preset="4"] .section-header-title {
+  font-family: var(--font-playful-heading);
+  color: var(--preset-4-primary);
+  font-weight: 600;
+}
+
+[data-preset="4"] .section-header-subtitle {
+  font-family: var(--font-playful-body);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Preset 5: Professional & Structured */
+[data-preset="5"] .section-header-title {
+  font-family: var(--font-pro-heading);
+  color: var(--preset-5-primary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+[data-preset="5"] .section-header-subtitle {
+  font-family: var(--font-pro-body);
+  color: #cfd4dc;
+}
+
+/* ========================================
+   SECTION HEADER BASE STRUCTURE
+   ======================================== */
+
+.section-header {
+  text-align: center;
+  margin-bottom: var(--space-xl);
+}
+
+.section-header--left {
+  text-align: left;
+}
+
+.section-header__title {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.section-header__subtitle {
+  font-weight: 400;
+  opacity: 0.8;
+  margin-bottom: 0;
+}
+
+.section-header__divider {
+  width: 80px;
+  height: 3px;
+  margin: 1.5rem auto 0;
+  border-radius: 2px;
+}
+
+.section-header--left .section-header__divider {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* Title Size Variations */
+.section-title--small {
+  font-size: 1.75rem;
+}
+
+.section-title--medium {
+  font-size: 2.25rem;
+}
+
+.section-title--large {
+  font-size: 2.75rem;
+}
+
+.section-title--extra-large {
+  font-size: 3.5rem;
+}
+
+/* ========================================
+   PRESET 1: CLEAN & MODERN HEADERS
+   ======================================== */
+
+.section-header--preset-1 {
+  background: linear-gradient(135deg, rgba(59, 169, 255, 0.08), transparent);
+  padding: 2rem;
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--preset-1-primary);
+}
+
+.section-header--preset-1 .section-header__title {
+  font-family: var(--font-clean-heading);
+  color: var(--preset-1-primary);
+  font-weight: 700;
+}
+
+.section-header--preset-1 .section-header__subtitle {
+  font-family: var(--font-clean-subtitle);
+  color: var(--text-soft);
+}
+
+.section-header--preset-1 .section-header__divider {
+  background: linear-gradient(90deg, var(--preset-1-primary), var(--preset-1-accent));
+}
+
+/* ========================================
+   PRESET 2: DARK & ELEGANT HEADERS
+   ======================================== */
+
+.section-header--preset-2 {
+  background: linear-gradient(180deg, transparent, rgba(242, 201, 76, 0.05));
+  padding: 2.5rem;
+  border-radius: var(--radius-lg);
+  border-top: 3px solid var(--preset-2-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.section-header--preset-2 .section-header__title {
+  font-family: var(--font-elegant-heading);
+  color: var(--preset-2-primary);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.section-header--preset-2 .section-header__subtitle {
+  font-family: var(--font-elegant-subtitle);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.section-header--preset-2 .section-header__divider {
+  background: linear-gradient(90deg, var(--preset-2-primary), var(--preset-2-accent));
+  height: 2px;
+  position: relative;
+}
+
+.section-header--preset-2 .section-header__divider::before,
+.section-header--preset-2 .section-header__divider::after {
+  content: '◆';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--preset-2-primary);
+  font-size: 0.8rem;
+}
+
+.section-header--preset-2 .section-header__divider::before {
+  left: -20px;
+}
+
+.section-header--preset-2 .section-header__divider::after {
+  right: -20px;
+}
+
+/* ========================================
+   PRESET 3: MINIMAL & SLEEK HEADERS
+   ======================================== */
+
+.section-header--preset-3 {
+  padding: 1.5rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  margin-bottom: var(--space-lg);
+}
+
+.section-header--preset-3 .section-header__title {
+  font-family: var(--font-minimal-heading);
+  color: #1a1a1a;
+  font-weight: 600;
+  letter-spacing: 2px;
+}
+
+.section-header--preset-3 .section-header__subtitle {
+  font-family: var(--font-minimal-subtitle);
+  color: rgba(0, 0, 0, 0.6);
+  font-weight: 300;
+}
+
+.section-header--preset-3 .section-header__divider {
+  background: rgba(0, 0, 0, 0.2);
+  height: 1px;
+  width: 60px;
+}
+
+/* ========================================
+   PRESET 4: VIBRANT & PLAYFUL HEADERS
+   ======================================== */
+
+.section-header--preset-4 {
+  background: linear-gradient(135deg, rgba(255, 107, 157, 0.15), rgba(255, 160, 107, 0.15));
+  padding: 2rem;
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--preset-4-primary);
+  transform: rotate(-0.5deg);
+  transition: all var(--transition-base);
+}
+
+.section-header--preset-4:hover {
+  transform: rotate(0.5deg) scale(1.02);
+}
+
+.section-header--preset-4 .section-header__title {
+  font-family: var(--font-playful-heading);
+  color: var(--preset-4-primary);
+  font-weight: 600;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
+}
+
+.section-header--preset-4 .section-header__subtitle {
+  font-family: var(--font-playful-subtitle);
+  color: white;
+}
+
+.section-header--preset-4 .section-header__divider {
+  background: linear-gradient(90deg, var(--preset-4-primary), var(--preset-4-accent));
+  height: 4px;
+  border-radius: 2px;
+}
+
+/* ========================================
+   PRESET 5: PROFESSIONAL & STRUCTURED HEADERS
+   ======================================== */
+
+.section-header--preset-5 {
+  background: rgba(48, 225, 124, 0.05);
+  padding: 2rem;
+  border-radius: var(--radius-sm);
+  border-top: 4px solid var(--preset-5-primary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.section-header--preset-5 .section-header__title {
+  font-family: var(--font-pro-heading);
+  color: var(--preset-5-primary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.section-header--preset-5 .section-header__subtitle {
+  font-family: var(--font-pro-subtitle);
+  color: #cfd4dc;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.section-header--preset-5 .section-header__divider {
+  background: linear-gradient(90deg, var(--preset-5-primary), var(--preset-5-accent));
+  height: 3px;
+}
+
+/* ========================================
+   DIVIDER STYLE VARIATIONS
+   ======================================== */
+
+.section-divider--solid {
+  background: currentColor;
+}
+
+.section-divider--decorative {
+  position: relative;
+  background: currentColor;
+}
+
+.section-divider--decorative::before,
+.section-divider--decorative::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.section-divider--decorative::before {
+  left: -16px;
+}
+
+.section-divider--decorative::after {
+  right: -16px;
+}
+
+/* ========================================
+   MARGIN BOTTOM VARIATIONS
+   ======================================== */
+
+.section-header--mb-small {
+  margin-bottom: var(--space-md);
+}
+
+.section-header--mb-medium {
+  margin-bottom: var(--space-lg);
+}
+
+.section-header--mb-large {
+  margin-bottom: var(--space-xl);
+}
+
+.section-header--mb-extra-large {
+  margin-bottom: var(--space-2xl);
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================== */
+
+@media (max-width: 992px) {
+  .section-header {
+    margin-bottom: 2rem;
+  }
+  
+  .section-title--extra-large {
+    font-size: 2.5rem;
+  }
+  
+  .section-title--large {
+    font-size: 2rem;
+  }
+  
+  .section-title--medium {
+    font-size: 1.75rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .section-header {
+    margin-bottom: 1.5rem;
+  }
+  
+  .section-header--preset-1,
+  .section-header--preset-2,
+  .section-header--preset-4,
+  .section-header--preset-5 {
+    padding: 1.5rem 1rem;
+  }
+  
+  .section-title--extra-large {
+    font-size: 2rem;
+  }
+  
+  .section-title--large {
+    font-size: 1.75rem;
+  }
+  
+  .section-title--medium {
+    font-size: 1.5rem;
+  }
+  
+  .section-title--small {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .section-header__divider {
+    width: 60px;
+  }
+  
+  .section-title--extra-large {
+    font-size: 1.75rem;
+  }
+  
+  .section-title--large {
+    font-size: 1.5rem;
+  }
+}

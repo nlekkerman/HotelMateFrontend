@@ -81,6 +81,36 @@ export const publicHotelPageAPI = {
       throw error;
     }
   },
+
+  /**
+   * Fetch all available presets for styling sections, cards, and elements
+   * @param {Object} params - Optional filters (target_type, section_type)
+   * @returns {Promise} Preset configurations organized by type
+   */
+  getPresets: async (params = {}) => {
+    try {
+      const response = await publicApi.get('/public/presets/', { params });
+      return response.data;
+    } catch (error) {
+      console.error('[PublicAPI] Failed to fetch presets:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch a single preset by key
+   * @param {string} key - Unique preset key
+   * @returns {Promise} Single preset configuration
+   */
+  getPreset: async (key) => {
+    try {
+      const response = await publicApi.get(`/public/presets/${key}/`);
+      return response.data;
+    } catch (error) {
+      console.error(`[PublicAPI] Failed to fetch preset ${key}:`, error);
+      throw error;
+    }
+  },
 };
 
 export default publicApi;

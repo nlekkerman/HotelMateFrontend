@@ -1,0 +1,565 @@
+/**
+ * Modals & Placeholder Tiles - Global Design System
+ * Modern 2025 hotel-tech UI components
+ * 
+ * Includes:
+ * - Modal overlays and panels
+ * - Modal animations
+ * - Placeholder tiles (add-card, add-list, add-gallery, add-news)
+ * - Close buttons and modal controls
+ */
+
+/* ========================================
+   MODAL OVERLAY & BACKDROP
+   ======================================== */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+  overflow-y: auto;
+  
+  /* Animation */
+  animation: modalOverlayFadeIn var(--transition-base);
+}
+
+@keyframes modalOverlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Fallback for browsers without backdrop-filter */
+@supports not (backdrop-filter: blur(6px)) {
+  .modal-overlay {
+    background: rgba(0, 0, 0, 0.75);
+  }
+}
+
+/* ========================================
+   MODAL PANEL
+   ======================================== */
+
+.modal-panel {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  margin: auto;
+  background: var(--gray-mid, #161c2b);
+  border-radius: var(--radius-panel);  /* 12px */
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-strong);
+  z-index: 9999;
+  
+  /* Animation */
+  animation: modalPanelSlideIn var(--transition-base);
+}
+
+.modal-panel--large {
+  max-width: 800px;
+}
+
+.modal-panel--small {
+  max-width: 480px;
+}
+
+@keyframes modalPanelSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Modal Header */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main, #f8f9fa);
+  margin: 0;
+}
+
+/* Modal Body */
+.modal-body {
+  margin-bottom: var(--space-lg);
+  color: var(--text-soft, #b7bcc8);
+  line-height: 1.6;
+}
+
+/* Modal Footer */
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ========================================
+   MODAL CLOSE BUTTON
+   ======================================== */
+
+.modal-close {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);  /* Pill shape */
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main, #f8f9fa);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-properties) var(--transition-base);
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.modal-close:active {
+  transform: scale(0.95);
+}
+
+/* Alternative close button in header */
+.modal-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: transparent;
+  color: var(--text-soft, #b7bcc8);
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-properties) var(--transition-fast);
+  padding: 0;
+}
+
+.modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main, #f8f9fa);
+}
+
+/* ========================================
+   PLACEHOLDER TILES (Add Components)
+   ======================================== */
+
+/* Base Placeholder Tile */
+.placeholder-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: var(--space-xl);
+  border-radius: var(--radius-card);  /* 8px for cards */
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: var(--transition-properties) var(--transition-base);
+  text-align: center;
+  gap: var(--space-md);
+}
+
+.placeholder-tile:hover {
+  transform: translateY(-2px) scale(1.03);
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: var(--shadow-card);
+}
+
+.placeholder-tile:active {
+  transform: scale(0.98);
+}
+
+/* Placeholder Icon */
+.placeholder-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main, #f8f9fa);
+  transition: var(--transition-properties) var(--transition-base);
+}
+
+.placeholder-tile:hover .placeholder-icon {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Placeholder Text */
+.placeholder-text {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-soft, #b7bcc8);
+  margin: 0;
+  transition: color var(--transition-base);
+}
+
+.placeholder-tile:hover .placeholder-text {
+  color: var(--text-main, #f8f9fa);
+}
+
+.placeholder-subtitle {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+}
+
+/* ========================================
+   PRESET-SPECIFIC PLACEHOLDERS
+   ======================================== */
+
+/* Preset 1: Clean & Modern */
+.placeholder-tile--preset-1 {
+  border-color: rgba(59, 169, 255, 0.4);
+  background: rgba(59, 169, 255, 0.05);
+}
+
+.placeholder-tile--preset-1:hover {
+  border-color: rgba(59, 169, 255, 0.7);
+  background: rgba(59, 169, 255, 0.1);
+}
+
+.placeholder-tile--preset-1 .placeholder-icon {
+  background: rgba(59, 169, 255, 0.2);
+  color: var(--preset-1-accent, #5fe0ff);
+}
+
+.placeholder-tile--preset-1:hover .placeholder-icon {
+  background: rgba(59, 169, 255, 0.3);
+}
+
+/* Preset 2: Dark & Elegant */
+.placeholder-tile--preset-2 {
+  border-color: rgba(242, 201, 76, 0.4);
+  background: rgba(242, 201, 76, 0.05);
+}
+
+.placeholder-tile--preset-2:hover {
+  border-color: rgba(242, 201, 76, 0.7);
+  background: rgba(242, 201, 76, 0.1);
+}
+
+.placeholder-tile--preset-2 .placeholder-icon {
+  background: rgba(242, 201, 76, 0.2);
+  color: var(--preset-2-primary, #f2c94c);
+}
+
+.placeholder-tile--preset-2:hover .placeholder-icon {
+  background: rgba(242, 201, 76, 0.3);
+}
+
+/* Preset 3: Minimal & Sleek */
+.placeholder-tile--preset-3 {
+  border-color: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.placeholder-tile--preset-3:hover {
+  border-color: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.placeholder-tile--preset-3 .placeholder-icon {
+  background: rgba(0, 0, 0, 0.08);
+  color: #000000;
+}
+
+.placeholder-tile--preset-3:hover .placeholder-icon {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+/* Preset 4: Vibrant & Playful */
+.placeholder-tile--preset-4 {
+  border-color: rgba(255, 107, 157, 0.5);
+  background: rgba(255, 107, 157, 0.08);
+}
+
+.placeholder-tile--preset-4:hover {
+  border-color: rgba(255, 107, 157, 0.8);
+  background: rgba(255, 107, 157, 0.15);
+  transform: translateY(-2px) scale(1.03) rotate(-1deg);  /* Tiny playful rotation */
+}
+
+.placeholder-tile--preset-4 .placeholder-icon {
+  background: rgba(255, 107, 157, 0.25);
+  color: var(--preset-4-primary, #ff6b9d);
+}
+
+.placeholder-tile--preset-4:hover .placeholder-icon {
+  background: rgba(255, 107, 157, 0.35);
+}
+
+/* Preset 5: Professional & Structured */
+.placeholder-tile--preset-5 {
+  border-color: rgba(48, 225, 124, 0.4);
+  background: rgba(48, 225, 124, 0.05);
+}
+
+.placeholder-tile--preset-5:hover {
+  border-color: rgba(48, 225, 124, 0.7);
+  background: rgba(48, 225, 124, 0.1);
+}
+
+.placeholder-tile--preset-5 .placeholder-icon {
+  background: rgba(48, 225, 124, 0.2);
+  color: var(--preset-5-primary, #30e17c);
+}
+
+.placeholder-tile--preset-5:hover .placeholder-icon {
+  background: rgba(48, 225, 124, 0.3);
+}
+
+/* ========================================
+   SPECIFIC PLACEHOLDER VARIANTS
+   ======================================== */
+
+/* Add Card Placeholder */
+.add-card-placeholder {
+  composes: placeholder-tile;
+  aspect-ratio: 1;
+  min-height: auto;
+}
+
+/* Add List Placeholder */
+.add-list-placeholder {
+  composes: placeholder-tile;
+  min-height: 150px;
+  flex-direction: row;
+  justify-content: flex-start;
+  padding: var(--space-lg);
+}
+
+/* Add Gallery Item Placeholder */
+.add-gallery-placeholder {
+  composes: placeholder-tile;
+  aspect-ratio: 16 / 9;
+  min-height: auto;
+}
+
+/* Add News Article Placeholder */
+.add-news-placeholder {
+  composes: placeholder-tile;
+  min-height: 120px;
+}
+
+/* Compact Placeholder (for inline adding) */
+.placeholder-compact {
+  min-height: 80px;
+  padding: var(--space-md);
+  flex-direction: row;
+  gap: var(--space-sm);
+}
+
+.placeholder-compact .placeholder-icon {
+  width: 40px;
+  height: 40px;
+  font-size: 1.25rem;
+}
+
+.placeholder-compact .placeholder-text {
+  font-size: 0.875rem;
+}
+
+/* ========================================
+   MODAL PRESET VARIATIONS
+   ======================================== */
+
+/* Preset 1 Modal */
+.modal-panel--preset-1 {
+  background: #1c232e;
+  border: 1px solid rgba(59, 169, 255, 0.2);
+}
+
+.modal-panel--preset-1 .modal-title {
+  color: var(--preset-1-primary, #3ba9ff);
+}
+
+/* Preset 2 Modal */
+.modal-panel--preset-2 {
+  background: #13171f;
+  border: 2px solid var(--preset-2-primary, #f2c94c);
+}
+
+.modal-panel--preset-2 .modal-title {
+  color: var(--preset-2-primary, #f2c94c);
+}
+
+/* Preset 3 Modal */
+.modal-panel--preset-3 {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #000000;
+}
+
+.modal-panel--preset-3 .modal-title {
+  color: #000000;
+}
+
+.modal-panel--preset-3 .modal-body {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+/* Preset 4 Modal */
+.modal-panel--preset-4 {
+  background: linear-gradient(145deg, #242a48, #141931);
+  border: 2px solid var(--preset-4-primary, #ff6b9d);
+}
+
+.modal-panel--preset-4 .modal-title {
+  color: var(--preset-4-primary, #ff6b9d);
+}
+
+/* Preset 5 Modal */
+.modal-panel--preset-5 {
+  background: #1a212e;
+  border-top: 4px solid var(--preset-5-primary, #30e17c);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.modal-panel--preset-5 .modal-title {
+  color: var(--preset-5-primary, #30e17c);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================== */
+
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: var(--space-md);
+  }
+  
+  .modal-panel {
+    padding: var(--space-lg);
+    max-width: 100%;
+  }
+  
+  .modal-panel--large,
+  .modal-panel--small {
+    max-width: 100%;
+  }
+  
+  .modal-title {
+    font-size: 1.25rem;
+  }
+  
+  .placeholder-tile {
+    min-height: 160px;
+    padding: var(--space-lg);
+  }
+  
+  .placeholder-icon {
+    width: 56px;
+    height: 56px;
+    font-size: 1.75rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .modal-panel {
+    padding: var(--space-md);
+    border-radius: var(--radius-section);  /* Smaller radius on mobile */
+  }
+  
+  .modal-footer {
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  
+  .modal-footer > * {
+    width: 100%;
+  }
+  
+  .placeholder-tile {
+    min-height: 140px;
+    padding: var(--space-md);
+  }
+  
+  .placeholder-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 1.5rem;
+  }
+  
+  .placeholder-text {
+    font-size: 0.9rem;
+  }
+}
+
+/* ========================================
+   ACCESSIBILITY
+   ======================================== */
+
+.modal-overlay[aria-hidden="true"] {
+  display: none;
+}
+
+.modal-close:focus-visible,
+.modal-close-btn:focus-visible {
+  outline: 2px solid var(--preset-1-primary, #3ba9ff);
+  outline-offset: 2px;
+}
+
+.placeholder-tile:focus-visible {
+  outline: 2px solid var(--preset-1-primary, #3ba9ff);
+  outline-offset: 2px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal-panel {
+    animation: none;
+  }
+  
+  .modal-panel {
+    transform: none;
+  }
+  
+  .placeholder-tile:hover {
+    transform: none;
+  }
+}

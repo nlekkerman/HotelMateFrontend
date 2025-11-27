@@ -316,6 +316,20 @@ const BookingPage = () => {
                     >
                       {[0, 1, 2, 3, 4].map(n => (
                         <option key={n} value={n}>{n}</option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Button type="submit" variant="primary" size="lg" disabled={loading}>
+                {loading ? <Spinner animation="border" size="sm" /> : 'Check Availability'}
+              </Button>
+            </Form>
+          </Card.Body>
+        </Card>
+      )}
+
       {/* Step 2: Select Room */}
       {step === 2 && availability && (
         <>
@@ -385,20 +399,6 @@ const BookingPage = () => {
             })}
           </Row>
         </>
-      )}          )}
-                  <Button 
-                    variant="primary" 
-                    className="w-100"
-                    onClick={() => getPriceQuote(room.room_type_code)}
-                    disabled={!room.is_available || loading}
-                  >
-                    {loading ? <Spinner animation="border" size="sm" /> : 'Select Room'}
-                  </Button>
-                </Card.Body>
-              </Card>
-            </Col>
-          ))}
-        </Row>
       )}
 
       {/* Step 3: Guest Information */}

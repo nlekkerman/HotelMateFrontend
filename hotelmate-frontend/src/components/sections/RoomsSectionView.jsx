@@ -1,18 +1,50 @@
 import React from 'react';
-import { Container, Row, Col, Card, Button, Badge, Alert } from 'react-bootstrap';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Container, Row, Col, Alert } from 'react-bootstrap';
 import { useAuth } from '@/context/AuthContext';
+import { usePreset } from '@/hooks/usePreset';
+import SectionHeader from './SectionHeader';
+import RoomCard from './RoomCard';
 import '@/styles/sections.css';
 
 /**
  * RoomsSectionView - Public view for rooms section (auto-populated from PMS)
  * Displays all active room types with booking CTAs
+ * Now supports preset-based layouts and styling
  */
 const RoomsSectionView = ({ section }) => {
-  const navigate = useNavigate();
-  const { slug } = useParams();
   const { isStaff } = useAuth();
-  const roomTypes = section.room_types || [];
+  
+  // Get presets for section layout, header, and cards
+  const sectionPreset = usePreset(
+    section.style_variant,
+    'section',
+    'rooms'
+  );
+  
+  const headerPreset = usePreset(
+    section.header_style || 'header_centered',
+    'section_header'
+  );
+  
+  const cardPreset = usePreset(
+    section.card_style || 'room_card_standard',
+    'room_card'
+  );
+  
+  // Backend structure: section.rooms_data.room_types
+  const roomsData = section.rooms_data || {};
+  const roomTypes = roomsData.room_types || [];
+  
+  // Extract section layout configuration
+  const config = sectionPreset?.config || {};
+  const { 
+    layout = 'grid', 
+    columns = 3, 
+    gap = 'large',
+    autoplay = false,
+    show_dots = false,
+    hover_effect = 'lift',
+  } = config;
 
   // Empty state handling
   if (roomTypes.length === 0) {
@@ -23,12 +55,13 @@ const RoomsSectionView = ({ section }) => {
     
     // Show message for staff users
     return (
-      <section className="rooms-section-view py-5 bg-light">
+      <section className="rooms-section-view py-5">
         <Container>
-          <h2 className="text-center mb-3">{section.name}</h2>
-          {section.subtitle && (
-            <p className="text-center text-muted mb-5">{section.subtitle}</p>
-          )}
+          <SectionHeader
+            title={section.name}
+            subtitle={roomsData.subtitle}
+            preset={headerPreset}
+          />
           <Alert variant="info" className="text-center" style={{ maxWidth: '600px', margin: '0 auto' }}>
             <i className="bi bi-door-open fs-1 d-block mb-3"></i>
             <h5>No Active Room Types</h5>
@@ -39,87 +72,60 @@ const RoomsSectionView = ({ section }) => {
     );
   }
 
-  const handleBookNow = (roomTypeCode) => {
-    navigate(`/hotels/${slug}/book?room_type_code=${roomTypeCode}`);
-  };
+  const getLayoutClass = () => {
+  const gapSize = {
+    'small': '3',
+    'medium': '4',
+    'large': '4',
+    'extra_large': '5',
+  }[gap] || '4';
+
+  switch (layout) {
+    case 'grid':
+      // Center cards horizontally
+      return `row justify-content-center row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-${gapSize}`;
+    
+    case 'list':
+      return 'd-flex flex-column gap-4 justify-content-center';
+
+    case 'carousel':
+      return 'rooms-carousel';
+
+    case 'luxury':
+      // same centering logic
+      return `row justify-content-center row-cols-1 row-cols-md-2 row-cols-lg-3 g-5`;
+
+    default:
+      return `row justify-content-center row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-${gapSize}`;
+  }
+};
+
+
+  const containerClass = layout === 'list' ? '' : getLayoutClass();
 
   return (
-    <section className="rooms-section-view py-5 bg-light">
-      <Container>
-        <h2 className="text-center mb-3">{section.name}</h2>
-        {section.subtitle && (
-          <p className="text-center text-muted mb-5">{section.subtitle}</p>
-        )}
+    <section className={`rooms-section rooms-section--preset-${section.style_variant ?? 1}`}>
+      <div className="section-container">
+        <div className={`section-header section-header--preset-${section.style_variant ?? 1}`}>
+          <div className="section-header__content">
+            <h2 className={`section-header__title font-preset-${section.style_variant ?? 1}-heading`}>{section.name}</h2>
+          </div>
+        </div>
         
-        <Row>
+        <div className={containerClass}>
           {roomTypes.map((room) => (
-            <Col key={room.id} xs={12} md={6} lg={4} className="mb-4">
-              <Card className="h-100 shadow-sm hover-lift">
-                {room.photo && (
-                  <Card.Img 
-                    variant="top" 
-                    src={room.photo} 
-                    alt={room.name}
-                    style={{ height: '250px', objectFit: 'cover' }}
-                  />
-                )}
-                <Card.Body className="d-flex flex-column">
-                  <Card.Title className="mb-3">{room.name}</Card.Title>
-                  
-                  {/* Room details */}
-                  <div className="mb-3">
-                    <div className="d-flex align-items-center mb-2 text-muted">
-                      <i className="bi bi-people me-2"></i>
-                      <small>Up to {room.max_occupancy} guests</small>
-                    </div>
-                    {room.bed_setup && (
-                      <div className="d-flex align-items-center mb-2 text-muted">
-                        <i className="bi bi-moon me-2"></i>
-                        <small>{room.bed_setup}</small>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Description */}
-                  {room.short_description && (
-                    <Card.Text className="mb-3 text-muted">
-                      {room.short_description}
-                    </Card.Text>
-                  )}
-                  
-                  {/* Price and availability */}
-                  <div className="mt-auto">
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                      <div>
-                        <small className="text-muted d-block">From</small>
-                        <h4 className="mb-0 text-primary">
-                          {room.currency || '€'}{room.starting_price_from}
-                          <small className="text-muted fs-6"> /night</small>
-                        </h4>
-                      </div>
-                      {room.availability_message && (
-                        <Badge bg="warning" text="dark">
-                          {room.availability_message}
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    {/* Book Now button */}
-                    <Button 
-                      variant="primary" 
-                      className="w-100"
-                      onClick={() => handleBookNow(room.code)}
-                    >
-                      <i className="bi bi-calendar-check me-2"></i>
-                      Book Now
-                    </Button>
-                  </div>
-                </Card.Body>
-              </Card>
-            </Col>
+            layout === 'list' ? (
+              <div key={room.id} className="mb-4">
+                <RoomCard room={room} preset={cardPreset} />
+              </div>
+            ) : (
+              <Col key={room.id} className="mb-4">
+                <RoomCard room={room} preset={cardPreset} />
+              </Col>
+            )
           ))}
-        </Row>
-      </Container>
+        </div>
+      </div>
     </section>
   );
 };

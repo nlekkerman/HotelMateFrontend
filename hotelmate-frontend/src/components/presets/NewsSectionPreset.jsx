@@ -95,6 +95,10 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
                         <NewsBlockRenderer key={block.id} block={block} />
                       ))}
                     </div>
+                    <button className="btn btn-hm btn-news mt-3">
+                      <i className="bi bi-arrow-right-circle me-2"></i>
+                      Read Full Article
+                    </button>
                   </div>
                 </Col>
               </Row>
@@ -112,6 +116,10 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
                     {newsItem.summary && (
                       <p className={`news-article__summary-small font-preset-${variant}-body`}>{newsItem.summary}</p>
                     )}
+                    <button className="btn btn-hm btn-news mt-2">
+                      <i className="bi bi-arrow-right me-2"></i>
+                      Read More
+                    </button>
                   </article>
                 </Col>
               ))}
@@ -148,6 +156,10 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
                 {newsItem.summary && (
                   <p className={`news-article__summary-compact font-preset-${variant}-body`}>{newsItem.summary}</p>
                 )}
+                <button className="btn btn-hm btn-news mt-2">
+                  <i className="bi bi-arrow-right me-2"></i>
+                  Read More
+                </button>
               </article>
             ))}
           </div>
@@ -194,6 +206,10 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
                       {newsItem.summary && (
                         <p className={`news-article__summary-magazine font-preset-${variant}-body`}>{newsItem.summary}</p>
                       )}
+                      <button className="btn btn-hm btn-news mt-3">
+                        <i className="bi bi-arrow-right me-2"></i>
+                        Read More
+                      </button>
                     </div>
                   </article>
                 </Col>
@@ -235,6 +251,10 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
                     <NewsBlockRenderer key={block.id} block={block} />
                   ))}
                 </div>
+                <button className="btn btn-hm btn-news mt-3">
+                  <i className="bi bi-arrow-right me-2"></i>
+                  Read Article
+                </button>
               </article>
             </Col>
           ))}

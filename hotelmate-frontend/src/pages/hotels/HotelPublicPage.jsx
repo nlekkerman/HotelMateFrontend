@@ -8,6 +8,7 @@ import GallerySectionPreset from '@/components/presets/GallerySectionPreset';
 import ListSectionPreset from '@/components/presets/ListSectionPreset';
 import NewsSectionPreset from '@/components/presets/NewsSectionPreset';
 import FooterSectionPreset from '@/components/presets/FooterSectionPreset';
+import RoomsSectionView from '@/components/sections/RoomsSectionView';
 import InlinePageBuilder from '@/components/builder/InlinePageBuilder';
 import PresetSelector from '@/components/presets/PresetSelector';
 import '@/styles/hotelPublicPage.css';
@@ -32,15 +33,13 @@ const HotelPublicPage = () => {
       setError(null);
       
      
-      // Get basic page data
+      // Get basic page data (includes all sections with full data)
       const data = await getPublicHotelPage(slug);
+      console.log('[HotelPublicPage] 📦 Public page data sections:', data.sections?.length, data.sections?.[0]);
       
-      // If staff, fetch ALL sections (including inactive) using staff endpoint
-      if (isStaff) {
-        const allSections = await listSections(slug);
-        // Ensure we have an array
-        data.sections = Array.isArray(allSections) ? allSections : [];
-      }
+      // Note: Public API already returns all sections (active + inactive for staff)
+      // with complete data including section_type, hero_data, galleries, etc.
+      // No need to fetch from staff endpoint as it returns incomplete data
       
       // Ensure sections is always an array
       if (!Array.isArray(data.sections)) {
@@ -48,8 +47,18 @@ const HotelPublicPage = () => {
         data.sections = [];
       }
       
+      // Map 'type' to 'section_type' if section_type is missing
+      data.sections = data.sections.map(section => {
+        if (!section.section_type && section.type) {
+          return { ...section, section_type: section.type };
+        }
+        return section;
+      });
+      
       console.log('[HotelPublicPage] Final sections count:', data?.sections?.length);
       console.log('[HotelPublicPage] First section after processing:', data.sections?.[0]);
+      console.log('[HotelPublicPage] First section keys:', data.sections?.[0] ? Object.keys(data.sections[0]) : 'no section');
+      console.log('[HotelPublicPage] First section section_type:', data.sections?.[0]?.section_type);
       
       setPageData(data);
       
@@ -214,6 +223,9 @@ const HotelPublicPage = () => {
         case 'news':
           return <NewsSectionPreset key={section.id} section={section} onUpdate={fetchPageData} />;
         
+        case 'rooms':
+          return <RoomsSectionView key={section.id} section={section} />;
+        
         case 'footer':
           return <FooterSectionPreset key={section.id} section={section} hotel={pageData.hotel} />;
         
@@ -320,7 +332,7 @@ const HotelPublicPage = () => {
   
   return (
     <div 
-      className={`hotel-public-page ${isStaff && user ? 'has-preset-selector' : ''}`}
+      className={`hotel-public-page page-style-${currentPreset} ${isStaff && user ? 'has-preset-selector' : ''}`}
       data-preset={presetValue}
     >
       {/* Preset Selector with Inline Builder - Only for authenticated staff on public page */}

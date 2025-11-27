@@ -91,6 +91,10 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
           <div className="hero__text-overlay">
             <h1 className={`hero__title font-preset-${variant}-heading`}>{heroData.hero_title || 'Welcome'}</h1>
             <p className={`hero__text font-preset-${variant}-body`}>{heroData.hero_text || 'Your perfect getaway awaits'}</p>
+            <button className="btn btn-hm btn-hero mt-3" onClick={() => window.location.href = `/${hotel?.slug}/book`}>
+              <i className="bi bi-calendar-check me-2"></i>
+              Book Your Stay
+            </button>
           </div>
         </div>
       )}
@@ -98,6 +102,10 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
         <>
           <h1 className={`hero__title font-preset-${variant}-heading`}>{heroData.hero_title || 'Welcome'}</h1>
           <p className={`hero__text font-preset-${variant}-body`}>{heroData.hero_text || 'Your perfect getaway awaits'}</p>
+          <button className="btn btn-hm btn-hero mt-3" onClick={() => window.location.href = `/${hotel?.slug}/book`}>
+            <i className="bi bi-calendar-check me-2"></i>
+            Book Your Stay
+          </button>
         </>
       )}
     </div>

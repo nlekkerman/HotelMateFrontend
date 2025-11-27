@@ -1,4 +1,20 @@
 /**
+ * PRESET SYSTEM - Now imports modular architecture
+ * 
+ * This file now imports the new modular preset system.
+ * All new preset features (room card buttons, component presets, etc.) are in ./presets/
+ * 
+ * The old CSS below is kept for reference but new features are added to modular files.
+ */
+
+/* Import new modular preset system */
+@import url('./presets/index.css');
+
+/**
+ * ========================================
+ * LEGACY CSS BELOW (Original Implementation)
+ * ========================================
+ * 
  * Style Variant Presets (1-5)
  * Each variant number represents a cohesive design family across ALL section types
  * 
@@ -270,7 +286,7 @@
 
 /* Hero — Clean & Modern (1) */
 .hero--preset-1 {
-  background: linear-gradient(135deg, #1a2332, #0f1522);
+  background: transparent;
   color: var(--text-main);
   box-shadow: var(--shadow-mid);
   margin-bottom: 0;
@@ -287,7 +303,7 @@
 
 /* Hero — Dark & Elegant (2) */
 .hero--preset-2 {
-  background: linear-gradient(180deg, #0a0e16, #05070a);
+  background: transparent;
   border-left: 4px solid var(--gold);
   padding: 3rem 2rem;
   box-shadow: var(--shadow-strong);
@@ -311,11 +327,11 @@
 
 /* Hero — Minimal & Sleek (3) */
 .hero--preset-3 {
-  background: #0e1219;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   padding: 2.5rem 2rem;
   margin-bottom: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .hero.hero--preset-3 .hero__logo {
@@ -325,20 +341,22 @@
 .hero.hero--preset-3 .hero__text-overlay .hero__title {
   font-weight: 300;
   letter-spacing: 2px;
+  color: #1a1a1a;
 }
 
 .hero.hero--preset-3 .hero__text-overlay .hero__text {
   font-size: 1rem;
   font-weight: 300;
+  color: rgba(0, 0, 0, 0.7);
 }
 
 .hero.hero--preset-3 .hero__image {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 /* Hero — Vibrant & Playful (4) */
 .hero--preset-4 {
-  background: radial-gradient(circle at top left, #2a4a8f, #0a0d14);
+  background: transparent;
   padding: 3rem 2.5rem;
   box-shadow: var(--shadow-mid);
   margin-bottom: 0;
@@ -382,7 +400,7 @@
 
 /* Hero — Professional & Structured (5) */
 .hero--preset-5 {
-  background: #0e131f;
+  background: transparent;
   border-radius: var(--radius-sm);
   border-top: 3px solid var(--accent-green);
   padding: 2.5rem 2rem;
@@ -408,7 +426,7 @@
 /* Preset 5: Structured and professional background - HERO ONLY */
 .hero.hero--preset-5 .hero__text-overlay {
   padding: 2rem;
-  background: rgba(14, 19, 31, 0.7);
+  background: transparent;
   border-top: 3px solid var(--accent-green);
   border: 1px solid rgba(255, 255, 255, 0.15);
 }
@@ -430,7 +448,7 @@
 
 /* Gallery — Clean & Modern (1) */
 .gallery--preset-1 {
-  background: #232936;
+  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 2px solid rgba(255, 255, 255, 0.1);
@@ -450,7 +468,7 @@
 
 /* Gallery — Dark & Elegant (2) */
 .gallery--preset-2 {
-  background: #0f1419;
+  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid rgba(242, 201, 76, 0.3);
@@ -470,15 +488,15 @@
 
 /* Gallery — Minimal & Sleek (3) */
 .gallery--preset-3 {
-  background: #12161e;
+  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 [data-preset="3"] .gallery-image {
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   overflow: hidden;
 }
 
@@ -490,7 +508,7 @@
 
 /* Gallery — Vibrant & Playful (4) */
 .gallery--preset-4 {
-  background: linear-gradient(135deg, #1f2542, #12162b);
+  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid var(--accent-pink);
@@ -510,7 +528,7 @@
 
 /* Gallery — Professional & Structured (5) */
 .gallery--preset-5 {
-  background: #161c28;
+  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid rgba(48, 225, 124, 0.4);
@@ -519,7 +537,7 @@
 [data-preset="5"] .gallery-image {
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: #0f1522;
+  background: transparent;
   padding: 4px;
 }
 
@@ -642,7 +660,7 @@
 
 /* List — Clean & Modern (1) */
 .list--preset-1 {
-  background: #1c232e;
+  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 2px solid rgba(255, 255, 255, 0.1);
@@ -650,21 +668,21 @@
 
 .list--preset-1 .card {
   border-radius: var(--radius-lg);
-  background: #111827;
+  background: transparent;
   box-shadow: var(--shadow-mid);
   border: none;
 }
 
 /* List — Dark & Elegant (2) */
 .list--preset-2 {
-  background: #13171f;
+  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid rgba(242, 201, 76, 0.3);
 }
 
 .list--preset-2 .card {
-  background: #05070a;
+  background: transparent;
   border: 1px solid var(--gold);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-strong);
@@ -672,7 +690,7 @@
 
 /* List — Minimal & Sleek (3) */
 .list--preset-3 {
-  background: #161b24;
+  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
@@ -681,12 +699,12 @@
 .list--preset-3 .card {
   border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  background: #0b0f17;
+  background: transparent;
 }
 
 /* List — Vibrant & Playful (4) */
 .list--preset-4 {
-  background: linear-gradient(135deg, #242a48, #141931);
+  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid var(--accent-blue);
@@ -694,14 +712,14 @@
 
 .list--preset-4 .card {
   border-radius: var(--radius-xl);
-  background: linear-gradient(145deg, #141b33, var(--accent-blue));
+  background: transparent;
   color: white;
   border: none;
 }
 
 /* List — Professional & Structured (5) */
 .list--preset-5 {
-  background: #1a212e;
+  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid rgba(48, 225, 124, 0.4);
@@ -710,7 +728,7 @@
 .list--preset-5 .card {
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: #0e131f;
+  background: transparent;
 }
 
 /* ========================================
@@ -719,7 +737,7 @@
 
 /* News — Clean & Modern (1) */
 .news-section--preset-1 {
-  background: #282f3d;
+  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 2px solid rgba(255, 255, 255, 0.1);
@@ -727,7 +745,7 @@
 
 [data-preset="1"] .news-article {
   border-radius: var(--radius-md);
-  background: #111827;
+  background: transparent;
   padding: 1rem;
   border: none;
   margin-bottom: 2rem;
@@ -735,7 +753,7 @@
 
 /* News — Dark & Elegant (2) */
 .news-section--preset-2 {
-  background: #181c25;
+  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid rgba(242, 201, 76, 0.3);
@@ -744,27 +762,27 @@
 [data-preset="2"] .news-article {
   border-left: 3px solid var(--gold);
   padding-left: 1rem;
-  background: #05070a;
+  background: transparent;
   margin-bottom: 2rem;
 }
 
 /* News — Minimal & Sleek (3) */
 .news-section--preset-3 {
-  background: #1a1f29;
+  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 [data-preset="3"] .news-article {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   padding: 0.7rem 0;
   margin-bottom: 1.5rem;
 }
 
 /* News — Vibrant & Playful (4) */
 .news-section--preset-4 {
-  background: linear-gradient(135deg, #29304e, #161c37);
+  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid var(--accent-pink);
@@ -772,7 +790,7 @@
 
 [data-preset="4"] .news-article {
   border-radius: var(--radius-xl);
-  background: #141b33;
+  background: transparent;
   color: var(--accent-blue);
   padding: 0.9rem 1.2rem;
   margin-bottom: 2rem;
@@ -780,7 +798,7 @@
 
 /* News — Professional & Structured (5) */
 .news-section--preset-5 {
-  background: #1e2533;
+  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid rgba(48, 225, 124, 0.4);
@@ -789,7 +807,7 @@
 [data-preset="5"] .news-article {
   border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: #0f1522;
+  background: transparent;
   padding: 1rem 1.25rem;
   margin-bottom: 2rem;
 }
@@ -800,7 +818,7 @@
 
 /* Footer — Clean & Modern (1) */
 .footer--preset-1 {
-  background: #0e131f;
+  background: transparent;
   border-top: 2px solid rgba(255, 255, 255, 0.08);
   padding: 2rem 0;
   color: var(--text-main);
@@ -808,28 +826,28 @@
 
 /* Footer — Dark & Elegant (2) */
 .footer--preset-2 {
-  background: #05070a;
+  background: transparent;
   border-top: 3px solid var(--gold);
   padding: 2rem 0;
 }
 
 /* Footer — Minimal & Sleek (3) */
 .footer--preset-3 {
-  background: #0b0f17;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: transparent;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
   padding: 1.5rem 0;
 }
 
 /* Footer — Vibrant & Playful (4) */
 .footer--preset-4 {
-  background: linear-gradient(135deg, #141b33, var(--accent-pink));
+  background: transparent;
   padding: 2rem 0;
   color: white;
 }
 
 /* Footer — Professional & Structured (5) */
 .footer--preset-5 {
-  background: #0e131f;
+  background: transparent;
   border-top: 4px solid var(--accent-green);
   padding: 2rem 0;
   color: #cfd4dc;
@@ -2183,6 +2201,256 @@ a[class*="footer-"] {
 }
 .page-style-5 {
   /* Professional & Structured */
+}
+
+/* ========================================
+   NEW PRESET SYSTEM STYLES
+   Universal styling for backend preset-driven components
+   ======================================== */
+
+/* Additional Hover Effects for Room Cards */
+.room-card.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.room-card.hover-lift:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+}
+
+.room-card.hover-zoom {
+  overflow: hidden;
+}
+
+.room-card.hover-zoom img {
+  transition: transform 0.3s ease;
+}
+
+.room-card.hover-zoom:hover img {
+  transform: scale(1.1);
+}
+
+.room-card.hover-opacity {
+  transition: opacity 0.3s ease;
+}
+
+.room-card.hover-opacity:hover {
+  opacity: 0.9;
+}
+
+/* Room Card Horizontal Layout Adjustments */
+@media (max-width: 768px) {
+  .room-card.flex-row {
+    flex-direction: column;
+  }
+  
+  .room-card.flex-row .card-img-left {
+    width: 100% !important;
+    height: 250px !important;
+    border-radius: 0.375rem 0.375rem 0 0;
+  }
+}
+
+/* Rooms Section Layouts */
+.rooms-carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  gap: 1.5rem;
+  padding-bottom: 1rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.rooms-carousel > * {
+  flex: 0 0 auto;
+  width: 350px;
+  scroll-snap-align: start;
+}
+
+.rooms-carousel::-webkit-scrollbar {
+  height: 8px;
+}
+
+.rooms-carousel::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.rooms-carousel::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.rooms-carousel::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Luxury Room Cards */
+.rooms-luxury .room-card {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.rooms-luxury .room-card img {
+  height: 350px;
+}
+
+/* Rooms Section View Background */
+.rooms-section-view {
+  background: #f8f9fa;
+}
+
+/* Section Header Responsive Adjustments */
+@media (max-width: 992px) {
+  .section-header {
+    margin-bottom: 2rem;
+  }
+  
+  .section-header .display-3 {
+    font-size: 2.5rem;
+  }
+  
+  .section-header .display-4 {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .rooms-carousel > * {
+    width: 300px;
+  }
+  
+  .section-header {
+    margin-bottom: 1.5rem;
+  }
+  
+  .section-header .display-3 {
+    font-size: 2rem;
+  }
+  
+  .section-header .display-4 {
+    font-size: 1.75rem;
+  }
+}
+
+/* Room Card Booking Buttons */
+.room-card-book-button {
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border-radius: 0.375rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+}
+
+.room-card-book-button--primary {
+  background: var(--bs-primary);
+  border-color: var(--bs-primary);
+  color: white;
+}
+
+.room-card-book-button--primary:hover {
+  background: var(--bs-primary);
+  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.room-card-book-button--outline {
+  background: transparent;
+  border: 2px solid var(--bs-primary);
+  color: var(--bs-primary);
+}
+
+.room-card-book-button--outline:hover {
+  background: var(--bs-primary);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.room-card-book-button--text {
+  background: transparent;
+  border: none;
+  color: var(--bs-primary);
+  text-decoration: underline;
+  padding: 0.5rem 1rem;
+}
+
+.room-card-book-button--text:hover {
+  color: var(--bs-primary);
+  text-decoration: none;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.room-card-book-button--secondary {
+  background: var(--bs-secondary);
+  border-color: var(--bs-secondary);
+  color: white;
+}
+
+.room-card-book-button--secondary:hover {
+  background: var(--bs-secondary);
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.room-card-book-button--success {
+  background: var(--bs-success);
+  border-color: var(--bs-success);
+  color: white;
+}
+
+.room-card-book-button--success:hover {
+  background: var(--bs-success);
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.room-card-book-button--dark {
+  background: #212529;
+  border-color: #212529;
+  color: white;
+}
+
+.room-card-book-button--dark:hover {
+  background: #1a1e21;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.room-card-book-button--light {
+  background: #f8f9fa;
+  border-color: #f8f9fa;
+  color: #212529;
+  border: 1px solid #dee2e6;
+}
+
+.room-card-book-button--light:hover {
+  background: #e9ecef;
+  color: #212529;
+  transform: translateY(-2px);
+}
+
+/* Accessibility - Focus States */
+.room-card:focus-within {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 2px;
+}
+
+.btn:focus-visible,
+.room-card-book-button:focus-visible {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 2px;
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .hover-lift,
+  .hover-zoom,
+  .hover-opacity,
+  .room-card,
+  .hover-zoom img,
+  .room-card-book-button {
+    transition: none !important;
+  }
 }
 
 
