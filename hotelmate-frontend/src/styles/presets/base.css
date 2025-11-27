@@ -31,7 +31,7 @@
 
   /* Pastel Tint Colors (RGB values for alpha blending) */
   --preset-1-tint: 189, 220, 255;   /* Pastel baby blue */
-  --preset-2-tint: 255, 240, 200;   /* Pastel champagne gold */
+  --preset-2-tint:  20, 20, 20;   /* DARK */
   --preset-3-tint: 240, 242, 245;   /* Soft grey-white */
   --preset-4-tint: 255, 220, 235;   /* Pastel rose-peach */
   --preset-5-tint: 210, 250, 230;   /* Pastel mint */
@@ -76,6 +76,7 @@
   --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.25);
   --shadow-card-hover: 0 6px 18px rgba(0, 0, 0, 0.35);
   --shadow-mid: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --shadow-mid-whited: 2px 2px 10px rgba(255, 255, 255, 0.1);
   --shadow-strong: 0 12px 32px rgba(0, 0, 0, 0.4);
 
   /* Typography - Font Families by Preset */

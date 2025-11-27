@@ -51,6 +51,330 @@
 }
 
 /* ========================================
+   INDIVIDUAL SECTION BACKGROUNDS
+   Each section type can be independently controlled
+   ======================================== */
+
+/* ========== PRESET 1: Clean & Modern ========== */
+
+/* Hero Section - Preset 1 */
+.hero--preset-1 {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-1-tint), 0.1),
+    rgba(var(--preset-1-tint), 0.05)
+  );
+}
+
+/* Gallery Section - Preset 1 */
+.gallery--preset-1,
+[data-preset="1"] .gallery-section-view {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-1-tint), 0.1),
+    rgba(var(--preset-1-tint), 0.05)
+  );
+}
+
+/* List Section - Preset 1 */
+.list-section--preset-1 {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-1-tint), 0.1),
+    rgba(var(--preset-1-tint), 0.05)
+  );
+}
+
+/* News Section - Preset 1 */
+.news-section--preset-1 {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-1-tint), 0.1),
+    rgba(var(--preset-1-tint), 0.05)
+  );
+}
+
+/* Rooms Section - Preset 1 */
+.rooms-section--preset-1,
+[data-preset="1"] .rooms-section-view {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-1-tint), 0.1),
+    rgba(var(--preset-1-tint), 0.05)
+  );
+}
+
+/* Footer Section - Preset 1 */
+.footer--preset-1 {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-1-tint), 0.1),
+    rgba(var(--preset-1-tint), 0.05)
+  );
+}
+
+/* ========== PRESET 2: Dark & Elegant ========== */
+
+/* Hero Section - Preset 2 */
+.hero--preset-2 {
+  background-color: rgba(var(--preset-2-tint), 1);
+  background-image: linear-gradient(
+    135deg,
+    rgba(180, 150, 150, 0.03),
+    rgba(255, 255, 255, 0.01)
+  );
+}
+
+/* Gallery Section - Preset 2 */
+.gallery--preset-2,
+[data-preset="2"] .gallery-section-view {
+  background-color: rgba(var(--preset-2-tint), 1);
+  background-image: linear-gradient(
+    135deg,
+    rgba(180, 150, 150, 0.03),
+    rgba(255, 255, 255, 0.01)
+  );
+}
+
+/* List Section - Preset 2 */
+.list-section--preset-2 {
+  background-color: rgba(var(--preset-2-tint), 1);
+  background-image: linear-gradient(
+    135deg,
+rgba(180, 150, 150, 0.03),    rgba(255, 255, 255, 0.01)
+  );
+}
+
+/* News Section - Preset 2 */
+.news-section--preset-2 {
+  background-color: rgba(var(--preset-2-tint), 1);
+  background-image: linear-gradient(
+    135deg,
+rgba(180, 150, 150, 0.03),
+    rgba(255, 255, 255, 0.01)
+  );
+}
+
+/* Rooms Section - Preset 2 */
+.rooms-section--preset-2,
+[data-preset="2"] .rooms-section-view {
+  background-color: rgba(var(--preset-2-tint), 1);
+  background-image: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.01)
+  );
+}
+
+/* Footer Section - Preset 2 */
+.footer--preset-2 {
+  background-color: rgba(var(--preset-2-tint), 1);
+  background-image: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.01)
+  );
+}
+
+/* ========== PRESET 3: Minimal & Sleek ========== */
+
+/* Hero Section - Preset 3 */
+.hero--preset-3 {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-3-tint), 0.1),
+    rgba(var(--preset-3-tint), 0.05)
+  );
+}
+
+/* Gallery Section - Preset 3 */
+.gallery--preset-3,
+[data-preset="3"] .gallery-section-view {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-3-tint), 0.1),
+    rgba(var(--preset-3-tint), 0.05)
+  );
+}
+
+/* List Section - Preset 3 */
+.list-section--preset-3 {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-3-tint), 0.1),
+    rgba(var(--preset-3-tint), 0.05)
+  );
+}
+
+/* News Section - Preset 3 */
+.news-section--preset-3 {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-3-tint), 0.1),
+    rgba(var(--preset-3-tint), 0.05)
+  );
+}
+
+/* Rooms Section - Preset 3 */
+.rooms-section--preset-3,
+[data-preset="3"] .rooms-section-view {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-3-tint), 0.1),
+    rgba(var(--preset-3-tint), 0.05)
+  );
+}
+
+/* Footer Section - Preset 3 */
+.footer--preset-3 {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-3-tint), 0.1),
+    rgba(var(--preset-3-tint), 0.05)
+  );
+}
+
+/* ========== PRESET 4: Vibrant & Playful ========== */
+
+/* Hero Section - Preset 4 */
+.hero--preset-4 {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-4-tint), 0.1),
+    rgba(var(--preset-4-tint), 0.05)
+  );
+}
+
+/* Gallery Section - Preset 4 */
+.gallery--preset-4,
+[data-preset="4"] .gallery-section-view {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-4-tint), 0.1),
+    rgba(var(--preset-4-tint), 0.05)
+  );
+}
+
+/* List Section - Preset 4 */
+.list-section--preset-4 {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-4-tint), 0.1),
+    rgba(var(--preset-4-tint), 0.05)
+  );
+}
+
+/* News Section - Preset 4 */
+.news-section--preset-4 {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-4-tint), 0.1),
+    rgba(var(--preset-4-tint), 0.05)
+  );
+}
+
+/* Rooms Section - Preset 4 */
+.rooms-section--preset-4,
+[data-preset="4"] .rooms-section-view {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-4-tint), 0.1),
+    rgba(var(--preset-4-tint), 0.05)
+  );
+}
+
+/* Footer Section - Preset 4 */
+.footer--preset-4 {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-4-tint), 0.1),
+    rgba(var(--preset-4-tint), 0.05)
+  );
+}
+
+/* ========== PRESET 5: Professional & Structured ========== */
+
+/* Hero Section - Preset 5 */
+.hero--preset-5 {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-5-tint), 0.1),
+    rgba(var(--preset-5-tint), 0.05)
+  );
+}
+
+/* Gallery Section - Preset 5 */
+.gallery--preset-5,
+[data-preset="5"] .gallery-section-view {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-5-tint), 0.1),
+    rgba(var(--preset-5-tint), 0.05)
+  );
+}
+
+/* List Section - Preset 5 */
+.list-section--preset-5 {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-5-tint), 0.1),
+    rgba(var(--preset-5-tint), 0.05)
+  );
+}
+
+/* News Section - Preset 5 */
+.news-section--preset-5 {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-5-tint), 0.1),
+    rgba(var(--preset-5-tint), 0.05)
+  );
+}
+
+/* Rooms Section - Preset 5 */
+.rooms-section--preset-5,
+[data-preset="5"] .rooms-section-view {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-5-tint), 0.1),
+    rgba(var(--preset-5-tint), 0.05)
+  );
+}
+
+/* Footer Section - Preset 5 */
+.footer--preset-5 {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    135deg,
+    rgba(var(--preset-5-tint), 0.1),
+    rgba(var(--preset-5-tint), 0.05)
+  );
+}
+
+/* ========================================
    HERO SECTION PRESETS (5 variants)
    ======================================== */
 
@@ -61,7 +385,7 @@
   align-items: center;
   justify-content: center;
   min-height: 500px;
-  padding: 2rem;
+  padding: 0rem !important;
 }
 
 .hero .hero__logo {
@@ -111,12 +435,11 @@
 
 /* Preset 1: Clean & Modern */
 .hero--preset-1 {
-  background: transparent;
   color: #1a1a1a;
   box-shadow: var(--shadow-card);
   margin-bottom: 0;
   border-bottom: 2px solid rgba(189, 220, 255, 0.3);
-  padding-block: var(--space-2xl);  /* 4rem */
+  padding-block: var(--space-2xl); /* 4rem */
   padding-inline: clamp(1.5rem, 4vw, 4rem);
 }
 
@@ -140,19 +463,18 @@
 
 /* Preset 2: Dark & Elegant */
 .hero--preset-2 {
-  background: transparent;
-  border-left: 4px solid var(--gold);
-  padding: 3rem 0;
-  box-shadow: var(--shadow-strong);
-  margin-bottom: 0;
+  
+ 
   border-bottom: 3px solid rgba(242, 201, 76, 0.3);
+  margin-bottom: 0;
+  
 }
 
 .hero--preset-2 .hero__title {
   font-family: var(--font-elegant-heading);
   font-weight: 700;
   letter-spacing: 0.03em;
-  color: #8b7136;
+  color: #8b7136 !important;
   text-shadow: none;
 }
 
@@ -162,17 +484,18 @@
 }
 
 .hero--preset-2 .hero__logo {
-  border: 2px solid var(--gold);
+  border-bottom: 3px solid rgba(242, 201, 76, 0.3);
   padding: 1rem;
 }
 
 .hero--preset-2 .hero__image {
-  border: 3px solid var(--gold);
+  box-shadow: var(--shadow-mid-whited);
+  border-bottom: 3px solid rgba(242, 201, 76, 0.3);
+ 
 }
 
 /* Preset 3: Minimal & Sleek */
 .hero--preset-3 {
-  background: transparent;
   border: 1px solid rgba(0, 0, 0, 0.08);
   padding: 3rem 0;
   margin-bottom: 0;
@@ -203,7 +526,6 @@
 
 /* Preset 4: Vibrant & Playful */
 .hero--preset-4 {
-  background: transparent;
   padding: 3rem 0;
   box-shadow: var(--shadow-mid);
   margin-bottom: 0;
@@ -225,7 +547,7 @@
 }
 
 .hero--preset-4 .hero__logo:hover {
-  transform: scale(1.05);  /* Only scale, no rotation on most elements */
+  transform: scale(1.05); /* Only scale, no rotation on most elements */
 }
 
 .hero--preset-4 .hero__image {
@@ -234,8 +556,7 @@
 
 .hero--preset-4 .hero__text-overlay {
   padding: var(--space-lg);
-  background: transparent;
-  border-radius: var(--radius-panel);  /* 12px */
+  border-radius: var(--radius-panel); /* 12px */
   box-shadow: var(--shadow-mid);
 }
 
@@ -251,7 +572,6 @@
 
 /* Preset 5: Professional & Structured */
 .hero--preset-5 {
-  background: transparent;
   border-top: 3px solid var(--accent-green);
   padding-block: var(--space-2xl);
   padding-inline: clamp(1.5rem, 4vw, 4rem);
@@ -284,10 +604,9 @@
 
 .hero--preset-5 .hero__text-overlay {
   padding: var(--space-lg);
-  background: transparent;
   border-top: 3px solid var(--accent-green);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius-panel);  /* 12px */
+  border-radius: var(--radius-panel); /* 12px */
 }
 
 /* ========================================
@@ -297,7 +616,6 @@
 /* Preset 1: Clean & Modern */
 .gallery--preset-1,
 [data-preset="1"] .gallery-section-view {
-  background: transparent;
   padding-block: var(--space-2xl);
   padding-inline: clamp(1.5rem, 4vw, 4rem);
   margin-bottom: 0;
@@ -305,7 +623,7 @@
 }
 
 .gallery--preset-1 .gallery-image {
-  border-radius: var(--radius-section);  /* 10px */
+  border-radius: var(--radius-section); /* 10px */
   overflow: hidden;
   box-shadow: var(--shadow-soft);
   transition: var(--transition-properties) var(--transition-base);
@@ -325,7 +643,6 @@
 /* Preset 2: Dark & Elegant */
 .gallery--preset-2,
 [data-preset="2"] .gallery-section-view {
-  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid rgba(242, 201, 76, 0.3);
@@ -346,7 +663,6 @@
 /* Preset 3: Minimal & Sleek */
 .gallery--preset-3,
 [data-preset="3"] .gallery-section-view {
-  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
@@ -367,7 +683,6 @@
 /* Preset 4: Vibrant & Playful */
 .gallery--preset-4,
 [data-preset="4"] .gallery-section-view {
-  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid var(--accent-blue);
@@ -388,7 +703,6 @@
 /* Preset 5: Professional & Structured */
 .gallery--preset-5,
 [data-preset="5"] .gallery-section-view {
-  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid rgba(48, 225, 124, 0.4);
@@ -397,7 +711,6 @@
 .gallery--preset-5 .gallery-image {
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: transparent;
   padding: 4px;
 }
 
@@ -464,7 +777,7 @@
   height: 250px;
   background: rgba(59, 169, 255, 0.1);
   border: 2px dashed var(--accent-blue);
-  border-radius: var(--radius-card);  /* 8px for card placeholders */
+  border-radius: var(--radius-card); /* 8px for card placeholders */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -620,7 +933,6 @@
 
 /* Preset 1: Clean & Modern */
 .list--preset-1 {
-  background: transparent;
   padding-block: var(--space-2xl);
   padding-inline: clamp(1.5rem, 4vw, 4rem);
   margin-bottom: 0;
@@ -628,23 +940,20 @@
 }
 
 .list--preset-1 .card {
-  border-radius: var(--radius-card);  /* 8px */
-  background: transparent;
+  border-radius: var(--radius-card); /* 8px */
   box-shadow: var(--shadow-card);
   border: none;
-  padding: var(--space-lg);  /* Main cards get lg padding */
+  padding: var(--space-lg); /* Main cards get lg padding */
 }
 
 /* Preset 2: Dark & Elegant */
 .list--preset-2 {
-  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid rgba(242, 201, 76, 0.3);
 }
 
 .list--preset-2 .card {
-  background: transparent;
   border: 1px solid var(--gold);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-strong);
@@ -652,7 +961,6 @@
 
 /* Preset 3: Minimal & Sleek */
 .list--preset-3 {
-  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
@@ -661,12 +969,10 @@
 .list--preset-3 .card {
   border-radius: var(--radius-sm);
   border: 1px solid rgba(0, 0, 0, 0.08);
-  background: transparent;
 }
 
 /* Preset 4: Vibrant & Playful */
 .list--preset-4 {
-  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid var(--accent-blue);
@@ -674,14 +980,12 @@
 
 .list--preset-4 .card {
   border-radius: var(--radius-xl);
-  background: transparent;
   color: white;
   border: none;
 }
 
 /* Preset 5: Professional & Structured */
 .list--preset-5 {
-  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid rgba(48, 225, 124, 0.4);
@@ -690,7 +994,6 @@
 .list--preset-5 .card {
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: transparent;
 }
 
 /* ========================================
@@ -699,7 +1002,6 @@
 
 /* Preset 1: Clean & Modern */
 .news-section--preset-1 {
-  background: transparent;
   padding-block: var(--space-2xl);
   padding-inline: clamp(1.5rem, 4vw, 4rem);
   margin-bottom: 0;
@@ -707,9 +1009,8 @@
 }
 
 .news-section--preset-1 .news-article {
-  border-radius: var(--radius-card);  /* 8px */
-  background: transparent;
-  padding: var(--space-md);  /* Compact padding for news items */
+  border-radius: var(--radius-card); /* 8px */
+  padding: var(--space-md); /* Compact padding for news items */
   border: none;
   margin-bottom: var(--space-lg);
   transition: var(--transition-properties) var(--transition-base);
@@ -722,7 +1023,6 @@
 
 /* Preset 2: Dark & Elegant */
 .news-section--preset-2 {
-  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid rgba(242, 201, 76, 0.3);
@@ -731,13 +1031,11 @@
 .news-section--preset-2 .news-article {
   border-left: 3px solid var(--gold);
   padding-left: 1rem;
-  background: transparent;
   margin-bottom: 2rem;
 }
 
 /* Preset 3: Minimal & Sleek */
 .news-section--preset-3 {
-  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
@@ -751,7 +1049,6 @@
 
 /* Preset 4: Vibrant & Playful */
 .news-section--preset-4 {
-  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid var(--accent-blue);
@@ -759,7 +1056,6 @@
 
 .news-section--preset-4 .news-article {
   border-radius: var(--radius-xl);
-  background: transparent;
   color: var(--accent-blue);
   padding: 0.9rem 1.2rem;
   margin-bottom: 2rem;
@@ -767,7 +1063,6 @@
 
 /* Preset 5: Professional & Structured */
 .news-section--preset-5 {
-  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid rgba(48, 225, 124, 0.4);
@@ -776,7 +1071,6 @@
 .news-section--preset-5 .news-article {
   border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: transparent;
   padding: 1rem 1.25rem;
   margin-bottom: 2rem;
 }
@@ -787,7 +1081,6 @@
 
 /* Preset 1: Clean & Modern */
 .footer--preset-1 {
-  background: transparent;
   border-top: 2px solid rgba(189, 220, 255, 0.3);
   padding: 2rem 0;
   color: #1a1a1a;
@@ -795,7 +1088,6 @@
 
 /* Preset 2: Dark & Elegant */
 .footer--preset-2 {
-  background: transparent;
   border-top: 3px solid rgba(242, 201, 76, 0.3);
   padding: 2rem 0;
   color: #1a1a1a;
@@ -803,14 +1095,12 @@
 
 /* Preset 3: Minimal & Sleek */
 .footer--preset-3 {
-  background: transparent;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   padding: 2rem 0;
 }
 
 /* Preset 4: Vibrant & Playful */
 .footer--preset-4 {
-  background: transparent;
   border-top: 3px solid var(--accent-blue);
   padding: 2rem 0;
   color: #1a1a1a;
@@ -818,7 +1108,6 @@
 
 /* Preset 5: Professional & Structured */
 .footer--preset-5 {
-  background: transparent;
   border-top: 3px solid rgba(48, 225, 124, 0.4);
   padding: 2rem 0;
   color: #1a1a1a;
@@ -830,7 +1119,6 @@
 
 /* Preset 1: Clean & Modern */
 [data-preset="1"] .rooms-section-view {
-  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 2px solid rgba(189, 220, 255, 0.3);
@@ -838,7 +1126,6 @@
 
 /* Preset 2: Dark & Elegant */
 [data-preset="2"] .rooms-section-view {
-  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid rgba(242, 201, 76, 0.3);
@@ -846,7 +1133,6 @@
 
 /* Preset 3: Minimal & Sleek */
 [data-preset="3"] .rooms-section-view {
-  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
@@ -854,7 +1140,6 @@
 
 /* Preset 4: Vibrant & Playful */
 [data-preset="4"] .rooms-section-view {
-  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid var(--accent-blue);
@@ -862,7 +1147,6 @@
 
 /* Preset 5: Professional & Structured */
 [data-preset="5"] .rooms-section-view {
-  background: transparent;
   padding: 3rem 0;
   margin-bottom: 0;
   border-bottom: 3px solid rgba(48, 225, 124, 0.4);
@@ -870,7 +1154,7 @@
 
 /* Default fallback */
 .rooms-section-view {
-  background: transparent;
+  /* No background - inherited from unified preset rules */
 }
 
 .rooms-carousel {
@@ -922,7 +1206,7 @@
   .hero .hero__title {
     font-size: 2.5rem;
   }
-  
+
   .hero .hero__text {
     font-size: 1.1rem;
   }
@@ -933,24 +1217,24 @@
     min-height: 400px;
     padding: 1.5rem;
   }
-  
+
   .hero .hero__title {
     font-size: 2rem;
   }
-  
+
   .hero .hero__text {
     font-size: 1rem;
   }
-  
+
   .hero .hero__image-wrapper,
   .hero .hero__image {
     min-height: 400px;
   }
-  
+
   .rooms-carousel > * {
     width: 300px;
   }
-  
+
   .gallery__horizontal-item {
     flex: 0 0 250px;
     min-width: 250px;
@@ -962,11 +1246,11 @@
     min-height: 350px;
     padding: 1rem;
   }
-  
+
   .hero .hero__title {
     font-size: 1.75rem;
   }
-  
+
   .hero .hero__text {
     font-size: 0.95rem;
   }

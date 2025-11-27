@@ -284,15 +284,23 @@
   font-weight: 400;
 }
 
-/* Hero — Clean & Modern (1) */
-.hero--preset-1 {
-  background: transparent;
-  color: var(--text-main);
-  box-shadow: var(--shadow-mid);
-  margin-bottom: 0;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-}
+/* ========================================
+   LEGACY SECTION PRESETS REMOVED
+   ======================================== 
+   
+   ALL section-level preset styles (hero, gallery, list, news, footer)
+   have been moved to ./presets/section-presets.css
+   
+   This file now only contains:
+   - Typography/font definitions for presets
+   - Child element styling (logos, images, overlays)
+   - Gallery lightbox and other shared components
+   
+   DO NOT add section background rules here!
+   They are managed centrally in section-presets.css
+   ======================================== */
 
+/* Typography remains here - preset-specific fonts */
 .hero.hero--preset-1 .hero__logo {
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
 }
@@ -301,557 +309,35 @@
   box-shadow: var(--shadow-mid);
 }
 
-/* Hero — Dark & Elegant (2) */
-.hero--preset-2 {
-  background: transparent;
-  border-left: 4px solid var(--gold);
-  padding: 3rem 2rem;
-  box-shadow: var(--shadow-strong);
-  margin-bottom: 0;
-  border-bottom: 3px solid var(--gold);
-}
-
-.hero.hero--preset-2 .hero__logo {
-  border: 2px solid var(--gold);
-  padding: 1rem;
-}
-
-.hero.hero--preset-2 .hero__title {
-  color: var(--gold);
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-}
-
-.hero.hero--preset-2 .hero__image {
-  border: 3px solid var(--gold);
-}
-
-/* Hero — Minimal & Sleek (3) */
-.hero--preset-3 {
-  background: transparent;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  padding: 2.5rem 2rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-.hero.hero--preset-3 .hero__logo {
-  opacity: 0.9;
-}
-
-.hero.hero--preset-3 .hero__text-overlay .hero__title {
-  font-weight: 300;
-  letter-spacing: 2px;
-  color: #1a1a1a;
-}
-
-.hero.hero--preset-3 .hero__text-overlay .hero__text {
-  font-size: 1rem;
-  font-weight: 300;
-  color: rgba(0, 0, 0, 0.7);
-}
-
-.hero.hero--preset-3 .hero__image {
-  border: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-/* Hero — Vibrant & Playful (4) */
-.hero--preset-4 {
-  background: transparent;
-  padding: 3rem 2.5rem;
-  box-shadow: var(--shadow-mid);
-  margin-bottom: 0;
-  border-bottom: 3px solid var(--accent-blue);
-}
-
-.hero.hero--preset-4 .hero__logo {
-  transform: rotate(-3deg);
-  transition: transform 0.3s;
-}
-
-.hero.hero--preset-4 .hero__logo:hover {
-  transform: rotate(3deg) scale(1.1);
-}
-
-.hero.hero--preset-4 .hero__image {
-  transform: rotate(1deg);
-  box-shadow: var(--shadow-strong);
-}
-
-/* Preset 4: Vibrant gradient background for text - HERO ONLY */
-.hero.hero--preset-4 .hero__text-overlay {
-  padding: 2rem;
-  background: linear-gradient(
-    135deg,
-    rgba(59, 169, 255, 0.4),
-    rgba(255, 93, 200, 0.4)
-  );
-  box-shadow: var(--shadow-strong);
-}
-
-.hero.hero--preset-4 .hero__text-overlay .hero__title {
-  color: white;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-.hero.hero--preset-4 .hero__text-overlay .hero__text {
-  color: white;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-}
-
-/* Hero — Professional & Structured (5) */
-.hero--preset-5 {
-  background: transparent;
-  border-radius: var(--radius-sm);
-  border-top: 3px solid var(--accent-green);
-  padding: 2.5rem 2rem;
-  box-shadow: var(--shadow-soft);
-}
-
-.hero--preset-5 .hero__logo {
-  border-bottom: 2px solid var(--accent-green);
-  padding-bottom: 1rem;
-}
-
-.hero--preset-5 .hero__title {
-  font-family: system-ui, -apple-system, sans-serif;
-  font-weight: 600;
-  letter-spacing: -1px;
-}
-
-.hero--preset-5 .hero__image {
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-/* Preset 5: Structured and professional background - HERO ONLY */
-.hero.hero--preset-5 .hero__text-overlay {
-  padding: 2rem;
-  background: transparent;
-  border-top: 3px solid var(--accent-green);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.hero.hero--preset-5 .hero__text-overlay .hero__title {
-  font-family: system-ui, -apple-system, sans-serif;
-  font-weight: 600;
-  letter-spacing: -1px;
-  color: white;
-}
-
-.hero.hero--preset-5 .hero__text-overlay .hero__text {
-  color: var(--text-soft);
-}
-
 /* ========================================
-   GALLERY SECTION (5 presets)
+   DUPLICATE SECTION PRESETS - COMMENTED OUT
+   These are now managed in section-presets.css
    ======================================== */
 
-/* Gallery — Clean & Modern (1) */
-.gallery--preset-1 {
-  background: transparent;
-  padding: 3rem 0;
-  margin-bottom: 0;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-}
+/*
+REMOVED: All hero, gallery, list, news, footer preset background definitions
+These duplicate rules were overriding section-presets.css
 
-[data-preset="1"] .gallery-image {
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  box-shadow: var(--shadow-soft);
-}
-
-[data-preset="1"] .gallery-image__img {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* Gallery — Dark & Elegant (2) */
-.gallery--preset-2 {
-  background: transparent;
-  padding: 3rem 0;
-  margin-bottom: 0;
-  border-bottom: 3px solid rgba(242, 201, 76, 0.3);
-}
-
-[data-preset="2"] .gallery-image {
-  border-radius: var(--radius-md);
-  border: 2px solid rgba(242, 201, 76, 0.35);
-  overflow: hidden;
-}
-
-[data-preset="2"] .gallery-image__img {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* Gallery — Minimal & Sleek (3) */
-.gallery--preset-3 {
-  background: transparent;
-  padding: 3rem 0;
-  margin-bottom: 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-[data-preset="3"] .gallery-image {
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-}
-
-[data-preset="3"] .gallery-image__img {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* Gallery — Vibrant & Playful (4) */
-.gallery--preset-4 {
-  background: transparent;
-  padding: 3rem 0;
-  margin-bottom: 0;
-  border-bottom: 3px solid var(--accent-pink);
-}
-
-[data-preset="4"] .gallery-image {
-  border-radius: var(--radius-xl);
-  border: 3px solid var(--accent-pink);
-  overflow: hidden;
-}
-
-[data-preset="4"] .gallery-image__img {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* Gallery — Professional & Structured (5) */
-.gallery--preset-5 {
-  background: transparent;
-  padding: 3rem 0;
-  margin-bottom: 0;
-  border-bottom: 3px solid rgba(48, 225, 124, 0.4);
-}
-
-[data-preset="5"] .gallery-image {
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: transparent;
-  padding: 4px;
-}
-
-[data-preset="5"] .gallery-image__img {
-  width: 100%;
-  height: auto;
-  display: block;
-}
 
 /* ========================================
-   GALLERY HORIZONTAL SCROLL (All Presets)
+   GALLERY SECTION - MOVED TO section-presets.css
+   All gallery section styling now in ./presets/section-presets.css
    ======================================== */
-
-.gallery__horizontal-wrapper {
-  position: relative;
-  overflow: hidden;
-  padding: 2rem 0;
-}
-
-.gallery__horizontal-scroll {
-  display: flex;
-  gap: 1rem;
-  overflow-x: auto;
-  scroll-behavior: smooth;
-  padding: 1rem 0;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-}
-
-.gallery__horizontal-scroll::-webkit-scrollbar {
-  height: 8px;
-}
-
-.gallery__horizontal-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.gallery__horizontal-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
-}
-
-.gallery__horizontal-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
-}
-
-.gallery__horizontal-item {
-  flex: 0 0 300px;
-  min-width: 300px;
-  display: inline-block;
-}
-
-.gallery__horizontal-item .gallery-image {
-  height: 250px;
-  width: 100%;
-}
-
-.gallery__horizontal-item .gallery-image__img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* Add Image Placeholder (Staff Only) */
-.gallery__add-placeholder {
-  width: 300px;
-  height: 250px;
-  background: rgba(59, 169, 255, 0.1);
-  border: 3px dashed var(--accent-blue);
-  border-radius: var(--radius-md);
-  display: flex !important;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.gallery__add-placeholder:hover {
-  background: rgba(59, 169, 255, 0.2);
-  border-color: var(--gold);
-  transform: translateY(-5px);
-}
-
-.gallery__add-icon {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: var(--accent-blue);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1rem;
-  font-size: 2.5rem;
-  color: white;
-  transition: all 0.3s ease;
-}
-
-.gallery__add-placeholder:hover .gallery__add-icon {
-  background: var(--gold);
-  color: var(--gray-dark);
-  transform: scale(1.15) rotate(90deg);
-}
-
-.gallery__add-text {
-  color: var(--accent-blue);
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin: 0;
-  transition: color 0.3s ease;
-}
-
-.gallery__add-placeholder:hover .gallery__add-text {
-  color: var(--gold);
-}
 
 /* ========================================
-   LIST SECTION (cards) (5 presets)
+   LIST SECTION - MOVED TO section-presets.css
+   All list section styling now in ./presets/section-presets.css
    ======================================== */
-
-/* List — Clean & Modern (1) */
-.list--preset-1 {
-  background: transparent;
-  padding: 3rem 0;
-  margin-bottom: 0;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-}
-
-.list--preset-1 .card {
-  border-radius: var(--radius-lg);
-  background: transparent;
-  box-shadow: var(--shadow-mid);
-  border: none;
-}
-
-/* List — Dark & Elegant (2) */
-.list--preset-2 {
-  background: transparent;
-  padding: 3rem 0;
-  margin-bottom: 0;
-  border-bottom: 3px solid rgba(242, 201, 76, 0.3);
-}
-
-.list--preset-2 .card {
-  background: transparent;
-  border: 1px solid var(--gold);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-strong);
-}
-
-/* List — Minimal & Sleek (3) */
-.list--preset-3 {
-  background: transparent;
-  padding: 3rem 0;
-  margin-bottom: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.list--preset-3 .card {
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: transparent;
-}
-
-/* List — Vibrant & Playful (4) */
-.list--preset-4 {
-  background: transparent;
-  padding: 3rem 0;
-  margin-bottom: 0;
-  border-bottom: 3px solid var(--accent-blue);
-}
-
-.list--preset-4 .card {
-  border-radius: var(--radius-xl);
-  background: transparent;
-  color: white;
-  border: none;
-}
-
-/* List — Professional & Structured (5) */
-.list--preset-5 {
-  background: transparent;
-  padding: 3rem 0;
-  margin-bottom: 0;
-  border-bottom: 3px solid rgba(48, 225, 124, 0.4);
-}
-
-.list--preset-5 .card {
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: transparent;
-}
 
 /* ========================================
-   NEWS SECTION (5 presets)
+   NEWS SECTION - MOVED TO section-presets.css
+   All news section styling now in ./presets/section-presets.css
    ======================================== */
-
-/* News — Clean & Modern (1) */
-.news-section--preset-1 {
-  background: transparent;
-  padding: 3rem 0;
-  margin-bottom: 0;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-}
-
-[data-preset="1"] .news-article {
-  border-radius: var(--radius-md);
-  background: transparent;
-  padding: 1rem;
-  border: none;
-  margin-bottom: 2rem;
-}
-
-/* News — Dark & Elegant (2) */
-.news-section--preset-2 {
-  background: transparent;
-  padding: 3rem 0;
-  margin-bottom: 0;
-  border-bottom: 3px solid rgba(242, 201, 76, 0.3);
-}
-
-[data-preset="2"] .news-article {
-  border-left: 3px solid var(--gold);
-  padding-left: 1rem;
-  background: transparent;
-  margin-bottom: 2rem;
-}
-
-/* News — Minimal & Sleek (3) */
-.news-section--preset-3 {
-  background: transparent;
-  padding: 3rem 0;
-  margin-bottom: 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-[data-preset="3"] .news-article {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  padding: 0.7rem 0;
-  margin-bottom: 1.5rem;
-}
-
-/* News — Vibrant & Playful (4) */
-.news-section--preset-4 {
-  background: transparent;
-  padding: 3rem 0;
-  margin-bottom: 0;
-  border-bottom: 3px solid var(--accent-pink);
-}
-
-[data-preset="4"] .news-article {
-  border-radius: var(--radius-xl);
-  background: transparent;
-  color: var(--accent-blue);
-  padding: 0.9rem 1.2rem;
-  margin-bottom: 2rem;
-}
-
-/* News — Professional & Structured (5) */
-.news-section--preset-5 {
-  background: transparent;
-  padding: 3rem 0;
-  margin-bottom: 0;
-  border-bottom: 3px solid rgba(48, 225, 124, 0.4);
-}
-
-[data-preset="5"] .news-article {
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: transparent;
-  padding: 1rem 1.25rem;
-  margin-bottom: 2rem;
-}
 
 /* ========================================
-   FOOTER SECTION (5 presets)
+   FOOTER SECTION - MOVED TO section-presets.css
+   All footer section styling now in ./presets/section-presets.css
    ======================================== */
-
-/* Footer — Clean & Modern (1) */
-.footer--preset-1 {
-  background: transparent;
-  border-top: 2px solid rgba(255, 255, 255, 0.08);
-  padding: 2rem 0;
-  color: var(--text-main);
-}
-
-/* Footer — Dark & Elegant (2) */
-.footer--preset-2 {
-  background: transparent;
-  border-top: 3px solid var(--gold);
-  padding: 2rem 0;
-}
-
-/* Footer — Minimal & Sleek (3) */
-.footer--preset-3 {
-  background: transparent;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  padding: 1.5rem 0;
-}
-
-/* Footer — Vibrant & Playful (4) */
-.footer--preset-4 {
-  background: transparent;
-  padding: 2rem 0;
-  color: white;
-}
-
-/* Footer — Professional & Structured (5) */
-.footer--preset-5 {
-  background: transparent;
-  border-top: 4px solid var(--accent-green);
-  padding: 2rem 0;
-  color: #cfd4dc;
-}
 
 /* ========================================
    GALLERY LIGHTBOX WITH NAVIGATION
@@ -2292,11 +1778,6 @@ a[class*="footer-"] {
 
 .rooms-luxury .room-card img {
   height: 350px;
-}
-
-/* Rooms Section View Background */
-.rooms-section-view {
-  background: #f8f9fa;
 }
 
 /* Section Header Responsive Adjustments */

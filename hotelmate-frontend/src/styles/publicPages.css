@@ -64,21 +64,14 @@
 /* Full viewport width container with small side margins */
 .section-container {
   width: 100%;
-  padding-left: 60px;
-  padding-right: 60px;
+
   
   margin-left: auto;
   margin-right: auto;
 }
 
 
-/* On mobile, use slightly larger padding for better touch targets */
-@media (max-width: 768px) {
-  .section-container {
-    padding-left: 20px;
-    padding-right: 20px;
-  }
-}
+
 
 /* ========== TYPOGRAPHY ========== */
 .display-heading {
