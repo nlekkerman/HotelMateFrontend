@@ -79,6 +79,7 @@
 .font-preset-1-heading {
   font-family: var(--font-clean-heading);
   font-weight: 700;
+  color: white !important;
 }
 
 .font-preset-1-subtitle {
@@ -1092,9 +1093,9 @@ a[class*="footer-"] {
 /* List Section Buttons */
 /* Add List Button - Small header button */
 [data-preset="1"] .list-section-add-list {
-  background: linear-gradient(135deg, #9fcef2, #5fe0ff) !important;
+  background: linear-gradient(135deg, #034070, #2f6cba) !important;
   border: none !important;
-  color: #05070a !important;
+  color: #ffffff !important;
   padding: 0.5rem 1rem !important;
   border-radius: 8px !important;
   font-size: 0.95rem !important;
@@ -1182,7 +1183,7 @@ a[class*="footer-"] {
 [data-preset="1"] .gallery-add-images {
   background: transparent !important;
   border: 2px dashed rgba(59, 169, 255, 0.4) !important;
-  color: rgba(59, 169, 255, 0.8) !important;
+  color: rgba(251, 252, 252, 0.8) !important;
 }
 
 [data-preset="1"] .gallery-add-gallery:hover,
@@ -2184,29 +2185,4 @@ a[class*="footer-"] {
   /* Professional & Structured */
 }
 
-/* ========================================
-   DEBUG TEST - Remove after testing
-   ======================================== */
-[data-preset] .hero-edit {
-  outline: 3px solid red !important;
-}
 
-[data-preset="1"] .hero-edit {
-  background: blue !important;
-}
-
-[data-preset="2"] .hero-edit {
-  background: green !important;
-}
-
-[data-preset="3"] .hero-edit {
-  background: purple !important;
-}
-
-[data-preset="4"] .hero-edit {
-  background: orange !important;
-}
-
-[data-preset="5"] .hero-edit {
-  background: brown !important;
-}

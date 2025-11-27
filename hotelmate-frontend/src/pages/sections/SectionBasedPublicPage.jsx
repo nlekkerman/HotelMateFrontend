@@ -6,6 +6,7 @@ import HeroSectionView from '@/components/sections/HeroSectionView';
 import GallerySectionView from '@/components/sections/GallerySectionView';
 import ListSectionView from '@/components/sections/ListSectionView';
 import NewsSectionView from '@/components/sections/NewsSectionView';
+import RoomsSectionView from '@/components/sections/RoomsSectionView';
 import { getPublicHotelPage } from '@/services/sectionEditorApi';
 import '@/styles/sections.css';
 
@@ -62,6 +63,8 @@ const SectionBasedPublicPage = () => {
         return <ListSectionView key={section.id} section={section} onUpdate={fetchPageData} />;
       case 'news':
         return <NewsSectionView key={section.id} section={section} />;
+      case 'rooms':
+        return <RoomsSectionView key={section.id} section={section} />;
       default:
         return null;
     }

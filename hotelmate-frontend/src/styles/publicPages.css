@@ -66,7 +66,7 @@
   width: 100%;
   padding-left: 60px;
   padding-right: 60px;
-  margin-top: 20px;
+  
   margin-left: auto;
   margin-right: auto;
 }
@@ -1649,6 +1649,7 @@ section:not(:first-of-type)::before {
   margin-bottom: 3rem;
   padding: 1.5rem 2rem;
   border-radius: 12px;
+  padding-top: 20px;
   transition: all 0.3s ease;
 }
 

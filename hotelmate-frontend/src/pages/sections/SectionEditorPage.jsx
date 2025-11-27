@@ -9,6 +9,7 @@ import HeroSectionEditor from '@/components/sections/HeroSectionEditor';
 import GallerySectionEditor from '@/components/sections/GallerySectionEditor';
 import ListSectionEditor from '@/components/sections/ListSectionEditor';
 import NewsSectionEditor from '@/components/sections/NewsSectionEditor';
+import RoomsSectionEditor from '@/components/sections/RoomsSectionEditor';
 import {
   listSections,
   createSection,
@@ -160,6 +161,8 @@ const SectionEditorPage = () => {
         return <ListSectionEditor {...commonProps} />;
       case 'news':
         return <NewsSectionEditor {...commonProps} />;
+      case 'rooms':
+        return <RoomsSectionEditor {...commonProps} />;
       default:
         return (
           <Alert variant="warning">
@@ -175,6 +178,7 @@ const SectionEditorPage = () => {
       case 'gallery': return 'bi-images';
       case 'list': return 'bi-card-list';
       case 'news': return 'bi-newspaper';
+      case 'rooms': return 'bi-door-open';
       default: return 'bi-question-circle';
     }
   };
@@ -340,6 +344,7 @@ const SectionEditorPage = () => {
               <option value="gallery">Gallery - Photo collections</option>
               <option value="list">List/Cards - Offers, facilities, services</option>
               <option value="news">News - Articles with text and images</option>
+              <option value="rooms">Rooms (auto from PMS) - Display all active room types</option>
             </Form.Select>
           </Form.Group>
 

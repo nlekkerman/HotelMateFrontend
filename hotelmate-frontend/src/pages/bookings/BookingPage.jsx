@@ -19,8 +19,9 @@ const BookingPage = () => {
   const [hotel, setHotel] = useState(null);
   const [roomTypes, setRoomTypes] = useState([]);
   
-  // Booking data
-  const [selectedRoom, setSelectedRoom] = useState(searchParams.get('room') || '');
+  // Booking data - read room_type_code from URL params for preselection
+  const preselectedRoomCode = searchParams.get('room_type_code') || searchParams.get('room') || '';
+  const [selectedRoom, setSelectedRoom] = useState(preselectedRoomCode);
   const [dates, setDates] = useState({
     checkIn: '',
     checkOut: ''
@@ -82,6 +83,20 @@ const BookingPage = () => {
       });
       
       setAvailability(response.data);
+      
+      // If room_type_code was provided in URL, try to preselect it in Step 2
+      if (preselectedRoomCode && response.data.available_rooms) {
+        const preselectedRoom = response.data.available_rooms.find(
+          room => room.room_type_code === preselectedRoomCode && room.is_available
+        );
+        
+        // If preselected room is available, keep it selected
+        // Otherwise, clear selection and let user choose
+        if (!preselectedRoom) {
+          setSelectedRoom('');
+        }
+      }
+      
       setStep(2);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to check availability');
@@ -301,40 +316,76 @@ const BookingPage = () => {
                     >
                       {[0, 1, 2, 3, 4].map(n => (
                         <option key={n} value={n}>{n}</option>
-                      ))}
-                    </Form.Select>
-                  </Form.Group>
-                </Col>
-              </Row>
-
-              <Button type="submit" variant="primary" size="lg" disabled={loading}>
-                {loading ? <Spinner animation="border" size="sm" /> : 'Check Availability'}
-              </Button>
-            </Form>
-          </Card.Body>
-        </Card>
-      )}
-
       {/* Step 2: Select Room */}
       {step === 2 && availability && (
-        <Row>
-          {availability.available_rooms?.map(room => (
-            <Col md={6} lg={4} key={room.room_type_code} className="mb-4">
-              <Card className="h-100">
-                {room.photo_url && (
-                  <Card.Img variant="top" src={room.photo_url} alt={room.room_type_name} />
-                )}
-                <Card.Body>
-                  <Card.Title>{room.room_type_name}</Card.Title>
-                  <p className="text-muted small">
-                    <i className="bi bi-people me-1"></i>
-                    Up to {room.max_occupancy} guests
-                  </p>
-                  {room.note && (
-                    <Alert variant="warning" className="py-2">
-                      <small>{room.note}</small>
-                    </Alert>
-                  )}
+        <>
+          {preselectedRoomCode && (
+            <Alert variant="info" className="mb-4">
+              <i className="bi bi-info-circle me-2"></i>
+              {selectedRoom ? (
+                <>Room type preselected from your request. You can select a different room below if preferred.</>
+              ) : (
+                <>The requested room type is not available for your selected dates. Please choose from the available options below.</>
+              )}
+            </Alert>
+          )}
+          <Row>
+            {availability.available_rooms?.map(room => {
+              const isPreselected = preselectedRoomCode && room.room_type_code === selectedRoom;
+              
+              return (
+                <Col md={6} lg={4} key={room.room_type_code} className="mb-4">
+                  <Card 
+                    className={`h-100 ${isPreselected ? 'border-primary border-2' : ''}`}
+                    style={isPreselected ? { boxShadow: '0 0 10px rgba(13, 110, 253, 0.3)' } : {}}
+                  >
+                    {room.photo_url && (
+                      <Card.Img variant="top" src={room.photo_url} alt={room.room_type_name} />
+                    )}
+                    {isPreselected && (
+                      <div className="position-absolute top-0 end-0 m-2">
+                        <span className="badge bg-primary">
+                          <i className="bi bi-check-circle me-1"></i>
+                          Preselected
+                        </span>
+                      </div>
+                    )}
+                    <Card.Body>
+                      <Card.Title>{room.room_type_name}</Card.Title>
+                      <p className="text-muted small">
+                        <i className="bi bi-people me-1"></i>
+                        Up to {room.max_occupancy} guests
+                      </p>
+                      {room.note && (
+                        <Alert variant="warning" className="py-2">
+                          <small>{room.note}</small>
+                        </Alert>
+                      )}
+                      <Button 
+                        variant={isPreselected ? "success" : "primary"}
+                        className="w-100"
+                        onClick={() => getPriceQuote(room.room_type_code)}
+                        disabled={!room.is_available || loading}
+                      >
+                        {loading ? (
+                          <Spinner animation="border" size="sm" />
+                        ) : isPreselected ? (
+                          <>
+                            <i className="bi bi-check-circle me-2"></i>
+                            Continue with This Room
+                          </>
+                        ) : (
+                          'Select Room'
+                        )}
+                      </Button>
+                    </Card.Body>
+                  </Card>
+                </Col>
+              );
+            })}
+          </Row>
+        </>
+      )}          )}
                   <Button 
                     variant="primary" 
                     className="w-100"
