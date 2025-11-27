@@ -7,11 +7,18 @@ import { useAuth } from "@/context/AuthContext";
 const ThemeContext = createContext({
   mainColor: "#3498db",
   secondaryColor: "#2ecc71",
+  backgroundColor: "#ffffff",
+  textColor: "#333333",
+  borderColor: "#dddddd",
   buttonColor: "#004faf",
   buttonTextColor: "#ffffff",
   buttonHoverColor: "#0066cc",
+  linkColor: "#007bff",
+  linkHoverColor: "#0056b3",
   setTheme: () => Promise.resolve(),
+  updateTheme: () => Promise.resolve(),
   themeLoading: true,
+  settings: null,
 });
 
 export function ThemeProvider({ children }) {
@@ -40,7 +47,7 @@ export function ThemeProvider({ children }) {
   }, [user]);
 
   // 1️⃣ Fetch theme from public settings (includes both content AND theme)
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["theme", hotelSlug],
     queryFn: async () => {
       console.log('[ThemeContext] Fetching theme for:', hotelSlug);
@@ -50,34 +57,34 @@ export function ThemeProvider({ children }) {
         console.log('[ThemeContext] Staff settings response:', res.data);
         // Map to ThemeContext format with ALL colors
         return {
-          main_color: res.data.primary_color || '#3498db',
-          secondary_color: res.data.secondary_color || '#10B981',
-          accent_color: res.data.accent_color || '#F59E0B',
-          button_color: res.data.button_color || '#3B82F6',
+          ...res.data, // Include all settings data
+          main_color: res.data.main_color || res.data.primary_color || '#3498db',
+          secondary_color: res.data.secondary_color || '#2ecc71',
+          button_color: res.data.button_color || '#2980b9',
           button_text_color: res.data.button_text_color || '#ffffff',
-          button_hover_color: res.data.button_hover_color || '#0066cc',
+          button_hover_color: res.data.button_hover_color || '#1f6391',
           text_color: res.data.text_color || '#333333',
-          background_color: res.data.background_color || '#FFFFFF',
-          border_color: res.data.border_color || '#e5e7eb',
-          link_color: res.data.link_color || '#007bff',
-          link_hover_color: res.data.link_hover_color || '#0056b3',
+          background_color: res.data.background_color || '#ffffff',
+          border_color: res.data.border_color || '#dddddd',
+          link_color: res.data.link_color || '#2980b9',
+          link_hover_color: res.data.link_hover_color || '#1f6391',
         };
       }
       // For guests, use public endpoint
       const res = await api.get(`/public/hotels/${hotelSlug}/settings/`);
       console.log('[ThemeContext] Public settings response:', res.data);
       return {
-        main_color: res.data.primary_color || '#3498db',
-        secondary_color: res.data.secondary_color || '#10B981',
-        accent_color: res.data.accent_color || '#F59E0B',
-        button_color: res.data.button_color || '#3B82F6',
+        ...res.data,
+        main_color: res.data.main_color || res.data.primary_color || '#3498db',
+        secondary_color: res.data.secondary_color || '#2ecc71',
+        button_color: res.data.button_color || '#2980b9',
         button_text_color: res.data.button_text_color || '#ffffff',
-        button_hover_color: res.data.button_hover_color || '#0066cc',
+        button_hover_color: res.data.button_hover_color || '#1f6391',
         text_color: res.data.text_color || '#333333',
-        background_color: res.data.background_color || '#FFFFFF',
-        border_color: res.data.border_color || '#e5e7eb',
-        link_color: res.data.link_color || '#007bff',
-        link_hover_color: res.data.link_hover_color || '#0056b3',
+        background_color: res.data.background_color || '#ffffff',
+        border_color: res.data.border_color || '#dddddd',
+        link_color: res.data.link_color || '#2980b9',
+        link_hover_color: res.data.link_hover_color || '#1f6391',
       };
     },
     enabled: !!hotelSlug,
@@ -158,33 +165,38 @@ useEffect(() => {
       if (!user?.hotel_slug) {
         return Promise.reject(new Error('Not authorized to update theme'));
       }
-      // Map back to primary_color for backend
-      return api.patch(`/staff/hotel/${hotelSlug}/settings/`, {
-        primary_color: updatedTheme.main_color,
-        secondary_color: updatedTheme.secondary_color,
-        button_color: updatedTheme.button_color,
-      });
+      // Send all theme colors to backend
+      return api.patch(`/staff/hotel/${hotelSlug}/settings/`, updatedTheme);
     },
     onSuccess: (res) => {
       // Map response back with ALL colors
       const mappedData = {
-        main_color: res.data.primary_color,
-        secondary_color: res.data.secondary_color,
-        accent_color: res.data.accent_color || '#F59E0B',
-        button_color: res.data.button_color,
+        ...res.data,
+        main_color: res.data.main_color || res.data.primary_color || '#3498db',
+        secondary_color: res.data.secondary_color || '#2ecc71',
+        button_color: res.data.button_color || '#2980b9',
         button_text_color: res.data.button_text_color || '#ffffff',
-        button_hover_color: res.data.button_hover_color || '#0066cc',
+        button_hover_color: res.data.button_hover_color || '#1f6391',
         text_color: res.data.text_color || '#333333',
-        background_color: res.data.background_color || '#FFFFFF',
-        border_color: res.data.border_color || '#e5e7eb',
-        link_color: res.data.link_color || '#007bff',
-        link_hover_color: res.data.link_hover_color || '#0056b3',
+        background_color: res.data.background_color || '#ffffff',
+        border_color: res.data.border_color || '#dddddd',
+        link_color: res.data.link_color || '#2980b9',
+        link_hover_color: res.data.link_hover_color || '#1f6391',
       };
       applyTheme(mappedData);
       queryClient.invalidateQueries({ queryKey: ["theme", hotelSlug] });
       queryClient.invalidateQueries({ queryKey: ["hotelPublicSettings", hotelSlug] });
     },
   });
+
+  // 5️⃣ Simple update function for direct theme updates
+  const updateTheme = async (updates) => {
+    if (!user?.hotel_slug) {
+      throw new Error('Not authorized to update theme');
+    }
+    const result = await mutation.mutateAsync(updates);
+    return result;
+  };
 
   const setTheme = ({
     mainColor,
@@ -208,11 +220,19 @@ useEffect(() => {
       value={{
         mainColor: data?.main_color || "#3498db",
         secondaryColor: data?.secondary_color || "#2ecc71",
-        buttonColor: data?.button_color || "#004faf",
+        backgroundColor: data?.background_color || "#ffffff",
+        textColor: data?.text_color || "#333333",
+        borderColor: data?.border_color || "#dddddd",
+        buttonColor: data?.button_color || "#2980b9",
         buttonTextColor: data?.button_text_color || "#ffffff",
-        buttonHoverColor: data?.button_hover_color || "#0066cc",
+        buttonHoverColor: data?.button_hover_color || "#1f6391",
+        linkColor: data?.link_color || "#2980b9",
+        linkHoverColor: data?.link_hover_color || "#1f6391",
         setTheme,
+        updateTheme,
+        refetchTheme: refetch,
         themeLoading: isLoading || mutation.isLoading,
+        settings: data,
       }}
     >
       {children}

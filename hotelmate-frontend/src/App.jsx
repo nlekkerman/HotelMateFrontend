@@ -182,8 +182,21 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
   // Check if current page is a guest route (should also hide sidebar/navbar)
   const isGuestPage = isGuestRoute(location.pathname);
   
+  // Staff routes that should ALWAYS show navigation
+  const isStaffRoute = location.pathname.startsWith("/staff/") ||
+                       location.pathname === "/reception" ||
+                       location.pathname.startsWith("/rooms") ||
+                       location.pathname.startsWith("/bookings") ||
+                       location.pathname.startsWith("/maintenance") ||
+                       location.pathname.startsWith("/roster/") ||
+                       location.pathname.startsWith("/stock_tracker/") ||
+                       location.pathname.startsWith("/games") ||
+                       location.pathname.startsWith("/hotel_info/") ||
+                       location.pathname.startsWith("/good_to_know_console/");
+  
   // Public landing pages - hide navbar/sidebar
-  const isPublicLandingPage = location.pathname === "/" || 
+  const isPublicLandingPage = !isStaffRoute && (
+                              location.pathname === "/" || 
                               /^\/hotel\/[a-z0-9-]+$/.test(location.pathname) || // Public hotel pages
                               /^\/[a-z0-9-]+$/.test(location.pathname) ||
                               /^\/[a-z0-9-]+\/book/.test(location.pathname) ||
@@ -191,7 +204,8 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                               /^\/my-bookings/.test(location.pathname) ||
                               /^\/booking\/confirmation\//.test(location.pathname) ||
                               /^\/booking\/payment\//.test(location.pathname) ||
-                              location.pathname === "/staff/login";
+                              location.pathname === "/staff/login"
+                            );
   
   // Determine if navbar/sidebar should be hidden
   const hideNavigation = isClockInPage || isAuthPage || isGuestPage || isPublicLandingPage;
@@ -260,7 +274,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
       <div className="d-flex min-vh-100 min-vw-100 app-container">
         {sidebar}
         <div className={layoutClass}>
-          <div className="main-content-area d-flex flex-column">
+          <div className={`main-content-area d-flex flex-column ${!hideNavigation ? 'with-navbar' : ''}`}>
             {!hideNavigation && <LogoBanner />}
             <Routes>
               {/* Public Routes - Always Accessible */}

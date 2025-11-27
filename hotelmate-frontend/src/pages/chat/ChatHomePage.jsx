@@ -72,7 +72,7 @@ const ChatHomePage = ({ selectedRoom, onSelectRoom, onUnreadChange }) => {
           background: "transparent",
         }}
       >
-        <div className="container-fluid">
+        <div className="container-fluid contextual-actions-container">
           <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-2 flex-wrap">
             <button className="contextual-action-btn" onClick={() => navigate(`/hotel/${hotelSlug}/chat`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
               <i className="bi bi-chat-dots-fill" style={{ color: mainColor || '#3498db' }} />

@@ -103,107 +103,29 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
     </div>
   );
 
-  // Preset 1: Clean & Modern - Logo above, text in lower right, edit button on hover
+  // Preset 1: Clean & Modern
   if (variant === 1) {
     return (
       <section className={`hero hero--preset-1 ${section.is_active === false ? 'section-inactive' : ''}`}>
-        {/* Logo above hero image - centered */}
-        {heroData.hero_logo_url && (
-          <div className="section-container">
-            <div className="text-center mb-3" style={{ position: 'relative', zIndex: 2 }}>
-              <img 
-                src={heroData.hero_logo_url} 
-                alt="Logo" 
-                style={{ 
-                  maxWidth: '250px', 
-                  maxHeight: '120px',
-                  objectFit: 'contain'
-                }} 
-              />
-            </div>
-          </div>
-        )}
-        
-        {/* Hero Image with text overlay and edit button */}
-        {heroData.hero_image_url ? (
-          <div 
-            className="hero__image-wrapper position-relative"
-            style={{ 
-              position: 'relative',
-              overflow: 'hidden',
-              width: '100vw'
-            }}
-          >
-              <img 
-                src={heroData.hero_image_url} 
-                alt={heroData.hero_title || 'Hero'} 
-                className="hero__image"
+        <div className="section-container hero__container">
+          {isStaff && hotel && (
+            <div className="text-end mb-3">
+              <button 
+                onClick={() => setShowModal(true)}
+                className="hero-edit"
                 style={{
-                  width: '100vw',
-                  height: '500px',
-                  objectFit: 'cover',
-                  display: 'block'
+                  opacity: 0.5,
+                  transition: 'opacity 0.3s ease'
                 }}
-              />
-              
-              {/* Text overlay in lower right corner */}
-              <div 
-                className="hero__text-overlay"
-                style={{
-                  position: 'absolute',
-                  bottom: '30px',
-                  right: '30px',
-                  maxWidth: '500px',
-                  textAlign: 'right',
-                  color: 'white',
-                  textShadow: '2px 2px 4px rgba(0,0,0,0.7)',
-                  zIndex: 1
-                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '0.5'}
               >
-                <h1 className={`hero__title font-preset-${variant}-heading`} style={{ fontSize: '2.5rem', marginBottom: '1rem', whiteSpace: 'nowrap' }}>
-                  {heroData.hero_title || 'Welcome'}
-                </h1>
-                <p className={`hero__text font-preset-${variant}-body`} style={{ fontSize: '1.2rem', marginBottom: 0 }}>
-                  {heroData.hero_text || 'Your perfect getaway awaits'}
-                </p>
-              </div>
-              
-              {/* Edit button on hover with alpha transition */}
-              {isStaff && hotel && (
-                <button 
-                  onClick={() => setShowModal(true)}
-                  className="hero-edit"
-                  style={{
-                    position: 'absolute',
-                    top: '20px',
-                    left: '20px',
-                    zIndex: 2,
-                    opacity: 0.5,
-                    transition: 'opacity 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                  onMouseLeave={(e) => e.currentTarget.style.opacity = '0.5'}
-                >
-                  <i className="bi bi-pencil-square me-2"></i>Edit Hero
-                </button>
-              )}
-          </div>
-        ) : (
-          <div className="section-container">
-            {/* Fallback if no image */}
-            {isStaff && hotel && (
-              <div className="text-end mb-3">
-                <button className="hero-edit" onClick={() => setShowModal(true)}>
-                  <i className="bi bi-pencil-square me-2"></i>Edit Hero
-                </button>
-              </div>
-            )}
-            <div className="text-center py-5">
-              <h1 className={`hero__title font-preset-${variant}-heading`}>{heroData.hero_title || 'Welcome'}</h1>
-              <p className={`hero__text font-preset-${variant}-body`}>{heroData.hero_text || 'Your perfect getaway awaits'}</p>
+                <i className="bi bi-pencil-square me-2"></i>Edit Hero
+              </button>
             </div>
-          </div>
-        )}
+          )}
+          {renderHeroContent()}
+        </div>
         {renderEditModal()}
       </section>
     );
@@ -216,9 +138,18 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
         <div className="section-container hero__container">
           {isStaff && hotel && (
             <div className="text-end mb-3">
-              <Button variant="primary" size="sm" onClick={() => setShowModal(true)} className="shadow">
+              <button 
+                onClick={() => setShowModal(true)}
+                className="hero-edit"
+                style={{
+                  opacity: 0.5,
+                  transition: 'opacity 0.3s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '0.5'}
+              >
                 <i className="bi bi-pencil-square me-2"></i>Edit Hero
-              </Button>
+              </button>
             </div>
           )}
           {renderHeroContent()}
@@ -235,9 +166,18 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
         <div className="section-container hero__container">
           {isStaff && hotel && (
             <div className="text-end mb-3">
-              <Button variant="primary" size="sm" onClick={() => setShowModal(true)}>
+              <button 
+                onClick={() => setShowModal(true)}
+                className="hero-edit"
+                style={{
+                  opacity: 0.5,
+                  transition: 'opacity 0.3s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '0.5'}
+              >
                 <i className="bi bi-pencil-square me-2"></i>Edit Hero
-              </Button>
+              </button>
             </div>
           )}
           {renderHeroContent()}
@@ -254,9 +194,18 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
         <div className="section-container hero__container">
           {isStaff && hotel && (
             <div className="text-end mb-3">
-              <Button variant="primary" size="sm" onClick={() => setShowModal(true)} className="shadow">
+              <button 
+                onClick={() => setShowModal(true)}
+                className="hero-edit"
+                style={{
+                  opacity: 0.5,
+                  transition: 'opacity 0.3s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '0.5'}
+              >
                 <i className="bi bi-pencil-square me-2"></i>Edit Hero
-              </Button>
+              </button>
             </div>
           )}
           {renderHeroContent()}
@@ -273,9 +222,18 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
         <div className="section-container hero__container">
           {isStaff && hotel && (
             <div className="text-end mb-3">
-              <Button variant="primary" size="sm" onClick={() => setShowModal(true)} className="shadow">
+              <button 
+                onClick={() => setShowModal(true)}
+                className="hero-edit"
+                style={{
+                  opacity: 0.5,
+                  transition: 'opacity 0.3s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '0.5'}
+              >
                 <i className="bi bi-pencil-square me-2"></i>Edit Hero
-              </Button>
+              </button>
             </div>
           )}
           {renderHeroContent()}
@@ -291,9 +249,18 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
       <div className="section-container hero__container">
         {isStaff && hotel && (
           <div className="text-end mb-3">
-            <Button variant="primary" size="sm" onClick={() => setShowModal(true)} className="shadow">
+            <button 
+              onClick={() => setShowModal(true)}
+              className="hero-edit"
+              style={{
+                opacity: 0.5,
+                transition: 'opacity 0.3s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = '0.5'}
+            >
               <i className="bi bi-pencil-square me-2"></i>Edit Hero
-            </Button>
+            </button>
           </div>
         )}
         {renderHeroContent()}

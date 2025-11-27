@@ -56,23 +56,8 @@ export default function Feed() {
   };
 
   return (
-    <div className="feed">
-      {/* All hotels landing page toggle button */}
-      {hotelSlug && (
-        <div className="mb-3">
-          <Link 
-            to="/?view=all"
-            className="btn btn-primary btn-sm"
-            style={{ 
-              borderRadius: '50px',
-              padding: '8px 20px'
-            }}
-          >
-            <i className="bi bi-buildings me-2"></i>
-            All Hotels
-          </Link>
-        </div>
-      )}
+    <div className="feed ">
+      
       
       {hotelSlug && (
         <PostComposer hotelSlug={hotelSlug} onPostCreated={handleNewPost} />

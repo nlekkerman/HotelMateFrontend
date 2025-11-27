@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 
 // Import section components - STAFF ONLY
 import SectionStaffRegistration from "./settings-sections/SectionStaffRegistration";
+import SectionThemeSettings from "./settings-sections/SectionThemeSettings";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -24,9 +25,9 @@ export default function Settings() {
   }
 
   return (
-    <Container className="py-4" style={{ maxWidth: '1200px' }}>
+    <Container className="py-5" style={{ maxWidth: '1200px' }}>
       {/* Header */}
-      <Row className="mb-4">
+      <Row className="mb-4 py-5">
         <Col>
           <div>
             <h2 className="mb-1">
@@ -43,6 +44,9 @@ export default function Settings() {
       {/* Staff-Only Sections */}
       <Row>
         <Col>
+          {/* Theme Settings */}
+          <SectionThemeSettings />
+          
           {/* Staff Registration Packages */}
           <SectionStaffRegistration />
           

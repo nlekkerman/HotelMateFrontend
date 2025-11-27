@@ -321,10 +321,10 @@ export default function HotelInfo() {
               zIndex: 1045,
               background: "transparent",
             }}
-          >
-            <div className="container-fluid">
-              <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-2 flex-wrap">
-                <button
+            >
+              <div className="container-fluid contextual-actions-container">
+                <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-2 flex-wrap">
+                  <button
                   className="contextual-action-btn"
                   onClick={() => {
                     setShowCreateCategory((prev) => !prev);

@@ -26,16 +26,25 @@ const ListSectionPreset = ({ section, onUpdate }) => {
     listForm,
     setListForm,
     showAddCard,
+    showEditCard,
+    showDeleteConfirm,
     selectedList,
+    selectedCard,
     cardForm,
     setCardForm,
     cardImage,
     setCardImage,
     handleCreateList,
     handleCreateCard,
+    handleUpdateCard,
+    handleDeleteCard,
     openAddCard,
+    openEditCard,
+    openDeleteConfirm,
     closeListModal,
     closeCardModal,
+    closeEditModal,
+    closeDeleteConfirm,
     saving,
   } = useListSectionActions(slug, section, onUpdate);
 
@@ -85,7 +94,11 @@ const ListSectionPreset = ({ section, onUpdate }) => {
               )}
               {list.cards?.map((card) => (
                 <Col key={card.id} xs={12} sm={6} md={4}>
-                  <CardRenderer card={card} variant={variant} />
+                  <CardRenderer 
+                    card={card} 
+                    variant={variant}
+                    onEdit={isStaff ? () => openEditCard(card, list) : undefined}
+                  />
                 </Col>
               ))}
             </Row>
@@ -187,6 +200,118 @@ const ListSectionPreset = ({ section, onUpdate }) => {
           <button className="card-modal-create" onClick={handleCreateCard} disabled={saving}>
             {saving ? <><Spinner animation="border" size="sm" className="me-2" /> Creating...</> : 'Create Card'}
           </button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Edit Card Modal */}
+      <Modal show={showEditCard} onHide={closeEditModal} size="lg" data-preset={variant}>
+        <Modal.Header closeButton>
+          <Modal.Title>Edit Card</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group className="mb-3">
+            <Form.Label>Title *</Form.Label>
+            <Form.Control
+              type="text"
+              value={cardForm.title}
+              onChange={(e) => setCardForm({ ...cardForm, title: e.target.value })}
+              placeholder="Card title"
+              autoFocus
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Subtitle</Form.Label>
+            <Form.Control
+              type="text"
+              value={cardForm.subtitle}
+              onChange={(e) => setCardForm({ ...cardForm, subtitle: e.target.value })}
+              placeholder="Optional subtitle"
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Description</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={3}
+              value={cardForm.description}
+              onChange={(e) => setCardForm({ ...cardForm, description: e.target.value })}
+              placeholder="Card description"
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Image</Form.Label>
+            {selectedCard?.image_url && !cardImage && (
+              <div className="mb-2">
+                <img 
+                  src={selectedCard.image_url} 
+                  alt="Current" 
+                  style={{ maxWidth: '200px', maxHeight: '150px', objectFit: 'cover', borderRadius: '8px' }}
+                />
+                <Form.Text className="d-block text-muted">Current image</Form.Text>
+              </div>
+            )}
+            <Form.Control
+              type="file"
+              accept="image/*"
+              onChange={(e) => setCardImage(e.target.files?.[0] || null)}
+            />
+            {cardImage && (
+              <Form.Text className="text-muted">
+                <i className="bi bi-check-circle text-success me-1"></i>
+                New image: {cardImage.name}
+              </Form.Text>
+            )}
+          </Form.Group>
+
+          <div className="d-flex gap-2 mt-4">
+            <Button 
+              variant="outline-danger" 
+              onClick={() => {
+                closeEditModal();
+                openDeleteConfirm(selectedCard);
+              }}
+              className="flex-grow-1"
+            >
+              <i className="bi bi-trash me-2"></i>
+              Delete Card
+            </Button>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <button className="card-modal-cancel" onClick={closeEditModal}>
+            Cancel
+          </button>
+          <button className="card-modal-create" onClick={handleUpdateCard} disabled={saving}>
+            {saving ? <><Spinner animation="border" size="sm" className="me-2" /> Updating...</> : 'Update Card'}
+          </button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal show={showDeleteConfirm} onHide={closeDeleteConfirm} centered data-preset={variant}>
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Deletion</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>Are you sure you want to delete this card?</p>
+          <p className="text-muted mb-0">
+            <strong>{selectedCard?.title}</strong>
+          </p>
+          <p className="text-danger mt-3 mb-0">
+            <i className="bi bi-exclamation-triangle me-2"></i>
+            This action cannot be undone.
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={closeDeleteConfirm}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleDeleteCard} disabled={saving}>
+            {saving ? <><Spinner animation="border" size="sm" className="me-2" /> Deleting...</> : 'Delete'}
+          </Button>
         </Modal.Footer>
       </Modal>
     </>

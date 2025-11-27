@@ -142,7 +142,7 @@ export default function StockDashboard() {
           background: "transparent",
         }}
       >
-        <div className="container-fluid">
+        <div className="container-fluid contextual-actions-container">
           <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-2 flex-wrap">
             <button className="contextual-action-btn" onClick={() => navigate(`/stock_tracker/${hotel_slug}/items`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
               <i className="bi bi-box-seam" style={{ color: mainColor || '#3498db' }} />

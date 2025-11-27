@@ -34,11 +34,11 @@ const PresetSelector = ({
   }, [currentVariant, sections]);
 
   const presets = [
-    { value: 1, label: 'Clean & Modern', emoji: '✨' },
-    { value: 2, label: 'Dark & Elegant', emoji: '🌙' },
-    { value: 3, label: 'Minimal & Sleek', emoji: '⚡' },
-    { value: 4, label: 'Vibrant & Playful', emoji: '🎨' },
-    { value: 5, label: 'Professional', emoji: '💼' },
+    { value: 1, label: 'Modern' },
+    { value: 2, label: 'Dark' },
+    { value: 3, label: 'Minimal'},
+    { value: 4, label: 'Vibrant' },
+    { value: 5, label: 'Professional' },
   ];
 
   const handleVariantChange = async (variant) => {
@@ -100,7 +100,7 @@ const PresetSelector = ({
               <i className="bi bi-pencil-square me-2"></i>
               Edit Sections
               {sections && sections.length > 0 && (
-                <span className="badge bg-light text-dark ms-2">{sections.length}</span>
+                <span className="badge bg-warning text-dark ms-2">{sections.length}</span>
               )}
             </button>
             

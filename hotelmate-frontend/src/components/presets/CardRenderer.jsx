@@ -1,13 +1,30 @@
 import React from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 /**
  * CardRenderer - Simple card renderer for list sections
  * Styling is controlled by parent section's style_variant via CSS
  */
-const CardRenderer = ({ card, onCardClick, variant = 1 }) => {
+const CardRenderer = ({ card, onCardClick, onEdit, onDelete, variant = 1 }) => {
+  const { isStaff } = useAuth();
+  
   // Simple card rendering - styling handled by CSS based on parent section variant
   return (
     <div className="list-card">
+      {/* Staff Edit Overlay - Show on hover */}
+      {isStaff && (
+        <div className="list-card__edit-overlay">
+          <button 
+            className="card-edit-button"
+            onClick={() => onEdit?.(card)}
+            title="Edit card"
+          >
+            <i className="bi bi-pencil me-1"></i>
+            Edit
+          </button>
+        </div>
+      )}
+      
       {card.image_url && (
         <div className="list-card__image-wrapper">
           <img 

@@ -1363,6 +1363,7 @@ section:not(:first-of-type)::before {
   box-shadow: var(--shadow-md);
   transition: all var(--transition-base);
   cursor: pointer;
+  position: relative;
 }
 
 .list-card:hover {
@@ -1430,6 +1431,28 @@ section:not(:first-of-type)::before {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   line-height: 1.6;
+}
+
+/* Card Edit Button - Hidden by default, shown on hover */
+.list-card__edit-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.list-card:hover .list-card__edit-overlay {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* Override Bootstrap column padding for list cards */

@@ -124,7 +124,7 @@ const MobileNavbar = () => {
 
   return (
     <nav
-      className={`navbar navbar-expand-lg text-white main-bg shadow-lg  ${
+      className={`navbar navbar-expand-lg text-white main-bg shadow-lg fixed-top ${
         mainColor ? "" : "bg-dark"
       }`}
       style={mainColor ? { backgroundColor: mainColor } : {}}

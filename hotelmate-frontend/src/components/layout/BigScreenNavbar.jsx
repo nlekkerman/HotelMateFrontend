@@ -694,7 +694,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
           }}
         >
           <div className="container-fluid">
-            <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-3">
+            <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-3 my-3 contextual-actions-container glassmorphic-bar">
               {/* Contextual action buttons */}
               {contextualActions.map((action, idx) => (
                 <button
