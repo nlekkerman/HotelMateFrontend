@@ -417,12 +417,7 @@
     --page-link-hover: #e9ecef;
   }
   
-  .page-style-3 .card,
-  .page-style-3 .modal-content {
-    background: #1a1f29;
-    color: #f8f9fa;
-    border-color: rgba(255, 255, 255, 0.1);
-  }
+ 
   
   .page-style-5 {
     --page-bg: #0e131f;

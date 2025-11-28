@@ -11,6 +11,7 @@ import FooterSectionPreset from '@/components/presets/FooterSectionPreset';
 import RoomsSectionView from '@/components/sections/RoomsSectionView';
 import InlinePageBuilder from '@/components/builder/InlinePageBuilder';
 import PresetSelector from '@/components/presets/PresetSelector';
+import { debugRoomTypesAPI } from '@/utils/debugRoomTypes';
 import '@/styles/hotelPublicPage.css';
 
 /**
@@ -36,6 +37,41 @@ const HotelPublicPage = () => {
       // Get basic page data (includes all sections with full data)
       const data = await getPublicHotelPage(slug);
       console.log('[HotelPublicPage] 📦 Public page data sections:', data.sections?.length, data.sections?.[0]);
+      console.log('[HotelPublicPage] 🏨 Hotel data:', data.hotel);
+      
+      // Run debug utility to understand the API response
+      await debugRoomTypesAPI(slug);
+      
+      // Debug the complete API response structure
+      console.log('[HotelPublicPage] 🔍 Complete API response:', JSON.stringify(data, null, 2));
+      
+      // Log room types data following API guide structure
+      const roomsSections = data.sections?.filter(section => 
+        section.element?.element_type === 'rooms_list' || section.section_type === 'rooms'
+      );
+      
+      console.log('[HotelPublicPage] 🏠 Found rooms sections:', roomsSections?.length || 0);
+      
+      roomsSections?.forEach((section, index) => {
+        console.log(`[HotelPublicPage] 🏠 Rooms section ${index + 1}:`, section.name);
+        console.log(`[HotelPublicPage] 🏠 Section element:`, section.element);
+        console.log(`[HotelPublicPage] 🏠 Section rooms_data:`, section.rooms_data);
+        console.log(`[HotelPublicPage] 🏠 Room types count:`, section.rooms_data?.room_types?.length || 0);
+        
+        if (section.rooms_data?.room_types?.length > 0) {
+          section.rooms_data.room_types.forEach((room, roomIndex) => {
+            console.log(`[HotelPublicPage] 🏠 Room ${roomIndex + 1}: ${room.name} - ${room.currency} ${room.starting_price_from}/night`);
+            console.log(`[HotelPublicPage] 🏠 Room data:`, room);
+          });
+        } else {
+          console.warn('[HotelPublicPage] ⚠️ No room types found in this section');
+        }
+      });
+      
+      // Also check if rooms data is in a different location
+      if (data.hotel) {
+        console.log('[HotelPublicPage] 🏨 Hotel object keys:', Object.keys(data.hotel));
+      }
       
       // Note: Public API already returns all sections (active + inactive for staff)
       // with complete data including section_type, hero_data, galleries, etc.

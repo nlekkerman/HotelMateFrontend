@@ -1898,7 +1898,7 @@ rgba(180, 150, 150, 0.03),
 }
 
 .booking-page.page-style-2 .booking-step .card .text-primary {
-  color: #05070a !important;
+  color: #ffffff !important;
 }
 
 .booking-page.page-style-2 .booking-step .card .text-muted {
@@ -2018,4 +2018,126 @@ rgba(180, 150, 150, 0.03),
 .booking-page.page-style-5 .booking-step .card.border-primary {
   border: 2px solid #2e7d32 !important;
   background: rgba(46, 204, 113, 0.05) !important;
+}
+
+/* ========================================
+   GLOBAL CARD STYLES FOR ALL PRESETS
+   Similar to theme-presets.css preset-3 pattern
+   ======================================== */
+
+/* Preset 1 - Global Card Styles */
+.page-style-1 .card,
+.page-style-1 .modal-content {
+  background: rgba(255, 255, 255, 0.95);
+  color: #1a1a1a;
+  border: 1px solid rgba(59, 169, 255, 0.2);
+  backdrop-filter: blur(5px);
+}
+
+.page-style-1 .card *,
+.page-style-1 .modal-content * {
+  color: #1a1a1a !important;
+}
+
+.page-style-1 .card .card-title,
+.page-style-1 .card h1, .page-style-1 .card h2, .page-style-1 .card h3, .page-style-1 .card h4, .page-style-1 .card h5, .page-style-1 .card h6,
+.page-style-1 .modal-content .modal-title,
+.page-style-1 .modal-content h1, .page-style-1 .modal-content h2, .page-style-1 .modal-content h3, .page-style-1 .modal-content h4, .page-style-1 .modal-content h5, .page-style-1 .modal-content h6 {
+  color: var(--preset-1-primary) !important;
+}
+
+.page-style-1 .card .btn,
+.page-style-1 .modal-content .btn {
+  border-color: rgba(59, 169, 255, 0.3) !important;
+}
+
+.page-style-1 .card .form-control,
+.page-style-1 .modal-content .form-control {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(59, 169, 255, 0.2) !important;
+  color: #1a1a1a !important;
+}
+
+/* Preset 2 - Global Card Styles */
+.page-style-2 .card,
+.page-style-2 .modal-content {
+  background: rgba(20, 20, 20, 0.9);
+  color: #f8f9fa;
+  border: 1px solid rgba(242, 201, 76, 0.3);
+  backdrop-filter: blur(8px);
+}
+
+.page-style-2 .card *,
+.page-style-2 .modal-content * {
+  color: #f8f9fa !important;
+}
+
+.page-style-2 .card .card-title,
+.page-style-2 .card h1, .page-style-2 .card h2, .page-style-2 .card h3, .page-style-2 .card h4, .page-style-2 .card h5, .page-style-2 .card h6,
+.page-style-2 .modal-content .modal-title,
+.page-style-2 .modal-content h1, .page-style-2 .modal-content h2, .page-style-2 .modal-content h3, .page-style-2 .modal-content h4, .page-style-2 .modal-content h5, .page-style-2 .modal-content h6 {
+  color: var(--preset-2-primary) !important;
+}
+
+.page-style-2 .card .btn,
+.page-style-2 .modal-content .btn {
+  border-color: rgba(242, 201, 76, 0.4) !important;
+}
+
+.page-style-2 .card .form-control,
+.page-style-2 .modal-content .form-control {
+  background: rgba(40, 40, 40, 0.8) !important;
+  border-color: rgba(242, 201, 76, 0.3) !important;
+  color: #f8f9fa !important;
+}
+
+/* Preset 3 - Global Card Styles */
+.page-style-3 .card,
+.page-style-3 .modal-content {
+  background: rgba(255, 255, 255, 0.95);
+  color: #000000;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(5px);
+}
+
+.page-style-3 .card *,
+.page-style-3 .modal-content * {
+  color: #000000 !important;
+}
+
+.page-style-3 .card .card-title,
+.page-style-3 .card h1, .page-style-3 .card h2, .page-style-3 .card h3, .page-style-3 .card h4, .page-style-3 .card h5, .page-style-3 .card h6,
+.page-style-3 .modal-content .modal-title,
+.page-style-3 .modal-content h1, .page-style-3 .modal-content h2, .page-style-3 .modal-content h3, .page-style-3 .modal-content h4, .page-style-3 .modal-content h5, .page-style-3 .modal-content h6 {
+  color: #000000 !important;
+}
+
+.page-style-3 .card .btn,
+.page-style-3 .modal-content .btn {
+  border-color: rgba(0, 0, 0, 0.2) !important;
+}
+
+.page-style-3 .card .form-control,
+.page-style-3 .modal-content .form-control {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000000 !important;
+}
+
+/* Preset 4 - Global Card Styles */
+.page-style-4 .card,
+.page-style-4 .modal-content {
+  background: rgba(255, 255, 255, 0.95);
+  color: #1a1a1a;
+  border: 1px solid rgba(255, 107, 157, 0.3);
+  backdrop-filter: blur(5px);
+}
+
+/* Preset 5 - Global Card Styles */
+.page-style-5 .card,
+.page-style-5 .modal-content {
+  background: rgba(255, 255, 255, 0.95);
+  color: #1a1a1a;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+  backdrop-filter: blur(5px);
 }

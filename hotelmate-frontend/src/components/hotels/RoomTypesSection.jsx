@@ -12,7 +12,25 @@ const CLOUDINARY_BASE = 'https://res.cloudinary.com/dg0ssec7u/';
  */
 const RoomTypesSection = ({ hotel }) => {
   const navigate = useNavigate();
-  const roomTypes = hotel?.room_types || [];
+  const allRoomTypes = hotel?.room_types || [];
+
+  // Group rooms by room type and get the one with the lowest price (starting price)
+  const uniqueRoomTypes = React.useMemo(() => {
+    const roomsByType = {};
+    
+    allRoomTypes.forEach(room => {
+      const key = room.name || room.code;
+      const currentPrice = parseFloat(room.starting_price_from || room.price || 0);
+      
+      if (!roomsByType[key] || currentPrice < parseFloat(roomsByType[key].starting_price_from || roomsByType[key].price || 0)) {
+        roomsByType[key] = room;
+      }
+    });
+    
+    return Object.values(roomsByType);
+  }, [allRoomTypes]);
+  
+  const roomTypes = uniqueRoomTypes;
 
   if (roomTypes.length === 0) return null;
 

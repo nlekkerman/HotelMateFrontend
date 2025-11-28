@@ -4,6 +4,21 @@ import { Card, Button, Badge } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 
 /**
+ * Format currency following API guide best practices
+ */
+const formatPrice = (price, currency) => {
+  try {
+    return new Intl.NumberFormat('en-EU', {
+      style: 'currency',
+      currency: currency || 'EUR',
+    }).format(parseFloat(price));
+  } catch (error) {
+    console.warn('[RoomCard] Currency formatting failed:', error);
+    return `${currency || 'EUR'} ${parseFloat(price).toFixed(2)}`;
+  }
+};
+
+/**
  * RoomCard Component
  * Universal room card component that adapts to preset configurations
  * 
@@ -55,10 +70,15 @@ const RoomCard = ({ room, preset }) => {
   const imageClass = layout === 'horizontal' ? 'card-img-left' : 'card-img-top';
 
   const handleBookNow = () => {
+    // Use booking_cta_url from API guide if available
     if (room.booking_cta_url) {
+      console.log('[RoomCard] 🔗 Using API booking URL:', room.booking_cta_url);
       navigate(room.booking_cta_url);
     } else {
-      navigate(`/booking/${slug}?room_type_code=${room.code}`);
+      // Fallback to manual construction
+      const bookingUrl = `/booking/${slug}?room_type_code=${room.code}`;
+      console.log('[RoomCard] 🔗 Using fallback booking URL:', bookingUrl);
+      navigate(bookingUrl);
     }
   };
 
@@ -102,22 +122,31 @@ const RoomCard = ({ room, preset }) => {
           </Card.Text>
         )}
         
-        {/* Price and CTA */}
+        {/* Price and CTA - Following API guide format */}
         <div className="mt-auto">
-          {show_price && (
+          {show_price && room.starting_price_from && (
             <div className="d-flex justify-content-between align-items-center mb-3">
               <div>
-                <small className="text-muted d-block">From</small>
+                <small className="text-muted d-block">Starting from</small>
                 <h4 className="mb-0 text-primary">
-                  {room.currency || '€'}{room.starting_price_from}
-                  <small className="text-muted fs-6"> /night</small>
+                  {formatPrice(room.starting_price_from, room.currency)}
+                  <small className="text-muted fs-6">/night</small>
                 </h4>
               </div>
               {show_badge && room.availability_message && (
-                <Badge bg="warning" text="dark">
+                <Badge 
+                  bg={room.availability_message.toLowerCase().includes('high demand') ? 'danger' : 'warning'} 
+                  text={room.availability_message.toLowerCase().includes('high demand') ? 'white' : 'dark'}
+                >
                   {room.availability_message}
                 </Badge>
               )}
+            </div>
+          )}
+          
+          {show_price && !room.starting_price_from && (
+            <div className="mb-3">
+              <h5 className="mb-0 text-muted">Price on request</h5>
             </div>
           )}
           

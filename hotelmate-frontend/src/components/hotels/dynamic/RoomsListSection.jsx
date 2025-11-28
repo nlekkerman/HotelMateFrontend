@@ -3,12 +3,30 @@ import PropTypes from 'prop-types';
 import { Container, Row, Col, Card } from 'react-bootstrap';
 
 const RoomsListSection = ({ element }) => {
-  const { title, subtitle, rooms = [], settings = {} } = element;
+  const { title, subtitle, rooms: allRooms = [], settings = {} } = element;
   const { 
     show_price_from = true, 
     show_occupancy = true, 
     columns = 3 
   } = settings;
+
+  // Group rooms by room type and get the one with the lowest price (starting price)
+  const uniqueRooms = React.useMemo(() => {
+    const roomsByType = {};
+    
+    allRooms.forEach(room => {
+      const key = room.name || room.code;
+      const currentPrice = parseFloat(room.starting_price_from || room.price || 0);
+      
+      if (!roomsByType[key] || currentPrice < parseFloat(roomsByType[key].starting_price_from || roomsByType[key].price || 0)) {
+        roomsByType[key] = room;
+      }
+    });
+    
+    return Object.values(roomsByType);
+  }, [allRooms]);
+  
+  const rooms = uniqueRooms;
 
   if (!rooms || rooms.length === 0) {
     return null;
