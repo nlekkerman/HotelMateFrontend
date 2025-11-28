@@ -7,8 +7,8 @@ import HotelInfoCreateForm from "@/components/hotel_info/HotelInfoCreateForm";
 import HotelInfoModal from "@/components/modals/HotelInfoModal.jsx";
 import CreateCategoryForm from "@/components/hotel_info/CreateCategoryForm";
 import HotelInfoEditModal from "@/components/hotel_info/modals/HotelInfoEditModal";
-import ConfirmationModal from "@/components/modals/ConfirmationModal";
-import SuccessModal from "@/components/modals/SuccessModal";
+import StaffConfirmationModal from "@/components/staff/modals/StaffConfirmationModal";
+import StaffSuccessModal from "@/components/staff/modals/StaffSuccessModal";
 
 export default function HotelInfo() {
   const { hotel_slug, category } = useParams();
@@ -403,18 +403,21 @@ export default function HotelInfo() {
 
       {/* QR Download Confirmation Modal */}
       {showQRConfirmModal && (
-        <ConfirmationModal
+        <StaffConfirmationModal
+          show={showQRConfirmModal}
           title="Download QR Codes"
           message="Are you sure you want to download all QR codes?"
+          preset="confirm_booking"
           onConfirm={handleQRDownloadConfirm}
           onCancel={() => setShowQRConfirmModal(false)}
         />
       )}
 
       {/* QR Download Success Modal */}
-      <SuccessModal
+      <StaffSuccessModal
         show={showQRSuccessModal}
         message="QR codes downloaded successfully!"
+        preset="operation_completed"
         onClose={() => setShowQRSuccessModal(false)}
       />
 

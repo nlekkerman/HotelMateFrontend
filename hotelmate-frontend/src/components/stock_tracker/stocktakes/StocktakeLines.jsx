@@ -33,7 +33,7 @@ import { VoiceRecorder } from '@/voiceRecognition/VoiceRecorder';
 import { VoiceCommandPreview } from '@/voiceRecognition/VoiceCommandPreview';
 import { confirmVoiceCommand } from '@/voiceRecognition/voiceApi';
 import VoiceDebugPanel, { addVoiceLog } from '@/voiceRecognition/VoiceDebugPanel';
-import SuccessModal from '@/components/modals/SuccessModal';
+import StaffSuccessModal from '@/components/staff/modals/StaffSuccessModal';
 import { SubcategoryBadge, getSubcategoryHelpText } from '../utils/SubcategoryBadge';
 import { CategoryTotalsRow } from './CategoryTotalsRow';
 import { useCategoryTotals } from '../hooks/useCategoryTotals';
@@ -2348,9 +2348,10 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
       )}
 
       {/* Success Modal - Shows detailed breakdown after voice command confirmation */}
-      <SuccessModal
+      <StaffSuccessModal
         show={showSuccessModal}
         message={successMessage}
+        preset="data_saved"
         onClose={() => setShowSuccessModal(false)}
       />
 

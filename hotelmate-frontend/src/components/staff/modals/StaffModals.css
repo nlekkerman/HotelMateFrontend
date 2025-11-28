@@ -1,0 +1,115 @@
+/* Staff Modal Styles */
+
+.staff-modal .modal-content,
+.staff-success-modal .modal-content {
+  border: none;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.staff-modal .modal-header,
+.staff-success-modal .modal-header {
+  border-bottom: none;
+  padding: 1.5rem;
+  border-radius: 16px 16px 0 0;
+}
+
+.staff-modal .modal-body,
+.staff-success-modal .modal-body {
+  padding: 2rem 1.5rem;
+}
+
+.staff-modal .modal-footer,
+.staff-success-modal .modal-footer {
+  padding: 1.5rem;
+  border-top: none;
+}
+
+/* Animation for modal appearance */
+.staff-modal .modal-dialog,
+.staff-success-modal .modal-dialog {
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    transform: translate(0, -50px);
+    opacity: 0;
+  }
+  to {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+}
+
+/* Success icon animation */
+.staff-success-modal .success-icon i {
+  animation: successIconBounce 0.6s ease-out;
+}
+
+@keyframes successIconBounce {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Button hover effects */
+.staff-modal .btn:hover,
+.staff-success-modal .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: all 0.2s ease;
+}
+
+/* Custom button styles */
+.staff-modal .btn,
+.staff-success-modal .btn {
+  border-radius: 8px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+}
+
+/* Enhanced shadow for modal */
+.staff-modal .modal-content,
+.staff-success-modal .modal-content {
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
+}
+
+/* Close button styling */
+.staff-modal .btn-close,
+.staff-success-modal .btn-close {
+  opacity: 0.8;
+}
+
+.staff-modal .btn-close:hover,
+.staff-success-modal .btn-close:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .staff-modal .modal-dialog,
+  .staff-success-modal .modal-dialog {
+    margin: 1rem;
+  }
+  
+  .staff-modal .modal-body,
+  .staff-success-modal .modal-body {
+    padding: 1.5rem 1rem;
+  }
+  
+  .staff-success-modal .success-icon i {
+    font-size: 4rem !important;
+  }
+}

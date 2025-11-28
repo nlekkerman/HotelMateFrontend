@@ -18,6 +18,7 @@ const BookingPage = () => {
   // Hotel data
   const [hotel, setHotel] = useState(null);
   const [roomTypes, setRoomTypes] = useState([]);
+  const [preset, setPreset] = useState(1);
   
   // Booking data - read room_type_code from URL params for preselection
   const preselectedRoomCode = searchParams.get('room_type_code') || searchParams.get('room') || '';
@@ -49,9 +50,13 @@ const BookingPage = () => {
   const fetchHotelData = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/hotel/public/page/${hotelSlug}/`);
-      setHotel(response.data);
+      const response = await api.get(`/public/hotel/${hotelSlug}/page/`);
+      console.log('Hotel API Response:', response.data);
+      setHotel(response.data.hotel || response.data);
       setRoomTypes(response.data.room_types || []);
+      const hotelPreset = response.data.hotel?.preset || response.data.preset || response.data.global_style_variant || 1;
+      console.log('Setting preset to:', hotelPreset);
+      setPreset(hotelPreset);
     } catch (err) {
       setError('Failed to load hotel information');
       console.error(err);
@@ -210,7 +215,12 @@ const BookingPage = () => {
   }
 
   return (
-    <Container className="py-5">
+    <div
+      className={`hotel-public-page booking-page page-style-${preset}`}
+      data-preset={preset}
+      style={{ minHeight: '100vh' }}
+    >
+      <Container className="py-5 booking-layout">
       {/* Header */}
       <Row className="mb-4">
         <Col>
@@ -218,7 +228,7 @@ const BookingPage = () => {
             <Button 
               variant="outline-secondary" 
               size="sm"
-              onClick={() => step > 1 ? setStep(step - 1) : navigate(`/${hotelSlug}`)}
+              onClick={() => step > 1 ? setStep(step - 1) : navigate(`/hotel/${hotelSlug}`)}
             >
               <i className="bi bi-arrow-left me-1"></i>
               {step > 1 ? 'Back' : 'Cancel'}
@@ -256,6 +266,7 @@ const BookingPage = () => {
 
       {/* Step 1: Select Dates */}
       {step === 1 && (
+        <div className={`booking-step booking-step--1 booking-step--preset-${preset}`}>
         <Card>
           <Card.Body className="p-4">
             <h4 className="mb-4">Select Your Dates</h4>
@@ -270,9 +281,6 @@ const BookingPage = () => {
                       onChange={(e) => setDates({ ...dates, checkIn: e.target.value })}
                       min={new Date().toISOString().split('T')[0]}
                       required
-                      style={{
-                        colorScheme: 'light'
-                      }}
                     />
                   </Form.Group>
                 </Col>
@@ -285,9 +293,6 @@ const BookingPage = () => {
                       onChange={(e) => setDates({ ...dates, checkOut: e.target.value })}
                       min={dates.checkIn || new Date().toISOString().split('T')[0]}
                       required
-                      style={{
-                        colorScheme: 'light'
-                      }}
                     />
                   </Form.Group>
                 </Col>
@@ -328,10 +333,12 @@ const BookingPage = () => {
             </Form>
           </Card.Body>
         </Card>
+        </div>
       )}
 
       {/* Step 2: Select Room */}
       {step === 2 && availability && (
+        <div className={`booking-step booking-step--2 booking-step--preset-${preset}`}>
         <>
           {preselectedRoomCode && (
             <Alert variant="info" className="mb-4">
@@ -343,53 +350,143 @@ const BookingPage = () => {
               )}
             </Alert>
           )}
-          <Row>
-            {availability.available_rooms?.map(room => {
-              const isPreselected = preselectedRoomCode && room.room_type_code === selectedRoom;
+          
+          {/* Room Selection Cards */}
+          <Row className="g-4 justify-content-center">
+            {availability.available_rooms?.map((room, index) => {
+              const isPreselected = preselectedRoomCode && 
+                (room.room_type_code === selectedRoom || room.code === selectedRoom || room.name === preselectedRoomCode);
+              const roomKey = `${room.room_type_code || room.code || room.name}-${index}`;
+              
+              // Debug pricing - try multiple possible price fields
+              const roomPrice = room.base_rate || room.current_price || room.price || room.starting_price_from || room.rate || 0;
+              
+              // Debug log to see what data we have
+              console.log('Room data for pricing:', {
+                name: room.name || room.room_type_name,
+                base_rate: room.base_rate,
+                current_price: room.current_price,
+                price: room.price,
+                starting_price_from: room.starting_price_from,
+                rate: room.rate,
+                finalPrice: roomPrice,
+                allRoomData: room
+              });
               
               return (
-                <Col md={6} lg={4} key={room.room_type_code} className="mb-4">
+                <Col sm={6} md={4} lg={4} xl={3} key={roomKey}>
                   <Card 
-                    className={`h-100 ${isPreselected ? 'border-primary border-2' : ''}`}
-                    style={isPreselected ? { boxShadow: '0 0 10px rgba(13, 110, 253, 0.3)' } : {}}
+                    className={`h-100 position-relative ${isPreselected ? 'border-primary border-2 shadow' : 'border-light'}`}
                   >
+                    {/* Room Image */}
                     {room.photo_url && (
-                      <Card.Img variant="top" src={room.photo_url} alt={room.room_type_name} />
+                      <div className="room-image">
+                        <Card.Img 
+                          variant="top" 
+                          src={room.photo_url} 
+                          alt={room.name || room.room_type_name}
+                          className="room-image-img"
+                        />
+                      </div>
                     )}
-                    {isPreselected && (
-                      <div className="position-absolute top-0 end-0 m-2">
-                        <span className="badge bg-primary">
+                    
+                    {/* Badges */}
+                    <div className="position-absolute top-0 end-0 m-2 d-flex flex-column align-items-end gap-1">
+                      {isPreselected && (
+                        <span className="badge  fs-6 px-3 py-2">
                           <i className="bi bi-check-circle me-1"></i>
                           Preselected
                         </span>
-                      </div>
-                    )}
-                    <Card.Body>
-                      <Card.Title>{room.room_type_name}</Card.Title>
-                      <p className="text-muted small">
-                        <i className="bi bi-people me-1"></i>
-                        Up to {room.max_occupancy} guests
+                      )}
+                      {room.has_discount && room.discount_percent > 0 && (
+                        <span className="badge bg-success fs-6 px-2">
+                          {room.discount_percent}% OFF
+                        </span>
+                      )}
+                    </div>
+
+                    <Card.Body className="d-flex flex-column p-4">
+                      {/* Room Title */}
+                      <Card.Title className="h5 mb-2">
+                        {room.name || room.room_type_name}
+                      </Card.Title>
+                      
+                      {/* Guest Capacity */}
+                      <p className="text-muted mb-3">
+                        <i className="bi bi-people me-2"></i>
+                        <span>Up to {room.max_occupancy} guests
+                        {room.bed_setup && (
+                          <>
+                            <br />
+                            <i className="bi bi-bed me-2"></i>
+                            {room.bed_setup}
+                          </>
+                        )}</span>
                       </p>
+
+                      {/* Rate Plan */}
+                      {room.rate_plan_name && room.rate_plan_name !== 'Standard Rate' && (
+                        <div className="mb-3">
+                          <span className="badge bg-light text-dark border px-3 py-2">
+                            {room.rate_plan_name}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Pricing Section */}
+                      <div className="mb-3 p-3 bg-light rounded">
+                        <div className="d-flex justify-content-between align-items-center">
+                          <span className="text-muted">Price per night</span>
+                          <div className="text-end">
+                            <div className="h4 mb-0 text-primary fw-bold">
+                              €{parseFloat(roomPrice).toFixed(0)}
+                            </div>
+                            {room.has_discount && room.original_price && parseFloat(room.original_price) > parseFloat(roomPrice) && (
+                              <small className="text-muted">
+                                <s>€{parseFloat(room.original_price).toFixed(0)}</s>
+                              </small>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Policies */}
+                      <div className="mb-3">
+                        <div className={`d-flex align-items-center ${room.is_refundable !== false ? 'text-success' : 'text-warning'}`}>
+                          <i className={`bi ${room.is_refundable !== false ? 'bi-check-circle' : 'bi-exclamation-triangle'} me-2`}></i>
+                          <small className="fw-medium">
+                            {room.is_refundable !== false ? 'Refundable' : 'Non-Refundable'}
+                          </small>
+                        </div>
+                      </div>
+
+                      {/* Availability Note */}
                       {room.note && (
-                        <Alert variant="warning" className="py-2">
-                          <small>{room.note}</small>
+                        <Alert variant="info" className="py-2 small">
+                          {room.note}
                         </Alert>
                       )}
+
+                      {/* Action Button */}
                       <Button 
                         variant={isPreselected ? "success" : "primary"}
-                        className="w-100"
-                        onClick={() => getPriceQuote(room.room_type_code)}
+                        className="w-100 mt-auto py-2"
+                        onClick={() => getPriceQuote(room.room_type_code || room.code || room.name)}
                         disabled={!room.is_available || loading}
+                        size="lg"
                       >
                         {loading ? (
                           <Spinner animation="border" size="sm" />
                         ) : isPreselected ? (
                           <>
-                            <i className="bi bi-check-circle me-2"></i>
+                            <i className="bi bi-arrow-right me-2"></i>
                             Continue with This Room
                           </>
                         ) : (
-                          'Select Room'
+                          <>
+                            <i className="bi bi-check me-2"></i>
+                            Select This Room
+                          </>
                         )}
                       </Button>
                     </Card.Body>
@@ -399,128 +496,132 @@ const BookingPage = () => {
             })}
           </Row>
         </>
+        </div>
       )}
 
       {/* Step 3: Guest Information */}
       {step === 3 && quote && (
-        <Row>
-          <Col lg={8}>
-            <Card className="mb-4">
-              <Card.Body className="p-4">
-                <h4 className="mb-4">Guest Information</h4>
-                <Form onSubmit={createBooking}>
-                  <Row>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label>First Name *</Form.Label>
-                        <Form.Control
-                          type="text"
-                          value={guestInfo.firstName}
-                          onChange={(e) => setGuestInfo({ ...guestInfo, firstName: e.target.value })}
-                          required
-                        />
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label>Last Name *</Form.Label>
-                        <Form.Control
-                          type="text"
-                          value={guestInfo.lastName}
-                          onChange={(e) => setGuestInfo({ ...guestInfo, lastName: e.target.value })}
-                          required
-                        />
-                      </Form.Group>
-                    </Col>
-                  </Row>
+        <div className={`booking-step booking-step--3 booking-step--preset-${preset}`}>
+          <Row>
+            <Col lg={8}>
+              <Card className="mb-4">
+                <Card.Body className="p-4">
+                  <h4 className="mb-4">Guest Information</h4>
+                  <Form onSubmit={createBooking}>
+                    <Row>
+                      <Col md={6}>
+                        <Form.Group className="mb-3">
+                          <Form.Label>First Name *</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={guestInfo.firstName}
+                            onChange={(e) => setGuestInfo({ ...guestInfo, firstName: e.target.value })}
+                            required
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6}>
+                        <Form.Group className="mb-3">
+                          <Form.Label>Last Name *</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={guestInfo.lastName}
+                            onChange={(e) => setGuestInfo({ ...guestInfo, lastName: e.target.value })}
+                            required
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
 
-                  <Form.Group className="mb-3">
-                    <Form.Label>Email *</Form.Label>
-                    <Form.Control
-                      type="email"
-                      value={guestInfo.email}
-                      onChange={(e) => setGuestInfo({ ...guestInfo, email: e.target.value })}
-                      required
-                    />
-                  </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Email *</Form.Label>
+                      <Form.Control
+                        type="email"
+                        value={guestInfo.email}
+                        onChange={(e) => setGuestInfo({ ...guestInfo, email: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
 
-                  <Form.Group className="mb-3">
-                    <Form.Label>Phone *</Form.Label>
-                    <Form.Control
-                      type="tel"
-                      value={guestInfo.phone}
-                      onChange={(e) => setGuestInfo({ ...guestInfo, phone: e.target.value })}
-                      required
-                    />
-                  </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Phone *</Form.Label>
+                      <Form.Control
+                        type="tel"
+                        value={guestInfo.phone}
+                        onChange={(e) => setGuestInfo({ ...guestInfo, phone: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
 
-                  <Form.Group className="mb-4">
-                    <Form.Label>Special Requests (Optional)</Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      rows={3}
-                      value={guestInfo.specialRequests}
-                      onChange={(e) => setGuestInfo({ ...guestInfo, specialRequests: e.target.value })}
-                      placeholder="e.g., Late check-in, specific floor preference..."
-                    />
-                  </Form.Group>
+                    <Form.Group className="mb-4">
+                      <Form.Label>Special Requests (Optional)</Form.Label>
+                      <Form.Control
+                        as="textarea"
+                        rows={3}
+                        value={guestInfo.specialRequests}
+                        onChange={(e) => setGuestInfo({ ...guestInfo, specialRequests: e.target.value })}
+                          placeholder="e.g., Late check-in, specific floor preference..."
+                      />
+                    </Form.Group>
 
-                  <Button type="submit" variant="success" size="lg" disabled={loading}>
-                    {loading ? <Spinner animation="border" size="sm" /> : 'Confirm Booking'}
-                  </Button>
-                </Form>
-              </Card.Body>
+                    <Button type="submit" variant="success" size="lg" disabled={loading}>
+                      {loading ? <Spinner animation="border" size="sm" /> : 'Confirm Booking'}
+                    </Button>
+                  </Form>
+                </Card.Body>
             </Card>
-          </Col>
+            </Col>
 
-          <Col lg={4}>
-            <Card className="sticky-top" style={{ top: '100px' }}>
-              <Card.Body>
-                <h5 className="mb-3">Booking Summary</h5>
-                <div className="mb-3">
-                  <small className="text-muted">Dates</small>
-                  <p className="mb-1">{dates.checkIn} to {dates.checkOut}</p>
-                  <small className="text-muted">{quote.breakdown?.number_of_nights} nights</small>
-                </div>
-                
-                <div className="mb-3">
-                  <small className="text-muted">Guests</small>
-                  <p className="mb-0">{guests.adults} adults, {guests.children} children</p>
-                </div>
+            <Col lg={4}>
+              <Card className="sticky-top booking-summary-card">
+                <Card.Body>
+                  <h5 className="mb-3">Booking Summary</h5>
+                  <div className="mb-3">
+                    <small className="text-muted">Dates</small>
+                    <p className="mb-1">{dates.checkIn} to {dates.checkOut}</p>
+                    <small className="text-muted">{quote.breakdown?.number_of_nights} nights</small>
+                  </div>
+                  
+                  <div className="mb-3">
+                    <small className="text-muted">Guests</small>
+                    <p className="mb-0">{guests.adults} adults, {guests.children} children</p>
+                  </div>
 
-                <hr />
+                  <hr />
 
                 <div className="mb-2 d-flex justify-content-between">
                   <span>Subtotal:</span>
                   <span>€{quote.breakdown?.subtotal}</span>
                 </div>
-                <div className="mb-2 d-flex justify-content-between">
-                  <span>Taxes & Fees:</span>
-                  <span>€{quote.breakdown?.taxes}</span>
-                </div>
-                {quote.breakdown?.discount !== "0.00" && (
-                  <div className="mb-2 d-flex justify-content-between text-success">
-                    <span>Discount:</span>
-                    <span>-€{quote.breakdown?.discount}</span>
+                  <div className="mb-2 d-flex justify-content-between">
+                    <span>Taxes & Fees:</span>
+                    <span>€{quote.breakdown?.taxes}</span>
                   </div>
-                )}
-                
-                <hr />
-                
-                <div className="d-flex justify-content-between">
-                  <strong>Total:</strong>
-                  <strong className="fs-4 text-primary">€{quote.breakdown?.total}</strong>
-                </div>
+                  {quote.breakdown?.discount !== "0.00" && (
+                    <div className="mb-2 d-flex justify-content-between text-success">
+                      <span>Discount:</span>
+                      <span>-€{quote.breakdown?.discount}</span>
+                    </div>
+                  )}
+                  
+                  <hr />
+                  
+                  <div className="d-flex justify-content-between">
+                    <strong>Total:</strong>
+                    <strong className="fs-4 text-primary">€{quote.breakdown?.total}</strong>
+                  </div>
               </Card.Body>
-            </Card>
-          </Col>
-        </Row>
+              </Card>
+            </Col>
+          </Row>
+        </div>
       )}
 
       {/* Step 4: Payment */}
       {step === 4 && bookingData && quote && (
-        <Row className="justify-content-center">
-          <Col lg={8}>
+        <div className={`booking-step booking-step--4 booking-step--preset-${preset}`}>
+          <Row className="justify-content-center">
+            <Col lg={8}>
             <Card className="mb-4">
               <Card.Body className="p-4">
                 <h4 className="mb-4">Complete Payment</h4>
@@ -582,39 +683,14 @@ const BookingPage = () => {
                 </Form>
               </Card.Body>
             </Card>
-          </Col>
-        </Row>
+            </Col>
+          </Row>
+        </div>
       )}
 
-      <style jsx>{`
-        .step-indicator {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          opacity: 0.4;
-        }
-        
-        .step-indicator.active {
-          opacity: 1;
-        }
-        
-        .step-number {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background: #dee2e6;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: bold;
-        }
-        
-        .step-indicator.active .step-number {
-          background: #0d6efd;
-          color: white;
-        }
-      `}</style>
-    </Container>
+
+      </Container>
+    </div>
   );
 };
 

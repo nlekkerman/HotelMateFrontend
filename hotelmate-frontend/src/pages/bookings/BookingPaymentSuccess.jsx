@@ -13,6 +13,7 @@ const BookingPaymentSuccess = () => {
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(null);
   const [error, setError] = useState(null);
+  const [preset, setPreset] = useState(1);
 
   useEffect(() => {
     if (!bookingId) {
@@ -33,7 +34,11 @@ const BookingPaymentSuccess = () => {
     try {
       // Try to fetch booking details
       const response = await api.get(`/bookings/${bookingId}/`);
+      console.log('Booking API Response:', response.data);
       setBooking(response.data);
+      const hotelPreset = response.data.hotel_preset || response.data.hotel?.preset || response.data.hotel?.global_style_variant || 1;
+      console.log('Setting booking payment success preset to:', hotelPreset);
+      setPreset(hotelPreset);
       setError(null);
       
       // Store booking in localStorage for My Bookings feature
@@ -67,19 +72,29 @@ const BookingPaymentSuccess = () => {
 
   if (loading) {
     return (
-      <Container className="py-5">
+      <div
+        className={`hotel-public-page booking-page page-style-${preset}`}
+        data-preset={preset}
+      >
+      <Container className="py-5 booking-layout booking-layout--payment-success">
         <Card className="text-center p-5">
           <Spinner animation="border" variant="primary" style={{ width: '3rem', height: '3rem', margin: '0 auto' }} />
           <h4 className="mt-4">Processing your payment...</h4>
           <p className="text-muted">Please wait while we confirm your booking.</p>
         </Card>
-      </Container>
+        </Container>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Container className="py-5">
+      <div
+        className={`hotel-public-page booking-page page-style-${preset}`}
+        data-preset={preset}
+        style={{ minHeight: '100vh' }}
+      >
+      <Container className="py-5 booking-layout booking-layout--payment-success">
         <Alert variant="warning" className="text-center">
           <i className="bi bi-exclamation-triangle me-2"></i>
           {error}
@@ -89,7 +104,8 @@ const BookingPaymentSuccess = () => {
             Back to Hotels
           </Link>
         </div>
-      </Container>
+        </Container>
+      </div>
     );
   }
 
@@ -98,7 +114,12 @@ const BookingPaymentSuccess = () => {
   }
 
   return (
-    <Container className="py-5">
+    <div
+      className={`hotel-public-page booking-page page-style-${preset}`}
+      data-preset={preset}
+      style={{ minHeight: '100vh' }}
+    >
+    <Container className="py-5 booking-layout booking-layout--payment-success">
       <div className="text-center mb-4">
         <div className="text-success mb-3">
           <i className="bi bi-check-circle-fill" style={{ fontSize: '4rem' }}></i>
@@ -198,10 +219,17 @@ const BookingPaymentSuccess = () => {
             <Button 
               variant="primary" 
               size="lg"
-              onClick={() => navigate(`/${booking.hotel?.slug || ''}`)}
+              onClick={() => navigate(`/hotel/${booking.hotel?.slug || ''}`)}
             >
               <i className="bi bi-house-door me-2"></i>
               Back to Hotel
+            </Button>
+            <Button 
+              variant="success"
+              onClick={() => navigate('/my-bookings')}
+            >
+              <i className="bi bi-calendar-check me-2"></i>
+              View My Bookings
             </Button>
             <Button 
               variant="outline-secondary"
@@ -218,6 +246,7 @@ const BookingPaymentSuccess = () => {
         <strong>Need help?</strong> Contact the hotel directly if you have any questions about your booking.
       </Alert>
     </Container>
+    </div>
   );
 };
 

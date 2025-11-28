@@ -385,6 +385,33 @@ const HotelPublicPage = () => {
       {!isEmpty && !pageData.sections.some(s => s.section_type === 'footer') && (
         <FooterSectionPreset hotel={pageData.hotel} />
       )}
+
+      {/* My Bookings Floating Button - Show if user has bookings in localStorage */}
+      {(() => {
+        const existingBookings = JSON.parse(localStorage.getItem('myBookings') || '[]');
+        const hasBookings = existingBookings.length > 0;
+        
+        if (!hasBookings) return null;
+        
+        return (
+          <div className="position-fixed" style={{ bottom: '20px', right: '20px', zIndex: 1050 }}>
+            <Link 
+              to="/my-bookings" 
+              className="btn btn-primary btn-lg shadow-lg"
+              style={{ 
+                borderRadius: '50px',
+                padding: '12px 24px',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                textDecoration: 'none'
+              }}
+            >
+              <i className="bi bi-calendar-check me-2"></i>
+              My Bookings ({existingBookings.length})
+            </Link>
+          </div>
+        );
+      })()}
     </div>
   );
 };

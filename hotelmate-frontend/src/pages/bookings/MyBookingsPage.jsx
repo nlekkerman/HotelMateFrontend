@@ -9,6 +9,7 @@ const MyBookingsPage = () => {
   const { hotelSlug } = useParams();
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
+  const [preset, setPreset] = useState(1);
 
   useEffect(() => {
     // Load bookings from localStorage
@@ -56,7 +57,12 @@ const MyBookingsPage = () => {
   };
 
   return (
-    <Container className="py-5">
+    <div
+      className={`hotel-public-page booking-page page-style-${preset}`}
+      data-preset={preset}
+      style={{ minHeight: '100vh' }}
+    >
+      <Container className="py-5 booking-layout booking-layout--my-bookings">
       {/* Header */}
       <Row className="mb-4">
         <Col>
@@ -100,6 +106,7 @@ const MyBookingsPage = () => {
         </Card>
       ) : (
         <>
+          <div className={`booking-list booking-step--preset-${preset}`}>
           <Row className="g-4">
             {bookings.map((booking, index) => (
               <Col key={booking.booking_id || index} lg={6}>
@@ -170,6 +177,7 @@ const MyBookingsPage = () => {
               </Col>
             ))}
           </Row>
+          </div>
 
           {/* Clear Bookings Button */}
           <Row className="mt-4">
@@ -193,7 +201,8 @@ const MyBookingsPage = () => {
         <strong>Note:</strong> These bookings are stored locally on your device. 
         For official booking records, please check your confirmation email or contact the hotel directly.
       </Alert>
-    </Container>
+      </Container>
+    </div>
   );
 };
 

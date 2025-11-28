@@ -9,10 +9,16 @@ const BookingConfirmation = () => {
   const { bookingId } = useParams();
   const location = useLocation();
   const { booking, hotel, room, dates, guests } = location.state || {};
+  const preset = (hotel && (hotel.preset || hotel.public_settings?.preset || hotel.global_style_variant)) || 1;
 
   if (!booking || !hotel) {
     return (
-      <Container className="py-5">
+      <div
+        className={`hotel-public-page booking-page page-style-${preset}`}
+        data-preset={preset}
+        style={{ minHeight: '100vh' }}
+      >
+      <Container className="py-5 booking-layout booking-layout--confirmation">
         <Alert variant="warning" className="text-center">
           <i className="bi bi-exclamation-triangle me-2"></i>
           Booking details not available
@@ -22,12 +28,18 @@ const BookingConfirmation = () => {
             Back to Hotels
           </Link>
         </div>
-      </Container>
+        </Container>
+      </div>
     );
   }
 
   return (
-    <Container className="py-5">
+    <div
+      className={`hotel-public-page booking-page page-style-${preset}`}
+      data-preset={preset}
+      style={{ minHeight: '100vh' }}
+    >
+    <Container className="py-5 booking-layout booking-layout--confirmation">
       <Row className="justify-content-center">
         <Col lg={8}>
           {/* Success Message */}
@@ -203,6 +215,7 @@ const BookingConfirmation = () => {
         }
       `}</style>
     </Container>
+    </div>
   );
 };
 

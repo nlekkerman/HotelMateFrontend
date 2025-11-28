@@ -532,12 +532,98 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
 
             {/* Right side: Main Navigation Items - Categories & Uncategorized */}
             <div className="d-flex align-items-center justify-content-end flex-grow-1 gap-1 flex-wrap">
-              {/* Uncategorized items first (Home, Settings) */}
+              {/* Uncategorized items first (Home, Settings, Room Bookings) */}
               {uncategorizedItems.map((item) => {
                 const orderCount = getOrderCountForItem(item);
                 const showNewBadge = hasNewBadgeForItem(item);
                 const hasNotification = orderCount > 0 || showNewBadge;
                 
+                // Special handling for Room Bookings with dropdown
+                if (item.slug === 'room_bookings') {
+                  const isOpen = openCategoryId === `uncategorized_${item.slug}`;
+                  
+                  return (
+                    <div 
+                      key={item.slug}
+                      className="position-relative category-nav-wrapper"
+                      ref={(el) => (categoryRefs.current[`uncategorized_${item.slug}`] = el)}
+                      onMouseEnter={() => handleCategoryHoverEnter(`uncategorized_${item.slug}`)}
+                      onMouseLeave={handleCategoryHoverLeave}
+                    >
+                      <div
+                        className={`top-nav-link category-toggle ${
+                          isPartialActive(item.path) ? "active" : ""
+                        } ${isOpen ? "open" : ""}`}
+                        title={item.name}
+                      >
+                        <div className="top-nav-item position-relative">
+                          <span className="top-nav-label">{item.name}</span>
+                          
+                          {hasNotification && (
+                            <span className="notification-badge with-label">
+                              {orderCount > 0 ? orderCount : showNewBadge ? "NEW" : ""}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Room Bookings Dropdown */}
+                      {isOpen && (
+                        <div 
+                          className="category-dropdown"
+                          style={{
+                            background: mainColor 
+                              ? `linear-gradient(135deg, ${mainColor}f5 0%, ${mainColor}f8 100%)`
+                              : 'linear-gradient(135deg, rgba(30, 30, 30, 0.98) 0%, rgba(40, 40, 40, 0.98) 100%)'
+                          }}
+                        >
+                          <Link
+                            className="category-dropdown-item"
+                            to={`/staff/hotel/${hotelIdentifier}/bookings?filter=pending`}
+                            onClick={() => setOpenCategoryId(null)}
+                          >
+                            <i className="bi bi-clock me-2" />
+                            <span>Pending Bookings</span>
+                          </Link>
+                          <Link
+                            className="category-dropdown-item"
+                            to={`/staff/hotel/${hotelIdentifier}/bookings?filter=confirmed`}
+                            onClick={() => setOpenCategoryId(null)}
+                          >
+                            <i className="bi bi-check-circle me-2" />
+                            <span>Confirmed Bookings</span>
+                          </Link>
+                          <Link
+                            className="category-dropdown-item"
+                            to={`/staff/hotel/${hotelIdentifier}/bookings?filter=cancelled`}
+                            onClick={() => setOpenCategoryId(null)}
+                          >
+                            <i className="bi bi-x-circle me-2" />
+                            <span>Cancelled Bookings</span>
+                          </Link>
+                          <Link
+                            className="category-dropdown-item"
+                            to={`/staff/hotel/${hotelIdentifier}/bookings`}
+                            onClick={() => setOpenCategoryId(null)}
+                          >
+                            <i className="bi bi-calendar-event me-2" />
+                            <span>All Bookings</span>
+                          </Link>
+                          <Link
+                            className="category-dropdown-item"
+                            to={`/staff/hotel/${hotelIdentifier}/bookings?filter=history`}
+                            onClick={() => setOpenCategoryId(null)}
+                          >
+                            <i className="bi bi-archive me-2" />
+                            <span>Booking History</span>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                
+                // Regular uncategorized items (Home, Settings)
                 return (
                   <Link
                     key={item.slug}
@@ -603,6 +689,67 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                           const showNewBadge = hasNewBadgeForItem(item);
                           const hasItemNotification = orderCount > 0 || showNewBadge;
                           
+                          // Special handling for Room Bookings with sub-dropdown
+                          if (item.slug === 'room_bookings') {
+                            return (
+                              <div key={item.slug} className="category-dropdown-item-with-submenu">
+                                <div
+                                  className={`category-dropdown-item ${
+                                    isPartialActive(item.path) ? "active" : ""
+                                  }`}
+                                >
+                                  <i className={`bi bi-${item.icon} me-2`} />
+                                  <span>{item.name}</span>
+                                  <i className="bi bi-chevron-right ms-auto"></i>
+                                  
+                                  {hasItemNotification && (
+                                    <span className="item-notification-badge">
+                                      {orderCount > 0 ? orderCount : "NEW"}
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                {/* Room Bookings Sub-dropdown */}
+                                <div className="sub-dropdown">
+                                  <Link
+                                    className="sub-dropdown-item"
+                                    to={`/staff/hotel/${hotelIdentifier}/bookings?filter=pending`}
+                                    onClick={() => setOpenCategoryId(null)}
+                                  >
+                                    <i className="bi bi-clock me-2" />
+                                    <span>Pending Bookings</span>
+                                    {/* Add badge for pending count when logic is ready */}
+                                  </Link>
+                                  <Link
+                                    className="sub-dropdown-item"
+                                    to={`/staff/hotel/${hotelIdentifier}/bookings?filter=confirmed`}
+                                    onClick={() => setOpenCategoryId(null)}
+                                  >
+                                    <i className="bi bi-check-circle me-2" />
+                                    <span>Confirmed Bookings</span>
+                                  </Link>
+                                  <Link
+                                    className="sub-dropdown-item"
+                                    to={`/staff/hotel/${hotelIdentifier}/bookings`}
+                                    onClick={() => setOpenCategoryId(null)}
+                                  >
+                                    <i className="bi bi-calendar-event me-2" />
+                                    <span>All Bookings</span>
+                                  </Link>
+                                  <Link
+                                    className="sub-dropdown-item"
+                                    to={`/staff/hotel/${hotelIdentifier}/bookings?filter=history`}
+                                    onClick={() => setOpenCategoryId(null)}
+                                  >
+                                    <i className="bi bi-archive me-2" />
+                                    <span>Booking History</span>
+                                  </Link>
+                                </div>
+                              </div>
+                            );
+                          }
+                          
+                          // Regular category items
                           return (
                             <Link
                               key={item.slug}
@@ -776,3 +923,63 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
 
 // No need for separate PusherProvider - already wrapped in App.jsx
 export default BigScreenNavbar;
+
+// Add styles for room bookings sub-dropdown
+const styleElement = document.createElement('style');
+styleElement.textContent = `
+  .category-dropdown-item-with-submenu {
+    position: relative;
+  }
+
+  .category-dropdown-item-with-submenu:hover .sub-dropdown {
+    display: block;
+  }
+
+  .sub-dropdown {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    min-width: 200px;
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    display: none;
+    z-index: 1001;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .sub-dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    color: #ffffff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .sub-dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    transform: translateX(2px);
+  }
+
+  .category-dropdown-item-with-submenu .category-dropdown-item {
+    position: relative;
+  }
+
+  .category-dropdown-item-with-submenu .category-dropdown-item .bi-chevron-right {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-left: auto;
+  }
+`;
+
+if (!document.head.querySelector('[data-component="BigScreenNavbar"]')) {
+  styleElement.setAttribute('data-component', 'BigScreenNavbar');
+  document.head.appendChild(styleElement);
+}

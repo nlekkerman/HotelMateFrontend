@@ -17,6 +17,7 @@ const DEFAULT_NAV_ITEMS = [
   { slug: 'roster', name: 'Roster', path: '/roster/{hotelSlug}', icon: 'calendar-week' },
   { slug: 'staff', name: 'Staff', path: '/{hotelSlug}/staff', icon: 'person-badge' },
   { slug: 'restaurants', name: 'Restaurants', path: '/{hotelSlug}/restaurants', icon: 'shop-window' },
+  { slug: 'room_bookings', name: 'Room Bookings', path: '/staff/hotel/{hotelSlug}/bookings', icon: 'bed', hasDropdown: true },
   { slug: 'bookings', name: 'Restaurant Bookings', path: '/bookings', icon: 'calendar-check' },
   { slug: 'maintenance', name: 'Maintenance', path: '/maintenance', icon: 'tools' },
   { slug: 'hotel_info', name: 'Hotel Info', path: '/hotel_info/{hotelSlug}', icon: 'info-circle' },
@@ -76,7 +77,10 @@ export function useNavigation() {
     items.forEach(item => {
       const categoryId = getCategoryForNavItem(item.slug);
       
-      if (categoryId) {
+      // Special handling: room_bookings is always independent
+      if (item.slug === 'room_bookings') {
+        uncategorized.push(item);
+      } else if (categoryId) {
         if (!categorized[categoryId]) {
           categorized[categoryId] = [];
         }

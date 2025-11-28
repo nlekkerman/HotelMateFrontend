@@ -3,7 +3,7 @@ import { Modal, Button, Form, Alert, Spinner } from 'react-bootstrap';
 import { FaUnlock, FaUserPlus, FaTrash } from 'react-icons/fa';
 import api from '@/services/api';
 import { toast } from 'react-toastify';
-import ConfirmationModal from '@/components/modals/ConfirmationModal';
+import StaffConfirmationModal from '@/components/staff/modals/StaffConfirmationModal';
 import { useAuth } from '@/context/AuthContext';
 
 export const ReopenPeriodModal = ({ show, onHide, period, hotelSlug, onSuccess }) => {
@@ -383,9 +383,11 @@ export const ReopenPeriodModal = ({ show, onHide, period, hotelSlug, onSuccess }
 
       {/* Confirmation Modal for Reopening */}
       {showConfirmModal && (
-        <ConfirmationModal
+        <StaffConfirmationModal
+          show={showConfirmModal}
           title="Confirm Reopen Period"
           message={`Are you sure you want to reopen "${period?.period_name}"? This will change the period status to OPEN and the stocktake status to DRAFT, allowing editing of stocktake data.`}
+          preset="approve_request"
           onConfirm={handleConfirmReopen}
           onCancel={() => setShowConfirmModal(false)}
         />
@@ -393,9 +395,11 @@ export const ReopenPeriodModal = ({ show, onHide, period, hotelSlug, onSuccess }
 
       {/* Confirmation Modal for Revoking Permission */}
       {showRevokeModal && staffToRevoke && (
-        <ConfirmationModal
+        <StaffConfirmationModal
+          show={showRevokeModal}
           title="Confirm Revoke Permission"
           message={`Are you sure you want to revoke reopen permission for ${staffToRevoke.staffName}?`}
+          preset="reject_request"
           onConfirm={handleConfirmRevoke}
           onCancel={() => {
             setShowRevokeModal(false);

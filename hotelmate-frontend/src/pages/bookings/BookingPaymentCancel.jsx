@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Container, Card, Alert, Button } from 'react-bootstrap';
 
@@ -8,9 +8,15 @@ import { Container, Card, Alert, Button } from 'react-bootstrap';
 const BookingPaymentCancel = () => {
   const [searchParams] = useSearchParams();
   const bookingId = searchParams.get('booking_id');
+  const [preset] = useState(1); // Can be extended later with hotel data
 
   return (
-    <Container className="py-5">
+    <div
+      className={`hotel-public-page booking-page page-style-${preset}`}
+      data-preset={preset}
+      style={{ minHeight: '100vh' }}
+    >
+    <Container className="py-5 booking-layout booking-layout--payment-cancel">
       <div className="text-center mb-4">
         <div className="text-warning mb-3">
           <i className="bi bi-x-circle" style={{ fontSize: '4rem' }}></i>
@@ -68,6 +74,7 @@ const BookingPaymentCancel = () => {
         </Card.Body>
       </Card>
     </Container>
+    </div>
   );
 };
 

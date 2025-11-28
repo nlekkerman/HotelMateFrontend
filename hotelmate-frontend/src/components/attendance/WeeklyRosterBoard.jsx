@@ -14,7 +14,7 @@ import ShiftLocationBar from "@/components/attendance/ShiftLocationBar";
 import { FaUserCircle } from "react-icons/fa";
 import CopyPeriodModal from "@/components/attendance/modals/CopyPeriodModal";
 import CopyDayModal from "@/components/attendance/modals/CopyDayModal";
-import SuccessModal from "@/components/modals/SuccessModal";
+import StaffSuccessModal from "@/components/staff/modals/StaffSuccessModal";
 import api from "@/services/api";
 import { FiCopy } from "react-icons/fi";
 
@@ -479,9 +479,10 @@ return (
       loading={loadingCopyStaffWeek}
     />
 
-    <SuccessModal
+    <StaffSuccessModal
       show={showSuccessModal}
       message={successMessage}
+      preset="operation_completed"
       onClose={() => setShowSuccessModal(false)}
     />
   </div>

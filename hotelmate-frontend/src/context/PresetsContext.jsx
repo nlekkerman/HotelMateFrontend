@@ -25,9 +25,9 @@ export const PresetsProvider = ({ children }) => {
         setPresets(data);
         setError(null);
       } catch (err) {
-        console.error('[PresetsContext] Failed to load presets:', err);
+        console.warn('[PresetsContext] Failed to load presets:', err);
         setError(err);
-        // Set empty presets to prevent null issues
+        // Set empty presets to prevent null issues - disable API calls
         setPresets({
           section: {},
           card: [],
@@ -35,7 +35,7 @@ export const PresetsProvider = ({ children }) => {
           image: [],
           news_block: [],
           section_header: [],
-          page_theme: [],
+          page_theme: []
         });
       } finally {
         setLoading(false);

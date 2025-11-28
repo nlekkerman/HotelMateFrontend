@@ -30,15 +30,29 @@ class PresetsService {
       const response = await fetch(`${baseURL}public/presets/`);
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // If presets endpoint doesn't exist, return empty presets
+        console.warn('[PresetsService] Presets endpoint not available, using fallback');
+        this.presets = {
+          section: {},
+          card: [],
+          room_card: [],
+          image: []
+        };
+        return this.presets;
       }
       
       this.presets = await response.json();
       return this.presets;
     } catch (error) {
-      console.error('[PresetsService] Failed to fetch presets:', error);
-      this.error = error;
-      throw error;
+      console.warn('[PresetsService] Failed to fetch presets, using fallback:', error);
+      // Return empty presets structure to prevent crashes
+      this.presets = {
+        section: {},
+        card: [],
+        room_card: [],
+        image: []
+      };
+      return this.presets;
     } finally {
       this.loading = false;
     }

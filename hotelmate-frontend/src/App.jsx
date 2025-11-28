@@ -85,6 +85,7 @@ import DinnerBookingList from "@/components/bookings/DinnerBookingList";
 import Bookings from "@/components/bookings/Bookings";
 import RestaurantManagementDashboard from "@/pages/bookings/RestaurantManagementDashboard";
 import StaffBookingsPage from "@/pages/bookings/StaffBookingsPage";
+import BookingManagementPage from "@/pages/staff/BookingManagementPage";
 import Restaurant from "@/components/restaurants/Restaurant";
 import HotelInfo from "@/pages/hotel_info/HotelInfo";
 import GoodToKnow from "@/components/hotel_info/GoodToKnow";
@@ -302,6 +303,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               {/* Hotel Portal - Public (guest view) or Staff (with toggle) */}
               <Route path="/:hotelSlug" element={<HotelPortalPage />} />
               <Route path="/:hotelSlug/book" element={<BookingPage />} />
+              <Route path="/public/booking/:hotelSlug" element={<BookingPage />} />
               <Route path="/:hotelSlug/my-bookings" element={<MyBookingsPage />} />
               <Route path="/my-bookings" element={<MyBookingsPage />} />
               <Route path="/booking/confirmation/:bookingId" element={<BookingConfirmation />} />
@@ -382,7 +384,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
 
               {/* Bookings */}
               <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
-              <Route path="/staff/hotel/:hotelSlug/bookings" element={<ProtectedRoute><StaffBookingsPage /></ProtectedRoute>} />
+              <Route path="/staff/hotel/:hotelSlug/bookings" element={<ProtectedRoute><BookingManagementPage /></ProtectedRoute>} />
 
               {/* Hotel Info */}
               <Route path="/hotel_info/:hotel_slug" element={<ProtectedRoute><HotelInfo /></ProtectedRoute>} />

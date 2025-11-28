@@ -3,6 +3,16 @@
 ## Overview
 Complete guide for implementing the room booking flow from the public hotel page through Stripe payment integration.
 
+Frontend booking entry route:
+
+- `GET /public/booking/{hotel_slug}?room_type_code={CODE}`
+
+Public booking API endpoints (for guest UI):
+
+- `GET /api/public/hotel/{slug}/availability/`
+- `POST /api/public/hotel/{slug}/pricing/quote/`
+- `POST /api/public/hotel/{slug}/bookings/`
+
 ---
 
 ## 🎯 User Journey
@@ -20,7 +30,7 @@ Complete guide for implementing the room booking flow from the public hotel page
 ## 📍 Backend API Endpoints (Already Implemented)
 
 ### 1. Check Room Availability
-**Endpoint:** `GET /api/hotel/{slug}/availability/`
+**Endpoint:** `GET /api/public/hotel/{slug}/availability/`
 
 **Query Parameters:**
 ```javascript
@@ -59,7 +69,7 @@ Complete guide for implementing the room booking flow from the public hotel page
 ---
 
 ### 2. Get Pricing Quote
-**Endpoint:** `POST /api/hotel/{slug}/pricing/quote/`
+**Endpoint:** `POST /api/public/hotel/{slug}/pricing/quote/`
 
 **Request Body:**
 ```json
@@ -120,7 +130,7 @@ Complete guide for implementing the room booking flow from the public hotel page
 ---
 
 ### 3. Create Booking
-**Endpoint:** `POST /api/hotel/{slug}/bookings/`
+**Endpoint:** `POST /api/public/hotel/{slug}/bookings/`
 
 **Request Body:**
 ```json
@@ -184,7 +194,7 @@ Complete guide for implementing the room booking flow from the public hotel page
 ---
 
 ### 4. Create Stripe Payment Session
-**Endpoint:** `POST /api/hotel/{slug}/bookings/{booking_id}/payment/`
+**Endpoint:** `POST /api/public/hotel/{slug}/bookings/{booking_id}/payment/`
 
 **Request Body:**
 ```json
@@ -210,7 +220,7 @@ Complete guide for implementing the room booking flow from the public hotel page
 ---
 
 ### 5. Verify Payment (After Stripe Redirect)
-**Endpoint:** `GET /api/hotel/{slug}/bookings/{booking_id}/verify-payment/?session_id={session_id}`
+**Endpoint:** `GET /api/public/hotel/{slug}/bookings/{booking_id}/verify-payment/?session_id={session_id}`
 
 **Response:**
 ```json
@@ -238,7 +248,7 @@ const RoomCard = ({ roomType, hotelSlug }) => {
 
   const handleBookNow = () => {
     // Redirect to booking wizard with pre-selected room
-    navigate(`/booking/${hotelSlug}`, {
+    navigate(`/public/booking/${hotelSlug}`, {
       state: {
         roomTypeCode: roomType.code,
         roomTypeName: roomType.name,
@@ -550,7 +560,7 @@ const API_BASE = '/api';
 export const checkAvailability = async (hotelSlug, params) => {
   const queryString = new URLSearchParams(params).toString();
   const response = await fetch(
-    `${API_BASE}/hotel/${hotelSlug}/availability/?${queryString}`
+    `${API_BASE}/public/hotel/${hotelSlug}/availability/?${queryString}`
   );
   if (!response.ok) throw new Error('Failed to check availability');
   return await response.json();
@@ -558,7 +568,7 @@ export const checkAvailability = async (hotelSlug, params) => {
 
 export const getPricingQuote = async (hotelSlug, data) => {
   const response = await fetch(
-    `${API_BASE}/hotel/${hotelSlug}/pricing/quote/`,
+    `${API_BASE}/public/hotel/${hotelSlug}/pricing/quote/`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -571,7 +581,7 @@ export const getPricingQuote = async (hotelSlug, data) => {
 
 export const createBooking = async (hotelSlug, data) => {
   const response = await fetch(
-    `${API_BASE}/hotel/${hotelSlug}/bookings/`,
+    `${API_BASE}/public/hotel/${hotelSlug}/bookings/`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -584,7 +594,7 @@ export const createBooking = async (hotelSlug, data) => {
 
 export const createPaymentSession = async (hotelSlug, bookingId, urls) => {
   const response = await fetch(
-    `${API_BASE}/hotel/${hotelSlug}/bookings/${bookingId}/payment/`,
+    `${API_BASE}/public/hotel/${hotelSlug}/bookings/${bookingId}/payment/`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -597,7 +607,7 @@ export const createPaymentSession = async (hotelSlug, bookingId, urls) => {
 
 export const verifyPayment = async (hotelSlug, bookingId, sessionId) => {
   const response = await fetch(
-    `${API_BASE}/hotel/${hotelSlug}/bookings/${bookingId}/verify-payment/?session_id=${sessionId}`
+    `${API_BASE}/public/hotel/${hotelSlug}/bookings/${bookingId}/verify-payment/?session_id=${sessionId}`
   );
   if (!response.ok) throw new Error('Failed to verify payment');
   return await response.json();
@@ -674,7 +684,7 @@ export default BookingCancelled;
 
 The backend automatically handles Stripe webhooks at:
 ```
-POST /api/hotel/stripe/webhook/
+POST /api/public/stripe/webhook/
 ```
 
 When payment succeeds, it:
@@ -711,7 +721,7 @@ When payment succeeds, it:
 1. **Add routes to your frontend:**
 ```javascript
 // App.jsx or routes config
-<Route path="/booking/:hotelSlug" element={<BookingWizard />} />
+<Route path="/public/booking/:hotelSlug" element={<BookingWizard />} />
 <Route path="/booking/success" element={<BookingSuccess />} />
 <Route path="/booking/cancelled" element={<BookingCancelled />} />
 ```

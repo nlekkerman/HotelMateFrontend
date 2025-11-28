@@ -9,8 +9,8 @@ import { Button, Badge, Spinner, Alert, Modal, Table, Form } from 'react-bootstr
 import { FaTrash, FaHistory, FaEdit } from 'react-icons/fa';
 import api from '@/services/api';
 import DeletionModal from '@/components/modals/DeletionModal';
-import ConfirmationModal from '@/components/modals/ConfirmationModal';
-import SuccessModal from '@/components/modals/SuccessModal';
+import StaffConfirmationModal from '@/components/staff/modals/StaffConfirmationModal';
+import StaffSuccessModal from '@/components/staff/modals/StaffSuccessModal';
 
 export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, itemName, itemSku }) => {
   const [movements, setMovements] = useState([]);
@@ -451,18 +451,21 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
 
       {/* Edit Confirmation Modal */}
       {showEditConfirm && (
-        <ConfirmationModal
+        <StaffConfirmationModal
+          show={showEditConfirm}
           title="Confirm Update"
           message="Are you sure you want to update this movement? This will recalculate the stocktake variance."
+          preset="confirm_booking"
           onConfirm={handleUpdateConfirm}
           onCancel={() => setShowEditConfirm(false)}
         />
       )}
 
       {/* Success Modal */}
-      <SuccessModal
+      <StaffSuccessModal
         show={showSuccess}
         message={successMessage}
+        preset="data_saved"
         onClose={() => {
           setShowSuccess(false);
           setSuccessMessage('');
