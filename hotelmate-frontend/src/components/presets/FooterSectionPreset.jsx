@@ -26,7 +26,7 @@ const FooterSectionPreset = ({ section, hotel }) => {
     return (
       <footer className={`footer footer--preset-1 ${section?.is_active === false ? 'section-inactive' : ''}`}>
         <div className="section-container">
-          <div className="footer__content-centered">
+          <div className="footer__content-centered ">
             <h5 className={`footer__hotel-name font-preset-${variant}-heading`}>{hotelName}</h5>
             {(hotelCity || hotelCountry) && (
               <p className={`footer__location font-preset-${variant}-body`}>

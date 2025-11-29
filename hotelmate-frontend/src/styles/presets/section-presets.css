@@ -1123,7 +1123,6 @@ rgba(180, 150, 150, 0.03),
 
 .news-section--preset-1 .news-article {
   border-radius: var(--radius-card); /* 8px */
-  padding: var(--space-md); /* Compact padding for news items */
   border: none;
   margin-bottom: var(--space-lg);
   transition: var(--transition-properties) var(--transition-base);
@@ -2140,4 +2139,52 @@ rgba(180, 150, 150, 0.03),
   color: #1a1a1a;
   border: 1px solid rgba(46, 204, 113, 0.3);
   backdrop-filter: blur(5px);
+}
+
+/* ========================================
+   FOOTER CONTENT CENTERED
+   ======================================== */
+
+.footer__content-centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2rem;
+}
+
+.footer__content-centered > * {
+  position: relative;
+}
+
+/* Large screens: horizontal layout with vertical separators */
+@media (min-width: 768px) {
+  .footer__content-centered {
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 3rem;
+  }
+  
+  /* Add vertical line separators between children (except last) */
+  .footer__content-centered > *:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: -1.5rem;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* Small screens: maintain vertical layout, no separators */
+@media (max-width: 767px) {
+  .footer__content-centered {
+    gap: 1.5rem;
+  }
+  
+  .footer__content-centered > *::after {
+    display: none;
+  }
 }

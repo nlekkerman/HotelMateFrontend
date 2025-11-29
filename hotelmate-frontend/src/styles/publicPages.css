@@ -1479,25 +1479,163 @@ section:not(:first-of-type)::before {
   margin-bottom: 1.5rem;
 }
 
-/* Different background colors for each preset with 0.4 alpha */
-.news-section--preset-1 .article-part--middle {
-  background-color: rgba(227, 242, 253, 0.4); /* Light blue */
-}
+/* ========================================
+   UNIFIED MODERN ARTICLE LAYOUT FOR ALL PRESETS
+   Based on Preset 1's clean, modern design
+   ======================================== */
 
-.news-section--preset-2 .article-part--middle {
-  background-color: rgba(232, 222, 248, 0.4); /* Light purple */
+/* Top Part - Consistent across all presets */
+.news-section--preset-1 .article-part--top,
+.news-section--preset-2 .article-part--top,
+.news-section--preset-3 .article-part--top,
+.news-section--preset-4 .article-part--top,
+.news-section--preset-5 .article-part--top {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  margin-bottom: 3rem;
 }
-
-.news-section--preset-3 .article-part--middle {
-  background-color: rgba(255, 243, 224, 0.4); /* Light orange */
+.news-section--preset-1, .news-section--preset-2, .news-section--preset-3,
+.news-section--preset-4, .news-section--preset-5 {
+  padding: 5px !important;
 }
-
-.news-section--preset-4 .article-part--middle {
-  background-color: rgba(220, 252, 231, 0.4); /* Light green */
-}
-
+/* Middle Part - Modern light backgrounds for all presets */
+.news-section--preset-1 .article-part--middle,
+.news-section--preset-2 .article-part--middle,
+.news-section--preset-3 .article-part--middle,
+.news-section--preset-4 .article-part--middle,
 .news-section--preset-5 .article-part--middle {
-  background-color: rgba(254, 226, 226, 0.4); /* Light red */
+  border: 1px solid rgba(59, 169, 255, 0.15);
+  box-shadow: 0 4px 16px rgba(59, 169, 255, 0.08);
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  backdrop-filter: blur(5px);
+}
+
+/* Bottom Part - Consistent modern styling */
+.news-section--preset-1 .article-part--bottom,
+.news-section--preset-2 .article-part--bottom,
+.news-section--preset-3 .article-part--bottom,
+.news-section--preset-4 .article-part--bottom,
+.news-section--preset-5 .article-part--bottom {
+  border-top: 3px solid rgba(59, 169, 255, 0.2);
+  box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.05);
+  padding: 2px;
+  margin: ;
+  background:none;
+}
+
+/* ========================================
+   ARTICLE CHILD CONTAINER PADDING & PRESET STYLES
+   ======================================== */
+
+/* Add padding to key containers and their parents */
+.article-part--top,
+.article-hero-image,
+.article-header {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+/* Parent container padding */
+.article-part--middle {
+  padding: 1.5rem;
+}
+
+.article-text-with-image {
+  position: relative;
+}
+
+/* Preset 1: Clean & Modern - Light styling */
+.news-section--preset-1 .article-part--top {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.news-section--preset-1 .article-hero-image {
+  background: rgba(248, 249, 250, 0.3);
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+}
+
+.news-section--preset-1 .article-header {
+  background: rgba(59, 169, 255, 0.05);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+/* Preset 2: Dark & Elegant - Dark backgrounds */
+.news-section--preset-2 .article-part--top {
+  background: rgba(30, 30, 30, 0.95);
+  color: #ffffff;
+}
+
+.news-section--preset-2 .article-hero-image {
+  background: rgba(20, 20, 20, 0.8);
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+}
+
+.news-section--preset-2 .article-header {
+  background: rgba(40, 40, 40, 0.9);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.news-section--preset-2 .article-title,
+.news-section--preset-2 .article-subtitle,
+.news-section--preset-2 .article-date {
+  color: #ffffff !important;
+}
+
+/* Preset 3: Minimal & Sleek */
+.news-section--preset-3 .article-part--top {
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.news-section--preset-3 .article-hero-image {
+  background: rgba(245, 245, 245, 0.4);
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+}
+
+.news-section--preset-3 .article-header {
+  background: rgba(240, 240, 240, 0.3);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+/* Preset 4: Vibrant & Playful */
+.news-section--preset-4 .article-part--top {
+  background: rgba(255, 245, 250, 0.95);
+}
+
+.news-section--preset-4 .article-hero-image {
+  background: rgba(255, 107, 157, 0.1);
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+}
+
+.news-section--preset-4 .article-header {
+  background: rgba(255, 160, 107, 0.15);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+/* Preset 5: Professional & Structured */
+.news-section--preset-5 .article-part--top {
+  background: rgba(248, 255, 250, 0.95);
+}
+
+.news-section--preset-5 .article-hero-image {
+  background: rgba(46, 204, 113, 0.1);
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+}
+
+.news-section--preset-5 .article-header {
+  background: rgba(48, 225, 124, 0.15);
+  border-radius: 8px;
+  padding: 1.5rem;
 }
 
 /* Larger text for middle section - main article part */

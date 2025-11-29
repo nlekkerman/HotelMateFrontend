@@ -132,7 +132,6 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
       <div 
         className="article-part article-part--top" 
         style={{ 
-          padding: '0px', 
           borderRadius: '8px', 
           marginBottom: '3rem',
           position: 'relative',
@@ -185,7 +184,6 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
       <div 
         className="article-part article-part--middle" 
         style={{ 
-          padding: '1px', 
           borderRadius: '8px', 
           marginBottom: '1.5rem',
           position: 'relative',
@@ -238,7 +236,6 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
           right: '50%',
           marginLeft: '-50vw',
           marginRight: '-50vw',
-          padding: '3rem 0',
           transition: 'box-shadow 0.3s ease'
         }}
         onMouseEnter={() => isStaff && setHoveredPart('bottom')}
@@ -261,7 +258,7 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
             Edit Part 3
           </button>
         )}
-        <div className="article-author-section" style={{ padding: '0 20px', marginTop: '2rem' }}>
+        <div className="article-author-section">
           <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
             {bottomImage && (
               <img 

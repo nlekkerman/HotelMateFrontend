@@ -51,11 +51,10 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
     );
   }
 
-  // Preset 2: Dark & Elegant - Featured Layout
-  if (variant === 2) {
-    const [featuredItem, ...restItems] = newsItems;
+  // All Presets (2-5): Use same structured article layout as Preset 1
+  if (variant >= 2 && variant <= 5) {
     return (
-      <section className={`news-section news-section--preset-2 ${section.is_active === false ? 'section-inactive' : ''}`}>
+      <section className={`news-section news-section--preset-${variant} ${section.is_active === false ? 'section-inactive' : ''}`}>
         <div className="section-container">
           <div className={`section-header section-header--preset-${variant}`}>
             <div className="section-header__content">
@@ -68,199 +67,11 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
               )}
             </div>
           </div>
-          
-          {/* Featured Article */}
-          {featuredItem && (
-            <article className="news-article news-article--featured mb-5">
-              <Row>
-                <Col xs={12} md={6}>
-                  {featuredItem.content_blocks?.find(b => b.block_type === 'image') && (
-                    <div className="news-article__featured-image">
-                      <img 
-                        src={featuredItem.content_blocks.find(b => b.block_type === 'image').image_url}
-                        alt={featuredItem.title}
-                      />
-                    </div>
-                  )}
-                </Col>
-                <Col xs={12} md={6}>
-                  <div className="news-article__featured-content">
-                    <h3 className={`news-article__title-featured font-preset-${variant}-heading`}>{featuredItem.title}</h3>
-                    <p className={`news-article__date font-preset-${variant}-body`}>{new Date(featuredItem.date).toLocaleDateString()}</p>
-                    {featuredItem.summary && (
-                      <p className={`news-article__summary-featured font-preset-${variant}-body`}>{featuredItem.summary}</p>
-                    )}
-                    <div className="news-article__content">
-                      {featuredItem.content_blocks?.filter(b => b.block_type === 'text').slice(0, 2).map((block) => (
-                        <NewsBlockRenderer key={block.id} block={block} />
-                      ))}
-                    </div>
-                    <button className="btn btn-hm btn-news mt-3">
-                      <i className="bi bi-arrow-right-circle me-2"></i>
-                      Read Full Article
-                    </button>
-                  </div>
-                </Col>
-              </Row>
-            </article>
-          )}
-
-          {/* Rest of Articles */}
-          {restItems.length > 0 && (
-            <Row className="g-4">
-              {restItems.map((newsItem) => (
-                <Col key={newsItem.id} xs={12} sm={6} md={4}>
-                  <article className="news-article news-article--card">
-                    <h4 className={`news-article__title-small font-preset-${variant}-subtitle`}>{newsItem.title}</h4>
-                    <p className={`news-article__date-small font-preset-${variant}-body`}>{new Date(newsItem.date).toLocaleDateString()}</p>
-                    {newsItem.summary && (
-                      <p className={`news-article__summary-small font-preset-${variant}-body`}>{newsItem.summary}</p>
-                    )}
-                    <button className="btn btn-hm btn-news mt-2">
-                      <i className="bi bi-arrow-right me-2"></i>
-                      Read More
-                    </button>
-                  </article>
-                </Col>
-              ))}
-            </Row>
-          )}
-        </div>
-      </section>
-    );
-  }
-
-  // Preset 3: Minimal & Sleek - Compact list
-  if (variant === 3) {
-    return (
-      <section className={`news-section news-section--preset-3 ${section.is_active === false ? 'section-inactive' : ''}`}>
-        <div className="section-container">
-          <div className={`section-header section-header--preset-${variant}`}>
-            <div className="section-header__content">
-              <h2 className={`section-header__title font-preset-${variant}-heading`}>{section.name}</h2>
-              {isStaff && (
-                <button className="news-section-add-article" onClick={handleAddArticle}>
-                  <i className="bi bi-plus-circle me-2"></i>
-                  Add Article
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="news-article__compact-list">
-            {newsItems.map((newsItem) => (
-              <article key={newsItem.id} className="news-article news-article--compact">
-                <div className="news-article__compact-header">
-                  <h4 className={`news-article__title-compact font-preset-${variant}-subtitle`}>{newsItem.title}</h4>
-                  <p className={`news-article__date-compact font-preset-${variant}-body`}>{new Date(newsItem.date).toLocaleDateString()}</p>
-                </div>
-                {newsItem.summary && (
-                  <p className={`news-article__summary-compact font-preset-${variant}-body`}>{newsItem.summary}</p>
-                )}
-                <button className="btn btn-hm btn-news mt-2">
-                  <i className="bi bi-arrow-right me-2"></i>
-                  Read More
-                </button>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  // Preset 4: Vibrant & Playful - Magazine grid
-  if (variant === 4) {
-    return (
-      <section className={`news-section news-section--preset-4 ${section.is_active === false ? 'section-inactive' : ''}`}>
-        <div className="section-container">
-          <div className={`section-header section-header--preset-${variant}`}>
-            <div className="section-header__content">
-              <h2 className={`section-header__title font-preset-${variant}-heading`}>{section.name}</h2>
-              {isStaff && (
-                <button className="news-section-add-article" onClick={handleAddArticle}>
-                  <i className="bi bi-plus-circle me-2"></i>
-                  Add Article
-                </button>
-              )}
-            </div>
-          </div>
-          <Row className="g-4">
-            {newsItems.map((newsItem, index) => {
-              const colSize = index === 0 ? { xs: 12, md: 8 } : { xs: 12, md: 4 };
-              return (
-                <Col key={newsItem.id} {...colSize}>
-                  <article className={`news-article news-article--magazine ${index === 0 ? 'news-article--magazine-main' : ''}`}>
-                    {newsItem.content_blocks?.find(b => b.block_type === 'image') && (
-                      <div className="news-article__magazine-image">
-                        <img 
-                          src={newsItem.content_blocks.find(b => b.block_type === 'image').image_url}
-                          alt={newsItem.title}
-                        />
-                      </div>
-                    )}
-                    <div className="news-article__magazine-content">
-                      <h3 className={`${index === 0 ? 'news-article__title-magazine-main' : 'news-article__title-magazine'} font-preset-${variant}-heading`}>
-                        {newsItem.title}
-                      </h3>
-                      <p className={`news-article__date font-preset-${variant}-body`}>{new Date(newsItem.date).toLocaleDateString()}</p>
-                      {newsItem.summary && (
-                        <p className={`news-article__summary-magazine font-preset-${variant}-body`}>{newsItem.summary}</p>
-                      )}
-                      <button className="btn btn-hm btn-news mt-3">
-                        <i className="bi bi-arrow-right me-2"></i>
-                        Read More
-                      </button>
-                    </div>
-                  </article>
-                </Col>
-              );
-            })}
-          </Row>
-        </div>
-      </section>
-    );
-  }
-
-  // Preset 5: Professional & Structured - Grid layout
-  if (variant === 5) {
-    return (
-      <section className={`news-section news-section--preset-5 ${section.is_active === false ? 'section-inactive' : ''}`}>
-        <div className="section-container">
-          <div className={`section-header section-header--preset-${variant}`}>
-            <div className="section-header__content">
-              <h2 className={`section-header__title font-preset-${variant}-heading`}>{section.name}</h2>
-              {isStaff && (
-                <button className="news-section-add-article" onClick={handleAddArticle}>
-                  <i className="bi bi-plus-circle me-2"></i>
-                  Add Article
-                </button>
-              )}
-            </div>
-          </div>
-          <Row className="g-4">
           {newsItems.map((newsItem) => (
-            <Col key={newsItem.id} xs={12} md={6} lg={4}>
-              <article className="news-article news-article--grid">
-                <h3 className={`news-article__title font-preset-${variant}-heading`}>{newsItem.title}</h3>
-                <p className={`news-article__date font-preset-${variant}-body`}>{new Date(newsItem.date).toLocaleDateString()}</p>
-                {newsItem.summary && (
-                  <p className={`news-article__summary font-preset-${variant}-body`}>{newsItem.summary}</p>
-                )}
-                <div className="news-article__content">
-                  {newsItem.content_blocks?.map((block) => (
-                    <NewsBlockRenderer key={block.id} block={block} />
-                  ))}
-                </div>
-                <button className="btn btn-hm btn-news mt-3">
-                  <i className="bi bi-arrow-right me-2"></i>
-                  Read Article
-                </button>
-              </article>
-            </Col>
+            <NewsArticleStructured key={newsItem.id} newsItem={newsItem} onUpdate={onUpdate} />
           ))}
-        </Row>
-      </div>
-    </section>
+        </div>
+      </section>
     );
   }
 
