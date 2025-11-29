@@ -25,6 +25,7 @@ const MobileNavbar = () => {
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [presetMenuOpen, setPresetMenuOpen] = useState(false);
 
   // Use usePermissions WITHOUT argument — it reads roles from localStorage inside
   const { canAccess } = usePermissions();
@@ -126,33 +127,59 @@ const MobileNavbar = () => {
     <nav
       className={`navbar navbar-expand-lg text-white main-bg shadow-lg fixed-top ${
         mainColor ? "" : "bg-dark"
-      }`}
+      } d-lg-none mobile-nav ${!collapsed ? "show" : ""}`}
       style={mainColor ? { backgroundColor: mainColor } : {}}
     >
       <div className="container-fluid ">
-        <div className="position-relative d-inline-block ms-auto ">
+        <div className="d-flex align-items-center justify-content-between w-100">
+          {/* Public Pages Button */}
           <button
-            className="navbar-toggler bg-transparent border-0 shadow-lg position-relative"
-            type="button"
-            aria-controls="navbarSupportedContent"
-            aria-expanded={!collapsed}
-            aria-label="Toggle navigation"
-            onClick={toggleNavbar}
+            className="btn btn-outline-light btn-sm me-2"
+            onClick={() => navigate(`/${hotelIdentifier}`)}
+            title="View Public Pages"
           >
-            <span
-              className="navbar-toggler-icon"
-              style={{ filter: "invert(1)" }}
-            />
-            {/* Small dot indicator on hamburger when collapsed and there are notifications */}
-            {collapsed && (totalUnread > 0 || hasNewRoomService || hasNewBreakfast || totalServiceCount > 0) && (
-              <span 
-                className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"
-                style={{ width: '10px', height: '10px' }}
-              >
-                <span className="visually-hidden">New notifications</span>
-              </span>
-            )}
+            <i className="bi bi-globe2 me-1"></i>
+            <span className="d-none d-sm-inline">Public</span>
           </button>
+
+          {/* Preset Selector for Mobile (when on public pages) */}
+          {location.pathname.includes(`/${hotelIdentifier}`) && !location.pathname.includes('/staff/') && (
+            <div className="mobile-preset-selector me-2">
+              <button
+                className="btn btn-outline-light btn-sm"
+                onClick={() => setPresetMenuOpen(!presetMenuOpen)}
+                title="Page Styles"
+              >
+                <i className="bi bi-palette me-1"></i>
+                <span className="d-none d-sm-inline">Style</span>
+              </button>
+            </div>
+          )}
+
+          <div className="position-relative d-inline-block">
+            <button
+              className="navbar-toggler bg-transparent border-0 shadow-lg position-relative"
+              type="button"
+              aria-controls="navbarSupportedContent"
+              aria-expanded={!collapsed}
+              aria-label="Toggle navigation"
+              onClick={toggleNavbar}
+            >
+              <span
+                className="navbar-toggler-icon"
+                style={{ filter: "invert(1)" }}
+              />
+              {/* Small dot indicator on hamburger when collapsed and there are notifications */}
+              {collapsed && (totalUnread > 0 || hasNewRoomService || hasNewBreakfast || totalServiceCount > 0) && (
+                <span 
+                  className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"
+                  style={{ width: '10px', height: '10px' }}
+                >
+                  <span className="visually-hidden">New notifications</span>
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         <div className={`collapse navbar-collapse ${!collapsed ? "show" : ""}`}>
@@ -181,6 +208,94 @@ const MobileNavbar = () => {
                   <i className="bi bi-person-circle me-2" />
                   Profile
                 </Link>
+              </li>
+            )}
+
+            {/* Preset Selector Menu Items (when on public pages) */}
+            {location.pathname.includes(`/${hotelIdentifier}`) && !location.pathname.includes('/staff/') && (
+              <li className="nav-item mobile-preset-nav">
+                <div className="nav-link text-white py-2 px-3" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <i className="bi bi-palette me-2" />
+                      Page Styles
+                    </div>
+                    <button
+                      className="btn btn-link text-white p-0"
+                      onClick={() => setPresetMenuOpen(!presetMenuOpen)}
+                      aria-expanded={presetMenuOpen}
+                    >
+                      <i className={`bi bi-chevron-${presetMenuOpen ? 'up' : 'down'}`}></i>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Preset Options Submenu */}
+                {presetMenuOpen && (
+                  <ul className="list-unstyled ps-4 mt-1">
+                    <li className="mb-1">
+                      <button
+                        className="nav-link text-white py-1 px-2 small w-100 text-start border-0 bg-transparent"
+                        onClick={() => {
+                          // Handle preset 1 selection
+                          window.dispatchEvent(new CustomEvent('presetChange', { detail: { variant: 1 } }));
+                          toggleNavbar();
+                        }}
+                      >
+                        <i className="bi bi-1-circle me-2" />
+                        Modern
+                      </button>
+                    </li>
+                    <li className="mb-1">
+                      <button
+                        className="nav-link text-white py-1 px-2 small w-100 text-start border-0 bg-transparent"
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('presetChange', { detail: { variant: 2 } }));
+                          toggleNavbar();
+                        }}
+                      >
+                        <i className="bi bi-2-circle me-2" />
+                        Dark
+                      </button>
+                    </li>
+                    <li className="mb-1">
+                      <button
+                        className="nav-link text-white py-1 px-2 small w-100 text-start border-0 bg-transparent"
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('presetChange', { detail: { variant: 3 } }));
+                          toggleNavbar();
+                        }}
+                      >
+                        <i className="bi bi-3-circle me-2" />
+                        Minimal
+                      </button>
+                    </li>
+                    <li className="mb-1">
+                      <button
+                        className="nav-link text-white py-1 px-2 small w-100 text-start border-0 bg-transparent"
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('presetChange', { detail: { variant: 4 } }));
+                          toggleNavbar();
+                        }}
+                      >
+                        <i className="bi bi-4-circle me-2" />
+                        Vibrant
+                      </button>
+                    </li>
+                    <li className="mb-1">
+                      <button
+                        className="nav-link text-white py-1 px-2 small w-100 text-start border-0 bg-transparent"
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('presetChange', { detail: { variant: 5 } }));
+                          toggleNavbar();
+                        }}
+                      >
+                        <i className="bi bi-5-circle me-2" />
+                        Professional
+                      </button>
+                    </li>
+                  </ul>
+                )}
               </li>
             )}
 
@@ -223,13 +338,13 @@ const MobileNavbar = () => {
                 {categories.map((category) => {
                   const isExpanded = expandedCategoryId === category.id;
                   const hasNotifications = categoryHasNotifications(category);
-                  const isActive = isCategoryActive(category);
+                  const isCategoryCurrentlyActive = isCategoryActive(category);
 
                   return (
                     <li className="nav-item mobile-category-item" key={category.id}>
                       <button
                         className={`nav-link text-white d-flex justify-content-between align-items-center w-100 border-0 bg-transparent text-start ${
-                          isActive ? "active" : ""
+                          isCategoryCurrentlyActive ? "active" : ""
                         }`}
                         onClick={() => toggleCategory(category.id)}
                       >
@@ -252,6 +367,84 @@ const MobileNavbar = () => {
                             const orderCount = getOrderCountForItem(item);
                             const showNewBadge = hasNewBadgeForItem(item);
 
+                            // Special handling for Room Bookings with sub-items
+                            if (item.slug === 'room_bookings') {
+                              return (
+                                <li key={item.slug} className="mb-2">
+                                  {/* Main Room Bookings Header */}
+                                  <div className="nav-link text-white py-2 px-3" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                                    <div className="d-flex justify-content-between align-items-center">
+                                      <div>
+                                        <i className={`bi bi-${item.icon} me-2`} />
+                                        {item.name}
+                                      </div>
+                                      {orderCount > 0 && (
+                                        <span className="badge bg-danger rounded-pill">
+                                          {orderCount}
+                                        </span>
+                                      )}
+                                      {showNewBadge && orderCount === 0 && (
+                                        <span className="badge bg-danger">NEW</span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Room Bookings Sub-items */}
+                                  <ul className="list-unstyled ps-4 mt-1">
+                                    <li className="mb-1">
+                                      <Link
+                                        className={`nav-link ${
+                                          location.pathname.includes('/bookings') && location.search.includes('filter=pending') ? "active" : ""
+                                        } text-white py-1 px-2 small`}
+                                        to={`/staff/hotel/${hotelIdentifier}/bookings?filter=pending`}
+                                        onClick={toggleNavbar}
+                                      >
+                                        <i className="bi bi-clock me-2" />
+                                        Pending Bookings
+                                      </Link>
+                                    </li>
+                                    <li className="mb-1">
+                                      <Link
+                                        className={`nav-link ${
+                                          location.pathname.includes('/bookings') && location.search.includes('filter=confirmed') ? "active" : ""
+                                        } text-white py-1 px-2 small`}
+                                        to={`/staff/hotel/${hotelIdentifier}/bookings?filter=confirmed`}
+                                        onClick={toggleNavbar}
+                                      >
+                                        <i className="bi bi-check-circle me-2" />
+                                        Confirmed Bookings
+                                      </Link>
+                                    </li>
+                                    <li className="mb-1">
+                                      <Link
+                                        className={`nav-link ${
+                                          location.pathname.includes('/bookings') && !location.search.includes('filter=') ? "active" : ""
+                                        } text-white py-1 px-2 small`}
+                                        to={`/staff/hotel/${hotelIdentifier}/bookings`}
+                                        onClick={toggleNavbar}
+                                      >
+                                        <i className="bi bi-calendar-event me-2" />
+                                        All Bookings
+                                      </Link>
+                                    </li>
+                                    <li className="mb-1">
+                                      <Link
+                                        className={`nav-link ${
+                                          location.pathname.includes('/bookings') && location.search.includes('filter=history') ? "active" : ""
+                                        } text-white py-1 px-2 small`}
+                                        to={`/staff/hotel/${hotelIdentifier}/bookings?filter=history`}
+                                        onClick={toggleNavbar}
+                                      >
+                                        <i className="bi bi-archive me-2" />
+                                        Booking History
+                                      </Link>
+                                    </li>
+                                  </ul>
+                                </li>
+                              );
+                            }
+
+                            // Regular category items
                             return (
                               <li key={item.slug} className="mb-2">
                                 <Link

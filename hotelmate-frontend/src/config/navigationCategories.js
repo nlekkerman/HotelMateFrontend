@@ -50,6 +50,7 @@ export const NAV_ITEM_CATEGORY_MAP = {
   'rooms': 'front-office',
   'guests': 'front-office',
   'chat': 'front-office', // Guest Chat
+  'room_bookings': 'front-office', // Room bookings/reservations
   
   // F&B
   'restaurants': 'fnb',

@@ -64,13 +64,12 @@
 /* Full viewport width container with small side margins */
 .section-container {
   width: 100%;
-
-  
   margin-left: auto;
   margin-right: auto;
 }
-
-
+.list-section__container{
+  padding: 15px !important;
+}
 
 
 /* ========== TYPOGRAPHY ========== */
@@ -1512,6 +1511,7 @@ section:not(:first-of-type)::before {
   border: 3px solid rgba(0, 0, 0, 0.1);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   max-height: 350px;
+ 
   object-fit: cover;
 }
 
@@ -1524,6 +1524,43 @@ section:not(:first-of-type)::before {
 .article-part--middle .article-text-with-image {
   display: block;
   overflow: auto;
+}
+
+/* Mobile responsive overrides for inline image */
+@media (max-width: 768px) {
+  /* ID: mobile-article-image-override */
+  .article-part--middle .article-text-with-image > div {
+    float: none !important;
+    margin-left: 0 !important;
+    margin-bottom: 1.5rem !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  
+  .article-part--middle .article-inline-image {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+  
+  .article-part--middle {
+    min-height: auto;
+  }
+  
+  .article-part--middle .article-text-with-image {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Ensure text comes after image */
+  .article-part--middle .article-text {
+    order: 2;
+  }
+  
+  .article-part--middle .article-text-with-image > div {
+    order: 1;
+  }
 }
 
 .article-part--bottom {
@@ -1709,5 +1746,73 @@ section:not(:first-of-type)::before {
   
   .section-header__title {
     font-size: 1.5rem;
+  }
+}
+
+/* ========================================
+   LIST SECTION CONTAINER
+   Ensures proper responsive layout for list cards
+   ======================================== */
+
+.list-section__container {
+  margin-bottom: 3rem;
+}
+
+.list-section__subtitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 1.5rem;
+}
+
+/* List section grid - same as rooms section */
+.list-section__container .row {
+  /* Use Bootstrap row-cols system like rooms section */
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: -0.75rem;
+  margin-right: -0.75rem;
+}
+
+.list-section__container .row > * {
+  /* Base: 1 column on mobile */
+  flex: 0 0 auto;
+  width: 100%;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Medium screens: 2 columns */
+@media (min-width: 768px) {
+  .list-section__container .row > * {
+    width: 50%;
+  }
+}
+
+/* Large screens: 3 columns (same as rooms) */
+@media (min-width: 992px) {
+  .list-section__container .row > * {
+    width: 33.333333%;
+  }
+}
+
+/* Extra large screens: 4 columns (same as rooms) */
+@media (min-width: 1200px) {
+  .list-section__container .row > * {
+    width: 25%;
+  }
+}
+
+.list-section__container .g-4 {
+  --bs-gutter-x: 1.5rem;
+  --bs-gutter-y: 1.5rem;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 767px) {
+  .list-section__subtitle {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
   }
 }

@@ -107,12 +107,12 @@ export function getHotelSlug() {
 }
 
 /**
- * Fetch public hotel settings (read-only for landing page)
+ * Fetch public hotel page data (includes settings and hotel details)
  * @param {string} hotelSlug - The hotel slug
- * @returns {Promise} - Axios response with settings data
+ * @returns {Promise} - Axios response with hotel data including settings
  */
-export async function getHotelPublicSettings(hotelSlug) {
-  return publicAPI.get(`/public/hotels/${hotelSlug}/settings/`);
+export async function getHotelPublicPage(hotelSlug) {
+  return publicAPI.get(`/public/hotel/${hotelSlug}/page/`);
 }
 
 export default api;

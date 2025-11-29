@@ -185,7 +185,7 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
         {renderGalleryFilters()}
         
         <div 
-          style={{ position: 'relative', padding: '0 50px' }}
+          style={{ position: 'relative', padding: '0 5px' }}
           onMouseEnter={() => setShowHover(true)}
           onMouseLeave={() => setShowHover(false)}
         >
@@ -378,7 +378,7 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
     return (
       <>
         <section className={`gallery gallery--preset-1 ${section.is_active === false ? 'section-inactive' : ''}`}>
-          <div className="section-container">
+          <div className="section-container ">
             {renderGalleryLayout()}
           </div>
           {renderLightbox()}

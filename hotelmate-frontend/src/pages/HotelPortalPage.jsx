@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { Container, Spinner, Alert, Button } from "react-bootstrap";
 import { useAuth } from "@/context/AuthContext";
 import GuestHotelHome from "@/sections/GuestHotelHome";
-import api, { getHotelPublicSettings } from "@/services/api";
+import api from "@/services/api";
 import useHotelTheme from "@/hooks/useHotelTheme";
 import useHotelRealtime from "@/hooks/useHotelRealtime";
 
@@ -37,14 +37,15 @@ const HotelPortalPage = () => {
   });
 
   useEffect(() => {
-    fetchHotelDetails();
-    fetchPublicSettings();
+    fetchHotelData();
   }, [hotelSlug]);
 
-  const fetchHotelDetails = async () => {
+  const fetchHotelData = async () => {
     try {
       setLoading(true);
       setError(null);
+
+      console.log("[HotelPortal] 🔍 Fetching hotel data and settings...");
 
       // Fetch hotel details from public endpoint with full booking data
       const response = await api.get(`/public/hotel/${hotelSlug}/page/`);
@@ -53,53 +54,59 @@ const HotelPortalPage = () => {
         throw new Error("Hotel not found");
       }
 
+      console.log("[HotelPortal] ✅ Hotel data received:", response.data);
+
+      // Set hotel data
       setHotel(response.data);
       selectHotel(response.data); // Store in auth context
+
+      // Extract settings/customizable properties from hotel data
+      const extractedSettings = {
+        hero_image: response.data.hero_image || null,
+        hero_image_display: response.data.hero_image_display || null,
+        welcome_message: response.data.welcome_message || null,
+        gallery: response.data.gallery || [],
+        amenities: response.data.amenities || [],
+        // Add other settings properties as they exist in the hotel data
+        theme_settings: response.data.theme_settings || null,
+        custom_css: response.data.custom_css || null,
+        primary_color: response.data.primary_color || null,
+        secondary_color: response.data.secondary_color || null,
+        // Include all hotel data as settings fallback
+        ...response.data
+      };
+      
+      console.log("[HotelPortal] 📸 Hero image:", extractedSettings.hero_image_display);
+      console.log("[HotelPortal] 💬 Welcome message:", extractedSettings.welcome_message);
+      console.log("[HotelPortal] 🖼️ Gallery:", extractedSettings.gallery);
+      console.log("[HotelPortal] 🏨 Amenities:", extractedSettings.amenities);
+      
+      setSettings(extractedSettings);
+
     } catch (err) {
-      console.error("[HotelPortal] Failed to fetch hotel:", err);
-      setError("Hotel not found or unavailable");
+      console.error("[HotelPortal] ❌ Failed to fetch hotel data:", err);
+      console.error("[HotelPortal] Error details:", err.response?.data || err.message);
+      
+      // More specific error messages based on status code
+      if (err.response?.status === 404) {
+        setError(`Hotel '${hotelSlug}' not found`);
+      } else if (err.response?.status >= 500) {
+        setError("Server error - please try again later");
+      } else if (err.code === 'ERR_NETWORK') {
+        setError("Network error - check your connection");
+      } else {
+        setError("Hotel not found or unavailable");
+      }
+      
+      setSettings(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchPublicSettings = async () => {
-    try {
-      // Fetch public settings for customizable content
-      const response = await getHotelPublicSettings(hotelSlug);
-      console.log("[HotelPortal] ⭐ Full response object:", response);
-      console.log("[HotelPortal] ⭐ Response.data:", response.data);
-      console.log("[HotelPortal] Public settings fetched:", response.data);
-      console.log("[HotelPortal] 🔍 hero_image_display:", response.data?.hero_image_display);
-      console.log("[HotelPortal] 🔍 hero_image:", response.data?.hero_image);
-      console.log("[HotelPortal] Hero image:", response.data?.hero_image);
-      console.log(
-        "[HotelPortal] Welcome message:",
-        response.data?.welcome_message
-      );
-      console.log("[HotelPortal] Gallery:", response.data?.gallery);
-      console.log("[HotelPortal] Amenities:", response.data?.amenities);
-
-      if (response && response.data) {
-        console.log(
-          "[HotelPortal] ✅ Setting settings state with:",
-          response.data
-        );
-        setSettings(response.data);
-      } else {
-        console.warn("[HotelPortal] ⚠️ Response or response.data is missing");
-        setSettings(null);
-      }
-    } catch (err) {
-      console.error("[HotelPortal] ❌ Failed to fetch public settings:", err);
-      console.error(
-        "[HotelPortal] Error details:",
-        err.response?.data || err.message
-      );
-      // Settings are optional - don't set error, just log it
-      // Hotel can still render with default content
-      setSettings(null);
-    }
+  // Separate function to refresh hotel data (used by GuestHotelHome)
+  const fetchHotelDetails = async () => {
+    return fetchHotelData();
   };
 
   // Loading state
@@ -135,22 +142,23 @@ const HotelPortalPage = () => {
   return (
     <div className="hotel-portal-page">
       {/* Hotel Header with Navigation */}
-      <header className="bg-white shadow-sm py-3 mb-4 sticky-top">
+      <header className="bg-white shadow-sm py-3 mb-4 sticky-top hotel-portal-header">
         <Container>
-          <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
+          <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
             {/* Hotel Info */}
-            <div className="d-flex align-items-center gap-3">
+            <div className="d-flex align-items-center gap-2 flex-grow-1 min-width-0">
               <Link
                 to="/?view=all"
-                className="btn btn-outline-secondary btn-sm"
+                className="btn btn-outline-secondary btn-sm flex-shrink-0"
               >
                 <i className="bi bi-arrow-left me-1"></i>
-                All Hotels
+                <span className="d-none d-sm-inline">All Hotels</span>
+                <span className="d-sm-none">Back</span>
               </Link>
-              <div>
-                <h5 className="mb-0 fw-bold">{hotel.name}</h5>
+              <div className="min-width-0 flex-grow-1">
+                <h5 className="mb-0 fw-bold text-truncate hotel-portal-title">{hotel.name}</h5>
                 {(hotel.city || hotel.country) && (
-                  <small className="text-muted">
+                  <small className="text-muted d-block text-truncate">
                     <i className="bi bi-geo-alt me-1"></i>
                     {hotel.city && hotel.country
                       ? `${hotel.city}, ${hotel.country}`
@@ -161,11 +169,12 @@ const HotelPortalPage = () => {
             </div>
 
             {/* View Toggle and Actions */}
-            <div className="d-flex align-items-center gap-3">
+            <div className="d-flex align-items-center gap-2 flex-shrink-0">
               {hotel.logo_url && (
                 <img
                   src={hotel.logo_url}
                   alt={`${hotel.name} logo`}
+                  className="hotel-portal-logo"
                   style={{
                     maxHeight: "40px",
                     maxWidth: "120px",
@@ -183,10 +192,12 @@ const HotelPortalPage = () => {
                 <Button
                   variant="primary"
                   size="sm"
+                  className="hotel-portal-staff-btn"
                   onClick={() => navigate(`/staff/${hotelSlug}/feed`)}
                 >
                   <i className="bi bi-arrow-left me-1"></i>
-                  Back to Staff Feed
+                  <span className="d-none d-md-inline">Back to Staff Feed</span>
+                  <span className="d-md-none">Staff</span>
                 </Button>
               )}
             </div>

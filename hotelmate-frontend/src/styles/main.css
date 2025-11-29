@@ -1,5 +1,6 @@
 /* Import public pages modern design system */
 @import './publicPages.css';
+@import './mobilePublicPage.css';
 
 :root {
   --main-color: #3498db;
@@ -2106,18 +2107,52 @@ body.terminal-mode,
 }
 
 @media (max-width: 991.98px) {
+  /* Default mobile navbar - visible but collapsed */
   nav.mobile-nav {
     position: fixed;
-    top: 56px;
+    top: 0;
     left: 0;
-    width: 260px;
-    height: calc(100vh - 56px);
+    width: 100%;
+    height: 56px; /* Regular navbar height when collapsed */
     z-index: 1050;
-    transition: transform 0.3s ease;
-    transform: translateX(-100%);
+    transition: all 0.3s ease;
+    background-color: inherit; /* Use the navbar's original background */
   }
+  
+  /* Full screen mobile drawer when expanded */
   nav.mobile-nav.show {
-    transform: translateX(0);
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(10px);
+  }
+  
+  /* Hide the collapse content when not expanded */
+  nav.mobile-nav .navbar-collapse:not(.show) {
+    display: none;
+  }
+  
+  /* Make navbar content scrollable and full viewport when expanded */
+  nav.mobile-nav.show .navbar-collapse {
+    height: 100vh;
+    overflow-y: auto;
+    padding: 4rem 1rem 2rem 1rem; /* Top padding for hamburger button space */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  }
+  
+  /* Ensure navbar items have proper spacing for scrolling */
+  nav.mobile-nav .navbar-nav {
+    max-height: none;
+    overflow: visible;
+    padding-bottom: 2rem; /* Extra padding at bottom for easier scrolling */
+  }
+  
+  /* Hide the regular navbar hamburger when mobile drawer is open */
+  nav.mobile-nav.show .navbar-toggler {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1051;
   }
 
   /* Mobile Quick Actions - Hide icons, make much smaller */
@@ -2161,6 +2196,12 @@ body.terminal-mode,
     transition: opacity 0.3s ease;
   }
 
+  /* Lock background scroll when mobile navbar is open */
+  body.mobile-navbar-expanded {
+    overflow: hidden;
+    height: 100vh;
+  }
+
   /* Mobile category accordion styles */
   .mobile-category-item .nav-link {
     font-weight: 600;
@@ -2187,6 +2228,24 @@ body.terminal-mode,
     background-color: rgba(255, 215, 0, 0.2);
     border-left: 2px solid #FFD700;
     padding-left: calc(1rem - 2px);
+  }
+
+  /* Mobile Room Bookings Sub-items */
+  .mobile-category-item .nav-link + .list-unstyled {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    margin-top: 4px;
+  }
+
+  .mobile-category-item .nav-link + .list-unstyled .nav-link {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 3px;
+    margin-bottom: 1px;
+  }
+
+  .mobile-category-item .nav-link + .list-unstyled .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.08);
   }
 }
 

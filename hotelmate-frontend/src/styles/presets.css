@@ -95,7 +95,7 @@
 .font-preset-1-heading {
   font-family: var(--font-clean-heading);
   font-weight: 700;
-  color: white !important;
+  color: rgb(0, 8, 144) !important;
 }
 
 .font-preset-1-subtitle {
@@ -202,6 +202,7 @@
   width: 100%;
   margin-top: 2rem;
   min-height: 500px;
+  max-height: 500px;
 }
 
 .hero .hero__image {

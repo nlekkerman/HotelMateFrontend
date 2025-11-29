@@ -132,7 +132,7 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
       <div 
         className="article-part article-part--top" 
         style={{ 
-          padding: '2rem', 
+          padding: '0px', 
           borderRadius: '8px', 
           marginBottom: '3rem',
           position: 'relative',
@@ -185,7 +185,7 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
       <div 
         className="article-part article-part--middle" 
         style={{ 
-          padding: '2rem', 
+          padding: '1px', 
           borderRadius: '8px', 
           marginBottom: '1.5rem',
           position: 'relative',

@@ -13,7 +13,7 @@
 /* Preset 1: Clean & Modern */
 [data-preset="1"] .section-header-title {
   font-family: var(--font-clean-heading);
-  color: var(--preset-1-primary);
+  color: #1a1a1a;
   font-weight: 700;
 }
 
@@ -141,7 +141,7 @@
 
 .section-header--preset-1 .section-header__title {
   font-family: var(--font-clean-heading);
-  color: var(--preset-1-primary);
+  color: #1a1a1a;
   font-weight: 700;
 }
 
@@ -414,5 +414,40 @@
   
   .section-title--large {
     font-size: 1.5rem;
+  }
+}
+
+/* ========================================
+   SECTION HEADER PRESET OVERRIDES
+   Force consistent padding, remove borders & radius
+   ======================================== */
+
+.section-header--preset-1,
+.section-header--preset-2,
+.section-header--preset-3,
+.section-header--preset-4,
+.section-header--preset-5 {
+  /* Remove all borders */
+  border: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  
+  /* Remove all border-radius */
+  border-radius: 0 !important;
+  
+  /* Force horizontal padding to 0, vertical padding to 2.5rem */
+  padding: 2.5rem 0 !important;
+}
+
+/* Responsive override for mobile */
+@media (max-width: 768px) {
+  .section-header--preset-1,
+  .section-header--preset-2,
+  .section-header--preset-3,
+  .section-header--preset-4,
+  .section-header--preset-5 {
+    padding: 2.5rem 0 !important;
   }
 }

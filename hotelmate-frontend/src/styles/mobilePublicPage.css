@@ -1,0 +1,1014 @@
+/* =============================================================================
+   MOBILE PUBLIC PAGE CSS
+   Mobile-first overrides for hotel public pages
+   
+   This file contains responsive overrides that sit on top of:
+   - base.css
+   - hotelPublicPage.css  
+   - publicPages.css
+   - section-presets.css
+   
+   All rules are scoped to mobile breakpoints to avoid desktop regressions.
+============================================================================= */
+
+/* =============================================================================
+   1. HERO SECTIONS - MODERN & PRESET HEROES
+============================================================================= */
+
+/* 1.1 Modern Hero Mobile Layout */
+@media (max-width: 768px) {
+  .modern-hero-section {
+    min-height: 60vh;
+    padding: 2rem 1.25rem;
+  }
+
+  .modern-hero-content {
+    max-width: 100%;
+    padding: 0;
+    text-align: center;
+    align-items: center;
+  }
+
+  /* Clean Hero Section View - let it breathe */
+  .hero-section-view {
+    padding: 2rem 1.25rem;
+    text-align: center;
+  }
+
+  .hero-section-view * {
+    max-width: 100%;
+  }
+
+  .hero-section-view .display-3 {
+    font-size: clamp(1.8rem, 6vw, 2.4rem);
+  }
+
+  .hero-section-view .lead {
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  .modern-hero-title {
+    font-size: clamp(1.9rem, 6vw, 2.4rem);
+    margin-bottom: 0.75rem;
+  }
+
+  .modern-hero-tagline {
+    font-size: clamp(1.1rem, 3.8vw, 1.3rem);
+    margin-bottom: 0.75rem;
+  }
+
+  .modern-hero-description {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  .modern-hero-cta {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    width: 100%;
+    margin-top: 1.25rem;
+  }
+
+  .modern-hero-cta .hero-btn-primary,
+  .modern-hero-cta .hero-btn-secondary,
+  .modern-hero-cta .hero-btn-outline {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 576px) {
+  .hero-scroll-indicator {
+    display: none;
+  }
+}
+
+/* 1.2 Preset Hero Text Overlay Fix */
+@media (max-width: 768px) {
+  /* Force all hero containers to wrap image naturally */
+  .hero,
+  .hero-section,
+  .modern-hero-section {
+    height: auto !important;
+    min-height: auto !important;
+  }
+
+  .hero .hero__content-centered {
+    min-height: auto !important;
+    height: auto !important;
+    
+  }
+
+  .hero .hero__image-wrapper {
+    width: 100%;
+    height: auto !important;        /* allow wrapper to grow naturally */
+    min-height: auto !important;    /* override fixed min-height */
+    max-height: none !important;    /* remove height constraints */
+    display: inline-block;          /* ensures it wraps the image */
+    overflow: visible;              /* guarantees no clipping */
+  }
+
+  .hero .hero__image {
+    height: auto !important;        /* let image determine height */
+    min-height: auto !important;    /* override fixed min-height */
+    max-height: none !important;    /* remove height constraints */
+   
+  }
+
+
+  /* On larger mobile, keep static positioning */
+  @media (min-width: 577px) {
+    .hero .hero__text-overlay {
+      position: static !important;
+    }
+  }
+
+  .hero .hero__title {
+    font-size: clamp(1.7rem, 5.5vw, 2.2rem);
+    margin-bottom: 0.5rem;
+  }
+
+  .hero .hero__text {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 0.75rem;
+  }
+}
+
+/* Small screen text overlay handled in main @media (max-width: 576px) block above */
+
+/* 1.3 Hero Presets 1–5 Unified Mobile Feeling */
+@media (max-width: 768px) {
+  .hero--preset-1,
+  .hero--preset-2,
+  .hero--preset-3,
+  .hero--preset-4,
+  .hero--preset-5 {
+    padding-top: 4rem;
+    padding-bottom: 2.5rem;
+    padding-left: 0px !important;
+    padding-right: 0px !important;
+  }
+
+  .hero--preset-1 .hero__content-centered,
+  .hero--preset-2 .hero__content-centered,
+  .hero--preset-3 .hero__content-centered,
+  .hero--preset-4 .hero__content-centered,
+  .hero--preset-5 .hero__content-centered {
+    padding-inline: 1.25rem;
+  }
+  .gallery--preset-3 {
+     padding-left: 5px !important;
+    padding-right: 5px !important;
+  }
+}
+
+/* =============================================================================
+   2. GLOBAL PUBLIC PAGE MOBILE LAYOUT
+============================================================================= */
+
+@media (max-width: 768px) {
+  .hotel-public-page {
+    padding-top: 4rem; /* leave space for fixed header if any */
+  }
+
+  .hotel-public-page section {
+    padding-inline: 1.25rem;
+  }
+}
+
+/* =============================================================================
+   3. ROOMS & OFFERS
+============================================================================= */
+
+/* 3.1 Modern Room Section & Cards */
+@media (max-width: 768px) {
+  .modern-room-section {
+    padding-inline: 1.25rem;
+    padding-block: 2rem;
+  }
+
+  .modern-room-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .modern-room-card {
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  .modern-room-card-image {
+    max-height: 220px;
+  }
+}
+
+/* 3.2 Modern Offers */
+@media (max-width: 768px) {
+  .modern-offers-section {
+    padding-inline: 1.25rem;
+    padding-block: 2rem;
+  }
+
+  .modern-offers-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .modern-offer-card {
+    border-radius: 18px;
+    overflow: hidden;
+  }
+}
+
+/* 3.3 Rooms Section View & Carousel */
+@media (max-width: 768px) {
+  .rooms-section-view {
+    padding-inline: 1.25rem;
+    padding-block: 2rem;
+  }
+
+  .rooms-carousel {
+    gap: 1rem;
+  }
+}
+
+/* =============================================================================
+   4. LIST SECTIONS & CARDS
+============================================================================= */
+
+@media (max-width: 768px) {
+  .list-section__container{
+  padding: 0px !important;
+}
+  .list {
+    padding-inline: 1.25rem;
+    padding-block: 2rem;
+  }
+
+  .list .row {
+    gap: 1.25rem;
+  }
+
+  .list-card {
+    margin-bottom: 0;
+  }
+
+  .list-card__body {
+    padding: 1rem 1rem 1.1rem;
+    font-size: 0.95rem;
+  }
+
+  .list-card__image {
+    border-radius: 16px 16px 0 0;
+  }
+
+  /* List Presets */
+  .list--preset-1,
+  .list--preset-2,
+  .list--preset-3,
+  .list--preset-4,
+  .list--preset-5 {
+    padding-inline: 1.25rem;
+    padding-block: 2rem;
+  }
+}
+
+/* =============================================================================
+   5. GALLERY SECTIONS
+============================================================================= */
+
+@media (max-width: 768px) {
+  .gallery--preset-1,
+  .gallery--preset-2,
+  .gallery--preset-3,
+  .gallery--preset-4,
+  .gallery--preset-5 {
+    padding-inline: 1.25rem;
+  }
+
+  /* Change gallery from horizontal scroll to vertical grid on mobile */
+  .gallery__horizontal-wrapper {
+    padding-inline: 0;
+  }
+
+  .gallery__horizontal-scroll {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    overflow: visible !important;
+  }
+
+  .gallery__horizontal-item {
+    flex: none !important;
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .gallery__horizontal-item img {
+    width: 100% !important;
+    height: 200px !important;
+    object-fit: cover !important;
+    display: block;
+  }
+
+  /* Override any existing flex or scroll properties */
+  .gallery {
+    overflow: visible !important;
+  }
+}
+
+@media (max-width: 576px) {
+  /* Single column gallery on very small screens */
+  .gallery__horizontal-scroll {
+    grid-template-columns: 1fr;
+  }
+
+  .gallery__horizontal-item img {
+    height: 180px;
+  }
+}
+
+/* =============================================================================
+   6. NEWS SECTIONS
+============================================================================= */
+
+@media (max-width: 768px) {
+  .news-section--preset-1,
+  .news-section--preset-2,
+  .news-section--preset-3,
+  .news-section--preset-4,
+  .news-section--preset-5 {
+    padding-inline: 1.25rem;
+    padding-block: 2rem;
+  }
+
+  .news-article,
+  .news-article-structured {
+    margin-bottom: 1.25rem;
+    border-radius: 16px;
+  }
+
+  .news-article p,
+  .news-article-structured p {
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+
+  .article-part--top,
+  .article-part--middle,
+  .article-part--bottom {
+    padding: 1rem;
+  }
+
+  .article-part--top {
+    border-radius: 16px 16px 0 0;
+  }
+
+  .article-part--bottom {
+    border-radius: 0 0 16px 16px;
+  }
+}
+
+/* =============================================================================
+   7. FOOTER SECTIONS
+============================================================================= */
+
+@media (max-width: 768px) {
+  .footer--preset-1,
+  .footer--preset-2,
+  .footer--preset-3,
+  .footer--preset-4,
+  .footer--preset-5 {
+    text-align: center;
+    padding-inline: 1.25rem;
+    padding-block: 1.75rem;
+  }
+
+  .footer--preset-1 .footer-columns,
+  .footer--preset-2 .footer-columns,
+  .footer--preset-3 .footer-columns,
+  .footer--preset-4 .footer-columns,
+  .footer--preset-5 .footer-columns {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .footer-column {
+    margin-bottom: 1rem;
+  }
+
+  .footer-column h4 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .footer-column p,
+  .footer-column a {
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+}
+
+/* =============================================================================
+   8. HOVER / INTERACTION ADJUSTMENTS FOR MOBILE
+============================================================================= */
+
+@media (max-width: 768px) {
+  /* Remove heavy hover transforms on touch devices */
+  .modern-room-card:hover,
+  .modern-offer-card:hover,
+  .list-card:hover,
+  .gallery__horizontal-item:hover,
+  .news-article:hover,
+  .news-article-structured:hover {
+    transform: none;
+  }
+
+  /* Keep only subtle shadow changes for feedback */
+  .modern-room-card:active,
+  .modern-offer-card:active,
+  .list-card:active {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Disable scale transforms on buttons for mobile */
+  .hero-btn-primary:hover,
+  .hero-btn-secondary:hover,
+  .hero-btn-outline:hover,
+  .btn:hover {
+    transform: none;
+  }
+
+  /* Keep button press feedback */
+  .hero-btn-primary:active,
+  .hero-btn-secondary:active,
+  .hero-btn-outline:active,
+  .btn:active {
+    transform: scale(0.98);
+  }
+
+  /* Make all buttons smaller on mobile */
+  .btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 0.375rem;
+  }
+
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+  }
+
+  .btn-lg {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    border-radius: 0.5rem;
+  }
+
+  /* Hero buttons specific sizing */
+  .hero-btn-primary,
+  .hero-btn-secondary,
+  .hero-btn-outline {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    border-radius: 0.5rem;
+  }
+}
+
+/* =============================================================================
+   9. SECTION SPACING & TYPOGRAPHY
+============================================================================= */
+
+@media (max-width: 768px) {
+  /* Global section spacing */
+  .section {
+    padding-block: 2rem;
+    padding-inline: 1.25rem;
+  }
+
+  /* Section titles */
+  .section-title,
+  .section__title {
+    font-size: clamp(1.5rem, 4.5vw, 2rem);
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  /* Section descriptions */
+  .section-description,
+  .section__description {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+}
+
+@media (max-width: 576px) {
+  .section {
+    padding-block: 1.75rem;
+    padding-inline: 1rem;
+  }
+
+  .section-title,
+  .section__title {
+    font-size: clamp(1.4rem, 5vw, 1.8rem);
+    margin-bottom: 0.75rem;
+  }
+
+  .section-description,
+  .section__description {
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+  }
+
+  /* Even smaller buttons on very small screens */
+  .btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .btn-sm {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.7rem;
+  }
+
+  .hero-btn-primary,
+  .hero-btn-secondary,
+  .hero-btn-outline {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* =============================================================================
+   10. CONTAINER & GRID ADJUSTMENTS
+============================================================================= */
+
+@media (max-width: 768px) {
+  /* Container adjustments */
+  .container,
+  .container-fluid {
+    padding-inline: 1.25rem;
+  }
+
+  /* Grid system mobile adjustments */
+  .row {
+    margin-inline: -0.625rem;
+  }
+
+  .col,
+  [class*="col-"] {
+    padding-inline: 0.625rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Force single column on mobile for most grid layouts */
+  .col-md-6,
+  .col-lg-4,
+  .col-lg-6,
+  .col-xl-3,
+  .col-xl-4 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .container,
+  .container-fluid {
+    padding-inline: 1rem;
+  }
+
+  .row {
+    margin-inline: -0.5rem;
+  }
+
+  .col,
+  [class*="col-"] {
+    padding-inline: 0.5rem;
+  }
+}
+
+/* =============================================================================
+   11. IMAGES & MEDIA
+============================================================================= */
+
+@media (max-width: 768px) {
+  /* Responsive images */
+  .section img,
+  .card img,
+  .article img {
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100% !important;
+    border-radius: 12px;
+    object-fit: cover;
+  }
+
+
+
+  /* Article images specific */
+  .news-article img,
+  .news-article-structured img,
+  .article-part img {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 200px !important;
+    object-fit: cover !important;
+    margin-bottom: 0.75rem;
+  }
+
+  /* Card images */
+  .card img,
+  .list-card img,
+  .modern-room-card img,
+  .modern-offer-card img {
+    width: 100% !important;
+    height: 180px !important;
+    object-fit: cover !important;
+  }
+
+  /* Image overlays */
+  .image-overlay {
+    border-radius: 12px;
+  }
+
+  /* Background images */
+  .bg-image {
+    background-attachment: scroll; /* Fix for mobile performance */
+    background-size: cover !important;
+    background-position: center !important;
+  }
+
+
+}
+
+@media (max-width: 576px) {
+  .hero-section-view {
+    padding: 1.5rem 1rem;
+  }
+
+  .hero-section-view .display-3 {
+    font-size: clamp(1.5rem, 5vw, 2rem);
+  }
+
+  .hero-section-view .lead {
+    font-size: 0.9rem;
+  }
+
+  /* FORCE IMAGE TO FIT (NOT CROP) */
+  .hero .hero__image,
+  .hero .hero__image-wrapper img,
+  .hero-section-view img {
+    width: 100%;
+    height: auto !important;
+    object-fit: contain !important;
+    object-position: center !important;
+  }
+
+  /* PUT TEXT ON TOP OF THE IMAGE (CENTERED) */
+  .hero .hero__image-wrapper {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+  }
+
+  .hero .hero__text-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    padding: 1rem;
+    width: 90%;
+    background: none;
+    border-radius: 12px;
+  }
+
+  .hero .hero__title {
+    font-size: clamp(1.3rem, 4.5vw, 1.8rem);
+    margin-bottom: 0.25rem;
+    color: #fff;
+  }
+
+  .hero .hero__text {
+    color: #fff;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+
+  /* ALLOW HERO TO AUTO-GROW - Already handled above in @media (max-width: 768px) */
+
+  .news-article img,
+  .news-article-structured img,
+  .article-part img {
+    max-height: 160px !important;
+  }
+
+  .card img,
+  .list-card img,
+  .modern-room-card img,
+  .modern-offer-card img {
+    height: 150px !important;
+  }
+
+
+}
+
+/* =============================================================================
+   12. UTILITIES & HELPERS FOR MOBILE
+============================================================================= */
+
+@media (max-width: 768px) {
+  /* Mobile-only utilities */
+  .mobile-center {
+    text-align: center;
+  }
+
+  .mobile-full-width {
+    width: 100%;
+  }
+
+  .mobile-stack {
+    flex-direction: column;
+  }
+
+  .mobile-hide {
+    display: none;
+  }
+
+  /* Flexbox utilities for mobile */
+  .flex-grow-1 {
+    flex-grow: 1;
+  }
+
+  .flex-shrink-0 {
+    flex-shrink: 0;
+  }
+
+  .min-width-0 {
+    min-width: 0;
+  }
+
+  /* Adjust spacing utilities for mobile */
+  .mb-4 {
+    margin-bottom: 1.25rem;
+  }
+
+  .mt-4 {
+    margin-top: 1.25rem;
+  }
+
+  .py-4 {
+    padding-block: 1.25rem;
+  }
+
+  .px-4 {
+    padding-inline: 1.25rem;
+  }
+
+  /* Gap utilities */
+  .gap-2 {
+    gap: 0.5rem !important;
+  }
+
+  .gap-3 {
+    gap: 0.75rem !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .mb-4 {
+    margin-bottom: 1rem;
+  }
+
+  .mt-4 {
+    margin-top: 1rem;
+  }
+
+  .py-4 {
+    padding-block: 1rem;
+  }
+
+  .px-4 {
+    padding-inline: 1rem;
+  }
+}
+
+/* =============================================================================
+   13. HOTEL PORTAL PAGE HEADER (Mobile Responsive)
+============================================================================= */
+
+@media (max-width: 768px) {
+  /* Hotel Portal Header Mobile Optimizations */
+  .hotel-portal-header {
+    padding-block: 0.75rem;
+  }
+
+  .hotel-portal-header .container {
+    padding-inline: 1rem;
+  }
+
+  .hotel-portal-header .d-flex {
+    gap: 0.5rem !important;
+  }
+
+  /* Hotel Title Responsive */
+  .hotel-portal-title {
+    font-size: 1.1rem !important;
+    line-height: 1.2;
+  }
+
+  /* Hotel Logo Mobile */
+  .hotel-portal-logo {
+    max-height: 28px !important;
+    max-width: 80px !important;
+  }
+
+  /* Back Button Mobile */
+  .hotel-portal-header .btn-sm {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  /* Staff Button Mobile */
+  .hotel-portal-staff-btn {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  /* Location text mobile */
+  .hotel-portal-header small {
+    font-size: 0.7rem;
+  }
+
+  /* Better text truncation */
+  .min-width-0 {
+    min-width: 0;
+  }
+
+  .text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+@media (max-width: 576px) {
+  /* Extra small screens */
+  .hotel-portal-header {
+    padding-block: 0.5rem;
+  }
+
+  .hotel-portal-title {
+    font-size: 1rem !important;
+  }
+
+  .hotel-portal-logo {
+    max-height: 24px !important;
+    max-width: 60px !important;
+  }
+
+  .hotel-portal-header .btn-sm {
+    padding: 0.25rem 0.375rem;
+    font-size: 0.75rem;
+  }
+
+  .hotel-portal-staff-btn {
+    padding: 0.25rem 0.375rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* =============================================================================
+   14. GENERAL MOBILE NAVBAR FIXES
+============================================================================= */
+
+@media (max-width: 991.98px) {
+  /* Ensure mobile navbar doesn't interfere with sticky headers */
+  .sticky-top {
+    top: 0 !important;
+    z-index: 1040;
+  }
+  
+  /* Mobile navbar should be above sticky headers */
+  .mobile-nav {
+    z-index: 1050 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Mobile navbar collapsed state */
+  .mobile-nav:not(.show) {
+    height: 56px !important;
+  }
+
+  /* Mobile navbar expanded state */
+  .mobile-nav.show {
+    height: 100vh !important;
+    width: 100vw !important;
+    background-color: rgba(0, 0, 0, 0.95) !important;
+    backdrop-filter: blur(10px);
+  }
+
+  /* Hotel portal page specific mobile spacing */
+  .hotel-portal-page {
+    padding-top: 0;
+  }
+
+  /* Adjust main content when mobile navbar is present */
+  .hotel-portal-page .hotel-portal-header {
+    margin-top: 0;
+  }
+
+  /* Mobile navbar brand/logo adjustments */
+  .mobile-nav .navbar-brand {
+    font-size: 1rem;
+    padding: 0.5rem 0;
+  }
+
+  /* Mobile navbar toggler improvements */
+  .mobile-nav .navbar-toggler {
+    padding: 0.25rem 0.5rem;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .mobile-nav .navbar-toggler:focus {
+    box-shadow: none !important;
+  }
+
+  /* Mobile nav items spacing */
+  .mobile-nav .navbar-nav {
+    padding: 1rem 0;
+  }
+
+  .mobile-nav .nav-item {
+    margin-bottom: 0.5rem;
+  }
+
+  .mobile-nav .nav-link {
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    border-radius: 0.375rem;
+  }
+
+  /* Mobile navigation buttons */
+  .mobile-nav .btn {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+
+  /* Prevent body scroll when mobile nav is open */
+  body.mobile-navbar-expanded {
+    overflow: hidden !important;
+    position: fixed !important;
+    width: 100% !important;
+  }
+
+  /* Fix horizontal overflow issues on mobile */
+  body, html {
+    overflow-x: hidden;
+  }
+
+  .container, .container-fluid {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Ensure all sections fit within viewport */
+  .section, section {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* Fix any absolute positioned elements */
+  .position-absolute {
+    max-width: calc(100vw - 2rem);
+  }
+
+
+
+
+
+
+}
+
+/* =============================================================================
+   END OF MOBILE PUBLIC PAGE CSS
+============================================================================= */

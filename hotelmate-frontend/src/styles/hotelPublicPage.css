@@ -170,7 +170,80 @@
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
 }
 
-/* Responsive preset selector */
+/* Mobile Preset Selector Toggle */
+.preset-selector-mobile-toggle {
+  border-radius: 8px !important;
+  font-weight: 600;
+  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.preset-selector-mobile-toggle:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.preset-selector-mobile-toggle:focus {
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+}
+
+/* Mobile Preset Content - Collapsible */
+.preset-selector-mobile-content {
+  overflow: hidden;
+  transition: all 0.3s ease-in-out;
+  max-height: 0;
+  opacity: 0;
+}
+
+.preset-selector-mobile-content.show {
+  max-height: 500px; /* Generous height for content */
+  opacity: 1;
+}
+
+/* Mobile preset buttons in grid layout */
+.preset-selector-mobile-content .preset-selector-variant-1,
+.preset-selector-mobile-content .preset-selector-variant-2,
+.preset-selector-mobile-content .preset-selector-variant-3,
+.preset-selector-mobile-content .preset-selector-variant-4,
+.preset-selector-mobile-content .preset-selector-variant-5 {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+  padding: 0.75rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.preset-selector-mobile-content .preset-selector-variant-1:hover,
+.preset-selector-mobile-content .preset-selector-variant-2:hover,
+.preset-selector-mobile-content .preset-selector-variant-3:hover,
+.preset-selector-mobile-content .preset-selector-variant-4:hover,
+.preset-selector-mobile-content .preset-selector-variant-5:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+.preset-selector-mobile-content .preset-selector-variant-1.active,
+.preset-selector-mobile-content .preset-selector-variant-2.active,
+.preset-selector-mobile-content .preset-selector-variant-3.active,
+.preset-selector-mobile-content .preset-selector-variant-4.active,
+.preset-selector-mobile-content .preset-selector-variant-5.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Responsive behavior - Old styles kept for backward compatibility */
 @media (max-width: 991px) {
   .preset-selector-bar .btn-group {
     flex-wrap: wrap;
@@ -191,20 +264,6 @@
   
   .preset-selector-bar .container-fluid {
     padding: 0 0.5rem;
-  }
-  
-  .preset-selector-bar .row {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  
-  .preset-selector-bar .btn-group {
-    width: 100%;
-  }
-  
-  .preset-selector-bar .btn {
-    flex: 1;
-    min-width: 0;
   }
 }
 

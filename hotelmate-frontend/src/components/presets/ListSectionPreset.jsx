@@ -81,9 +81,9 @@ const ListSectionPreset = ({ section, onUpdate }) => {
           </div>
         </div>
         {lists.map((list) => (
-          <div key={list.id} className="list-section__container mb-5">
+          <div key={list.id} className="list-section__container mb-5 ">
             {list.title && <h3 className={`list-section__subtitle mb-4 font-preset-${variant}-subtitle`}>{list.title}</h3>}
-            <Row className="g-4">
+            <Row className="g-2 d-flex justify-content-center">
               {isStaff && (
                 <Col xs={12} sm={6} md={4}>
                   <button className="list-section-add-card" onClick={() => openAddCard(list)}>
