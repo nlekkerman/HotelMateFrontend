@@ -878,6 +878,7 @@ body.terminal-mode,
   backdrop-filter: blur(0);
   z-index: 3;
 }
+/* LEGACY ATTENDANCE CSS – commented out in Phase 3
 .shift-chip {
   display: block;
   align-items: center;
@@ -892,6 +893,7 @@ body.terminal-mode,
 .roster-cell {
   white-space: nowrap;
 }
+*/
 
 .controls {
   position: relative;
@@ -1030,10 +1032,12 @@ body.terminal-mode,
   font-size: 1.1rem;
   z-index: 20050 !important;
 }
+/* LEGACY ATTENDANCE CSS – commented out in Phase 3
 .shift-modal {
   z-index: 20059 !important;
   background-color: #00ff00;
 }
+*/
 /* Hotel Logo Display - No hero/header background, just logo */
 .hotel-logo-display {
   text-align: start;

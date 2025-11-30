@@ -42,7 +42,6 @@ import BookingConfirmation from "@/pages/bookings/BookingConfirmation";
 import BookingPaymentSuccess from "@/pages/bookings/BookingPaymentSuccess";
 import BookingPaymentCancel from "@/pages/bookings/BookingPaymentCancel";
 import MyBookingsPage from "@/pages/bookings/MyBookingsPage";
-import StaffLoginPage from "@/pages/StaffLoginPage";
 import Reception from "@/components/Reception";
 import Login from "@/components/auth/Login";
 import Register from "@/components/auth/Register";
@@ -130,6 +129,9 @@ import QuizResultsScreen from "@/games/quiz-game/pages/QuizResultsScreen";
 import QuizLeaderboard from "@/games/quiz-game/pages/QuizLeaderboard";
 import QuizTournaments from "@/games/quiz-game/pages/QuizTournaments";
 
+// Attendance
+import AttendanceDashboard from "@/features/attendance/pages/AttendanceDashboard";
+
 const queryClient = new QueryClient();
 // Default settings for all games
 const defaultAudioSettings = {
@@ -170,7 +172,6 @@ const isGuestRoute = (pathname) => {
 function AppLayout({ collapsed, setCollapsed, isMobile }) {
   const [audioSettings, setAudioSettings] = useState(defaultAudioSettings);
   const location = useLocation();
-  const isClockInPage = location.pathname.startsWith("/clock-in");
   const isAuthPage = location.pathname === "/login" || 
                      location.pathname === "/logout" ||
                      location.pathname === "/register" || 
@@ -206,7 +207,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                             );
   
   // Determine if navbar/sidebar should be hidden
-  const hideNavigation = isClockInPage || isAuthPage || isGuestPage || isPublicLandingPage;
+  const hideNavigation = isAuthPage || isGuestPage || isPublicLandingPage;
   
   const { user } = useAuth();
 
@@ -307,9 +308,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/booking/payment/success" element={<BookingPaymentSuccess />} />
               <Route path="/booking/payment/cancel" element={<BookingPaymentCancel />} />
               
-              {/* Staff Login - Public */}
-              <Route path="/staff/login" element={<StaffLoginPage />} />
-              
+      
               {/* Staff Feed - Requires hotel slug */}
               <Route path="/staff/:hotelSlug/feed" element={<ProtectedRoute><Home /></ProtectedRoute>} />
               
@@ -332,6 +331,9 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/:hotelSlug/staff/create" element={<ProtectedRoute><StaffCreate /></ProtectedRoute>} />
               <Route path="/:hotelSlug/staff/:id" element={<ProtectedRoute><StaffDetails /></ProtectedRoute>} />
               <Route path="/:hotelSlug/staff/me" element={<ProtectedRoute><StaffProfile /></ProtectedRoute>} />
+
+              {/* Attendance Routes */}
+              <Route path="/roster/:hotelSlug" element={<ProtectedRoute><AttendanceDashboard /></ProtectedRoute>} />
            
               {/* PIN Auth - Public (guests use these) */}
               <Route path="/:hotelIdentifier/room/:roomNumber/validate-pin" element={<PinAuth />} />

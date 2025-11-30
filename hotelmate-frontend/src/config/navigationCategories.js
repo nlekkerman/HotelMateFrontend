@@ -60,6 +60,7 @@ export const NAV_ITEM_CATEGORY_MAP = {
   
   // Staff
   'staff': 'staff',
+  'attendance': 'staff',
   'maintenance': 'staff',
   'staff_chat': 'staff',
   
