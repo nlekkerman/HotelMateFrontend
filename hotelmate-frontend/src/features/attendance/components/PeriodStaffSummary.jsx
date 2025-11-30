@@ -3,7 +3,7 @@ import React from "react";
 export default function PeriodStaffSummary({ logsInPeriod }) {
   if (!logsInPeriod || logsInPeriod.length === 0) {
     return (
-      <div className="card mb-3">
+      <div className="card attendance-card mb-3">
         <div className="card-body">
           <p className="mb-0 text-muted">
             No approved attendance data for this period yet.
@@ -52,7 +52,7 @@ export default function PeriodStaffSummary({ logsInPeriod }) {
   );
 
   return (
-    <div className="card mb-3">
+    <div className="card attendance-card mb-3">
       <div className="card-body">
         <h6 className="mb-3">Period Staff Summary</h6>
         <div className="table-responsive">

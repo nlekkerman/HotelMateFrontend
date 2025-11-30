@@ -16,7 +16,7 @@ export default function RosterPeriodSummary({
   const exportsDisabled = !period.finalized || !onExportCsv;
 
   return (
-    <div className="card mb-3">
+    <div className="card attendance-card mb-3">
       <div className="card-body">
         <div className="row align-items-center">
           <div className="col-md-8">

@@ -1,0 +1,285 @@
+/* Face Kiosk Page Styles - Phase 2 UX Polish */
+
+.face-kiosk-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.face-kiosk-card {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  max-width: 600px;
+  width: 100%;
+}
+
+/* Kiosk-specific typography */
+.face-kiosk-page .kiosk-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.face-kiosk-page .kiosk-subtitle {
+  font-size: 1.2rem;
+  color: #7f8c8d;
+  margin-bottom: 1rem;
+}
+
+.face-kiosk-page .kiosk-hotel-info {
+  background: #3498db;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+  font-weight: 600;
+  display: inline-block;
+  margin-bottom: 2rem;
+}
+
+/* Kiosk buttons */
+.face-kiosk-page .kiosk-btn {
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  border: none;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  text-transform: none;
+}
+
+.face-kiosk-page .kiosk-btn-primary {
+  background: #27ae60;
+  color: white;
+  box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+}
+
+.face-kiosk-page .kiosk-btn-primary:hover:not(:disabled) {
+  background: #2ecc71;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+}
+
+.face-kiosk-page .kiosk-btn-secondary {
+  background: #95a5a6;
+  color: white;
+  box-shadow: 0 4px 15px rgba(149, 165, 166, 0.3);
+}
+
+.face-kiosk-page .kiosk-btn-secondary:hover:not(:disabled) {
+  background: #7f8c8d;
+  transform: translateY(-2px);
+}
+
+.face-kiosk-page .kiosk-btn-warning {
+  background: #f39c12;
+  color: white;
+  box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+}
+
+.face-kiosk-page .kiosk-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Kiosk states */
+.face-kiosk-page .kiosk-state-ready {
+  border-left: 5px solid #3498db;
+  background: #ecf0f1;
+  padding: 1.5rem;
+  border-radius: 0 12px 12px 0;
+  margin-bottom: 2rem;
+}
+
+.face-kiosk-page .kiosk-state-captured {
+  border-left: 5px solid #f39c12;
+  background: #fdf2e9;
+  padding: 1.5rem;
+  border-radius: 0 12px 12px 0;
+  margin-bottom: 2rem;
+}
+
+.face-kiosk-page .kiosk-state-processing {
+  border-left: 5px solid #9b59b6;
+  background: #f4ecf7;
+  padding: 1.5rem;
+  border-radius: 0 12px 12px 0;
+  margin-bottom: 2rem;
+}
+
+.face-kiosk-page .kiosk-state-success {
+  border-left: 5px solid #27ae60;
+  background: #e8f5e8;
+  padding: 1.5rem;
+  border-radius: 0 12px 12px 0;
+  margin-bottom: 2rem;
+}
+
+.face-kiosk-page .kiosk-state-error {
+  border-left: 5px solid #e74c3c;
+  background: #fdf2f2;
+  padding: 1.5rem;
+  border-radius: 0 12px 12px 0;
+  margin-bottom: 2rem;
+}
+
+/* Kiosk alerts and messages */
+.face-kiosk-page .kiosk-alert {
+  padding: 1.5rem;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.face-kiosk-page .kiosk-alert-success {
+  background: #d5ead5;
+  color: #27ae60;
+  border: 2px solid #27ae60;
+}
+
+.face-kiosk-page .kiosk-alert-error {
+  background: #fdeaea;
+  color: #e74c3c;
+  border: 2px solid #e74c3c;
+}
+
+.face-kiosk-page .kiosk-alert-warning {
+  background: #fef9e7;
+  color: #f39c12;
+  border: 2px solid #f39c12;
+}
+
+.face-kiosk-page .kiosk-alert-info {
+  background: #e3f2fd;
+  color: #2196f3;
+  border: 2px solid #2196f3;
+}
+
+/* Safety warnings */
+.face-kiosk-page .safety-warning {
+  background: #fff3cd;
+  border: 2px solid #ffc107;
+  color: #856404;
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.face-kiosk-page .safety-warning-severe {
+  background: #f8d7da;
+  border: 2px solid #dc3545;
+  color: #721c24;
+}
+
+.face-kiosk-page .safety-warning h6 {
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+/* Camera preview enhancements */
+.face-kiosk-page .camera-container {
+  border: 3px solid #ddd;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f8f9fa;
+  position: relative;
+}
+
+.face-kiosk-page .camera-container.ready {
+  border-color: #3498db;
+  box-shadow: 0 0 20px rgba(52, 152, 219, 0.3);
+}
+
+.face-kiosk-page .camera-container.captured {
+  border-color: #27ae60;
+  box-shadow: 0 0 20px rgba(39, 174, 96, 0.3);
+}
+
+/* Location selector */
+.face-kiosk-page .location-selector {
+  margin-bottom: 2rem;
+}
+
+.face-kiosk-page .location-selector label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.face-kiosk-page .location-selector select {
+  font-size: 1rem;
+  padding: 0.8rem;
+  border-radius: 8px;
+  border: 2px solid #ddd;
+  background: white;
+}
+
+/* Auto-reset countdown */
+.face-kiosk-page .auto-reset-countdown {
+  background: #e9ecef;
+  color: #6c757d;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .face-kiosk-page .kiosk-title {
+    font-size: 2rem;
+  }
+  
+  .face-kiosk-page .kiosk-subtitle {
+    font-size: 1rem;
+  }
+  
+  .face-kiosk-page .kiosk-btn {
+    font-size: 1rem;
+    padding: 0.8rem 1.5rem;
+    min-height: 50px;
+  }
+  
+  .face-kiosk-card {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+}
+
+/* High contrast mode for accessibility */
+@media (prefers-contrast: high) {
+  .face-kiosk-page {
+    background: #ffffff;
+  }
+  
+  .face-kiosk-card {
+    border: 3px solid #000000;
+  }
+  
+  .face-kiosk-page .kiosk-btn {
+    border: 2px solid #000000;
+  }
+}
+
+/* Print styles (hide kiosk when printing) */
+@media print {
+  .face-kiosk-page {
+    display: none;
+  }
+}

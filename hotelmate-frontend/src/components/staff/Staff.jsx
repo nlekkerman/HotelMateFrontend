@@ -13,6 +13,7 @@ export default function Staff() {
   const [loadingClockedIn, setLoadingClockedIn] = useState(false);
   const navigate = useNavigate();
   const [showClockedIn, setShowClockedIn] = useState(false);
+  const [faceFilter, setFaceFilter] = useState("all"); // "all", "registered", "missing"
   
   // Expose toggle function globally so quick actions can access it
   useEffect(() => {
@@ -79,12 +80,85 @@ export default function Staff() {
     fetchClockedInLogs();
   }, [showClockedIn, hotelSlug]);
 
+  // Filter staff based on face registration status
+  const filteredStaffList = staffList.filter(staff => {
+    if (faceFilter === "registered") return staff.has_registered_face;
+    if (faceFilter === "missing") return !staff.has_registered_face;
+    return true; // "all"
+  });
+
+  // Calculate face registration stats
+  const totalStaff = staffList.length;
+  const withFace = staffList.filter(s => s.has_registered_face).length;
+  const withoutFace = totalStaff - withFace;
+
   return (
     <div className="container my-4">
       <div className="text-center mb-4">
         <h2 className="fw-bold mb-3">
           {showClockedIn ? "Currently Clocked In Staff" : "Staff Directory"}
         </h2>
+        
+        {/* Face Registration Stats */}
+        {!showClockedIn && totalStaff > 0 && (
+          <div className="row mb-4">
+            <div className="col-md-8 mx-auto">
+              <div className="card bg-light">
+                <div className="card-body py-3">
+                  <div className="row text-center">
+                    <div className="col-3">
+                      <strong className="d-block fs-5">{totalStaff}</strong>
+                      <small className="text-muted">Total Staff</small>
+                    </div>
+                    <div className="col-3">
+                      <strong className="d-block fs-5 text-success">{withFace}</strong>
+                      <small className="text-muted">With Face Data</small>
+                    </div>
+                    <div className="col-3">
+                      <strong className="d-block fs-5 text-warning">{withoutFace}</strong>
+                      <small className="text-muted">Missing Face</small>
+                    </div>
+                    <div className="col-3">
+                      <strong className="d-block fs-5 text-info">
+                        {totalStaff > 0 ? Math.round((withFace / totalStaff) * 100) : 0}%
+                      </strong>
+                      <small className="text-muted">Coverage</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Face Filter Controls */}
+        {!showClockedIn && staffList.length > 0 && (
+          <div className="mb-4">
+            <div className="btn-group" role="group" aria-label="Face registration filter">
+              <button
+                type="button"
+                className={`btn ${faceFilter === "all" ? "btn-primary" : "btn-outline-primary"}`}
+                onClick={() => setFaceFilter("all")}
+              >
+                All Staff ({totalStaff})
+              </button>
+              <button
+                type="button"
+                className={`btn ${faceFilter === "registered" ? "btn-success" : "btn-outline-success"}`}
+                onClick={() => setFaceFilter("registered")}
+              >
+                With Face Data ({withFace})
+              </button>
+              <button
+                type="button"
+                className={`btn ${faceFilter === "missing" ? "btn-warning" : "btn-outline-warning"}`}
+                onClick={() => setFaceFilter("missing")}
+              >
+                Missing Face Data ({withoutFace})
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Show loading indicators */}
@@ -116,12 +190,26 @@ export default function Staff() {
         </>
       )}
 
-      {/* Show all staff when not in clocked-in view */}
-      {!showClockedIn && !loadingStaff && !error && staffList.length > 0 && (
+      {/* Show filtered staff when not in clocked-in view */}
+      {!showClockedIn && !loadingStaff && !error && filteredStaffList.length > 0 && (
         <StaffByDepartment
-          staffList={staffList}
+          staffList={filteredStaffList}
           onStaffClick={(staff) => navigate(`/${hotelSlug}/staff/${staff.id}`)}
         />
+      )}
+
+      {/* Show no results message when filter produces empty results */}
+      {!showClockedIn && !loadingStaff && !error && filteredStaffList.length === 0 && staffList.length > 0 && (
+        <div className="alert alert-info text-center">
+          <i className="bi bi-funnel me-2"></i>
+          No staff members match the current filter. 
+          <button 
+            className="btn btn-sm btn-outline-primary ms-2"
+            onClick={() => setFaceFilter("all")}
+          >
+            Show All Staff
+          </button>
+        </div>
       )}
 
       {!showClockedIn && !loadingStaff && error && (

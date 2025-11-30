@@ -281,7 +281,7 @@ a[class*="footer-"] {
 [data-preset="1"] .room-card-book-button--primary {
   background: linear-gradient(135deg, #9fcef2, #5fe0ff);
   border-color: transparent;
-  color: #05070a;
+  color: #ffffff !important;
   box-shadow: 0 4px 12px rgba(59, 169, 255, 0.3);
 }
 

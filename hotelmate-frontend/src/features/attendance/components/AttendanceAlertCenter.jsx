@@ -1,53 +1,101 @@
-import React from "react";
+import React, { useState } from "react";
+import { safeString } from "../utils/safeUtils";
 
 export default function AttendanceAlertCenter({ alerts, onDismiss, onAction }) {
-  if (!alerts || alerts.length === 0) {
+  const [actionLoading, setActionLoading] = useState(new Set());
+
+  // Defensive check for alerts
+  if (!Array.isArray(alerts) || alerts.length === 0) {
     return null;
   }
 
+  const handleAction = async (alert, action) => {
+    if (!alert || !alert.id || !action || actionLoading.has(alert.id)) {
+      return;
+    }
+
+    setActionLoading(prev => new Set([...prev, alert.id]));
+    
+    try {
+      if (typeof onAction === 'function') {
+        await onAction(alert, action);
+      }
+    } catch (error) {
+      console.error("Alert action failed:", error);
+    } finally {
+      setActionLoading(prev => {
+        const next = new Set(prev);
+        next.delete(alert.id);
+        return next;
+      });
+    }
+  };
+
+  const handleDismiss = (alertId) => {
+    if (typeof onDismiss === 'function') {
+      onDismiss(alertId);
+    }
+  };
+
   return (
     <div className="mb-3">
-      {alerts.map((alert) => {
-        const isHardLimit = alert.type === "hard-limit";
-        const isBreak = alert.type === "break-warning";
-        const isOvertime = alert.type === "overtime-warning";
-        const isUnrostered = alert.type === "unrostered-request";
+      {alerts.filter(alert => alert && alert.id).map((alert, index) => {
+        const alertType = safeString(alert.type);
+        const isHardLimit = alertType === "hard-limit";
+        const isBreak = alertType === "break-warning";
+        const isOvertime = alertType === "overtime-warning";
+        const isUnrostered = alertType === "unrostered-request";
+        const isLoading = actionLoading.has(alert.id);
 
-        let className = "alert alert-info d-flex justify-content-between align-items-center";
-        if (isHardLimit) className = "alert alert-danger d-flex justify-content-between align-items-center";
-        else if (isOvertime) className = "alert alert-warning d-flex justify-content-between align-items-center";
-        else if (isBreak) className = "alert alert-primary d-flex justify-content-between align-items-center";
-        else if (isUnrostered) className = "alert alert-secondary d-flex justify-content-between align-items-center";
+        let className = "alert d-flex justify-content-between align-items-start flex-wrap gap-2";
+        let variant = "info";
+
+        if (isHardLimit) variant = "danger";
+        else if (isOvertime) variant = "warning";
+        else if (isBreak) variant = "primary";
+        else if (isUnrostered) variant = "secondary";
+
+        className += ` alert-${variant}`;
 
         return (
-          <div key={alert.id} className={className}>
-            <div>
-              <strong>{alert.staffName || "Staff"}</strong>{" "}
-              <span className="d-block d-sm-inline">{alert.message}</span>
+          <div key={alert.id || `alert-${index}`} className={`${className} attendance-alert`}>
+            <div className="flex-grow-1">
+              <strong>{safeString(alert.staffName) || "Staff"}</strong>{" "}
+              <span className="d-block d-sm-inline">
+                {safeString(alert.message) || "No message"}
+              </span>
+              {alert.createdAt && (
+                <small className="text-muted d-block">
+                  {new Date(alert.createdAt).toLocaleTimeString()}
+                </small>
+              )}
             </div>
-            <div className="d-flex gap-2">
-              {isHardLimit && onAction && (
+            <div className="d-flex gap-2 flex-wrap">
+              {isHardLimit && typeof onAction === 'function' && (
                 <>
                   <button
                     type="button"
                     className="btn btn-sm btn-outline-light"
-                    onClick={() => onAction(alert, "stay")}
+                    disabled={isLoading}
+                    onClick={() => handleAction(alert, "stay")}
                   >
-                    Stay clocked in
+                    {isLoading ? "..." : "Stay clocked in"}
                   </button>
                   <button
                     type="button"
                     className="btn btn-sm btn-light"
-                    onClick={() => onAction(alert, "clockout")}
+                    disabled={isLoading}
+                    onClick={() => handleAction(alert, "clockout")}
                   >
-                    Clock out now
+                    {isLoading ? "..." : "Clock out now"}
                   </button>
                 </>
               )}
               <button
                 type="button"
                 className="btn btn-sm btn-outline-dark"
-                onClick={() => onDismiss && onDismiss(alert.id)}
+                onClick={() => handleDismiss(alert.id)}
+                disabled={isLoading}
               >
                 Dismiss
               </button>

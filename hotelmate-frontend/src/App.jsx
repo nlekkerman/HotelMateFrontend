@@ -132,6 +132,10 @@ import QuizTournaments from "@/games/quiz-game/pages/QuizTournaments";
 // Attendance
 import AttendanceDashboard from "@/features/attendance/pages/AttendanceDashboard";
 
+// Face Attendance
+import FaceRegisterPage from "@/features/faceAttendance/pages/FaceRegisterPage";
+import FaceClockInPage from "@/features/faceAttendance/pages/FaceClockInPage";
+
 const queryClient = new QueryClient();
 // Default settings for all games
 const defaultAudioSettings = {
@@ -334,6 +338,10 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
 
               {/* Attendance Routes */}
               <Route path="/roster/:hotelSlug" element={<ProtectedRoute><AttendanceDashboard /></ProtectedRoute>} />
+              
+              {/* Face Attendance Routes */}
+              <Route path="/face/:hotelSlug/register" element={<ProtectedRoute><FaceRegisterPage /></ProtectedRoute>} />
+              <Route path="/face/:hotelSlug/clock-in" element={<FaceClockInPage />} />
            
               {/* PIN Auth - Public (guests use these) */}
               <Route path="/:hotelIdentifier/room/:roomNumber/validate-pin" element={<PinAuth />} />

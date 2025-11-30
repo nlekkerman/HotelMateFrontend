@@ -1,5 +1,22 @@
 import { useEffect } from 'react';
-import Pusher from 'pusher-js';
+
+/**
+ * Safe event handler that validates event structure
+ * @param {Function} onEvent - Original event callback
+ * @param {string} type - Event type
+ * @param {*} data - Event data
+ */
+function safeEventHandler(onEvent, type, data) {
+  if (typeof onEvent !== 'function') return;
+  
+  try {
+    // Validate event structure
+    const payload = data && typeof data === 'object' ? data : {};
+    onEvent({ type, payload });
+  } catch (error) {
+    console.error(`[Attendance Pusher] Error handling event ${type}:`, error);
+  }
+}
 
 /**
  * Hook for real-time attendance updates via Pusher
@@ -8,89 +25,135 @@ import Pusher from 'pusher-js';
  */
 export function useAttendanceRealtime(hotelSlug, onEvent) {
   useEffect(() => {
-    if (!hotelSlug) return;
+    if (!hotelSlug || typeof onEvent !== 'function') return;
 
-    // Initialize Pusher using the same pattern as other features
-    const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
-      cluster: import.meta.env.VITE_PUSHER_CLUSTER,
-      encrypted: true,
-    });
-
-    const channelName = `hotel-${hotelSlug}`;
-    console.log('[Attendance Pusher] Subscribing to channel:', channelName);
-    const channel = pusher.subscribe(channelName);
-
-    // Unrostered clock-in request - someone clocked in without being rostered
-    channel.bind('attendance-unrostered-request', (data) => {
-      console.log('[Attendance Pusher] 🚨 Unrostered request:', data);
-      onEvent?.({ type: 'unrostered-request', payload: data });
-    });
-
-    // Break warning - staff member should take a break
-    channel.bind('attendance-break-warning', (data) => {
-      console.log('[Attendance Pusher] ⏰ Break warning:', data);
-      onEvent?.({ type: 'break-warning', payload: data });
-    });
-
-    // Overtime warning - staff member is working overtime
-    channel.bind('attendance-overtime-warning', (data) => {
-      console.log('[Attendance Pusher] ⏰ Overtime warning:', data);
-      onEvent?.({ type: 'overtime-warning', payload: data });
-    });
-
-    // Hard limit warning - staff member reached maximum hours
-    channel.bind('attendance-hard-limit-warning', (data) => {
-      console.log('[Attendance Pusher] 🔴 Hard limit warning:', data);
-      onEvent?.({ type: 'hard-limit', payload: data });
-    });
-
-    // Clock log approved - unrostered request was approved
-    channel.bind('clocklog-approved', (data) => {
-      console.log('[Attendance Pusher] ✅ Clock log approved:', data);
-      onEvent?.({ type: 'log-approved', payload: data });
-    });
-
-    // Clock log rejected - unrostered request was rejected
-    channel.bind('clocklog-rejected', (data) => {
-      console.log('[Attendance Pusher] ❌ Clock log rejected:', data);
-      onEvent?.({ type: 'log-rejected', payload: data });
-    });
-
-    // New clock log created/updated - staff clocked in/out
-    channel.bind('clocklog-created', (data) => {
-      console.log('[Attendance Pusher] 🔄 Clock log created:', data);
-      onEvent?.({ type: 'log-created', payload: data });
-    });
-
-    channel.bind('clocklog-updated', (data) => {
-      console.log('[Attendance Pusher] 🔄 Clock log updated:', data);
-      onEvent?.({ type: 'log-updated', payload: data });
-    });
-
-    // Debug: Log when channel is ready
-    channel.bind('pusher:subscription_succeeded', () => {
-      console.log('[Attendance Pusher] ✅ Successfully subscribed to:', channelName);
-    });
+    // Check if Pusher environment variables are available
+    const pusherKey = import.meta.env.VITE_PUSHER_KEY;
+    const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER;
     
-    channel.bind('pusher:subscription_error', (error) => {
-      console.error('[Attendance Pusher] ❌ Subscription error:', error);
-    });
+    if (!pusherKey || !pusherCluster) {
+      console.warn('[Attendance Pusher] Pusher configuration missing');
+      return;
+    }
 
-    // Connection status
-    pusher.connection.bind('connected', () => {
-      console.log('[Attendance Pusher] ✅ Connected to Pusher');
-    });
+    let pusher;
+    let channel;
 
-    pusher.connection.bind('error', (error) => {
-      console.error('[Attendance Pusher] ❌ Connection error:', error);
-    });
+    const initializePusher = async () => {
+      try {
+        // Dynamic import with fallback
+        let Pusher;
+        try {
+          Pusher = (await import('pusher-js')).default;
+        } catch (importError) {
+          console.warn('[Attendance Pusher] Pusher not available:', importError);
+          return;
+        }
 
-    // Cleanup
+        // Initialize Pusher
+        pusher = new Pusher(pusherKey, {
+          cluster: pusherCluster,
+          encrypted: true,
+        });
+
+        const channelName = `hotel-${hotelSlug}`;
+        console.log('[Attendance Pusher] Subscribing to channel:', channelName);
+        channel = pusher.subscribe(channelName);
+
+        // Bind event handlers with safety wrapper
+        const bindSafeEvent = (eventName, eventType) => {
+          channel.bind(eventName, (data) => {
+            console.log(`[Attendance Pusher] ${eventType} event:`, data);
+            safeEventHandler(onEvent, eventType, data);
+          });
+        };
+
+        // Unrostered clock-in request - someone clocked in without being rostered
+        bindSafeEvent('attendance-unrostered-request', 'unrostered-request');
+
+        // Break warning - staff member should take a break
+        bindSafeEvent('attendance-break-warning', 'break-warning');
+
+        // Overtime warning - staff member is working overtime
+        bindSafeEvent('attendance-overtime-warning', 'overtime-warning');
+
+        // Hard limit warning - staff member reached maximum hours
+        bindSafeEvent('attendance-hard-limit-warning', 'hard-limit');
+
+        // Clock log approved - unrostered request was approved
+        bindSafeEvent('clocklog-approved', 'log-approved');
+
+        // Clock log rejected - unrostered request was rejected
+        bindSafeEvent('clocklog-rejected', 'log-rejected');
+
+        // New clock log created/updated - staff clocked in/out
+        bindSafeEvent('clocklog-created', 'log-created');
+        bindSafeEvent('clocklog-updated', 'log-updated');
+
+        // Handle unknown event types safely
+        channel.bind_global((eventName, data) => {
+          // Only handle unknown attendance-related events
+          if (eventName.startsWith('attendance-') || eventName.startsWith('clocklog-')) {
+            const knownEvents = [
+              'attendance-unrostered-request',
+              'attendance-break-warning', 
+              'attendance-overtime-warning',
+              'attendance-hard-limit-warning',
+              'clocklog-approved',
+              'clocklog-rejected',
+              'clocklog-created',
+              'clocklog-updated'
+            ];
+            
+            if (!knownEvents.includes(eventName) && !eventName.startsWith('pusher:')) {
+              console.warn(`[Attendance Pusher] Unknown event type: ${eventName}`, data);
+              safeEventHandler(onEvent, 'unknown-event', { eventName, ...data });
+            }
+          }
+        });
+
+        // Debug: Log when channel is ready
+        channel.bind('pusher:subscription_succeeded', () => {
+          console.log('[Attendance Pusher] ✅ Successfully subscribed to:', channelName);
+        });
+        
+        channel.bind('pusher:subscription_error', (error) => {
+          console.error('[Attendance Pusher] ❌ Subscription error:', error);
+        });
+
+        // Connection status
+        pusher.connection.bind('connected', () => {
+          console.log('[Attendance Pusher] ✅ Connected to Pusher');
+        });
+
+        pusher.connection.bind('error', (error) => {
+          console.error('[Attendance Pusher] ❌ Connection error:', error);
+        });
+
+      } catch (error) {
+        console.error('[Attendance Pusher] Failed to initialize:', error);
+      }
+    };
+
+    // Initialize Pusher asynchronously
+    initializePusher();
+
+    // Cleanup function
     return () => {
-      console.log('[Attendance Pusher] Unsubscribing from channel:', channelName);
-      channel.unbind_all();
-      pusher.unsubscribe(channelName);
-      pusher.disconnect();
+      try {
+        if (channel) {
+          console.log('[Attendance Pusher] Unsubscribing from channel');
+          channel.unbind_all();
+        }
+        if (pusher) {
+          if (channel) {
+            pusher.unsubscribe(`hotel-${hotelSlug}`);
+          }
+          pusher.disconnect();
+        }
+      } catch (error) {
+        console.error('[Attendance Pusher] Error during cleanup:', error);
+      }
     };
   }, [hotelSlug, onEvent]);
 }

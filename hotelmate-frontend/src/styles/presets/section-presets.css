@@ -18,7 +18,7 @@
   margin-right: auto;
   margin-left: auto;
 }
-.booking-page.page-style-2 .booking-step .alert{
+.booking-page.page-style-2 .booking-step .alert {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -64,7 +64,9 @@
    ======================================== */
 
 /* Force preset backgrounds on booking page parents */
-.vw-100.expanded .main-content-area .hotel-public-page.booking-page.page-style-1,
+.vw-100.expanded
+  .main-content-area
+  .hotel-public-page.booking-page.page-style-1,
 .hotel-public-page.booking-page.page-style-1 {
   background-color: #ffffff !important;
   background-image: linear-gradient(
@@ -74,7 +76,9 @@
   ) !important;
 }
 
-.vw-100.expanded .main-content-area .hotel-public-page.booking-page.page-style-2,
+.vw-100.expanded
+  .main-content-area
+  .hotel-public-page.booking-page.page-style-2,
 .hotel-public-page.booking-page.page-style-2 {
   background-color: #010000 !important;
   background-image: linear-gradient(
@@ -84,7 +88,9 @@
   ) !important;
 }
 
-.vw-100.expanded .main-content-area .hotel-public-page.booking-page.page-style-3,
+.vw-100.expanded
+  .main-content-area
+  .hotel-public-page.booking-page.page-style-3,
 .hotel-public-page.booking-page.page-style-3 {
   background-color: #0b0000 !important;
   background-image: linear-gradient(
@@ -94,7 +100,9 @@
   ) !important;
 }
 
-.vw-100.expanded .main-content-area .hotel-public-page.booking-page.page-style-4,
+.vw-100.expanded
+  .main-content-area
+  .hotel-public-page.booking-page.page-style-4,
 .hotel-public-page.booking-page.page-style-4 {
   background-color: #ffffff !important;
   background-image: linear-gradient(
@@ -104,7 +112,9 @@
   ) !important;
 }
 
-.vw-100.expanded .main-content-area .hotel-public-page.booking-page.page-style-5,
+.vw-100.expanded
+  .main-content-area
+  .hotel-public-page.booking-page.page-style-5,
 .hotel-public-page.booking-page.page-style-5 {
   background-color: #ffffff !important;
   background-image: linear-gradient(
@@ -260,7 +270,8 @@
   background-color: rgba(var(--preset-2-tint), 1);
   background-image: linear-gradient(
     135deg,
-rgba(180, 150, 150, 0.03),    rgba(255, 255, 255, 0.01)
+    rgba(180, 150, 150, 0.03),
+    rgba(255, 255, 255, 0.01)
   );
 }
 
@@ -269,7 +280,7 @@ rgba(180, 150, 150, 0.03),    rgba(255, 255, 255, 0.01)
   background-color: rgba(var(--preset-2-tint), 1);
   background-image: linear-gradient(
     135deg,
-rgba(180, 150, 150, 0.03),
+    rgba(180, 150, 150, 0.03),
     rgba(255, 255, 255, 0.01)
   );
 }
@@ -576,11 +587,8 @@ rgba(180, 150, 150, 0.03),
 
 /* Preset 2: Dark & Elegant */
 .hero--preset-2 {
-  
- 
   border-bottom: 3px solid rgba(242, 201, 76, 0.3);
   margin-bottom: 0;
-  
 }
 
 .hero--preset-2 .hero__title {
@@ -604,7 +612,6 @@ rgba(180, 150, 150, 0.03),
 .hero--preset-2 .hero__image {
   box-shadow: var(--shadow-mid-whited);
   border-bottom: 3px solid rgba(242, 201, 76, 0.3);
- 
 }
 
 /* Preset 3: Minimal & Sleek */
@@ -1400,7 +1407,11 @@ rgba(180, 150, 150, 0.03),
 
 /* Preset 2 - Bootstrap Buttons */
 .booking-page.page-style-2 .btn-primary {
-  background: linear-gradient(135deg, var(--preset-2-primary), var(--preset-2-accent)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--preset-2-primary),
+    var(--preset-2-accent)
+  ) !important;
   border-color: transparent !important;
   color: #05070a !important;
   box-shadow: 0 4px 14px rgba(242, 201, 76, 0.4);
@@ -1450,7 +1461,11 @@ rgba(180, 150, 150, 0.03),
 
 /* Preset 4 - Bootstrap Buttons */
 .booking-page.page-style-4 .btn-primary {
-  background: linear-gradient(135deg, var(--preset-4-primary), var(--preset-4-accent)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--preset-4-primary),
+    var(--preset-4-accent)
+  ) !important;
   border-color: transparent !important;
   color: #ffffff !important;
   box-shadow: 0 4px 14px rgba(255, 107, 157, 0.4);
@@ -1475,7 +1490,11 @@ rgba(180, 150, 150, 0.03),
 
 /* Preset 5 - Bootstrap Buttons */
 .booking-page.page-style-5 .btn-primary {
-  background: linear-gradient(135deg, var(--preset-5-primary), var(--preset-5-accent)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--preset-5-primary),
+    var(--preset-5-accent)
+  ) !important;
   border-color: transparent !important;
   color: #ffffff !important;
   box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
@@ -1541,7 +1560,8 @@ rgba(180, 150, 150, 0.03),
 }
 
 /* Calendar icon for date inputs in preset 2 */
-.booking-page.page-style-2 input[type="date"]::-webkit-calendar-picker-indicator {
+.booking-page.page-style-2
+  input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.8) sepia(1) saturate(3) hue-rotate(25deg) brightness(1.2) !important;
   cursor: pointer;
 }
@@ -1566,7 +1586,8 @@ rgba(180, 150, 150, 0.03),
 }
 
 /* Calendar icon for date inputs in preset 3 */
-.booking-page.page-style-3 input[type="date"]::-webkit-calendar-picker-indicator {
+.booking-page.page-style-3
+  input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.2) !important;
   cursor: pointer;
 }
@@ -1590,7 +1611,8 @@ rgba(180, 150, 150, 0.03),
 }
 
 /* Calendar icon for date inputs in preset 4 */
-.booking-page.page-style-4 input[type="date"]::-webkit-calendar-picker-indicator {
+.booking-page.page-style-4
+  input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.4) sepia(1) saturate(2) hue-rotate(300deg) brightness(1.1) !important;
   cursor: pointer;
 }
@@ -1614,7 +1636,8 @@ rgba(180, 150, 150, 0.03),
 }
 
 /* Calendar icon for date inputs in preset 5 */
-.booking-page.page-style-5 input[type="date"]::-webkit-calendar-picker-indicator {
+.booking-page.page-style-5
+  input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.3) sepia(1) saturate(2) hue-rotate(120deg) brightness(1.1) !important;
   cursor: pointer;
 }
@@ -1748,7 +1771,11 @@ rgba(180, 150, 150, 0.03),
 
 .booking-page.page-style-1 .step-indicator.active {
   border-color: #5fe0ff;
-  background: linear-gradient(135deg, rgba(159, 206, 242, 0.3), rgba(95, 224, 255, 0.2));
+  background: linear-gradient(
+    135deg,
+    rgba(159, 206, 242, 0.3),
+    rgba(95, 224, 255, 0.2)
+  );
   color: #0d47a1;
   box-shadow: 0 4px 12px rgba(59, 169, 255, 0.3);
 }
@@ -1762,7 +1789,11 @@ rgba(180, 150, 150, 0.03),
 
 .booking-page.page-style-2 .step-indicator.active {
   border-color: var(--preset-2-primary);
-  background: linear-gradient(135deg, rgba(242, 201, 76, 0.3), rgba(212, 168, 56, 0.2));
+  background: linear-gradient(
+    135deg,
+    rgba(242, 201, 76, 0.3),
+    rgba(212, 168, 56, 0.2)
+  );
   color: #5d4a24;
   box-shadow: 0 4px 14px rgba(242, 201, 76, 0.4);
 }
@@ -1790,7 +1821,11 @@ rgba(180, 150, 150, 0.03),
 
 .booking-page.page-style-4 .step-indicator.active {
   border-color: var(--preset-4-primary);
-  background: linear-gradient(135deg, rgba(255, 107, 157, 0.3), rgba(230, 73, 143, 0.2));
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 157, 0.3),
+    rgba(230, 73, 143, 0.2)
+  );
   color: #8e0038;
   box-shadow: 0 4px 14px rgba(255, 107, 157, 0.4);
 }
@@ -1804,7 +1839,11 @@ rgba(180, 150, 150, 0.03),
 
 .booking-page.page-style-5 .step-indicator.active {
   border-color: var(--preset-5-primary);
-  background: linear-gradient(135deg, rgba(46, 204, 113, 0.3), rgba(32, 146, 77, 0.2));
+  background: linear-gradient(
+    135deg,
+    rgba(46, 204, 113, 0.3),
+    rgba(32, 146, 77, 0.2)
+  );
   color: #1b5e20;
   box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
 }
@@ -1866,16 +1905,11 @@ rgba(180, 150, 150, 0.03),
   color: #b67b04 !important;
 }
 .booking-page.page-style-2 .booking-step p span {
-  
- 
   color: #b67b04 !important;
 }
 .booking-page.page-style-2 .booking-step p i {
-  
- 
   color: #ffffff !important;
 }
-
 
 .booking-page.page-style-2 .booking-step .card:hover {
   border-color: #8b7136 !important;
@@ -1890,8 +1924,8 @@ rgba(180, 150, 150, 0.03),
   color: #05070a !important;
 }
 .booking-page.page-style-2 .booking-step .card .badge {
-   background: linear-gradient(135deg, #564412, #d4a838) !important;
-   opacity: 0.8;
+  background: linear-gradient(135deg, #564412, #d4a838) !important;
+  opacity: 0.8;
   border: 1px solid rgba(5, 7, 10, 0.1);
   color: #ecedef !important;
 }
@@ -1935,7 +1969,11 @@ rgba(180, 150, 150, 0.03),
 /* Preset 4 - Room Cards */
 .booking-page.page-style-4 .booking-step .card {
   border: 2px solid var(--preset-4-primary) !important;
-  background: linear-gradient(135deg, var(--preset-4-primary), var(--preset-4-accent)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--preset-4-primary),
+    var(--preset-4-accent)
+  ) !important;
   color: #ffffff !important;
 }
 
@@ -1963,7 +2001,11 @@ rgba(180, 150, 150, 0.03),
 /* Preset 5 - Room Cards */
 .booking-page.page-style-5 .booking-step .card {
   border: 2px solid var(--preset-5-primary) !important;
-  background: linear-gradient(135deg, var(--preset-5-primary), var(--preset-5-accent)) !important;
+  background: linear-gradient(
+    135deg,
+    var(--preset-5-primary),
+    var(--preset-5-accent)
+  ) !important;
   color: #ffffff !important;
 }
 
@@ -2028,20 +2070,30 @@ rgba(180, 150, 150, 0.03),
 .page-style-1 .card,
 .page-style-1 .modal-content {
   background: rgba(255, 255, 255, 0.95);
-  color: #1a1a1a;
+  color: rgba(59, 169, 255, 0.2) !important;
   border: 1px solid rgba(59, 169, 255, 0.2);
   backdrop-filter: blur(5px);
 }
 
 .page-style-1 .card *,
 .page-style-1 .modal-content * {
-  color: #1a1a1a !important;
+  color: rgba(157, 204, 239, 1) !important;
 }
 
 .page-style-1 .card .card-title,
-.page-style-1 .card h1, .page-style-1 .card h2, .page-style-1 .card h3, .page-style-1 .card h4, .page-style-1 .card h5, .page-style-1 .card h6,
+.page-style-1 .card h1,
+.page-style-1 .card h2,
+.page-style-1 .card h3,
+.page-style-1 .card h4,
+.page-style-1 .card h5,
+.page-style-1 .card h6,
 .page-style-1 .modal-content .modal-title,
-.page-style-1 .modal-content h1, .page-style-1 .modal-content h2, .page-style-1 .modal-content h3, .page-style-1 .modal-content h4, .page-style-1 .modal-content h5, .page-style-1 .modal-content h6 {
+.page-style-1 .modal-content h1,
+.page-style-1 .modal-content h2,
+.page-style-1 .modal-content h3,
+.page-style-1 .modal-content h4,
+.page-style-1 .modal-content h5,
+.page-style-1 .modal-content h6 {
   color: var(--preset-1-primary) !important;
 }
 
@@ -2072,9 +2124,19 @@ rgba(180, 150, 150, 0.03),
 }
 
 .page-style-2 .card .card-title,
-.page-style-2 .card h1, .page-style-2 .card h2, .page-style-2 .card h3, .page-style-2 .card h4, .page-style-2 .card h5, .page-style-2 .card h6,
+.page-style-2 .card h1,
+.page-style-2 .card h2,
+.page-style-2 .card h3,
+.page-style-2 .card h4,
+.page-style-2 .card h5,
+.page-style-2 .card h6,
 .page-style-2 .modal-content .modal-title,
-.page-style-2 .modal-content h1, .page-style-2 .modal-content h2, .page-style-2 .modal-content h3, .page-style-2 .modal-content h4, .page-style-2 .modal-content h5, .page-style-2 .modal-content h6 {
+.page-style-2 .modal-content h1,
+.page-style-2 .modal-content h2,
+.page-style-2 .modal-content h3,
+.page-style-2 .modal-content h4,
+.page-style-2 .modal-content h5,
+.page-style-2 .modal-content h6 {
   color: var(--preset-2-primary) !important;
 }
 
@@ -2105,9 +2167,19 @@ rgba(180, 150, 150, 0.03),
 }
 
 .page-style-3 .card .card-title,
-.page-style-3 .card h1, .page-style-3 .card h2, .page-style-3 .card h3, .page-style-3 .card h4, .page-style-3 .card h5, .page-style-3 .card h6,
+.page-style-3 .card h1,
+.page-style-3 .card h2,
+.page-style-3 .card h3,
+.page-style-3 .card h4,
+.page-style-3 .card h5,
+.page-style-3 .card h6,
 .page-style-3 .modal-content .modal-title,
-.page-style-3 .modal-content h1, .page-style-3 .modal-content h2, .page-style-3 .modal-content h3, .page-style-3 .modal-content h4, .page-style-3 .modal-content h5, .page-style-3 .modal-content h6 {
+.page-style-3 .modal-content h1,
+.page-style-3 .modal-content h2,
+.page-style-3 .modal-content h3,
+.page-style-3 .modal-content h4,
+.page-style-3 .modal-content h5,
+.page-style-3 .modal-content h6 {
   color: #000000 !important;
 }
 
@@ -2165,10 +2237,10 @@ rgba(180, 150, 150, 0.03),
     align-items: flex-start;
     gap: 3rem;
   }
-  
+
   /* Add vertical line separators between children (except last) */
   .footer__content-centered > *:not(:last-child)::after {
-    content: '';
+    content: "";
     position: absolute;
     right: -1.5rem;
     top: 0;
@@ -2183,7 +2255,7 @@ rgba(180, 150, 150, 0.03),
   .footer__content-centered {
     gap: 1.5rem;
   }
-  
+
   .footer__content-centered > *::after {
     display: none;
   }

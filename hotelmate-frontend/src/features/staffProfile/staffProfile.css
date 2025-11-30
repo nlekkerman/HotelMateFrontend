@@ -1,0 +1,320 @@
+/**
+ * Staff Profile Module - UI Polish & Theming
+ * 
+ * This CSS file provides theming for the staff profile that:
+ * 1. Uses the staff theme tokens from attendance.css
+ * 2. Maintains visual consistency with the attendance module
+ * 3. Provides modern, clean styling for profile components
+ */
+
+/* ========================================
+   PAGE SHELL & LAYOUT
+   ======================================== */
+
+.staff-profile-page {
+  /* Bootstrap container already provides padding */
+  color: var(--staff-text-primary);
+}
+
+.staff-profile-shell {
+  background: var(--staff-main-bg);
+  border-radius: var(--staff-border-radius);
+  padding: 1.5rem;
+  box-shadow: var(--staff-shadow-card);
+}
+
+.staff-profile-section {
+  margin-bottom: var(--staff-gap);
+}
+
+.staff-section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  color: var(--staff-text-secondary);
+  margin-bottom: 1rem;
+}
+
+/* ========================================
+   PROFILE CARD STYLING
+   ======================================== */
+
+.staff-profile-card {
+  background: var(--staff-card-bg) !important;
+  border-radius: var(--staff-border-radius) !important;
+  border: 1px solid var(--staff-border-color) !important;
+  box-shadow: var(--staff-shadow-card) !important;
+  transition: box-shadow 0.3s ease;
+}
+
+.staff-profile-card:hover {
+  box-shadow: var(--staff-shadow-hover) !important;
+}
+
+.staff-profile-card .card-header {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-radius: var(--staff-border-radius) var(--staff-border-radius) 0 0 !important;
+  border-bottom: 1px solid var(--staff-border-color) !important;
+  color: var(--staff-text-primary) !important;
+}
+
+.staff-profile-card .card-body {
+  padding: 0 !important;
+  background: transparent;
+}
+
+/* ========================================
+   PROFILE HEADER & AVATAR
+   ======================================== */
+
+.staff-profile-header {
+  padding: 1.5rem 1.25rem 1rem 1.25rem;
+}
+
+.staff-profile-avatar,
+.staff-profile-avatar-placeholder {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--staff-border-color);
+  transition: border-color 0.3s ease;
+}
+
+.staff-profile-avatar-placeholder {
+  background: rgba(255, 255, 255, 0.05);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--staff-text-muted);
+}
+
+.staff-profile-header h5 {
+  color: var(--staff-text-primary);
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.staff-profile-header .text-muted {
+  color: var(--staff-text-muted) !important;
+  font-size: 0.875rem;
+}
+
+/* ========================================
+   FIELD ROWS & STATUS
+   ======================================== */
+
+.staff-field-row {
+  background: transparent !important;
+  border-color: var(--staff-border-color) !important;
+  font-size: 0.9rem;
+  padding: 0.75rem 1.25rem;
+  color: var(--staff-text-primary);
+  transition: background-color 0.2s ease;
+}
+
+.staff-field-row:hover {
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+.staff-field-row:first-child {
+  border-top: none !important;
+}
+
+.staff-field-row:last-child {
+  border-bottom: none !important;
+  border-radius: 0 0 var(--staff-border-radius) var(--staff-border-radius);
+}
+
+.staff-field-icon {
+  color: var(--staff-text-muted);
+  width: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.staff-field-label {
+  color: var(--staff-text-secondary);
+  font-weight: 500;
+}
+
+.staff-field-value {
+  color: var(--staff-text-primary);
+}
+
+.staff-field-value .form-control,
+.staff-field-value .form-select {
+  min-width: 160px;
+  background: var(--staff-card-bg);
+  border-color: var(--staff-border-color);
+  color: var(--staff-text-primary);
+  font-size: 0.875rem;
+}
+
+.staff-field-value .form-control:focus,
+.staff-field-value .form-select:focus {
+  border-color: var(--staff-border-hover);
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.1);
+}
+
+.staff-field-value .btn-link {
+  color: var(--staff-text-muted);
+  font-size: 0.75rem;
+  text-decoration: none;
+  padding: 0.25rem 0.5rem;
+}
+
+.staff-field-value .btn-link:hover {
+  color: var(--staff-text-secondary);
+}
+
+/* Status badges */
+.staff-status-badge {
+  text-transform: capitalize;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* ========================================
+   FACE REGISTRATION CTA
+   ======================================== */
+
+.staff-face-cta {
+  border-radius: 999px !important;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  margin: 1.5rem 1.25rem 1.25rem 1.25rem;
+  transition: all 0.3s ease;
+}
+
+.staff-face-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.staff-face-hint {
+  color: var(--staff-text-muted);
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
+  padding: 0 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+/* ========================================
+   IMAGE UPLOADER STYLING
+   ======================================== */
+
+.staff-image-uploader {
+  margin-top: 1rem;
+}
+
+.staff-image-uploader .btn {
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--staff-card-radius);
+}
+
+.staff-image-uploader .text-danger {
+  color: #dc3545 !important;
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+/* ========================================
+   ROSTER SECTION STYLING
+   ======================================== */
+
+.staff-roster-section .card {
+  background: var(--staff-card-bg) !important;
+  border: 1px solid var(--staff-border-color) !important;
+  border-radius: var(--staff-border-radius) !important;
+  box-shadow: var(--staff-shadow-card) !important;
+}
+
+.staff-roster-section .card-header {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-bottom: 1px solid var(--staff-border-color) !important;
+  color: var(--staff-text-primary) !important;
+}
+
+.staff-roster-section .table {
+  color: var(--staff-text-primary);
+}
+
+.staff-roster-section .table-light {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--staff-text-secondary) !important;
+}
+
+.staff-roster-section .table td,
+.staff-roster-section .table th {
+  border-color: var(--staff-border-color) !important;
+}
+
+/* ========================================
+   RESPONSIVE BEHAVIOR
+   ======================================== */
+
+@media (max-width: 768px) {
+  .staff-profile-shell {
+    padding: 1rem;
+  }
+
+  .staff-section-title {
+    text-align: center;
+    font-size: 1rem;
+  }
+
+  .staff-profile-header {
+    text-align: center;
+    padding: 1rem;
+  }
+
+  .staff-profile-avatar,
+  .staff-profile-avatar-placeholder {
+    width: 100px;
+    height: 100px;
+  }
+
+  .staff-field-row {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .staff-field-value .form-control,
+  .staff-field-value .form-select {
+    min-width: 120px;
+    font-size: 0.8rem;
+  }
+
+  .staff-face-cta {
+    margin: 1rem;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .staff-profile-shell {
+    border-radius: var(--staff-card-radius);
+    padding: 0.75rem;
+  }
+
+  .staff-field-row {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.5rem;
+  }
+
+  .staff-field-value {
+    width: 100%;
+  }
+
+  .staff-field-value .form-control,
+  .staff-field-value .form-select {
+    min-width: 100%;
+  }
+}

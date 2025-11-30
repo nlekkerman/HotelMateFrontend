@@ -6,22 +6,40 @@ import {
 } from "../hooks/useAttendanceData";
 import { useAttendanceRealtime } from "../hooks/useAttendanceRealtime";
 import { usePeriodExport } from "../hooks/usePeriodExport";
+import { useRosterPeriods } from "../hooks/useRosterPeriods";
 import AttendanceTable from "../components/AttendanceTable";
 import AttendanceAlertCenter from "../components/AttendanceAlertCenter";
+import RosterPeriodSelector from "../components/RosterPeriodSelector";
 import RosterPeriodSummary from "../components/RosterPeriodSummary";
 import PeriodStaffSummary from "../components/PeriodStaffSummary";
+import StaffDetailModal from "../components/StaffDetailModal";
+import AttendanceErrorBoundary from "../components/AttendanceErrorBoundary";
+import AttendanceToasts from "../components/AttendanceToasts";
+import { AttendanceDashboardSkeleton, AttendanceTableSkeleton, PeriodSelectorSkeleton } from "../components/AttendanceSkeletons";
+import { deriveStatus } from "../utils/attendanceStatus";
+import { safeStaffId, safeStaffName, safeTimeSlice, safeNumber } from "../utils/safeUtils";
+import { handleAttendanceError, showSuccessMessage, ERROR_TYPES } from "../utils/errorHandling";
 import api from "@/services/api";
+import "../styles/attendance.css";
 
 function mergeRosterAndLogs(rosterItems, logItems) {
   const byStaff = new Map();
 
+  // Ensure inputs are arrays
+  const safeRosterItems = Array.isArray(rosterItems) ? rosterItems : [];
+  const safeLogItems = Array.isArray(logItems) ? logItems : [];
+
   // Seed from roster
-  for (const shift of rosterItems) {
-    const key = shift.staff_id || shift.staff;
+  for (const shift of safeRosterItems) {
+    if (!shift) continue;
+    
+    const key = safeStaffId(shift);
+    if (!key) continue; // Skip if no valid staff ID
+    
     if (!byStaff.has(key)) {
       byStaff.set(key, {
         staffId: key,
-        staffName: shift.staff_name || "",
+        staffName: safeStaffName(shift),
         roster: [],
         logs: [],
       });
@@ -30,12 +48,16 @@ function mergeRosterAndLogs(rosterItems, logItems) {
   }
 
   // Add logs
-  for (const log of logItems) {
-    const key = log.staff || log.staff_id;
+  for (const log of safeLogItems) {
+    if (!log) continue;
+    
+    const key = safeStaffId(log);
+    if (!key) continue; // Skip if no valid staff ID
+    
     if (!byStaff.has(key)) {
       byStaff.set(key, {
         staffId: key,
-        staffName: log.staff_name || "",
+        staffName: safeStaffName(log),
         roster: [],
         logs: [],
       });
@@ -46,38 +68,16 @@ function mergeRosterAndLogs(rosterItems, logItems) {
   return Array.from(byStaff.values());
 }
 
-function deriveStatus(row) {
-  const hasRoster = row.roster.length > 0;
-  const hasLog = row.logs.length > 0;
-  const openLog = row.logs.find((l) => !l.time_out);
-  const anyUnrosteredPending = row.logs.some(
-    (l) => l.is_unrostered && !l.is_approved && !l.is_rejected
-  );
-  const anyRejected = row.logs.some((l) => l.is_rejected);
-  const anyApproved = row.logs.some((l) => l.is_approved);
+  function handleRowClick(row) {
+    setSelectedStaffRow(row);
+    setShowStaffModal(true);
+  }
 
-  if (openLog) {
-    return "On duty (open log)";
+  function handleCloseStaffModal() {
+    setShowStaffModal(false);
   }
-  if (anyUnrosteredPending) {
-    return "Unrostered – pending approval";
-  }
-  if (anyRejected) {
-    return "Rejected";
-  }
-  if (hasRoster && anyApproved) {
-    return "Completed (approved)";
-  }
-  if (hasRoster && !hasLog) {
-    return "No clock log";
-  }
-  if (!hasRoster && anyApproved) {
-    return "Unrostered but approved";
-  }
-  return "No data";
-}
 
-export default function AttendanceDashboard() {
+function AttendanceDashboardComponent() {
   const { hotelSlug } = useParams();
   const [selectedDate, setSelectedDate] = useState(
     () => new Date().toISOString().slice(0, 10)
@@ -85,74 +85,106 @@ export default function AttendanceDashboard() {
   const [department, setDepartment] = useState("all");
   const [refreshKey, setRefreshKey] = useState(0);
   const [alerts, setAlerts] = useState([]);
-  const [selectedPeriod, setSelectedPeriod] = useState(null);
+  const [selectedPeriodId, setSelectedPeriodId] = useState(null);
   const [finalizing, setFinalizing] = useState(false);
   const [finalizeError, setFinalizeError] = useState(null);
+  const [staffSearch, setStaffSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedStaffRow, setSelectedStaffRow] = useState(null);
+  const [showStaffModal, setShowStaffModal] = useState(false);
+  const [periodsRefreshKey, setPeriodsRefreshKey] = useState(0);
 
   // Export hook
   const { downloadExport } = usePeriodExport(hotelSlug);
 
+  // Load roster periods
+  const periods = useRosterPeriods(hotelSlug, periodsRefreshKey);
+  
+  // Find selected period with defensive checks
+  const allPeriods = Array.isArray(periods.items) ? periods.items : [];
+  const selectedPeriod = selectedPeriodId && allPeriods.length > 0 
+    ? allPeriods.find((p) => p && p.id === safeNumber(selectedPeriodId)) || null 
+    : null;
+
   function handleRealtimeEvent(evt) {
-    // evt: { type, payload }
+    // Defensive checks
+    if (!evt || !evt.type) {
+      console.warn("Invalid realtime event received:", evt);
+      return;
+    }
+
+    const { type, payload = {} } = evt;
+
     // For any attendance-related event, refresh table:
     setRefreshKey((prev) => prev + 1);
 
-    // Build an alert for specific types:
-    const { type, payload } = evt;
+    // Build an alert for specific types with safe data extraction:
+    const staffName = safeStaffName(payload);
+    const logId = payload.id || payload.clock_log_id;
+    const timestamp = Date.now();
 
     if (type === "unrostered-request") {
       const alert = {
-        id: `unr-${payload.id}-${Date.now()}`,
+        id: `unr-${logId || timestamp}`,
         type: "unrostered-request",
-        staffName: payload.staff_name,
-        logId: payload.id,
+        staffName,
+        logId,
         message: "clocked in unrostered – pending approval.",
         createdAt: new Date().toISOString(),
         data: payload,
       };
-      setAlerts((prev) => [alert, ...prev]);
+      setAlerts((prev) => [alert, ...prev.slice(0, 19)]); // Limit to 20 alerts
     }
 
     if (type === "break-warning") {
       const alert = {
-        id: `brk-${payload.id}-${Date.now()}`,
+        id: `brk-${logId || timestamp}`,
         type: "break-warning",
-        staffName: payload.staff_name,
-        logId: payload.clock_log_id,
+        staffName,
+        logId,
         message: "has reached their break threshold.",
         createdAt: new Date().toISOString(),
         data: payload,
       };
-      setAlerts((prev) => [alert, ...prev]);
+      setAlerts((prev) => [alert, ...prev.slice(0, 19)]);
     }
 
     if (type === "overtime-warning") {
       const alert = {
-        id: `ovt-${payload.id}-${Date.now()}`,
+        id: `ovt-${logId || timestamp}`,
         type: "overtime-warning",
-        staffName: payload.staff_name,
-        logId: payload.clock_log_id,
+        staffName,
+        logId,
         message: "is in overtime – please review.",
         createdAt: new Date().toISOString(),
         data: payload,
       };
-      setAlerts((prev) => [alert, ...prev]);
+      setAlerts((prev) => [alert, ...prev.slice(0, 19)]);
     }
 
     if (type === "hard-limit") {
       const alert = {
-        id: `hlt-${payload.id}-${Date.now()}`,
+        id: `hlt-${logId || timestamp}`,
         type: "hard-limit",
-        staffName: payload.staff_name,
-        logId: payload.clock_log_id,
+        staffName,
+        logId,
         message: "reached the hard limit – stay clocked in or clock out now?",
         createdAt: new Date().toISOString(),
         data: payload,
       };
-      setAlerts((prev) => [alert, ...prev]);
+      setAlerts((prev) => [alert, ...prev.slice(0, 19)]);
     }
 
-    // clocklog-approved / clocklog-rejected can also create small alerts if desired
+    // Handle approved/rejected events
+    if (type === "log-approved" || type === "log-rejected") {
+      const action = type === "log-approved" ? "approved" : "rejected";
+      console.log(`[Dashboard] Clock log ${action} for ${staffName}`);
+    }
+
+    // Handle unknown event types
+    if (type === "unknown-event") {
+      console.warn("Unknown attendance event received:", payload);
+    }
   }
 
   function handleDismissAlert(id) {
@@ -160,54 +192,112 @@ export default function AttendanceDashboard() {
   }
 
   async function handleAlertAction(alert, action) {
-    if (!hotelSlug || !alert.logId) return;
+    // Defensive checks
+    if (!hotelSlug || !alert || !alert.logId || !action) {
+      console.warn("Invalid alert action parameters:", { hotelSlug, alert, action });
+      return;
+    }
 
     const logId = alert.logId;
     let endpoint = "";
 
     if (action === "stay") {
-      endpoint = `/attendance/${hotelSlug}/clock-logs/${logId}/stay-clocked-in/`;
+      endpoint = `/attendance/${encodeURIComponent(hotelSlug)}/clock-logs/${logId}/stay-clocked-in/`;
     } else if (action === "clockout") {
-      endpoint = `/attendance/${hotelSlug}/clock-logs/${logId}/force-clock-out/`;
+      endpoint = `/attendance/${encodeURIComponent(hotelSlug)}/clock-logs/${logId}/force-clock-out/`;
     }
 
-    if (!endpoint) return;
+    if (!endpoint) {
+      console.warn("Unknown alert action:", action);
+      return;
+    }
 
     try {
       await api.post(endpoint);
 
       // After successful action:
+      showSuccessMessage(action, { 
+        staffName: alert.staffName || "Staff member" 
+      });
       setRefreshKey((prev) => prev + 1);
       handleDismissAlert(alert.id);
     } catch (err) {
-      console.error("Failed to perform alert action", action, "for log", logId, err);
+      handleAttendanceError(err, {
+        type: ERROR_TYPES.NETWORK,
+        component: 'alert-action',
+        action: action,
+        hotelSlug,
+        data: { logId, alertId: alert.id }
+      });
     }
   }
 
-  function handleExportCsv() {
-    if (!selectedPeriod) return;
-    downloadExport(selectedPeriod.id, "csv");
+  async function handleExportCsv() {
+    if (!selectedPeriodId) {
+      console.warn("No period selected for CSV export");
+      return;
+    }
+    
+    const result = await downloadExport(selectedPeriodId, "csv");
+    if (!result.success) {
+      handleAttendanceError(new Error(result.error), {
+        type: ERROR_TYPES.NETWORK,
+        component: 'export',
+        action: 'export-csv',
+        hotelSlug
+      });
+    } else {
+      showSuccessMessage('export');
+    }
   }
 
-  function handleExportXlsx() {
-    if (!selectedPeriod) return;
-    downloadExport(selectedPeriod.id, "xlsx");
+  async function handleExportXlsx() {
+    if (!selectedPeriodId) {
+      console.warn("No period selected for XLSX export");
+      return;
+    }
+    
+    const result = await downloadExport(selectedPeriodId, "xlsx");
+    if (!result.success) {
+      handleAttendanceError(new Error(result.error), {
+        type: ERROR_TYPES.NETWORK,
+        component: 'export',
+        action: 'export-xlsx',
+        hotelSlug
+      });
+    } else {
+      showSuccessMessage('export');
+    }
   }
 
   async function handleFinalizePeriod() {
-    if (!selectedPeriod || !hotelSlug) return;
+    if (!selectedPeriodId || !hotelSlug) {
+      console.warn("Cannot finalize: missing period ID or hotel slug");
+      return;
+    }
     
     setFinalizing(true);
     setFinalizeError(null);
     
     try {
-      await api.post(`/attendance/${hotelSlug}/periods/${selectedPeriod.id}/finalize/`);
-      // Update period state to show as finalized
-      setSelectedPeriod(prev => ({ ...prev, finalized: true }));
+      const endpoint = `/attendance/${encodeURIComponent(hotelSlug)}/periods/${safeNumber(selectedPeriodId)}/finalize/`;
+      await api.post(endpoint);
+      
+      // Refresh both periods and attendance data
+      setPeriodsRefreshKey((prev) => prev + 1);
       setRefreshKey((prev) => prev + 1);
+      
+      showSuccessMessage('finalize');
     } catch (err) {
-      setFinalizeError("Failed to finalize period. Please try again.");
-      console.error("Failed to finalize period:", err);
+      const { userMessage } = handleAttendanceError(err, {
+        type: ERROR_TYPES.NETWORK,
+        component: 'period',
+        action: 'finalize',
+        hotelSlug,
+        data: { periodId: selectedPeriodId }
+      });
+      
+      setFinalizeError(userMessage);
     } finally {
       setFinalizing(false);
     }
@@ -224,96 +314,157 @@ export default function AttendanceDashboard() {
   // Wire the realtime hook
   useAttendanceRealtime(hotelSlug, handleRealtimeEvent);
 
-  // Compute period stats and filtered logs
+  // Show full loading skeleton on initial load
+  const isInitialLoading = !hotelSlug || (roster.loading && logs.loading && periods.loading);
+  
+  if (isInitialLoading) {
+    return <AttendanceDashboardSkeleton />;
+  }
+
+  // Compute period stats and filtered logs with defensive checks
   let periodStats = null;
   let logsInPeriod = [];
 
-  if (selectedPeriod && logs.items && logs.items.length > 0) {
+  if (selectedPeriod && Array.isArray(logs.items) && logs.items.length > 0) {
     logsInPeriod = logs.items.filter((log) => {
-      if (!log.time_in) return false;
-      const d = log.time_in.slice(0, 10);
-      return (
-        d >= selectedPeriod.start_date && d <= selectedPeriod.end_date
-      );
+      if (!log || !log.time_in) return false;
+      
+      try {
+        const logDate = safeTimeSlice(log.time_in, 0, 10);
+        return (
+          logDate >= selectedPeriod.start_date && 
+          logDate <= selectedPeriod.end_date
+        );
+      } catch (error) {
+        console.warn("Error filtering log by period:", error, log);
+        return false;
+      }
     });
 
     const totalLogs = logsInPeriod.length;
-    const openLogs = logsInPeriod.filter((l) => !l.time_out).length;
+    const openLogs = logsInPeriod.filter((l) => l && !l.time_out).length;
     const unapprovedLogs = logsInPeriod.filter(
-      (l) => !l.is_approved && !l.is_rejected
+      (l) => l && !l.is_approved && !l.is_rejected
     ).length;
+    
     const approvedHours = logsInPeriod
-      .filter((l) => l.is_approved && !l.is_rejected && l.hours_worked)
-      .reduce((sum, l) => sum + parseFloat(l.hours_worked), 0);
+      .filter((l) => l && l.is_approved && !l.is_rejected && l.hours_worked)
+      .reduce((sum, l) => {
+        const hours = parseFloat(l.hours_worked);
+        return sum + (isNaN(hours) ? 0 : hours);
+      }, 0);
 
     periodStats = {
       totalLogs,
       openLogs,
       unapprovedLogs,
-      approvedHours,
+      approvedHours: Math.round(approvedHours * 100) / 100, // Round to 2 decimal places
     };
   }
 
   const mergedRows = mergeRosterAndLogs(roster.items, logs.items);
-  const rowsWithStatus = mergedRows.map((row) => ({
-    ...row,
-    _status: deriveStatus(row),
-  }));
+  const rowsWithStatus = mergedRows.map((row) => {
+    try {
+      return {
+        ...row,
+        _status: deriveStatus(row),
+      };
+    } catch (error) {
+      console.warn("Error deriving status for row:", error, row);
+      return {
+        ...row,
+        _status: "No data",
+      };
+    }
+  });
+
+  // Apply filters with safety checks
+  const normalizedSearch = (staffSearch || "").trim().toLowerCase();
+  const filteredRows = rowsWithStatus.filter((row) => {
+    if (!row) return false;
+    
+    try {
+      const name = (row.staffName || "").toLowerCase();
+      const matchesSearch =
+        !normalizedSearch || name.includes(normalizedSearch);
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        row._status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    } catch (error) {
+      console.warn("Error filtering row:", error, row);
+      return false;
+    }
+  });
+
+  // Determine staff detail logs with safety checks
+  let staffDetailLogs = [];
+  if (selectedStaffRow && selectedStaffRow.staffId) {
+    const staffId = selectedStaffRow.staffId;
+    const sourceLogs = selectedPeriodId ? logsInPeriod : (Array.isArray(logs.items) ? logs.items : []);
+    
+    staffDetailLogs = sourceLogs.filter((log) => {
+      if (!log) return false;
+      const id = safeStaffId(log);
+      return id === staffId;
+    });
+  }
 
   console.log("ROSTER", roster.items);
   console.log("LOGS", logs.items);
   console.log("MERGED", mergedRows);
 
   return (
-    <div className="container py-4">
-      <header className="d-flex justify-content-between align-items-center mb-3">
-        <div>
-          <h2 className="mb-1">Attendance Dashboard</h2>
-          <small className="text-muted">
-            Hotel: <strong>{hotelSlug}</strong>
-          </small>
-        </div>
+    <div className="container py-4 attendance-dashboard">
+      <header className="attendance-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-2">
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+          <div>
+            <h2 className="mb-1">Attendance Dashboard</h2>
+            <small className="text-muted">
+              Hotel: <strong>{hotelSlug}</strong>
+            </small>
+          </div>
 
-        <div className="d-flex gap-2 flex-wrap">
-          <select
-            className="form-select"
-            value={selectedPeriod?.id || ""}
-            onChange={(e) => {
-              if (e.target.value) {
-                // Mock period selection - in real app, this would come from API
-                const periodId = e.target.value;
-                setSelectedPeriod({
-                  id: periodId,
-                  name: `Period ${periodId}`,
-                  start_date: "2025-11-01",
-                  end_date: "2025-11-30",
-                  finalized: periodId === "1" // Mock: period 1 is finalized
-                });
-              } else {
-                setSelectedPeriod(null);
-              }
-            }}
-          >
-            <option value="">Select Period</option>
-            <option value="1">November 2025 (Finalized)</option>
-            <option value="2">December 2025 (Open)</option>
-          </select>
-          <input
-            type="date"
-            className="form-control"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-          />
-          <select
-            className="form-select"
-            value={department}
-            onChange={(e) => setDepartment(e.target.value)}
-          >
-            <option value="all">All departments</option>
-            {/* TODO: later replace with real department list from API */}
-            <option value="restaurant">Restaurant</option>
-            <option value="bar">Bar</option>
-          </select>
+          <div className="attendance-header-controls d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2">
+            <div className="attendance-control-block">
+              {periods.loading ? (
+                <PeriodSelectorSkeleton />
+              ) : periods.error ? (
+                <div className="alert alert-warning py-1 px-2 mb-0">
+                  <small>{periods.error}</small>
+                </div>
+              ) : (
+                <RosterPeriodSelector
+                  periods={periods.items}
+                  selectedId={selectedPeriodId}
+                  onChange={setSelectedPeriodId}
+                />
+              )}
+            </div>
+            
+            <div className="d-flex gap-2">
+              <input
+                type="date"
+                className="form-control form-control-sm"
+                style={{ minWidth: "150px" }}
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+              />
+              <select
+                className="form-select form-select-sm"
+                style={{ minWidth: "160px" }}
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+              >
+                <option value="all">All departments</option>
+                {/* TODO: later replace with real department list from API */}
+                <option value="restaurant">Restaurant</option>
+                <option value="bar">Bar</option>
+              </select>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -339,23 +490,102 @@ export default function AttendanceDashboard() {
         onAction={handleAlertAction}
       />
 
-      <div className="card">
+      <div className="attendance-filters d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center mb-2 gap-2">
+        <div className="flex-grow-1">
+          <input
+            type="text"
+            className="form-control form-control-sm"
+            placeholder="Search staff..."
+            value={staffSearch}
+            onChange={(e) => setStaffSearch(e.target.value)}
+          />
+        </div>
+        <div style={{ minWidth: 220 }}>
+          <select
+            className="form-select form-select-sm"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">All statuses</option>
+            <option value="On duty (open log)">On duty</option>
+            <option value="Unrostered – pending approval">Unrostered – pending</option>
+            <option value="Completed (approved)">Completed</option>
+            <option value="No clock log">No clock log</option>
+            <option value="Unrostered but approved">Unrostered approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="card attendance-card">
         <div className="card-body">
           {roster.loading || logs.loading ? (
-            <p>Loading...</p>
+            <AttendanceTableSkeleton rows={6} />
           ) : roster.error || logs.error ? (
-            <p className="text-danger mb-0">
-              {roster.error || logs.error}
-            </p>
+            <div className="alert alert-danger" role="alert">
+              <h6 className="alert-heading">Error Loading Data</h6>
+              <p className="mb-0">
+                {roster.error || logs.error}
+              </p>
+              <hr />
+              <small className="mb-0">
+                Please check your connection and try refreshing the page.
+              </small>
+            </div>
+          ) : filteredRows.length === 0 ? (
+            <div className="text-center py-4">
+              <div className="text-muted">
+                <i className="bi bi-calendar-x" style={{ fontSize: "2rem" }}></i>
+                <p className="mt-2">
+                  {staffSearch || statusFilter !== "all" 
+                    ? "No staff match your current filters." 
+                    : "No roster or attendance data for this date/department."
+                  }
+                </p>
+                {(staffSearch || statusFilter !== "all") && (
+                  <button 
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={() => {
+                      setStaffSearch("");
+                      setStatusFilter("all");
+                    }}
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+            </div>
           ) : (
-            <AttendanceTable
-              rows={rowsWithStatus}
-              hotelSlug={hotelSlug}
-              onRowAction={handleRowAction}
-            />
+            <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
+              <AttendanceTable
+                rows={filteredRows}
+                hotelSlug={hotelSlug}
+                onRowAction={handleRowAction}
+                onRowClick={handleRowClick}
+              />
+            </div>
           )}
         </div>
       </div>
+
+      <StaffDetailModal
+        show={showStaffModal}
+        onClose={handleCloseStaffModal}
+        staffName={selectedStaffRow?.staffName || `Staff #${selectedStaffRow?.staffId}`}
+        logs={staffDetailLogs}
+      />
+
+      {/* Toast notifications */}
+      <AttendanceToasts />
     </div>
+  );
+}
+
+// Wrap with error boundary
+export default function AttendanceDashboard() {
+  return (
+    <AttendanceErrorBoundary showDetails={process.env.NODE_ENV === 'development'}>
+      <AttendanceDashboardComponent />
+    </AttendanceErrorBoundary>
   );
 }
