@@ -407,7 +407,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
               {user && (
                 <button
                   className={`btn ${isOnDuty ? 'btn-danger' : 'btn-success'} text-white top-nav-btn clock-btn`}
-                  onClick={() => navigate(`/clock-in/${hotelIdentifier}`)}
+                  onClick={() => navigate(`/face/${hotelIdentifier}/clock-in`)}
                   title={isOnDuty ? "Clock Out" : "Clock In"}
                   style={{
                     backgroundColor: isOnDuty ? '#dc3545' : '#28a745',

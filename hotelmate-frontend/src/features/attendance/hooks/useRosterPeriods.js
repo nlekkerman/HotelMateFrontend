@@ -17,7 +17,7 @@ export function useRosterPeriods(hotelSlug, refreshKey = 0) {
 
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
-    api.get(`/attendance/${encodeURIComponent(hotelSlug)}/periods/`)
+    api.get(`/staff/hotel/${encodeURIComponent(hotelSlug)}/attendance/periods/`)
       .then((response) => {
         const items = safeApiResponse(response?.data);
         setState({

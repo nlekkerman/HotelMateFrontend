@@ -202,9 +202,9 @@ function AttendanceDashboardComponent() {
     let endpoint = "";
 
     if (action === "stay") {
-      endpoint = `/attendance/${encodeURIComponent(hotelSlug)}/clock-logs/${logId}/stay-clocked-in/`;
+      endpoint = `/staff/hotel/${encodeURIComponent(hotelSlug)}/attendance/clock-logs/${logId}/stay-clocked-in/`;
     } else if (action === "clockout") {
-      endpoint = `/attendance/${encodeURIComponent(hotelSlug)}/clock-logs/${logId}/force-clock-out/`;
+      endpoint = `/staff/hotel/${encodeURIComponent(hotelSlug)}/attendance/clock-logs/${logId}/force-clock-out/`;
     }
 
     if (!endpoint) {
@@ -280,7 +280,7 @@ function AttendanceDashboardComponent() {
     setFinalizeError(null);
     
     try {
-      const endpoint = `/attendance/${encodeURIComponent(hotelSlug)}/periods/${safeNumber(selectedPeriodId)}/finalize/`;
+      const endpoint = `/staff/hotel/${encodeURIComponent(hotelSlug)}/attendance/periods/${safeNumber(selectedPeriodId)}/finalize/`;
       await api.post(endpoint);
       
       // Refresh both periods and attendance data

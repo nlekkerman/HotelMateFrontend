@@ -58,7 +58,6 @@ export default function Feed() {
   return (
     <div className="feed ">
       
-      
       {hotelSlug && (
         <PostComposer hotelSlug={hotelSlug} onPostCreated={handleNewPost} />
       )}

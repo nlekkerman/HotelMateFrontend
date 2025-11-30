@@ -9,6 +9,8 @@ export default function CameraPreview({
   onCapture, 
   onError, 
   autoStart = false,
+  showFaceOverlay = true,
+  faceDetected = false,
   className = "",
   style = {} 
 }) {
@@ -70,14 +72,26 @@ export default function CameraPreview({
           autoPlay
           playsInline
           muted
-          className="w-100 rounded"
+          className="w-100 h-100"
           style={{ 
-            maxHeight: "400px", 
             objectFit: "cover",
             backgroundColor: "#000",
-            display: isActive ? "block" : "none"
+            display: isActive ? "block" : "none",
+            position: "absolute",
+            top: 0,
+            left: 0
           }}
         />
+        
+        {/* Face Frame Overlay */}
+        {showFaceOverlay && isActive && (
+          <div className="face-frame-overlay">
+            <div className="face-frame-placeholder">
+            </div>
+          </div>
+        )}
+        
+
         
         {/* Loading State */}
         {isLoading && (
@@ -108,59 +122,9 @@ export default function CameraPreview({
         )}
       </div>
 
-      {/* Controls */}
-      <div className="d-flex justify-content-center gap-2 mt-3">
-        {!isActive ? (
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={handleStartCamera}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-2" role="status">
-                  <span className="visually-hidden">Loading...</span>
-                </span>
-                Starting...
-              </>
-            ) : (
-              <>
-                <i className="bi bi-camera-video me-2"></i>
-                Start Camera
-              </>
-            )}
-          </button>
-        ) : (
-          <>
-            <button
-              type="button"
-              className="btn btn-success"
-              onClick={handleCapture}
-            >
-              <i className="bi bi-camera me-2"></i>
-              Capture Image
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={stopCamera}
-            >
-              <i className="bi bi-stop me-2"></i>
-              Stop Camera
-            </button>
-          </>
-        )}
-      </div>
 
-      {/* Helper Text */}
-      {isActive && (
-        <div className="text-center mt-2">
-          <small className="text-muted">
-            Position your face in the center of the frame and click "Capture Image"
-          </small>
-        </div>
-      )}
+
+
     </div>
   );
 }

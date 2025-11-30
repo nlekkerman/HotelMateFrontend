@@ -28,7 +28,7 @@ function logError(name, err) {
 }
 
 export const getKpis = async (hotelSlug, params) => {
-  const url = `/attendance/${hotelSlug}/roster-analytics/kpis/`;
+  const url = `/staff/hotel/${hotelSlug}/attendance/roster-analytics/kpis/`;
   const name = "getKpis";
   logRequest(name, hotelSlug, params, url);
   try {
@@ -42,7 +42,7 @@ export const getKpis = async (hotelSlug, params) => {
 };
 
 export const getStaffSummary = async (hotelSlug, params) => {
-  const url = `/attendance/${hotelSlug}/roster-analytics/staff-summary/`;
+  const url = `/staff/hotel/${hotelSlug}/attendance/roster-analytics/staff-summary/`;
   const name = "getStaffSummary";
   logRequest(name, hotelSlug, params, url);
   try {
@@ -56,7 +56,7 @@ export const getStaffSummary = async (hotelSlug, params) => {
 };
 
 export const getDepartmentSummary = async (hotelSlug, params) => {
-  const url = `/attendance/${hotelSlug}/roster-analytics/department-summary/`;
+  const url = `/staff/hotel/${hotelSlug}/attendance/roster-analytics/department-summary/`;
   const name = "getDepartmentSummary";
   logRequest(name, hotelSlug, params, url);
   try {
@@ -70,7 +70,7 @@ export const getDepartmentSummary = async (hotelSlug, params) => {
 };
 
 export const getDailyTotals = async (hotelSlug, params) => {
-  const url = `/attendance/${hotelSlug}/roster-analytics/daily-totals/`;
+  const url = `/staff/hotel/${hotelSlug}/attendance/roster-analytics/daily-totals/`;
   const name = "getDailyTotals";
   logRequest(name, hotelSlug, params, url);
   try {
@@ -84,7 +84,7 @@ export const getDailyTotals = async (hotelSlug, params) => {
 };
 
 export const getWeeklyTotals = async (hotelSlug, params) => {
-  const url = `/attendance/${hotelSlug}/roster-analytics/weekly-totals/`;
+  const url = `/staff/hotel/${hotelSlug}/attendance/roster-analytics/weekly-totals/`;
   const name = "getWeeklyTotals";
   logRequest(name, hotelSlug, params, url);
   try {

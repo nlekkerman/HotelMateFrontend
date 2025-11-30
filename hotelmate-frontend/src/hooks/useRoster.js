@@ -58,7 +58,7 @@ useEffect(() => {
         p = idOrObj;
       } else if (idOrObj) {
         const { data } = await api.get(
-          `/attendance/${hotelSlug}/periods/${idOrObj}/`
+          `/staff/hotel/${hotelSlug}/attendance/periods/${idOrObj}/`
         );
         p = data;
       } else return;
@@ -155,7 +155,7 @@ useEffect(() => {
   const remove = useCallback(async () => {
     const { shift, staff, date } = editing;
     if (shift?.id) {
-      await api.delete(`/attendance/${hotelSlug}/shifts/${shift.id}/`);
+      await api.delete(`/staff/hotel/${hotelSlug}/attendance/shifts/${shift.id}/`);
       fetchShifts(period.id);
       // also strip any local edited copy of this id
       setLocalShifts((prev) => prev.filter((s) => s.id !== shift.id));
@@ -202,7 +202,7 @@ useEffect(() => {
 
     try {
       const { data } = await api.post(
-        `/attendance/${hotelSlug}/shifts/bulk-save/`,
+        `/staff/hotel/${hotelSlug}/attendance/shifts/bulk-save/`,
         {
           shifts: payloadShifts,
           period: period.id,

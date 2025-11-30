@@ -64,10 +64,7 @@ export default function Staff() {
       setLoadingClockedIn(true);
       try {
         const { data } = await api.get(
-          "/attendance/clock-logs/currently-clocked-in/",
-          {
-            params: { hotel_slug: hotelSlug },
-          }
+          `/staff/hotel/${hotelSlug}/attendance/clock-logs/currently-clocked-in/`
         );
         setClockedInLogs(data.results || []);
       } catch (err) {

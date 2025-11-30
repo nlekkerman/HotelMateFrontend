@@ -342,6 +342,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               {/* Face Attendance Routes */}
               <Route path="/face/:hotelSlug/register" element={<ProtectedRoute><FaceRegisterPage /></ProtectedRoute>} />
               <Route path="/face/:hotelSlug/clock-in" element={<FaceClockInPage />} />
+              <Route path="/camera-clock-in/:hotelSlug" element={<FaceClockInPage />} />
            
               {/* PIN Auth - Public (guests use these) */}
               <Route path="/:hotelIdentifier/room/:roomNumber/validate-pin" element={<PinAuth />} />

@@ -22,31 +22,18 @@ export function useHotelFaceConfig(hotelSlug) {
       setError(null);
 
       try {
-        // Try the dedicated face config endpoint first
-        let response;
-        try {
-          response = await api.get(`/hotels/${hotelSlug}/face-config/`);
-        } catch (err) {
-          // Fallback: get config from general hotel settings
-          if (err.response?.status === 404) {
-            response = await api.get(`/hotels/${hotelSlug}/settings/`);
-            // Extract face-related settings from general settings
-            const data = response.data;
-            response.data = {
-              face_attendance_enabled: data.face_attendance_enabled ?? true,
-              face_attendance_min_confidence: data.face_attendance_min_confidence ?? 0.8,
-              face_department_restrictions: data.face_department_restrictions || [],
-              face_role_restrictions: data.face_role_restrictions || [],
-              max_session_hours: data.max_session_hours ?? 12,
-              break_warning_hours: data.break_warning_hours ?? 6,
-              long_session_warning_hours: data.long_session_warning_hours ?? 10,
-            };
-          } else {
-            throw err;
-          }
-        }
+        // Enable face attendance by default for development/testing
+        const faceConfig = {
+          face_attendance_enabled: true,
+          face_attendance_min_confidence: 0.8,
+          face_department_restrictions: [],
+          face_role_restrictions: [],
+          max_session_hours: 12,
+          break_warning_hours: 6,
+          long_session_warning_hours: 10,
+        };
 
-        setConfig(response.data);
+        setConfig(faceConfig);
       } catch (err) {
         console.error("[useHotelFaceConfig] Error fetching face config:", err);
         
@@ -62,8 +49,8 @@ export function useHotelFaceConfig(hotelSlug) {
         });
         
         setError({
-          message: err.response?.data?.detail || "Failed to fetch face configuration",
-          code: err.response?.status || null,
+          message: "Face recognition is not available on this system",
+          code: "FACE_NOT_IMPLEMENTED",
         });
       } finally {
         setLoading(false);

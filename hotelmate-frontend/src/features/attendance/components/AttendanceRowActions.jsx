@@ -33,8 +33,8 @@ export default function AttendanceRowActions({ row, hotelSlug, onAction }) {
     
     try {
       const endpoint = decision === "approve"
-        ? `/attendance/${encodeURIComponent(hotelSlug)}/clock-logs/${pendingLog.id}/approve/`
-        : `/attendance/${encodeURIComponent(hotelSlug)}/clock-logs/${pendingLog.id}/reject/`;
+        ? `/staff/hotel/${encodeURIComponent(hotelSlug)}/attendance/clock-logs/${pendingLog.id}/approve/`
+        : `/staff/hotel/${encodeURIComponent(hotelSlug)}/attendance/clock-logs/${pendingLog.id}/reject/`;
 
       await api.post(endpoint);
 

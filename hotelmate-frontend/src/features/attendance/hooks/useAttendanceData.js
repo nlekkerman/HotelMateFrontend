@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { safeApiResponse, safeString } from "../utils/safeUtils";
+import api from "@/services/api";
 
 export function useRosterForDate(hotelSlug, date, department, refreshKey = 0) {
   const [state, setState] = useState({
@@ -16,20 +17,14 @@ export function useRosterForDate(hotelSlug, date, department, refreshKey = 0) {
 
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
-    const params = new URLSearchParams({ date: safeString(date) });
+    const params = { date: safeString(date) };
     if (department && department !== "all") {
-      params.append("department", safeString(department));
+      params.department = safeString(department);
     }
 
-    fetch(`/api/attendance/${encodeURIComponent(hotelSlug)}/roster?${params.toString()}`)
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Failed to load roster (${res.status}): ${res.statusText}`);
-        }
-        return res.json();
-      })
-      .then((json) => {
-        const items = safeApiResponse(json);
+    api.get(`/staff/hotel/${encodeURIComponent(hotelSlug)}/attendance/shifts/`, { params })
+      .then((response) => {
+        const items = safeApiResponse(response.data);
         setState({
           loading: false,
           error: null,
@@ -64,20 +59,14 @@ export function useClockLogsForDate(hotelSlug, date, department, refreshKey = 0)
 
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
-    const params = new URLSearchParams({ date: safeString(date) });
+    const params = { date: safeString(date) };
     if (department && department !== "all") {
-      params.append("department", safeString(department));
+      params.department = safeString(department);
     }
 
-    fetch(`/api/attendance/${encodeURIComponent(hotelSlug)}/clock-logs?${params.toString()}`)
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Failed to load clock logs (${res.status}): ${res.statusText}`);
-        }
-        return res.json();
-      })
-      .then((json) => {
-        const items = safeApiResponse(json);
+    api.get(`/staff/hotel/${encodeURIComponent(hotelSlug)}/attendance/clock-logs/`, { params })
+      .then((response) => {
+        const items = safeApiResponse(response.data);
         setState({
           loading: false,
           error: null,

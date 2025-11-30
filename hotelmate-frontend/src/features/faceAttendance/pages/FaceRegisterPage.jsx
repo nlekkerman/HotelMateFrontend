@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import CameraPreview from "../components/CameraPreview";
 import { useFaceApi } from "../hooks/useFaceApi";
+import { useFaceEncoder } from "../hooks/useFaceRecognition";
 
 /**
  * Face Registration Page
@@ -24,6 +25,7 @@ export default function FaceRegisterPage() {
   const [successMessage, setSuccessMessage] = useState(null);
   
   const { loading, error, registerFace, clearError } = useFaceApi();
+  const { processing: encodingProcessing, extractFaceEncoding, modelsLoaded } = useFaceEncoder();
 
   const validate = () => {
     if (!staffId.trim()) return "Staff ID is required.";
@@ -69,13 +71,33 @@ export default function FaceRegisterPage() {
       return;
     }
 
+    if (!modelsLoaded) {
+      setValidationError("Face recognition models are still loading. Please wait a moment.");
+      return;
+    }
+
     setStep("processing");
 
     try {
+      // Extract face encoding first
+      const encodingResult = await extractFaceEncoding(capturedImage);
+      
+      if (encodingResult.error) {
+        throw new Error(encodingResult.error === 'NO_FACE_DETECTED' ? 
+          'No face detected in the image. Please try again with better lighting.' : 
+          'Failed to process face data. Please ensure you are looking directly at the camera.');
+      }
+      
+      if (!encodingResult.encoding) {
+        throw new Error('Unable to extract face data. Please capture a clearer image.');
+      }
+
       const data = await registerFace({
         hotelSlug,
         staffId,
-        imageBase64: capturedImage
+        imageBase64: capturedImage,
+        encoding: encodingResult.encoding,
+        consentGiven: true
       });
 
       const staffName = data.staff_name || "staff";
@@ -196,6 +218,8 @@ export default function FaceRegisterPage() {
                     onCapture={handleImageCapture}
                     onError={handleCameraError}
                     autoStart={true}
+                    showFaceOverlay={true}
+                    faceDetected={false}
                   />
                   {/* Success Message */}
                   {successMessage && (
@@ -263,7 +287,7 @@ export default function FaceRegisterPage() {
                       type="button"
                       className="btn btn-success flex-fill"
                       onClick={handleRegisterFace}
-                      disabled={!capturedImage || loading}
+                      disabled={!capturedImage || loading || encodingProcessing || !modelsLoaded}
                     >
                       {loading ? (
                         <>
@@ -289,7 +313,9 @@ export default function FaceRegisterPage() {
                   </div>
                   <h5>Processing Registration...</h5>
                   <p className="text-muted mb-0">
-                    Please wait while we register your face
+                    {encodingProcessing 
+                      ? 'Analyzing face data...' 
+                      : 'Please wait while we register your face'}
                   </p>
                 </div>
               )}

@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import api from "@/services/api";
 
 const fetchStaffShifts = async ({ hotelSlug, staffId, start, end }) => {
-  const { data } = await api.get(`/attendance/${hotelSlug}/shifts/`, {
+  const { data } = await api.get(`/staff/hotel/${hotelSlug}/attendance/shifts/`, {
     params: {
       staff: staffId, // our endpoint accepts staff_id or staff
       start,

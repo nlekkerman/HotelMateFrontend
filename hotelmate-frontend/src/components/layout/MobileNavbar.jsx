@@ -46,6 +46,16 @@ const MobileNavbar = () => {
       .catch(() => setStaffProfile(null));
   }, [user]);
 
+  // Listen for clock status changes from camera clock-in
+  useEffect(() => {
+    const handleClockStatusChange = (event) => {
+      setIsOnDuty(event.detail.is_on_duty);
+    };
+
+    window.addEventListener('clockStatusChanged', handleClockStatusChange);
+    return () => window.removeEventListener('clockStatusChanged', handleClockStatusChange);
+  }, []);
+
   const toggleNavbar = () => setCollapsed((prev) => !prev);
   const handleLogout = () => {
     logout();
@@ -187,11 +197,11 @@ const MobileNavbar = () => {
             {user && (
               <li className="nav-item">
                 <button
-                  className="btn btn-primary text-white w-100"
-                  onClick={() => navigate(`/clock-in/${hotelIdentifier}`)}
+                  className={`btn ${isOnDuty ? 'btn-danger' : 'btn-success'} text-white w-100`}
+                  onClick={() => navigate(`/face/${hotelIdentifier}/clock-in`)}
                 >
-                  <i className="bi bi-clock me-2" />
-                  Clock In / Out
+                  <i className="bi bi-person-bounding-box me-2" />
+                  {isOnDuty ? 'Clock Out' : 'Clock In'}
                 </button>
               </li>
             )}

@@ -2,13 +2,13 @@
 import api from "@/services/api";
 
 export const getShiftLocations = (hotelSlug) =>
-  api.get(`/attendance/${hotelSlug}/shift-locations/`).then(r => r.data);
+  api.get(`/staff/hotel/${hotelSlug}/attendance/shift-locations/`).then(r => r.data);
 
 export const createShiftLocation = (hotelSlug, payload) =>
-  api.post(`/attendance/${hotelSlug}/shift-locations/`, payload).then(r => r.data);
+  api.post(`/staff/hotel/${hotelSlug}/attendance/shift-locations/`, payload).then(r => r.data);
 
 export const updateShiftLocation = (hotelSlug, id, payload) =>
-  api.put(`/attendance/${hotelSlug}/shift-locations/${id}/`, payload).then(r => r.data);
+  api.put(`/staff/hotel/${hotelSlug}/attendance/shift-locations/${id}/`, payload).then(r => r.data);
 
 export const deleteShiftLocation = (hotelSlug, id) =>
-  api.delete(`/attendance/${hotelSlug}/shift-locations/${id}/`).then(r => r.data);
+  api.delete(`/staff/hotel/${hotelSlug}/attendance/shift-locations/${id}/`).then(r => r.data);

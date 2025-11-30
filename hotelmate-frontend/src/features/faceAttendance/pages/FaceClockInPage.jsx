@@ -4,6 +4,8 @@ import { toast } from "react-toastify";
 import CameraPreview from "../components/CameraPreview";
 import { useFaceApi } from "../hooks/useFaceApi";
 import { useHotelFaceConfig } from "../hooks/useHotelFaceConfig";
+import { useFaceEncoder } from "../hooks/useFaceRecognition";
+import api from "@/services/api";
 import "../styles/faceKiosk.css";
 
 /**
@@ -16,8 +18,12 @@ export default function FaceClockInPage() {
   
   const [capturedImage, setCapturedImage] = useState(null);
   const [locationNote, setLocationNote] = useState("Kiosk");
-  const [mode, setMode] = useState("ready"); // "ready" | "captured" | "processing" | "result"
+  const [mode, setMode] = useState("ready"); // "ready" | "captured" | "processing" | "success" | "options" | "result"
   const [result, setResult] = useState(null);
+  const [staffData, setStaffData] = useState(null);
+  const [unrosteredData, setUnrosteredData] = useState(null);
+  const [sessionInfo, setSessionInfo] = useState(null);
+  const [availableActions, setAvailableActions] = useState([]);
   const [countdown, setCountdown] = useState(0);
   const resetTimeoutRef = useRef(null);
   const countdownRef = useRef(null);
@@ -29,6 +35,7 @@ export default function FaceClockInPage() {
     config,
     error: configError 
   } = useHotelFaceConfig(hotelSlug);
+  const { processing: encodingProcessing, extractFaceEncoding, modelsLoaded } = useFaceEncoder();
 
   // Auto-reset for kiosk mode with countdown
   const scheduleAutoReset = () => {
@@ -74,34 +81,149 @@ export default function FaceClockInPage() {
 
   const handleImageCapture = (base64Image) => {
     setCapturedImage(base64Image);
-    setResult(null);
-    setMode("captured");
-    toast.success("Image captured! Click 'Clock In' to proceed.");
   };
 
   const handleCameraError = (errorMessage) => {
     toast.error(errorMessage);
   };
 
-  const handleClockIn = async () => {
+  const handleTakePhoto = async () => {
+    if (!hotelSlug) return;
+    
+    setMode("processing");
+    setResult(null);
+
+    try {
+      // Capture image from camera
+      const imageBase64 = capturedImage || await new Promise((resolve) => {
+        // Trigger camera capture programmatically
+        const video = document.querySelector('video');
+        if (video) {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0);
+          resolve(canvas.toDataURL('image/jpeg'));
+        }
+      });
+      
+      if (!imageBase64) {
+        throw new Error('Failed to capture image');
+      }
+
+      // Extract face encoding
+      const encodingResult = await extractFaceEncoding(imageBase64);
+      
+      if (encodingResult.error) {
+        throw new Error(encodingResult.error === 'NO_FACE_DETECTED' ? 
+          'No face detected. Please position your face in the oval frame.' : 
+          'Failed to process face data. Please try again.');
+      }
+      
+      if (!encodingResult.encoding) {
+        throw new Error('Unable to extract face data. Please ensure you are looking directly at the camera.');
+      }
+
+      // Send to backend for recognition
+      const data = await clockInWithFace({
+        hotelSlug,
+        imageBase64,
+        encoding: encodingResult.encoding,
+        locationNote: "Kiosk"
+      });
+      
+      // Handle different response types based on backend flow
+      switch (data.action) {
+        case 'clock_in_success':
+          // Show success with staff info
+          setStaffData({
+            name: data.staff?.name || data.staff_name || 'Staff Member',
+            image: data.staff?.image || data.staff_image,
+            department: data.staff?.department
+          });
+          setMode("success");
+          
+          // Auto-refresh for next person after 4 seconds
+          setTimeout(() => {
+            handleReset();
+          }, 4000);
+          break;
+          
+        case 'unrostered_detected':
+          // Show unrostered confirmation dialog
+          setUnrosteredData({
+            staff: data.staff,
+            message: data.message,
+            confirmationEndpoint: data.confirmation_endpoint,
+            encoding: encodingResult.encoding
+          });
+          setMode("unrostered");
+          break;
+          
+        case 'clock_out_options':
+          // For now show error - need full interface for clock out options
+          throw new Error(data.message || 'Face recognized but clock-out options required. Please use the full interface.');
+          
+        default:
+          throw new Error(data.message || 'Face not recognized or unknown response from server');
+      }
+      
+    } catch (err) {
+      setResult({
+        type: "error",
+        message: err.message || "Face recognition failed"
+      });
+      setMode("result");
+      
+      // Auto-refresh on error after 3 seconds
+      setTimeout(() => {
+        handleReset();
+      }, 3000);
+    }
+  };
+
+  const handleFaceRecognition = async () => {
     if (!capturedImage || !hotelSlug) return;
     
     setMode("processing");
     setResult(null);
 
     try {
+      // Extract face encoding first
+      const encodingResult = await extractFaceEncoding(capturedImage);
+      
+      if (encodingResult.error) {
+        throw new Error(encodingResult.error === 'NO_FACE_DETECTED' ? 
+          'No face detected in the image. Please try again.' : 
+          'Failed to process face data. Please try again.');
+      }
+      
+      if (!encodingResult.encoding) {
+        throw new Error('Unable to extract face data. Please ensure you are looking directly at the camera.');
+      }
+
       const data = await clockInWithFace({
         hotelSlug,
         imageBase64: capturedImage,
+        encoding: encodingResult.encoding,
         locationNote
       });
-
-      setResult({ type: "success", data });
-      setMode("result");
-      toast.success(data.message || "Clock-in successful!");
-      // TODO: Ensure backend emits standard attendance Pusher events
-      // when face clock-in/out succeeds so AttendanceDashboard updates live.
-      scheduleAutoReset();
+      
+      // Handle different response types based on backend flow
+      switch (data.action) {
+        case 'clock_in_success':
+          handleClockInSuccess(data);
+          break;
+        case 'clock_out_options':
+          handleClockOutOptions(data);
+          break;
+        case 'unrostered_detected':
+          handleUnrosteredDetection(data);
+          break;
+        default:
+          throw new Error(data.message || 'Unknown response from server');
+      }
       
     } catch (err) {
       setResult({
@@ -110,14 +232,112 @@ export default function FaceClockInPage() {
         code: err.code || null,
       });
       setMode("result");
-      toast.error(err.message || "Clock-in failed");
+      toast.error(err.message || "Face recognition failed");
+      scheduleAutoReset();
+    }
+  };  const handleClockInSuccess = (data) => {
+    const { staff, shift_info, confidence_score, clock_log } = data;
+    setStaffData(staff);
+    setResult({
+      type: "success",
+      title: "✅ Clocked In Successfully!",
+      staffName: staff.name,
+      staffImage: staff.image,
+      department: staff.department,
+      clockInTime: new Date(clock_log.time_in).toLocaleTimeString(),
+      shiftInfo: shift_info,
+      confidence: Math.round((1 - (confidence_score || 0)) * 100)
+    });
+    setMode("success");
+    toast.success(`Welcome, ${staff.name}!`);
+    scheduleAutoReset();
+  };
+
+  const handleClockOutOptions = (data) => {
+    const { staff, session_info, available_actions } = data;
+    setStaffData(staff);
+    setSessionInfo(session_info);
+    setAvailableActions(available_actions);
+    setMode("options");
+  };
+
+  const handleUnrosteredDetection = (data) => {
+    setResult({
+      type: "warning",
+      message: "You are not scheduled to work at this time. Contact your supervisor if this is incorrect.",
+      staffName: data.staff?.name
+    });
+    setMode("result");
+    scheduleAutoReset();
+  };
+
+  const handleAction = async (action) => {
+    setMode("processing");
+    try {
+      let endpoint = "";
+      if (action === 'clock_out') {
+        endpoint = `/staff/hotel/${hotelSlug}/attendance/face-management/confirm-clock-out/`;
+      } else if (action === 'start_break' || action === 'end_break') {
+        endpoint = `/staff/hotel/${hotelSlug}/attendance/face-management/toggle-break/`;
+      }
+      
+      const encodingResult = await extractFaceEncoding(capturedImage);
+      const response = await api.post(endpoint, {
+        encoding: encodingResult.encoding
+      });
+      
+      const result = response.data;
+      switch (result.action) {
+        case 'clock_out_success':
+          setResult({
+            type: "success",
+            title: "👋 Clocked Out Successfully!",
+            staffName: result.staff.name,
+            staffImage: result.staff.image,
+            message: "Have a great day!",
+            sessionSummary: result.session_summary
+          });
+          setMode("success");
+          break;
+        case 'break_started':
+          setResult({
+            type: "success",
+            title: "🕐 Break Started",
+            staffName: result.staff.name,
+            staffImage: result.staff.image,
+            message: "Enjoy your break!"
+          });
+          setMode("success");
+          break;
+        case 'break_ended':
+          setResult({
+            type: "success",
+            title: "✅ Break Ended",
+            staffName: result.staff.name,
+            staffImage: result.staff.image,
+            message: "Welcome back to work!"
+          });
+          setMode("success");
+          break;
+      }
+      scheduleAutoReset();
+    } catch (err) {
+      setResult({
+        type: "error",
+        message: err.message || "Action failed"
+      });
+      setMode("result");
       scheduleAutoReset();
     }
   };
 
-  const handleRetake = () => {
+  const handleReset = () => {
     setCapturedImage(null);
     setResult(null);
+    setStaffData(null);
+    setUnrosteredData(null);
+    setSessionInfo(null);
+    setAvailableActions([]);
     setMode("ready");
     setCountdown(0);
     clearError();
@@ -132,26 +352,48 @@ export default function FaceClockInPage() {
     }
   };
 
-  const handleNewClockIn = () => {
-    setCapturedImage(null);
-    setResult(null);
-    setMode("ready");
-    setCountdown(0);
-    clearError();
-    // Clear any pending auto-reset
-    if (resetTimeoutRef.current) {
-      clearTimeout(resetTimeoutRef.current);
-      resetTimeoutRef.current = null;
-    }
-    if (countdownRef.current) {
-      clearInterval(countdownRef.current);
-      countdownRef.current = null;
+  const confirmUnrosteredClockIn = async (reason, location) => {
+    if (!unrosteredData || !hotelSlug) return;
+    
+    setMode("processing");
+    
+    try {
+      const response = await api.post(unrosteredData.confirmationEndpoint, {
+        encoding: unrosteredData.encoding,
+        reason: reason || '',
+        location_note: location || 'Kiosk'
+      });
+      
+      const data = response.data;
+      
+      // Show success with staff info
+      setStaffData({
+        name: data.staff?.name || unrosteredData.staff?.name || 'Staff Member',
+        image: data.staff?.image || unrosteredData.staff?.image,
+        department: data.staff?.department || unrosteredData.staff?.department
+      });
+      setMode("success");
+      
+      // Auto-refresh for next person after 4 seconds
+      setTimeout(() => {
+        handleReset();
+      }, 4000);
+      
+    } catch (err) {
+      setResult({
+        type: "error",
+        message: err.response?.data?.detail || err.message || "Unrostered clock-in failed"
+      });
+      setMode("result");
+      
+      // Auto-refresh on error after 3 seconds
+      setTimeout(() => {
+        handleReset();
+      }, 3000);
     }
   };
 
-  const handleGoHome = () => {
-    navigate(`/${hotelSlug}`);
-  };
+
 
   // Helper functions for kiosk UX
   const getFriendlyErrorMessage = (errorMessage, errorCode) => {
@@ -312,257 +554,203 @@ export default function FaceClockInPage() {
   }
 
   return (
-    <div className="face-kiosk-page">
-      <div className="container-fluid py-4">
-        <div className="row justify-content-center">
-          <div className="col-12 col-md-10 col-lg-8 col-xl-6">
-            <div className="face-kiosk-card">
+    <div className="fullscreen-kiosk">
               
-              {/* Header */}
-              <div className="text-center mb-4">
-                <h1 className="kiosk-title">Face Clock-In</h1>
-                <p className="kiosk-subtitle">Use face recognition to clock in to your shift</p>
-                <div className="kiosk-hotel-info">
-                  <i className="bi bi-building me-2"></i>
-                  {hotelSlug}
-                </div>
-              </div>
 
-              {/* State: Ready for Capture */}
-              {mode === "ready" && (
-                <div className="kiosk-state-ready">
-                  <div className="text-center">
-                    <h4><i className="bi bi-camera me-2"></i>Ready to Capture</h4>
-                    <p className="mb-0">Position your face in the camera and capture your image</p>
-                  </div>
-                </div>
-              )}
 
-              {/* State: Image Captured */}
-              {mode === "captured" && (
-                <div className="kiosk-state-captured">
-                  <div className="text-center">
-                    <h4><i className="bi bi-check-circle me-2"></i>Image Captured</h4>
-                    <p className="mb-0">Review your image and confirm to clock in</p>
-                  </div>
-                </div>
-              )}
+
+
+
 
               {/* State: Processing */}
               {mode === "processing" && (
-                <div className="kiosk-state-processing">
-                  <div className="text-center">
-                    <div className="spinner-border text-primary mb-3" role="status" style={{ width: "3rem", height: "3rem" }}>
-                      <span className="visually-hidden">Processing...</span>
-                    </div>
-                    <h4>Processing Clock-In</h4>
-                    <p className="mb-0">Please wait while we verify your identity...</p>
+                <div className="fullscreen-processing">
+                  <div className="spinner-border spinner-border-lg text-success mb-3" role="status">
+                    <span className="visually-hidden">Processing...</span>
                   </div>
+                  <h4 className="text-success">Processing Face Recognition</h4>
+                  <p className="text-muted">Please wait while we verify your identity...</p>
                 </div>
               )}
 
-              {/* Camera Capture Interface */}
-              {(mode === "ready" || mode === "captured") && (
-                <>
-                  <div className="location-selector">
-                    <label htmlFor="locationNote">Clock-In Location</label>
-                    <select
-                      id="locationNote"
-                      className="form-select"
-                      value={locationNote}
-                      onChange={(e) => setLocationNote(e.target.value)}
-                    >
-                      <option value="Kiosk">Kiosk</option>
-                      <option value="Reception">Reception</option>
-                      <option value="Restaurant">Restaurant</option>
-                      <option value="Kitchen">Kitchen</option>
-                      <option value="Bar">Bar</option>
-                      <option value="Housekeeping">Housekeeping</option>
-                      <option value="Back Office">Back Office</option>
-                    </select>
+              {/* Full Screen Camera Interface */}
+              {mode === "ready" && (
+                <div className="fullscreen-camera-overlay">
+                  {/* Instructions at top */}
+                  <div className="camera-instructions">
+                    <small>
+                      • Position your face in the oval frame • Ensure good lighting • Look directly at camera
+                    </small>
                   </div>
 
-                  <div className={`camera-container ${mode === "ready" ? "ready" : "captured"}`}>
+                  {/* Full screen camera */}
+                  <div className="fullscreen-camera-container">
                     <CameraPreview
                       onCapture={handleImageCapture}
                       onError={handleCameraError}
                       autoStart={true}
+                      showFaceOverlay={true}
+                      faceDetected={false}
                     />
                   </div>
 
-                  {/* Captured Image Preview */}
-                  {capturedImage && (
-                    <div className="text-center mt-4">
-                      <h5>Captured Image</h5>
-                      <img
-                        src={capturedImage}
-                        alt="Captured face"
-                        className="img-thumbnail"
-                        style={{ maxWidth: "250px", maxHeight: "200px", border: "3px solid #27ae60" }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="d-flex gap-3 mt-4">
-                    {mode === "captured" && (
-                      <button
-                        type="button"
-                        className="kiosk-btn kiosk-btn-warning"
-                        onClick={handleRetake}
-                      >
-                        <i className="bi bi-arrow-clockwise"></i>
-                        Retake Photo
-                      </button>
-                    )}
-                    
+                  {/* Take Photo Button in Overlay */}
+                  <div className="camera-button-container">
                     <button
                       type="button"
-                      className="kiosk-btn kiosk-btn-primary flex-fill"
-                      onClick={handleClockIn}
-                      disabled={mode !== "captured" || loading}
+                      className="btn btn-success btn-lg px-5"
+                      onClick={handleTakePhoto}
+                      disabled={loading || encodingProcessing || !modelsLoaded}
+                      style={{
+                        fontSize: "1.2rem",
+                        borderRadius: "25px",
+                        boxShadow: "0 4px 15px rgba(40, 167, 69, 0.3)"
+                      }}
                     >
-                      {mode === "captured" ? (
+                      {loading || encodingProcessing ? (
                         <>
-                          <i className="bi bi-clock-history"></i>
-                          Confirm Clock-In
+                          <div className="spinner-border spinner-border-sm me-2"></div>
+                          Processing...
                         </>
                       ) : (
                         <>
-                          <i className="bi bi-camera"></i>
-                          Capture Face
+                          <i className="bi bi-camera-fill me-2"></i>
+                          Take Photo
                         </>
                       )}
                     </button>
                   </div>
-                </>
+
+
+                </div>
               )}
 
               {/* Result State */}
-              {mode === "result" && result && (
-                <>
-                  {result.type === "success" ? (
-                    <div className="kiosk-state-success">
-                      <div className="text-center">
-                        <i className="bi bi-check-circle-fill" style={{ fontSize: "4rem", color: "#27ae60" }}></i>
-                        <h3 className="mt-3 mb-2">Clock-In Successful!</h3>
-                        {result.data?.staff_name && (
-                          <h4 className="text-success">Welcome, {result.data.staff_name}</h4>
-                        )}
-                        {result.data?.message && (
-                          <p className="mt-2">{result.data.message}</p>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="kiosk-state-error">
-                      <div className="text-center">
-                        <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: "4rem", color: "#e74c3c" }}></i>
-                        {(() => {
-                          const errorInfo = getFriendlyErrorMessage(result.message, result.code);
-                          return (
-                            <>
-                              <h3 className="mt-3 mb-2">{errorInfo.title}</h3>
-                              <p className="mb-0">{errorInfo.message}</p>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  )}
+              {/* Error Display */}
+              {mode === "result" && result && result.type === "error" && (
+                <div className="error-display text-center py-4">
+                  <div className="error-icon mb-3" style={{fontSize: "3rem"}}>❌</div>
+                  <h4 className="text-danger mb-2">Clock-In Failed</h4>
+                  <p className="text-muted">{result.message}</p>
+                  <small className="text-muted">
+                    <i className="bi bi-arrow-clockwise me-1"></i>
+                    Refreshing automatically...
+                  </small>
+                </div>
+              )}
 
-                  {/* Safety Warnings */}
-                  {result.type === "success" && result.data && (() => {
-                    const warnings = getSessionWarnings(result.data);
-                    return warnings.map((warning, index) => (
-                      <div key={index} className={`safety-warning ${warning.type === "severe" ? "safety-warning-severe" : ""}`}>
-                        <h6>{warning.title}</h6>
-                        <p className="mb-0">{warning.message}</p>
-                      </div>
-                    ));
-                  })()}
-
-                  {/* Special Status Badges */}
-                  {result.type === "success" && result.data && (
-                    <div className="text-center mt-3">
-                      {result.data.is_unrostered && (
-                        <div className="kiosk-alert kiosk-alert-warning mb-2">
-                          <i className="bi bi-exclamation-triangle-fill"></i>
-                          <div>
-                            <strong>Unrostered Clock-In</strong>
-                            <div>This clock-in is pending manager approval</div>
-                          </div>
-                        </div>
+              {/* Unrostered Confirmation Dialog */}
+              {mode === "unrostered" && unrosteredData && (
+                <div className="unrostered-confirmation-display">
+                  <div className="confirmation-card">
+                    <div className="confirmation-header">
+                      <div className="warning-icon">⚠️</div>
+                      <h3>Unrostered Clock-In Detected</h3>
+                    </div>
+                    
+                    <div className="staff-verification">
+                      {unrosteredData.staff?.image && (
+                        <img 
+                          src={unrosteredData.staff.image} 
+                          alt={unrosteredData.staff.name}
+                          className="verification-photo"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
                       )}
-                    </div>
-                  )}
-
-                  {/* Auto-reset countdown */}
-                  {countdown > 0 && (
-                    <div className="text-center mt-3">
-                      <div className="auto-reset-countdown">
-                        <i className="bi bi-clock"></i>
-                        Resetting in {countdown} seconds...
+                      <div className="staff-details">
+                        <h4>{unrosteredData.staff?.name || 'Staff Member'}</h4>
+                        {unrosteredData.staff?.department && (
+                          <p className="department">{unrosteredData.staff.department}</p>
+                        )}
                       </div>
                     </div>
-                  )}
-
-                  {/* Result Action Buttons */}
-                  <div className="d-flex gap-3 mt-4">
-                    <button
-                      type="button"
-                      className="kiosk-btn kiosk-btn-secondary"
-                      onClick={handleNewClockIn}
-                    >
-                      <i className="bi bi-arrow-clockwise"></i>
-                      Clock In Again
-                    </button>
-                    <button
-                      type="button"
-                      className="kiosk-btn kiosk-btn-primary flex-fill"
-                      onClick={handleGoHome}
-                    >
-                      <i className="bi bi-house-door"></i>
-                      Go to Dashboard
-                    </button>
+                    
+                    <div className="confirmation-message">
+                      <p>{unrosteredData.message || 'No scheduled shift found. Confirm to clock in anyway?'}</p>
+                    </div>
+                    
+                    <div className="confirmation-form">
+                      <div className="form-group">
+                        <label>Reason (optional):</label>
+                        <input 
+                          type="text" 
+                          id="unrostered-reason"
+                          placeholder="e.g., Emergency shift, Manager approval"
+                          className="form-control"
+                        />
+                      </div>
+                      
+                      <div className="form-group">
+                        <label>Location:</label>
+                        <input 
+                          type="text" 
+                          id="unrostered-location"
+                          defaultValue="Kiosk"
+                          className="form-control"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="confirmation-actions">
+                      <button 
+                        className="btn btn-secondary btn-lg me-3"
+                        onClick={() => handleReset()}
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        className="btn btn-warning btn-lg"
+                        onClick={() => {
+                          const reason = document.getElementById('unrostered-reason')?.value || '';
+                          const location = document.getElementById('unrostered-location')?.value || 'Kiosk';
+                          confirmUnrosteredClockIn(reason, location);
+                        }}
+                      >
+                        Confirm Clock In
+                      </button>
+                    </div>
                   </div>
-                </>
-              )}
-
-              {/* Help and Registration Link */}
-              {(mode === "ready" || mode === "captured") && (
-                <div className="text-center mt-4">
-                  <button
-                    type="button"
-                    className="btn btn-link"
-                    onClick={() => navigate(`/face/${hotelSlug}/register`)}
-                  >
-                    <i className="bi bi-person-plus me-2"></i>
-                    Need to register your face first?
-                  </button>
                 </div>
               )}
 
-              {/* Kiosk Instructions */}
-              {mode === "ready" && (
-                <div className="text-center mt-4 p-3 bg-light rounded">
-                  <h6 className="mb-2">
-                    <i className="bi bi-info-circle me-2"></i>
-                    Instructions
-                  </h6>
-                  <ul className="list-unstyled small mb-0">
-                    <li>• Ensure you're in a well-lit area</li>
-                    <li>• Look directly at the camera</li>
-                    <li>• Remove sunglasses or face coverings</li>
-                    <li>• Position your face in the center of the frame</li>
-                  </ul>
+              {/* Success Display */}
+              {mode === "success" && staffData && (
+                <div className="success-display text-center py-5">
+                  <div className="success-icon mb-3">
+                    ✅
+                  </div>
+                  
+                  <h2 className="text-success mb-3">Clock-In Successful!</h2>
+                  
+                  {staffData.image && (
+                    <div className="mb-3">
+                      <img 
+                        src={staffData.image} 
+                        alt={staffData.name}
+                        className="staff-success-photo"
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    </div>
+                  )}
+                  
+                  <h3 className="staff-name mb-2">{staffData.name}</h3>
+                  {staffData.department && (
+                    <p className="department-name text-muted">{staffData.department}</p>
+                  )}
+                  
+                  <p className="clock-in-time text-success mb-3">
+                    Clocked in at {new Date().toLocaleTimeString()}
+                  </p>
+                  
+                  <div className="auto-refresh-info mt-4">
+                    <small className="text-muted">
+                      <i className="bi bi-arrow-clockwise me-1"></i>
+                      Refreshing for next person...
+                    </small>
+                  </div>
                 </div>
               )}
 
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
