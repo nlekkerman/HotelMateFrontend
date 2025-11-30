@@ -22,6 +22,39 @@ import { handleAttendanceError, showSuccessMessage, ERROR_TYPES } from "../utils
 import api from "@/services/api";
 import "../styles/attendance.css";
 
+// Add CSS for kiosk toggle button
+const kioskStyles = `
+  .kiosk-toggle-btn {
+    white-space: nowrap;
+    min-width: fit-content;
+  }
+  
+  .kiosk-control-block {
+    display: flex;
+    align-items: center;
+  }
+  
+  .kiosk-mode-indicator {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+  
+  @media (max-width: 768px) {
+    .kiosk-toggle-btn .d-none.d-md-inline {
+      display: none !important;
+    }
+  }
+`;
+
+// Inject styles
+if (!document.head.querySelector('[data-component="KioskStyles"]')) {
+  const styleElement = document.createElement('style');
+  styleElement.setAttribute('data-component', 'KioskStyles');
+  styleElement.textContent = kioskStyles;
+  document.head.appendChild(styleElement);
+}
+
 function mergeRosterAndLogs(rosterItems, logItems) {
   const byStaff = new Map();
 
@@ -308,6 +341,26 @@ function AttendanceDashboardComponent() {
     setRefreshKey((prev) => prev + 1);
   }
 
+  function handleToggleKioskMode() {
+    const isCurrentlyKiosk = localStorage.getItem('kioskMode') === 'true';
+    
+    if (isCurrentlyKiosk) {
+      // Disable kiosk mode
+      if (confirm('Disable kiosk mode? This will return to personal device mode.')) {
+        localStorage.removeItem('kioskMode');
+        // Force re-render by updating state
+        setRefreshKey(prev => prev + 1);
+      }
+    } else {
+      // Enable kiosk mode
+      if (confirm('Enable kiosk mode? This device will be shared for all staff to clock in/out.')) {
+        localStorage.setItem('kioskMode', 'true');
+        // Force re-render by updating state
+        setRefreshKey(prev => prev + 1);
+      }
+    }
+  }
+
   const roster = useRosterForDate(hotelSlug, selectedDate, department, refreshKey);
   const logs = useClockLogsForDate(hotelSlug, selectedDate, department, refreshKey);
 
@@ -443,6 +496,31 @@ function AttendanceDashboardComponent() {
                 />
               )}
             </div>
+            
+            {/* Kiosk Mode Toggle - Only for Super Staff/Admin */}
+            {(() => {
+              const user = JSON.parse(localStorage.getItem('user') || '{}');
+              const isSuperStaff = user?.is_super_staff || user?.role === 'admin' || user?.access_level === 'super_admin' || user?.is_staff;
+              const isKioskMode = localStorage.getItem('kioskMode') === 'true';
+              
+              console.log('[AttendanceDashboard] Kiosk button check:', { user, isSuperStaff, isKioskMode });
+              
+              // For now, show to all staff users for testing
+              return user?.is_staff ? (
+                <div className="kiosk-control-block">
+                  <button
+                    className={`btn btn-sm ${isKioskMode ? 'btn-warning' : 'btn-info'} kiosk-toggle-btn`}
+                    onClick={handleToggleKioskMode}
+                    title={isKioskMode ? 'Disable Kiosk Mode' : 'Enable Kiosk Mode'}
+                  >
+                    <i className={`bi ${isKioskMode ? 'bi-laptop' : 'bi-display'}`}></i>
+                    <span className="ms-2 d-none d-md-inline">
+                      {isKioskMode ? 'Disable Kiosk' : 'Set as Kiosk'}
+                    </span>
+                  </button>
+                </div>
+              ) : null;
+            })()}
             
             <div className="d-flex gap-2">
               <input

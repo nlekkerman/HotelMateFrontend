@@ -86,6 +86,12 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
       .then((res) => {
         console.log("[BigScreenNav] Staff profile data:", res.data);
         console.log("[BigScreenNav] Clock status (is_on_duty):", res.data.is_on_duty);
+        console.log("[BigScreenNav] Break status fields:", {
+          on_break: res.data.on_break,
+          is_on_break: res.data.is_on_break,
+          break_status: res.data.break_status,
+          current_break: res.data.current_break
+        });
         setStaffProfile(res.data);
         setIsOnDuty(res.data.is_on_duty);
       })
@@ -404,20 +410,79 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                 </button>
               )}
 
-              {user && (
-                <button
-                  className={`btn ${isOnDuty ? 'btn-danger' : 'btn-success'} text-white top-nav-btn clock-btn`}
-                  onClick={() => navigate(`/face/${hotelIdentifier}/clock-in`)}
-                  title={isOnDuty ? "Clock Out" : "Clock In"}
-                  style={{
-                    backgroundColor: isOnDuty ? '#dc3545' : '#28a745',
-                    borderColor: isOnDuty ? '#dc3545' : '#28a745'
-                  }}
-                >
-                  <i className="bi bi-clock" />
-                  <span className="ms-2 btn-label">{isOnDuty ? 'Clock Out' : 'Clock In'}</span>
-                </button>
-              )}
+              {user && (() => {
+                const isKioskMode = localStorage.getItem('kioskMode') === 'true';
+                
+                // Hide clock buttons in kiosk mode
+                if (isKioskMode) {
+                  return (
+                    <div className="kiosk-mode-indicator badge bg-warning text-dark">
+                      <i className="bi bi-display me-1"></i>
+                      Kiosk Mode Active
+                    </div>
+                  );
+                }
+                
+                // Get button text and style based on staff status (same logic as ClockModal)
+                const getClockButtonInfo = () => {
+                  if (!staffProfile) {
+                    return { text: 'Clock In', color: '#28a745', isDanger: false };
+                  }
+                  
+                  // If staff is clocked out
+                  if (!staffProfile.is_on_duty) {
+                    return { text: 'Clock In', color: '#28a745', isDanger: false };
+                  }
+                  
+                  // If on break (check multiple possible field names)
+                  const isOnBreak = staffProfile.is_on_break || staffProfile.on_break || staffProfile.break_status === 'on_break' || 
+                                   staffProfile.current_break_id || (staffProfile.current_session && staffProfile.current_session.is_on_break);
+                  console.log("[BigScreenNav] Break status check:", { isOnBreak, staffProfile });
+                  
+                  if (isOnBreak) {
+                    return { text: 'End Break', subText: '(Clock Out)', color: '#17a2b8', isDanger: false };
+                  }
+                  
+                  // If clocked in and working - show options
+                  return { text: 'Start Break', subText: '(Clock Out)', color: '#ffc107', isDanger: false };
+                };
+                
+                const buttonInfo = getClockButtonInfo();
+                
+                // Update other button info objects to have consistent structure
+                if (buttonInfo.text === 'Clock In') {
+                  buttonInfo.subText = null;
+                }
+                
+                return (
+                  <button
+                    className={`btn ${buttonInfo.isDanger ? 'btn-danger' : buttonInfo.color === '#28a745' ? 'btn-success' : buttonInfo.color === '#17a2b8' ? 'btn-info' : 'btn-warning'} text-white top-nav-btn clock-btn`}
+                    onClick={() => navigate(`/face/${hotelIdentifier}/clock-in`)}
+                    title={buttonInfo.text}
+                    style={{
+                      backgroundColor: buttonInfo.color,
+                      borderColor: buttonInfo.color
+                    }}
+                  >
+                    <i className={`bi ${
+                      buttonInfo.text === 'Clock In' ? 'bi-clock' : 
+                      buttonInfo.text === 'End Break' ? 'bi-play-circle' : 
+                      buttonInfo.text === 'Start Break' ? 'bi-pause-circle' :
+                      'bi-clock'
+                    }`} />
+                    <span className="ms-2 btn-label">
+                      <div className="d-flex flex-column align-items-start">
+                        <span style={{ fontSize: '0.9rem', lineHeight: '1.1' }}>{buttonInfo.text}</span>
+                        {buttonInfo.subText && (
+                          <small className="text-muted" style={{ fontSize: '0.7rem', opacity: 0.8 }}>
+                            {buttonInfo.subText}
+                          </small>
+                        )}
+                      </div>
+                    </span>
+                  </button>
+                );
+              })()}
 
               {(staffProfile || user) && (() => {
                 const getImageUrl = (url) => {

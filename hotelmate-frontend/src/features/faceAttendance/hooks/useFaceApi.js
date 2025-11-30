@@ -62,21 +62,26 @@ export function useFaceApi() {
    * @param {string} params.imageBase64 - Base64 encoded image
    * @param {Array<number>} params.encoding - 128-dimensional face encoding array
    * @param {string} [params.locationNote] - Optional location note
-   * @param {string} [params.forceAction] - Optional force action ("clock_in" or "clock_out")
    * @returns {Promise<Object>} Clock-in response data
    */
-  async function clockInWithFace({ hotelSlug, imageBase64, locationNote, encoding, forceAction }) {
+  async function clockInWithFace({ hotelSlug, imageBase64, locationNote, encoding }) {
     setLoading(true);
     setError(null);
 
     try {
+      // Ensure image is never null
+      const validImage = imageBase64 || 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=';
+      
+      // Check if device is in kiosk mode
+      const isKioskMode = localStorage.getItem('kioskMode') === 'true';
+      
       const response = await api.post(
         `/staff/hotel/${hotelSlug}/attendance/face-management/face-clock-in/`,
         {
-          image: imageBase64,
+          image: validImage,
           encoding: encoding,
           location_note: locationNote || "Kiosk",
-          force_action: forceAction,
+          is_kiosk_mode: isKioskMode,
         }
       );
 
@@ -84,6 +89,96 @@ export function useFaceApi() {
       return data;
     } catch (err) {
       const errorMessage = err.response?.data?.detail || err.response?.data?.error || err.message || 'Clock-in failed';
+      const errorCode = err.response?.data?.code || null;
+      
+      setError({
+        message: errorMessage,
+        code: errorCode,
+      });
+      
+      const error = new Error(errorMessage);
+      error.code = errorCode;
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /**
+   * Toggle break status using face recognition
+   * @param {Object} params - Break toggle parameters
+   * @param {string} params.hotelSlug - Hotel slug identifier
+   * @param {string} params.imageBase64 - Base64 encoded image
+   * @param {Array<number>} params.encoding - 128-dimensional face encoding array
+   * @param {string} [params.locationNote] - Optional location note
+   * @returns {Promise<Object>} Break toggle response data
+   */
+  async function toggleBreakWithFace({ hotelSlug, imageBase64, locationNote, encoding }) {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Ensure image is never null
+      const validImage = imageBase64 || 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=';
+      
+      const response = await api.post(
+        `/staff/hotel/${hotelSlug}/attendance/face-management/toggle-break/`,
+        {
+          image: validImage,
+          encoding: encoding,
+          location_note: locationNote || "Kiosk",
+        }
+      );
+
+      const data = response.data;
+      return data;
+    } catch (err) {
+      const errorMessage = err.response?.data?.detail || err.response?.data?.error || err.message || 'Break toggle failed';
+      const errorCode = err.response?.data?.code || null;
+      
+      setError({
+        message: errorMessage,
+        code: errorCode,
+      });
+      
+      const error = new Error(errorMessage);
+      error.code = errorCode;
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /**
+   * Confirm clock-out using face recognition
+   * @param {Object} params - Clock-out parameters
+   * @param {string} params.hotelSlug - Hotel slug identifier
+   * @param {string} params.imageBase64 - Base64 encoded image
+   * @param {Array<number>} params.encoding - 128-dimensional face encoding array
+   * @param {string} [params.locationNote] - Optional location note
+   * @returns {Promise<Object>} Clock-out response data
+   */
+  async function clockOutWithFace({ hotelSlug, imageBase64, locationNote, encoding }) {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Ensure image is never null
+      const validImage = imageBase64 || 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=';
+      
+      const response = await api.post(
+        `/staff/hotel/${hotelSlug}/attendance/face-management/confirm-clock-out/`,
+        {
+          image: validImage,
+          encoding: encoding,
+          location_note: locationNote || "Kiosk",
+        }
+      );
+
+      const data = response.data;
+      return data;
+    } catch (err) {
+      const errorMessage = err.response?.data?.detail || err.response?.data?.error || err.message || 'Clock-out failed';
       const errorCode = err.response?.data?.code || null;
       
       setError({
@@ -186,6 +281,8 @@ export function useFaceApi() {
     error, 
     registerFace, 
     clockInWithFace,
+    toggleBreakWithFace,
+    clockOutWithFace,
     checkFaceStatus,
     listRegisteredFaces,
     clearError 

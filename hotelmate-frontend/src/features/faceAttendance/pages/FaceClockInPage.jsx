@@ -29,7 +29,7 @@ export default function FaceClockInPage() {
   const resetTimeoutRef = useRef(null);
   const countdownRef = useRef(null);
   
-  const { loading, error, clockInWithFace, clearError } = useFaceApi();
+  const { loading, error, clockInWithFace, toggleBreakWithFace, clockOutWithFace, clearError } = useFaceApi();
   const { 
     loading: configLoading, 
     isEnabled: faceEnabled, 
@@ -141,9 +141,13 @@ export default function FaceClockInPage() {
           setStaffData({
             name: data.staff?.name || data.staff_name || 'Staff Member',
             image: data.staff?.image || data.staff_image,
-            department: data.staff?.department
+            department: data.staff?.department,
+            actionMessage: '✅ Clocked In Successfully!',
+            actionTime: new Date().toLocaleTimeString(),
+            actionType: 'clock_in_success'
           });
           setMode("success");
+          toast.success(`Welcome, ${data.staff?.name || 'Staff Member'}!`);
           
           // Auto-refresh for next person after 4 seconds
           setTimeout(() => {
@@ -164,13 +168,15 @@ export default function FaceClockInPage() {
           
         case 'clock_out_options':
           // Show action selection interface for clock-out/break options
+          const { staff, session_info, available_actions } = data;
+          setStaffData(staff);
+          setSessionInfo(session_info);
+          setAvailableActions(available_actions);
           setActionOptions({
-            staff: data.staff,
-            message: data.message,
-            actions: data.actions || [],
-            encoding: encodingResult.encoding
+            encoding: encodingResult.encoding,
+            imageBase64: imageBase64
           });
-          setMode("actionSelection");
+          setMode("options");
           break;
           
         default:
@@ -245,14 +251,13 @@ export default function FaceClockInPage() {
     }
   };  const handleClockInSuccess = (data) => {
     const { staff, shift_info, confidence_score, clock_log } = data;
-    setStaffData(staff);
-    setResult({
-      type: "success",
-      title: "✅ Clocked In Successfully!",
-      staffName: staff.name,
-      staffImage: staff.image,
+    setStaffData({
+      name: staff.name,
+      image: staff.image,
       department: staff.department,
-      clockInTime: new Date(clock_log.time_in).toLocaleTimeString(),
+      actionMessage: '✅ Clocked In Successfully!',
+      actionTime: new Date(clock_log.time_in).toLocaleTimeString(),
+      actionType: 'clock_in_success',
       shiftInfo: shift_info,
       confidence: Math.round((1 - (confidence_score || 0)) * 100)
     });
@@ -279,65 +284,7 @@ export default function FaceClockInPage() {
     scheduleAutoReset();
   };
 
-  const handleAction = async (action) => {
-    setMode("processing");
-    try {
-      let endpoint = "";
-      if (action === 'clock_out') {
-        endpoint = `/staff/hotel/${hotelSlug}/attendance/face-management/confirm-clock-out/`;
-      } else if (action === 'start_break' || action === 'end_break') {
-        endpoint = `/staff/hotel/${hotelSlug}/attendance/face-management/toggle-break/`;
-      }
-      
-      const encodingResult = await extractFaceEncoding(capturedImage);
-      const response = await api.post(endpoint, {
-        encoding: encodingResult.encoding
-      });
-      
-      const result = response.data;
-      switch (result.action) {
-        case 'clock_out_success':
-          setResult({
-            type: "success",
-            title: "👋 Clocked Out Successfully!",
-            staffName: result.staff.name,
-            staffImage: result.staff.image,
-            message: "Have a great day!",
-            sessionSummary: result.session_summary
-          });
-          setMode("success");
-          break;
-        case 'break_started':
-          setResult({
-            type: "success",
-            title: "🕐 Break Started",
-            staffName: result.staff.name,
-            staffImage: result.staff.image,
-            message: "Enjoy your break!"
-          });
-          setMode("success");
-          break;
-        case 'break_ended':
-          setResult({
-            type: "success",
-            title: "✅ Break Ended",
-            staffName: result.staff.name,
-            staffImage: result.staff.image,
-            message: "Welcome back to work!"
-          });
-          setMode("success");
-          break;
-      }
-      scheduleAutoReset();
-    } catch (err) {
-      setResult({
-        type: "error",
-        message: err.message || "Action failed"
-      });
-      setMode("result");
-      scheduleAutoReset();
-    }
-  };
+
 
   const handleReset = () => {
     setCapturedImage(null);
@@ -379,14 +326,27 @@ export default function FaceClockInPage() {
       setStaffData({
         name: data.staff?.name || unrosteredData.staff?.name || 'Staff Member',
         image: data.staff?.image || unrosteredData.staff?.image,
-        department: data.staff?.department || unrosteredData.staff?.department
+        department: data.staff?.department || unrosteredData.staff?.department,
+        actionMessage: '✅ Clocked In Successfully!',
+        actionTime: new Date().toLocaleTimeString(),
+        actionType: 'clock_in_success'
       });
       setMode("success");
+      toast.success(`Welcome, ${data.staff?.name || unrosteredData.staff?.name || 'Staff Member'}!`);
       
-      // Auto-refresh for next person after 4 seconds
-      setTimeout(() => {
-        handleReset();
-      }, 4000);
+      // Handle kiosk vs personal mode
+      const isKioskMode = localStorage.getItem('kioskMode') === 'true';
+      if (isKioskMode) {
+        // Kiosk mode: Auto-refresh for next person after 4 seconds
+        setTimeout(() => {
+          handleReset();
+        }, 4000);
+      } else {
+        // Personal mode: Close camera and navigate back after 2 seconds
+        setTimeout(() => {
+          navigate(-1); // Go back to previous page
+        }, 2000);
+      }
       
     } catch (err) {
       setResult({
@@ -402,47 +362,218 @@ export default function FaceClockInPage() {
     }
   };
 
-  const handleActionSelection = async (action) => {
-    if (!actionOptions || !hotelSlug) return;
-    
+  const handleActionFromBackend = async (actionObj) => {
     setMode("processing");
     
     try {
-      const response = await clockInWithFace({
-        hotelSlug,
-        imageBase64: capturedImage,
-        encoding: actionOptions.encoding,
-        locationNote: "Kiosk",
-        forceAction: action
+      // Clean the endpoint URL - remove /api/ prefix if it exists since api.js already includes it
+      let cleanEndpoint = actionObj.endpoint;
+      if (cleanEndpoint.startsWith('/api/')) {
+        cleanEndpoint = cleanEndpoint.substring(4); // Remove '/api' prefix
+      }
+      
+      const response = await api.post(cleanEndpoint, {
+        encoding: actionOptions.encoding
       });
       
-      const data = response;
+      const result = response.data;
       
-      // Show success with staff info
+      // Set consistent success data using staffData approach
       setStaffData({
-        name: data.staff?.name || actionOptions.staff?.name || 'Staff Member',
-        image: data.staff?.image || actionOptions.staff?.image,
-        department: data.staff?.department || actionOptions.staff?.department
+        name: result.staff.name,
+        image: result.staff.image,
+        department: result.staff.department,
+        actionMessage: getSuccessTitle(result.action),
+        actionTime: new Date().toLocaleTimeString(),
+        actionType: result.action,
+        sessionSummary: result.session_summary || null
       });
       setMode("success");
       
-      // Auto-refresh for next person after 4 seconds
-      setTimeout(() => {
-        handleReset();
-      }, 4000);
+      // Show toast notification
+      toast.success(getSuccessToastMessage(result.action, result.staff.name));
+      
+      // Handle kiosk vs personal mode based on backend response or localStorage
+      const kioskAction = result.kiosk_action;
+      const isKioskMode = localStorage.getItem('kioskMode') === 'true';
+      
+      if (kioskAction === 'refresh_for_next_person' || (isKioskMode && !kioskAction)) {
+        // Kiosk mode: Auto-refresh for next person
+        if (result.action === 'clock_out_success') {
+          // Longer delay for clock-out to read session summary
+          setTimeout(() => {
+            handleReset();
+          }, 10000);
+        } else {
+          scheduleAutoReset();
+        }
+      } else if (kioskAction === 'stay_logged_in' || (!isKioskMode && !kioskAction)) {
+        // Personal mode: Close camera after short delay
+        setTimeout(() => {
+          navigate(-1); // Go back to previous page
+        }, result.action === 'clock_out_success' ? 5000 : 2000);
+      } else {
+        // Fallback to existing logic
+        if (result.action === 'clock_out_success') {
+          setTimeout(() => {
+            handleReset();
+          }, 10000);
+        } else {
+          scheduleAutoReset();
+        }
+      }
       
     } catch (err) {
       setResult({
-        type: "error",
+        type: "error", 
         message: err.message || "Action failed"
       });
       setMode("result");
-      
-      // Auto-refresh on error after 3 seconds
-      setTimeout(() => {
-        handleReset();
-      }, 3000);
+      scheduleAutoReset();
     }
+  };
+
+  const getSuccessTitle = (action) => {
+    switch (action) {
+      case 'clock_out_success': return '👋 Clocked Out Successfully!';
+      case 'break_started': return '🕐 Break Started';
+      case 'break_ended': return '✅ Break Ended - Shift Resumed';
+      default: return '✅ Action Completed';
+    }
+  };
+
+  const getSuccessToastMessage = (action, staffName) => {
+    switch (action) {
+      case 'clock_out_success': return `Goodbye, ${staffName}!`;
+      case 'break_started': return `${staffName}, enjoy your break!`;
+      case 'break_ended': return `Welcome back, ${staffName}!`;
+      default: return `Action completed for ${staffName}`;
+    }
+  };
+
+  const getActionTimeMessage = (actionType) => {
+    switch (actionType) {
+      case 'clock_in_success': return 'Clocked in at';
+      case 'clock_out_success': return 'Clocked out at';
+      case 'break_started': return 'Break started at';
+      case 'break_ended': return 'Break ended at';
+      default: return 'Action completed at';
+    }
+  };
+
+  const formatSessionSummary = (summaryObj) => {
+    if (!summaryObj || typeof summaryObj !== 'object') {
+      return '';
+    }
+    
+    return (
+      <div className="shift-report">
+        {/* Shift Duration */}
+        {summaryObj.duration_hours && (
+          <div className="report-item mb-2">
+            <div className="report-label">⏰ Total Shift Duration</div>
+            <div className="report-value fw-bold">
+              {(() => {
+                const hours = parseFloat(summaryObj.duration_hours);
+                const wholeHours = Math.floor(hours);
+                const minutes = Math.round((hours - wholeHours) * 60);
+                
+                if (wholeHours > 0 && minutes > 0) {
+                  return `${wholeHours} hours ${minutes} minutes`;
+                } else if (wholeHours > 0) {
+                  return `${wholeHours} hours`;
+                } else if (minutes > 0) {
+                  return `${minutes} minutes`;
+                }
+                return 'Less than a minute';
+              })()} 
+            </div>
+          </div>
+        )}
+        
+        {/* Time Range */}
+        {summaryObj.clock_in_time && summaryObj.clock_out_time && (
+          <div className="report-item mb-2">
+            <div className="report-label">🕐 Shift Times</div>
+            <div className="report-value">
+              <span className="text-success">
+                {new Date(summaryObj.clock_in_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+              </span>
+              <span className="mx-2">→</span>
+              <span className="text-danger">
+                {new Date(summaryObj.clock_out_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+              </span>
+            </div>
+          </div>
+        )}
+        
+        {/* Break Information */}
+        <div className="report-item mb-2">
+          <div className="report-label">☕ Break Time</div>
+          <div className="report-value">
+            {summaryObj.total_break_minutes ? (
+              (() => {
+                const totalMinutes = parseInt(summaryObj.total_break_minutes);
+                const breakHours = Math.floor(totalMinutes / 60);
+                const breakMins = totalMinutes % 60;
+                
+                if (breakHours > 0 && breakMins > 0) {
+                  return `${breakHours}h ${breakMins}m`;
+                } else if (breakHours > 0) {
+                  return `${breakHours} hours`;
+                } else if (breakMins > 0) {
+                  return `${breakMins} minutes`;
+                } else {
+                  return 'No breaks taken';
+                }
+              })()
+            ) : (
+              'No breaks taken'
+            )}
+          </div>
+        </div>
+        
+        {/* Work Time (Duration - Breaks) */}
+        {summaryObj.duration_hours && (
+          <div className="report-item mb-2">
+            <div className="report-label">💼 Active Work Time</div>
+            <div className="report-value text-primary fw-bold">
+              {(() => {
+                const totalHours = parseFloat(summaryObj.duration_hours);
+                const breakHours = summaryObj.total_break_minutes ? summaryObj.total_break_minutes / 60 : 0;
+                const workHours = totalHours - breakHours;
+                const wholeHours = Math.floor(workHours);
+                const minutes = Math.round((workHours - wholeHours) * 60);
+                
+                if (wholeHours > 0 && minutes > 0) {
+                  return `${wholeHours}h ${minutes}m`;
+                } else if (wholeHours > 0) {
+                  return `${wholeHours} hours`;
+                } else if (minutes > 0) {
+                  return `${minutes} minutes`;
+                }
+                return 'Less than a minute';
+              })()} 
+            </div>
+          </div>
+        )}
+        
+        {/* Date */}
+        {summaryObj.clock_in_time && (
+          <div className="report-item">
+            <div className="report-label">📅 Date</div>
+            <div className="report-value">
+              {new Date(summaryObj.clock_in_time).toLocaleDateString([], {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Helper functions for kiosk UX
@@ -764,7 +895,7 @@ export default function FaceClockInPage() {
               )}
 
               {/* Action Selection Dialog */}
-              {mode === "actionSelection" && actionOptions && (
+              {mode === "options" && staffData && sessionInfo && (
                 <div className="action-selection-display">
                   <div className="action-card">
                     <div className="action-header">
@@ -772,66 +903,58 @@ export default function FaceClockInPage() {
                     </div>
                     
                     <div className="staff-verification">
-                      {actionOptions.staff?.image && (
+                      {staffData.image && (
                         <img 
-                          src={actionOptions.staff.image} 
-                          alt={actionOptions.staff.name}
+                          src={staffData.image} 
+                          alt={staffData.name}
                           className="verification-photo"
                           onError={(e) => { e.target.style.display = 'none'; }}
                         />
                       )}
                       <div className="staff-details">
-                        <h4>{actionOptions.staff?.name || 'Staff Member'}</h4>
-                        {actionOptions.staff?.department && (
-                          <p className="department">{actionOptions.staff.department}</p>
+                        <h4>{staffData.name}</h4>
+                        {staffData.department && (
+                          <p className="department">{staffData.department}</p>
                         )}
                       </div>
                     </div>
                     
                     <div className="action-message">
                       <p>
-                        {actionOptions.staff?.on_break || actionOptions.staff?.is_on_break ? 
-                          'You are currently on break. Resume shift or clock out for the day?' : 
-                          (actionOptions.message || 'What would you like to do?')
+                        {sessionInfo.is_on_break ? 
+                          'You are currently on break. What would you like to do?' : 
+                          'What would you like to do?'
                         }
                       </p>
+                      
+                      {sessionInfo && (
+                        <div className="current-session-info mt-3 p-2 bg-light rounded">
+                          <small className="text-muted d-block mb-1">Current Session:</small>
+                          <small className="text-dark">
+                            {sessionInfo.clock_in_time && (
+                              `Started: ${new Date(sessionInfo.clock_in_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`
+                            )}
+                            {sessionInfo.duration_hours && (
+                              ` • Duration: ${parseFloat(sessionInfo.duration_hours).toFixed(1)}h`
+                            )}
+                            {sessionInfo.total_break_minutes > 0 && (
+                              ` • Break: ${sessionInfo.total_break_minutes}m`
+                            )}
+                          </small>
+                        </div>
+                      )}
                     </div>
                     
                     <div className="action-buttons">
-                      {/* Show different buttons based on break status */}
-                      {actionOptions.staff?.on_break || actionOptions.staff?.is_on_break ? (
-                        // When on break - show "Resume Shift" and "Clock Out"
-                        <>
-                          <button 
-                            className="btn btn-success btn-lg me-3"
-                            onClick={() => handleActionSelection('break_end')}
-                          >
-                            Resume Shift
-                          </button>
-                          <button 
-                            className="btn btn-primary btn-lg me-3"
-                            onClick={() => handleActionSelection('clock_out')}
-                          >
-                            Clock Out
-                          </button>
-                        </>
-                      ) : (
-                        // When working - show "Clock Out" and "Start Break"
-                        <>
-                          <button 
-                            className="btn btn-primary btn-lg me-3"
-                            onClick={() => handleActionSelection('clock_out')}
-                          >
-                            Clock Out
-                          </button>
-                          <button 
-                            className="btn btn-warning btn-lg me-3"
-                            onClick={() => handleActionSelection('break_start')}
-                          >
-                            Start Break
-                          </button>
-                        </>
-                      )}
+                      {availableActions.map((action, index) => (
+                        <button 
+                          key={index}
+                          className={`btn ${action.primary ? 'btn-primary' : 'btn-warning'} btn-lg me-3`}
+                          onClick={() => handleActionFromBackend(action)}
+                        >
+                          {action.label}
+                        </button>
+                      ))}
                       
                       <button 
                         className="btn btn-secondary btn-lg"
@@ -851,7 +974,7 @@ export default function FaceClockInPage() {
                     ✅
                   </div>
                   
-                  <h2 className="text-success mb-3">Clock-In Successful!</h2>
+                  <h2 className="text-success mb-3">{staffData.actionMessage}</h2>
                   
                   {staffData.image && (
                     <div className="mb-3">
@@ -869,9 +992,27 @@ export default function FaceClockInPage() {
                     <p className="department-name text-muted">{staffData.department}</p>
                   )}
                   
-                  <p className="clock-in-time text-success mb-3">
-                    Clocked in at {new Date().toLocaleTimeString()}
+                  <p className="action-time text-success mb-3">
+                    {getActionTimeMessage(staffData.actionType)} {staffData.actionTime}
                   </p>
+                  
+                  {staffData.sessionSummary && (
+                    <div className="session-summary mb-4 p-4 bg-white border rounded shadow-sm" style={{maxWidth: '400px', margin: '0 auto'}}>
+                      <div className="text-center mb-3">
+                        <h4 className="text-primary mb-1">📊 Complete Shift Report</h4>
+                        <small className="text-muted">Your work session summary</small>
+                      </div>
+                      <div className="shift-report-content" style={{fontSize: '0.95rem'}}>
+                        {typeof staffData.sessionSummary === 'string' 
+                          ? <div className="text-center text-dark">{staffData.sessionSummary}</div>
+                          : formatSessionSummary(staffData.sessionSummary)
+                        }
+                      </div>
+                      <div className="text-center mt-3">
+                        <small className="text-success">✨ Great work today! Have a wonderful rest of your day!</small>
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="auto-refresh-info mt-4">
                     <small className="text-muted">
