@@ -60,7 +60,6 @@ export const NAV_ITEM_CATEGORY_MAP = {
   
   // Staff
   'staff': 'staff',
-  'roster': 'staff',
   'maintenance': 'staff',
   'staff_chat': 'staff',
   
@@ -122,8 +121,7 @@ export const SUBCATEGORIES = {
   ],
   'staff': [
     { slug: 'staff', name: 'Staff', order: 1 },
-    { slug: 'roster', name: 'Roster', order: 2 },
-    { slug: 'clock', name: 'Clock', order: 3 },
+    { slug: 'clock', name: 'Clock', order: 2 },
     { slug: 'maintenance', name: 'Maintenance', order: 4 },
     { slug: 'staff_chat', name: 'Staff Chat', order: 5 },
   ],

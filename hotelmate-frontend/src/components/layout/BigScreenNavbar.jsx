@@ -50,7 +50,6 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
     if (path.includes('/games')) return 'games';
     if (path.includes('/restaurants')) return 'restaurant';
     if (path.includes('/bookings')) return 'bookings';
-    if (path.includes('/roster')) return 'roster';
     return 'general';
   };
   
@@ -222,35 +221,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
   const getContextualActions = () => {
     const path = location.pathname;
     
-    // ROSTER - Show Quick Actions when department is selected
-    if (path.includes('/roster')) {
-      const searchParams = new URLSearchParams(location.search);
-      const department = searchParams.get('department');
-      
-      if (department) {
-        // Department selected - show action buttons
-        return [
-          { icon: 'calendar-check', label: 'Daily Plans', action: () => {
-            // Toggle daily plans view
-            const event = new CustomEvent('toggleDailyPlans');
-            window.dispatchEvent(event);
-          }},
-          { icon: 'clock-history', label: 'Clock Logs', action: () => {
-            // Toggle clock logs view
-            const event = new CustomEvent('toggleClockLogs');
-            window.dispatchEvent(event);
-          }},
-          { icon: 'graph-up', label: 'Analytics', action: () => {
-            // Toggle analytics view
-            const event = new CustomEvent('toggleAnalytics');
-            window.dispatchEvent(event);
-          }},
-        ];
-      }
-      
-      // No department selected - hide Quick Actions
-      return [];
-    }
+
     
     // ROOMS - No Quick Actions
     if (path.includes('/rooms')) {
@@ -316,20 +287,10 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
       ];
     }
     
-    // ROSTER - Staff scheduling
-    if (path.includes('/roster')) {
-      return [
-        { icon: 'people-fill', label: 'All Staff', action: () => navigate(`/${hotelIdentifier}/staff`) },
-        { icon: 'person-plus', label: 'Add Staff', action: () => navigate(`/${hotelIdentifier}/staff/create`) },
-        { icon: 'clock', label: 'Clock In/Out', action: () => navigate(`/clock-in/${hotelIdentifier}`) },
-      ];
-    }
-    
     // STAFF - Staff management
     if (path.includes('/staff') && !path.includes('/staff/create')) {
       return [
         { icon: 'person-plus', label: 'Add Staff', action: () => navigate(`/${hotelIdentifier}/staff/create`) },
-        { icon: 'calendar-week', label: 'Roster', action: () => navigate(`/roster/${hotelIdentifier}`) },
         { icon: 'clock-history', label: 'Clocked In', action: () => {
           if (window.toggleClockedInView) {
             window.toggleClockedInView();
@@ -782,53 +743,10 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
 
       {/* Spacer to push content down - adjusted for navbar + quick actions */}
       <div className="d-none d-lg-block" style={{ 
-        height: contextualActions.length > 0 ? "90px" : 
-                (location.pathname.includes('/roster') && new URLSearchParams(location.search).get('department')) ? "130px" :
-                location.pathname.includes('/roster') ? "90px" : "50px" 
+        height: contextualActions.length > 0 ? "90px" : "50px" 
       }}></div>
 
-      {/* Roster Page Title - Below Navbar */}
-      {location.pathname.includes('/roster') && (() => {
-        const searchParams = new URLSearchParams(location.search);
-        const department = searchParams.get('department');
-        
-        return (
-          <div 
-            className="d-none d-lg-flex position-fixed start-0 end-0"
-            style={{
-              top: "50px",
-              zIndex: 1045,
-              background: "transparent",
-              padding: "8px 0",
-            }}
-          >
-            <div className="container-fluid">
-              <div className="d-flex flex-column align-items-start px-3">
-                <h1 className="fw-bold mb-0" style={{ fontSize: '2.5rem', color: '#2c3e50' }}>
-                  <i className="bi bi-calendar-week me-3" style={{ color: '#3498db' }}></i>
-                  Roster Management
-                </h1>
-                
-                {department && (
-                  <button
-                    className="btn btn-outline-secondary mt-2"
-                    onClick={() => navigate(`/roster/${hotelIdentifier}`)}
-                    style={{
-                      borderRadius: '8px',
-                      padding: '0.4rem 1.2rem',
-                      fontWeight: '600',
-                      fontSize: '0.9rem',
-                    }}
-                  >
-                    <i className="bi bi-arrow-left me-2"></i>
-                    Back to Departments
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+
 
       {/* Contextual Quick Actions Bar - Desktop - Always Visible Below Navbar */}
       {contextualActions.length > 0 && (

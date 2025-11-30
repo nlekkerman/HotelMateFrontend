@@ -14,7 +14,6 @@ const DEFAULT_NAV_ITEMS = [
   { slug: 'reception', name: 'Reception', path: '/reception', icon: 'bell' },
   { slug: 'rooms', name: 'Rooms', path: '/rooms', icon: 'door-closed' },
   { slug: 'guests', name: 'Guests', path: '/{hotelSlug}/guests', icon: 'people' },
-  { slug: 'roster', name: 'Roster', path: '/roster/{hotelSlug}', icon: 'calendar-week' },
   { slug: 'staff', name: 'Staff', path: '/{hotelSlug}/staff', icon: 'person-badge' },
   { slug: 'restaurants', name: 'Restaurants', path: '/{hotelSlug}/restaurants', icon: 'shop-window' },
   { slug: 'room_bookings', name: 'Room Bookings', path: '/staff/hotel/{hotelSlug}/bookings', icon: 'bed', hasDropdown: true },

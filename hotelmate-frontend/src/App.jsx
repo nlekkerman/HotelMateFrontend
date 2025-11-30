@@ -57,8 +57,7 @@ import RequireDinnerPin from "@/components/auth/RequireDinnerPin";
 import DinnerPinAuth from "@/components/auth/DinnerPinAuth";
 import ChatPinAuth from "@/components/auth/ChatPinAuth";
 import PinAuth from "@/components/auth/PinAuth";
-import FaceClockInPage from "@/pages/attendance/FaceClockInPage";
-import FaceRegister from "@/components/attendance/FaceRegister";
+
 
 import RoomList from "@/components/rooms/RoomList";
 import RoomDetails from "@/components/rooms/RoomDetails";
@@ -73,8 +72,7 @@ import Staff from "@/components/staff/Staff";
 import StaffCreate from "@/components/staff/StaffCreate";
 import StaffDetails from "@/components/staff/StaffDetails";
 import StaffProfile from "@/components/staff/StaffProfile";
-import RosterDashboard from "@/pages/attendance/RosterDashboard";
-import DepartmentRosterView from "@/components/attendance/DepartmentRosterView";
+
 
 import GuestList from "@/components/guests/GuestList";
 import GuestEdit from "@/components/guests/GuestEdit";
@@ -189,7 +187,6 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                        location.pathname.startsWith("/rooms") ||
                        location.pathname.startsWith("/bookings") ||
                        location.pathname.startsWith("/maintenance") ||
-                       location.pathname.startsWith("/roster/") ||
                        location.pathname.startsWith("/stock_tracker/") ||
                        location.pathname.startsWith("/games") ||
                        location.pathname.startsWith("/hotel_info/") ||
@@ -335,13 +332,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/:hotelSlug/staff/create" element={<ProtectedRoute><StaffCreate /></ProtectedRoute>} />
               <Route path="/:hotelSlug/staff/:id" element={<ProtectedRoute><StaffDetails /></ProtectedRoute>} />
               <Route path="/:hotelSlug/staff/me" element={<ProtectedRoute><StaffProfile /></ProtectedRoute>} />
-              <Route path="/roster/:hotelSlug" element={<ProtectedRoute><RosterDashboard /></ProtectedRoute>} />
-              <Route path="/roster/:hotelSlug/department/:department" element={<ProtectedRoute><DepartmentRosterView /></ProtectedRoute>} />
-
-              {/* Face Recognition */}
-              <Route path="/clock-in/:hotel_slug" element={<FaceClockInPage />} />
-              <Route path="/:hotel_slug/staff/register-face" element={<ProtectedRoute><FaceRegister /></ProtectedRoute>} />
-
+           
               {/* PIN Auth - Public (guests use these) */}
               <Route path="/:hotelIdentifier/room/:roomNumber/validate-pin" element={<PinAuth />} />
               <Route path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin" element={<DinnerPinAuth />} />
