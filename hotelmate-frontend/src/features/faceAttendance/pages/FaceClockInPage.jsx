@@ -22,6 +22,7 @@ export default function FaceClockInPage() {
   const [result, setResult] = useState(null);
   const [staffData, setStaffData] = useState(null);
   const [unrosteredData, setUnrosteredData] = useState(null);
+  const [actionOptions, setActionOptions] = useState(null);
   const [sessionInfo, setSessionInfo] = useState(null);
   const [availableActions, setAvailableActions] = useState([]);
   const [countdown, setCountdown] = useState(0);
@@ -162,8 +163,15 @@ export default function FaceClockInPage() {
           break;
           
         case 'clock_out_options':
-          // For now show error - need full interface for clock out options
-          throw new Error(data.message || 'Face recognized but clock-out options required. Please use the full interface.');
+          // Show action selection interface for clock-out/break options
+          setActionOptions({
+            staff: data.staff,
+            message: data.message,
+            actions: data.actions || [],
+            encoding: encodingResult.encoding
+          });
+          setMode("actionSelection");
+          break;
           
         default:
           throw new Error(data.message || 'Face not recognized or unknown response from server');
@@ -336,6 +344,7 @@ export default function FaceClockInPage() {
     setResult(null);
     setStaffData(null);
     setUnrosteredData(null);
+    setActionOptions(null);
     setSessionInfo(null);
     setAvailableActions([]);
     setMode("ready");
@@ -393,7 +402,48 @@ export default function FaceClockInPage() {
     }
   };
 
-
+  const handleActionSelection = async (action) => {
+    if (!actionOptions || !hotelSlug) return;
+    
+    setMode("processing");
+    
+    try {
+      const response = await clockInWithFace({
+        hotelSlug,
+        imageBase64: capturedImage,
+        encoding: actionOptions.encoding,
+        locationNote: "Kiosk",
+        forceAction: action
+      });
+      
+      const data = response;
+      
+      // Show success with staff info
+      setStaffData({
+        name: data.staff?.name || actionOptions.staff?.name || 'Staff Member',
+        image: data.staff?.image || actionOptions.staff?.image,
+        department: data.staff?.department || actionOptions.staff?.department
+      });
+      setMode("success");
+      
+      // Auto-refresh for next person after 4 seconds
+      setTimeout(() => {
+        handleReset();
+      }, 4000);
+      
+    } catch (err) {
+      setResult({
+        type: "error",
+        message: err.message || "Action failed"
+      });
+      setMode("result");
+      
+      // Auto-refresh on error after 3 seconds
+      setTimeout(() => {
+        handleReset();
+      }, 3000);
+    }
+  };
 
   // Helper functions for kiosk UX
   const getFriendlyErrorMessage = (errorMessage, errorCode) => {
@@ -707,6 +757,87 @@ export default function FaceClockInPage() {
                         }}
                       >
                         Confirm Clock In
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Selection Dialog */}
+              {mode === "actionSelection" && actionOptions && (
+                <div className="action-selection-display">
+                  <div className="action-card">
+                    <div className="action-header">
+                      <h3>Choose Action</h3>
+                    </div>
+                    
+                    <div className="staff-verification">
+                      {actionOptions.staff?.image && (
+                        <img 
+                          src={actionOptions.staff.image} 
+                          alt={actionOptions.staff.name}
+                          className="verification-photo"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      )}
+                      <div className="staff-details">
+                        <h4>{actionOptions.staff?.name || 'Staff Member'}</h4>
+                        {actionOptions.staff?.department && (
+                          <p className="department">{actionOptions.staff.department}</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="action-message">
+                      <p>
+                        {actionOptions.staff?.on_break || actionOptions.staff?.is_on_break ? 
+                          'You are currently on break. Resume shift or clock out for the day?' : 
+                          (actionOptions.message || 'What would you like to do?')
+                        }
+                      </p>
+                    </div>
+                    
+                    <div className="action-buttons">
+                      {/* Show different buttons based on break status */}
+                      {actionOptions.staff?.on_break || actionOptions.staff?.is_on_break ? (
+                        // When on break - show "Resume Shift" and "Clock Out"
+                        <>
+                          <button 
+                            className="btn btn-success btn-lg me-3"
+                            onClick={() => handleActionSelection('break_end')}
+                          >
+                            Resume Shift
+                          </button>
+                          <button 
+                            className="btn btn-primary btn-lg me-3"
+                            onClick={() => handleActionSelection('clock_out')}
+                          >
+                            Clock Out
+                          </button>
+                        </>
+                      ) : (
+                        // When working - show "Clock Out" and "Start Break"
+                        <>
+                          <button 
+                            className="btn btn-primary btn-lg me-3"
+                            onClick={() => handleActionSelection('clock_out')}
+                          >
+                            Clock Out
+                          </button>
+                          <button 
+                            className="btn btn-warning btn-lg me-3"
+                            onClick={() => handleActionSelection('break_start')}
+                          >
+                            Start Break
+                          </button>
+                        </>
+                      )}
+                      
+                      <button 
+                        className="btn btn-secondary btn-lg"
+                        onClick={() => handleReset()}
+                      >
+                        Cancel
                       </button>
                     </div>
                   </div>
