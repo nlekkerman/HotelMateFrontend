@@ -12,6 +12,7 @@ import StaffImageUploader from "./StaffImageUploader";
 import StaffFieldRow from "./StaffFieldRow";
 import StaffStatusRow from "./StaffStatusRow";
 import StaffFaceRegistrationCTA from "./StaffFaceRegistrationCTA";
+import { useAttendanceRealtime } from "@/features/attendance/hooks/useAttendanceRealtime";
 
 const prettify = (v) =>
   (v || "N/A")
@@ -27,8 +28,47 @@ const prettify = (v) =>
 export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
   const [departments, setDepartments] = useState([]);
   const [roles, setRoles] = useState([]);
+  const [realTimeStaff, setRealTimeStaff] = useState(staff);
   
   const queryClient = useQueryClient();
+
+  // Handle real-time status updates
+  const handleAttendanceEvent = ({ type, payload }) => {
+    console.log('[StaffProfile] Pusher event:', { type, payload });
+    
+    if (type === 'clock-status-updated' && payload.staff_id === staff.id) {
+      console.log('[StaffProfile] Updating status for current staff:', payload);
+      
+      setRealTimeStaff(prev => ({
+        ...prev,
+        is_on_duty: payload.is_on_duty,
+        current_status: payload.current_status
+      }));
+      
+      // Add visual feedback for status change
+      setTimeout(() => {
+        const statusBadge = document.querySelector('.staff-status-badge');
+        if (statusBadge) {
+          statusBadge.classList.add('updating');
+          setTimeout(() => statusBadge.classList.remove('updating'), 600);
+        }
+      }, 100);
+      
+      // Also invalidate queries to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ["staffMe", hotelSlug] });
+    }
+  };
+  
+  // Subscribe to real-time updates
+  useAttendanceRealtime(hotelSlug, handleAttendanceEvent);
+  
+  // Update local state when staff prop changes
+  useEffect(() => {
+    setRealTimeStaff(staff);
+  }, [staff]);
+  
+  // Use real-time staff data for rendering
+  const displayStaff = realTimeStaff || staff;
 
   useEffect(() => {
     // Fetch departments and roles (paginated)
@@ -75,7 +115,7 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
       payload = { [fieldKey]: newValue };
     }
 
-    await api.patch(`/staff/${hotelSlug}/${staff.id}/`, payload);
+    await api.patch(`/staff/${hotelSlug}/${displayStaff.id}/`, payload);
     await queryClient.invalidateQueries({ queryKey: ["staffMe", hotelSlug] });
   };
 
@@ -103,10 +143,10 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
 
       <div className="card-body">
         <div className="staff-profile-header text-center">
-          {staff.profile_image_url ? (
+          {displayStaff.profile_image_url ? (
             <img
-              src={staff.profile_image_url}
-              alt={`${staff.first_name} ${staff.last_name}`}
+              src={displayStaff.profile_image_url}
+              alt={`${displayStaff.first_name} ${displayStaff.last_name}`}
               className="staff-profile-avatar mb-3"
             />
           ) : (
@@ -116,15 +156,15 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
           )}
 
           <h5 className="mb-1">
-            {staff.first_name} {staff.last_name}
+            {displayStaff.first_name} {displayStaff.last_name}
           </h5>
           <p className="text-muted small mb-0">
-            {staff.role_detail?.name || "Staff"}
+            {displayStaff.role_detail?.name || "Staff"}
           </p>
 
           {isOwnProfile && (
             <StaffImageUploader
-              staff={staff}
+              staff={displayStaff}
               hotelSlug={hotelSlug}
               isOwnProfile={isOwnProfile}
             />
@@ -199,10 +239,19 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
             canEdit={isOwnProfile}
             onSave={handleSaveField}
           />
+
+          <StaffStatusRow
+            label="Duty Status"
+            value={staff.current_status}
+            fieldKey="current_status"
+            canEdit={false}
+            onSave={handleSaveField}
+            isStatusBadge={true}
+          />
         </ul>
 
         <StaffFaceRegistrationCTA
-          staff={staff}
+          staff={displayStaff}
           hotelSlug={hotelSlug}
           isOwnProfile={isOwnProfile}
         />

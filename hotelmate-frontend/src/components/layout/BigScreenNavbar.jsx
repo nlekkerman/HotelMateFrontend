@@ -11,6 +11,9 @@ import { useNavigation } from "@/hooks/useNavigation";
 import { useChat } from "@/context/ChatContext";
 import { useBookingNotifications } from "@/context/BookingNotificationContext";
 import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationContext";
+import { useAttendanceRealtime } from "@/features/attendance/hooks/useAttendanceRealtime";
+import { handleClockAction as performClockActionAPI, showClockOptionsModal } from "@/features/attendance/utils/clockActions";
+
 const BigScreenNavbar = ({ chatUnreadCount }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -30,6 +33,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
   const [isOnDuty, setIsOnDuty] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [clockActionLoading, setClockActionLoading] = useState(false);
   const [flyoutOpen, setFlyoutOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -76,49 +80,210 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
 
   // Fetch staff profile
   const fetchStaffProfile = () => {
+    console.log("[BigScreenNav] 🔄 fetchStaffProfile called:", {
+      hasUser: !!user,
+      userId: user?.id,
+      hotelIdentifier,
+      timestamp: new Date().toISOString()
+    });
+
     if (!user || !hotelIdentifier) {
+      console.log("[BigScreenNav] ⚠️ Missing requirements for profile fetch:", {
+        hasUser: !!user,
+        hotelIdentifier
+      });
       setStaffProfile(null);
       setIsOnDuty(false);
       return;
     }
+
+    console.log("[BigScreenNav] 📡 Making API call to fetch profile...");
     api
       .get(`/staff/${hotelIdentifier}/me/`)
       .then((res) => {
-        console.log("[BigScreenNav] Staff profile data:", res.data);
-        console.log("[BigScreenNav] Clock status (is_on_duty):", res.data.is_on_duty);
-        console.log("[BigScreenNav] Break status fields:", {
+        console.log("[BigScreenNav] ✅ Staff profile API response:", {
+          data: res.data,
+          hasCurrentStatus: !!res.data.current_status,
+          timestamp: new Date().toISOString()
+        });
+        console.log("[BigScreenNav] 📊 Current Status Details:", res.data.current_status);
+        console.log("[BigScreenNav] 🕐 Clock Status (is_on_duty):", res.data.is_on_duty);
+        console.log("[BigScreenNav] ☕ Break Status Fields:", {
           on_break: res.data.on_break,
           is_on_break: res.data.is_on_break,
           break_status: res.data.break_status,
           current_break: res.data.current_break
         });
+        
         setStaffProfile(res.data);
         setIsOnDuty(res.data.is_on_duty);
+        
+        console.log("[BigScreenNav] 🎯 Profile state updated, button will recalculate...");
       })
       .catch((err) => {
-        console.error("[BigScreenNav] Failed to fetch staff profile:", err);
+        console.error("[BigScreenNav] ❌ Failed to fetch staff profile:", {
+          error: err.message,
+          status: err.response?.status,
+          data: err.response?.data,
+          timestamp: new Date().toISOString()
+        });
         setStaffProfile(null);
         setIsOnDuty(false);
       });
   };
 
   useEffect(() => {
+    console.log("[BigScreenNav] 🚀 User or hotel identifier changed:", {
+      hasUser: !!user,
+      userId: user?.id,
+      staffId: user?.staff_id,
+      hotelIdentifier,
+      timestamp: new Date().toISOString()
+    });
     fetchStaffProfile();
   }, [user, hotelIdentifier]);
 
-  // Listen for clock status changes from ClockModal
+  // Track staffProfile state changes
+  useEffect(() => {
+    console.log("[BigScreenNav] 👤 Staff profile state changed:", {
+      hasStaffProfile: !!staffProfile,
+      staffId: staffProfile?.id,
+      name: staffProfile?.name,
+      isOnDuty,
+      hasCurrentStatus: !!staffProfile?.current_status,
+      currentStatus: staffProfile?.current_status,
+      timestamp: new Date().toISOString()
+    });
+  }, [staffProfile, isOnDuty]);
+
+  // Listen for clock status changes from ClockModal and Pusher
   useEffect(() => {
     const handleClockStatusChange = () => {
-      console.log("[BigScreenNav] Clock status changed, refreshing...");
+      console.log("[BigScreenNav] 🔔 Clock status changed event received, refreshing profile...");
       fetchStaffProfile();
     };
 
+    const handlePusherStatusUpdate = (event) => {
+      const { staff_id, user_id, action, is_on_duty } = event.detail || {};
+      console.log("[BigScreenNav] 📡 Pusher status update received:", {
+        eventDetail: event.detail,
+        currentUser: {
+          userId: user?.id,
+          staffId: user?.staff_id
+        },
+        timestamp: new Date().toISOString()
+      });
+      
+      // Only update if it's for the current user
+      const isForCurrentUser = (user?.staff_id && staff_id === user.staff_id) || 
+                              (user?.id && user_id === user.id);
+      
+      console.log("[BigScreenNav] 🎯 Is Pusher update for current user?", {
+        isForCurrentUser,
+        matchByStaffId: user?.staff_id && staff_id === user.staff_id,
+        matchByUserId: user?.id && user_id === user.id
+      });
+      
+      if (isForCurrentUser) {
+        console.log("[BigScreenNav] ✅ Pusher update is for current user, refreshing profile...");
+        fetchStaffProfile();
+      } else {
+        console.log("[BigScreenNav] ℹ️ Pusher update not for current user, ignoring");
+      }
+    };
+
     window.addEventListener('clockStatusChanged', handleClockStatusChange);
+    window.addEventListener('pusherClockStatusUpdate', handlePusherStatusUpdate);
 
     return () => {
       window.removeEventListener('clockStatusChanged', handleClockStatusChange);
+      window.removeEventListener('pusherClockStatusUpdate', handlePusherStatusUpdate);
     };
   }, [user, hotelIdentifier]);
+
+  // Handle real-time attendance updates via Pusher
+  const handleAttendanceEvent = (event) => {
+    console.log("[BigScreenNav] 🔔 Pusher event received:", event);
+    const { type, payload } = event;
+    
+    if (type === 'clock-status-updated') {
+      console.log("[BigScreenNav] 📊 Clock status update:", payload);
+      console.log("[BigScreenNav] 👤 Current user:", { 
+        staff_id: user?.staff_id, 
+        user_id: user?.id,
+        email: user?.email 
+      });
+      
+      // Check if this update is for the current user
+      const isCurrentUser = (user?.staff_id && payload.staff_id === user.staff_id) || 
+                           (user?.id && payload.user_id === user.id);
+      
+      console.log("[BigScreenNav] 🎯 Is current user?", isCurrentUser);
+      
+      if (isCurrentUser) {
+        console.log("[BigScreenNav] ✅ Status update for current user, refreshing profile...");
+        
+        // Add visual feedback to clock button
+        const clockButton = document.querySelector('.clock-btn');
+        if (clockButton) {
+          console.log("[BigScreenNav] 🔄 Adding visual feedback to clock button");
+          clockButton.classList.add('updating');
+          setTimeout(() => {
+            clockButton.classList.remove('updating');
+          }, 800);
+        } else {
+          console.log("[BigScreenNav] ⚠️ Clock button not found for visual feedback");
+        }
+        
+        // Refresh staff profile to get updated status
+        setTimeout(() => {
+          console.log("[BigScreenNav] 🔄 Refreshing staff profile...");
+          fetchStaffProfile();
+        }, 500); // Small delay to ensure backend has processed the change
+      } else {
+        console.log("[BigScreenNav] ℹ️ Status update not for current user, ignoring");
+      }
+    } else {
+      console.log("[BigScreenNav] ℹ️ Non-clock status event:", type);
+    }
+  };
+
+  // Initialize Pusher real-time updates
+  useAttendanceRealtime(hotelIdentifier, handleAttendanceEvent);
+
+  // Listen for face recognition clock actions (manual refresh trigger)
+  useEffect(() => {
+    const handleFaceClockAction = (event) => {
+      const { action, hotelSlug: eventHotelSlug, data } = event.detail;
+      
+      console.log("[BigScreenNav] 🎭 Face clock action detected:", { action, eventHotelSlug, data });
+      
+      // Check if this event is for the current hotel
+      if (eventHotelSlug === hotelIdentifier) {
+        console.log("[BigScreenNav] 🔄 Refreshing profile due to face clock action");
+        
+        // Add visual feedback to clock button
+        const clockButton = document.querySelector('.clock-btn');
+        if (clockButton) {
+          clockButton.classList.add('updating');
+          setTimeout(() => {
+            clockButton.classList.remove('updating');
+          }, 800);
+        }
+        
+        // Refresh staff profile to get updated status
+        setTimeout(() => {
+          fetchStaffProfile();
+        }, 1000); // Longer delay for face recognition processing
+      }
+    };
+
+    window.addEventListener('face-clock-action-success', handleFaceClockAction);
+
+    return () => {
+      window.removeEventListener('face-clock-action-success', handleFaceClockAction);
+    };
+  }, [hotelIdentifier, fetchStaffProfile]);
 
   // Collapse/expand sidebar
   useEffect(() => {
@@ -423,57 +588,183 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                   );
                 }
                 
-                // Get button text and style based on staff status (same logic as ClockModal)
+                // Get button text and style based on enhanced staff status
                 const getClockButtonInfo = () => {
+                  console.log("[BigScreenNav] 🔍 Getting clock button info:", {
+                    hasStaffProfile: !!staffProfile,
+                    staffId: staffProfile?.id,
+                    name: staffProfile?.name,
+                    currentStatus: staffProfile?.current_status,
+                    isOnDuty: staffProfile?.is_on_duty,
+                    timestamp: new Date().toISOString()
+                  });
+
                   if (!staffProfile) {
+                    console.log("[BigScreenNav] ⚠️ No staff profile, defaulting to Clock In");
                     return { text: 'Clock In', color: '#28a745', isDanger: false };
                   }
                   
-                  // If staff is clocked out
-                  if (!staffProfile.is_on_duty) {
-                    return { text: 'Clock In', color: '#28a745', isDanger: false };
+                  // Use enhanced current_status from backend
+                  const currentStatus = staffProfile.current_status;
+                  console.log("[BigScreenNav] 📊 Current status details:", {
+                    hasCurrentStatus: !!currentStatus,
+                    status: currentStatus?.status,
+                    label: currentStatus?.label,
+                    isOnBreak: currentStatus?.is_on_break,
+                    totalBreakMinutes: currentStatus?.total_break_minutes,
+                    fallbackIsOnDuty: staffProfile?.is_on_duty
+                  });
+
+                  if (!currentStatus) {
+                    console.log("[BigScreenNav] ⚠️ No current_status, using fallback logic");
+                    // Fallback to old logic if current_status not available
+                    const fallbackButton = !staffProfile.is_on_duty 
+                      ? { text: 'Clock In', color: '#28a745', isDanger: false }
+                      : { text: 'Clock Out', subText: '(Start Break)', color: '#dc3545', isDanger: true };
+                    console.log("[BigScreenNav] 🔄 Fallback button info:", fallbackButton);
+                    return fallbackButton;
                   }
                   
-                  // If on break (check multiple possible field names)
-                  const isOnBreak = staffProfile.is_on_break || staffProfile.on_break || staffProfile.break_status === 'on_break' || 
-                                   staffProfile.current_break_id || (staffProfile.current_session && staffProfile.current_session.is_on_break);
-                  console.log("[BigScreenNav] Break status check:", { isOnBreak, staffProfile });
+                  console.log("[BigScreenNav] ✅ Using enhanced status:", currentStatus);
                   
-                  if (isOnBreak) {
-                    return { text: 'End Break', subText: '(Clock Out)', color: '#17a2b8', isDanger: false };
+                  let buttonInfo;
+                  switch (currentStatus.status) {
+                    case 'off_duty':
+                      buttonInfo = { text: 'Clock In', color: '#28a745', isDanger: false };
+                      break;
+                      
+                    case 'on_duty':
+                      buttonInfo = { text: 'Start Break', color: '#ffc107', isDanger: false };
+                      break;
+                      
+                    case 'on_break':
+                      const breakTime = currentStatus.break_start 
+                        ? Math.round((Date.now() - new Date(currentStatus.break_start)) / 60000)
+                        : 0;
+                      buttonInfo = { 
+                        text: 'End Break', 
+                        subText: breakTime > 0 ? `(${breakTime} min)` : null,
+                        color: '#17a2b8', 
+                        isDanger: false 
+                      };
+                      break;
+                      
+                    default:
+                      buttonInfo = { text: 'Clock In', color: '#28a745', isDanger: false };
                   }
                   
-                  // If clocked in and working - show options
-                  return { text: 'Start Break', subText: '(Clock Out)', color: '#ffc107', isDanger: false };
+                  console.log("[BigScreenNav] 🎯 Final button info:", buttonInfo);
+                  return buttonInfo;
                 };
                 
                 const buttonInfo = getClockButtonInfo();
+                
+                console.log("[BigScreenNav] 🎨 About to render button:", {
+                  buttonInfo,
+                  clockActionLoading,
+                  hasStaffProfile: !!staffProfile,
+                  staffProfileId: staffProfile?.id,
+                  currentStatus: staffProfile?.current_status,
+                  timestamp: new Date().toISOString()
+                });
                 
                 // Update other button info objects to have consistent structure
                 if (buttonInfo.text === 'Clock In') {
                   buttonInfo.subText = null;
                 }
                 
+                const handleClockAction = async () => {
+                  console.log("[BigScreenNav] 🎬 handleClockAction called:", {
+                    hasHotelIdentifier: !!hotelIdentifier,
+                    hotelIdentifier,
+                    clockActionLoading,
+                    hasStaffProfile: !!staffProfile,
+                    currentStatus: staffProfile?.current_status,
+                    buttonText: buttonInfo.text,
+                    timestamp: new Date().toISOString()
+                  });
+
+                  if (!hotelIdentifier || clockActionLoading) {
+                    console.warn('[BigScreenNav] ⚠️ Cannot perform clock action:', {
+                      hasHotelIdentifier: !!hotelIdentifier,
+                      clockActionLoading,
+                      reason: !hotelIdentifier ? 'No hotel identifier' : 'Already loading'
+                    });
+                    return;
+                  }
+                  
+                  console.log('[BigScreenNav] 🔄 Setting clock action loading...');
+                  setClockActionLoading(true);
+                  
+                  try {
+                    if (!staffProfile?.current_status) {
+                      console.log('[BigScreenNav] 🎭 No enhanced status, falling back to face recognition');
+                      navigate(`/face/${hotelIdentifier}/clock-in`);
+                      return;
+                    }
+                    
+                    const currentStatus = staffProfile.current_status;
+                    console.log('[BigScreenNav] 📊 Handling clock action for status:', {
+                      status: currentStatus.status,
+                      label: currentStatus.label,
+                      isOnBreak: currentStatus.is_on_break,
+                      buttonAction: buttonInfo.text
+                    });
+                    
+                    // For complex actions (on_duty/on_break), might want to show options
+                    // For now, handle the primary action based on button text
+                    if (currentStatus.status === 'on_duty' || currentStatus.status === 'on_break') {
+                      // Show options or use face recognition for more complex flow
+                      showClockOptionsModal(currentStatus, hotelIdentifier, (result) => {
+                        console.log('[BigScreenNav] Clock action completed:', result);
+                        fetchStaffProfile(); // Refresh profile after action
+                        setClockActionLoading(false);
+                      });
+                    } else {
+                      // Simple clock in action
+                      const result = await performClockActionAPI(currentStatus, hotelIdentifier);
+                      console.log('[BigScreenNav] Clock action completed:', result);
+                      fetchStaffProfile(); // Refresh profile after action
+                    }
+                  } catch (error) {
+                    console.error('[BigScreenNav] Clock action failed:', error);
+                    // Fallback to face recognition on error
+                    navigate(`/face/${hotelIdentifier}/clock-in`);
+                  } finally {
+                    setClockActionLoading(false);
+                  }
+                };
+
                 return (
                   <button
                     className={`btn ${buttonInfo.isDanger ? 'btn-danger' : buttonInfo.color === '#28a745' ? 'btn-success' : buttonInfo.color === '#17a2b8' ? 'btn-info' : 'btn-warning'} text-white top-nav-btn clock-btn`}
-                    onClick={() => navigate(`/face/${hotelIdentifier}/clock-in`)}
-                    title={buttonInfo.text}
+                    onClick={handleClockAction}
+                    title={clockActionLoading ? 'Processing...' : buttonInfo.text}
+                    disabled={clockActionLoading}
                     style={{
                       backgroundColor: buttonInfo.color,
-                      borderColor: buttonInfo.color
+                      borderColor: buttonInfo.color,
+                      opacity: clockActionLoading ? 0.7 : 1
                     }}
                   >
-                    <i className={`bi ${
-                      buttonInfo.text === 'Clock In' ? 'bi-clock' : 
-                      buttonInfo.text === 'End Break' ? 'bi-play-circle' : 
-                      buttonInfo.text === 'Start Break' ? 'bi-pause-circle' :
-                      'bi-clock'
-                    }`} />
+                    {clockActionLoading ? (
+                      <div className="spinner-border spinner-border-sm text-white me-2" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                      </div>
+                    ) : (
+                      <i className={`bi ${
+                        buttonInfo.text === 'Clock In' ? 'bi-clock' : 
+                        buttonInfo.text === 'End Break' ? 'bi-play-circle' : 
+                        buttonInfo.text === 'Start Break' ? 'bi-pause-circle' :
+                        'bi-clock'
+                      }`} />
+                    )}
                     <span className="ms-2 btn-label">
                       <div className="d-flex flex-column align-items-start">
-                        <span style={{ fontSize: '0.9rem', lineHeight: '1.1' }}>{buttonInfo.text}</span>
-                        {buttonInfo.subText && (
+                        <span style={{ fontSize: '0.9rem', lineHeight: '1.1' }}>
+                          {clockActionLoading ? 'Processing...' : buttonInfo.text}
+                        </span>
+                        {!clockActionLoading && buttonInfo.subText && (
                           <small className="text-muted" style={{ fontSize: '0.7rem', opacity: 0.8 }}>
                             {buttonInfo.subText}
                           </small>
@@ -854,6 +1145,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
           onClose={() => setIsModalOpen(false)}
           staffId={staffProfile.id}
           initialStatus={isOnDuty}
+          currentStatus={staffProfile.current_status}
           onStatusChange={(newStatus) => {
             setIsOnDuty(newStatus);
             setIsModalOpen(false);

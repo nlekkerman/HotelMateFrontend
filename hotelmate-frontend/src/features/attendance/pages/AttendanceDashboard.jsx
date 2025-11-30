@@ -17,6 +17,7 @@ import AttendanceErrorBoundary from "../components/AttendanceErrorBoundary";
 import AttendanceToasts from "../components/AttendanceToasts";
 import { AttendanceDashboardSkeleton, AttendanceTableSkeleton, PeriodSelectorSkeleton } from "../components/AttendanceSkeletons";
 import { deriveStatus } from "../utils/attendanceStatus";
+import { handleRealTimeStatusUpdate, showStatusNotification } from "../utils/statusUpdates";
 import { safeStaffId, safeStaffName, safeTimeSlice, safeNumber } from "../utils/safeUtils";
 import { handleAttendanceError, showSuccessMessage, ERROR_TYPES } from "../utils/errorHandling";
 import api from "@/services/api";
@@ -148,7 +149,27 @@ function AttendanceDashboardComponent() {
 
     const { type, payload = {} } = evt;
 
-    // For any attendance-related event, refresh table:
+    // Handle real-time clock status updates
+    if (type === 'clock-status-updated') {
+      console.log('[AttendanceDashboard] Real-time clock status update:', payload);
+      
+      // Broadcast to navbar for button updates
+      window.dispatchEvent(new CustomEvent('pusherClockStatusUpdate', {
+        detail: payload
+      }));
+      
+      // Show status notification
+      if (payload.first_name && payload.action) {
+        showStatusNotification(payload);
+      }
+      
+      // Refresh table data immediately for real-time updates
+      console.log('[AttendanceDashboard] Refreshing table data due to status change');
+      setRefreshKey((prev) => prev + 1);
+      return; // Early return to avoid double refresh
+    }
+
+    // For any other attendance-related event, refresh table:
     setRefreshKey((prev) => prev + 1);
 
     // Build an alert for specific types with safe data extraction:

@@ -29,13 +29,34 @@ const Navbar = () => {
       setStaffProfile(null);
       return;
     }
-    api
-      .get("/staff/me/")
-      .then((res) => {
-        setStaffProfile(res.data);
-        setIsOnDuty(res.data.is_on_duty);
-      })
-      .catch(() => setStaffProfile(null));
+    
+    const hotelSlug = user?.hotel_slug;
+    if (hotelSlug) {
+      api
+        .get(`/staff/hotel/${hotelSlug}/me/`)
+        .then((res) => {
+          setStaffProfile(res.data);
+          setIsOnDuty(res.data.is_on_duty);
+        })
+        .catch(() => {
+          // Fallback to old endpoint
+          api
+            .get("/staff/me/")
+            .then((res) => {
+              setStaffProfile(res.data);
+              setIsOnDuty(res.data.is_on_duty);
+            })
+            .catch(() => setStaffProfile(null));
+        });
+    } else {
+      api
+        .get("/staff/me/")
+        .then((res) => {
+          setStaffProfile(res.data);
+          setIsOnDuty(res.data.is_on_duty);
+        })
+        .catch(() => setStaffProfile(null));
+    }
   }, [user]);
   // ─── Now we can decide whether to render ───
   const { pathname } = location;

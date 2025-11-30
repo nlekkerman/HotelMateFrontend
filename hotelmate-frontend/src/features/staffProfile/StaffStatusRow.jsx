@@ -10,7 +10,8 @@ export default function StaffStatusRow({
   value, 
   fieldKey, 
   canEdit = false, 
-  onSave 
+  onSave,
+  isStatusBadge = false
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
@@ -49,7 +50,18 @@ export default function StaffStatusRow({
   };
 
   const getBadgeClass = () => {
-    if (fieldKey === "is_active") {
+    if (fieldKey === "current_status" && value && value.status) {
+      switch (value.status) {
+        case 'off_duty':
+          return "bg-secondary";
+        case 'on_duty':
+          return "bg-success";
+        case 'on_break':
+          return "bg-warning";
+        default:
+          return "bg-secondary";
+      }
+    } else if (fieldKey === "is_active") {
       return value ? "bg-success" : "bg-secondary";
     } else if (fieldKey === "is_on_duty") {
       return value ? "bg-success" : "bg-danger";
@@ -58,7 +70,12 @@ export default function StaffStatusRow({
   };
 
   const getDisplayText = () => {
-    if (fieldKey === "is_active") {
+    if (fieldKey === "current_status" && value && value.status) {
+      const breakTime = value.is_on_break && value.break_start 
+        ? ` (${Math.round((Date.now() - new Date(value.break_start)) / 60000)}min)`
+        : '';
+      return `${value.label}${breakTime}`;
+    } else if (fieldKey === "is_active") {
       return value ? "Active" : "Inactive";
     } else if (fieldKey === "is_on_duty") {
       return value ? "On Duty" : "Off Duty";
@@ -87,7 +104,17 @@ export default function StaffStatusRow({
   return (
     <li className="list-group-item staff-field-row d-flex align-items-center">
       <span className="staff-field-icon me-2">
-        {value ? (
+        {fieldKey === "current_status" && value && value.status ? (
+          <span className={`status-icon ${
+            value.status === 'off_duty' ? 'text-secondary' :
+            value.status === 'on_duty' ? 'text-success' :
+            value.status === 'on_break' ? 'text-warning' : 'text-secondary'
+          }`}>
+            {value.status === 'off_duty' ? '🔴' :
+             value.status === 'on_duty' ? '🟢' :
+             value.status === 'on_break' ? '🟡' : '⚪'}
+          </span>
+        ) : value ? (
           <FaToggleOn className="text-success" />
         ) : (
           <FaToggleOff className={fieldKey === "is_on_duty" ? "text-danger" : "text-secondary"} />
@@ -132,7 +159,7 @@ export default function StaffStatusRow({
           <span className={`badge staff-status-badge ${getBadgeClass()} text-capitalize`}>
             {getDisplayText()}
           </span>
-          {canEdit && (
+          {canEdit && !isStatusBadge && (
             <button 
               className="btn btn-link btn-sm ms-1" 
               onClick={handleEdit}

@@ -33,18 +33,27 @@ const MobileNavbar = () => {
   const [expandedCategoryId, setExpandedCategoryId] = useState(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !hotelIdentifier) {
       setStaffProfile(null);
       return;
     }
     api
-      .get(`/staff/me/`)
+      .get(`/staff/hotel/${hotelIdentifier}/me/`)
       .then((res) => {
         setStaffProfile(res.data);
         setIsOnDuty(res.data.is_on_duty);
       })
-      .catch(() => setStaffProfile(null));
-  }, [user]);
+      .catch(() => {
+        // Fallback to old endpoint if enhanced one fails
+        api
+          .get(`/staff/me/`)
+          .then((res) => {
+            setStaffProfile(res.data);
+            setIsOnDuty(res.data.is_on_duty);
+          })
+          .catch(() => setStaffProfile(null));
+      });
+  }, [user, hotelIdentifier]);
 
   // Listen for clock status changes from camera clock-in
   useEffect(() => {
@@ -508,6 +517,7 @@ const MobileNavbar = () => {
           onClose={() => setIsModalOpen(false)}
           staffId={staffProfile.id}
           initialStatus={isOnDuty}
+          currentStatus={staffProfile?.current_status}
           onStatusChange={(newStatus) => {
             setIsOnDuty(newStatus);
             setIsModalOpen(false);

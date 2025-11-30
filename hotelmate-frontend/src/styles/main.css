@@ -878,6 +878,137 @@ body.terminal-mode,
   backdrop-filter: blur(0);
   z-index: 3;
 }
+/* Status Indicator Styles for Enhanced Attendance */
+.status-indicator {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-indicator-sm {
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  border-radius: 8px;
+}
+
+.status-indicator-lg {
+  padding: 6px 12px;
+  font-size: 1rem;
+  border-radius: 16px;
+}
+
+.status-indicator.off_duty {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.status-indicator.on_duty {
+  background: #e8f5e8;
+  color: #2e7d32;
+}
+
+.status-indicator.on_break {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.btn-clock-in {
+  background: #4caf50 !important;
+  color: white !important;
+}
+
+.btn-clock-out {
+  background: #f44336 !important;
+  color: white !important;
+}
+
+.btn-resume {
+  background: #ff9800 !important;
+  color: white !important;
+}
+
+.staff-item.on_break {
+  border-left: 4px solid #ff9800;
+}
+
+.break-time {
+  font-size: 0.75rem;
+  color: #666;
+  font-style: italic;
+}
+
+.badge.off_duty {
+  background-color: #dc3545;
+}
+
+.badge.on_duty {
+  background-color: #28a745;
+}
+
+.badge.on_break {
+  background-color: #fd7e14;
+}
+
+/* Toast notification styles */
+.toast {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-weight: 500;
+}
+
+/* Real-time update animations */
+@keyframes pulse-update {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.status-indicator.updating {
+  animation: pulse-update 0.6s ease-in-out;
+}
+
+.badge.updating {
+  animation: pulse-update 0.6s ease-in-out;
+}
+
+/* Clock button pulse when updating */
+.clock-btn.updating {
+  animation: pulse-update 0.8s ease-in-out;
+}
+
+/* Attendance Summary Dashboard */
+.attendance-summary-dashboard .status-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.attendance-summary-dashboard .status-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.attendance-summary-dashboard .staff-item {
+  transition: transform 0.2s ease;
+}
+
+.attendance-summary-dashboard .staff-item:hover {
+  transform: translateY(-1px);
+}
+
+.attendance-summary-dashboard .staff-item.on_break {
+  border-left: 4px solid #fd7e14;
+}
+
+.attendance-summary-dashboard .staff-item.on_duty {
+  border-left: 4px solid #28a745;
+}
+
+.attendance-summary-dashboard .staff-item.off_duty {
+  border-left: 4px solid #dc3545;
+}
+
 /* LEGACY ATTENDANCE CSS – commented out in Phase 3
 .shift-chip {
   display: block;

@@ -47,6 +47,11 @@
   --attendance-gap: var(--space-md, 1rem);
   --attendance-gap-sm: var(--space-sm, 0.5rem);
   --attendance-gap-lg: var(--space-lg, 2rem);
+  
+  /* Duty status badge colors */
+  --duty-status-off: #6c757d;
+  --duty-status-on: #28a745;
+  --duty-status-break: #fd7e14;
 }
 
 /* ========================================
@@ -239,7 +244,7 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   opacity: 0.8;
-  color: var(--attendance-text-secondary);
+  color: darkblue;
   border-bottom: 1px solid var(--attendance-border-color);
   padding: 0.75rem 0.5rem;
 }
@@ -263,6 +268,46 @@
   border-radius: var(--attendance-card-radius);
   max-height: 60vh;
   overflow-y: auto;
+}
+
+/* Badge styling within attendance table */
+.attendance-table .badge {
+  color: #000000 !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem;
+  padding: 0.5em 0.75em;
+  border-radius: 0.375rem;
+  text-shadow: none !important;
+}
+
+.attendance-table .badge.bg-success {
+  background-color: #d1e7dd !important;
+  color: #000000 !important;
+  border: 1px solid #badbcc;
+}
+
+.attendance-table .badge.bg-warning {
+  background-color: #fff3cd !important;
+  color: #000000 !important;
+  border: 1px solid #ffecb5;
+}
+
+.attendance-table .badge.bg-info {
+  background-color: #d1ecf1 !important;
+  color: #000000 !important;
+  border: 1px solid #b8daff;
+}
+
+.attendance-table .badge.bg-danger {
+  background-color: #f8d7da !important;
+  color: #000000 !important;
+  border: 1px solid #f5c2c7;
+}
+
+.attendance-table .badge.bg-secondary {
+  background-color: #e2e3e5 !important;
+  color: #000000 !important;
+  border: 1px solid #d3d3d4;
 }
 
 /* ========================================
@@ -380,6 +425,63 @@
 .attendance-card .btn-outline-primary:hover {
   background-color: var(--main-color, #3498db);
   color: white;
+}
+
+/* ========================================
+   DUTY STATUS BADGES
+   ======================================== */
+
+/* Enhanced duty status badges for staff profile */
+.staff-status-badge {
+  font-weight: 600 !important;
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--attendance-input-radius);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 100px;
+  justify-content: center;
+}
+
+.staff-status-badge.bg-warning {
+  background-color: var(--duty-status-break) !important;
+  color: #000 !important;
+  border: 1px solid rgba(253, 126, 20, 0.3);
+}
+
+.staff-status-badge.bg-success {
+  background-color: var(--duty-status-on) !important;
+  color: white !important;
+}
+
+.staff-status-badge.bg-secondary {
+  background-color: var(--duty-status-off) !important;
+  color: white !important;
+}
+
+/* Status icon styling */
+.status-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* Real-time update animation */
+.staff-status-badge.updating {
+  animation: status-pulse 0.6s ease-in-out;
+}
+
+@keyframes status-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); opacity: 0.8; }
+  100% { transform: scale(1); }
+}
+
+/* Break time indicator */
+.break-time-indicator {
+  font-size: 0.75rem;
+  opacity: 0.9;
+  font-weight: normal;
 }
 
 /* ========================================

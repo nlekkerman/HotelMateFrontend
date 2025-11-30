@@ -25,14 +25,36 @@ function safeEventHandler(onEvent, type, data) {
  */
 export function useAttendanceRealtime(hotelSlug, onEvent) {
   useEffect(() => {
-    if (!hotelSlug || typeof onEvent !== 'function') return;
+    console.log('[Attendance Pusher] 🚀 useAttendanceRealtime called:', {
+      hotelSlug,
+      hasOnEvent: typeof onEvent === 'function',
+      timestamp: new Date().toISOString()
+    });
+
+    if (!hotelSlug || typeof onEvent !== 'function') {
+      console.warn('[Attendance Pusher] ⚠️ Missing requirements:', {
+        hotelSlug,
+        onEventType: typeof onEvent
+      });
+      return;
+    }
 
     // Check if Pusher environment variables are available
     const pusherKey = import.meta.env.VITE_PUSHER_KEY;
     const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER;
     
+    console.log('[Attendance Pusher] 🔧 Environment check:', {
+      hasPusherKey: !!pusherKey,
+      pusherKeyLength: pusherKey ? pusherKey.length : 0,
+      pusherCluster,
+      timestamp: new Date().toISOString()
+    });
+    
     if (!pusherKey || !pusherCluster) {
-      console.warn('[Attendance Pusher] Pusher configuration missing');
+      console.warn('[Attendance Pusher] ❌ Pusher configuration missing:', {
+        pusherKey: pusherKey ? 'present' : 'missing',
+        pusherCluster: pusherCluster || 'missing'
+      });
       return;
     }
 
@@ -68,6 +90,9 @@ export function useAttendanceRealtime(hotelSlug, onEvent) {
           });
         };
 
+        // Real-time clock status updates (clock in/out, break start/end)
+        bindSafeEvent('clock-status-updated', 'clock-status-updated');
+
         // Unrostered clock-in request - someone clocked in without being rostered
         bindSafeEvent('attendance-unrostered-request', 'unrostered-request');
 
@@ -95,6 +120,7 @@ export function useAttendanceRealtime(hotelSlug, onEvent) {
           // Only handle unknown attendance-related events
           if (eventName.startsWith('attendance-') || eventName.startsWith('clocklog-')) {
             const knownEvents = [
+              'clock-status-updated',
               'attendance-unrostered-request',
               'attendance-break-warning', 
               'attendance-overtime-warning',

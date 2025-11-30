@@ -1,6 +1,7 @@
 import React from "react";
 import AttendanceStatusBadge from "./AttendanceStatusBadge";
 import AttendanceRowActions from "./AttendanceRowActions";
+import AttendanceClockActions from "./AttendanceClockActions";
 import { safeTimeSlice, safeString } from "../utils/safeUtils";
 
 export default function AttendanceTable({ rows, hotelSlug, onRowAction, onRowClick }) {
@@ -87,14 +88,38 @@ export default function AttendanceTable({ rows, hotelSlug, onRowAction, onRowCli
                 <td>{rosterSummary}</td>
                 <td>{logSummary}</td>
                 <td>
-                  <AttendanceStatusBadge status={derivedStatus} />
+                  <AttendanceStatusBadge 
+                    status={derivedStatus} 
+                    staffId={row.staffId}
+                    enhancedStatus={row.current_status}
+                  />
                 </td>
                 <td onClick={(e) => e.stopPropagation()}>
-                  <AttendanceRowActions
-                    row={row}
-                    hotelSlug={hotelSlug}
-                    onAction={onRowAction}
-                  />
+                  <div className="d-flex flex-column gap-2">
+                    {/* Unrostered approval actions */}
+                    <AttendanceRowActions
+                      row={row}
+                      hotelSlug={hotelSlug}
+                      onAction={onRowAction}
+                    />
+                    
+                    {/* Clock in/out actions */}
+                    <AttendanceClockActions
+                      staff={{
+                        id: row.staffId,
+                        first_name: row.staffName?.split(' ')[0] || 'Unknown',
+                        last_name: row.staffName?.split(' ').slice(1).join(' ') || '',
+                        current_status: row.current_status
+                      }}
+                      hotelSlug={hotelSlug}
+                      onAction={(result) => {
+                        console.log('[AttendanceTable] Clock action completed:', result);
+                        if (typeof onRowAction === 'function') {
+                          onRowAction(result);
+                        }
+                      }}
+                    />
+                  </div>
                 </td>
               </tr>
             );
