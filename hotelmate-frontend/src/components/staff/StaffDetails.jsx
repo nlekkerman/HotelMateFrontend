@@ -8,6 +8,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useFaceAdminApi } from "@/features/faceAttendance/hooks/useFaceAdminApi";
 import { useHotelFaceConfig } from "@/features/faceAttendance/hooks/useHotelFaceConfig";
 import NavigationPermissionManager from "./NavigationPermissionManager";
+import StaffRosterAnalytics from "./StaffRosterAnalytics";
 
 function StaffDetails() {
   const navigate = useNavigate();
@@ -316,6 +317,14 @@ function StaffDetails() {
           </div>
         </div>
       )}
+
+      {/* Staff Roster Analytics Section */}
+      <div className="mt-4">
+        <StaffRosterAnalytics 
+          hotelSlug={hotelSlug} 
+          staffId={id}
+        />
+      </div>
 
       {/* Navigation Permissions Section - Super Admin Only */}
       {canAccess(['super_staff_admin']) && (

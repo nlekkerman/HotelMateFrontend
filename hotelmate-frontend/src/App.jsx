@@ -131,6 +131,7 @@ import QuizTournaments from "@/games/quiz-game/pages/QuizTournaments";
 
 // Attendance
 import AttendanceDashboard from "@/features/attendance/pages/AttendanceDashboard";
+import EnhancedAttendanceDashboard from "@/features/attendance/components/EnhancedAttendanceDashboard";
 
 // Face Attendance
 import FaceRegisterPage from "@/features/faceAttendance/pages/FaceRegisterPage";
@@ -338,6 +339,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
 
               {/* Attendance Routes */}
               <Route path="/roster/:hotelSlug" element={<ProtectedRoute><AttendanceDashboard /></ProtectedRoute>} />
+              <Route path="/enhanced-attendance/:hotelSlug" element={<ProtectedRoute><EnhancedAttendanceDashboard /></ProtectedRoute>} />
               
               {/* Face Attendance Routes */}
               <Route path="/face/:hotelSlug/register" element={<ProtectedRoute><FaceRegisterPage /></ProtectedRoute>} />

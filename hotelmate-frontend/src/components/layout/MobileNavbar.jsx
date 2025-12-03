@@ -154,7 +154,7 @@ const MobileNavbar = () => {
           {/* Public Pages Button */}
           <button
             className="btn btn-outline-light btn-sm me-2"
-            onClick={() => navigate(`/${hotelIdentifier}`)}
+            onClick={() => navigate(`/hotel/${hotelIdentifier}`)}
             title="View Public Pages"
           >
             <i className="bi bi-globe2 me-1"></i>

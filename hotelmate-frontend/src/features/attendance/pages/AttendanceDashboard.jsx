@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   useRosterForDate,
   useClockLogsForDate,
+  useStaffAttendanceSummary,
 } from "../hooks/useAttendanceData";
 import { useAttendanceRealtime } from "../hooks/useAttendanceRealtime";
 import { usePeriodExport } from "../hooks/usePeriodExport";
@@ -17,6 +18,8 @@ import AttendanceErrorBoundary from "../components/AttendanceErrorBoundary";
 import AttendanceToasts from "../components/AttendanceToasts";
 import { AttendanceDashboardSkeleton, AttendanceTableSkeleton, PeriodSelectorSkeleton } from "../components/AttendanceSkeletons";
 import { deriveStatus } from "../utils/attendanceStatus";
+import useStaffMetadata from "@/hooks/useStaffMetadata";
+import "../components/AttendanceCards.css";
 import { handleRealTimeStatusUpdate, showStatusNotification } from "../utils/statusUpdates";
 import { safeStaffId, safeStaffName, safeTimeSlice, safeNumber } from "../utils/safeUtils";
 import { handleAttendanceError, showSuccessMessage, ERROR_TYPES } from "../utils/errorHandling";
@@ -102,17 +105,9 @@ function mergeRosterAndLogs(rosterItems, logItems) {
   return Array.from(byStaff.values());
 }
 
-  function handleRowClick(row) {
-    setSelectedStaffRow(row);
-    setShowStaffModal(true);
-  }
-
-  function handleCloseStaffModal() {
-    setShowStaffModal(false);
-  }
-
 function AttendanceDashboardComponent() {
   const { hotelSlug } = useParams();
+  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(
     () => new Date().toISOString().slice(0, 10)
   );
@@ -127,6 +122,67 @@ function AttendanceDashboardComponent() {
   const [selectedStaffRow, setSelectedStaffRow] = useState(null);
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [periodsRefreshKey, setPeriodsRefreshKey] = useState(0);
+  const [viewMode, setViewMode] = useState('table'); // 'table' or 'cards'
+  const [selectedStaffSummary, setSelectedStaffSummary] = useState(null);
+  
+  function handleRowClick(row) {
+    console.log('[AttendanceDashboard] handleRowClick called with:', row);
+    // Handle both table rows and staff summaries
+    if (row.id && row.full_name) {
+      // This is a staff summary from card view
+      console.log('[AttendanceDashboard] Setting staff summary:', row);
+      setSelectedStaffSummary(row);
+      setSelectedStaffRow(null);
+    } else {
+      // This is a table row
+      console.log('[AttendanceDashboard] Setting staff row:', row);
+      setSelectedStaffRow(row);
+      setSelectedStaffSummary(null);
+    }
+    console.log('[AttendanceDashboard] Setting showStaffModal to true');
+    setShowStaffModal(true);
+  }
+
+  function handleCloseStaffModal() {
+    setShowStaffModal(false);
+    setSelectedStaffRow(null);
+    setSelectedStaffSummary(null);
+  }
+
+  // Fetch departments from API
+  const { departments, isLoading: departmentsLoading } = useStaffMetadata(hotelSlug);
+  
+  // Calculate week range from selected date
+  const getWeekRange = (date) => {
+    const currentDate = new Date(date);
+    const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    
+    // Calculate start of week (Monday)
+    const startOfWeek = new Date(currentDate);
+    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days, else go back (dayOfWeek - 1) days
+    startOfWeek.setDate(currentDate.getDate() - daysToSubtract);
+    
+    // Calculate end of week (Sunday)
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    
+    return {
+      from: startOfWeek.toISOString().split('T')[0],
+      to: endOfWeek.toISOString().split('T')[0]
+    };
+  };
+
+  const weekRange = getWeekRange(selectedDate);
+
+  // Fetch staff attendance summary for card view - WEEKLY DATA
+  const staffSummary = useStaffAttendanceSummary(
+    hotelSlug,
+    weekRange.from,
+    weekRange.to, // Week range instead of single day
+    department,
+    statusFilter === "all" ? null : statusFilter,
+    refreshKey
+  );
 
   // Export hook
   const { downloadExport } = usePeriodExport(hotelSlug);
@@ -473,6 +529,22 @@ function AttendanceDashboardComponent() {
     }
   });
 
+  // Filter staff summaries for card view
+  const filteredStaffSummaries = (staffSummary.results || []).filter((summary) => {
+    if (!summary) return false;
+    
+    try {
+      const name = (summary.full_name || "").toLowerCase();
+      const matchesSearch = 
+        !normalizedSearch || name.includes(normalizedSearch);
+
+      return matchesSearch;
+    } catch (error) {
+      console.warn("Error filtering staff summary:", error, summary);
+      return false;
+    }
+  });
+
   // Determine staff detail logs with safety checks
   let staffDetailLogs = [];
   if (selectedStaffRow && selectedStaffRow.staffId) {
@@ -491,13 +563,14 @@ function AttendanceDashboardComponent() {
   console.log("MERGED", mergedRows);
 
   return (
-    <div className="container py-4 attendance-dashboard">
+    <div className="container py-4 attendance-dashboard d-flex flex-column vw-100 justify-content-center align-self-center align-items-center">
       <header className="attendance-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-2">
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
           <div>
-            <h2 className="mb-1">Attendance Dashboard</h2>
+            <h2 className="mb-1">Attendance Dashboard - Weekly View</h2>
             <small className="text-muted">
-              Hotel: <strong>{hotelSlug}</strong>
+              Hotel: <strong>{hotelSlug}</strong> | 
+              Week: <strong>{weekRange.from}</strong> to <strong>{weekRange.to}</strong>
             </small>
           </div>
 
@@ -518,7 +591,7 @@ function AttendanceDashboardComponent() {
               )}
             </div>
             
-            {/* Kiosk Mode Toggle - Only for Super Staff/Admin */}
+            {/* Enhanced Dashboard & Kiosk Mode Toggle - Only for Super Staff/Admin */}
             {(() => {
               const user = JSON.parse(localStorage.getItem('user') || '{}');
               const isSuperStaff = user?.is_super_staff || user?.role === 'admin' || user?.access_level === 'super_admin' || user?.is_staff;
@@ -528,7 +601,17 @@ function AttendanceDashboardComponent() {
               
               // For now, show to all staff users for testing
               return user?.is_staff ? (
-                <div className="kiosk-control-block">
+                <div className="kiosk-control-block d-flex gap-2">
+                  <button
+                    className="btn btn-sm btn-primary"
+                    onClick={() => navigate(`/enhanced-attendance/${hotelSlug}`)}
+                    title="Open Enhanced Analytics Dashboard"
+                  >
+                    <i className="bi bi-bar-chart"></i>
+                    <span className="ms-2 d-none d-md-inline">
+                      Enhanced Dashboard
+                    </span>
+                  </button>
                   <button
                     className={`btn btn-sm ${isKioskMode ? 'btn-warning' : 'btn-info'} kiosk-toggle-btn`}
                     onClick={handleToggleKioskMode}
@@ -556,11 +639,17 @@ function AttendanceDashboardComponent() {
                 style={{ minWidth: "160px" }}
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
+                disabled={departmentsLoading}
               >
                 <option value="all">All departments</option>
-                {/* TODO: later replace with real department list from API */}
-                <option value="restaurant">Restaurant</option>
-                <option value="bar">Bar</option>
+                {departments.map((dept) => (
+                  <option key={dept.slug || dept.id} value={dept.slug || dept.id}>
+                    {dept.name}
+                  </option>
+                ))}
+                {departmentsLoading && (
+                  <option disabled>Loading departments...</option>
+                )}
               </select>
             </div>
           </div>
@@ -661,6 +750,8 @@ function AttendanceDashboardComponent() {
                 hotelSlug={hotelSlug}
                 onRowAction={handleRowAction}
                 onRowClick={handleRowClick}
+                staffSummaries={staffSummary.results || []}
+                viewMode={viewMode}
               />
             </div>
           )}
@@ -670,8 +761,15 @@ function AttendanceDashboardComponent() {
       <StaffDetailModal
         show={showStaffModal}
         onClose={handleCloseStaffModal}
-        staffName={selectedStaffRow?.staffName || `Staff #${selectedStaffRow?.staffId}`}
+        staffName={
+          selectedStaffSummary?.full_name || 
+          selectedStaffRow?.staffName || 
+          `Staff #${selectedStaffRow?.staffId || selectedStaffSummary?.id}`
+        }
         logs={staffDetailLogs}
+        staffSummary={selectedStaffSummary}
+        hotelSlug={hotelSlug}
+        onAction={handleRowAction}
       />
 
       {/* Toast notifications */}

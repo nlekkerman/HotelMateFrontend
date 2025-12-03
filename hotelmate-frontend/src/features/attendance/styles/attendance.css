@@ -515,3 +515,102 @@
   0% { opacity: 0.5; }
   100% { opacity: 1; }
 }
+
+/* ========================================
+   CLICKABLE TABLE ROWS ENHANCEMENT
+   ======================================== */
+
+.attendance-dashboard .table tbody tr[style*="pointer"] {
+  transition: all 0.2s ease;
+}
+
+.attendance-dashboard .table tbody tr[style*="pointer"]:hover {
+  background-color: var(--attendance-border-color) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.attendance-dashboard .table tbody tr[style*="pointer"]:active {
+  transform: translateY(0);
+  background-color: var(--attendance-border-hover) !important;
+}
+
+/* Enhanced visual feedback for clickable rows */
+.attendance-dashboard .table tbody tr[style*="pointer"] td:first-child::before {
+  content: '👤';
+  opacity: 0;
+  margin-right: 0.5rem;
+  transition: opacity 0.2s ease;
+}
+
+.attendance-dashboard .table tbody tr[style*="pointer"]:hover td:first-child::before {
+  opacity: 0.6;
+}
+
+/* ========================================
+   WEEKLY SUMMARY SECTION STYLING
+   ======================================== */
+
+.weekly-summary-section {
+  border: 1px solid var(--attendance-border-color);
+  border-radius: var(--attendance-card-radius);
+  padding: 1rem;
+  background: var(--attendance-card-bg);
+  margin-bottom: 1rem;
+}
+
+.weekly-summary-section .bg-light {
+  background-color: var(--background-color, #f8f9fa) !important;
+  border: 1px solid var(--attendance-border-color);
+  transition: all 0.2s ease;
+}
+
+.weekly-summary-section .bg-light:hover {
+  background-color: var(--attendance-border-color) !important;
+  transform: translateY(-1px);
+  box-shadow: var(--attendance-shadow-card);
+}
+
+/* ========================================
+   TODAY'S SHIFTS SECTION STYLING
+   ======================================== */
+
+.today-shifts-section {
+  border: 1px solid var(--attendance-border-color);
+  border-radius: var(--attendance-card-radius);
+  padding: 1rem;
+  background: var(--attendance-card-bg);
+  margin-bottom: 1rem;
+}
+
+.today-shifts-section h6 {
+  color: var(--attendance-text-primary);
+  font-weight: 600;
+}
+
+.shift-item {
+  background: var(--background-color, #f8f9fa) !important;
+  border: 1px solid var(--attendance-border-color) !important;
+  border-radius: var(--attendance-input-radius) !important;
+  transition: all 0.2s ease;
+}
+
+.shift-item:hover {
+  background: var(--attendance-border-color) !important;
+  box-shadow: var(--attendance-shadow-card);
+}
+
+.shift-time {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  color: var(--attendance-text-primary);
+}
+
+.shift-department,
+.shift-notes {
+  color: var(--attendance-text-muted);
+}
+
+.today-shifts-section .badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
