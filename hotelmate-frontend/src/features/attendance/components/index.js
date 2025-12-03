@@ -6,3 +6,5 @@ export { default as EnhancedAttendanceDashboard } from './EnhancedAttendanceDash
 export { default as DepartmentAnalytics } from './DepartmentAnalytics';
 export { default as PeriodCreationModal } from './PeriodCreationModal';
 export { default as PeriodCopyModal } from './PeriodCopyModal';
+export { default as RosterManagementGrid } from './RosterManagementGrid';
+export { default as ClockedInByDepartment } from './ClockedInByDepartment';

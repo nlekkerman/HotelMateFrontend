@@ -1,21 +1,25 @@
-import React, { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { Card } from "react-bootstrap";
 import {
   useRosterForDate,
   useClockLogsForDate,
   useStaffAttendanceSummary,
 } from "../hooks/useAttendanceData";
+import ClockedInTicker from "@/components/analytics/ClockedInTicker.jsx";
 import { useAttendanceRealtime } from "../hooks/useAttendanceRealtime";
 import { usePeriodExport } from "../hooks/usePeriodExport";
 import { useRosterPeriods } from "../hooks/useRosterPeriods";
-import AttendanceTable from "../components/AttendanceTable";
 import AttendanceAlertCenter from "../components/AttendanceAlertCenter";
 import RosterPeriodSelector from "../components/RosterPeriodSelector";
 import RosterPeriodSummary from "../components/RosterPeriodSummary";
+import PeriodFinalizeModal from "../components/PeriodFinalizeModal";
 import PeriodStaffSummary from "../components/PeriodStaffSummary";
 import StaffDetailModal from "../components/StaffDetailModal";
+import RosterManagementGrid from "../components/RosterManagementGrid";
 import AttendanceErrorBoundary from "../components/AttendanceErrorBoundary";
 import AttendanceToasts from "../components/AttendanceToasts";
+import ClockedInByDepartment from "../components/ClockedInByDepartment";
 import { AttendanceDashboardSkeleton, AttendanceTableSkeleton, PeriodSelectorSkeleton } from "../components/AttendanceSkeletons";
 import { deriveStatus } from "../utils/attendanceStatus";
 import useStaffMetadata from "@/hooks/useStaffMetadata";
@@ -108,6 +112,9 @@ function mergeRosterAndLogs(rosterItems, logItems) {
 function AttendanceDashboardComponent() {
   const { hotelSlug } = useParams();
   const navigate = useNavigate();
+  
+  console.log('[AttendanceDashboardComponent] Rendering with hotelSlug:', hotelSlug);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedDate, setSelectedDate] = useState(
     () => new Date().toISOString().slice(0, 10)
   );
@@ -117,13 +124,28 @@ function AttendanceDashboardComponent() {
   const [selectedPeriodId, setSelectedPeriodId] = useState(null);
   const [finalizing, setFinalizing] = useState(false);
   const [finalizeError, setFinalizeError] = useState(null);
+  const [finalizeCanForce, setFinalizeCanForce] = useState(false);
+  const [showFinalizeModal, setShowFinalizeModal] = useState(false);
   const [staffSearch, setStaffSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedStaffRow, setSelectedStaffRow] = useState(null);
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [periodsRefreshKey, setPeriodsRefreshKey] = useState(0);
-  const [viewMode, setViewMode] = useState('table'); // 'table' or 'cards'
+  const [viewMode, setViewMode] = useState(() => {
+    // Initialize view mode from URL parameter
+    const urlView = searchParams.get('view');
+    return urlView === 'roster' ? 'roster' : 'table';
+  });
   const [selectedStaffSummary, setSelectedStaffSummary] = useState(null);
+  
+  // Update URL when view mode changes
+  useEffect(() => {
+    if (viewMode === 'roster') {
+      setSearchParams({ view: 'roster' });
+    } else {
+      setSearchParams({});
+    }
+  }, [viewMode, setSearchParams]);
   
   function handleRowClick(row) {
     console.log('[AttendanceDashboard] handleRowClick called with:', row);
@@ -380,7 +402,13 @@ function AttendanceDashboardComponent() {
     }
   }
 
-  async function handleFinalizePeriod() {
+  const handleShowFinalizeModal = () => {
+    setFinalizeError(null);
+    setFinalizeCanForce(false);
+    setShowFinalizeModal(true);
+  };
+
+  const handleFinalizePeriod = async (force = false) => {
     if (!selectedPeriodId || !hotelSlug) {
       console.warn("Cannot finalize: missing period ID or hotel slug");
       return;
@@ -391,27 +419,39 @@ function AttendanceDashboardComponent() {
     
     try {
       const endpoint = `/staff/hotel/${encodeURIComponent(hotelSlug)}/attendance/periods/${safeNumber(selectedPeriodId)}/finalize/`;
-      await api.post(endpoint);
+      const payload = force ? { force: true } : {};
+      await api.post(endpoint, payload);
       
       // Refresh both periods and attendance data
       setPeriodsRefreshKey((prev) => prev + 1);
       setRefreshKey((prev) => prev + 1);
+      setShowFinalizeModal(false);
       
       showSuccessMessage('finalize');
     } catch (err) {
-      const { userMessage } = handleAttendanceError(err, {
-        type: ERROR_TYPES.NETWORK,
-        component: 'period',
-        action: 'finalize',
-        hotelSlug,
-        data: { periodId: selectedPeriodId }
-      });
+      console.log('Finalize error response:', err.response?.data);
       
-      setFinalizeError(userMessage);
+      // Check if this is a validation error with force option
+      if (err.response?.status === 400 && err.response?.data) {
+        const errorData = err.response.data;
+        setFinalizeError(errorData.error || errorData.message || 'Cannot finalize period');
+        setFinalizeCanForce(errorData.can_force === true);
+      } else {
+        // Handle other errors normally
+        const { userMessage } = handleAttendanceError(err, {
+          type: ERROR_TYPES.NETWORK,
+          component: 'period',
+          action: 'finalize',
+          hotelSlug,
+          data: { periodId: selectedPeriodId }
+        });
+        setFinalizeError(userMessage);
+        setFinalizeCanForce(false);
+      }
     } finally {
       setFinalizing(false);
     }
-  }
+  };
 
   function handleRowAction(actionType, log) {
     console.log("Row action:", actionType, log);
@@ -564,13 +604,14 @@ function AttendanceDashboardComponent() {
 
   return (
     <div className="container py-4 attendance-dashboard d-flex flex-column vw-100 justify-content-center align-self-center align-items-center">
+
       <header className="attendance-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-2">
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
           <div>
-            <h2 className="mb-1">Attendance Dashboard - Weekly View</h2>
+            <h2 className="mb-1">Currently Clocked In Staff</h2>
             <small className="text-muted">
               Hotel: <strong>{hotelSlug}</strong> | 
-              Week: <strong>{weekRange.from}</strong> to <strong>{weekRange.to}</strong>
+              Real-time attendance view
             </small>
           </div>
 
@@ -602,16 +643,7 @@ function AttendanceDashboardComponent() {
               // For now, show to all staff users for testing
               return user?.is_staff ? (
                 <div className="kiosk-control-block d-flex gap-2">
-                  <button
-                    className="btn btn-sm btn-primary"
-                    onClick={() => navigate(`/enhanced-attendance/${hotelSlug}`)}
-                    title="Open Enhanced Analytics Dashboard"
-                  >
-                    <i className="bi bi-bar-chart"></i>
-                    <span className="ms-2 d-none d-md-inline">
-                      Enhanced Dashboard
-                    </span>
-                  </button>
+                  
                   <button
                     className={`btn btn-sm ${isKioskMode ? 'btn-warning' : 'btn-info'} kiosk-toggle-btn`}
                     onClick={handleToggleKioskMode}
@@ -660,9 +692,9 @@ function AttendanceDashboardComponent() {
         <RosterPeriodSummary
           period={selectedPeriod}
           stats={periodStats}
-          onFinalize={handleFinalizePeriod}
+          onFinalize={handleShowFinalizeModal}
           finalizing={finalizing}
-          error={finalizeError}
+          error={null}
           onExportCsv={handleExportCsv}
           onExportXlsx={handleExportXlsx}
         />
@@ -672,91 +704,82 @@ function AttendanceDashboardComponent() {
         <PeriodStaffSummary logsInPeriod={logsInPeriod} />
       )}
 
+      {/* Roster Management Section - Only show when period is selected */}
+      {selectedPeriod && (
+        <div className="mb-4">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h5 className="mb-0">Period Management</h5>
+              <small className="text-muted">Create and manage shifts for the selected period</small>
+            </div>
+            <div className="btn-group view-mode-toggle" role="group">
+              <input
+                type="radio"
+                className="btn-check"
+                name="viewMode"
+                id="attendanceView"
+                checked={viewMode === 'table'}
+                onChange={() => setViewMode('table')}
+              />
+              <label className="btn btn-outline-primary btn-sm" htmlFor="attendanceView">
+                📊 Attendance View
+              </label>
+              
+              <input
+                type="radio"
+                className="btn-check"
+                name="viewMode"
+                id="rosterView"
+                checked={viewMode === 'roster'}
+                onChange={() => setViewMode('roster')}
+              />
+              <label className="btn btn-outline-primary btn-sm" htmlFor="rosterView">
+                📅 Roster View (Use Department Roster instead)
+              </label>
+            </div>
+          </div>
+
+          {viewMode === 'roster' && (
+            <div>
+              <div className="alert alert-info mb-3">
+                <i className="fas fa-info-circle me-2"></i>
+                <strong>New!</strong> For better roster management, use the dedicated{' '}
+                <button 
+                  className="btn btn-link p-0 mx-1" 
+                  onClick={() => navigate(`/department-roster/${hotelSlug}`)}
+                  style={{ textDecoration: 'underline' }}
+                >
+                  Department Roster Dashboard
+                </button>
+                which offers department-focused weekly planning.
+              </div>
+              <RosterManagementGrid 
+                selectedPeriod={selectedPeriod}
+                hotelSlug={hotelSlug}
+                onRefresh={() => setRefreshKey(prev => prev + 1)}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       <AttendanceAlertCenter
         alerts={alerts}
         onDismiss={handleDismissAlert}
         onAction={handleAlertAction}
       />
 
-      <div className="attendance-filters d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center mb-2 gap-2">
-        <div className="flex-grow-1">
-          <input
-            type="text"
-            className="form-control form-control-sm"
-            placeholder="Search staff..."
-            value={staffSearch}
-            onChange={(e) => setStaffSearch(e.target.value)}
-          />
-        </div>
-        <div style={{ minWidth: 220 }}>
-          <select
-            className="form-select form-select-sm"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">All statuses</option>
-            <option value="On duty (open log)">On duty</option>
-            <option value="Unrostered – pending approval">Unrostered – pending</option>
-            <option value="Completed (approved)">Completed</option>
-            <option value="No clock log">No clock log</option>
-            <option value="Unrostered but approved">Unrostered approved</option>
-            <option value="Rejected">Rejected</option>
-          </select>
-        </div>
-      </div>
 
-      <div className="card attendance-card">
-        <div className="card-body">
-          {roster.loading || logs.loading ? (
-            <AttendanceTableSkeleton rows={6} />
-          ) : roster.error || logs.error ? (
-            <div className="alert alert-danger" role="alert">
-              <h6 className="alert-heading">Error Loading Data</h6>
-              <p className="mb-0">
-                {roster.error || logs.error}
-              </p>
-              <hr />
-              <small className="mb-0">
-                Please check your connection and try refreshing the page.
-              </small>
-            </div>
-          ) : filteredRows.length === 0 ? (
-            <div className="text-center py-4">
-              <div className="text-muted">
-                <i className="bi bi-calendar-x" style={{ fontSize: "2rem" }}></i>
-                <p className="mt-2">
-                  {staffSearch || statusFilter !== "all" 
-                    ? "No staff match your current filters." 
-                    : "No roster or attendance data for this date/department."
-                  }
-                </p>
-                {(staffSearch || statusFilter !== "all") && (
-                  <button 
-                    className="btn btn-sm btn-outline-primary"
-                    onClick={() => {
-                      setStaffSearch("");
-                      setStatusFilter("all");
-                    }}
-                  >
-                    Clear Filters
-                  </button>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
-              <AttendanceTable
-                rows={filteredRows}
-                hotelSlug={hotelSlug}
-                onRowAction={handleRowAction}
-                onRowClick={handleRowClick}
-                staffSummaries={staffSummary.results || []}
-                viewMode={viewMode}
-              />
-            </div>
-          )}
-        </div>
-      </div>
+
+
+
+      {/* Currently Clocked In Staff Display */}
+      {viewMode !== 'roster' && (
+        <ClockedInByDepartment
+          hotelSlug={hotelSlug}
+          refreshKey={refreshKey}
+        />
+      )}
 
       <StaffDetailModal
         show={showStaffModal}
@@ -772,6 +795,18 @@ function AttendanceDashboardComponent() {
         onAction={handleRowAction}
       />
 
+      {/* Period Finalize Modal */}
+      <PeriodFinalizeModal
+        show={showFinalizeModal}
+        onHide={() => setShowFinalizeModal(false)}
+        onConfirm={handleFinalizePeriod}
+        period={selectedPeriod}
+        department="All Departments"
+        finalizing={finalizing}
+        error={finalizeError}
+        canForce={finalizeCanForce}
+      />
+
       {/* Toast notifications */}
       <AttendanceToasts />
     </div>
@@ -780,6 +815,7 @@ function AttendanceDashboardComponent() {
 
 // Wrap with error boundary
 export default function AttendanceDashboard() {
+  console.log('[AttendanceDashboard] Component is rendering');
   return (
     <AttendanceErrorBoundary showDetails={process.env.NODE_ENV === 'development'}>
       <AttendanceDashboardComponent />

@@ -61,6 +61,8 @@ export const NAV_ITEM_CATEGORY_MAP = {
   // Staff
   'staff': 'staff',
   'attendance': 'staff',
+  'department_roster': 'staff',
+  'management_analytics': 'staff',
   'maintenance': 'staff',
   'staff_chat': 'staff',
   

@@ -16,7 +16,7 @@ export function usePeriodManagement(hotelSlug) {
     
     try {
       const response = await api.post(
-        `/attendance/${encodeURIComponent(hotelSlug)}/periods/create-for-week/`,
+        `/staff/hotel/${encodeURIComponent(hotelSlug)}/attendance/periods/create-for-week/`,
         { date: safeString(date) }
       );
       
@@ -36,7 +36,7 @@ export function usePeriodManagement(hotelSlug) {
     
     try {
       const response = await api.post(
-        `/attendance/${encodeURIComponent(hotelSlug)}/periods/create-custom-period/`,
+        `/staff/hotel/${encodeURIComponent(hotelSlug)}/attendance/periods/create-custom-period/`,
         {
           title: safeString(periodData.title),
           start_date: safeString(periodData.startDate),
@@ -61,7 +61,7 @@ export function usePeriodManagement(hotelSlug) {
     
     try {
       const response = await api.post(
-        `/attendance/${encodeURIComponent(hotelSlug)}/periods/${periodId}/duplicate-period/`,
+        `/staff/hotel/${encodeURIComponent(hotelSlug)}/attendance/periods/${periodId}/duplicate-period/`,
         {
           new_start_date: safeString(newData.newStartDate),
           new_title: newData.newTitle ? safeString(newData.newTitle) : undefined
@@ -84,7 +84,7 @@ export function usePeriodManagement(hotelSlug) {
     
     try {
       const response = await api.post(
-        `/attendance/${encodeURIComponent(hotelSlug)}/shift-copy/copy-entire-period/`,
+        `/staff/hotel/${encodeURIComponent(hotelSlug)}/attendance/shift-copy/copy-entire-period/`,
         {
           source_period_id: copyData.sourcePeriodId,
           target_start_date: safeString(copyData.targetStartDate),
@@ -110,7 +110,7 @@ export function usePeriodManagement(hotelSlug) {
     
     try {
       const response = await api.delete(
-        `/attendance/${encodeURIComponent(hotelSlug)}/periods/${periodId}/`
+        `/staff/hotel/${encodeURIComponent(hotelSlug)}/attendance/periods/${periodId}/`
       );
       
       setLoading(false);

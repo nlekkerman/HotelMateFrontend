@@ -5,7 +5,7 @@ import { safeString, safeNumber, isValidPeriodId } from "../utils/safeUtils";
  * Hook for exporting attendance period data
  * @param {string} hotelSlug - Hotel slug identifier
  */
-export function usePeriodExport(hotelSlug) {
+function usePeriodExport(hotelSlug) {
   async function downloadExport(periodId, format = "csv") {
     // Validate inputs
     if (!hotelSlug || !isValidPeriodId(periodId)) {
@@ -24,7 +24,7 @@ export function usePeriodExport(hotelSlug) {
 
     try {
       // Construct export URL – backend endpoint for period export
-      const url = `/attendance/${encodeURIComponent(hotelSlug)}/periods/${safePeriodId}/export/`;
+      const url = `/staff/hotel/${encodeURIComponent(hotelSlug)}/attendance/periods/${safePeriodId}/export/`;
       
       // Make request with format parameter
       const response = await api.get(url, {
@@ -94,3 +94,5 @@ export function usePeriodExport(hotelSlug) {
 
   return { downloadExport };
 }
+
+export { usePeriodExport };

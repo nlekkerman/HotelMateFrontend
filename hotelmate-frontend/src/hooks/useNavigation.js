@@ -15,7 +15,9 @@ const DEFAULT_NAV_ITEMS = [
   { slug: 'rooms', name: 'Rooms', path: '/rooms', icon: 'door-closed' },
   { slug: 'guests', name: 'Guests', path: '/{hotelSlug}/guests', icon: 'people' },
   { slug: 'staff', name: 'Staff', path: '/{hotelSlug}/staff', icon: 'person-badge' },
-  { slug: 'attendance', name: 'Attendance', path: '/roster/{hotelSlug}', icon: 'clock-history' },
+  { slug: 'attendance', name: 'Attendance', path: '/attendance/{hotelSlug}', icon: 'clock-history' },
+  { slug: 'department_roster', name: 'Department Roster', path: '/department-roster/{hotelSlug}', icon: 'calendar-week' },
+  { slug: 'management_analytics', name: 'Management Analytics', path: '/enhanced-attendance/{hotelSlug}', icon: 'bar-chart' },
   { slug: 'restaurants', name: 'Restaurants', path: '/{hotelSlug}/restaurants', icon: 'shop-window' },
   { slug: 'room_bookings', name: 'Room Bookings', path: '/staff/hotel/{hotelSlug}/bookings', icon: 'bed', hasDropdown: true },
   { slug: 'bookings', name: 'Restaurant Bookings', path: '/bookings', icon: 'calendar-check' },
@@ -28,6 +30,8 @@ const DEFAULT_NAV_ITEMS = [
   { slug: 'room_service', name: 'Room Service', path: '/room_services/{hotelSlug}/orders-management', icon: 'box' },
   { slug: 'breakfast', name: 'Breakfast', path: '/room_services/{hotelSlug}/breakfast-orders', icon: 'egg-fried' },
 ];
+
+
 
 /**
  * Custom hook for managing navigation items
@@ -112,6 +116,6 @@ export function useNavigation() {
     allNavItems,
     categories,
     uncategorizedItems: uncategorized,
-    hasNavigation: visibleNavItems.length > 0 
+    hasNavigation: visibleNavItems.length > 0
   };
 }

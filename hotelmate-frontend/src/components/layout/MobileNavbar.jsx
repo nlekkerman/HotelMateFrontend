@@ -325,6 +325,7 @@ const MobileNavbar = () => {
                   const orderCount = getOrderCountForItem(item);
                   const showNewBadge = hasNewBadgeForItem(item);
 
+                  // Regular uncategorized items
                   return (
                     <li className="nav-item" key={item.slug}>
                       <Link

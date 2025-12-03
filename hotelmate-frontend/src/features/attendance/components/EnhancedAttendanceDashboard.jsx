@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Card, Row, Col, Button, Badge, Dropdown, Nav } from "react-bootstrap";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useStaffAttendanceSummary, useDepartmentRosterAnalytics, useStaffRosterAnalytics } from "../hooks/useAttendanceData";
+import { useRosterPeriods } from "../hooks/useRosterPeriods";
 import useStaffMetadata from "@/hooks/useStaffMetadata";
 import { formatDuration, calculateStaffEfficiency } from "../utils/durationUtils";
+import { safeNumber } from "../utils/safeUtils";
 import DepartmentAnalytics from "./DepartmentAnalytics";
-import PeriodCreationModal from "./PeriodCreationModal";
-import PeriodCopyModal from "./PeriodCopyModal";
+import PeriodCreationModal from './PeriodCreationModal';
+import PeriodCopyModal from './PeriodCopyModal';
+import RosterManagementGrid from './RosterManagementGrid';
+import RosterPeriodSelector from './RosterPeriodSelector';
 
 /**
  * Enhanced Attendance Dashboard with analytics and roster management
@@ -14,19 +18,52 @@ import PeriodCopyModal from "./PeriodCopyModal";
 export default function EnhancedAttendanceDashboard() {
   const { hotelSlug } = useParams();
   const [activeTab, setActiveTab] = useState('summary'); // summary, departments, individuals, roster-mgmt
-  
-  // Date and filter state
-  const [dateRange, setDateRange] = useState({
-    start: new Date().toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0]
-  });
+  const navigate = useNavigate();
+  // Period and filter state
+  const [selectedPeriodId, setSelectedPeriodId] = useState(null);
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [periodsRefreshKey, setPeriodsRefreshKey] = useState(0);
   
   // Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCopyModal, setShowCopyModal] = useState(false);
+
+  // Load roster periods
+  const periods = useRosterPeriods(hotelSlug, periodsRefreshKey);
+  
+  // Auto-select current period when periods load
+  useEffect(() => {
+    if (periods.items && periods.items.length > 0 && !selectedPeriodId) {
+      // Find current period (period that includes today's date)
+      const today = new Date().toISOString().split('T')[0];
+      const currentPeriod = periods.items.find(period => 
+        period && 
+        period.start_date <= today && 
+        period.end_date >= today
+      );
+      
+      if (currentPeriod) {
+        setSelectedPeriodId(currentPeriod.id);
+      } else if (periods.items.length > 0) {
+        // If no current period, select the most recent one
+        const sortedPeriods = [...periods.items].sort((a, b) => 
+          new Date(b.start_date) - new Date(a.start_date)
+        );
+        setSelectedPeriodId(sortedPeriods[0].id);
+      }
+    }
+  }, [periods.items, selectedPeriodId]);
+  
+  // Find selected period and get date range from it
+  const selectedPeriod = selectedPeriodId && periods.items 
+    ? periods.items.find(p => p && p.id === safeNumber(selectedPeriodId)) 
+    : null;
+    
+  const dateRange = selectedPeriod 
+    ? { start: selectedPeriod.start_date, end: selectedPeriod.end_date }
+    : { start: new Date().toISOString().split('T')[0], end: new Date().toISOString().split('T')[0] };
 
   // Data hooks
   const { 
@@ -109,12 +146,9 @@ export default function EnhancedAttendanceDashboard() {
     setRefreshKey(prev => prev + 1);
   };
 
-  const handleDateChange = (field, value) => {
-    setDateRange(prev => ({ ...prev, [field]: value }));
-  };
-
   const handleModalSuccess = (result) => {
     console.log('Operation successful:', result);
+    setPeriodsRefreshKey(prev => prev + 1);
     handleRefresh();
   };
 
@@ -162,6 +196,12 @@ export default function EnhancedAttendanceDashboard() {
                   <Dropdown.Item onClick={() => setShowCopyModal(true)}>
                     📋 Copy Period
                   </Dropdown.Item>
+                  <Dropdown.Divider />
+                  <Dropdown.Item onClick={() => {
+                    navigate(`/department-roster/${hotelSlug}`);
+                  }}>
+                    📅 Department Rosters
+                  </Dropdown.Item>
                 </Dropdown.Menu>
               </Dropdown>
             </Col>
@@ -169,24 +209,23 @@ export default function EnhancedAttendanceDashboard() {
         </Card.Header>
         <Card.Body>
           <Row className="align-items-end">
-            {/* Date Range */}
-            <Col md={3}>
-              <label className="form-label">From Date</label>
-              <input 
-                type="date" 
-                className="form-control form-control-sm"
-                value={dateRange.start}
-                onChange={(e) => handleDateChange('start', e.target.value)}
+            {/* Period Selection */}
+            <Col md={6}>
+              <label className="form-label">Roster Period</label>
+              <RosterPeriodSelector
+                periods={periods.items || []}
+                selectedPeriodId={selectedPeriodId}
+                onPeriodSelect={setSelectedPeriodId}
+                loading={periods.loading}
+                error={periods.error}
+                onRefresh={() => setPeriodsRefreshKey(prev => prev + 1)}
+                size="sm"
               />
-            </Col>
-            <Col md={3}>
-              <label className="form-label">To Date</label>
-              <input 
-                type="date" 
-                className="form-control form-control-sm"
-                value={dateRange.end}
-                onChange={(e) => handleDateChange('end', e.target.value)}
-              />
+              {selectedPeriod && (
+                <small className="text-muted d-block mt-1">
+                  {selectedPeriod.start_date} to {selectedPeriod.end_date}
+                </small>
+              )}
             </Col>
             
             {/* Department Filter */}

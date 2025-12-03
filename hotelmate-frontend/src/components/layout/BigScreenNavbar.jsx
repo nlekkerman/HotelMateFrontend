@@ -628,6 +628,15 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
       ];
     }
     
+    // ATTENDANCE & ROSTER - Attendance management
+    if (path.includes('/attendance') || path.includes('/roster') || path.includes('/enhanced-attendance') || path.includes('/department-roster')) {
+      return [
+        { icon: 'clock', label: 'Live View', action: () => navigate(`/attendance/${hotelIdentifier}`) },
+        { icon: 'calendar-week', label: 'Rosters', action: () => navigate(`/department-roster/${hotelIdentifier}`) },
+        { icon: 'bar-chart', label: 'Analytics', action: () => navigate(`/enhanced-attendance/${hotelIdentifier}`) },
+      ];
+    }
+    
     // ============================================================================
     // PLACEHOLDER: Future Category-Based Quick Actions
     // ============================================================================
