@@ -50,13 +50,16 @@ export async function performClockOut(hotelSlug, reason = 'End of shift') {
 }
 
 /**
- * Start break action
+ * Start break action - API call to start break
  * @param {string} hotelSlug - Hotel slug
  * @returns {Promise} API response
  */
 export async function startBreak(hotelSlug) {
   try {
-    const response = await api.post(`/staff/hotel/${hotelSlug}/attendance/clock-logs/start-break/`, {
+    console.log('[ClockActions] Starting break via API');
+    
+    const response = await api.post(`/staff/hotel/${hotelSlug}/attendance/clock-logs/`, {
+      action: 'start_break',
       location_name: 'Manual',
       notes: 'Break started from navigation'
     });
@@ -70,14 +73,17 @@ export async function startBreak(hotelSlug) {
 }
 
 /**
- * End break action
+ * End break action - API call to end break
  * @param {string} hotelSlug - Hotel slug
  * @returns {Promise} API response
  */
 export async function endBreak(hotelSlug) {
   try {
-    const response = await api.post(`/staff/hotel/${hotelSlug}/attendance/clock-logs/end-break/`, {
-      location_name: 'Manual', 
+    console.log('[ClockActions] Ending break via API');
+    
+    const response = await api.post(`/staff/hotel/${hotelSlug}/attendance/clock-logs/`, {
+      action: 'end_break',
+      location_name: 'Manual',
       notes: 'Break ended from navigation'
     });
     

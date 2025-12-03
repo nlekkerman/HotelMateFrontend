@@ -1,20 +1,42 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 /**
- * Safe event handler that validates event structure
+ * Safe event handler that validates event structure and normalizes backend data
  * @param {Function} onEvent - Original event callback
  * @param {string} type - Event type
- * @param {*} data - Event data
+ * @param {*} data - Event data from backend
  */
 function safeEventHandler(onEvent, type, data) {
-  if (typeof onEvent !== 'function') return;
+  console.log(`[Attendance Pusher] 📨 safeEventHandler called for ${type}:`, {
+    hasOnEvent: typeof onEvent === 'function',
+    dataType: typeof data,
+    data,
+    timestamp: new Date().toISOString()
+  });
+  
+  if (typeof onEvent !== 'function') {
+    console.warn(`[Attendance Pusher] ⚠️ No onEvent callback provided for ${type}`);
+    return;
+  }
   
   try {
-    // Validate event structure
+    // Normalize backend data into our expected payload structure
     const payload = data && typeof data === 'object' ? data : {};
-    onEvent({ type, payload });
+    
+    const normalizedEvent = { type, payload };
+    
+    console.log(`[Attendance Pusher] ✅ Normalized ${type} event, calling handler:`, {
+      event: normalizedEvent,
+      hasPayload: Object.keys(payload).length > 0,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Call with normalized { type, payload } structure
+    onEvent(normalizedEvent);
+    
+    console.log(`[Attendance Pusher] 🎯 Successfully dispatched ${type} event to handler`);
   } catch (error) {
-    console.error(`[Attendance Pusher] Error handling event ${type}:`, error);
+    console.error(`[Attendance Pusher] ❌ Error handling event ${type}:`, error);
   }
 }
 
@@ -24,19 +46,42 @@ function safeEventHandler(onEvent, type, data) {
  * @param {Function} onEvent - Callback for attendance events ({ type, payload })
  */
 export function useAttendanceRealtime(hotelSlug, onEvent) {
+  // Use ref to avoid dependency on onEvent changing
+  const handlerRef = useRef(onEvent);
+  const pusherRef = useRef(null);
+  const channelRef = useRef(null);
+  
+  // Keep handler ref up to date
   useEffect(() => {
-    console.log('[Attendance Pusher] 🚀 useAttendanceRealtime called:', {
+    handlerRef.current = onEvent;
+  }, [onEvent]);
+
+  useEffect(() => {
+    const hookId = Math.random().toString(36).substr(2, 9);
+    console.log(`[Attendance Pusher] 🚀 useAttendanceRealtime called [${hookId}]:`, {
       hotelSlug,
       hasOnEvent: typeof onEvent === 'function',
       timestamp: new Date().toISOString()
     });
 
     if (!hotelSlug || typeof onEvent !== 'function') {
-      console.warn('[Attendance Pusher] ⚠️ Missing requirements:', {
+      console.warn(`[Attendance Pusher] ⚠️ Missing requirements [${hookId}]:`, {
         hotelSlug,
         onEventType: typeof onEvent
       });
       return;
+    }
+
+    // Clean up any existing connection first
+    if (channelRef.current) {
+      console.log(`[Attendance Pusher] 🧹 Cleaning up existing subscription [${hookId}]`);
+      channelRef.current.unbind_all();
+      channelRef.current.unsubscribe();
+      channelRef.current = null;
+    }
+    if (pusherRef.current) {
+      pusherRef.current.disconnect();
+      pusherRef.current = null;
     }
 
     // Check if Pusher environment variables are available
@@ -58,9 +103,6 @@ export function useAttendanceRealtime(hotelSlug, onEvent) {
       return;
     }
 
-    let pusher;
-    let channel;
-
     const initializePusher = async () => {
       try {
         // Dynamic import with fallback
@@ -73,25 +115,67 @@ export function useAttendanceRealtime(hotelSlug, onEvent) {
         }
 
         // Initialize Pusher
-        pusher = new Pusher(pusherKey, {
+        pusherRef.current = new Pusher(pusherKey, {
           cluster: pusherCluster,
           encrypted: true,
         });
 
+        // ✅ Backend uses format: hotel-{hotel_slug} (e.g., hotel-hotel-killarney)
         const channelName = `hotel-${hotelSlug}`;
-        console.log('[Attendance Pusher] Subscribing to channel:', channelName);
-        channel = pusher.subscribe(channelName);
+        console.log('[Attendance Pusher] 📡 Subscribing to channel:', {
+          channelName,
+          hotelSlug,
+          timestamp: new Date().toISOString()
+        });
+        channelRef.current = pusherRef.current.subscribe(channelName);
 
-        // Bind event handlers with safety wrapper
+        // Bind event handlers with safety wrapper - use ref to avoid re-subscription
         const bindSafeEvent = (eventName, eventType) => {
-          channel.bind(eventName, (data) => {
-            console.log(`[Attendance Pusher] ${eventType} event:`, data);
-            safeEventHandler(onEvent, eventType, data);
+          channelRef.current.bind(eventName, (data) => {
+            console.log(`[Attendance Pusher] ${eventType} event received:`, {
+              eventName,
+              data,
+              timestamp: new Date().toISOString()
+            });
+            safeEventHandler(handlerRef.current, eventType, data);
           });
         };
 
-        // Real-time clock status updates (clock in/out, break start/end)
-        bindSafeEvent('clock-status-updated', 'clock-status-updated');
+        // ✅ MAIN EVENT: Real-time clock status updates (clock in/out, break start/end)
+        // Backend sends: { staff_id, user_id, duty_status, current_status, ... }
+        channelRef.current.bind('clock-status-updated', (data) => {
+          console.log('[Attendance Pusher] 📡 MAIN EVENT clock-status-updated received:', {
+            data,
+            hasStaffId: !!data?.staff_id,
+            hasUserId: !!data?.user_id,
+            dutyStatus: data?.duty_status,
+            hasCurrentStatus: !!data?.current_status,
+            timestamp: new Date().toISOString()
+          });
+          
+          // Normalize to { type, payload } format as expected by handlers
+          safeEventHandler(handlerRef.current, 'clock-status-updated', data);
+          
+          // Turn off camera after successful clock action
+          console.log('[Attendance Pusher] 📹 Dispatching camera cleanup event after clock action');
+          window.dispatchEvent(new CustomEvent('stopCameraAfterClockAction', {
+            detail: {
+              action: data?.action,
+              success: true,
+              timestamp: new Date().toISOString()
+            }
+          }));
+          
+          // IMMEDIATE camera cleanup for break end actions
+          if (data?.action === 'end_break') {
+            console.log('[Attendance Pusher] 📹 IMMEDIATE camera cleanup for break end action!');
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('forceStopCamera', {
+                detail: { reason: 'break_ended_immediately', action: 'end_break' }
+              }));
+            }, 100);
+          }
+        });
 
         // Unrostered clock-in request - someone clocked in without being rostered
         bindSafeEvent('attendance-unrostered-request', 'unrostered-request');
@@ -106,17 +190,45 @@ export function useAttendanceRealtime(hotelSlug, onEvent) {
         bindSafeEvent('attendance-hard-limit-warning', 'hard-limit');
 
         // Clock log approved - unrostered request was approved
-        bindSafeEvent('clocklog-approved', 'log-approved');
+        channelRef.current.bind('clocklog-approved', (data) => {
+          console.log('[Attendance Pusher] clocklog-approved received:', data);
+          safeEventHandler(handlerRef.current, 'log-approved', data);
+          
+          // Turn off camera after approval
+          console.log('[Attendance Pusher] 📹 Dispatching camera cleanup after log approval');
+          window.dispatchEvent(new CustomEvent('stopCameraAfterClockAction', {
+            detail: { action: 'log-approved', success: true }
+          }));
+        });
 
         // Clock log rejected - unrostered request was rejected
         bindSafeEvent('clocklog-rejected', 'log-rejected');
 
         // New clock log created/updated - staff clocked in/out
-        bindSafeEvent('clocklog-created', 'log-created');
-        bindSafeEvent('clocklog-updated', 'log-updated');
+        channelRef.current.bind('clocklog-created', (data) => {
+          console.log('[Attendance Pusher] clocklog-created received:', data);
+          safeEventHandler(handlerRef.current, 'log-created', data);
+          
+          // Turn off camera after log creation
+          console.log('[Attendance Pusher] 📹 Dispatching camera cleanup after log creation');
+          window.dispatchEvent(new CustomEvent('stopCameraAfterClockAction', {
+            detail: { action: 'log-created', success: true }
+          }));
+        });
+        
+        channelRef.current.bind('clocklog-updated', (data) => {
+          console.log('[Attendance Pusher] clocklog-updated received:', data);
+          safeEventHandler(handlerRef.current, 'log-updated', data);
+          
+          // Turn off camera after log update (including break end actions)
+          console.log('[Attendance Pusher] 📹 Dispatching camera cleanup after log update');
+          window.dispatchEvent(new CustomEvent('stopCameraAfterClockAction', {
+            detail: { action: 'log-updated', success: true }
+          }));
+        });
 
         // Handle unknown event types safely
-        channel.bind_global((eventName, data) => {
+        channelRef.current.bind_global((eventName, data) => {
           // Only handle unknown attendance-related events
           if (eventName.startsWith('attendance-') || eventName.startsWith('clocklog-')) {
             const knownEvents = [
@@ -133,26 +245,26 @@ export function useAttendanceRealtime(hotelSlug, onEvent) {
             
             if (!knownEvents.includes(eventName) && !eventName.startsWith('pusher:')) {
               console.warn(`[Attendance Pusher] Unknown event type: ${eventName}`, data);
-              safeEventHandler(onEvent, 'unknown-event', { eventName, ...data });
+              safeEventHandler(handlerRef.current, 'unknown-event', { eventName, ...data });
             }
           }
         });
 
         // Debug: Log when channel is ready
-        channel.bind('pusher:subscription_succeeded', () => {
+        channelRef.current.bind('pusher:subscription_succeeded', () => {
           console.log('[Attendance Pusher] ✅ Successfully subscribed to:', channelName);
         });
         
-        channel.bind('pusher:subscription_error', (error) => {
+        channelRef.current.bind('pusher:subscription_error', (error) => {
           console.error('[Attendance Pusher] ❌ Subscription error:', error);
         });
 
         // Connection status
-        pusher.connection.bind('connected', () => {
+        pusherRef.current.connection.bind('connected', () => {
           console.log('[Attendance Pusher] ✅ Connected to Pusher');
         });
 
-        pusher.connection.bind('error', (error) => {
+        pusherRef.current.connection.bind('error', (error) => {
           console.error('[Attendance Pusher] ❌ Connection error:', error);
         });
 
@@ -167,19 +279,21 @@ export function useAttendanceRealtime(hotelSlug, onEvent) {
     // Cleanup function
     return () => {
       try {
-        if (channel) {
-          console.log('[Attendance Pusher] Unsubscribing from channel');
-          channel.unbind_all();
+        console.log(`[Attendance Pusher] 🧹 Cleaning up subscription for: hotel-${hotelSlug} [${hookId}]`);
+        if (channelRef.current) {
+          console.log(`[Attendance Pusher] Unbinding all events from channel [${hookId}]`);
+          channelRef.current.unbind_all();
+          channelRef.current = null;
         }
-        if (pusher) {
-          if (channel) {
-            pusher.unsubscribe(`hotel-${hotelSlug}`);
-          }
-          pusher.disconnect();
+        if (pusherRef.current) {
+          console.log(`[Attendance Pusher] Unsubscribing and disconnecting from Pusher [${hookId}]`);
+          pusherRef.current.unsubscribe(`hotel-${hotelSlug}`);
+          pusherRef.current.disconnect();
+          pusherRef.current = null;
         }
       } catch (error) {
-        console.error('[Attendance Pusher] Error during cleanup:', error);
+        console.error(`[Attendance Pusher] Error during cleanup [${hookId}]:`, error);
       }
     };
-  }, [hotelSlug, onEvent]);
+  }, [hotelSlug]); // ONLY depends on hotelSlug now, not onEvent!
 }

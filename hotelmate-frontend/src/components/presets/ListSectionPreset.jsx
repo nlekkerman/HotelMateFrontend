@@ -48,13 +48,14 @@ const ListSectionPreset = ({ section, onUpdate }) => {
     saving,
   } = useListSectionActions(slug, section, onUpdate);
 
-  if (lists.length === 0) {
+  // Only hide empty sections from public users, staff should always see sections to populate them
+  if (lists.length === 0 && !isStaff) {
     return null;
   }
 
   const hasCards = lists.some(l => l.cards && l.cards.length > 0);
 
-  if (!hasCards) {
+  if (!hasCards && !isStaff) {
     return null;
   }
 

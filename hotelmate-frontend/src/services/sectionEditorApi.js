@@ -28,10 +28,17 @@ const buildSectionURL = (hotelSlug, path = '') => {
  * @returns {Promise<Object>} Created section
  */
 export const createSection = async (hotelSlug, sectionData) => {
+  console.log('[sectionEditorApi] 📤 createSection called with:', { hotelSlug, sectionData });
+  console.log('[sectionEditorApi] 📤 POST URL:', buildSectionURL(hotelSlug, 'sections/create/'));
+  
   const response = await api.post(
     buildSectionURL(hotelSlug, 'sections/create/'),
     sectionData
   );
+  
+  console.log('[sectionEditorApi] 📥 createSection response:', response.data);
+  console.log('[sectionEditorApi] 📥 Response section_type:', response.data.section?.section_type || response.data.section_type);
+  
   // Backend returns {message, section}
   return response.data.section || response.data;
 };
@@ -523,7 +530,21 @@ export const deleteContentBlock = async (hotelSlug, blockId) => {
 export const getPublicHotelPage = async (slug) => {
   // Use publicAPI for public endpoint (no auth required)
   const { publicAPI } = await import('./api');
+  console.log('[sectionEditorApi] 📤 getPublicHotelPage called for slug:', slug);
+  console.log('[sectionEditorApi] 📤 GET URL:', `/public/hotel/${slug}/page/`);
+  
   const response = await publicAPI.get(`/public/hotel/${slug}/page/`);
+  
+  console.log('[sectionEditorApi] 📥 getPublicHotelPage response:', response.data);
+  console.log('[sectionEditorApi] 📥 Sections count:', response.data.sections?.length);
+  
+  if (response.data.sections?.length > 0) {
+    console.log('[sectionEditorApi] 📥 Section types in response:');
+    response.data.sections.forEach((section, index) => {
+      console.log(`  ${index + 1}. ID=${section.id} Type="${section.section_type}" Element="${section.element?.element_type || 'N/A'}"`);
+    });
+  }
+  
   return response.data;
 };
 

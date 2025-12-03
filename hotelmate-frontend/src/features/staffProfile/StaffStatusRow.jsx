@@ -120,7 +120,7 @@ export default function StaffStatusRow({
           <FaToggleOff className={fieldKey === "is_on_duty" ? "text-danger" : "text-secondary"} />
         )}
       </span>
-      <span className="flex-grow-1 staff-field-label">{label}:</span>
+      <span className="flex-grow-1 staff-field-label text-dark">{label}:</span>
       
       {isEditing ? (
         <span className="staff-field-value">

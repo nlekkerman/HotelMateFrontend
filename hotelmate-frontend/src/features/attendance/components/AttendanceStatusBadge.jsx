@@ -64,11 +64,37 @@ export default function AttendanceStatusBadge({ status, staffId, enhancedStatus 
       }
     };
 
+    const handleBroadcastStatusUpdate = (event) => {
+      const { staffId: eventStaffId, currentStatus, action } = event.detail;
+      console.log(`[AttendanceStatusBadge] Broadcast status update:`, event.detail);
+      
+      if (eventStaffId === staffId) {
+        console.log(`[AttendanceStatusBadge] Updating badge for staff ${staffId}`);
+        
+        // Add visual feedback
+        const badgeElement = document.getElementById(`staff-${staffId}-status`);
+        if (badgeElement) {
+          badgeElement.classList.add('updating');
+          setTimeout(() => {
+            badgeElement.classList.remove('updating');
+          }, 800);
+        }
+        
+        // Update status based on current_status from backend
+        if (currentStatus) {
+          setCurrentStatus(currentStatus.label || 'Updated');
+        }
+      }
+    };
+
     window.addEventListener('pusherClockStatusUpdate', handleStatusUpdate);
     window.addEventListener('face-clock-action-success', handleFaceClockAction);
+    window.addEventListener('staffStatusUpdated', handleBroadcastStatusUpdate);
+    
     return () => {
       window.removeEventListener('pusherClockStatusUpdate', handleStatusUpdate);
       window.removeEventListener('face-clock-action-success', handleFaceClockAction);
+      window.removeEventListener('staffStatusUpdated', handleBroadcastStatusUpdate);
     };
   }, [staffId]);
 

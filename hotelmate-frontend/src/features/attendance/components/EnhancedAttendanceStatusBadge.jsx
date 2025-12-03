@@ -13,7 +13,17 @@ const EnhancedAttendanceStatusBadge = ({
   size = 'md',
   className = '' 
 }) => {
+  console.log('[EnhancedAttendanceStatusBadge] Rendering with props:', {
+    hasStaff: !!staff,
+    hasCurrentStatus: !!staff?.current_status,
+    staff: staff,
+    showBreakTime,
+    size,
+    className
+  });
+
   if (!staff || !staff.current_status) {
+    console.log('[EnhancedAttendanceStatusBadge] Using fallback status');
     // Fallback to basic status
     const basicStatus = staff?.is_on_duty ? 'on_duty' : 'off_duty';
     const basicLabel = staff?.is_on_duty ? 'On Duty' : 'Off Duty';
@@ -50,6 +60,14 @@ const EnhancedAttendanceStatusBadge = ({
     md: '',
     lg: 'status-indicator-lg'
   };
+
+  console.log('[EnhancedAttendanceStatusBadge] Rendering status badge:', {
+    status,
+    label,
+    icon: statusIcons[status],
+    breakTimeDisplay,
+    finalClassName: `status-indicator ${status} ${sizeClasses[size]} ${className}`
+  });
 
   return (
     <span 

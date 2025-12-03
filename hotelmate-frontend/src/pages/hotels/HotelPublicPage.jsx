@@ -39,6 +39,23 @@ const HotelPublicPage = () => {
       console.log('[HotelPublicPage] 📦 Public page data sections:', data.sections?.length, data.sections?.[0]);
       console.log('[HotelPublicPage] 🏨 Hotel data:', data.hotel);
       
+      // Debug section types to identify backend issues
+      if (data.sections?.length > 0) {
+        console.log('[HotelPublicPage] 🔍 Section types analysis:');
+        data.sections.forEach((section, index) => {
+          console.log(`  Section ${index + 1}: ID=${section.id}, Name="${section.name}", Type="${section.section_type}", Element="${section.element?.element_type || 'N/A'}"`);
+          
+          // Flag problematic sections
+          if (section.section_type === 'unknown' || !section.section_type) {
+            console.error(`  ❌ PROBLEMATIC SECTION FOUND: ID=${section.id}, Name="${section.name}"`);
+            console.error(`     - section_type: "${section.section_type}"`);
+            console.error(`     - element_type: "${section.element?.element_type || 'N/A'}"`);
+            console.error(`     - All properties:`, Object.keys(section));
+            console.error(`     - Full section data:`, section);
+          }
+        });
+      }
+      
       // Run debug utility to understand the API response
       await debugRoomTypesAPI(slug);
       
@@ -264,6 +281,27 @@ const HotelPublicPage = () => {
         
         case 'footer':
           return <FooterSectionPreset key={section.id} section={section} hotel={pageData.hotel} />;
+        
+        case 'unknown':
+          console.warn(`[HotelPublicPage] Section with unknown type found:`, section);
+          // Try to determine the actual type based on element_type or other properties
+          if (section.element?.element_type) {
+            console.log(`[HotelPublicPage] Attempting to render based on element_type: ${section.element.element_type}`);
+            // Create a new section object with the corrected type
+            const correctedSection = { ...section, section_type: section.element.element_type };
+            return renderSection(correctedSection);
+          }
+          // If we can't determine the type, show a debug info card for staff
+          return isStaff ? (
+            <div key={section.id} className="alert alert-info m-3">
+              <i className="bi bi-info-circle me-2"></i>
+              <strong>Unknown Section (ID: {section.id})</strong>
+              <br />
+              <small>Type: {section.section_type} | Element Type: {section.element?.element_type || 'N/A'}</small>
+              <br />
+              <small>This section needs to be configured with a proper section type.</small>
+            </div>
+          ) : null;
         
         default:
           console.warn(`[HotelPublicPage] Unknown section type: ${section.section_type}`);

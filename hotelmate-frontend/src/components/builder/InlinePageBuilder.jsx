@@ -36,11 +36,19 @@ const InlinePageBuilder = forwardRef(({ hotel, sections, onUpdate }, ref) => {
     if (sectionType.section_type === 'hero' || sectionType.section_type === 'news' || sectionType.section_type === 'rooms') {
       setLoading(true);
       try {
-        const newSection = await createSection(hotel.slug, {
-          section_type: sectionType.section_type
-        });
+        // Calculate next position (place at end)
+        const nextPosition = sections.length > 0 ? Math.max(...sections.map(s => s.position)) + 1 : 0;
+        const payload = { 
+          section_type: sectionType.section_type,
+          position: nextPosition
+        };
+        console.log('[InlinePageBuilder] 📤 Creating section with payload:', payload);
+        console.log('[InlinePageBuilder] 📤 Section type definition:', sectionType);
+        
+        const newSection = await createSection(hotel.slug, payload);
         
         console.log('[InlinePageBuilder] ✅ Section created:', newSection);
+        console.log('[InlinePageBuilder] ✅ New section type received:', newSection.section_type);
         toast.success(`${sectionType.label} created successfully!`);
         
         // Refresh to show new section
@@ -64,9 +72,13 @@ const InlinePageBuilder = forwardRef(({ hotel, sections, onUpdate }, ref) => {
   const handleCreateSectionWithContainer = async () => {
     setLoading(true);
     try {
+      // Calculate next position (place at end)
+      const nextPosition = sections.length > 0 ? Math.max(...sections.map(s => s.position)) + 1 : 0;
+      
       // Build payload - backend will use defaults for empty fields
       const payload = {
-        section_type: selectedSectionType.section_type
+        section_type: selectedSectionType.section_type,
+        position: nextPosition
       };
 
       // Only add name if provided
@@ -80,9 +92,13 @@ const InlinePageBuilder = forwardRef(({ hotel, sections, onUpdate }, ref) => {
       }
 
       // Backend creates section and first container automatically
+      console.log('[InlinePageBuilder] 📤 Creating section+container with payload:', payload);
+      console.log('[InlinePageBuilder] 📤 Selected section type:', selectedSectionType);
+      
       const newSection = await createSection(hotel.slug, payload);
       
       console.log('[InlinePageBuilder] ✅ Section created with container:', newSection);
+      console.log('[InlinePageBuilder] ✅ New section type received:', newSection.section_type);
       toast.success(`${selectedSectionType.label} created successfully!`);
       
       // Reset and close

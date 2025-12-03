@@ -5,6 +5,7 @@ import CameraPreview from "../components/CameraPreview";
 import { useFaceApi } from "../hooks/useFaceApi";
 import { useHotelFaceConfig } from "../hooks/useHotelFaceConfig";
 import { useFaceEncoder } from "../hooks/useFaceRecognition";
+import { useCameraStream } from "../hooks/useCameraStream";
 import api from "@/services/api";
 import "../styles/faceKiosk.css";
 
@@ -18,7 +19,7 @@ export default function FaceClockInPage() {
   
   const [capturedImage, setCapturedImage] = useState(null);
   const [locationNote, setLocationNote] = useState("Kiosk");
-  const [mode, setMode] = useState("ready"); // "ready" | "captured" | "processing" | "success" | "options" | "result"
+  const [mode, setMode] = useState("inactive"); // "inactive" | "ready" | "captured" | "processing" | "success" | "options" | "result"
   const [result, setResult] = useState(null);
   const [staffData, setStaffData] = useState(null);
   const [unrosteredData, setUnrosteredData] = useState(null);
@@ -37,6 +38,18 @@ export default function FaceClockInPage() {
     error: configError 
   } = useHotelFaceConfig(hotelSlug);
   const { processing: encodingProcessing, extractFaceEncoding, modelsLoaded } = useFaceEncoder();
+  const { 
+    stream, 
+    isActive: cameraActive, 
+    error: cameraError, 
+    isLoading: cameraLoading,
+    videoRef,
+    startCamera,
+    stopCamera,
+    captureImage,
+    clearError: clearCameraError,
+    isCameraSupported
+  } = useCameraStream();
 
   // Auto-reset for kiosk mode with countdown
   const scheduleAutoReset = () => {
@@ -60,11 +73,7 @@ export default function FaceClockInPage() {
     }, 1000);
     
     resetTimeoutRef.current = setTimeout(() => {
-      setCapturedImage(null);
-      setResult(null);
-      setMode("ready");
-      setCountdown(0);
-      clearError();
+      handleReset();
     }, 7000);
   };
 
@@ -88,30 +97,35 @@ export default function FaceClockInPage() {
     toast.error(errorMessage);
   };
 
+  const handleClockButtonClick = async () => {
+    if (!isCameraSupported()) {
+      toast.error("Camera is not supported on this device");
+      return;
+    }
+    
+    setMode("ready");
+    await startCamera();
+  };
+
+  const handleGoHome = () => {
+    navigate(`/staff/${hotelSlug}/dashboard`);
+  };
+
   const handleTakePhoto = async () => {
-    if (!hotelSlug) return;
+    if (!hotelSlug || !cameraActive) return;
     
     setMode("processing");
     setResult(null);
 
     try {
-      // Capture image from camera
-      const imageBase64 = capturedImage || await new Promise((resolve) => {
-        // Trigger camera capture programmatically
-        const video = document.querySelector('video');
-        if (video) {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          ctx.drawImage(video, 0, 0);
-          resolve(canvas.toDataURL('image/jpeg'));
-        }
-      });
+      // Capture image from camera using the hook
+      const imageBase64 = captureImage();
       
       if (!imageBase64) {
         throw new Error('Failed to capture image');
       }
+
+      setCapturedImage(imageBase64);
 
       // Extract face encoding
       const encodingResult = await extractFaceEncoding(imageBase64);
@@ -137,22 +151,7 @@ export default function FaceClockInPage() {
       // Handle different response types based on backend flow
       switch (data.action) {
         case 'clock_in_success':
-          // Show success with staff info
-          setStaffData({
-            name: data.staff?.name || data.staff_name || 'Staff Member',
-            image: data.staff?.image || data.staff_image,
-            department: data.staff?.department,
-            actionMessage: '✅ Clocked In Successfully!',
-            actionTime: new Date().toLocaleTimeString(),
-            actionType: 'clock_in_success'
-          });
-          setMode("success");
-          toast.success(`Welcome, ${data.staff?.name || 'Staff Member'}!`);
-          
-          // Auto-refresh for next person after 4 seconds
-          setTimeout(() => {
-            handleReset();
-          }, 4000);
+          handleClockInSuccess(data);
           break;
           
         case 'unrostered_detected':
@@ -263,6 +262,10 @@ export default function FaceClockInPage() {
     });
     setMode("success");
     toast.success(`Welcome, ${staff.name}!`);
+    
+    // Stop camera after successful action
+    stopCamera();
+    
     scheduleAutoReset();
   };
 
@@ -294,9 +297,12 @@ export default function FaceClockInPage() {
     setActionOptions(null);
     setSessionInfo(null);
     setAvailableActions([]);
-    setMode("ready");
+    setMode("inactive");
     setCountdown(0);
-    clearError();
+    
+    // Stop camera and return to inactive state
+    stopCamera();
+    
     // Clear any pending auto-reset
     if (resetTimeoutRef.current) {
       clearTimeout(resetTimeoutRef.current);
@@ -413,6 +419,9 @@ export default function FaceClockInPage() {
           navigate(-1); // Go back to previous page
         }, result.action === 'clock_out_success' ? 5000 : 2000);
       } else {
+        // Stop camera immediately after action
+        stopCamera();
+        
         // Fallback to existing logic
         if (result.action === 'clock_out_success') {
           setTimeout(() => {
@@ -576,6 +585,13 @@ export default function FaceClockInPage() {
     );
   };
 
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []); // Empty dependency array since stopCamera is stable from the hook
+
   // Helper functions for kiosk UX
   const getFriendlyErrorMessage = (errorMessage, errorCode) => {
     switch (errorCode) {
@@ -737,11 +753,37 @@ export default function FaceClockInPage() {
   return (
     <div className="fullscreen-kiosk">
               
-
-
-
-
-
+              {/* Inactive State - Show Clock Button */}
+              {mode === "inactive" && (
+                <div className="fullscreen-inactive">
+                  <div className="text-center py-5">
+                    <div className="mb-4">
+                      <i className="bi bi-clock" style={{ fontSize: "4rem", color: "#007bff" }}></i>
+                    </div>
+                    <h2 className="text-primary mb-4">Face Clock-In System</h2>
+                    <p className="text-muted mb-4">Click the button below to start face recognition</p>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-lg px-5 py-3"
+                      onClick={handleClockButtonClick}
+                      style={{
+                        fontSize: "1.3rem",
+                        borderRadius: "25px",
+                        boxShadow: "0 4px 15px rgba(0, 123, 255, 0.3)"
+                      }}
+                    >
+                      <i className="bi bi-clock me-2"></i>
+                      Clock In/Out
+                    </button>
+                    <div className="mt-4">
+                      <small className="text-muted">
+                        <i className="bi bi-building me-1"></i>
+                        {hotelSlug}
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* State: Processing */}
               {mode === "processing" && (
@@ -766,13 +808,53 @@ export default function FaceClockInPage() {
 
                   {/* Full screen camera */}
                   <div className="fullscreen-camera-container">
-                    <CameraPreview
-                      onCapture={handleImageCapture}
-                      onError={handleCameraError}
-                      autoStart={true}
-                      showFaceOverlay={true}
-                      faceDetected={false}
-                    />
+                    <div className="position-relative w-100 h-100">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-100 h-100"
+                        style={{ 
+                          objectFit: "cover",
+                          backgroundColor: "#000",
+                          display: cameraActive ? "block" : "none"
+                        }}
+                      />
+                      
+                      {/* Face Frame Overlay */}
+                      {cameraActive && (
+                        <div className="face-frame-overlay">
+                          <div className="face-frame-placeholder">
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Camera Loading State */}
+                      {cameraLoading && (
+                        <div className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-50">
+                          <div className="text-white text-center">
+                            <div className="spinner-border" role="status">
+                              <span className="visually-hidden">Loading...</span>
+                            </div>
+                            <p className="mt-2 mb-0">Starting camera...</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Camera Error */}
+                      {cameraError && (
+                        <div className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark">
+                          <div className="text-white text-center">
+                            <i className="bi bi-exclamation-triangle" style={{ fontSize: "3rem" }}></i>
+                            <p className="mt-2 mb-0">{cameraError}</p>
+                            <button className="btn btn-outline-light mt-3" onClick={startCamera}>
+                              Try Again
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Take Photo Button in Overlay */}
@@ -781,7 +863,7 @@ export default function FaceClockInPage() {
                       type="button"
                       className="btn btn-success btn-lg px-5"
                       onClick={handleTakePhoto}
-                      disabled={loading || encodingProcessing || !modelsLoaded}
+                      disabled={loading || encodingProcessing || !modelsLoaded || !cameraActive}
                       style={{
                         fontSize: "1.2rem",
                         borderRadius: "25px",

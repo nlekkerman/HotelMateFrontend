@@ -228,7 +228,6 @@
   background: transparent;
   pointer-events: none;
   display: flex;
-}
   align-items: flex-end;
   justify-content: center;
   padding-bottom: 20px;
@@ -615,11 +614,13 @@
 }
 
 .staff-name {
-  color: #2c3e50;
-  font-size: 1.8rem;
+  color: #ffffff;
+  font-size: 1rem;
   font-weight: 600;
 }
-
+.staff-status-text{
+  color: rgb(255, 255, 255) !important;
+}
 .department-name {
   font-size: 1.1rem;
 }
@@ -863,8 +864,6 @@
 
 .action-buttons .btn-secondary:hover {
   background: #757575;
-}
-
   box-shadow: 0 0 20px rgba(52, 152, 219, 0.3);
 }
 

@@ -32,7 +32,7 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
   
   const queryClient = useQueryClient();
 
-  // Handle real-time status updates
+  // Handle real-time status updates from Pusher
   const handleAttendanceEvent = ({ type, payload }) => {
     console.log('[StaffProfile] Pusher event:', { type, payload });
     
@@ -59,8 +59,34 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
     }
   };
   
+  // Handle broadcasted status updates from other components
+  const handleBroadcastedStatusUpdate = (event) => {
+    const { staffId, currentStatus, isOnDuty } = event.detail;
+    console.log('[StaffProfile] Broadcasted status update:', event.detail);
+    
+    if (staffId === staff.id) {
+      console.log('[StaffProfile] Updating from broadcast for current staff');
+      setRealTimeStaff(prev => ({
+        ...prev,
+        is_on_duty: isOnDuty,
+        current_status: currentStatus
+      }));
+      
+      // Also invalidate queries
+      queryClient.invalidateQueries({ queryKey: ["staffMe", hotelSlug] });
+    }
+  };
+  
   // Subscribe to real-time updates
   useAttendanceRealtime(hotelSlug, handleAttendanceEvent);
+  
+  // Listen for broadcasted status updates
+  useEffect(() => {
+    window.addEventListener('staffStatusUpdated', handleBroadcastedStatusUpdate);
+    return () => {
+      window.removeEventListener('staffStatusUpdated', handleBroadcastedStatusUpdate);
+    };
+  }, [staff.id, hotelSlug]);
   
   // Update local state when staff prop changes
   useEffect(() => {
@@ -232,13 +258,7 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
             onSave={handleSaveField}
           />
 
-          <StaffStatusRow
-            label="On Duty"
-            value={staff.is_on_duty}
-            fieldKey="is_on_duty"
-            canEdit={isOwnProfile}
-            onSave={handleSaveField}
-          />
+          
 
           <StaffStatusRow
             label="Duty Status"
