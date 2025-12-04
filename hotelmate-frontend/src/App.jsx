@@ -122,7 +122,6 @@ import NotFound from "@/components/offline/NotFound";
 
 import ChatHomePage from "@/pages/chat/ChatHomePage";
 import ChatWindow from "@/components/chat/ChatWindow";
-import StaffChatPage from "@/pages/chat/StaffChatPage";
 
 //Games
 import GamesDashboard from "@/games/GamesDashboard";
@@ -280,10 +279,6 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
   const layoutClass = `vw-100 ${collapsed ? "collapsed" : "expanded"} ${
     isMobile ? "mt-0" : ""
   }`;
-
-  // Show floating button - position based on screen size and not on staff chat page
-  const isStaffChatPage = location.pathname.includes("/staff-chat");
-  const showFloatingButton = user && !hideNavigation && !isStaffChatPage;
 
   return (
     <>
@@ -798,15 +793,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 path="/chat/:hotelSlug/conversations/:conversationId/messages"
                 element={<ChatWindow />}
               />
-              {/* Staff Chat Route */}
-              <Route
-                path="/:hotelSlug/staff-chat"
-                element={
-                  <ProtectedRoute>
-                    <StaffChatPage />
-                  </ProtectedRoute>
-                }
-              />
+              
               {/* Games - Protected */}
               <Route
                 path="/games"
@@ -964,7 +951,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
       </div>
 
       {/* Messenger Widget */}
-      {showFloatingButton && <MessengerWidget position="bottom-right" />}
+      { <MessengerWidget position="bottom-right" />}
 
       {/* Global Quick Notifications - Always visible when logged in */}
       {user && !hideNavigation && <GlobalQuickNotifications />}

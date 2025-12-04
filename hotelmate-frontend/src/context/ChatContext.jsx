@@ -108,6 +108,11 @@ export const ChatProvider = ({ children }) => {
   }, [guestChatState]);
 
   const markConversationRead = async (conversationId) => {
+    if (!conversationId) {
+      console.warn("markConversationRead called with undefined/null conversationId");
+      return;
+    }
+    
     try {
       await api.post(`/chat/conversations/${conversationId}/mark-read/`);
       setConversations((prev) =>

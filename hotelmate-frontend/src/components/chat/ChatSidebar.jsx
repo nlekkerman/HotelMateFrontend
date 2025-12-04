@@ -24,8 +24,17 @@ const ChatSidebar = ({
   }, [conversations, onUnreadChange]);
 
   const handleConversationClick = (conv) => {
-    onSelectRoom(conv.room_number, conv.conversation_id);
-    markConversationRead(conv.conversation_id); // updates the shared context
+    // Handle both property naming conventions (API vs Store)
+    const conversationId = conv?.conversation_id || conv?.id;
+    const roomNumber = conv?.room_number || conv?.roomNumber;
+    
+    if (!conv || !conversationId) {
+      console.warn("handleConversationClick called with invalid conversation:", conv);
+      return;
+    }
+    
+    onSelectRoom(roomNumber, conversationId);
+    markConversationRead(conversationId);
   };
 
   return (
@@ -35,10 +44,10 @@ const ChatSidebar = ({
           <p>No active conversations</p>
         </div>
       ) : (
-        conversations.map((conv) => (
+        conversations.map((conv, index) => (
           <div
-            key={conv.conversation_id}
-            className={`shadow chat-room ${selectedRoom === conv.room_number ? "selected" : ""}`}
+            key={conv.conversation_id || conv.id || `conv-${index}`}
+            className={`shadow chat-room ${selectedRoom === (conv.room_number || conv.roomNumber) ? "selected" : ""}`}
             onClick={() => handleConversationClick(conv)}
             style={{
               padding: 0,
@@ -47,7 +56,7 @@ const ChatSidebar = ({
           >
             {/* Conversation Header */}
             <div className="conversation-header" style={{
-              backgroundColor: selectedRoom === conv.room_number 
+              backgroundColor: selectedRoom === (conv.room_number || conv.roomNumber) 
                 ? 'rgba(var(--main-color-rgb), 0.95)' 
                 : 'rgba(var(--main-color-rgb), 0.85)',
               padding: '0.5rem 1rem',
@@ -56,27 +65,27 @@ const ChatSidebar = ({
             }}>
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  {conv.guest_name && (
+                  {(conv.guest_name || conv.guestName) && (
                     <strong style={{ 
                       fontSize: isMobile ? '1.1rem' : '1rem',
                       lineHeight: 1.2,
                       color: '#fff'
                     }}>
-                      {conv.guest_name} <span style={{ fontWeight: 'normal', fontSize: '0.9em' }}>(Room {conv.room_number})</span>
+                      {conv.guest_name || conv.guestName} <span style={{ fontWeight: 'normal', fontSize: '0.9em' }}>(Room {conv.room_number || conv.roomNumber})</span>
                     </strong>
                   )}
-                  {!conv.guest_name && (
+                  {!(conv.guest_name || conv.guestName) && (
                     <strong style={{ 
                       fontSize: isMobile ? '1.1rem' : '1rem',
                       lineHeight: 1.2,
                       color: '#fff'
                     }}>
-                      Room {conv.room_number}
+                      Room {conv.room_number || conv.roomNumber}
                     </strong>
                   )}
                 </div>
-                {conv.unread_count > 0 && (
-                  <span className="badge bg-danger">{conv.unread_count}</span>
+                {((conv.unread_count || conv.unreadCountForGuest) > 0) && (
+                  <span className="badge bg-danger">{conv.unread_count || conv.unreadCountForGuest}</span>
                 )}
               </div>
             </div>
@@ -96,13 +105,13 @@ const ChatSidebar = ({
                     color: '#333'
                   }}
                 >
-                  {conv.last_message || <em>No messages yet</em>}
+                  {conv.last_message || conv.lastMessage || <em>No messages yet</em>}
                 </div>
                 <small style={{ fontSize: '0.7rem', fontStyle: 'italic', color: '#6c757d' }}>
-                  {conv.unread_count > 0 ? 'Not seen' : 'Seen'}
+                  {((conv.unread_count || conv.unreadCountForGuest) > 0) ? 'Not seen' : 'Seen'}
                 </small>
               </div>
-              {conv.last_message_time && (
+              {(conv.last_message_time || conv.updatedAt) && (
                 <div
                   className="last-message-time small"
                   style={{
@@ -111,7 +120,7 @@ const ChatSidebar = ({
                     whiteSpace: 'nowrap'
                   }}
                 >
-                  {new Date(conv.last_message_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(conv.last_message_time || conv.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
               )}
             </div>

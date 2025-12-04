@@ -125,6 +125,20 @@ const ChatWindow = ({
     locationStateIsGuest: location.state?.isGuest
   });
   
+  // Get chat context data early (needed in useEffects below)
+  const { 
+    markConversationRead, 
+    pusherInstance, 
+    setCurrentConversationId,
+    // Guest chat functionality from guestChatStore
+    guestMessages,
+    activeGuestConversation,
+    fetchGuestMessages,
+    setActiveGuestConversation,
+    markGuestConversationReadForStaff,
+    markGuestConversationReadForGuest
+  } = useChat();
+
   // Guest session management
   const [guestSession, setGuestSession] = useState(null);
   const [currentStaff, setCurrentStaff] = useState(null);
@@ -243,18 +257,6 @@ const ChatWindow = ({
   const emojiButtonRef = useRef(null);
   const messageInputRef = useRef(null);
   const fileInputRef = useRef(null);
-  const { 
-    markConversationRead, 
-    pusherInstance, 
-    setCurrentConversationId,
-    // Guest chat functionality from guestChatStore
-    guestMessages,
-    activeGuestConversation,
-    fetchGuestMessages,
-    setActiveGuestConversation,
-    markGuestConversationReadForStaff,
-    markGuestConversationReadForGuest
-  } = useChat();
 
   // Initialize reply handlers from utility
   const { startReply, cancelReply, clearReplyAfterSend } = createReplyHandlers(setReplyingTo, messageInputRef);
@@ -342,6 +344,8 @@ const ChatWindow = ({
       // Use guest chat store for guests, local state for staff
       if (isGuest) {
         // Let the store handle message initialization
+        setLoading(false); // Clear loading state for guests
+        setLoadingMore(false);
         return; // guestChatStore will be updated via fetchGuestMessages
       }
       
@@ -885,12 +889,20 @@ const ChatWindow = ({
 
   // Initialize guest conversation when component loads
   useEffect(() => {
-    if (isGuest && conversationId && !activeGuestConversation) {
+    if (isGuest && conversationId) {
       console.log('🔄 [GUEST CHAT] Setting active conversation:', conversationId);
       setActiveGuestConversation(conversationId);
-      fetchGuestMessages(conversationId);
+      fetchGuestMessages(conversationId).then(() => {
+        console.log('📥 [GUEST CHAT] Messages fetched, clearing loading state');
+        setLoading(false);
+        setLoadingMore(false);
+      }).catch((err) => {
+        console.error('❌ [GUEST CHAT] Failed to fetch messages:', err);
+        setLoading(false);
+        setLoadingMore(false);
+      });
     }
-  }, [isGuest, conversationId, activeGuestConversation, setActiveGuestConversation, fetchGuestMessages]);
+  }, [isGuest, conversationId, setActiveGuestConversation, fetchGuestMessages]);
 
   // FCM foreground message listener for guests
   useEffect(() => {
@@ -2176,7 +2188,7 @@ const ChatWindow = ({
           >
             {selectedFiles.map((file, index) => (
               <div 
-                key={index} 
+                key={`${file.name}-${file.size}-${file.lastModified}-${index}`} 
                 className="file-preview position-relative d-flex flex-column align-items-center p-2 bg-white rounded"
                 style={{ minWidth: '80px' }}
               >

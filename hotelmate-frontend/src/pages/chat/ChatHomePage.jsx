@@ -20,7 +20,7 @@ const ChatHomePage = ({ selectedRoom, onSelectRoom, onUnreadChange }) => {
 
   // Get the full conversation object
   const currentConversation = conversations.find(
-    (c) => c.conversation_id === selectedConversation
+    (c) => (c.conversation_id || c.id) === selectedConversation
   );
 
   // Listen to window resize to auto-show/hide sidebar
@@ -78,10 +78,7 @@ const ChatHomePage = ({ selectedRoom, onSelectRoom, onUnreadChange }) => {
               <i className="bi bi-chat-dots-fill" style={{ color: mainColor || '#3498db' }} />
               <span className="action-label" style={{ color: mainColor || '#3498db' }}>All Chats</span>
             </button>
-            <button className="contextual-action-btn" onClick={() => navigate(`/${hotelSlug}/staff-chat`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
-              <i className="bi bi-people" style={{ color: mainColor || '#3498db' }} />
-              <span className="action-label" style={{ color: mainColor || '#3498db' }}>Staff Chat</span>
-            </button>
+           
             <button className="contextual-action-btn" onClick={() => {}} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
               <i className="bi bi-bell" style={{ color: mainColor || '#3498db' }} />
               <span className="action-label" style={{ color: mainColor || '#3498db' }}>Notifications</span>
