@@ -4,30 +4,29 @@ import api from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useTheme } from "@/context/ThemeContext";
 import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationContext";
+import { useRoomServiceState, useRoomServiceDispatch } from "@/realtime/stores/roomServiceStore";
+import { roomServiceActions } from "@/realtime/stores/roomServiceStore";
 
 export default function BreakfastRoomService() {
   const { user } = useAuth();
   const hotelSlug = user?.hotel_slug;
   const { refreshAll } = useOrderCount(hotelSlug);
   const { hasNewBreakfast, markBreakfastRead } = useRoomServiceNotifications();
-  const [orders, setOrders] = useState([]);
-  const [pendingCount, setPendingCount] = useState(0);
+  const roomServiceState = useRoomServiceState();
+  const dispatch = useRoomServiceDispatch();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { mainColor } = useTheme();
 
-  const fetchPendingCount = () => {
-    if (!hotelSlug) return;
-
-    api
-      .get(`/room_services/${hotelSlug}/breakfast-orders/breakfast-pending-count/`)
-      .then((res) => {
-        setPendingCount(res.data.count || 0);
-      })
-      .catch((err) => {
-        console.error("Error fetching pending count:", err);
-      });
-  };
+  // Get breakfast orders from store
+  const orders = Object.values(roomServiceState.ordersById)
+    .filter(order => order.type === 'breakfast' || order.breakfast_order === true)
+    .sort((a, b) => new Date(b.created_at || b.timestamp) - new Date(a.created_at || a.timestamp));
+  
+  // Calculate pending count from store
+  const pendingCount = orders.filter(order => 
+    order.status === 'pending' || order.status === 'accepted'
+  ).length;
 
   const fetchOrders = () => {
     if (!hotelSlug) {
@@ -43,15 +42,14 @@ export default function BreakfastRoomService() {
       .then((res) => {
         let data = res.data;
         if (data && Array.isArray(data.results)) data = data.results;
-        setOrders(Array.isArray(data) ? data : []);
+        
+        // Initialize store with fetched data
+        roomServiceActions.initFromAPI(Array.isArray(data) ? data : []);
         
         // Mark notifications as read when viewing the page
         if (hasNewBreakfast) {
           markBreakfastRead();
         }
-
-        // Fetch pending count
-        fetchPendingCount();
       })
       .catch((err) => {
         setError("Error fetching breakfast orders.");
@@ -90,12 +88,11 @@ export default function BreakfastRoomService() {
       return;
     }
 
-    // Optimistically update UI
-    setOrders((all) =>
-      newStatus === "completed"
-        ? all.filter((o) => o.id !== order.id)
-        : all.map((o) => (o.id === order.id ? { ...o, status: newStatus } : o))
-    );
+    // Optimistically update store (realtime event will update definitively)
+    dispatch({
+      type: 'ORDER_STATUS_CHANGED',
+      payload: { order: { ...order, status: newStatus }, orderId: order.id }
+    });
 
     api
       .patch(`/room_services/${hotelSlug}/breakfast-orders/${order.id}/`, {

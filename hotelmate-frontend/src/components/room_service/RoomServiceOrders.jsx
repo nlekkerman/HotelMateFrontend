@@ -5,6 +5,8 @@ import api from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useTheme } from "@/context/ThemeContext";
 import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationContext";
+import { useRoomServiceState, useRoomServiceDispatch } from "@/realtime/stores/roomServiceStore";
+import { roomServiceActions } from "@/realtime/stores/roomServiceStore";
 
 export default function RoomServiceOrders() {
   const { user } = useAuth();
@@ -12,10 +14,16 @@ export default function RoomServiceOrders() {
   const hotelSlug = user?.hotel_slug;
   const { refreshAll: refreshCount } = useOrderCount(hotelSlug);
   const { hasNewRoomService, markRoomServiceRead } = useRoomServiceNotifications();
-  const [orders, setOrders] = useState([]);
+  const roomServiceState = useRoomServiceState();
+  const dispatch = useRoomServiceDispatch();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { mainColor } = useTheme();
+
+  // Get room service orders from store (excluding breakfast)
+  const orders = Object.values(roomServiceState.ordersById)
+    .filter(order => order.type !== 'breakfast' && !order.breakfast_order)
+    .sort((a, b) => new Date(b.created_at || b.timestamp) - new Date(a.created_at || a.timestamp));
 
   const fetchOrders = () => {
     if (!hotelSlug) {
@@ -31,7 +39,9 @@ export default function RoomServiceOrders() {
       .then((res) => {
         let data = res.data;
         if (data && Array.isArray(data.results)) data = data.results;
-        setOrders(Array.isArray(data) ? data : []);
+        
+        // Initialize store with fetched data
+        roomServiceActions.initFromAPI(Array.isArray(data) ? data : []);
         
         // Mark notifications as read when viewing the page
         if (hasNewRoomService) {

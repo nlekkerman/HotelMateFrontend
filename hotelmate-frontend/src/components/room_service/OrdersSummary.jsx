@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import api, { setHotelIdentifier } from '@/services/apiWithHotel';
+import { useRoomServiceState } from '@/realtime/stores/roomServiceStore';
+import { roomServiceActions } from '@/realtime/stores/roomServiceStore';
 import { toast } from 'react-toastify';
 
 export default function OrdersSummary() {
   const { hotelIdentifier } = useParams();
+  const roomServiceState = useRoomServiceState();
   const [orders, setOrders] = useState([]);
   const [pagination, setPagination] = useState({});
   const [statusBreakdown, setStatusBreakdown] = useState([]);
   const [ordersByRoom, setOrdersByRoom] = useState([]);
   const [loading, setLoading] = useState(false);
+  
+  // Get current orders from store for real-time updates
+  const storeOrders = Object.values(roomServiceState.ordersById);
   
   const [filters, setFilters] = useState({
     room_number: '',
@@ -42,6 +48,11 @@ export default function OrdersSummary() {
       setPagination(response.data.pagination);
       setStatusBreakdown(response.data.status_breakdown);
       setOrdersByRoom(response.data.orders_by_room || []);
+      
+      // Also initialize the store with the orders for realtime updates
+      if (response.data.orders && response.data.orders.length > 0) {
+        roomServiceActions.initFromAPI(response.data.orders);
+      }
       
       console.log('📊 Orders summary loaded:', {
         total: response.data.pagination.total_orders,

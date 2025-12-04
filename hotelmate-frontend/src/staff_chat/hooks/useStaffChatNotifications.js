@@ -1,14 +1,15 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { toast } from 'react-toastify';
-import { usePusherContext } from '../context/PusherProvider';
+import { useNavigate } from 'react-router-dom';
+import { useChatState } from '@/realtime/stores/chatStore.jsx';
 
 /**
- * Custom hook for global staff chat notifications
- * Shows toast notifications when receiving new messages
- * Updates unread count badge in sidebar/navigation
+ * Custom hook for global staff chat notifications via centralized store
+ * Shows toast notifications when receiving new messages from store state
+ * Updates unread count badge based on store data
  * 
  * @param {Object} params - Hook parameters
- * @param {string} params.hotelSlug - Hotel slug for channel subscription
+ * @param {string} params.hotelSlug - Hotel slug (for compatibility)
  * @param {number} params.staffId - Current staff ID
  * @param {number} params.currentConversationId - ID of currently open conversation (to avoid duplicate notifications)
  * @param {Function} params.onNewMessage - Callback when new message received
@@ -22,9 +23,11 @@ const useStaffChatNotifications = ({
   onNewMessage,
   onUnreadCountChange
 }) => {
-  const { bind, unbind, subscribe, unsubscribe, isReady, enabled } = usePusherContext();
+  const chatState = useChatState();
+  const navigate = useNavigate();
   const audioRef = useRef(null);
   const lastNotificationTime = useRef({});
+  const previousMessageCounts = useRef({});
 
   // Initialize notification sound (optional)
   useEffect(() => {
@@ -87,10 +90,7 @@ const useStaffChatNotifications = ({
         }}
         onClick={() => {
           // Navigate to conversation when clicked
-          const event = new CustomEvent('openStaffChatConversation', {
-            detail: { conversationId: conversation_id }
-          });
-          window.dispatchEvent(event);
+          navigate(`/${hotelSlug}/staff-chat?conversation=${conversation_id}`);
           toast.dismiss();
         }}
       >
@@ -200,10 +200,7 @@ const useStaffChatNotifications = ({
           gap: '12px'
         }}
         onClick={() => {
-          const event = new CustomEvent('openStaffChatConversation', {
-            detail: { conversationId: conversation_id }
-          });
-          window.dispatchEvent(event);
+          navigate(`/${hotelSlug}/staff-chat?conversation=${conversation_id}`);
           toast.dismiss();
         }}
       >
@@ -290,65 +287,70 @@ const useStaffChatNotifications = ({
   }, [onNewMessage, onUnreadCountChange, showMentionNotification, showMessageNotification]);
 
   /**
-   * Subscribe to personal notification channel
+   * Monitor store state for new messages and trigger notifications
    */
   useEffect(() => {
-    if (!enabled || !isReady || !staffId || !hotelSlug) {
-      // console.log('Skipping notification subscription:', { enabled, isReady, staffId, hotelSlug });
+    if (!staffId) {
       return;
     }
 
-    // Personal notification channel: {hotel_slug}-staff-{staff_id}-notifications
-    const personalChannel = `${hotelSlug}-staff-${staffId}-notifications`;
+    // Check for new messages in all conversations
+    Object.values(chatState.conversationsById).forEach(conversation => {
+      if (!conversation.messages) return;
+      
+      const conversationId = conversation.id;
+      const currentMessageCount = conversation.messages.length;
+      const previousCount = previousMessageCounts.current[conversationId] || 0;
+      
+      // If we have new messages
+      if (currentMessageCount > previousCount) {
+        const newMessages = conversation.messages.slice(previousCount);
+        
+        newMessages.forEach(message => {
+          // Don't notify for own messages or messages in active conversation
+          if (message.sender_id === staffId || conversationId === currentConversationId) {
+            return;
+          }
+          
+          // Trigger notification for new message
+          const notificationData = {
+            conversation_id: conversationId,
+            sender: {
+              id: message.sender_id,
+              full_name: message.sender_name,
+              profile_image_url: message.sender_avatar
+            },
+            content: message.message || message.content,
+            message_type: message.message_type || 'text'
+          };
+          
+          handlePersonalNotification(notificationData);
+        });
+      }
+      
+      // Update the previous count
+      previousMessageCounts.current[conversationId] = currentMessageCount;
+    });
+  }, [chatState.conversationsById, staffId, currentConversationId, handlePersonalNotification]);
 
-    // console.log(`Subscribing to personal notifications: ${personalChannel}`);
-    subscribe(personalChannel);
+  // Navigation now handled directly via React Router (window events removed)
 
-    // Bind to new-message event (sent when user receives a message in any conversation)
-    bind(personalChannel, 'new-message', handlePersonalNotification);
-    
-    // Bind to mention event (sent when user is @mentioned)
-    bind(personalChannel, 'mention', handlePersonalNotification);
+  // Calculate total unread count from store
+  const totalUnreadCount = Object.values(chatState.conversationsById).reduce((total, conv) => {
+    return total + (conv.unreadCount || 0);
+  }, 0);
 
-    // Cleanup
-    return () => {
-      // console.log(`Unsubscribing from personal notifications: ${personalChannel}`);
-      unbind(personalChannel, 'new-message', handlePersonalNotification);
-      unbind(personalChannel, 'mention', handlePersonalNotification);
-      unsubscribe(personalChannel);
-    };
-  }, [
-    enabled,
-    isReady,
-    staffId,
-    hotelSlug,
-    subscribe,
-    unsubscribe,
-    bind,
-    unbind,
-    handlePersonalNotification
-  ]);
-
-  /**
-   * Listen for custom event to open conversation
-   */
+  // Trigger unread count callback when count changes
   useEffect(() => {
-    const handleOpenConversation = (event) => {
-      const { conversationId } = event.detail;
-      // Navigate to staff chat with conversation
-      window.location.href = `/${hotelSlug}/staff-chat?conversation=${conversationId}`;
-    };
-
-    window.addEventListener('openStaffChatConversation', handleOpenConversation);
-
-    return () => {
-      window.removeEventListener('openStaffChatConversation', handleOpenConversation);
-    };
-  }, [hotelSlug]);
+    if (onUnreadCountChange) {
+      onUnreadCountChange(totalUnreadCount);
+    }
+  }, [totalUnreadCount, onUnreadCountChange]);
 
   return {
     showMessageNotification,
-    showMentionNotification
+    showMentionNotification,
+    totalUnreadCount
   };
 };
 

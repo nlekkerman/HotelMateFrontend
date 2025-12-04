@@ -3,9 +3,12 @@ import api from "@/services/api";
 import RestaurantReservationDetails from "@/components/bookings/RestaurantReservationDetails";
 import BookingsGrid from "@/components/bookings/BookingsGrid";
 import BookingsHistory from "@/components/bookings/BookingsHistory";
+import { useBookingState } from "@/realtime/stores/bookingStore";
+import { bookingActions } from "@/realtime/stores/bookingStore";
 import { Modal } from "react-bootstrap";
 
 export default function RestaurantBookings({ hotelSlug, restaurantId }) {
+  const bookingState = useBookingState();
   const [bookings, setBookings] = useState([]);
   const [restaurantSlug, setRestaurantSlug] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,6 +17,10 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
   const [showGrid, setShowGrid] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const displayDate = new Date().toISOString().slice(0, 10);
+  
+  // Get bookings from store filtered by restaurant
+  const storeBookings = Object.values(bookingState.bookingsById)
+    .filter(booking => booking.restaurant_id === Number(restaurantId));
 
   // Fetch restaurant slug
   useEffect(() => {
@@ -66,7 +73,11 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
     setError(null);
 
     fetchAllPages({ hotel_slug: hotelSlug, restaurant: restaurantSlug })
-      .then(() => setBookings(allResults))
+      .then(() => {
+        setBookings(allResults);
+        // Initialize store with fetched data
+        bookingActions.initFromAPI(allResults);
+      })
       .catch(() => setError("Failed to fetch bookings."))
       .finally(() => setLoading(false));
   }, [hotelSlug, restaurantSlug]);
@@ -77,10 +88,20 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
     return dateA - dateB;
   };
 
-  const todaysBookings = bookings
+  // Combine local bookings with store bookings for comprehensive display
+  const allBookingsList = [...bookings, ...storeBookings];
+  // Remove duplicates based on booking ID
+  const uniqueBookings = allBookingsList.reduce((acc, booking) => {
+    if (!acc.find(b => b.id === booking.id)) {
+      acc.push(booking);
+    }
+    return acc;
+  }, []);
+
+  const todaysBookings = uniqueBookings
     .filter((b) => b.date === displayDate)
     .sort(sortBookings);
-  const upcomingBookings = bookings
+  const upcomingBookings = uniqueBookings
     .filter((b) => b.date > displayDate)
     .sort(sortBookings);
 

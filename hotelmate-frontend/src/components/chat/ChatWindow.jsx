@@ -6,7 +6,7 @@ import { useChat } from "@/context/ChatContext";
 import useHotelLogo from "@/hooks/useHotelLogo";
 import EmojiPicker from "emoji-picker-react";
 import { GuestChatSession } from "@/utils/guestChatSession";
-import { useGuestPusher } from "@/hooks/useGuestPusher";
+
 import { messaging } from "@/firebase";
 import { onMessage } from "firebase/messaging";
 import ConfirmationModal from "@/components/modals/ConfirmationModal";
@@ -129,41 +129,21 @@ const ChatWindow = ({
   const [guestSession, setGuestSession] = useState(null);
   const [currentStaff, setCurrentStaff] = useState(null);
   
-  // Guest Pusher channels - compute them directly from props
-  // According to backend docs: guests need THREE channels
-  // 1. Room channel: for new-staff-message, new-message, staff-assigned
-  // 2. Conversation channel: for messages-read-by-staff (read receipts)
-  // 3. Deletion channel: for content-deleted, attachment-deleted (NEW - dedicated for deletions)
-  const guestRoomChannel = isGuest && hotelSlug && roomNumber 
-    ? `${hotelSlug}-room-${roomNumber}-chat` 
-    : null;
-  
-  const guestConversationChannel = isGuest && hotelSlug && conversationId
-    ? `${hotelSlug}-conversation-${conversationId}-chat`
-    : null;
-  
-  // NEW: Dedicated deletion channel for reliable deletion sync
-  const guestDeletionChannel = isGuest && hotelSlug && roomNumber
-    ? `${hotelSlug}-room-${roomNumber}-deletions`
-    : null;
-  
-  // Debug log for guest Pusher channels
+  // Guest chat channels now managed by centralized RealtimeProvider
+  // Debug log for guest setup
   useEffect(() => {
     if (isGuest) {
-      console.log('🔍 Guest Pusher Channels Debug:', {
+      console.log('🔍 Guest Chat Store Debug:', {
         isGuest,
         hotelSlug,
         roomNumber,
         conversationId,
-        guestRoomChannel,
-        guestConversationChannel,
-        guestDeletionChannel,
-        roomChannelReady: !!guestRoomChannel,
-        conversationChannelReady: !!guestConversationChannel,
-        deletionChannelReady: !!guestDeletionChannel
+        usingCentralizedStore: true,
+        hasActiveConversation: !!activeGuestConversation,
+        messageCount: guestMessages?.length || 0
       });
     }
-  }, [isGuest, hotelSlug, roomNumber, conversationId, guestRoomChannel, guestConversationChannel, guestDeletionChannel]);
+  }, [isGuest, hotelSlug, roomNumber, conversationId, activeGuestConversation, guestMessages]);
   
   // Use conversation data from props (already fetched in ChatHomePage)
   const [conversationDetails, setConversationDetails] = useState(propConversationData || null);
@@ -263,7 +243,18 @@ const ChatWindow = ({
   const emojiButtonRef = useRef(null);
   const messageInputRef = useRef(null);
   const fileInputRef = useRef(null);
-  const { markConversationRead, pusherInstance, setCurrentConversationId } = useChat();
+  const { 
+    markConversationRead, 
+    pusherInstance, 
+    setCurrentConversationId,
+    // Guest chat functionality from guestChatStore
+    guestMessages,
+    activeGuestConversation,
+    fetchGuestMessages,
+    setActiveGuestConversation,
+    markGuestConversationReadForStaff,
+    markGuestConversationReadForGuest
+  } = useChat();
 
   // Initialize reply handlers from utility
   const { startReply, cancelReply, clearReplyAfterSend } = createReplyHandlers(setReplyingTo, messageInputRef);
@@ -347,6 +338,12 @@ const ChatWindow = ({
         }
         return msg;
       });
+
+      // Use guest chat store for guests, local state for staff
+      if (isGuest) {
+        // Let the store handle message initialization
+        return; // guestChatStore will be updated via fetchGuestMessages
+      }
       
       const container = messagesContainerRef.current;
 
@@ -477,7 +474,7 @@ const ChatWindow = ({
   useEffect(() => {
     if (!conversationId || !hotelSlug) return;
     
-    // IMPORTANT: Skip staff Pusher if this is a guest (guests use useGuestPusher hook)
+    // IMPORTANT: Skip staff Pusher if this is a guest (guests use centralized guestChatStore)
     if (isGuest) {
       console.log('⏭️ Skipping staff Pusher - using guest Pusher hook instead');
       return;
@@ -879,97 +876,21 @@ const ChatWindow = ({
     }
   }, []);
 
-  // Use guest Pusher hook with MULTIPLE channels
-  // According to backend docs: guests subscribe to:
-  // 1. Room channel: for new-staff-message, new-message, staff-assigned
-  // 2. Conversation channel: for messages-read-by-staff (read receipts)
-  // 3. Deletion channel: for content-deleted, attachment-deleted (NEW - dedicated for deletions)
-  // Build channels array conditionally - each channel subscribes independently
-  const guestPusherChannels = isGuest 
-    ? [
-        // Room channel - for receiving staff messages
-        ...(guestRoomChannel ? [{
-          name: guestRoomChannel,
-          events: {
-            'new-staff-message': handleNewStaffMessage,
-            'new-message': handleNewMessage,
-            'staff-assigned': handleStaffAssigned,
-            // Legacy deletion events - kept for backward compatibility
-            'message-deleted': handleMessageDeleted,
-            'message-removed': handleMessageDeleted,
-          }
-        }] : []),
-        // Conversation channel - for read receipts only
-        ...(guestConversationChannel ? [{
-          name: guestConversationChannel,
-          events: {
-            'messages-read-by-staff': handleMessagesReadByStaff,
-          }
-        }] : []),
-        // NEW: Dedicated deletion channel - ensures deletions always reach guest UI
-        ...(guestDeletionChannel ? [{
-          name: guestDeletionChannel,
-          events: {
-            'content-deleted': handleContentDeleted,
-            'attachment-deleted': handleAttachmentDeleted,
-          }
-        }] : [])
-      ]
-    : [];
+  // Guest chat now uses centralized guestChatStore via RealtimeProvider
+  // All Pusher subscriptions are handled by the eventBus system
+  console.log('🔧 [CHATWINDOW] Guest chat now uses centralized store via RealtimeProvider');
 
-  console.log('🔧 [CHATWINDOW] Setting up Pusher hook with channels:', {
-    isGuest,
-    channelCount: guestPusherChannels.length,
-    channels: guestPusherChannels.map(ch => ch.name),
-    roomChannel: guestRoomChannel,
-    conversationChannel: guestConversationChannel,
-    deletionChannel: guestDeletionChannel,
-    roomChannelEvents: guestPusherChannels[0]?.events ? Object.keys(guestPusherChannels[0].events) : [],
-    conversationChannelEvents: guestPusherChannels[1]?.events ? Object.keys(guestPusherChannels[1].events) : [],
-    deletionChannelEvents: guestPusherChannels[2]?.events ? Object.keys(guestPusherChannels[2].events) : []
-  });
+  // Use appropriate messages source based on user type
+  const displayMessages = isGuest ? guestMessages : messages;
 
-  console.log('🔧 [GUEST PUSHER] Deletion handlers:', {
-    handleMessageDeleted: !!handleMessageDeleted,
-    handleContentDeleted: !!handleContentDeleted,
-    handleAttachmentDeleted: !!handleAttachmentDeleted
-  });
-  
-  console.log('🔔 [GUEST PUSHER] Waiting for deletion events on channels:', {
-    roomChannel: guestRoomChannel,
-    deletionChannel: guestDeletionChannel
-  });
-  
-  // Detailed event handler check
-  if (guestPusherChannels.length > 0) {
-    guestPusherChannels.forEach((ch, idx) => {
-      console.log(`🔍 [DEBUG] Channel ${idx + 1}:`, {
-        name: ch.name,
-        events: Object.keys(ch.events),
-        eventHandlers: Object.entries(ch.events).map(([event, handler]) => ({
-          event,
-          handlerType: typeof handler,
-          handlerName: handler.name || 'anonymous'
-        }))
-      });
-    });
-  }
-  
-  // CRITICAL DEBUG: Verify deletion channel configuration before passing to hook
-  const deletionChannelConfig = guestPusherChannels.find(ch => ch.name && ch.name.includes('-deletions'));
-  if (deletionChannelConfig) {
-    console.log('🚨 [DELETION CHANNEL CONFIG]', {
-      channelName: deletionChannelConfig.name,
-      hasContentDeletedHandler: !!deletionChannelConfig.events['content-deleted'],
-      hasAttachmentDeletedHandler: !!deletionChannelConfig.events['attachment-deleted'],
-      contentDeletedType: typeof deletionChannelConfig.events['content-deleted'],
-      attachmentDeletedType: typeof deletionChannelConfig.events['attachment-deleted']
-    });
-  } else {
-    console.warn('⚠️ [DELETION CHANNEL] No deletion channel found in guestPusherChannels!');
-  }
-
-  useGuestPusher(guestPusherChannels);
+  // Initialize guest conversation when component loads
+  useEffect(() => {
+    if (isGuest && conversationId && !activeGuestConversation) {
+      console.log('🔄 [GUEST CHAT] Setting active conversation:', conversationId);
+      setActiveGuestConversation(conversationId);
+      fetchGuestMessages(conversationId);
+    }
+  }, [isGuest, conversationId, activeGuestConversation, setActiveGuestConversation, fetchGuestMessages]);
 
   // FCM foreground message listener for guests
   useEffect(() => {

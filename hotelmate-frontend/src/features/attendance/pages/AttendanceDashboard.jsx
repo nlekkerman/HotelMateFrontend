@@ -231,10 +231,8 @@ function AttendanceDashboardComponent() {
     if (type === 'clock-status-updated') {
       console.log('[AttendanceDashboard] Real-time clock status update:', payload);
       
-      // Broadcast to navbar for button updates
-      window.dispatchEvent(new CustomEvent('pusherClockStatusUpdate', {
-        detail: payload
-      }));
+      // Window event dispatching removed - realtime updates now handled through attendance store
+      // The navbar and other components should use the store-driven hooks instead
       
       // Show status notification
       if (payload.first_name && payload.action) {

@@ -59,34 +59,12 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
     }
   };
   
-  // Handle broadcasted status updates from other components
-  const handleBroadcastedStatusUpdate = (event) => {
-    const { staffId, currentStatus, isOnDuty } = event.detail;
-    console.log('[StaffProfile] Broadcasted status update:', event.detail);
-    
-    if (staffId === staff.id) {
-      console.log('[StaffProfile] Updating from broadcast for current staff');
-      setRealTimeStaff(prev => ({
-        ...prev,
-        is_on_duty: isOnDuty,
-        current_status: currentStatus
-      }));
-      
-      // Also invalidate queries
-      queryClient.invalidateQueries({ queryKey: ["staffMe", hotelSlug] });
-    }
-  };
+  // Status updates now handled through attendanceStore
   
   // Subscribe to real-time updates
   useAttendanceRealtime(hotelSlug, handleAttendanceEvent);
   
-  // Listen for broadcasted status updates
-  useEffect(() => {
-    window.addEventListener('staffStatusUpdated', handleBroadcastedStatusUpdate);
-    return () => {
-      window.removeEventListener('staffStatusUpdated', handleBroadcastedStatusUpdate);
-    };
-  }, [staff.id, hotelSlug]);
+  // Status updates now handled through attendanceStore (window events removed)
   
   // Update local state when staff prop changes
   useEffect(() => {

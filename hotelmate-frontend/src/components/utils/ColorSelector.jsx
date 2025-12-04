@@ -34,7 +34,7 @@ export default function ColorSelector() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await api.get(`common/${hotel_slug}/theme/`);
+        const res = await api.get(`staff/hotel/${hotel_slug}/settings/`);
         const {
           main_color,
           secondary_color,
@@ -88,7 +88,7 @@ const isColorDark = (hexColor) => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await api.patch(`common/${hotel_slug}/theme/`, {
+      const res = await api.patch(`staff/hotel/${hotel_slug}/settings/`, {
         main_color: mainColor,
         secondary_color: secondaryColor,
         button_color: buttonColor,

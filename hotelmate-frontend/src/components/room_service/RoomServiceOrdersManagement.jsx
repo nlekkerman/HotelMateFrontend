@@ -5,6 +5,8 @@ import api from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useTheme } from "@/context/ThemeContext";
 import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationContext";
+import { useRoomServiceState, useRoomServiceDispatch } from "@/realtime/stores/roomServiceStore";
+import { roomServiceActions } from "@/realtime/stores/roomServiceStore";
 import { toast } from "react-toastify";
 
 export default function RoomServiceOrdersManagement() {
@@ -13,12 +15,14 @@ export default function RoomServiceOrdersManagement() {
   const hotelSlug = hotelIdentifier || user?.hotel_slug;
   const { refreshAll: refreshCount } = useOrderCount(hotelSlug);
   const { hasNewRoomService, markRoomServiceRead } = useRoomServiceNotifications();
+  const roomServiceState = useRoomServiceState();
+  const dispatch = useRoomServiceDispatch();
   const { mainColor } = useTheme();
 
   // View mode: 'active' or 'history'
   const [viewMode, setViewMode] = useState('active');
   
-  const [orders, setOrders] = useState([]);
+  const [historyOrders, setHistoryOrders] = useState([]); // For history view only
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
@@ -35,9 +39,12 @@ export default function RoomServiceOrdersManagement() {
     page_size: 20
   });
 
-  // For active orders, display all - no filtering
-  // For history, orders are already filtered by the backend via API
-  const displayOrders = orders;
+  // Get active orders from store, history orders from local state (since they're filtered/paginated)
+  const activeOrders = Object.values(roomServiceState.ordersById)
+    .filter(order => order.status !== 'completed' && order.status !== 'cancelled')
+    .sort((a, b) => new Date(b.created_at || b.timestamp) - new Date(a.created_at || a.timestamp));
+  
+  const displayOrders = viewMode === 'active' ? activeOrders : historyOrders;
 
   const fetchActiveOrders = async () => {
     if (!hotelSlug) {
@@ -59,7 +66,8 @@ export default function RoomServiceOrdersManagement() {
         activeOrders = activeOrders.results;
       }
       
-      setOrders(activeOrders);
+      // Initialize store with active orders
+      roomServiceActions.initFromAPI(activeOrders);
       
       // Calculate status breakdown for active orders
       const breakdown = [
@@ -121,7 +129,7 @@ export default function RoomServiceOrdersManagement() {
       );
 
       const data = response.data;
-      setOrders(data.orders || []);
+      setHistoryOrders(data.orders || []);
       setPagination(data.pagination || {});
       
     } catch (err) {

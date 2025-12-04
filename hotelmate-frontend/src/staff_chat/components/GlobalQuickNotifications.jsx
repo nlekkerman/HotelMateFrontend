@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useStaffChat } from '../context/StaffChatContext';
+import { useChatState } from '@/realtime/stores/chatStore.jsx';
 import QuickNotificationButtons from './QuickNotificationButtons';
 import useUnreadCount from '../hooks/useUnreadCount';
 
@@ -15,70 +16,85 @@ const GlobalQuickNotifications = () => {
   const hotelSlug = user?.hotel_slug;
   const staffId = user?.staff_id || user?.id;
   
-  // Get subscription methods and conversations from StaffChatContext (single source of truth!)
-  const { subscribeToMessages, conversations } = useStaffChat();
+  // Get data from both contexts - new chatStore and legacy for compatibility
+  const chatState = useChatState();
+  const { conversations, totalUnread } = useStaffChat();
   
   // Store notifications state locally
   const [notifications, setNotifications] = useState([]);
+  const [previousConversationMessages, setPreviousConversationMessages] = useState({});
 
-  // Get actual unread count from API
-  const { totalUnread, conversationsWithUnread } = useUnreadCount(hotelSlug, 10000); // Check every 10 seconds
-
-  // Subscribe to new messages from StaffChatContext
+  // Monitor chatStore for new messages and generate notifications
   useEffect(() => {
     if (!hotelSlug || !staffId) return;
 
-    console.log('🔔 [GlobalQuickNotifications] Subscribing to StaffChatContext messages');
+    console.log('🔔 [GlobalQuickNotifications] Monitoring chatStore for new messages');
 
-    const unsubscribe = subscribeToMessages((message) => {
-      // Check if message is from someone else (not me)
-      const senderId = message.sender_info?.id || message.sender;
-      if (senderId === staffId) {
-        console.log('⏭️ [GlobalQuickNotifications] Skipping my own message');
-        return;
-      }
-
-      console.log('🔔 [GlobalQuickNotifications] New message received! Adding notification button');
+    // Check each conversation for new messages
+    Object.values(chatState.conversationsById).forEach(conversation => {
+      const conversationId = conversation.id;
+      const currentMessages = conversation.messages;
+      const previousMessages = previousConversationMessages[conversationId] || [];
       
-      const conversationId = message.conversation || message.conversation_id;
-      const senderName = message.sender_info?.full_name || message.sender_name || 'Someone';
+      // Find new messages (messages that weren't in previous state)
+      const newMessages = currentMessages.filter(msg => 
+        !previousMessages.some(prevMsg => prevMsg.id === msg.id)
+      );
+      
+      if (newMessages.length > 0) {
+        newMessages.forEach(message => {
+          // Check if message is from someone else (not me)
+          const senderId = message.sender_info?.id || message.sender_id || message.sender;
+          if (senderId === staffId) {
+            console.log('⏭️ [GlobalQuickNotifications] Skipping my own message');
+            return;
+          }
 
-      // Add or update notification
-      setNotifications(prev => {
-        const existing = prev.find(n => n.conversationId === conversationId);
-        
-        if (existing) {
-          // Update count
-          return prev.map(n => 
-            n.conversationId === conversationId
-              ? { ...n, count: n.count + 1, lastUpdate: new Date() }
-              : n
-          );
-        } else {
-          // Add new notification
-          return [
-            ...prev,
-            {
-              id: `msg-${conversationId}-${Date.now()}`,
-              category: 'staff_chat_message',
-              conversationId,
-              count: 1,
-              from: senderName,
-              icon: 'chat-left-text-fill',
-              color: '#3498db',
-              lastUpdate: new Date(),
-              data: message
+          console.log('🔔 [GlobalQuickNotifications] New message detected! Adding notification button');
+          
+          const senderName = message.sender_info?.full_name || message.sender_name || 'Someone';
+
+          // Add or update notification
+          setNotifications(prev => {
+            const existing = prev.find(n => n.conversationId === conversationId);
+            
+            if (existing) {
+              // Update count
+              return prev.map(n => 
+                n.conversationId === conversationId
+                  ? { ...n, count: n.count + 1, lastUpdate: new Date() }
+                  : n
+              );
+            } else {
+              // Add new notification
+              return [
+                ...prev,
+                {
+                  id: `msg-${conversationId}-${Date.now()}`,
+                  category: 'staff_chat_message',
+                  conversationId,
+                  count: 1,
+                  from: senderName,
+                  icon: 'chat-left-text-fill',
+                  color: '#3498db',
+                  lastUpdate: new Date(),
+                  data: message
+                }
+              ];
             }
-          ];
-        }
-      });
+          });
+        });
+      }
     });
 
-    return () => {
-      console.log('🧹 [GlobalQuickNotifications] Unsubscribing from StaffChatContext');
-      unsubscribe();
-    };
-  }, [subscribeToMessages, hotelSlug, staffId]);
+    // Update previous messages state
+    const newPreviousMessages = {};
+    Object.values(chatState.conversationsById).forEach(conversation => {
+      newPreviousMessages[conversation.id] = [...conversation.messages];
+    });
+    setPreviousConversationMessages(newPreviousMessages);
+
+  }, [chatState.conversationsById, hotelSlug, staffId, previousConversationMessages]);
 
   // Remove notifications when messages are read
   useEffect(() => {
@@ -86,18 +102,17 @@ const GlobalQuickNotifications = () => {
       // All messages are read, clear all staff chat notifications
       console.log('🧹 [GlobalQuickNotifications] All messages read, clearing notifications');
       setNotifications([]);
-    } else if (conversationsWithUnread.length > 0) {
+    } else if (conversations.length > 0) {
       // Check each notification and remove if conversation has no unread
       setNotifications(prev => 
         prev.filter(notification => {
-          const hasUnread = conversationsWithUnread.some(
-            c => c.conversation_id === notification.conversationId && c.unread_count > 0
-          );
+          const conversation = conversations.find(c => c.id === notification.conversationId);
+          const hasUnread = conversation && (conversation.unread_count > 0 || conversation.unreadCount > 0);
           return hasUnread;
         })
       );
     }
-  }, [totalUnread, conversationsWithUnread, notifications.length]);
+  }, [totalUnread, conversations, notifications.length]);
 
   // Handler to remove a notification
   const removeNotification = useCallback((id) => {

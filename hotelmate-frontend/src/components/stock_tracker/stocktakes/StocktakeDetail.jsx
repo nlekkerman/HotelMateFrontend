@@ -22,6 +22,7 @@ import {
 } from "react-icons/fa";
 import { FileDown, FileSpreadsheet } from "lucide-react";
 import { toast } from "react-toastify";
+// TODO: migrate this domain to centralized realtime (eventBus + store)
 import Pusher from "pusher-js";
 import api from "@/services/api";
 import { StocktakeLines } from "./StocktakeLines";

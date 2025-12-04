@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import DeletionModal from "@/components/modals/DeletionModal";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import useOrdersWebSocket from "@/hooks/useOrdersWebSocket";
-import { useGuestPusher } from "@/hooks/useGuestPusher";
+import { useRoomServiceState, useRoomServiceDispatch, roomServiceActions } from "@/realtime/stores/roomServiceStore.jsx";
 
 
 export default function RoomService({ isAdmin }) {
@@ -17,42 +17,23 @@ export default function RoomService({ isAdmin }) {
   const [currentOrder, setCurrentOrder] = useState(null);
   const currentOrderId = currentOrder?.id ?? null;
 
-  // Pusher: Listen for order status updates
-  const channelName = hotelIdentifier && roomNumber 
-    ? `${hotelIdentifier}-room-${roomNumber}` 
-    : null;
+  // Use roomServiceStore for realtime updates
+  const roomServiceState = useRoomServiceState();
+  const roomServiceDispatch = useRoomServiceDispatch();
 
-  useGuestPusher(channelName, {
-    'order-status-update': (data) => {
-      // Extract order ID and status (handle both field name formats)
-      const orderId = Number(data.updated_order_id || data.order_id);
-      const newStatus = data.new_status || data.status;
-      
-      if (!orderId || !newStatus) {
-        return;
-      }
-      
-      // Update currentOrder if it matches - use functional setState to access current value
-      setCurrentOrder(prev => {
-        if (prev && Number(prev.id) === orderId) {
-          return {
-            ...prev,
-            status: newStatus
-          };
-        }
-        return prev;
-      });
-      
-      // Also update in previousOrders list
-      setPreviousOrders(prev => {
-        const updated = prev.map(order => 
-          Number(order.id) === orderId 
-            ? { ...order, status: newStatus }
-            : order
-        );
-        
-        return updated;
-      });
+  // Handle realtime order updates from store
+  useEffect(() => {
+    if (!roomServiceState || !currentOrder) return;
+
+    const orderId = currentOrder.id;
+    const storeOrder = roomServiceState.ordersById[orderId];
+    
+    if (storeOrder && storeOrder.status !== currentOrder.status) {
+      // Update current order with new status from store
+      setCurrentOrder(prev => ({
+        ...prev,
+        status: storeOrder.status
+      }));
       
       // Show toast notification
       const statusMessages = {
@@ -64,11 +45,26 @@ export default function RoomService({ isAdmin }) {
         'cancelled': '❌ Your order has been cancelled.'
       };
       
-      toast.info(statusMessages[newStatus] || `Order status: ${newStatus}`, {
+      toast.info(statusMessages[storeOrder.status] || `Order status: ${storeOrder.status}`, {
         autoClose: 5000
       });
     }
-  });
+  }, [roomServiceState, currentOrder]);
+
+  // Also sync previousOrders with store
+  useEffect(() => {
+    if (!roomServiceState) return;
+    
+    const storeOrders = Object.values(roomServiceState.ordersById);
+    const roomOrders = storeOrders.filter(order => 
+      order.room_number === roomNumber && 
+      order.hotel_identifier === hotelIdentifier
+    );
+    
+    if (roomOrders.length > 0) {
+      setPreviousOrders(roomOrders);
+    }
+  }, [roomServiceState, roomNumber, hotelIdentifier]);
 
   const [previousOrders, setPreviousOrders] = useState([]);
   const [submitting, setSubmitting] = useState(false);

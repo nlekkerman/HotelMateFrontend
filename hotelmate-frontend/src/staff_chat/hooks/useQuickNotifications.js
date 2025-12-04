@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { usePusherContext } from '../context/PusherProvider';
+import { useChatState } from '@/realtime/stores/chatStore.jsx';
 
 /**
  * Custom hook for managing quick action notifications
@@ -12,7 +12,7 @@ import { usePusherContext } from '../context/PusherProvider';
  * @returns {Object} Notification state and methods
  */
 const useQuickNotifications = ({ hotelSlug, staffId }) => {
-  const { bind, unbind, subscribe, unsubscribe, isReady, enabled } = usePusherContext();
+  const chatState = useChatState();
   
   // Store notifications by type
   // Format: { type: 'staff_chat_message', count: 5, from: 'John Doe', conversationId: 123, lastUpdate: Date }
@@ -126,48 +126,48 @@ const useQuickNotifications = ({ hotelSlug, staffId }) => {
   }, []);
 
   /**
-   * Handle incoming notification from Pusher
-   */
-  const handlePusherNotification = useCallback((data) => {
-    addNotification(data);
-  }, [addNotification]);
-
-  /**
-   * Subscribe to personal notification channel
+   * Monitor chatStore for new messages and create notifications
    */
   useEffect(() => {
-    if (!enabled || !isReady || !staffId || !hotelSlug) {
+    if (!chatState || !staffId || !hotelSlug) {
       return;
     }
 
-    // Personal notification channel: {hotel_slug}-staff-{staff_id}-notifications
-    const personalChannel = `${hotelSlug}-staff-${staffId}-notifications`;
+    // Process conversations for unread messages and create notifications
+    Object.values(chatState.conversationsById || {}).forEach(conversation => {
+      if (conversation.unreadCount > 0 && conversation.messages) {
+        // Get recent unread messages
+        const recentMessages = conversation.messages
+          .filter(msg => !msg.read_by_staff)
+          .slice(-conversation.unreadCount);
 
-    subscribe(personalChannel);
+        recentMessages.forEach(message => {
+          if (message.sender_id !== staffId) {
+            // Create notification for each unread message
+            const notificationData = {
+              type: 'staff_chat_message',
+              conversation_id: conversation.id,
+              sender: {
+                first_name: message.sender_first_name,
+                last_name: message.sender_last_name,
+                username: message.sender_username
+              },
+              message_type: message.message_type || 'text',
+              notification_type: message.is_mention ? 'mention' : 'staff_chat_message'
+            };
 
-    // Bind to notification events
-    bind(personalChannel, 'new-message', handlePusherNotification);
-    bind(personalChannel, 'mention', handlePusherNotification);
-    bind(personalChannel, 'file-uploaded', handlePusherNotification);
-
-    // Cleanup
-    return () => {
-      unbind(personalChannel, 'new-message', handlePusherNotification);
-      unbind(personalChannel, 'mention', handlePusherNotification);
-      unbind(personalChannel, 'file-uploaded', handlePusherNotification);
-      unsubscribe(personalChannel);
-    };
-  }, [
-    enabled,
-    isReady,
-    staffId,
-    hotelSlug,
-    subscribe,
-    unsubscribe,
-    bind,
-    unbind,
-    handlePusherNotification
-  ]);
+            // Only add if we haven't already processed this message
+            const notificationId = `${notificationData.type}-${conversation.id}-${message.id}`;
+            const exists = notifications.find(n => n.id === notificationId);
+            
+            if (!exists) {
+              addNotification(notificationData);
+            }
+          }
+        });
+      }
+    });
+  }, [chatState, staffId, hotelSlug, notifications, addNotification]);
 
   /**
    * Auto-remove old notifications after 5 minutes

@@ -1,19 +1,23 @@
 // src/context/ChatContext.jsx
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import Pusher from "pusher-js";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import api from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
+import { useGuestChatState, useGuestChatDispatch, guestChatActions } from "@/realtime/stores/guestChatStore";
 
 const ChatContext = createContext(undefined);
 
 export const ChatProvider = ({ children }) => {
   const { user } = useAuth();
+  
+  // Use guestChatStore for guest chat data
+  const guestChatState = useGuestChatState();
+  const guestChatDispatch = useGuestChatDispatch();
+  
+  // Local state for staff-specific functionality
   const [conversations, setConversations] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
-  const pusherRef = useRef(null);
-  const channelsRef = useRef(new Map());
 
-  // Fetch conversations + unread counts
+  // Fetch conversations + unread counts (unchanged HTTP calls)
   const fetchConversations = useCallback(async () => {
     if (!user?.hotel_slug) return;
 
@@ -35,126 +39,73 @@ export const ChatProvider = ({ children }) => {
       }));
 
       setConversations(convs);
+      
+      // Also initialize guestChatStore with fetched conversations
+      guestChatActions.initFromAPI(convs, guestChatDispatch);
     } catch (err) {
       console.error("Failed to fetch conversations:", err);
     }
-  }, [user?.hotel_slug]);
+  }, [user?.hotel_slug, guestChatDispatch]);
 
   useEffect(() => {
     fetchConversations();
   }, [fetchConversations]);
 
-  // Initialize Pusher
+  // Sync conversations from guestChatStore realtime updates
   useEffect(() => {
-    if (!user?.hotel_slug || !user?.id) return;
+    if (!guestChatState || !user?.hotel_slug) return;
 
-    const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
-      cluster: import.meta.env.VITE_PUSHER_CLUSTER,
-      forceTLS: true,
-    });
-    pusherRef.current = pusher;
-
-    pusher.connection.bind("connected", () => {
-      console.log("✅ Pusher connected for chat");
-    });
-
-    pusher.connection.bind("error", (err) => {
-      console.error("❌ Pusher chat connection error:", err);
-    });
-
-    // Subscribe to global new-conversation channel
-    const globalChannel = pusher.subscribe(`${user.hotel_slug}-new-conversation`);
-    globalChannel.bind("new-conversation", fetchConversations);
-
-    // Subscribe to staff-specific chat channel for new guest messages
-    const staffChatChannel = pusher.subscribe(`${user.hotel_slug}-staff-${user.id}-chat`);
+    // Sync conversations with store data and show notifications for new messages
+    const storeConversations = Object.values(guestChatState.conversationsById || {});
     
-    staffChatChannel.bind("new-guest-message", (data) => {
-      console.log("💬 New guest message received:", data);
-      
-      // Refresh conversations to get updated unread counts
-      fetchConversations();
-
-      // Show browser notification if not the current conversation
-      if (
-        data.conversation_id !== currentConversationId &&
-        "Notification" in window &&
-        Notification.permission === "granted"
-      ) {
-        const notification = new Notification(`New Message from Room ${data.room_number}`, {
-          body: data.message,
-          icon: "/favicon-32x32.png",
-          tag: `chat-${data.message_id}`,
-        });
-
-        notification.onclick = () => {
-          window.focus();
-          window.location.href = `/${user.hotel_slug}/chat`;
-        };
-      }
-    });
-
-    return () => {
-      globalChannel.unbind_all();
-      pusher.unsubscribe(`${user.hotel_slug}-new-conversation`);
-      
-      staffChatChannel.unbind_all();
-      pusher.unsubscribe(`${user.hotel_slug}-staff-${user.id}-chat`);
-      
-      channelsRef.current.forEach((ch) => {
-        ch.unbind_all();
-        pusher.unsubscribe(ch.name);
-      });
-      channelsRef.current.clear();
-      pusher.disconnect();
-      pusherRef.current = null;
-    };
-  }, [user?.hotel_slug, user?.id, fetchConversations, currentConversationId]);
-
-  // Subscribe to individual conversation channels dynamically
-  useEffect(() => {
-    if (!pusherRef.current) return;
-
-    conversations.forEach((conv) => {
-      if (channelsRef.current.has(conv.conversation_id)) return;
-
-      const channelName = `${user.hotel_slug}-conversation-${conv.conversation_id}-chat`;
-      const channel = pusherRef.current.subscribe(channelName);
-
-      channel.bind("new-message", (msg) => {
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.conversation_id === msg.conversation
-              ? {
-                  ...c,
-                  last_message: msg.message,
-                  // Don't increment unread if this is the current conversation
-                  unread_count:
-                    c.conversation_id === currentConversationId
-                      ? c.unread_count
-                      : (c.unread_count || 0) + 1,
-                }
-              : c
-          )
-        );
-
-        // Show desktop notifications for guest messages
+    if (storeConversations.length > 0) {
+      // Simple notification logic without dependency on conversations state
+      storeConversations.forEach(storeConv => {
         if (
-          msg.sender_type === "guest" &&
-          msg.conversation !== currentConversationId &&
+          storeConv.last_message &&
+          storeConv.conversation_id !== currentConversationId &&
           "Notification" in window &&
           Notification.permission === "granted"
         ) {
-          new Notification(`New message from ${msg.guest_name}`, {
-            body: msg.message,
+          const notification = new Notification(`New Message from Room ${storeConv.room_number}`, {
+            body: storeConv.last_message,
             icon: "/favicon-32x32.png",
+            tag: `chat-${storeConv.conversation_id}`,
           });
+
+          notification.onclick = () => {
+            window.focus();
+            window.location.href = `/${user.hotel_slug}/chat`;
+          };
         }
       });
+      
+      // Update local conversations with store data
+      setConversations(storeConversations);
+    }
+  }, [guestChatState, currentConversationId, user?.hotel_slug]);
 
-      channelsRef.current.set(conv.conversation_id, channel);
+  // Handle realtime message updates from guestChatStore
+  useEffect(() => {
+    if (!guestChatState) return;
+
+    // Update conversations when store has new messages
+    const storeConversations = Object.values(guestChatState.conversationsById || {});
+    
+    storeConversations.forEach((storeConv) => {
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.conversation_id === storeConv.conversation_id
+            ? {
+                ...c,
+                last_message: storeConv.last_message || c.last_message,
+                unread_count: storeConv.unread_count !== undefined ? storeConv.unread_count : c.unread_count,
+              }
+            : c
+        )
+      );
     });
-  }, [conversations, user?.hotel_slug, currentConversationId]);
+  }, [guestChatState]);
 
   const markConversationRead = async (conversationId) => {
     try {
@@ -174,16 +125,75 @@ export const ChatProvider = ({ children }) => {
 
   const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
 
+  // Helper functions for guest chat integration
+  const fetchGuestMessages = useCallback(async (conversationId) => {
+    try {
+      const res = await api.get(`/chat/conversations/${conversationId}/messages/`);
+      guestChatActions.initMessagesForConversation(conversationId, res.data, guestChatDispatch);
+      return res.data;
+    } catch (err) {
+      console.error("Failed to fetch guest messages:", err);
+      return [];
+    }
+  }, [guestChatDispatch]);
+
+  const setActiveGuestConversation = useCallback((conversationId) => {
+    guestChatActions.setActiveConversation(conversationId, guestChatDispatch);
+    setCurrentConversationId(conversationId);
+  }, [guestChatDispatch]);
+
+  const markGuestConversationReadForStaff = useCallback(async (conversationId) => {
+    try {
+      await api.post(`/chat/conversations/${conversationId}/mark-read/`);
+      guestChatActions.markConversationReadForStaff(conversationId, guestChatDispatch);
+    } catch (err) {
+      console.error("Failed to mark guest conversation as read:", err);
+    }
+  }, [guestChatDispatch]);
+
+  const markGuestConversationReadForGuest = useCallback(async (conversationId) => {
+    try {
+      await api.post(`/chat/conversations/${conversationId}/mark-read-guest/`);
+      guestChatActions.markConversationReadForGuest(conversationId, guestChatDispatch);
+    } catch (err) {
+      console.error("Failed to mark guest conversation as read for guest:", err);
+    }
+  }, [guestChatDispatch]);
+
+  // Unified API that exposes both staff and guest chat data
+  const contextValue = {
+    // Legacy staff chat API (preserved for backward compatibility)
+    conversations,
+    fetchConversations,
+    markConversationRead,
+    totalUnread,
+    pusherInstance: null, // Legacy support - now using centralized realtime
+    currentConversationId,
+    setCurrentConversationId,
+
+    // Guest chat API backed by guestChatStore
+    guestConversations: Object.values(guestChatState.conversationsById),
+    guestMessages: guestChatState.activeConversationId 
+      ? guestChatState.messagesByConversationId[guestChatState.activeConversationId] || []
+      : [],
+    activeGuestConversation: guestChatState.activeConversationId 
+      ? guestChatState.conversationsById[guestChatState.activeConversationId]
+      : null,
+    activeGuestConversationId: guestChatState.activeConversationId,
+    
+    // Guest chat actions
+    fetchGuestMessages,
+    setActiveGuestConversation,
+    markGuestConversationReadForStaff,
+    markGuestConversationReadForGuest,
+    
+    // Store access for advanced usage
+    guestChatState,
+    guestChatDispatch
+  };
+
   return (
-    <ChatContext.Provider value={{
-      conversations,
-      fetchConversations,
-      markConversationRead,
-      totalUnread,
-      pusherInstance: pusherRef.current,
-      currentConversationId,
-      setCurrentConversationId
-    }}>
+    <ChatContext.Provider value={contextValue}>
       {children}
     </ChatContext.Provider>
   );

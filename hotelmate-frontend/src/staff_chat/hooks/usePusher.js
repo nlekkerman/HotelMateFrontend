@@ -1,3 +1,4 @@
+// TODO: migrate remaining domains to centralized realtime (eventBus + store)
 import { useEffect, useCallback, useRef } from 'react';
 import Pusher from 'pusher-js';
 import { pusherLogger } from '../utils/logger';

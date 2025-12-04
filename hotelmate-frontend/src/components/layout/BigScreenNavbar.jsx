@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import Pusher from "pusher-js";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import ClockModal from "@/components/staff/ClockModal";
@@ -83,164 +82,41 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
 
   // Fetch staff profile - MEMOIZED to prevent re-subscription loops
   const fetchStaffProfile = useCallback(() => {
-    console.log("[BigScreenNav] 🔄 fetchStaffProfile called:", {
-      hasUser: !!user,
-      userId: user?.id,
-      hotelIdentifier,
-      timestamp: new Date().toISOString()
-    });
-
     if (!user || !hotelIdentifier) {
-      console.log("[BigScreenNav] ⚠️ Missing requirements for profile fetch:", {
-        hasUser: !!user,
-        hotelIdentifier
-      });
       setStaffProfile(null);
       setIsOnDuty(false);
       return;
     }
 
-    console.log("[BigScreenNav] 📡 Making API call to fetch profile...");
     api
       .get(`/staff/${hotelIdentifier}/me/`)
       .then((res) => {
-        console.log("[BigScreenNav] ✅ Staff profile API response:", {
-          data: res.data,
-          hasCurrentStatus: !!res.data.current_status,
-          currentStatusDetails: res.data.current_status,
-          isOnDuty: res.data.is_on_duty,
-          dutyStatus: res.data.duty_status,
-          timestamp: new Date().toISOString()
-        });
-        
-        console.log("[BigScreenNav] 📊 Enhanced Current Status Analysis:", {
-          status: res.data.current_status?.status,
-          label: res.data.current_status?.label,
-          isOnBreak: res.data.current_status?.is_on_break,
-          breakStart: res.data.current_status?.break_start,
-          totalBreakMinutes: res.data.current_status?.total_break_minutes,
-          dutyStatus: res.data.duty_status,
-          legacyOnDuty: res.data.is_on_duty
-        });
-        
-        // Update all state immediately
         setStaffProfile(res.data);
         setIsOnDuty(res.data.is_on_duty);
         setForceButtonUpdate(prev => prev + 1);
-        
-        console.log("[BigScreenNav] 🎯 Profile state updated");
       })
       .catch((err) => {
-        console.error("[BigScreenNav] ❌ Failed to fetch staff profile:", {
-          error: err.message,
-          status: err.response?.status,
-          data: err.response?.data,
-          timestamp: new Date().toISOString()
-        });
+        console.error("Failed to fetch staff profile:", err.message);
         setStaffProfile(null);
         setIsOnDuty(false);
       });
   }, [user, hotelIdentifier]);
 
   useEffect(() => {
-    console.log("[BigScreenNav] 🚀 User or hotel identifier changed:", {
-      hasUser: !!user,
-      userId: user?.id,
-      staffId: user?.staff_id,
-      hotelIdentifier,
-      timestamp: new Date().toISOString()
-    });
     fetchStaffProfile();
-  }, [user, hotelIdentifier, fetchStaffProfile]);
+  }, [fetchStaffProfile]);
 
-  // Track staffProfile state changes
-  useEffect(() => {
-    console.log("[BigScreenNav] 👤 Staff profile state changed:", {
-      hasStaffProfile: !!staffProfile,
-      staffId: staffProfile?.id,
-      name: staffProfile?.name,
-      isOnDuty,
-      hasCurrentStatus: !!staffProfile?.current_status,
-      currentStatus: staffProfile?.current_status,
-      dutyStatus: staffProfile?.duty_status,
-      forceButtonUpdate,
-      timestamp: new Date().toISOString()
-    });
-    
-    // Additional debugging for profile badge rendering
-    console.log("[BigScreenNav] 🏷️ Profile badge rendering check:", {
-      hasStaffProfile: !!staffProfile,
-      hasCurrentStatus: !!staffProfile?.current_status,
-      currentStatus: staffProfile?.current_status,
-      shouldShowBadge: !!(staffProfile && (staffProfile.current_status || true)),
-      timestamp: new Date().toISOString()
-    });
-    
-    if (staffProfile?.current_status) {
-      console.log("[BigScreenNav] ✅ Profile badge will render with status:", {
-        status: staffProfile.current_status.status,
-        label: staffProfile.current_status.label,
-        isOnBreak: staffProfile.current_status.is_on_break,
-        isOnDuty: staffProfile.is_on_duty
-      });
-    } else if (staffProfile) {
-      console.log("[BigScreenNav] ⚠️ Profile exists but no current_status - will show loading badge");
-    }
-  }, [staffProfile, isOnDuty, forceButtonUpdate]);
+
 
   // Legacy DOM event listeners removed - now using only useAttendanceRealtime hook
 
   // Handle real-time attendance updates via Pusher - MEMOIZED to prevent re-subscription loops
   const handleAttendanceEvent = useCallback((event) => {
-    console.log("[BigScreenNav] 🔔 Attendance Pusher event received:", {
-      event,
-      eventType: event?.type,
-      hasPayload: !!event?.payload,
-      payloadKeys: event?.payload ? Object.keys(event.payload) : [],
-      fullPayload: event?.payload,
-      timestamp: new Date().toISOString()
-    });
-    
-    // 🚨 SPECIAL DEBUG: Store ALL events globally for debugging
-    window.lastAttendanceEvent = {
-      event,
-      timestamp: new Date().toISOString(),
-      receivedBy: 'BigScreenNavbar'
-    };
-    console.log('🚨 [BigScreenNavbar] STORED DEBUG EVENT:', window.lastAttendanceEvent);
-    
-    // Add extra debugging to track event reception
-    console.log("[BigScreenNav] 🎯 handleAttendanceEvent function called successfully!", {
-      hasEvent: !!event,
-      eventType: event?.type,
-      payloadAction: event?.payload?.action,
-      currentUser: {
-        userId: user?.id,
-        staffId: user?.staff_id
-      },
-      timestamp: new Date().toISOString()
-    });
-
     const { type, payload } = event || {};
     
     if (type !== "clock-status-updated" || !payload) {
-      console.log("[BigScreenNav] ℹ️ Other attendance event or missing payload:", {
-        type,
-        hasPayload: !!payload
-      });
       return;
     }
-
-    console.log("[BigScreenNav] 📊 Processing clock-status-updated event:", {
-      action: payload.action,
-      payload,
-      payloadKeys: Object.keys(payload),
-      hasStaffId: !!payload.staff_id,
-      hasUserId: !!payload.user_id,
-      hasDutyStatus: !!payload.duty_status,
-      hasCurrentStatus: !!payload.current_status,
-      timestamp: new Date().toISOString()
-    });
 
     // Normalize IDs to numbers for type-safe comparison
     const payloadStaffId = payload.staff_id != null ? Number(payload.staff_id) : null;
@@ -251,44 +127,13 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                           (user?.staff_id != null ? Number(user.staff_id) : null);
     const currentUserId  = user?.id         != null ? Number(user.id)          : null;
 
-    // 🔍 DEBUG: Verify what backend actually sends vs what we expect
-    console.log("[DEBUG] Pusher IDs:", {
-      payloadStaffId,
-      payloadUserId, 
-      staffProfileId: staffProfile?.id,
-      userStaffId: user?.staff_id,
-      userId: user?.id,
-      rawPayload: {
-        staff_id: payload.staff_id,
-        user_id: payload.user_id
-      }
-    });
-
     const isCurrentUser =
       (currentStaffId && payloadStaffId === currentStaffId) ||
       (currentUserId && payloadUserId === currentUserId);
 
-    console.log("[BigScreenNav] 🎯 DETAILED User identification result:", {
-      payloadStaffId,
-      currentStaffId,
-      payloadUserId,
-      currentUserId,
-      isCurrentUser,
-      staffProfileId: staffProfile?.id,
-      userStaffId: user?.staff_id,
-      staffIdComparison: `${currentStaffId} === ${payloadStaffId} = ${currentStaffId === payloadStaffId}`,
-      userIdComparison: `${currentUserId} === ${payloadUserId} = ${currentUserId === payloadUserId}`
-    });
-
     if (!isCurrentUser) {
-      console.log("[BigScreenNav] ❌ Status update NOT FOR CURRENT USER - IGNORING");
       return;
     }
-
-    console.log("[BigScreenNav] ✅ SUCCESS! Status update IS FOR CURRENT USER - PROCESSING", {
-      action: payload.action,
-      dutyStatus: payload.duty_status
-    });
 
     // Add visual shimmer effect to clock button
     const clockButton = document.querySelector(".clock-btn");
@@ -298,59 +143,28 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
     }
 
     // IMMEDIATELY UPDATE UI STATE - NO WAITING FOR API
-    console.log("[BigScreenNav] 🚀 IMMEDIATE UI UPDATE - Payload received:", {
-      action: payload.action,
-      duty_status: payload.duty_status,
-      current_status: payload.current_status,
-      hasCurrentStatus: !!payload.current_status
-    });
-    
     if (payload.current_status) {
-      console.log("[BigScreenNav] ✅ Updating staffProfile state immediately with:", payload.current_status);
-      setStaffProfile(prev => {
-        const updated = {
-          ...prev,
-          current_status: payload.current_status,
-          duty_status: payload.duty_status,
-          is_on_duty: payload.duty_status === 'on_duty' || payload.duty_status === 'on_break'
-        };
-        console.log("[BigScreenNav] 📊 Updated staffProfile:", updated);
-        return updated;
-      });
+      setStaffProfile(prev => ({
+        ...prev,
+        current_status: payload.current_status,
+        duty_status: payload.duty_status,
+        is_on_duty: payload.duty_status === 'on_duty' || payload.duty_status === 'on_break'
+      }));
       setIsOnDuty(payload.duty_status === 'on_duty' || payload.duty_status === 'on_break');
     } else {
-      console.log("[BigScreenNav] ❌ No current_status in payload - forcing IMMEDIATE profile refresh");
       // If Pusher doesn't send complete data, force immediate profile refresh
       fetchStaffProfile();
     }
 
     // Force immediate re-render + refetch profile for consistency
     setForceButtonUpdate(prev => prev + 1);
-    console.log("[BigScreenNav] 📡 Also fetching updated profile data for full sync...");
     fetchStaffProfile();
 
-    // Broadcast the status change to other components
-    window.dispatchEvent(new CustomEvent('staffStatusUpdated', {
-      detail: {
-        staffId: payload.staff_id,
-        userId: payload.user_id,
-        action: payload.action,
-        dutyStatus: payload.duty_status,
-        currentStatus: payload.current_status,
-        isOnDuty: payload.is_on_duty,
-        timestamp: new Date().toISOString()
-      }
-    }));
-
-    // Old clockStatusChanged event removed - using only useAttendanceRealtime now
-  }, [user, fetchStaffProfile]);
+    // Window event dispatching for staffStatusUpdated removed - components now use attendance store
+    // Real-time updates are handled through the centralized attendance store infrastructure
+  }, [user?.id, hotelIdentifier, fetchStaffProfile]);
 
   // Initialize Pusher real-time updates
-  console.log("[BigScreenNav] 🚀 Initializing attendance realtime with:", {
-    hotelIdentifier,
-    hasHandler: typeof handleAttendanceEvent === 'function',
-    timestamp: new Date().toISOString()
-  });
   useAttendanceRealtime(hotelIdentifier, handleAttendanceEvent);
 
   // Simple clock button - just shows "Clock" text
@@ -367,11 +181,8 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
     const handleFaceClockAction = (event) => {
       const { action, hotelSlug: eventHotelSlug, data } = event.detail;
       
-      console.log("[BigScreenNav] 🎭 Face clock action detected:", { action, eventHotelSlug, data });
-      
       // Check if this event is for the current hotel
       if (eventHotelSlug === hotelIdentifier) {
-        console.log("[BigScreenNav] 🔄 Refreshing profile due to face clock action");
         
         // Add visual feedback to clock button
         const clockButton = document.querySelector('.clock-btn');
@@ -713,58 +524,33 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                 const buttonInfo = clockButtonInfo;
                 
                 const handleClockAction = async () => {
-                  console.log("[BigScreenNav] 🎬 handleClockAction called:", {
-                    hasHotelIdentifier: !!hotelIdentifier,
-                    hotelIdentifier,
-                    clockActionLoading,
-                    hasStaffProfile: !!staffProfile,
-                    currentStatus: staffProfile?.current_status,
-                    buttonText: buttonInfo.text,
-                    timestamp: new Date().toISOString()
-                  });
-
                   if (!hotelIdentifier || clockActionLoading) {
-                    console.warn('[BigScreenNav] ⚠️ Cannot perform clock action:', {
-                      hasHotelIdentifier: !!hotelIdentifier,
-                      clockActionLoading,
-                      reason: !hotelIdentifier ? 'No hotel identifier' : 'Already loading'
-                    });
                     return;
                   }
                   
-                  console.log('[BigScreenNav] 🔄 Setting clock action loading...');
                   setClockActionLoading(true);
                   
                   try {
                     if (!staffProfile?.current_status) {
-                      console.log('[BigScreenNav] 🎭 No enhanced status, falling back to face recognition');
                       navigate(`/face/${hotelIdentifier}/clock-in`);
                       return;
                     }
                     
                     const currentStatus = staffProfile.current_status;
-                    console.log('[BigScreenNav] 📊 Handling clock action for status:', {
-                      status: currentStatus.status,
-                      label: currentStatus.label,
-                      isOnBreak: currentStatus.is_on_break,
-                      buttonAction: buttonInfo.text
-                    });
                     
                     // Navigate to face recognition for all actions except simple clock in
                     if (currentStatus.status === 'on_duty' || currentStatus.status === 'on_break') {
                       // Use face recognition for break start/end and clock out actions
-                      console.log('[BigScreenNav] 🎭 Using face recognition for status:', currentStatus.status);
                       navigate(`/face/${hotelIdentifier}/clock-in`);
                       return;
                     } else {
                       // Simple clock in action - use API directly
                       const result = await performClockActionAPI(currentStatus, hotelIdentifier);
-                      console.log('[BigScreenNav] Clock action completed:', result);
                       setForceButtonUpdate(prev => prev + 1); // Force immediate update
                       fetchStaffProfile(); // Refresh profile after action
                     }
                   } catch (error) {
-                    console.error('[BigScreenNav] Clock action failed:', error);
+                    console.error('Clock action failed:', error);
                     // Fallback to face recognition on error
                     navigate(`/face/${hotelIdentifier}/clock-in`);
                   } finally {

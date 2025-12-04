@@ -29,23 +29,9 @@ const AttendanceSummaryDashboard = ({ staffList = [], showStaffList = true }) =>
     updateAttendanceCounts();
   }, [staffList]);
 
-  // Listen for real-time updates
-  useEffect(() => {
-    const handleStatusUpdate = () => {
-      // Recalculate counts after a short delay to allow DOM updates
-      setTimeout(() => {
-        updateAttendanceCounts();
-      }, 100);
-    };
-
-    window.addEventListener('pusherClockStatusUpdate', handleStatusUpdate);
-    window.addEventListener('clockStatusChanged', handleStatusUpdate);
-
-    return () => {
-      window.removeEventListener('pusherClockStatusUpdate', handleStatusUpdate);
-      window.removeEventListener('clockStatusChanged', handleStatusUpdate);
-    };
-  }, []);
+  // Window event listeners removed - now using centralized attendance store via useAttendanceRealtime
+  // Real-time updates are handled through the store and parent components should trigger recalculation
+  // via props or state changes instead of window events
 
   return (
     <div className="attendance-summary-dashboard">

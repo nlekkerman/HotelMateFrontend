@@ -1,98 +1,69 @@
 // src/context/BookingNotificationContext.jsx
-import { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
-import Pusher from "pusher-js";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-toastify";
 import api from "@/services/api";
+import { useBookingState } from "@/realtime/stores/bookingStore";
 
 const BookingNotificationContext = createContext();
 
 export const BookingNotificationProvider = ({ children }) => {
   const { user } = useAuth();
-  const [bookingNotifications, setBookingNotifications] = useState([]);
+  const bookingState = useBookingState();
   const [hasNewBooking, setHasNewBooking] = useState(false);
-  const pusherRef = useRef(null);
-  const channelsRef = useRef(new Set());
-
-  useEffect(() => {
-    if (!user?.hotel_slug || !user?.id) {
-      console.log("⚠️ Bookings: No user or hotel slug - skipping Pusher setup");
-      return;
-    }
-
-    console.log("✅ Initializing Booking Pusher notifications...");
-
-    // Initialize Pusher
-    const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
-      cluster: import.meta.env.VITE_PUSHER_CLUSTER,
-      forceTLS: true,
-    });
-    pusherRef.current = pusher;
-
-    pusher.connection.bind("connected", () => {
-      console.log("✅ Pusher connected for booking notifications");
-    });
-
-    pusher.connection.bind("error", (err) => {
-      console.error("❌ Pusher booking connection error:", err);
-    });
-
-    const hotelSlug = user.hotel_slug;
-    const staffId = user.staff_id || user.id;
-
-    // Convert department string to slug format
+  const [lastSeenBookingCount, setLastSeenBookingCount] = useState(0);
+  
+  // Get all bookings from store
+  const allBookings = Object.values(bookingState.bookingsById);
+  const bookingNotifications = allBookings.slice(0, 10); // Show latest 10 for notifications
+  
+  // Check if user is eligible for booking notifications based on department/role
+  const isEligibleForNotifications = useCallback(() => {
+    if (!user?.department && !user?.role) return false;
+    
     const deptSlug = user.department?.toLowerCase().replace(/ /g, '-').replace(/&/g, 'and');
     const roleSlug = user.role?.toLowerCase().replace(/ /g, '_');
-
-    console.log("🔍 Bookings - Department Slug:", deptSlug);
-    console.log("🔍 Bookings - Role Slug:", roleSlug);
-
-    // Subscribe to department-based channel for Food & Beverage staff
+    
+    // Food & Beverage department receives booking notifications
     if (deptSlug === "food-and-beverage") {
-      const channelName = `${hotelSlug}-staff-${staffId}-food-and-beverage`;
-      console.log(`📡 Subscribing to F&B department channel: ${channelName}`);
-      
-      const channel = pusher.subscribe(channelName);
-      channelsRef.current.add(channelName);
-
-      channel.bind("new-dinner-booking", handleNewDinnerBooking);
+      return true;
     }
-
-    // Subscribe to role-based channel for specific roles
-    if (roleSlug) {
-      // Roles that should receive booking notifications
-      const bookingRoles = ["receptionist", "manager", "food_and_beverage_manager"];
-      
-      if (bookingRoles.includes(roleSlug)) {
-        const channelName = `${hotelSlug}-staff-${staffId}-${roleSlug}`;
-        console.log(`📡 Subscribing to role channel: ${channelName}`);
-        
-        const channel = pusher.subscribe(channelName);
-        channelsRef.current.add(channelName);
-
-        channel.bind("new-dinner-booking", handleNewDinnerBooking);
-      }
+    
+    // Roles that should receive booking notifications
+    const bookingRoles = ["receptionist", "manager", "food_and_beverage_manager"];
+    if (roleSlug && bookingRoles.includes(roleSlug)) {
+      return true;
     }
-
-    return () => {
-      console.log("Cleaning up Booking Pusher subscriptions...");
-      channelsRef.current.forEach((channelName) => {
-        const channel = pusher.channel(channelName);
-        if (channel) {
-          channel.unbind_all();
-          pusher.unsubscribe(channelName);
-        }
+    
+    return false;
+  }, [user?.department, user?.role]);
+  
+  // Monitor store for new bookings and trigger notifications
+  useEffect(() => {
+    if (!isEligibleForNotifications()) return;
+    
+    const currentBookingCount = allBookings.length;
+    
+    // If we have more bookings than before, check for new ones
+    if (currentBookingCount > lastSeenBookingCount && lastSeenBookingCount > 0) {
+      // Get bookings created recently (within last 30 seconds)
+      const recentThreshold = new Date(Date.now() - 30000);
+      const newBookings = allBookings.filter(booking => {
+        const createdAt = new Date(booking.created_at || booking.timestamp);
+        return createdAt > recentThreshold;
       });
-      channelsRef.current.clear();
-      pusher.disconnect();
-      pusherRef.current = null;
-    };
-  }, [user?.hotel_slug, user?.id, user?.department, user?.role]);
+      
+      newBookings.forEach(booking => {
+        handleNewDinnerBooking(booking);
+      });
+    }
+    
+    setLastSeenBookingCount(currentBookingCount);
+  }, [allBookings.length, isEligibleForNotifications, lastSeenBookingCount]);
 
   const handleNewDinnerBooking = (booking) => {
     console.log("🍽️ New dinner booking received:", booking);
     
-    setBookingNotifications((prev) => [booking, ...prev]);
     setHasNewBooking(true);
 
     // Show toast notification

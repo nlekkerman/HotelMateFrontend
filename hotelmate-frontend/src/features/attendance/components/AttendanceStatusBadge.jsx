@@ -87,14 +87,14 @@ export default function AttendanceStatusBadge({ status, staffId, enhancedStatus 
       }
     };
 
-    window.addEventListener('pusherClockStatusUpdate', handleStatusUpdate);
+    // Keep face-clock-action-success for face recognition integration (non-attendance realtime)
     window.addEventListener('face-clock-action-success', handleFaceClockAction);
-    window.addEventListener('staffStatusUpdated', handleBroadcastStatusUpdate);
+    
+    // Window event listeners for pusherClockStatusUpdate and staffStatusUpdated removed
+    // - now using centralized attendance store via realtime infrastructure
     
     return () => {
-      window.removeEventListener('pusherClockStatusUpdate', handleStatusUpdate);
       window.removeEventListener('face-clock-action-success', handleFaceClockAction);
-      window.removeEventListener('staffStatusUpdated', handleBroadcastStatusUpdate);
     };
   }, [staffId]);
 

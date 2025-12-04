@@ -1,104 +1,72 @@
 // src/context/RoomServiceNotificationContext.jsx
-import { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
-import Pusher from "pusher-js";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-toastify";
-import api from "@/services/api";
+import { useRoomServiceState } from "@/realtime/stores/roomServiceStore";
 
 const RoomServiceNotificationContext = createContext();
 
 export const RoomServiceNotificationProvider = ({ children }) => {
   const { user } = useAuth();
-  const [roomServiceOrders, setRoomServiceOrders] = useState([]);
-  const [breakfastOrders, setBreakfastOrders] = useState([]);
+  const roomServiceState = useRoomServiceState();
   const [hasNewRoomService, setHasNewRoomService] = useState(false);
   const [hasNewBreakfast, setHasNewBreakfast] = useState(false);
+  const [lastSeenOrderCount, setLastSeenOrderCount] = useState(0);
   
-  const pusherRef = useRef(null);
-  const channelsRef = useRef(new Set());
-
-  // Initialize Pusher and subscribe to channels
-  useEffect(() => {
-    if (!user?.hotel_slug || !user?.id) {
-      return;
-    }
+  // Get all orders from store
+  const allOrders = Object.values(roomServiceState.ordersById);
+  const roomServiceOrders = allOrders.filter(order => order.type !== 'breakfast');
+  const breakfastOrders = allOrders.filter(order => order.type === 'breakfast');
+  
+  // Check if user is eligible for room service notifications based on department/role
+  const isEligibleForNotifications = useCallback(() => {
+    if (!user?.department && !user?.role) return false;
     
-    // Check if user is on duty (you may need to add this field to your user object)
-    // For now, we'll subscribe regardless since we don't have is_on_duty in the user object
-
-    // Initialize Pusher
-    const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
-      cluster: import.meta.env.VITE_PUSHER_CLUSTER,
-      forceTLS: true,
-    });
-    pusherRef.current = pusher;
-
-    pusher.connection.bind("connected", () => {
-      // Connected
-    });
-
-    pusher.connection.bind("error", (err) => {
-      // Connection error
-    });
-
-    const hotelSlug = user.hotel_slug;
-    const staffId = user.staff_id || user.id;
-
-    // Convert department string to slug format
     const deptSlug = user.department?.toLowerCase().replace(/ /g, '-').replace(/&/g, 'and');
     const roleSlug = user.role?.toLowerCase().replace(/ /g, '_');
-
-    // Subscribe to department-based channel
-    if (deptSlug) {
-      const deptChannelName = `${hotelSlug}-staff-${staffId}-${deptSlug}`;
-      
-      const deptChannel = pusher.subscribe(deptChannelName);
-      channelsRef.current.add(deptChannelName);
-
-      // Kitchen department receives room service and breakfast orders
-      if (deptSlug === "kitchen") {
-        deptChannel.bind("new-room-service-order", handleNewRoomServiceOrder);
-        deptChannel.bind("new-breakfast-order", handleNewBreakfastOrder);
-      }
-      
-      // Food and Beverage might also get orders in some cases
-      if (deptSlug === "food-and-beverage") {
-        deptChannel.bind("new-room-service-order", handleNewRoomServiceOrder);
-        deptChannel.bind("new-breakfast-order", handleNewBreakfastOrder);
-      }
+    
+    // Kitchen department receives room service and breakfast orders
+    if (deptSlug === "kitchen" || deptSlug === "food-and-beverage") {
+      return true;
     }
-
-    // Subscribe to role-based channel
-    if (roleSlug) {
-      const roleChannelName = `${hotelSlug}-staff-${staffId}-${roleSlug}`;
-      
-      const roleChannel = pusher.subscribe(roleChannelName);
-      channelsRef.current.add(roleChannelName);
-
-      // Porter and room service waiters receive delivery notifications
-      if (roleSlug === "porter" || roleSlug === "room_service_waiter") {
-        roleChannel.bind("new-room-service-order", handleNewRoomServiceOrder);
-        roleChannel.bind("new-breakfast-order", handleNewBreakfastOrder);
-      }
+    
+    // Porter and room service waiters receive delivery notifications
+    if (roleSlug === "porter" || roleSlug === "room_service_waiter") {
+      return true;
     }
-
-    return () => {
-      channelsRef.current.forEach((channelName) => {
-        const channel = pusher.channel(channelName);
-        if (channel) {
-          channel.unbind_all();
-          pusher.unsubscribe(channelName);
+    
+    return false;
+  }, [user?.department, user?.role]);
+  
+  // Monitor store for new orders and trigger notifications
+  useEffect(() => {
+    if (!isEligibleForNotifications()) return;
+    
+    const currentOrderCount = allOrders.length;
+    
+    // If we have more orders than before, check for new ones
+    if (currentOrderCount > lastSeenOrderCount && lastSeenOrderCount > 0) {
+      // Get orders created recently (within last 30 seconds)
+      const recentThreshold = new Date(Date.now() - 30000);
+      const newOrders = allOrders.filter(order => {
+        const createdAt = new Date(order.created_at || order.timestamp);
+        return createdAt > recentThreshold;
+      });
+      
+      newOrders.forEach(order => {
+        if (order.type === 'breakfast') {
+          handleNewBreakfastOrder(order);
+        } else {
+          handleNewRoomServiceOrder(order);
         }
       });
-      channelsRef.current.clear();
-      pusher.disconnect();
-      pusherRef.current = null;
-    };
-  }, [user?.hotel_slug, user?.id, user?.department, user?.role]);
+    }
+    
+    setLastSeenOrderCount(currentOrderCount);
+  }, [allOrders.length, isEligibleForNotifications, lastSeenOrderCount]);
 
   // Handler for new room service orders
   const handleNewRoomServiceOrder = (data) => {
-    setRoomServiceOrders((prev) => [data, ...prev]);
     setHasNewRoomService(true);
 
     // Show toast notification
@@ -148,7 +116,6 @@ export const RoomServiceNotificationProvider = ({ children }) => {
 
   // Handler for new breakfast orders
   const handleNewBreakfastOrder = (data) => {
-    setBreakfastOrders((prev) => [data, ...prev]);
     setHasNewBreakfast(true);
 
     // Show toast notification

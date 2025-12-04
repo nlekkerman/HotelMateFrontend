@@ -1,12 +1,14 @@
 // src/main.jsx
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
 import "./index.css"; // Import base styles including publicPages.css
 import "./styles/presets.css"; // Import preset styles (variants 1-5)
 import App from "./App";
 import { OrderCountProvider } from "@/hooks/useOrderCount.jsx";
 import { PresetsProvider } from "@/context/PresetsContext";
 import { listenForFirebaseMessages } from "@/utils/firebaseNotifications";
+import { handleIncomingRealtimeEvent } from "@/realtime/eventBus";
 
 
 // Helper to pull hotel_slug out of localStorage
@@ -20,40 +22,11 @@ function getHotelSlug() {
   }
 }
 
-// Fetch theme from your API and set CSS vars
-async function applySavedTheme() {
-  const stored = localStorage.getItem("user");
-  if (!stored) return; // No user logged in, skip theme
-  
-  const hotel_slug = getHotelSlug();
-  if (!hotel_slug) return;
-
-  try {
-    const userData = JSON.parse(stored);
-    const token = userData?.token;
-    if (!token) return; // No token, skip theme
-    
-    const res = await fetch(`/api/common/${hotel_slug}/theme/`, {
-      credentials: "include",
-      headers: { 
-        Accept: "application/json",
-        Authorization: `Token ${token}`
-      },
-    });
-    if (!res.ok) throw new Error("Non-OK response");
-    const { main_color, secondary_color } = await res.json();
-    document.documentElement.style.setProperty("--main-color", main_color);
-    document.documentElement.style.setProperty(
-      "--secondary-color",
-      secondary_color
-    );
-  } catch (e) {
-    console.warn('Theme fetch failed, using defaults');
-  }
-}
+// Theme loading is now handled by ThemeContext with React Query
+// No need for manual theme loading here
 
 async function bootstrap() {
-  await applySavedTheme();
+  // Removed redundant applySavedTheme() call
 
   // Register Firebase service worker for push notifications
   if ("serviceWorker" in navigator) {
@@ -65,70 +38,35 @@ async function bootstrap() {
 
       // Handle foreground FCM messages
       listenForFirebaseMessages((payload) => {
-        console.log("🔥🔥🔥 [FCM] ==================== FCM MESSAGE RECEIVED ====================");
-        console.log("🔥 [FCM] Full payload:", JSON.stringify(payload, null, 2));
-        console.log("🔥 [FCM] Payload.data:", payload?.data);
-        console.log("🔥 [FCM] Payload.notification:", payload?.notification);
-        console.log("🔥 [FCM] Timestamp:", new Date().toISOString());
-
-        // Show notification for room_service, breakfast, stock_movement, or order status updates
+        console.log("🔥 [FCM] Message received, routing through event bus");
+        
+        // Route through centralized event bus
+        handleIncomingRealtimeEvent({
+          source: 'fcm',
+          payload
+        });
+        
+        // Keep existing notification display logic as fallback
+        // (This will be gradually replaced by the notification center)
         const notificationType = payload?.data?.type;
         const hasOrderId = payload?.data?.order_id;
-        const conversationId = payload?.data?.conversation_id;
-        const messageId = payload?.data?.message_id;
-        
-        console.log("🔥 [FCM] Parsed data:", {
-          notificationType,
-          hasOrderId,
-          conversationId,
-          messageId,
-          hasNotification: !!payload?.notification
-        });
-
-        // Check if this is a staff chat message
-        if (messageId && conversationId) {
-          console.log("💬 [FCM] STAFF CHAT MESSAGE DETECTED!", {
-            messageId,
-            conversationId,
-            senderName: payload?.data?.sender_name,
-            message: payload?.data?.message
-          });
-        }
         
         if (
           ["room_service", "room_service_order", "breakfast", "stock_movement"].includes(notificationType) &&
           payload?.notification
         ) {
-          console.log(
-            "🔔 [FCM] Displaying notification for type:",
-            notificationType
-          );
+          console.log("🔔 [FCM] Legacy notification display for type:", notificationType);
           new Notification(payload.notification.title, {
             body: payload.notification.body,
             icon: "/favicon.svg",
           });
         } else if (hasOrderId && payload?.notification) {
-          // Guest order status update (no type field)
-          console.log(
-            "🔔 [FCM] Displaying order status update for order:",
-            payload.data.order_id
-          );
+          console.log("🔔 [FCM] Legacy order status notification for order:", payload.data.order_id);
           new Notification(payload.notification.title, {
             body: payload.notification.body,
             icon: "/favicon.ico",
           });
-        } else {
-          console.log(
-            "ℹ️ [FCM] Notification not displayed - type:",
-            notificationType,
-            "hasOrderId:",
-            hasOrderId,
-            "hasNotification:",
-            !!payload?.notification
-          );
         }
-        
-        console.log("🔥🔥🔥 [FCM] ==================== END FCM MESSAGE ====================");
       });
     } catch (err) {
       console.error("❌ SW registration failed:", err);
@@ -139,7 +77,9 @@ async function bootstrap() {
     <React.StrictMode>
       <PresetsProvider>
         <OrderCountProvider>
+         
           <App />
+       
         </OrderCountProvider>
       </PresetsProvider>
     </React.StrictMode>

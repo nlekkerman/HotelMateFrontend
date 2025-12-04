@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import Pusher from "pusher-js";
 import api from "@/services/api";
 import { useMediaQuery } from "react-responsive";
 import "@/games/whack-a-mole/styles/InterfaceStyles.css";
@@ -19,17 +18,29 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { ChartPreferencesProvider } from "@/context/ChartPreferencesContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation, Navigate, matchPath } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useLocation,
+  Navigate,
+  matchPath,
+} from "react-router-dom";
 import MobileNavbar from "@/components/layout/MobileNavbar";
 import BigScreenNavbar from "@/components/layout/BigScreenNavbar";
 import NetworkHandler from "@/components/offline/NetworkHandler";
 import LogoBanner from "./components/layout/LogoBanner";
-import PusherDebugger from "@/components/utils/PusherDebugger";
-import UserDebugInfo from "@/components/debug/UserDebugInfo";
+
 import MessengerWidget from "@/staff_chat/components/MessengerWidget";
-import PusherProvider from "@/staff_chat/context/PusherProvider";
+
 import { MessengerProvider } from "@/staff_chat/context/MessengerContext";
 import GlobalQuickNotifications from "@/staff_chat/components/GlobalQuickNotifications";
+import RealtimeProvider from "@/realtime/RealtimeProvider";
+import { AttendanceProvider } from "@/realtime/stores/attendanceStore.jsx";
+import { RoomServiceProvider } from "@/realtime/stores/roomServiceStore.jsx";
+import { BookingProvider } from "@/realtime/stores/bookingStore.jsx";
+import { GuestChatProvider } from "@/realtime/stores/guestChatStore.jsx";
+import { ChatProvider as StaffChatStoreProvider } from "@/realtime/stores/chatStore.jsx";
 
 // Pages + Components
 import Home from "@/pages/home/Home";
@@ -58,7 +69,6 @@ import DinnerPinAuth from "@/components/auth/DinnerPinAuth";
 import ChatPinAuth from "@/components/auth/ChatPinAuth";
 import PinAuth from "@/components/auth/PinAuth";
 
-
 import RoomList from "@/components/rooms/RoomList";
 import RoomDetails from "@/components/rooms/RoomDetails";
 import RoomService from "@/components/rooms/RoomService";
@@ -72,7 +82,6 @@ import Staff from "@/components/staff/Staff";
 import StaffCreate from "@/components/staff/StaffCreate";
 import StaffDetails from "@/components/staff/StaffDetails";
 import StaffProfile from "@/components/staff/StaffProfile";
-
 
 import GuestList from "@/components/guests/GuestList";
 import GuestEdit from "@/components/guests/GuestEdit";
@@ -149,73 +158,73 @@ const defaultAudioSettings = {
 // 🔓 Guest routes that don't require staff authentication (PIN-based auth instead)
 const GUEST_ROUTE_PATTERNS = [
   // PIN Validation Routes
-  '/:hotelIdentifier/room/:roomNumber/validate-pin',
-  '/chat/:hotelSlug/messages/room/:room_number/validate-chat-pin',
-  '/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin',
-  
+  "/:hotelIdentifier/room/:roomNumber/validate-pin",
+  "/chat/:hotelSlug/messages/room/:room_number/validate-chat-pin",
+  "/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin",
+
   // Protected Guest Routes (use RequirePin/RequireChatPin/RequireDinnerPin)
-  '/room_services/:hotelIdentifier/room/:roomNumber/menu',
-  '/room_services/:hotelIdentifier/room/:roomNumber/breakfast',
-  '/chat/:hotelSlug/conversations/:conversationId/messages/send',
-  '/chat/:hotelSlug/conversations/:conversationId/messages',
-  '/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber',
-  '/guest-booking/:hotelSlug/restaurant/:restaurantSlug',
-  
+  "/room_services/:hotelIdentifier/room/:roomNumber/menu",
+  "/room_services/:hotelIdentifier/room/:roomNumber/breakfast",
+  "/chat/:hotelSlug/conversations/:conversationId/messages/send",
+  "/chat/:hotelSlug/conversations/:conversationId/messages",
+  "/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber",
+  "/guest-booking/:hotelSlug/restaurant/:restaurantSlug",
+
   // Good to Know (Public)
-  '/good_to_know/:hotel_slug/:slug',
-  
+  "/good_to_know/:hotel_slug/:slug",
+
   // Quiz Game (Public - Anonymous play via QR)
-  '/games/quiz',
+  "/games/quiz",
 ];
 
 // Helper function to check if current path is a guest route
 const isGuestRoute = (pathname) => {
-  return GUEST_ROUTE_PATTERNS.some(pattern => 
-    matchPath(pattern, pathname)
-  );
+  return GUEST_ROUTE_PATTERNS.some((pattern) => matchPath(pattern, pathname));
 };
 
 // 🔁 Inner layout that uses `useLocation()` safely
 function AppLayout({ collapsed, setCollapsed, isMobile }) {
   const [audioSettings, setAudioSettings] = useState(defaultAudioSettings);
   const location = useLocation();
-  const isAuthPage = location.pathname === "/login" || 
-                     location.pathname === "/logout" ||
-                     location.pathname === "/register" || 
-                     location.pathname === "/forgot-password" ||
-                     location.pathname === "/registration-success" ||
-                     location.pathname.startsWith("/reset-password");
-  
+  const isAuthPage =
+    location.pathname === "/login" ||
+    location.pathname === "/logout" ||
+    location.pathname === "/register" ||
+    location.pathname === "/forgot-password" ||
+    location.pathname === "/registration-success" ||
+    location.pathname.startsWith("/reset-password");
+
   // Check if current page is a guest route (should also hide sidebar/navbar)
   const isGuestPage = isGuestRoute(location.pathname);
-  
+
   // Staff routes that should ALWAYS show navigation
-  const isStaffRoute = location.pathname.startsWith("/staff/") ||
-                       location.pathname === "/reception" ||
-                       location.pathname.startsWith("/rooms") ||
-                       location.pathname.startsWith("/bookings") ||
-                       location.pathname.startsWith("/maintenance") ||
-                       location.pathname.startsWith("/stock_tracker/") ||
-                       location.pathname.startsWith("/games") ||
-                       location.pathname.startsWith("/hotel_info/") ||
-                       location.pathname.startsWith("/good_to_know_console/");
-  
+  const isStaffRoute =
+    location.pathname.startsWith("/staff/") ||
+    location.pathname === "/reception" ||
+    location.pathname.startsWith("/rooms") ||
+    location.pathname.startsWith("/bookings") ||
+    location.pathname.startsWith("/maintenance") ||
+    location.pathname.startsWith("/stock_tracker/") ||
+    location.pathname.startsWith("/games") ||
+    location.pathname.startsWith("/hotel_info/") ||
+    location.pathname.startsWith("/good_to_know_console/");
+
   // Public landing pages - hide navbar/sidebar
-  const isPublicLandingPage = !isStaffRoute && (
-                              location.pathname === "/" || 
-                              /^\/hotel\/[a-z0-9-]+$/.test(location.pathname) || // Public hotel pages
-                              /^\/[a-z0-9-]+$/.test(location.pathname) ||
-                              /^\/[a-z0-9-]+\/book/.test(location.pathname) ||
-                              /^\/[a-z0-9-]+\/my-bookings/.test(location.pathname) ||
-                              /^\/my-bookings/.test(location.pathname) ||
-                              /^\/booking\/confirmation\//.test(location.pathname) ||
-                              /^\/booking\/payment\//.test(location.pathname) ||
-                              location.pathname === "/staff/login"
-                            );
-  
+  const isPublicLandingPage =
+    !isStaffRoute &&
+    (location.pathname === "/" ||
+      /^\/hotel\/[a-z0-9-]+$/.test(location.pathname) || // Public hotel pages
+      /^\/[a-z0-9-]+$/.test(location.pathname) ||
+      /^\/[a-z0-9-]+\/book/.test(location.pathname) ||
+      /^\/[a-z0-9-]+\/my-bookings/.test(location.pathname) ||
+      /^\/my-bookings/.test(location.pathname) ||
+      /^\/booking\/confirmation\//.test(location.pathname) ||
+      /^\/booking\/payment\//.test(location.pathname) ||
+      location.pathname === "/staff/login");
+
   // Determine if navbar/sidebar should be hidden
   const hideNavigation = isAuthPage || isGuestPage || isPublicLandingPage;
-  
+
   const { user } = useAuth();
 
   const [selectedRoom, setSelectedRoom] = useState(null);
@@ -227,42 +236,44 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
   // Redirect home to login if not authenticated AND not on a guest route
   const HomeRedirect = () => {
     // Check if user is coming from a guest route (might have been redirected here)
-    const fromGuestRoute = location.state?.from && isGuestRoute(location.state.from.pathname);
-    
+    const fromGuestRoute =
+      location.state?.from && isGuestRoute(location.state.from.pathname);
+
     if (!user && !fromGuestRoute) {
-      console.log('🔒 HomeRedirect: No user and not from guest route, redirecting to login');
+      console.log(
+        "🔒 HomeRedirect: No user and not from guest route, redirecting to login"
+      );
       return <Navigate to="/login" replace />;
     }
-    
+
     // If coming from guest route but no user, something is wrong - go to login
     if (!user && fromGuestRoute) {
-      console.warn('⚠️ HomeRedirect: Coming from guest route but no user session');
+      console.warn(
+        "⚠️ HomeRedirect: Coming from guest route but no user session"
+      );
       return <Navigate to="/login" replace />;
     }
-    
+
     return <Home />;
   };
 
   // Only allow registration with QR token
   const RegisterWithToken = () => {
     const searchParams = new URLSearchParams(location.search);
-    const token = searchParams.get('token');
-    const hotel = searchParams.get('hotel');
-    
+    const token = searchParams.get("token");
+    const hotel = searchParams.get("hotel");
+
     // If no token/hotel, redirect to login
     if (!token || !hotel) {
       return <Navigate to="/login" replace />;
     }
-    
+
     return <Register />;
   };
 
   const sidebar = !isMobile && !hideNavigation && (
     <div className={`sidebar-wrapper ${collapsed ? "collapsed" : ""}`}>
-      <BigScreenNavbar
-        collapsed={collapsed}
-        setCollapsed={setCollapsed}
-      />
+      <BigScreenNavbar collapsed={collapsed} setCollapsed={setCollapsed} />
     </div>
   );
 
@@ -271,7 +282,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
   }`;
 
   // Show floating button - position based on screen size and not on staff chat page
-  const isStaffChatPage = location.pathname.includes('/staff-chat');
+  const isStaffChatPage = location.pathname.includes("/staff-chat");
   const showFloatingButton = user && !hideNavigation && !isStaffChatPage;
 
   return (
@@ -280,210 +291,683 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
       <div className="d-flex min-vh-100 min-vw-100 app-container">
         {sidebar}
         <div className={layoutClass}>
-          <div className={`main-content-area d-flex flex-column ${!hideNavigation ? 'with-navbar' : ''}`}>
+          <div
+            className={`main-content-area d-flex flex-column ${
+              !hideNavigation ? "with-navbar" : ""
+            }`}
+          >
             {!hideNavigation && <LogoBanner />}
             <Routes>
               {/* Public Routes - Always Accessible */}
               <Route path="/login" element={<Login />} />
               <Route path="/logout" element={<Logout />} />
               <Route path="/register" element={<RegisterWithToken />} />
-              <Route path="/registration-success" element={<RegistrationSuccess />} />
+              <Route
+                path="/registration-success"
+                element={<RegistrationSuccess />}
+              />
               <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password/:uid/:token/" element={<ResetPassword />} />
+              <Route
+                path="/reset-password/:uid/:token/"
+                element={<ResetPassword />}
+              />
               <Route path="/no-internet" element={<NoInternet />} />
-              
               {/* NEW PHASE 1 ROUTES */}
               {/* Hotels Landing - Public */}
               <Route path="/" element={<HotelsLandingPage />} />
-              
               {/* Hotel Dynamic Public Page - Public (uses page builder) */}
               <Route path="/hotel/:slug" element={<HotelPublicPage />} />
-              
               {/* Section-Based Public Page - Public (new section-based system) */}
-              <Route path="/hotel/:slug/sections" element={<SectionBasedPublicPage />} />
-              
+              <Route
+                path="/hotel/:slug/sections"
+                element={<SectionBasedPublicPage />}
+              />
               {/* Section Editor - Staff only */}
-              <Route path="/staff/:hotelSlug/section-editor" element={<ProtectedRoute><SectionEditorPage /></ProtectedRoute>} />
-              
-              {/* Hotel Portal - Public (guest view) or Staff (with toggle) */}
-              <Route path="/:hotelSlug" element={<HotelPortalPage />} />
-              <Route path="/:hotelSlug/book" element={<BookingPage />} />
-              <Route path="/public/booking/:hotelSlug" element={<BookingPage />} />
-              <Route path="/:hotelSlug/my-bookings" element={<MyBookingsPage />} />
-              <Route path="/my-bookings" element={<MyBookingsPage />} />
-              <Route path="/booking/confirmation/:bookingId" element={<BookingConfirmation />} />
-              <Route path="/booking/payment/success" element={<BookingPaymentSuccess />} />
-              <Route path="/booking/payment/cancel" element={<BookingPaymentCancel />} />
-              
-      
+              <Route
+                path="/staff/:hotelSlug/section-editor"
+                element={
+                  <ProtectedRoute>
+                    <SectionEditorPage />
+                  </ProtectedRoute>
+                }
+              />
               {/* Staff Feed - Requires hotel slug */}
-              <Route path="/staff/:hotelSlug/feed" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-              
+              <Route
+                path="/staff/:hotelSlug/feed"
+                element={
+                  <ProtectedRoute>
+                    <Home />
+                  </ProtectedRoute>
+                }
+              />
               {/* Protected Routes - Require Authentication */}
-              <Route path="/reception" element={<ProtectedRoute><Reception /></ProtectedRoute>} />
+              <Route
+                path="/reception"
+                element={
+                  <ProtectedRoute>
+                    <Reception />
+                  </ProtectedRoute>
+                }
+              />
               {/* Protected Routes - Require Authentication */}
-              <Route path="/reception" element={<ProtectedRoute><Reception /></ProtectedRoute>} />
-
-              {/* Debug Routes - REMOVE IN PRODUCTION */}
-              <Route path="/pusher-debug" element={<ProtectedRoute><PusherDebugger /></ProtectedRoute>} />
-              <Route path="/user-debug" element={<ProtectedRoute><UserDebugInfo /></ProtectedRoute>} />
+              <Route
+                path="/reception"
+                element={
+                  <ProtectedRoute>
+                    <Reception />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Settings */}
-              <Route path="/staff/:hotelSlug/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-
+              <Route
+                path="/staff/:hotelSlug/settings"
+                element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                }
+              />
               {/* Maintenance */}
-              <Route path="/maintenance" element={<ProtectedRoute><Maintenance /></ProtectedRoute>} />
-
+              <Route
+                path="/maintenance"
+                element={
+                  <ProtectedRoute>
+                    <Maintenance />
+                  </ProtectedRoute>
+                }
+              />
               {/* Staff Routes */}
-              <Route path="/:hotelSlug/staff" element={<ProtectedRoute><Staff /></ProtectedRoute>} />
-              <Route path="/:hotelSlug/staff/create" element={<ProtectedRoute><StaffCreate /></ProtectedRoute>} />
-              <Route path="/:hotelSlug/staff/:id" element={<ProtectedRoute><StaffDetails /></ProtectedRoute>} />
-              <Route path="/:hotelSlug/staff/me" element={<ProtectedRoute><StaffProfile /></ProtectedRoute>} />
-
+              <Route
+                path="/:hotelSlug/staff"
+                element={
+                  <ProtectedRoute>
+                    <Staff />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/:hotelSlug/staff/create"
+                element={
+                  <ProtectedRoute>
+                    <StaffCreate />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/:hotelSlug/staff/:id"
+                element={
+                  <ProtectedRoute>
+                    <StaffDetails />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/:hotelSlug/staff/me"
+                element={
+                  <ProtectedRoute>
+                    <StaffProfile />
+                  </ProtectedRoute>
+                }
+              />
               {/* Attendance Routes */}
-              <Route path="/attendance/:hotelSlug" element={<ProtectedRoute><AttendanceDashboard /></ProtectedRoute>} />
-              <Route path="/roster/:hotelSlug" element={<ProtectedRoute><AttendanceDashboard /></ProtectedRoute>} /> {/* Legacy route */}
-              <Route path="/department-roster/:hotelSlug" element={<ProtectedRoute><DepartmentRosterDashboard /></ProtectedRoute>} />
-              <Route path="/enhanced-attendance/:hotelSlug" element={<ProtectedRoute><EnhancedAttendanceDashboard /></ProtectedRoute>} />
-              
+              <Route
+                path="/attendance/:hotelSlug"
+                element={
+                  <ProtectedRoute>
+                    <AttendanceDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/roster/:hotelSlug"
+                element={
+                  <ProtectedRoute>
+                    <AttendanceDashboard />
+                  </ProtectedRoute>
+                }
+              />{" "}
+              {/* Legacy route */}
+              <Route
+                path="/department-roster/:hotelSlug"
+                element={
+                  <ProtectedRoute>
+                    <DepartmentRosterDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/enhanced-attendance/:hotelSlug"
+                element={
+                  <ProtectedRoute>
+                    <EnhancedAttendanceDashboard />
+                  </ProtectedRoute>
+                }
+              />
               {/* Face Attendance Routes */}
-              <Route path="/face/:hotelSlug/register" element={<ProtectedRoute><FaceRegisterPage /></ProtectedRoute>} />
-              <Route path="/face/:hotelSlug/clock-in" element={<FaceClockInPage />} />
-              <Route path="/camera-clock-in/:hotelSlug" element={<FaceClockInPage />} />
-           
+              <Route
+                path="/face/:hotelSlug/register"
+                element={
+                  <ProtectedRoute>
+                    <FaceRegisterPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/face/:hotelSlug/clock-in"
+                element={<FaceClockInPage />}
+              />
+              <Route
+                path="/camera-clock-in/:hotelSlug"
+                element={<FaceClockInPage />}
+              />
               {/* PIN Auth - Public (guests use these) */}
-              <Route path="/:hotelIdentifier/room/:roomNumber/validate-pin" element={<PinAuth />} />
-              <Route path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin" element={<DinnerPinAuth />} />
-              
+              <Route
+                path="/:hotelIdentifier/room/:roomNumber/validate-pin"
+                element={<PinAuth />}
+              />
+              <Route
+                path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin"
+                element={<DinnerPinAuth />}
+              />
               {/* Restaurant Management */}
-              <Route path="/hotel-:hotelSlug/restaurants" element={<ProtectedRoute><RestaurantManagementDashboard /></ProtectedRoute>} />
-              <Route path="/:hotelSlug/:restaurantSlug" element={<ProtectedRoute><RestaurantManagementDashboard /></ProtectedRoute>} />
-              <Route path="/hotels/:hotelSlug/restaurants/:restaurantSlug" element={<Restaurant />} />
-
+              <Route
+                path="/hotel-:hotelSlug/restaurants"
+                element={
+                  <ProtectedRoute>
+                    <RestaurantManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/:hotelSlug/:restaurantSlug"
+                element={
+                  <ProtectedRoute>
+                    <RestaurantManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hotels/:hotelSlug/restaurants/:restaurantSlug"
+                element={<Restaurant />}
+              />
               {/* Guest Booking - Public (guests can book) */}
-              <Route path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/" element={<DinnerBookingList />} />
-              <Route path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/" element={
-                <RequireDinnerPin>
-                  <DinnerBookingForm />
-                </RequireDinnerPin>
-              } />
-
+              <Route
+                path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/"
+                element={<DinnerBookingList />}
+              />
+              <Route
+                path="/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/"
+                element={
+                  <RequireDinnerPin>
+                    <DinnerBookingForm />
+                  </RequireDinnerPin>
+                }
+              />
               {/* Room Services */}
-              <Route path="/rooms" element={<ProtectedRoute><RoomList /></ProtectedRoute>} />
-              <Route path="/room_services/:hotelIdentifier/orders" element={<ProtectedRoute><RoomServiceOrders /></ProtectedRoute>} />
-              <Route path="/room_services/:hotelIdentifier/orders-summary" element={<ProtectedRoute><OrdersSummary /></ProtectedRoute>} />
-              <Route path="/room_services/:hotelIdentifier/orders-management" element={<ProtectedRoute><RoomServiceOrdersManagement /></ProtectedRoute>} />
-              <Route path="/room_services/:hotelIdentifier/breakfast-orders" element={<ProtectedRoute><BreakfastRoomService /></ProtectedRoute>} />
-              <Route path="/room_services/:hotelIdentifier/room/:roomNumber/menu" element={
-                <RequirePin>
-                  <RoomService />
-                </RequirePin>
-              } />
-              <Route path="/room_services/:hotelIdentifier/room/:roomNumber/breakfast/" element={
-                <RequirePin>
-                  <Breakfast />
-                </RequirePin>
-              } />
-
+              <Route
+                path="/rooms"
+                element={
+                  <ProtectedRoute>
+                    <RoomList />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room_services/:hotelIdentifier/orders"
+                element={
+                  <ProtectedRoute>
+                    <RoomServiceOrders />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room_services/:hotelIdentifier/orders-summary"
+                element={
+                  <ProtectedRoute>
+                    <OrdersSummary />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room_services/:hotelIdentifier/orders-management"
+                element={
+                  <ProtectedRoute>
+                    <RoomServiceOrdersManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room_services/:hotelIdentifier/breakfast-orders"
+                element={
+                  <ProtectedRoute>
+                    <BreakfastRoomService />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/room_services/:hotelIdentifier/room/:roomNumber/menu"
+                element={
+                  <RequirePin>
+                    <RoomService />
+                  </RequirePin>
+                }
+              />
+              <Route
+                path="/room_services/:hotelIdentifier/room/:roomNumber/breakfast/"
+                element={
+                  <RequirePin>
+                    <Breakfast />
+                  </RequirePin>
+                }
+              />
               {/* Guests */}
-              <Route path="/:hotelIdentifier/guests" element={<ProtectedRoute><GuestList /></ProtectedRoute>} />
-              <Route path="/:hotelIdentifier/guests/:guestId/edit" element={<ProtectedRoute><GuestEdit /></ProtectedRoute>} />
-              <Route path="/rooms/:hotelIdentifier/rooms/:roomNumber" element={<ProtectedRoute><RoomDetails /></ProtectedRoute>} />
-              <Route path="/rooms/:roomNumber/add-guest" element={<ProtectedRoute><AssignGuestForm /></ProtectedRoute>} />
-
+              <Route
+                path="/:hotelIdentifier/guests"
+                element={
+                  <ProtectedRoute>
+                    <GuestList />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/:hotelIdentifier/guests/:guestId/edit"
+                element={
+                  <ProtectedRoute>
+                    <GuestEdit />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/rooms/:hotelIdentifier/rooms/:roomNumber"
+                element={
+                  <ProtectedRoute>
+                    <RoomDetails />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/rooms/:roomNumber/add-guest"
+                element={
+                  <ProtectedRoute>
+                    <AssignGuestForm />
+                  </ProtectedRoute>
+                }
+              />
               {/* Bookings */}
-              <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
-              <Route path="/staff/hotel/:hotelSlug/bookings" element={<ProtectedRoute><BookingManagementPage /></ProtectedRoute>} />
-
+              <Route
+                path="/bookings"
+                element={
+                  <ProtectedRoute>
+                    <Bookings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/staff/hotel/:hotelSlug/bookings"
+                element={
+                  <ProtectedRoute>
+                    <BookingManagementPage />
+                  </ProtectedRoute>
+                }
+              />
               {/* Hotel Info */}
-              <Route path="/hotel_info/:hotel_slug" element={<ProtectedRoute><HotelInfo /></ProtectedRoute>} />
-              <Route path="/hotel_info/:hotel_slug/:category" element={<ProtectedRoute><HotelInfo /></ProtectedRoute>} />
-              <Route path="/good_to_know/:hotel_slug/:slug" element={<GoodToKnow />} />
-              <Route path="/good_to_know_console/:hotel_slug" element={<ProtectedRoute><GoodToKnowConsole /></ProtectedRoute>} />
-
+              <Route
+                path="/hotel_info/:hotel_slug"
+                element={
+                  <ProtectedRoute>
+                    <HotelInfo />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hotel_info/:hotel_slug/:category"
+                element={
+                  <ProtectedRoute>
+                    <HotelInfo />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/good_to_know/:hotel_slug/:slug"
+                element={<GoodToKnow />}
+              />
+              <Route
+                path="/good_to_know_console/:hotel_slug"
+                element={
+                  <ProtectedRoute>
+                    <GoodToKnowConsole />
+                  </ProtectedRoute>
+                }
+              />
               {/* Stock Tracker Routes */}
-              <Route path="/stock_tracker/:hotel_slug" element={<ProtectedRoute><StockDashboard /></ProtectedRoute>} />
-              <Route path="/stock_tracker/:hotel_slug/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-              <Route path="/stock_tracker/:hotel_slug/operations" element={<ProtectedRoute><StockOperations /></ProtectedRoute>} />
-              <Route path="/stock_tracker/:hotel_slug/items" element={<ProtectedRoute><StockItemsResponsive /></ProtectedRoute>} />
-              <Route path="/stock_tracker/:hotel_slug/profitability" element={<ProtectedRoute><StockItemProfitability /></ProtectedRoute>} />
-              <Route path="/stock_tracker/:hotel_slug/movements" element={<ProtectedRoute><MovementsList /></ProtectedRoute>} />
-              <Route path="/stock_tracker/:hotel_slug/stocktakes" element={<ProtectedRoute><StocktakesList /></ProtectedRoute>} />
-              <Route path="/stock_tracker/:hotel_slug/stocktakes/:id" element={<ProtectedRoute><StocktakeDetail /></ProtectedRoute>} />
-              <Route path="/stock_tracker/:hotel_slug/periods" element={<ProtectedRoute><PeriodSnapshots /></ProtectedRoute>} />
-              <Route path="/stock_tracker/:hotel_slug/periods/:id" element={<ProtectedRoute><PeriodSnapshotDetail /></ProtectedRoute>} />
-              <Route path="/stock_tracker/:hotel_slug/comparison" element={<ProtectedRoute><PeriodsComparison /></ProtectedRoute>} />
-              <Route path="/stock_tracker/:hotel_slug/sales/analysis" element={<ProtectedRoute><SalesReport /></ProtectedRoute>} />
-              <Route path="/stock_tracker/:hotel_slug/sales/list" element={<ProtectedRoute><SalesListView /></ProtectedRoute>} />
-              <Route path="/stock_tracker/:hotel_slug/sales/entry" element={<ProtectedRoute><SalesEntry /></ProtectedRoute>} />
+              <Route
+                path="/stock_tracker/:hotel_slug"
+                element={
+                  <ProtectedRoute>
+                    <StockDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stock_tracker/:hotel_slug/analytics"
+                element={
+                  <ProtectedRoute>
+                    <Analytics />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stock_tracker/:hotel_slug/operations"
+                element={
+                  <ProtectedRoute>
+                    <StockOperations />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stock_tracker/:hotel_slug/items"
+                element={
+                  <ProtectedRoute>
+                    <StockItemsResponsive />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stock_tracker/:hotel_slug/profitability"
+                element={
+                  <ProtectedRoute>
+                    <StockItemProfitability />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stock_tracker/:hotel_slug/movements"
+                element={
+                  <ProtectedRoute>
+                    <MovementsList />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stock_tracker/:hotel_slug/stocktakes"
+                element={
+                  <ProtectedRoute>
+                    <StocktakesList />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stock_tracker/:hotel_slug/stocktakes/:id"
+                element={
+                  <ProtectedRoute>
+                    <StocktakeDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stock_tracker/:hotel_slug/periods"
+                element={
+                  <ProtectedRoute>
+                    <PeriodSnapshots />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stock_tracker/:hotel_slug/periods/:id"
+                element={
+                  <ProtectedRoute>
+                    <PeriodSnapshotDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stock_tracker/:hotel_slug/comparison"
+                element={
+                  <ProtectedRoute>
+                    <PeriodsComparison />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stock_tracker/:hotel_slug/sales/analysis"
+                element={
+                  <ProtectedRoute>
+                    <SalesReport />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stock_tracker/:hotel_slug/sales/list"
+                element={
+                  <ProtectedRoute>
+                    <SalesListView />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stock_tracker/:hotel_slug/sales/entry"
+                element={
+                  <ProtectedRoute>
+                    <SalesEntry />
+                  </ProtectedRoute>
+                }
+              />
               {/* Legacy routes - redirect to new sales routes */}
-              <Route path="/stock_tracker/:hotel_slug/sales-report" element={<Navigate to="../sales/analysis" replace />} />
-              <Route path="/stock_tracker/:hotel_slug/sales" element={<Navigate to="./entry" replace />} />
-              <Route path="/stock_tracker/:hotel_slug/cocktails" element={<ProtectedRoute><CocktailsPage /></ProtectedRoute>} />
-
+              <Route
+                path="/stock_tracker/:hotel_slug/sales-report"
+                element={<Navigate to="../sales/analysis" replace />}
+              />
+              <Route
+                path="/stock_tracker/:hotel_slug/sales"
+                element={<Navigate to="./entry" replace />}
+              />
+              <Route
+                path="/stock_tracker/:hotel_slug/cocktails"
+                element={
+                  <ProtectedRoute>
+                    <CocktailsPage />
+                  </ProtectedRoute>
+                }
+              />
               {/* Chat Routes */}
-              <Route path="/chat/:hotelSlug/messages/room/:room_number/validate-chat-pin" element={<ChatPinAuth />} />
-              <Route path="/hotel/:hotelSlug/chat" element={
-                <ProtectedRoute>
-                  <ChatHomePage selectedRoom={selectedRoom} onSelectRoom={handleSelectRoom} />
-                </ProtectedRoute>
-              } />
-              <Route path="/chat/:hotelSlug/conversations/:conversationId/messages/send" element={
-                <RequireChatPin>
-                  <ChatWindow />
-                </RequireChatPin>
-              } />
-              <Route path="/chat/:hotelSlug/conversations/:conversationId/messages" element={<ChatWindow />} />
-              
+              <Route
+                path="/chat/:hotelSlug/messages/room/:room_number/validate-chat-pin"
+                element={<ChatPinAuth />}
+              />
+              <Route
+                path="/hotel/:hotelSlug/chat"
+                element={
+                  <ProtectedRoute>
+                    <ChatHomePage
+                      selectedRoom={selectedRoom}
+                      onSelectRoom={handleSelectRoom}
+                    />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/chat/:hotelSlug/conversations/:conversationId/messages/send"
+                element={
+                  <RequireChatPin>
+                    <ChatWindow />
+                  </RequireChatPin>
+                }
+              />
+              <Route
+                path="/chat/:hotelSlug/conversations/:conversationId/messages"
+                element={<ChatWindow />}
+              />
               {/* Staff Chat Route */}
-              <Route path="/:hotelSlug/staff-chat" element={
-                <ProtectedRoute>
-                  <StaffChatPage />
-                </ProtectedRoute>
-              } />
-
+              <Route
+                path="/:hotelSlug/staff-chat"
+                element={
+                  <ProtectedRoute>
+                    <StaffChatPage />
+                  </ProtectedRoute>
+                }
+              />
               {/* Games - Protected */}
-              <Route path="/games" element={<ProtectedRoute><GamesDashboard /></ProtectedRoute>} />
-              <Route path="/games/whack-a-mole" element={<ProtectedRoute><WhackAMolePage audioSettings={audioSettings} /></ProtectedRoute>} />
-              <Route path="/games/memory-match" element={<ProtectedRoute><MemoryMatchDashboard /></ProtectedRoute>} />
-              <Route path="/games/memory-match/practice" element={<ProtectedRoute><MemoryGame practiceMode={true} /></ProtectedRoute>} />
-              <Route path="/games/memory-match/tournament/:tournamentId" element={<ProtectedRoute><MemoryGame /></ProtectedRoute>} />
-              <Route path="/games/memory-match/tournament/:tournamentId/winners" element={
-                <ProtectedRoute>
-                  <React.Suspense fallback={<div>Loading...</div>}>
-                    <TournamentWinners />
-                  </React.Suspense>
-                </ProtectedRoute>
-              } />
-              <Route path="/games/memory-match/tournaments" element={<ProtectedRoute><TournamentDashboard /></ProtectedRoute>} />
-              <Route path="/games/memory-match/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
-              <Route path="/games/memory-match/stats" element={<ProtectedRoute><PersonalStats /></ProtectedRoute>} />
-              
+              <Route
+                path="/games"
+                element={
+                  <ProtectedRoute>
+                    <GamesDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/games/whack-a-mole"
+                element={
+                  <ProtectedRoute>
+                    <WhackAMolePage audioSettings={audioSettings} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/games/memory-match"
+                element={
+                  <ProtectedRoute>
+                    <MemoryMatchDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/games/memory-match/practice"
+                element={
+                  <ProtectedRoute>
+                    <MemoryGame practiceMode={true} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/games/memory-match/tournament/:tournamentId"
+                element={
+                  <ProtectedRoute>
+                    <MemoryGame />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/games/memory-match/tournament/:tournamentId/winners"
+                element={
+                  <ProtectedRoute>
+                    <React.Suspense fallback={<div>Loading...</div>}>
+                      <TournamentWinners />
+                    </React.Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/games/memory-match/tournaments"
+                element={
+                  <ProtectedRoute>
+                    <TournamentDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/games/memory-match/leaderboard"
+                element={
+                  <ProtectedRoute>
+                    <Leaderboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/games/memory-match/stats"
+                element={
+                  <ProtectedRoute>
+                    <PersonalStats />
+                  </ProtectedRoute>
+                }
+              />
               {/* Quiz Game Routes */}
-              <Route path="/games/quiz" element={<ProtectedRoute><QuizStartScreen /></ProtectedRoute>} />
-              <Route path="/games/quiz/play" element={<ProtectedRoute><QuizPlayScreen /></ProtectedRoute>} />
-              <Route path="/games/quiz/results" element={<ProtectedRoute><QuizResultsScreen /></ProtectedRoute>} />
-              <Route path="/games/quiz/leaderboard" element={<ProtectedRoute><QuizLeaderboard /></ProtectedRoute>} />
-              <Route path="/games/quiz/tournaments" element={<ProtectedRoute><QuizTournaments /></ProtectedRoute>} />
-              
-              <Route path="/games/settings" element={<ProtectedRoute><div>Game Settings Coming Soon!</div></ProtectedRoute>} />
-              
+              <Route
+                path="/games/quiz"
+                element={
+                  <ProtectedRoute>
+                    <QuizStartScreen />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/games/quiz/play"
+                element={
+                  <ProtectedRoute>
+                    <QuizPlayScreen />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/games/quiz/results"
+                element={
+                  <ProtectedRoute>
+                    <QuizResultsScreen />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/games/quiz/leaderboard"
+                element={
+                  <ProtectedRoute>
+                    <QuizLeaderboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/games/quiz/tournaments"
+                element={
+                  <ProtectedRoute>
+                    <QuizTournaments />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/games/settings"
+                element={
+                  <ProtectedRoute>
+                    <div>Game Settings Coming Soon!</div>
+                  </ProtectedRoute>
+                }
+              />
+              {/* Hotel Portal Routes - Must be at end to avoid catching other routes */}
+              <Route path="/:hotelSlug/book" element={<BookingPage />} />
+              <Route
+                path="/public/booking/:hotelSlug"
+                element={<BookingPage />}
+              />
+              <Route
+                path="/:hotelSlug/my-bookings"
+                element={<MyBookingsPage />}
+              />
+              <Route path="/my-bookings" element={<MyBookingsPage />} />
+              <Route
+                path="/booking/confirmation/:bookingId"
+                element={<BookingConfirmation />}
+              />
+              <Route
+                path="/booking/payment/success"
+                element={<BookingPaymentSuccess />}
+              />
+              <Route
+                path="/booking/payment/cancel"
+                element={<BookingPaymentCancel />}
+              />
+              {/* Hotel Portal - Public (guest view) or Staff (with toggle) - MUST be last specific route */}
+              <Route path="/:hotelSlug" element={<HotelPortalPage />} />
               {/* Catch All */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
         </div>
       </div>
-      
+
       {/* Messenger Widget */}
-      {showFloatingButton && (
-        <MessengerWidget position="bottom-right" />
-      )}
+      {showFloatingButton && <MessengerWidget position="bottom-right" />}
 
       {/* Global Quick Notifications - Always visible when logged in */}
-      {user && !hideNavigation && (
-        <GlobalQuickNotifications />
-      )}
+      {user && !hideNavigation && <GlobalQuickNotifications />}
     </>
   );
 }
@@ -493,6 +977,7 @@ export default function App() {
   const isMobile = useMediaQuery({ maxWidth: 991 });
 
   return (
+     <BrowserRouter>
     <QueryClientProvider client={queryClient}>
       <ToastContainer
         position="top-center"
@@ -506,36 +991,41 @@ export default function App() {
       />
       <UIProvider>
         <AuthProvider>
-          <PusherProvider 
-            appKey={import.meta.env.VITE_PUSHER_KEY} 
-            cluster={import.meta.env.VITE_PUSHER_CLUSTER}
-            enabled={true}
-          >
-            <MessengerProvider>
-              <ThemeProvider>
-                <ChartPreferencesProvider>
-                  <ChatProvider>
-                    <StaffChatProvider>
-                      <BookingNotificationProvider>
-                        <RoomServiceNotificationProvider>
-                          <BrowserRouter>
-                            <NetworkHandler />
-                            <AppLayout
-                              collapsed={collapsed}
-                              setCollapsed={setCollapsed}
-                              isMobile={isMobile}
-                            />
-                          </BrowserRouter>
-                        </RoomServiceNotificationProvider>
-                      </BookingNotificationProvider>
-                    </StaffChatProvider>
-                  </ChatProvider>
-                </ChartPreferencesProvider>
-              </ThemeProvider>
-            </MessengerProvider>
-          </PusherProvider>
+          <RealtimeProvider>
+            <AttendanceProvider>
+              <RoomServiceProvider>
+                <BookingProvider>
+                  <GuestChatProvider>
+                    <StaffChatStoreProvider>
+                      <MessengerProvider>
+                        <ThemeProvider>
+                          <ChartPreferencesProvider>
+                            <ChatProvider>
+                              <StaffChatProvider>
+                                <BookingNotificationProvider>
+                                  <RoomServiceNotificationProvider>
+                                    <NetworkHandler />
+                                    <AppLayout
+                                      collapsed={collapsed}
+                                      setCollapsed={setCollapsed}
+                                      isMobile={isMobile}
+                                    />
+                                  </RoomServiceNotificationProvider>
+                                </BookingNotificationProvider>
+                              </StaffChatProvider>
+                            </ChatProvider>
+                          </ChartPreferencesProvider>
+                        </ThemeProvider>
+                      </MessengerProvider>
+                    </StaffChatStoreProvider>
+                  </GuestChatProvider>
+                </BookingProvider>
+              </RoomServiceProvider>
+            </AttendanceProvider>
+          </RealtimeProvider>
         </AuthProvider>
       </UIProvider>
     </QueryClientProvider>
+    </BrowserRouter>
   );
 }

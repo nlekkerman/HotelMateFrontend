@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { fetchMessages, sendMessage, uploadFiles, deleteMessage, deleteAttachment } from '../services/staffChatApi';
+import { useChatState, useChatDispatch } from '@/realtime/stores/chatStore.jsx';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import MessageActions from './MessageActions';
@@ -25,7 +26,14 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     timestamp: new Date().toISOString()
   });
   
-  const [messages, setMessages] = useState([]);
+  // Get chat state from store
+  const chatState = useChatState();
+  const chatDispatch = useChatDispatch();
+  
+  // Get conversation data from store
+  const storeConversation = conversation?.id ? chatState.conversationsById[conversation.id] : null;
+  const messages = storeConversation?.messages || [];
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sending, setSending] = useState(false);
@@ -52,295 +60,73 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     loadReadReceipts
   } = useReadReceipts(hotelSlug, conversation?.id, currentUserId);
 
-  // Sync readReceipts state changes to messages array
+  // Sync readReceipts state changes to store messages
   useEffect(() => {
-    if (Object.keys(readReceipts).length === 0) return;
+    if (Object.keys(readReceipts).length === 0 || !conversation?.id) return;
     
-    console.log('🔄🔄🔄 [SYNC] readReceipts state changed, syncing to messages array');
+    console.log('🔄🔄🔄 [SYNC] readReceipts state changed, syncing to store');
     console.log('🔄 [SYNC] readReceipts keys:', Object.keys(readReceipts));
     
-    setMessages(prev => {
-      const updated = prev.map(msg => {
-        const receipt = readReceipts[msg.id];
-        if (receipt) {
-          console.log(`🔄 [SYNC] Updating message ${msg.id}:`, {
-            oldCount: msg.read_by_count,
-            newCount: receipt.read_count,
-            oldList: msg.read_by_list?.length,
-            newList: receipt.read_by?.length
-          });
-          return {
-            ...msg,
-            read_by_list: receipt.read_by,
-            read_by_count: receipt.read_count
-          };
-        }
-        return msg;
-      });
-      
-      console.log('✅ [SYNC] Messages array updated with read receipts');
-      return updated;
-    });
-  }, [readReceipts]);
-
-  // Get Pusher instance from StaffChatContext
-  const { pusherInstance, setCurrentConversationId } = useStaffChat();
-
-  // Real-time Pusher integration - direct channel subscription
-  useEffect(() => {
-    console.log('🔄 [PUSHER EFFECT] Running Pusher subscription effect:', {
-      hasPusherInstance: !!pusherInstance,
-      pusherState: pusherInstance?.connection?.state,
-      hotelSlug,
-      conversationId: conversation?.id
-    });
-    
-    if (!pusherInstance || !hotelSlug || !conversation?.id) {
-      console.warn('⚠️ [PUSHER EFFECT] Missing required data, skipping subscription');
-      return;
-    }
-
-    const channelName = `${hotelSlug}-staff-conversation-${conversation.id}`;
-    console.log('📡 [STAFF-TO-STAFF] ConversationView subscribing to:', channelName);
-    console.log('📡 [STAFF-TO-STAFF] ⚠️ IMPORTANT: This is STAFF-TO-STAFF (NO -chat suffix!)');
-    console.log('📡 [STAFF-TO-STAFF] Hotel:', hotelSlug);
-    console.log('📡 [STAFF-TO-STAFF] Conversation ID:', conversation.id);
-    console.log('📡 [STAFF-TO-STAFF] Pusher connection state:', pusherInstance.connection.state);
-    console.log('📡 [STAFF-TO-STAFF] Pusher socket ID:', pusherInstance.connection.socket_id);
-    
-    // Get or subscribe to channel
-    let channel = pusherInstance.channel(channelName);
-    if (!channel) {
-      channel = pusherInstance.subscribe(channelName);
-    }
-
-    // Handle new messages
-    const handleNewMessage = (data) => {
-      console.log('📨 [STAFF CHAT] ==================== NEW MESSAGE EVENT ====================');
-      console.log('📨 [STAFF CHAT] Raw event data:', JSON.stringify(data, null, 2));
-      console.log('📨 [STAFF CHAT] Message details:', {
-        id: data.id,
-        message: data.message || data.content,
-        sender_id: data.sender?.id || data.sender_id,
-        sender_name: data.sender?.full_name || data.sender_name,
-        conversation_id: data.conversation_id,
-        timestamp: data.timestamp || data.created_at,
-        has_attachments: !!data.attachments?.length
-      });
-      
-      // Check if message already exists
-      setMessages(prev => {
-        console.log('📨 [STAFF CHAT] ===== ADDING MESSAGE TO UI =====');
-        console.log('📨 [STAFF CHAT] Current messages in state:', prev.length);
-        console.log('📨 [STAFF CHAT] Current message IDs:', prev.map(m => m.id));
-        console.log('📨 [STAFF CHAT] New message ID:', data.id);
+    // Update messages with read receipt data in the store
+    Object.keys(readReceipts).forEach(messageId => {
+      const receipt = readReceipts[messageId];
+      if (receipt) {
+        console.log(`🔄 [SYNC] Updating message ${messageId} in store with read receipts`);
         
-        const exists = prev.some(m => m.id === data.id);
-        if (exists) {
-          console.log('⚠️ [STAFF CHAT] Message already exists, skipping. Message ID:', data.id);
-          return prev;
-        }
-        
-        console.log('✅ [STAFF CHAT] Message does NOT exist - ADDING TO UI');
-        console.log('✅ [STAFF CHAT] Message content:', data.message || data.content);
-        const newMessages = [...prev, data];
-        console.log('✅ [STAFF CHAT] New total messages:', newMessages.length);
-        console.log('✅ [STAFF CHAT] Updated message IDs:', newMessages.map(m => m.id));
-        console.log('✅ [STAFF CHAT] Last 3 messages:', newMessages.slice(-3).map(m => ({ 
-          id: m.id, 
-          text: (m.message || m.content)?.substring(0, 30),
-          sender: m.sender_name || m.sender_info?.full_name
-        })));
-        console.log('📨 [STAFF CHAT] ===== END ADDING MESSAGE =====');
-        
-        return newMessages;
-      });
-      
-      console.log('📨 [STAFF CHAT] Scrolling to bottom...');
-      scrollToBottom();
-    };
-
-    // Handle message edited
-    const handleMessageEdited = (data) => {
-      console.log('✏️ [STAFF CHAT] Message edited:', data);
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === data.id ? { ...msg, ...data, is_edited: true } : msg
-        )
-      );
-    };
-
-    // Handle message deleted
-    const handleMessageDeleted = (data) => {
-      console.log('🗑️ [STAFF CHAT] Message deleted:', data);
-      if (data.hard_delete) {
-        setMessages(prev => prev.filter(msg => msg.id !== data.message_id));
-      } else {
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === data.message_id
-              ? { ...msg, is_deleted: true, message: data.message?.message || '[Message deleted]' }
-              : msg
-          )
-        );
+        // Dispatch read receipt update to store
+        chatDispatch({
+          type: 'RECEIVE_READ_RECEIPT',
+          payload: {
+            messageId: parseInt(messageId),
+            conversationId: conversation.id,
+            readBy: receipt.read_by,
+            readCount: receipt.read_count
+          }
+        });
       }
-    };
+    });
+    
+    console.log('✅ [SYNC] Store updated with read receipts');
+  }, [readReceipts, conversation?.id, chatDispatch]);
 
-    // Handle read receipts
-    const handleReadReceipt = (data) => {
-      console.log('');
-      console.log('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
-      console.log('📖📖📖 [READ RECEIPT EVENT] PUSHER EVENT FIRED!!!');
-      console.log('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
-      console.log('📖 [READ RECEIPT EVENT] Pusher event received at:', new Date().toISOString());
-      console.log('📖 [READ RECEIPT EVENT] Raw data:', JSON.stringify(data, null, 2));
-      console.log('📖 [READ RECEIPT EVENT] Data type:', typeof data);
-      console.log('📖 [READ RECEIPT EVENT] Has message_ids:', !!data.message_ids);
-      console.log('📖 [READ RECEIPT EVENT] Message IDs:', data.message_ids);
-      console.log('📖 [READ RECEIPT EVENT] Staff ID who read:', data.staff_id);
-      console.log('📖 [READ RECEIPT EVENT] Staff name:', data.staff_name);
-      console.log('📖 [READ RECEIPT EVENT] Timestamp:', data.timestamp);
-      console.log('📖 [READ RECEIPT EVENT] Current conversation ID:', conversation?.id);
-      console.log('📖 [READ RECEIPT EVENT] Current messages count:', messages.length);
-      console.log('📖 [READ RECEIPT EVENT] Current userId:', currentUserId);
-      console.log('📖 [READ RECEIPT EVENT] Is this my read receipt?', data.staff_id === currentUserId);
-      console.log('📖 [READ RECEIPT EVENT] ===========================================');
+  // Get setCurrentConversationId from StaffChatContext (for compatibility)
+  const { setCurrentConversationId } = useStaffChat();
+
+  // Set active conversation in store when conversation changes
+  useEffect(() => {
+    if (conversation?.id && chatState.activeConversationId !== conversation.id) {
+      console.log('🔄 [CHAT STORE] Setting active conversation:', conversation.id);
       
-      console.log('🔄 [READ RECEIPT EVENT] Calling updateReadReceipts from useReadReceipts hook...');
-      updateReadReceipts(data);
-      console.log('✅ [READ RECEIPT EVENT] updateReadReceipts completed');
-      
-      // Update message list with new read counts
-      console.log('🔄 [READ RECEIPT EVENT] Updating messages state...');
-      setMessages(prevMessages => {
-        console.log('📝 [READ RECEIPT STATE] ===== START STATE UPDATE =====');
-        console.log('📝 [READ RECEIPT STATE] Previous messages count:', prevMessages.length);
-        console.log('📝 [READ RECEIPT STATE] Message IDs to update:', data.message_ids);
-        console.log('📝 [READ RECEIPT STATE] All message IDs in state:', prevMessages.map(m => m.id));
-        
-        const updatedMessages = prevMessages.map((msg, index) => {
-          if (data.message_ids && data.message_ids.includes(msg.id)) {
-            console.log(`✅ [READ RECEIPT STATE] Found message ${msg.id} to update (index ${index})`);
-            console.log(`   Message text:`, (msg.message || msg.content || '').substring(0, 30));
-            const alreadyReadBy = msg.read_by_list || [];
-            console.log(`   Current read_by_list:`, JSON.stringify(alreadyReadBy));
-            console.log(`   Current read_by_count:`, msg.read_by_count);
-            
-            const alreadyRead = alreadyReadBy.some(r => r.id === data.staff_id);
-            console.log(`   Already read by staff ${data.staff_id}?`, alreadyRead);
-            
-            if (!alreadyRead) {
-              console.log(`   ➕ ADDING new read receipt for staff ${data.staff_id}`);
-              const newReadByList = [
-                ...alreadyReadBy,
-                {
-                  id: data.staff_id,
-                  name: data.staff_name,
-                  timestamp: data.timestamp
-                }
-              ];
-              const newReadByCount = (msg.read_by_count || 0) + 1;
-              
-              const updated = {
-                ...msg,
-                read_by_count: newReadByCount,
-                read_by_list: newReadByList
-              };
-              console.log(`   ✅✅ UPDATED - New read_by_count:`, updated.read_by_count);
-              console.log(`   ✅✅ UPDATED - New read_by_list:`, JSON.stringify(updated.read_by_list));
-              console.log(`   ✅✅ UPDATED - Complete updated message object keys:`, Object.keys(updated));
-              return updated;
-            } else {
-              console.log(`   ⚠️ Staff already read this message, not updating`);
-            }
-          }
-          return msg;
-        });
-        
-        console.log('📝 [READ RECEIPT STATE] ===== COMPARING BEFORE/AFTER =====');
-        console.log('📝 [READ RECEIPT STATE] Messages changed?', prevMessages !== updatedMessages);
-        console.log('📝 [READ RECEIPT STATE] Updated messages count:', updatedMessages.length);
-        
-        // Log the specific messages that should have been updated
-        data.message_ids?.forEach(msgId => {
-          const oldMsg = prevMessages.find(m => m.id === msgId);
-          const newMsg = updatedMessages.find(m => m.id === msgId);
-          console.log(`📝 [READ RECEIPT STATE] Message ${msgId} comparison:`);
-          console.log(`   Old count:`, oldMsg?.read_by_count, `| New count:`, newMsg?.read_by_count);
-          console.log(`   Old list length:`, oldMsg?.read_by_list?.length, `| New list length:`, newMsg?.read_by_list?.length);
-          console.log(`   Actually changed?`, oldMsg?.read_by_count !== newMsg?.read_by_count);
-        });
-        
-        console.log('📝 [READ RECEIPT STATE] ===== END STATE UPDATE =====');
-        return updatedMessages;
+      chatDispatch({
+        type: 'SET_ACTIVE_CONVERSATION',
+        payload: { conversationId: conversation.id }
       });
       
-      console.log('✅✅✅ [READ RECEIPT EVENT] handleReadReceipt completed ===========================================');
-    };
+      // Backward compatibility with existing staff chat context
+      setCurrentConversationId(conversation.id);
+    }
+  }, [conversation?.id, chatState.activeConversationId, chatDispatch, setCurrentConversationId]);
 
-    // Handle attachment deleted
-    const handleAttachmentDeleted = (data) => {
-      console.log('📎 [STAFF CHAT] Attachment deleted:', data);
-      setMessages(prev =>
-        prev.map(msg => {
-          if (msg.id === data.message_id) {
-            return {
-              ...msg,
-              attachments: (msg.attachments || []).filter(att => att.id !== data.attachment_id)
-            };
-          }
-          return msg;
-        })
-      );
-    };
-
-    // DEBUG: Bind to ALL events to see what's coming through
-    channel.bind_global((eventName, data) => {
-      console.log('🌍🌍🌍 [GLOBAL EVENT CATCHER] Event received on channel:', channelName);
-      console.log('🌍 Event name:', eventName);
-      console.log('🌍 Event data:', data);
-      console.log('🌍 Is it messages-read?', eventName === 'messages-read');
-    });
-
-    // Bind all event handlers
-    console.log('🎧 [STAFF CHAT] Binding event handlers to channel:', channelName);
-    channel.bind('new-message', handleNewMessage);
-    console.log('🎧 [STAFF CHAT] ✓ Bound: new-message');
-    channel.bind('message-edited', handleMessageEdited);
-    console.log('🎧 [STAFF CHAT] ✓ Bound: message-edited');
-    channel.bind('message-deleted', handleMessageDeleted);
-    console.log('🎧 [STAFF CHAT] ✓ Bound: message-deleted');
-    
-    console.log('🎧🎧🎧 [STAFF CHAT] BINDING MESSAGES-READ EVENT...');
-    console.log('🎧 [STAFF CHAT] Event name: "messages-read"');
-    console.log('🎧 [STAFF CHAT] Handler function:', typeof handleReadReceipt);
-    console.log('🎧 [STAFF CHAT] Channel:', channelName);
-    channel.bind('messages-read', handleReadReceipt);
-    console.log('🎧🎧🎧 [STAFF CHAT] ✓✓✓ BOUND: messages-read - THIS IS THE READ RECEIPT EVENT');
-    
-    channel.bind('attachment-deleted', handleAttachmentDeleted);
-    console.log('🎧 [STAFF CHAT] ✓ Bound: attachment-deleted');
-
-    // Listen for Pusher subscription events
-    channel.bind('pusher:subscription_succeeded', () => {
-      console.log('✅ [STAFF CHAT] Successfully subscribed to channel:', channelName);
+  // Handle realtime events from store (messages automatically update via store state)
+  useEffect(() => {
+    console.log('📨 [CHAT STORE] Messages updated from store:', {
+      conversationId: conversation?.id,
+      messageCount: messages.length,
+      lastMessageId: messages[messages.length - 1]?.id
     });
     
-    channel.bind('pusher:subscription_error', (error) => {
-      console.error('❌ [STAFF CHAT] Subscription error for channel:', channelName, error);
-    });
+    // Auto scroll to bottom when new messages arrive
+    if (messages.length > 0) {
+      scrollToBottom();
+    }
+  }, [messages, conversation?.id]);
 
-    console.log('✅ [STAFF CHAT] All event handlers bound successfully');
+  // Handle read receipts from realtime events
+  // Read receipts are now handled through chatStore - window events removed
 
-    return () => {
-      console.log('🔌 [STAFF CHAT] ConversationView cleaning up event handlers');
-      channel.unbind('new-message', handleNewMessage);
-      channel.unbind('message-edited', handleMessageEdited);
-      channel.unbind('message-deleted', handleMessageDeleted);
-      channel.unbind('messages-read', handleReadReceipt);
-      channel.unbind('attachment-deleted', handleAttachmentDeleted);
-    };
-  }, [pusherInstance, hotelSlug, conversation?.id, updateReadReceipts]);
+
+
+
 
   // Debug: Log replyTo state changes
   useEffect(() => {
@@ -364,6 +150,39 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     };
   }, [conversation?.id, setCurrentConversationId]);
 
+  // Initialize messages from store when conversation changes
+  useEffect(() => {
+    if (conversation?.id && !storeConversation) {
+      // Initialize conversation in store if it doesn't exist
+      chatDispatch({
+        type: 'INIT_CONVERSATIONS_FROM_API',
+        payload: {
+          conversations: [conversation]
+        }
+      });
+    }
+  }, [conversation, storeConversation, chatDispatch]);
+
+  // Auto mark last message as read when it comes into view
+  useEffect(() => {
+    if (!lastMessageRef.current || messages.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      async (entries) => {
+        if (entries[0].isIntersecting) {
+          console.log('👁️ [AUTO MARK READ] Last message is visible, marking conversation as read');
+          await markConversationRead();
+          console.log('✅ [MARK ALL AS READ] markConversationRead completed');
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    observer.observe(lastMessageRef.current);
+
+    return () => observer.disconnect();
+  }, [messages.length, markConversationRead]);
+
   // Mark ALL messages as read when conversation is opened
   useEffect(() => {
     if (conversation?.id && messages.length > 0) {
@@ -382,30 +201,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     }
   }, [conversation?.id, messages.length, markConversationRead]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  // Auto-mark ALL messages as read when last message is visible (user scrolled to bottom)
-  useEffect(() => {
-    if (!lastMessageRef.current || messages.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      async (entries) => {
-        if (entries[0].isIntersecting) {
-          console.log('👁️ [MARK ALL AS READ] Last message visible, marking ALL as read');
-          console.log('📮 [MARK ALL AS READ] Calling markConversationRead...');
-          await markConversationRead();
-          console.log('✅ [MARK ALL AS READ] markConversationRead completed');
-        }
-      },
-      { threshold: 1.0 }
-    );
-
-    observer.observe(lastMessageRef.current);
-
-    return () => observer.disconnect();
-  }, [messages.length, markConversationRead]);
+  // Note: Auto-scroll and mark as read logic already handled above
 
   const loadMessages = async () => {
     if (!conversation?.id) return;
@@ -416,7 +212,15 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     try {
       const data = await fetchMessages(hotelSlug, conversation.id);
       const messageList = Array.isArray(data) ? data : data.results || [];
-      setMessages(messageList);
+      
+      // Load messages into store
+      chatDispatch({
+        type: 'INIT_MESSAGES_FOR_CONVERSATION',
+        payload: {
+          conversationId: conversation.id,
+          messages: messageList
+        }
+      });
       
       // Load read receipts from message data
       loadReadReceipts(messageList);
@@ -478,28 +282,22 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
         );
       }
       
-      // Add new message to list
+      // Add new message to store
       console.log('✅ [SEND MESSAGE] Message sent successfully:', {
         messageId: result.message?.id || result.id,
         hasMessage: !!result.message,
         hasId: !!result.id
       });
       
-      if (result.message) {
-        console.log('📝 [SEND MESSAGE] Adding result.message to UI:', result.message.id);
-        setMessages(prev => {
-          console.log('📝 [SEND MESSAGE] Previous count:', prev.length);
-          const newMessages = [...prev, result.message];
-          console.log('📝 [SEND MESSAGE] New count:', newMessages.length);
-          return newMessages;
-        });
-      } else if (result.id) {
-        console.log('📝 [SEND MESSAGE] Adding result to UI:', result.id);
-        setMessages(prev => {
-          console.log('📝 [SEND MESSAGE] Previous count:', prev.length);
-          const newMessages = [...prev, result];
-          console.log('📝 [SEND MESSAGE] New count:', newMessages.length);
-          return newMessages;
+      const messageToAdd = result.message || result;
+      if (messageToAdd && messageToAdd.id) {
+        console.log('📝 [SEND MESSAGE] Adding message to store:', messageToAdd.id);
+        chatDispatch({
+          type: 'RECEIVE_MESSAGE',
+          payload: {
+            message: messageToAdd,
+            conversationId: conversation.id
+          }
         });
       }
       
@@ -586,17 +384,16 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     try {
       const result = await deleteMessage(hotelSlug, messageId, hardDelete);
       
-      if (result.hard_delete) {
-        // Hard delete - remove from UI
-        setMessages(prev => prev.filter(msg => msg.id !== messageId));
-      } else {
-        // Soft delete - update to show deleted state
-        setMessages(prev => prev.map(msg => 
-          msg.id === messageId 
-            ? { ...msg, is_deleted: true, message: result.message.message }
-            : msg
-        ));
-      }
+      // Update store with delete result
+      chatDispatch({
+        type: 'MESSAGE_DELETED',
+        payload: {
+          messageId: messageId,
+          conversationId: conversation.id,
+          hardDelete: result.hard_delete,
+          deletedMessage: result.message
+        }
+      });
     } catch (err) {
       console.error('Error deleting message:', err);
       alert('Failed to delete message. Please try again.');

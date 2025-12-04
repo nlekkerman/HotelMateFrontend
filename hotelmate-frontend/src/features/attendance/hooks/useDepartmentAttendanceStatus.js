@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react';
 import api from '@/services/api';
+import { useAttendanceState, useAttendanceDispatch } from '@/realtime/stores/attendanceStore.jsx';
+import { attendanceActions } from '@/realtime/stores/attendanceStore.jsx';
 
 /**
- * Hook to fetch real-time attendance status by department
+ * Hook to fetch real-time attendance status by department - now using centralized store
  */
 export const useDepartmentAttendanceStatus = (hotelSlug, refreshKey = 0) => {
-  const [data, setData] = useState({});
+  const attendanceState = useAttendanceState();
+  const dispatch = useAttendanceDispatch();
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  // Initial fetch from API and populate store
   useEffect(() => {
     if (!hotelSlug) {
-      setData({});
       setLoading(false);
       return;
     }
@@ -21,11 +25,14 @@ export const useDepartmentAttendanceStatus = (hotelSlug, refreshKey = 0) => {
       try {
         setError(null);
         const response = await api.get(`/staff/hotel/${hotelSlug}/attendance/clock-logs/department-status/`);
-        setData(response.data || {});
+        const departmentData = response.data || {};
+        
+        // Store the department data in the attendance store
+        attendanceActions.initDepartmentSummary(departmentData);
+        
       } catch (err) {
         console.error('Failed to fetch department attendance status:', err);
         setError(err.response?.data?.detail || 'Failed to load attendance data');
-        setData({});
       } finally {
         setLoading(false);
       }
@@ -36,7 +43,13 @@ export const useDepartmentAttendanceStatus = (hotelSlug, refreshKey = 0) => {
 
   const refresh = () => setRefreshTrigger(prev => prev + 1);
 
-  return { data, loading, error, refresh };
+  // Return data from store instead of local state
+  return { 
+    data: attendanceState.byDepartment, 
+    loading, 
+    error, 
+    refresh 
+  };
 };
 
 /**

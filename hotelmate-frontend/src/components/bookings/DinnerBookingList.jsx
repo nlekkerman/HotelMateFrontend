@@ -2,14 +2,20 @@
 
 import React, { useEffect, useState } from "react";
 import api from "@/services/api";
+import { useBookingState } from "@/realtime/stores/bookingStore";
+import { bookingActions } from "@/realtime/stores/bookingStore";
 
 export default function DinnerBookingList() {
+  const bookingState = useBookingState();
   const [restaurants, setRestaurants] = useState([]);   // list of { id, name, slug }
   const [selectedSlug, setSelectedSlug] = useState(""); // slug of the restaurant to fetch
-  const [bookings, setBookings] = useState([]);
+  const [bookings, setBookings] = useState([]);  // Keep local state for filtered bookings by restaurant
   const [loadingRestaurants, setLoadingRestaurants] = useState(true);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Get all bookings from store for any realtime updates
+  const storeBookings = Object.values(bookingState.bookingsById);
 
   // 1) Read hotel_slug from localStorage
   const getHotelSlug = () => {
@@ -79,6 +85,11 @@ export default function DinnerBookingList() {
         setBookings(res.data);
         setLoadingBookings(false);
         console.log("Fetched dinner bookings:", res.data);
+        
+        // Initialize store with fetched bookings for realtime updates
+        if (res.data && res.data.length > 0) {
+          bookingActions.initFromAPI(res.data);
+        }
       })
       .catch((err) => {
         console.error("Failed to fetch dinner bookings:", err);

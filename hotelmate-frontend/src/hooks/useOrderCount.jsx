@@ -26,7 +26,6 @@ export function OrderCountProvider({ children }) {
       const res = await api.get(`/room_services/${hotelSlug}/orders/`);
       const ordersData = Array.isArray(res.data.results) ? res.data.results : res.data;
       const pendingCount = ordersData.filter(order => order.status === 'pending').length;
-      console.log('🔢 Room Service Count:', { total: ordersData.length, pending: pendingCount });
       setRoomServiceCount(pendingCount);
     } catch (err) {
       console.error('Error fetching room service count:', err);
@@ -40,7 +39,6 @@ export function OrderCountProvider({ children }) {
       const res = await api.get(`/room_services/${hotelSlug}/breakfast-orders/`);
       const ordersData = Array.isArray(res.data.results) ? res.data.results : res.data;
       const pendingCount = ordersData.filter(order => order.status === 'pending').length;
-      console.log('🔢 Breakfast Count:', { total: ordersData.length, pending: pendingCount });
       setBreakfastCount(pendingCount);
     } catch (err) {
       console.error('Error fetching breakfast count:', err);

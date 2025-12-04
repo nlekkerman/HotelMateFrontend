@@ -1,3 +1,4 @@
+// TODO: migrate remaining domains to centralized realtime (eventBus + store)
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import usePusher from '../hooks/usePusher';
@@ -22,7 +23,11 @@ export const usePusherContext = () => {
 
 /**
  * PusherProvider Component
- * Wraps the app with Pusher real-time functionality
+ * LEGACY: Wraps the app with Pusher real-time functionality
+ * 
+ * NOTE: Staff chat now uses centralized realtime system (src/realtime/realtimeClient.js)
+ * This provider is kept temporarily for compatibility with any remaining components
+ * that haven't been migrated to the new system yet.
  * 
  * Usage:
  * ```jsx

@@ -1,3 +1,4 @@
+// TODO: migrate this domain to centralized realtime (eventBus + store)
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Modal, Badge, Spinner, Card } from 'react-bootstrap';
 import { motion } from 'framer-motion';

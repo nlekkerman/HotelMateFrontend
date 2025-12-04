@@ -1,19 +1,17 @@
 // src/staff_chat/context/StaffChatContext.jsx
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import Pusher from "pusher-js";
-import { fetchConversations } from "../services/staffChatApi";
+import { fetchConversations, sendMessage as apiSendMessage, markConversationAsRead } from "../services/staffChatApi";
 import { useAuth } from "@/context/AuthContext";
+import { useChatState, useChatDispatch, CHAT_ACTIONS } from "@/realtime/stores/chatStore.jsx";
 
 const StaffChatContext = createContext(undefined);
 
 export const StaffChatProvider = ({ children }) => {
   const { user } = useAuth();
-  const [conversations, setConversations] = useState([]);
-  const [currentConversationId, setCurrentConversationId] = useState(null);
-  const pusherRef = useRef(null);
-  const channelsRef = useRef(new Map());
+  const chatState = useChatState();
+  const chatDispatch = useChatDispatch();
   
-  // Event listeners for broadcasting messages to all components
+  // Event listeners for broadcasting messages to all components (maintain compatibility)
   const messageListenersRef = useRef(new Set());
   const conversationUpdateListenersRef = useRef(new Set());
 
@@ -74,218 +72,116 @@ export const StaffChatProvider = ({ children }) => {
     });
   }, []);
 
-  // Fetch staff conversations
+  // Fetch staff conversations and load into store
   const fetchStaffConversations = useCallback(async () => {
     if (!hotelSlug) return;
 
     try {
       const res = await fetchConversations(hotelSlug);
       const convs = res?.results || res || [];
-      setConversations(convs);
+      
+      // Load conversations into chatStore
+      chatDispatch({
+        type: CHAT_ACTIONS.INIT_CONVERSATIONS_FROM_API,
+        payload: { conversations: convs }
+      });
     } catch (err) {
       console.error("Failed to fetch staff conversations:", err);
     }
-  }, [hotelSlug]);
+  }, [hotelSlug, chatDispatch]);
 
   useEffect(() => {
     fetchStaffConversations();
   }, [fetchStaffConversations]);
 
-  // Initialize Pusher for staff-to-staff chat
+  // Monitor chatStore for changes and broadcast to legacy listeners
   useEffect(() => {
-    if (!hotelSlug || !staffId) return;
-
-   
-
-    const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
-      cluster: import.meta.env.VITE_PUSHER_CLUSTER,
-      forceTLS: true,
-    });
-    pusherRef.current = pusher;
-
-   
-
-   
-
-    // Subscribe to personal staff notifications channel
-    // Format for staff-to-STAFF: {hotel_slug}-staff-{staff_id}-notifications (NOT -chat!)
-    const staffNotificationsChannel = `${hotelSlug}-staff-${staffId}-notifications`;
+    // Watch for new messages in any conversation and broadcast to legacy message listeners
+    const conversations = Object.values(chatState.conversationsById);
     
-    const notifChannel = pusher.subscribe(staffNotificationsChannel);
-    
-    notifChannel.bind('pusher:subscription_succeeded', () => {
-      console.log(`✅ [STAFF CHAT] Successfully subscribed to: ${staffNotificationsChannel}`);
-    });
-
-    notifChannel.bind('pusher:subscription_error', (error) => {
-      console.error(`❌ [STAFF CHAT] Subscription error for ${staffNotificationsChannel}:`, error);
-    });
-    
-    // ⚠️ IMPORTANT: Backend does NOT send "new-message" to notification channel!
-    // Notification channel ONLY receives: message-mention, new-conversation
-    // All "new-message" events come through conversation channels below
-
-    // Listen for mentions (this IS sent to notification channel)
-    notifChannel.bind("message-mention", (data) => {
-     
-      // Refresh conversations
-      fetchStaffConversations();
-
-      // Show notification
-      if (
-        "Notification" in window &&
-        Notification.permission === "granted"
-      ) {
-        new Notification(`${data.sender_name} mentioned you`, {
-          body: data.message || 'You were mentioned in a message',
-          icon: data.sender_profile_image || "/favicon-32x32.png",
-          tag: `staff-mention-${data.message_id}`,
-        });
-      }
-    });
-
-    // Listen for new conversation invites (this IS sent to notification channel)
-    notifChannel.bind("new-conversation", (data) => {
-      
-      
-      // Refresh to show new conversation
-      fetchStaffConversations();
-
-      // Show notification
-      if (
-        "Notification" in window &&
-        Notification.permission === "granted"
-      ) {
-        new Notification("Added to new conversation", {
-          body: data.title || 'You were added to a conversation',
-          icon: "/favicon-32x32.png",
-          tag: `new-conv-${data.conversation_id}`,
-        });
-      }
-    });
-
-    return () => {
-      notifChannel.unbind_all();
-      pusher.unsubscribe(staffNotificationsChannel);
-      
-      channelsRef.current.forEach((ch) => {
-        ch.unbind_all();
-        pusher.unsubscribe(ch.name);
-      });
-      channelsRef.current.clear();
-      pusher.disconnect();
-      pusherRef.current = null;
-    };
-  }, [hotelSlug, staffId, fetchStaffConversations, currentConversationId]);
-
-  // Subscribe to individual conversation channels dynamically
-  useEffect(() => {
-    if (!pusherRef.current || !hotelSlug) return;
-
-    conversations.forEach((conv) => {
-      if (channelsRef.current.has(conv.id)) return;
-
-      // Format for staff-to-STAFF: {hotel_slug}-staff-conversation-{conversation_id} (NO -chat suffix!)
-      const channelName = `${hotelSlug}-staff-conversation-${conv.id}`;
-     
-      
-      const channel = pusherRef.current.subscribe(channelName);
-
-    
-
-      channel.bind('pusher:subscription_error', (error) => {
-        console.error(`❌ [STAFF CHAT] Subscription error for ${channelName}:`, error);
-      });
-
-      // ✅ THIS IS WHERE ALL "new-message" EVENTS COME FROM
-      // Backend calls broadcast_new_message() which triggers this event
-      channel.bind("new-message", (msg) => {
-      
-        // 🔥 BROADCAST MESSAGE TO ALL LISTENERS (ChatWindowPopup, QuickNotifications, etc.)
-        broadcastMessage(msg);
+    conversations.forEach(conversation => {
+      const lastMessage = conversation.messages[conversation.messages.length - 1];
+      if (lastMessage) {
+        // Broadcast to legacy message listeners for compatibility
+        broadcastMessage(lastMessage);
         
-        setConversations((prev) =>
-          prev.map((c) => {
-            if (c.id === msg.conversation_id || c.id === conv.id) {
-              const isMyMessage = senderId === staffId;
-              const isCurrentConv = c.id === currentConversationId;
-              
-             
-              
-              const updatedConv = {
-                ...c,
-                last_message: {
-                  message: msg.message || msg.content,
-                  has_attachments: msg.attachments?.length > 0 || false,
-                  attachments: msg.attachments || [],
-                  timestamp: msg.timestamp || msg.created_at
-                },
-                // Don't increment unread if:
-                // 1. This is the current conversation (user is viewing it)
-                // 2. I sent the message
-                unread_count:
-                  isCurrentConv || isMyMessage
-                    ? c.unread_count
-                    : (c.unread_count || 0) + 1,
-                updated_at: msg.timestamp || msg.created_at
-              };
-              
-              // 🔥 BROADCAST CONVERSATION UPDATE TO ALL LISTENERS (ConversationsList, etc.)
-              broadcastConversationUpdate(c.id, updatedConv);
-              
-              return updatedConv;
-            }
-            return c;
-          })
-        );
-
-        // Show desktop notification if not current conversation
-        if (
-          msg.conversation_id !== currentConversationId &&
-          senderId !== staffId &&
-          "Notification" in window &&
-          Notification.permission === "granted"
-        ) {
-          const senderName = msg.sender_info?.full_name || msg.sender_name || 'Staff member';
+        // Show desktop notification if not active conversation and not sent by current user
+        const isActiveConv = chatState.activeConversationId === conversation.id;
+        const isMyMessage = lastMessage.sender_info?.id === staffId || lastMessage.sender_id === staffId;
+        
+        if (!isActiveConv && !isMyMessage && 
+            "Notification" in window && 
+            Notification.permission === "granted") {
+          const senderName = lastMessage.sender_info?.full_name || lastMessage.sender_name || 'Staff member';
           new Notification(`New message from ${senderName}`, {
-            body: msg.message || msg.content || 'New message',
-            icon: msg.sender?.profile_image_url || "/favicon-32x32.png",
-            tag: `staff-msg-${msg.id}`, // Prevent duplicate notifications for same message
+            body: lastMessage.message || lastMessage.content || 'New message',
+            icon: lastMessage.sender_info?.profile_image || "/favicon-32x32.png",
+            tag: `staff-msg-${lastMessage.id}`,
           });
         }
-      });
-
-      channelsRef.current.set(conv.id, channel);
+      }
+      
+      // Broadcast conversation updates to legacy listeners
+      broadcastConversationUpdate(conversation.id, conversation);
     });
-  }, [conversations, hotelSlug, currentConversationId, staffId]);
+  }, [chatState.conversationsById, chatState.activeConversationId, staffId, broadcastMessage, broadcastConversationUpdate]);
 
   const markConversationRead = async (conversationId) => {
     try {
-      // API call to mark as read will be handled by the component
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === conversationId
-            ? { ...c, unread_count: 0 }
-            : c
-        )
-      );
+      // Call API to mark as read
+      await markConversationAsRead(hotelSlug, conversationId);
+      
+      // Update local state immediately
+      chatDispatch({
+        type: CHAT_ACTIONS.MARK_CONVERSATION_READ,
+        payload: { conversationId: parseInt(conversationId) }
+      });
     } catch (err) {
       console.error("Failed to mark conversation as read:", err);
     }
   };
 
-  const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+  // Send message function
+  const sendMessage = async (conversationId, messageData) => {
+    try {
+      const response = await apiSendMessage(hotelSlug, conversationId, messageData);
+      // Message will be received via realtime event, no need to update state here
+      return response;
+    } catch (err) {
+      console.error("Failed to send message:", err);
+      throw err;
+    }
+  };
+
+  // Open/set active conversation
+  const openConversation = useCallback((conversationId) => {
+    chatDispatch({
+      type: CHAT_ACTIONS.SET_ACTIVE_CONVERSATION,
+      payload: { conversationId: conversationId }
+    });
+  }, [chatDispatch]);
+
+  // Derived values from chatStore
+  const conversations = Object.values(chatState.conversationsById);
+  const activeConversation = chatState.activeConversationId 
+    ? chatState.conversationsById[chatState.activeConversationId] 
+    : null;
+  const messagesForActiveConversation = activeConversation ? activeConversation.messages : [];
+  const totalUnread = conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
 
   return (
     <StaffChatContext.Provider value={{
       conversations,
+      activeConversation,
+      messagesForActiveConversation,
       fetchStaffConversations,
       markConversationRead,
+      sendMessage,
+      openConversation,
       totalUnread,
-      pusherInstance: pusherRef.current,
-      currentConversationId,
-      setCurrentConversationId,
-      // 🔥 NEW: Event subscription methods for components
+      currentConversationId: chatState.activeConversationId, // Legacy compatibility
+      setCurrentConversationId: openConversation, // Legacy compatibility
+      // 🔥 NEW: Event subscription methods for components (maintain compatibility)
       subscribeToMessages,
       subscribeToConversationUpdates,
       hotelSlug,

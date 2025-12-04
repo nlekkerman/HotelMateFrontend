@@ -241,8 +241,6 @@ export function handleRealTimeStatusUpdate(data) {
   // Show notification
   showStatusNotification(data);
   
-  // Broadcast for navbar button updates
-  window.dispatchEvent(new CustomEvent('pusherClockStatusUpdate', {
-    detail: data
-  }));
+  // Window event dispatching removed - realtime updates now handled through attendance store
+  // Components should use the store-driven hooks for navbar updates
 }
