@@ -188,61 +188,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
     }
   }, [staffProfile, isOnDuty, forceButtonUpdate]);
 
-  // Listen for clock status changes from ClockModal and Pusher
-  useEffect(() => {
-    const handleClockStatusChange = () => {
-      console.log("[BigScreenNav] 🔔 Clock status changed event received, refreshing profile...");
-      fetchStaffProfile();
-    };
-
-    const handlePusherStatusUpdate = (event) => {
-      const { staff_id, user_id, action, is_on_duty } = event.detail || {};
-      console.log("[BigScreenNav] 📡 Pusher status update received:", {
-        eventDetail: event.detail,
-        currentUser: {
-          userId: user?.id,
-          staffId: user?.staff_id
-        },
-        timestamp: new Date().toISOString()
-      });
-      
-      // Only update if it's for the current user (type-safe comparison)
-      const eventStaffId = staff_id != null ? Number(staff_id) : null;
-      const eventUserId = user_id != null ? Number(user_id) : null;
-      const currentStaffId = user?.staff_id != null ? Number(user.staff_id) : null;
-      const currentUserId = user?.id != null ? Number(user.id) : null;
-      
-      const isForCurrentUser = (currentStaffId && eventStaffId === currentStaffId) || 
-                              (currentUserId && eventUserId === currentUserId);
-      
-      console.log("[BigScreenNav] 🎯 Is Pusher update for current user?", {
-        isForCurrentUser,
-        eventStaffId,
-        currentStaffId,
-        eventUserId,
-        currentUserId,
-        rawComparison: {
-          staffIdMatch: user?.staff_id && staff_id === user.staff_id,
-          userIdMatch: user?.id && user_id === user.id
-        }
-      });
-      
-      if (isForCurrentUser) {
-        console.log("[BigScreenNav] ✅ Pusher update is for current user, refreshing profile...");
-        fetchStaffProfile();
-      } else {
-        console.log("[BigScreenNav] ℹ️ Pusher update not for current user, ignoring");
-      }
-    };
-
-    window.addEventListener('clockStatusChanged', handleClockStatusChange);
-    window.addEventListener('pusherClockStatusUpdate', handlePusherStatusUpdate);
-
-    return () => {
-      window.removeEventListener('clockStatusChanged', handleClockStatusChange);
-      window.removeEventListener('pusherClockStatusUpdate', handlePusherStatusUpdate);
-    };
-  }, [user, hotelIdentifier, fetchStaffProfile]);
+  // Legacy DOM event listeners removed - now using only useAttendanceRealtime hook
 
   // Handle real-time attendance updates via Pusher - MEMOIZED to prevent re-subscription loops
   const handleAttendanceEvent = useCallback((event) => {
@@ -304,6 +250,19 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
     const currentStaffId = staffProfile?.id != null ? Number(staffProfile.id) : 
                           (user?.staff_id != null ? Number(user.staff_id) : null);
     const currentUserId  = user?.id         != null ? Number(user.id)          : null;
+
+    // 🔍 DEBUG: Verify what backend actually sends vs what we expect
+    console.log("[DEBUG] Pusher IDs:", {
+      payloadStaffId,
+      payloadUserId, 
+      staffProfileId: staffProfile?.id,
+      userStaffId: user?.staff_id,
+      userId: user?.id,
+      rawPayload: {
+        staff_id: payload.staff_id,
+        user_id: payload.user_id
+      }
+    });
 
     const isCurrentUser =
       (currentStaffId && payloadStaffId === currentStaffId) ||
@@ -383,10 +342,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
       }
     }));
 
-    // Also fire the old event for compatibility
-    window.dispatchEvent(new CustomEvent('clockStatusChanged', {
-      detail: payload
-    }));
+    // Old clockStatusChanged event removed - using only useAttendanceRealtime now
   }, [user, fetchStaffProfile]);
 
   // Initialize Pusher real-time updates

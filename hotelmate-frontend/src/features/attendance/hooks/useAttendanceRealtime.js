@@ -178,28 +178,8 @@ export function useAttendanceRealtime(hotelSlug, onEvent) {
           
           eventTimeoutRef.current.set(eventId, timeoutId);
           
-          // Normalize to { type, payload } format as expected by handlers
+          // ✅ PURE: Just normalize and call the handler - no side effects
           safeEventHandler(handlerRef.current, 'clock-status-updated', data);
-          
-          // Turn off camera after successful clock action
-          console.log('[Attendance Pusher] 📹 Dispatching camera cleanup event after clock action');
-          window.dispatchEvent(new CustomEvent('stopCameraAfterClockAction', {
-            detail: {
-              action: data?.action,
-              success: true,
-              timestamp: new Date().toISOString()
-            }
-          }));
-          
-          // IMMEDIATE camera cleanup for break end actions
-          if (data?.action === 'end_break') {
-            console.log('[Attendance Pusher] 📹 IMMEDIATE camera cleanup for break end action!');
-            setTimeout(() => {
-              window.dispatchEvent(new CustomEvent('forceStopCamera', {
-                detail: { reason: 'break_ended_immediately', action: 'end_break' }
-              }));
-            }, 100);
-          }
         });
 
         // Unrostered clock-in request - someone clocked in without being rostered
@@ -218,12 +198,6 @@ export function useAttendanceRealtime(hotelSlug, onEvent) {
         channelRef.current.bind('clocklog-approved', (data) => {
           console.log('[Attendance Pusher] clocklog-approved received:', data);
           safeEventHandler(handlerRef.current, 'log-approved', data);
-          
-          // Turn off camera after approval
-          console.log('[Attendance Pusher] 📹 Dispatching camera cleanup after log approval');
-          window.dispatchEvent(new CustomEvent('stopCameraAfterClockAction', {
-            detail: { action: 'log-approved', success: true }
-          }));
         });
 
         // Clock log rejected - unrostered request was rejected
@@ -233,23 +207,11 @@ export function useAttendanceRealtime(hotelSlug, onEvent) {
         channelRef.current.bind('clocklog-created', (data) => {
           console.log('[Attendance Pusher] clocklog-created received:', data);
           safeEventHandler(handlerRef.current, 'log-created', data);
-          
-          // Turn off camera after log creation
-          console.log('[Attendance Pusher] 📹 Dispatching camera cleanup after log creation');
-          window.dispatchEvent(new CustomEvent('stopCameraAfterClockAction', {
-            detail: { action: 'log-created', success: true }
-          }));
         });
         
         channelRef.current.bind('clocklog-updated', (data) => {
           console.log('[Attendance Pusher] clocklog-updated received:', data);
           safeEventHandler(handlerRef.current, 'log-updated', data);
-          
-          // Turn off camera after log update (including break end actions)
-          console.log('[Attendance Pusher] 📹 Dispatching camera cleanup after log update');
-          window.dispatchEvent(new CustomEvent('stopCameraAfterClockAction', {
-            detail: { action: 'log-updated', success: true }
-          }));
         });
 
         // Handle unknown event types safely

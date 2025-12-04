@@ -10,6 +10,7 @@ import { safeString } from '../utils/safeUtils';
  */
 const DepartmentStatusSummary = ({
   hotelSlug,
+  selectedDepartment = '',
   refreshKey = 0
 }) => {
   const [toasts, setToasts] = useState([]);
@@ -140,13 +141,22 @@ const DepartmentStatusSummary = ({
     };
   }, [hotelSlug, user?.staff_id]);
   
-  // Process data from new API format
+  // Process the department data to get currently logged in and needing approval
+  // Filter by selectedDepartment if one is selected
   const allCurrentlyLoggedIn = [];
   const allNeedingApproval = [];
   
   if (departmentData) {
-    Object.entries(departmentData).forEach(([deptSlug, deptData]) => {
-      // Add currently clocked in staff
+    // If a specific department is selected, only show that department's data
+    const departmentsToShow = selectedDepartment 
+      ? [selectedDepartment] 
+      : Object.keys(departmentData);
+    
+    departmentsToShow.forEach(deptSlug => {
+      const deptData = departmentData[deptSlug];
+      if (!deptData) return;
+      
+      // Add currently logged in staff
       if (deptData.currently_clocked_in) {
         deptData.currently_clocked_in.forEach(staff => {
           allCurrentlyLoggedIn.push({
@@ -229,6 +239,21 @@ const DepartmentStatusSummary = ({
 
   return (
     <div className="department-status-summary mt-4">
+      {/* Department Filter Indicator */}
+      {selectedDepartment && (
+        <div className="mb-3">
+          <div className="d-flex align-items-center gap-2 p-2 bg-light rounded border">
+            <i className="bi bi-funnel text-primary"></i>
+            <span className="small text-muted">
+              Showing attendance data for: 
+            </span>
+            <Badge bg="primary" className="fw-normal">
+              {selectedDepartment.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())} Department
+            </Badge>
+          </div>
+        </div>
+      )}
+      
       <Row>
         {/* Currently Logged In Staff */}
         <Col md={6}>
@@ -237,13 +262,23 @@ const DepartmentStatusSummary = ({
               <h6 className="mb-0">
                 <i className="bi bi-clock-fill me-2"></i>
                 Currently Logged In ({allCurrentlyLoggedIn.length})
+                {selectedDepartment && (
+                  <small className="d-block mt-1 opacity-75">
+                    {selectedDepartment.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())} Department
+                  </small>
+                )}
               </h6>
             </Card.Header>
             <Card.Body>
               {allCurrentlyLoggedIn.length === 0 ? (
                 <div className="text-center text-muted py-3">
                   <i className="bi bi-person-dash" style={{ fontSize: '2rem' }}></i>
-                  <p className="mb-0 mt-2">No staff currently logged in</p>
+                  <p className="mb-0 mt-2">
+                    {selectedDepartment 
+                      ? `No staff currently logged in from ${selectedDepartment.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}`
+                      : 'No staff currently logged in'
+                    }
+                  </p>
                 </div>
               ) : (
                 <div className="list-group list-group-flush">
@@ -254,10 +289,12 @@ const DepartmentStatusSummary = ({
                           <div className="fw-bold">
                             {safeString(staff.staff_name)}
                           </div>
-                          <div className="small text-info mb-1">
-                            <i className="bi bi-building me-1"></i>
-                            {safeString(staff.department_name)}
-                          </div>
+                          {!selectedDepartment && (
+                            <div className="small text-info mb-1">
+                              <i className="bi bi-building me-1"></i>
+                              {safeString(staff.department_name)}
+                            </div>
+                          )}
                           <div className="small text-muted">
                             <i className="bi bi-clock me-1"></i>
                             Started: {staff.clock_in_time}
@@ -292,13 +329,23 @@ const DepartmentStatusSummary = ({
               <h6 className="mb-0">
                 <i className="bi bi-exclamation-triangle-fill me-2"></i>
                 Needs Approval ({allNeedingApproval.length})
+                {selectedDepartment && (
+                  <small className="d-block mt-1 opacity-75">
+                    {selectedDepartment.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())} Department
+                  </small>
+                )}
               </h6>
             </Card.Header>
             <Card.Body>
               {allNeedingApproval.length === 0 ? (
                 <div className="text-center text-muted py-3">
                   <i className="bi bi-check-circle" style={{ fontSize: '2rem' }}></i>
-                  <p className="mb-0 mt-2">All shifts approved</p>
+                  <p className="mb-0 mt-2">
+                    {selectedDepartment 
+                      ? `All shifts approved for ${selectedDepartment.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}`
+                      : 'All shifts approved'
+                    }
+                  </p>
                 </div>
               ) : (
                 <div className="list-group list-group-flush">
@@ -309,10 +356,12 @@ const DepartmentStatusSummary = ({
                           <div className="fw-bold">
                             {safeString(staff.staff_name)}
                           </div>
-                          <div className="small text-info mb-1">
-                            <i className="bi bi-building me-1"></i>
-                            {safeString(staff.department_name)}
-                          </div>
+                          {!selectedDepartment && (
+                            <div className="small text-info mb-1">
+                              <i className="bi bi-building me-1"></i>
+                              {safeString(staff.department_name)}
+                            </div>
+                          )}
                           <div className="small text-muted">
                             <i className="bi bi-clock me-1"></i>
                             Started: {staff.clock_in_time}

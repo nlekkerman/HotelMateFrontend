@@ -17,9 +17,11 @@ export default function FaceClockInPage() {
   const { hotelSlug } = useParams();
   const navigate = useNavigate();
   
-  const [capturedImage, setCapturedImage] = useState(null);
-  const [locationNote, setLocationNote] = useState("Kiosk");
-  const [mode, setMode] = useState("inactive"); // "inactive" | "ready" | "captured" | "processing" | "success" | "options" | "result"
+  // Single source of truth for kiosk vs personal mode
+  const isKioskMode = localStorage.getItem('kioskMode') === 'true';
+  
+  // Simplified state machine: inactive | camera | processing | unrostered | options | done
+  const [phase, setPhase] = useState('inactive');
   const [result, setResult] = useState(null);
   const [staffData, setStaffData] = useState(null);
   const [unrosteredData, setUnrosteredData] = useState(null);
@@ -27,6 +29,14 @@ export default function FaceClockInPage() {
   const [sessionInfo, setSessionInfo] = useState(null);
   const [availableActions, setAvailableActions] = useState([]);
   const [countdown, setCountdown] = useState(0);
+  const [capturedImage, setCapturedImage] = useState(null);
+  
+  // Controlled form state for unrostered inputs
+  const [unrosteredForm, setUnrosteredForm] = useState({
+    reason: '',
+    location: 'Kiosk'
+  });
+  
   const resetTimeoutRef = useRef(null);
   const countdownRef = useRef(null);
   
@@ -77,37 +87,8 @@ export default function FaceClockInPage() {
     }, 7000);
   };
 
-  // Cleanup timeouts on unmount and add camera event listeners
+  // Cleanup timeouts on unmount
   useEffect(() => {
-    // Camera cleanup event handlers
-    const handleStopCameraAfterClockAction = (event) => {
-      console.log('[FaceClockIn] 📹 Received camera stop event:', event.detail);
-      
-      // Stop camera and reset to inactive for kiosk mode
-      if (mode === "success" || mode === "processing") {
-        setTimeout(() => {
-          stopCamera();
-          console.log('[FaceClockIn] 📹 Camera stopped after clock action');
-        }, 1000);
-      }
-    };
-
-    const handleForceStopCamera = (event) => {
-      console.log('[FaceClockIn] 📹 Received force camera stop event:', event.detail);
-      stopCamera();
-      
-      // Auto-reset for kiosk mode after break end
-      if (event.detail?.action === 'end_break') {
-        setTimeout(() => {
-          handleReset();
-        }, 2000);
-      }
-    };
-
-    // Add event listeners
-    window.addEventListener('stopCameraAfterClockAction', handleStopCameraAfterClockAction);
-    window.addEventListener('forceStopCamera', handleForceStopCamera);
-
     return () => {
       // Cleanup timeouts
       if (resetTimeoutRef.current) {
@@ -116,12 +97,8 @@ export default function FaceClockInPage() {
       if (countdownRef.current) {
         clearInterval(countdownRef.current);
       }
-      
-      // Remove event listeners
-      window.removeEventListener('stopCameraAfterClockAction', handleStopCameraAfterClockAction);
-      window.removeEventListener('forceStopCamera', handleForceStopCamera);
     };
-  }, [mode, stopCamera]);
+  }, []);
 
   const handleImageCapture = (base64Image) => {
     setCapturedImage(base64Image);
@@ -131,199 +108,25 @@ export default function FaceClockInPage() {
     toast.error(errorMessage);
   };
 
-  const handleClockButtonClick = async () => {
+  // Core camera functions
+  const handleStartCameraForClockIn = async () => {
     if (!isCameraSupported()) {
       toast.error("Camera is not supported on this device");
-      return;
+      return false;
     }
     
-    setMode("ready");
-    await startCamera();
-  };
-
-  const handleGoHome = () => {
-    navigate(`/staff/${hotelSlug}/dashboard`);
-  };
-
-  const handleTakePhoto = async () => {
-    if (!hotelSlug || !cameraActive) return;
-    
-    setMode("processing");
-    setResult(null);
-
     try {
-      // Capture image from camera using the hook
-      const imageBase64 = captureImage();
-      
-      if (!imageBase64) {
-        throw new Error('Failed to capture image');
-      }
-
-      setCapturedImage(imageBase64);
-
-      // Extract face encoding
-      const encodingResult = await extractFaceEncoding(imageBase64);
-      
-      if (encodingResult.error) {
-        throw new Error(encodingResult.error === 'NO_FACE_DETECTED' ? 
-          'No face detected. Please position your face in the oval frame.' : 
-          'Failed to process face data. Please try again.');
-      }
-      
-      if (!encodingResult.encoding) {
-        throw new Error('Unable to extract face data. Please ensure you are looking directly at the camera.');
-      }
-
-      // Send to backend for recognition
-      const data = await clockInWithFace({
-        hotelSlug,
-        imageBase64,
-        encoding: encodingResult.encoding,
-        locationNote: "Kiosk"
-      });
-      
-      // Handle different response types based on backend flow
-      switch (data.action) {
-        case 'clock_in_success':
-          handleClockInSuccess(data);
-          break;
-          
-        case 'unrostered_detected':
-          // Show unrostered confirmation dialog
-          setUnrosteredData({
-            staff: data.staff,
-            message: data.message,
-            confirmationEndpoint: data.confirmation_endpoint,
-            encoding: encodingResult.encoding
-          });
-          setMode("unrostered");
-          break;
-          
-        case 'clock_out_options':
-          // Show action selection interface for clock-out/break options
-          const { staff, session_info, available_actions } = data;
-          setStaffData(staff);
-          setSessionInfo(session_info);
-          setAvailableActions(available_actions);
-          setActionOptions({
-            encoding: encodingResult.encoding,
-            imageBase64: imageBase64
-          });
-          setMode("options");
-          break;
-          
-        default:
-          throw new Error(data.message || 'Face not recognized or unknown response from server');
-      }
-      
-    } catch (err) {
-      setResult({
-        type: "error",
-        message: err.message || "Face recognition failed"
-      });
-      setMode("result");
-      
-      // Auto-refresh on error after 3 seconds
-      setTimeout(() => {
-        handleReset();
-      }, 3000);
+      await startCamera();
+      setPhase('camera');
+      return true;
+    } catch (error) {
+      toast.error("Failed to start camera");
+      return false;
     }
   };
-
-  const handleFaceRecognition = async () => {
-    if (!capturedImage || !hotelSlug) return;
-    
-    setMode("processing");
-    setResult(null);
-
-    try {
-      // Extract face encoding first
-      const encodingResult = await extractFaceEncoding(capturedImage);
-      
-      if (encodingResult.error) {
-        throw new Error(encodingResult.error === 'NO_FACE_DETECTED' ? 
-          'No face detected in the image. Please try again.' : 
-          'Failed to process face data. Please try again.');
-      }
-      
-      if (!encodingResult.encoding) {
-        throw new Error('Unable to extract face data. Please ensure you are looking directly at the camera.');
-      }
-
-      const data = await clockInWithFace({
-        hotelSlug,
-        imageBase64: capturedImage,
-        encoding: encodingResult.encoding,
-        locationNote
-      });
-      
-      // Handle different response types based on backend flow
-      switch (data.action) {
-        case 'clock_in_success':
-          handleClockInSuccess(data);
-          break;
-        case 'clock_out_options':
-          handleClockOutOptions(data);
-          break;
-        case 'unrostered_detected':
-          handleUnrosteredDetection(data);
-          break;
-        default:
-          throw new Error(data.message || 'Unknown response from server');
-      }
-      
-    } catch (err) {
-      setResult({
-        type: "error",
-        message: err.message,
-        code: err.code || null,
-      });
-      setMode("result");
-      toast.error(err.message || "Face recognition failed");
-      scheduleAutoReset();
-    }
-  };  const handleClockInSuccess = (data) => {
-    const { staff, shift_info, confidence_score, clock_log } = data;
-    setStaffData({
-      name: staff.name,
-      image: staff.image,
-      department: staff.department,
-      actionMessage: '✅ Clocked In Successfully!',
-      actionTime: new Date(clock_log.time_in).toLocaleTimeString(),
-      actionType: 'clock_in_success',
-      shiftInfo: shift_info,
-      confidence: Math.round((1 - (confidence_score || 0)) * 100)
-    });
-    setMode("success");
-    toast.success(`Welcome, ${staff.name}!`);
-    
-    // Stop camera after successful action
+  
+  const handleStopCameraAndReset = () => {
     stopCamera();
-    
-    scheduleAutoReset();
-  };
-
-  const handleClockOutOptions = (data) => {
-    const { staff, session_info, available_actions } = data;
-    setStaffData(staff);
-    setSessionInfo(session_info);
-    setAvailableActions(available_actions);
-    setMode("options");
-  };
-
-  const handleUnrosteredDetection = (data) => {
-    setResult({
-      type: "warning",
-      message: "You are not scheduled to work at this time. Contact your supervisor if this is incorrect.",
-      staffName: data.staff?.name
-    });
-    setMode("result");
-    scheduleAutoReset();
-  };
-
-
-
-  const handleReset = () => {
     setCapturedImage(null);
     setResult(null);
     setStaffData(null);
@@ -331,11 +134,9 @@ export default function FaceClockInPage() {
     setActionOptions(null);
     setSessionInfo(null);
     setAvailableActions([]);
-    setMode("inactive");
+    setUnrosteredForm({ reason: '', location: 'Kiosk' });
+    setPhase('inactive');
     setCountdown(0);
-    
-    // Stop camera and return to inactive state
-    stopCamera();
     
     // Clear any pending auto-reset
     if (resetTimeoutRef.current) {
@@ -348,10 +149,158 @@ export default function FaceClockInPage() {
     }
   };
 
+  const handleGoHome = () => {
+    navigate(`/staff/${hotelSlug}/dashboard`);
+  };
+  
+  // Helper functions for face recognition flow
+  const handleClockSuccess = (data) => {
+    const { staff, shift_info, confidence_score, clock_log } = data;
+    
+    setStaffData({
+      name: staff.name,
+      image: staff.image,
+      department: staff.department,
+      actionMessage: '✅ Clocked In Successfully!',
+      actionTime: new Date(clock_log.time_in).toLocaleTimeString(),
+      actionType: 'clock_in_success',
+      shiftInfo: shift_info,
+      confidence: Math.round((1 - (confidence_score || 0)) * 100)
+    });
+    
+    toast.success(`Welcome, ${staff.name}!`);
+    stopCamera();
+    setPhase('done');
+    
+    // Notify navbar to refresh immediately
+    window.dispatchEvent(new CustomEvent('face-clock-action-success', {
+      detail: {
+        action: 'clock_in_success',
+        hotelSlug,
+        data
+      }
+    }));
+    
+    if (isKioskMode) {
+      // Kiosk: auto reset back to big button
+      setTimeout(handleStopCameraAndReset, 7000);
+    } else {
+      // Personal: just go back after short delay
+      setTimeout(() => navigate(-1), 2000);
+    }
+  };
+  
+  const handleUnrosteredDetection = (data, encoding) => {
+    setUnrosteredData({
+      staff: data.staff,
+      message: data.message,
+      confirmationEndpoint: data.confirmation_endpoint,
+      encoding
+    });
+    setUnrosteredForm({ reason: '', location: 'Kiosk' }); // Reset form
+    setPhase('unrostered');
+  };
+  
+  const handleClockOutOptions = (data, encoding, imageBase64) => {
+    const { staff, session_info, available_actions } = data;
+    setStaffData(staff);
+    setSessionInfo(session_info);
+    setAvailableActions(available_actions);
+    setActionOptions({ encoding, imageBase64 });
+    setPhase('options');
+  };
+  
+  // Unified face recognition processing
+  const processFaceRecognition = async (providedImageBase64 = null, locationNoteOverride = 'Kiosk') => {
+    if (!hotelSlug) return;
+    
+    setPhase('processing');
+    setResult(null);
+    
+    try {
+      // Step 1: Get or capture image
+      const imageBase64 = providedImageBase64 || captureImage();
+      if (!imageBase64) {
+        throw new Error('Failed to capture image');
+      }
+      
+      setCapturedImage(imageBase64);
+      
+      // Step 2: Extract face encoding
+      const encodingResult = await extractFaceEncoding(imageBase64);
+      if (encodingResult.error || !encodingResult.encoding) {
+        throw new Error(
+          encodingResult.error === 'NO_FACE_DETECTED'
+            ? 'No face detected. Please position your face in the oval frame.'
+            : 'Failed to process face data. Please try again.'
+        );
+      }
+      
+      // Step 3: Send to backend for recognition
+      const data = await clockInWithFace({
+        hotelSlug,
+        imageBase64,
+        encoding: encodingResult.encoding,
+        locationNote: locationNoteOverride
+      });
+      
+      // Step 4: Handle response based on action
+      switch (data.action) {
+        case 'clock_in_success':
+          handleClockSuccess(data);
+          break;
+        case 'unrostered_detected':
+          handleUnrosteredDetection(data, encodingResult.encoding);
+          break;
+        case 'clock_out_options':
+          handleClockOutOptions(data, encodingResult.encoding, imageBase64);
+          break;
+        default:
+          throw new Error(data.message || 'Unknown response from server');
+      }
+    } catch (err) {
+      toast.error(err.message || 'Face recognition failed');
+      setResult({ type: 'error', message: err.message || 'Face recognition failed' });
+      setPhase('done');
+      
+      if (isKioskMode) {
+        setTimeout(handleStopCameraAndReset, 3000);
+      }
+    }
+  };
+
+  // Simple wrapper functions for processFaceRecognition
+  const handleTakePhoto = () => {
+    if (!hotelSlug || !cameraActive) return;
+    processFaceRecognition(null, 'Kiosk');
+  };
+  
+  const handleFaceRecognition = () => {
+    if (!capturedImage || !hotelSlug) return;
+    processFaceRecognition(capturedImage, 'Kiosk');
+  };
+
+  // Legacy function - replaced by handleClockSuccess
+  const handleClockInSuccess = (data) => {
+    // Redirect to new helper
+    handleClockSuccess(data);
+  };
+
+
+
+
+
+
+
+  // Legacy handleReset for backwards compatibility
+  const handleReset = () => {
+    handleStopCameraAndReset();
+  };
+
   const confirmUnrosteredClockIn = async (reason, location) => {
     if (!unrosteredData || !hotelSlug) return;
     
-    setMode("processing");
+    setPhase('processing');
     
     try {
       const response = await api.post(unrosteredData.confirmationEndpoint, {
@@ -371,21 +320,26 @@ export default function FaceClockInPage() {
         actionTime: new Date().toLocaleTimeString(),
         actionType: 'clock_in_success'
       });
-      setMode("success");
-      toast.success(`Welcome, ${data.staff?.name || unrosteredData.staff?.name || 'Staff Member'}!`);
       
-      // Handle kiosk vs personal mode
-      const isKioskMode = localStorage.getItem('kioskMode') === 'true';
+      toast.success(`Welcome, ${data.staff?.name || unrosteredData.staff?.name || 'Staff Member'}!`);
+      stopCamera();
+      setPhase('done');
+      
+      // Notify navbar to refresh immediately
+      window.dispatchEvent(new CustomEvent('face-clock-action-success', {
+        detail: {
+          action: 'unrostered_clock_in_success',
+          hotelSlug,
+          data
+        }
+      }));
+      
       if (isKioskMode) {
         // Kiosk mode: Auto-refresh for next person after 4 seconds
-        setTimeout(() => {
-          handleReset();
-        }, 4000);
+        setTimeout(handleStopCameraAndReset, 4000);
       } else {
-        // Personal mode: Close camera and navigate back after 2 seconds
-        setTimeout(() => {
-          navigate(-1); // Go back to previous page
-        }, 2000);
+        // Personal mode: Navigate back after 2 seconds
+        setTimeout(() => navigate(-1), 2000);
       }
       
     } catch (err) {
@@ -393,17 +347,16 @@ export default function FaceClockInPage() {
         type: "error",
         message: err.response?.data?.detail || err.message || "Unrostered clock-in failed"
       });
-      setMode("result");
+      setPhase('done');
       
-      // Auto-refresh on error after 3 seconds
-      setTimeout(() => {
-        handleReset();
-      }, 3000);
+      if (isKioskMode) {
+        setTimeout(handleStopCameraAndReset, 3000);
+      }
     }
   };
 
   const handleActionFromBackend = async (actionObj) => {
-    setMode("processing");
+    setPhase('processing');
     
     try {
       // Clean the endpoint URL - remove /api/ prefix if it exists since api.js already includes it
@@ -428,51 +381,39 @@ export default function FaceClockInPage() {
         actionType: result.action,
         sessionSummary: result.session_summary || null
       });
-      setMode("success");
       
-      // Show toast notification
       toast.success(getSuccessToastMessage(result.action, result.staff.name));
+      stopCamera();
+      setPhase('done');
       
-      // Handle kiosk vs personal mode based on backend response or localStorage
-      const kioskAction = result.kiosk_action;
-      const isKioskMode = localStorage.getItem('kioskMode') === 'true';
-      
-      if (kioskAction === 'refresh_for_next_person' || (isKioskMode && !kioskAction)) {
-        // Kiosk mode: Auto-refresh for next person
-        if (result.action === 'clock_out_success') {
-          // Longer delay for clock-out to read session summary
-          setTimeout(() => {
-            handleReset();
-          }, 10000);
-        } else {
-          scheduleAutoReset();
+      // Notify navbar to refresh immediately
+      window.dispatchEvent(new CustomEvent('face-clock-action-success', {
+        detail: {
+          action: result.action,
+          hotelSlug,
+          data: result
         }
-      } else if (kioskAction === 'stay_logged_in' || (!isKioskMode && !kioskAction)) {
-        // Personal mode: Close camera after short delay
-        setTimeout(() => {
-          navigate(-1); // Go back to previous page
-        }, result.action === 'clock_out_success' ? 5000 : 2000);
+      }));
+      
+      if (isKioskMode) {
+        // Kiosk mode: Auto-refresh for next person  
+        const delay = result.action === 'clock_out_success' ? 10000 : 7000;
+        setTimeout(handleStopCameraAndReset, delay);
       } else {
-        // Stop camera immediately after action
-        stopCamera();
-        
-        // Fallback to existing logic
-        if (result.action === 'clock_out_success') {
-          setTimeout(() => {
-            handleReset();
-          }, 10000);
-        } else {
-          scheduleAutoReset();
-        }
+        // Personal mode: Navigate back after short delay
+        const delay = result.action === 'clock_out_success' ? 5000 : 2000;
+        setTimeout(() => navigate(-1), delay);
       }
-      
     } catch (err) {
       setResult({
         type: "error", 
         message: err.message || "Action failed"
       });
-      setMode("result");
-      scheduleAutoReset();
+      setPhase('done');
+      
+      if (isKioskMode) {
+        setTimeout(handleStopCameraAndReset, 3000);
+      }
     }
   };
 
@@ -788,7 +729,7 @@ export default function FaceClockInPage() {
     <div className="fullscreen-kiosk">
               
               {/* Inactive State - Show Clock Button */}
-              {mode === "inactive" && (
+              {phase === 'inactive' && (
                 <div className="fullscreen-inactive">
                   <div className="text-center py-5">
                     <div className="mb-4">
@@ -799,7 +740,7 @@ export default function FaceClockInPage() {
                     <button
                       type="button"
                       className="btn btn-primary btn-lg px-5 py-3"
-                      onClick={handleClockButtonClick}
+                      onClick={handleStartCameraForClockIn}
                       style={{
                         fontSize: "1.3rem",
                         borderRadius: "25px",
@@ -820,7 +761,7 @@ export default function FaceClockInPage() {
               )}
 
               {/* State: Processing */}
-              {mode === "processing" && (
+              {phase === 'processing' && (
                 <div className="fullscreen-processing">
                   <div className="spinner-border spinner-border-lg text-success mb-3" role="status">
                     <span className="visually-hidden">Processing...</span>
@@ -831,7 +772,7 @@ export default function FaceClockInPage() {
               )}
 
               {/* Full Screen Camera Interface */}
-              {mode === "ready" && (
+              {phase === 'camera' && (
                 <div className="fullscreen-camera-overlay">
                   {/* Instructions at top */}
                   <div className="camera-instructions">
@@ -924,7 +865,7 @@ export default function FaceClockInPage() {
 
               {/* Result State */}
               {/* Error Display */}
-              {mode === "result" && result && result.type === "error" && (
+              {phase === 'done' && result && result.type === "error" && (
                 <div className="error-display text-center py-4">
                   <div className="error-icon mb-3" style={{fontSize: "3rem"}}>❌</div>
                   <h4 className="text-danger mb-2">Clock-In Failed</h4>
@@ -937,7 +878,7 @@ export default function FaceClockInPage() {
               )}
 
               {/* Unrostered Confirmation Dialog */}
-              {mode === "unrostered" && unrosteredData && (
+              {phase === 'unrostered' && unrosteredData && (
                 <div className="unrostered-confirmation-display">
                   <div className="confirmation-card">
                     <div className="confirmation-header">
@@ -971,7 +912,8 @@ export default function FaceClockInPage() {
                         <label>Reason (optional):</label>
                         <input 
                           type="text" 
-                          id="unrostered-reason"
+                          value={unrosteredForm.reason}
+                          onChange={(e) => setUnrosteredForm(prev => ({ ...prev, reason: e.target.value }))}
                           placeholder="e.g., Emergency shift, Manager approval"
                           className="form-control"
                         />
@@ -981,8 +923,8 @@ export default function FaceClockInPage() {
                         <label>Location:</label>
                         <input 
                           type="text" 
-                          id="unrostered-location"
-                          defaultValue="Kiosk"
+                          value={unrosteredForm.location}
+                          onChange={(e) => setUnrosteredForm(prev => ({ ...prev, location: e.target.value }))}
                           className="form-control"
                         />
                       </div>
@@ -997,11 +939,7 @@ export default function FaceClockInPage() {
                       </button>
                       <button 
                         className="btn btn-warning btn-lg"
-                        onClick={() => {
-                          const reason = document.getElementById('unrostered-reason')?.value || '';
-                          const location = document.getElementById('unrostered-location')?.value || 'Kiosk';
-                          confirmUnrosteredClockIn(reason, location);
-                        }}
+                        onClick={() => confirmUnrosteredClockIn(unrosteredForm.reason, unrosteredForm.location)}
                       >
                         Confirm Clock In
                       </button>
@@ -1011,7 +949,7 @@ export default function FaceClockInPage() {
               )}
 
               {/* Action Selection Dialog */}
-              {mode === "options" && staffData && sessionInfo && (
+              {phase === 'options' && staffData && sessionInfo && (
                 <div className="action-selection-display">
                   <div className="action-card">
                     <div className="action-header">
@@ -1084,7 +1022,7 @@ export default function FaceClockInPage() {
               )}
 
               {/* Success Display */}
-              {mode === "success" && staffData && (
+              {phase === 'done' && staffData && (
                 <div className="success-display text-center py-5">
                   <div className="success-icon mb-3">
                     ✅

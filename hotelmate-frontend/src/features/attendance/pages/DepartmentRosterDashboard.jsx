@@ -421,6 +421,7 @@ function DepartmentRosterDashboardComponent() {
           {/* Department Status Summary - Currently Logged In & Pending Approvals */}
           <DepartmentStatusSummary
             hotelSlug={hotelSlug}
+            selectedDepartment={selectedDepartment}
             refreshKey={refreshKey}
           />
 
