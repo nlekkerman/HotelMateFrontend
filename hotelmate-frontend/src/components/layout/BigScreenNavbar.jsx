@@ -251,8 +251,17 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
       eventType: event?.type,
       hasPayload: !!event?.payload,
       payloadKeys: event?.payload ? Object.keys(event.payload) : [],
+      fullPayload: event?.payload,
       timestamp: new Date().toISOString()
     });
+    
+    // 🚨 SPECIAL DEBUG: Store ALL events globally for debugging
+    window.lastAttendanceEvent = {
+      event,
+      timestamp: new Date().toISOString(),
+      receivedBy: 'BigScreenNavbar'
+    };
+    console.log('🚨 [BigScreenNavbar] STORED DEBUG EVENT:', window.lastAttendanceEvent);
     
     // Add extra debugging to track event reception
     console.log("[BigScreenNav] 🎯 handleAttendanceEvent function called successfully!", {
@@ -290,7 +299,10 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
     // Normalize IDs to numbers for type-safe comparison
     const payloadStaffId = payload.staff_id != null ? Number(payload.staff_id) : null;
     const payloadUserId  = payload.user_id  != null ? Number(payload.user_id)  : null;
-    const currentStaffId = user?.staff_id   != null ? Number(user.staff_id)    : null;
+    
+    // Use staffProfile.id as the primary staff identifier, fallback to user.staff_id
+    const currentStaffId = staffProfile?.id != null ? Number(staffProfile.id) : 
+                          (user?.staff_id != null ? Number(user.staff_id) : null);
     const currentUserId  = user?.id         != null ? Number(user.id)          : null;
 
     const isCurrentUser =
@@ -303,6 +315,8 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
       payloadUserId,
       currentUserId,
       isCurrentUser,
+      staffProfileId: staffProfile?.id,
+      userStaffId: user?.staff_id,
       staffIdComparison: `${currentStaffId} === ${payloadStaffId} = ${currentStaffId === payloadStaffId}`,
       userIdComparison: `${currentUserId} === ${payloadUserId} = ${currentUserId === payloadUserId}`
     });
@@ -324,12 +338,37 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
       setTimeout(() => clockButton.classList.remove("updating"), 800);
     }
 
-    // Force immediate re-render + refetch profile
-    setForceButtonUpdate(prev => prev + 1);
-    setTimeout(() => {
-      console.log("[BigScreenNav] 📡 Fetching updated profile data (delayed for DB sync)...");
+    // IMMEDIATELY UPDATE UI STATE - NO WAITING FOR API
+    console.log("[BigScreenNav] 🚀 IMMEDIATE UI UPDATE - Payload received:", {
+      action: payload.action,
+      duty_status: payload.duty_status,
+      current_status: payload.current_status,
+      hasCurrentStatus: !!payload.current_status
+    });
+    
+    if (payload.current_status) {
+      console.log("[BigScreenNav] ✅ Updating staffProfile state immediately with:", payload.current_status);
+      setStaffProfile(prev => {
+        const updated = {
+          ...prev,
+          current_status: payload.current_status,
+          duty_status: payload.duty_status,
+          is_on_duty: payload.duty_status === 'on_duty' || payload.duty_status === 'on_break'
+        };
+        console.log("[BigScreenNav] 📊 Updated staffProfile:", updated);
+        return updated;
+      });
+      setIsOnDuty(payload.duty_status === 'on_duty' || payload.duty_status === 'on_break');
+    } else {
+      console.log("[BigScreenNav] ❌ No current_status in payload - forcing IMMEDIATE profile refresh");
+      // If Pusher doesn't send complete data, force immediate profile refresh
       fetchStaffProfile();
-    }, 250);
+    }
+
+    // Force immediate re-render + refetch profile for consistency
+    setForceButtonUpdate(prev => prev + 1);
+    console.log("[BigScreenNav] 📡 Also fetching updated profile data for full sync...");
+    fetchStaffProfile();
 
     // Broadcast the status change to other components
     window.dispatchEvent(new CustomEvent('staffStatusUpdated', {
@@ -391,9 +430,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
         setForceButtonUpdate(prev => prev + 1);
         
         // Refresh staff profile to get updated status
-        setTimeout(() => {
-          fetchStaffProfile();
-        }, 500); // Reduced delay for face recognition processing
+        fetchStaffProfile(); // Immediate refresh - backend updates are synchronous
       }
     };
 

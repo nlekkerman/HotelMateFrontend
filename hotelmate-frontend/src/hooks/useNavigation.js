@@ -63,6 +63,13 @@ export function useNavigation() {
 
   // Regular staff: filter by allowed_navs AND exclude settings (superuser only)
   // Django superuser sees ALL items (bypass filtering)
+  
+  // 🔍 DEBUG: Log navigation filtering
+  console.log('🧭 NAVIGATION DEBUG:');
+  console.log('- isSuperUser:', isSuperUser);
+  console.log('- allowedNavs:', allowedNavs);
+  console.log('- allNavItems count:', allNavItems.length);
+  
   const visibleNavItems = isSuperUser 
     ? allNavItems 
     : allNavItems.filter(item => {
@@ -70,13 +77,21 @@ export function useNavigation() {
         if (item.slug === 'settings') {
           return false;
         }
-        return canAccessNav(item.slug);
+        const canAccess = canAccessNav(item.slug);
+        console.log(`- ${item.slug}: canAccess = ${canAccess}`);
+        return canAccess;
       });
+  
+  console.log('- visibleNavItems count:', visibleNavItems.length);
 
   // FALLBACK: If no navigation items are visible and user has empty allowed_navs,
   // show basic navigation items to prevent complete lockout
-  const finalVisibleItems = visibleNavItems.length === 0 && !isSuperUser && allowedNavs.length === 0
-    ? allNavItems.filter(item => ['home', 'reception', 'rooms', 'stock_tracker', 'chat'].includes(item.slug))
+  // ⚠️ SUPERUSER FIX: Also handle case where superuser has empty allowed_navs from backend
+  const finalVisibleItems = (visibleNavItems.length === 0 && allowedNavs.length === 0) || (isSuperUser && allowedNavs.length === 0)
+    ? (isSuperUser 
+        ? allNavItems  // Superusers get ALL items when allowed_navs is empty
+        : allNavItems.filter(item => ['home', 'reception', 'rooms', 'stock_tracker', 'chat'].includes(item.slug))  // Regular users get basic items
+      )
     : visibleNavItems;
 
   // Group navigation items by category

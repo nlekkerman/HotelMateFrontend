@@ -39,19 +39,7 @@ function useAxiosPost(endpoint) {
       });
       setData(response.data);
 
-      // If this is a login request, save hotel_id and hotel_name (and token etc.) to localStorage
-      if (endpoint === "staff/login/") {
-        const { token, username, hotel_id, hotel_name, is_staff, is_superuser } = response.data;
-        const userToStore = {
-          token,
-          username,
-          hotel_id,
-          hotel_name,
-          is_staff,
-          is_superuser,
-        };
-        localStorage.setItem("user", JSON.stringify(userToStore));
-      }
+      // ✅ Login data persistence is handled by useLogin hook to avoid data conflicts
 
       return response.data;
     } catch (err) {

@@ -39,6 +39,7 @@ export default function useLogin() {
         is_staff: data.is_staff,
         is_superuser: data.is_superuser,
         access_level: data.access_level,
+        isAdmin: data.is_superuser || ["staff_admin", "super_staff_admin"].includes(data.access_level),
         department: data.department,
         role: data.role,
         allowed_navs: data.allowed_navs || [],
@@ -51,29 +52,16 @@ export default function useLogin() {
         },
       };
 
-      localStorage.setItem("user", JSON.stringify(userToSave));
+      console.log('🔍 Login Debug Info:');
+      console.log('🔍 RAW BACKEND RESPONSE:', data);
+      console.log('Backend data.is_superuser:', data.is_superuser);
+      console.log('Backend data.allowed_navs:', data.allowed_navs);
+      console.log('Backend data.navigation_items:', data.navigation_items);
+      console.log('🔍 Final userToSave object:', userToSave);
+      console.log('🔍 userToSave.is_superuser:', userToSave.is_superuser);
 
-
-      const userForContext = {
-        id: data.staff_id,
-        staff_id: data.staff_id, // Ensure staff_id is present for profile edit logic
-        username: data.username,
-        token: data.token,
-        hotel_id: data.hotel_id,
-        hotel_name: data.hotel_name,
-        hotel_slug: data.hotel_slug,
-        isAdmin:
-          data.is_superuser || ["staff_admin", "super_staff_admin"].includes(data.access_level),
-        is_staff: data.is_staff,
-        is_superuser: data.is_superuser,
-        access_level: data.access_level,
-        department: data.department,
-        role: data.role,
-        allowed_navs: data.allowed_navs || [],
-        profile_image_url: profileImageUrl,
-      };
-
-      login(userForContext);
+      // ✅ Use the same object for both localStorage and AuthContext to avoid data loss
+      login(userToSave);
 
       // Request Firebase notification permission and get FCM token
       try {

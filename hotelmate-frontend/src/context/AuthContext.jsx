@@ -35,8 +35,18 @@ export const AuthProvider = ({ children }) => {
 
   // Login function (keep existing behavior)
   const login = (userData) => {
+    console.log('🔍 [AuthContext] Login called with userData:', userData);
+    console.log('🔍 [AuthContext] userData.is_superuser:', userData?.is_superuser);
+    console.log('🔍 [AuthContext] userData.allowed_navs:', userData?.allowed_navs);
+    
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
+    
+    // Verify what was actually saved
+    const savedData = JSON.parse(localStorage.getItem('user'));
+    console.log('🔍 [AuthContext] Data saved to localStorage:', savedData);
+    console.log('🔍 [AuthContext] Saved is_superuser:', savedData?.is_superuser);
+    
     // If staff logs in, default to staff view
     if (userData?.is_staff) {
       setViewMode('staff');

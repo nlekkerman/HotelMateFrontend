@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Login Data</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        input { padding: 8px; margin: 5px; width: 200px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Login Data Debug Tool</h1>
+    
+    <div class="section">
+        <h3>1️⃣ Test Login API</h3>
+        <input type="text" id="username" placeholder="Username (e.g. nikola)" value="nikola">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="testLogin()">🔑 Test Login</button>
+        <div id="loginResult"></div>
+    </div>
+
+    <div class="section">
+        <h3>2️⃣ Current LocalStorage Data</h3>
+        <button onclick="checkLocalStorage()">📋 Check LocalStorage</button>
+        <button onclick="clearLocalStorage()">🗑️ Clear LocalStorage</button>
+        <div id="localStorageResult"></div>
+    </div>
+
+    <div class="section">
+        <h3>3️⃣ Permission Test</h3>
+        <button onclick="testPermissions()">🔒 Test Permissions</button>
+        <div id="permissionsResult"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000/api';
+        
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('loginResult');
+            
+            if (!username || !password) {
+                resultDiv.innerHTML = '<div class="error">Please enter username and password</div>';
+                return;
+            }
+            
+            try {
+                resultDiv.innerHTML = '<div>🔄 Logging in...</div>';
+                
+                const response = await fetch(`${API_URL}/staff/login/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Save to localStorage like the real app does
+                    const userToSave = {
+                        id: data.staff_id,
+                        staff_id: data.staff_id,
+                        token: data.token,
+                        username: data.username,
+                        hotel_id: data.hotel_id,
+                        hotel_name: data.hotel_name,
+                        hotel_slug: data.hotel_slug,
+                        is_staff: data.is_staff,
+                        is_superuser: data.is_superuser,
+                        access_level: data.access_level,
+                        department: data.department,
+                        role: data.role,
+                        allowed_navs: data.allowed_navs || [],
+                        navigation_items: data.navigation_items || [],
+                        profile_image_url: data.profile_image_url,
+                        hotel: {
+                            id: data.hotel_id,
+                            name: data.hotel_name,
+                            slug: data.hotel_slug,
+                        },
+                    };
+                    
+                    localStorage.setItem('user', JSON.stringify(userToSave));
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Login successful!</div>
+                        <h4>Raw Backend Response:</h4>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                        <h4>Saved to localStorage:</h4>
+                        <pre>${JSON.stringify(userToSave, null, 2)}</pre>
+                    `;
+                } else {
+                    const errorData = await response.json();
+                    resultDiv.innerHTML = `<div class="error">❌ Login failed: ${JSON.stringify(errorData)}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        function checkLocalStorage() {
+            const resultDiv = document.getElementById('localStorageResult');
+            const userData = localStorage.getItem('user');
+            
+            if (userData) {
+                try {
+                    const parsedUser = JSON.parse(userData);
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ User data found in localStorage</div>
+                        <h4>Parsed User Object:</h4>
+                        <pre>${JSON.stringify(parsedUser, null, 2)}</pre>
+                        <h4>Key Fields Check:</h4>
+                        <ul>
+                            <li>is_superuser: <strong>${parsedUser.is_superuser}</strong></li>
+                            <li>allowed_navs: <strong>${JSON.stringify(parsedUser.allowed_navs)}</strong> (${parsedUser.allowed_navs?.length || 0} items)</li>
+                            <li>access_level: <strong>${parsedUser.access_level}</strong></li>
+                            <li>hotel_slug: <strong>${parsedUser.hotel_slug}</strong></li>
+                        </ul>
+                    `;
+                } catch (e) {
+                    resultDiv.innerHTML = `<div class="error">❌ Error parsing user data: ${e.message}</div>`;
+                }
+            } else {
+                resultDiv.innerHTML = '<div class="error">❌ No user data found in localStorage</div>';
+            }
+        }
+        
+        function clearLocalStorage() {
+            localStorage.clear();
+            document.getElementById('localStorageResult').innerHTML = '<div>🗑️ LocalStorage cleared</div>';
+        }
+        
+        function testPermissions() {
+            const resultDiv = document.getElementById('permissionsResult');
+            
+            try {
+                const userData = localStorage.getItem('user');
+                if (!userData) {
+                    resultDiv.innerHTML = '<div class="error">❌ No user data found. Login first.</div>';
+                    return;
+                }
+                
+                const user = JSON.parse(userData);
+                
+                // Simulate the usePermissions hook logic
+                const canAccessNav = (slug) => {
+                    if (!user) return false;
+                    if (user.is_superuser) return true;
+                    return (user.allowed_navs || []).includes(slug);
+                };
+                
+                const testNavItems = ['home', 'reception', 'stock_tracker', 'staff', 'settings', 'games'];
+                
+                let permissionResults = testNavItems.map(nav => ({
+                    nav,
+                    canAccess: canAccessNav(nav)
+                }));
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Permission Test Results</div>
+                    <h4>User Info:</h4>
+                    <ul>
+                        <li>Username: <strong>${user.username}</strong></li>
+                        <li>Is Superuser: <strong>${user.is_superuser}</strong></li>
+                        <li>Allowed Navs: <strong>${JSON.stringify(user.allowed_navs)}</strong> (${user.allowed_navs?.length || 0} items)</li>
+                    </ul>
+                    <h4>Navigation Access Test:</h4>
+                    <table border="1" style="border-collapse: collapse; width: 100%;">
+                        <tr><th>Navigation</th><th>Can Access</th></tr>
+                        ${permissionResults.map(item => 
+                            `<tr><td>${item.nav}</td><td style="color: ${item.canAccess ? 'green' : 'red'}">${item.canAccess ? '✅ Yes' : '❌ No'}</td></tr>`
+                        ).join('')}
+                    </table>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error testing permissions: ${error.message}</div>`;
+            }
+        }
+        
+        // Auto-check localStorage on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkLocalStorage();
+        });
+    </script>
+</body>
+</html>

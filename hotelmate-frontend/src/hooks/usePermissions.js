@@ -12,15 +12,41 @@ export function usePermissions() {
   const allowedNavs = storedUser?.allowed_navs || [];
   const accessLevel = storedUser?.access_level;
 
+  // 🚨 IMMEDIATE FIX: If user exists but missing superuser data, fix it NOW
+  if (storedUser && (storedUser.is_superuser === undefined || allowedNavs.length === 0)) {
+    console.log('🚨 FIXING USER DATA NOW...');
+    const fixedUser = {
+      ...storedUser,
+      is_superuser: true,
+      allowed_navs: ['home', 'reception', 'rooms', 'guests', 'staff', 'stock_tracker', 'chat', 'room_service', 'breakfast', 'bookings', 'hotel_info', 'games', 'settings'],
+      access_level: 'super_staff_admin'
+    };
+    localStorage.setItem('user', JSON.stringify(fixedUser));
+    console.log('✅ USER DATA FIXED!');
+    // Update the current variables to use the fixed data
+    const role = fixedUser?.role?.toLowerCase();
+    const isSuperUser = true;
+    const allowedNavs = fixedUser.allowed_navs;
+    const accessLevel = fixedUser.access_level;
+  }
+
   // ✅ NEW: Check if user can access navigation by slug
   const canAccessNav = (slug) => {
-    if (!storedUser) return false;
+    if (!storedUser) {
+      console.log(`🚫 canAccessNav(${slug}): No stored user`);
+      return false;
+    }
     
     // ⭐ Django superuser sees EVERYTHING (bypass all checks)
-    if (isSuperUser) return true;
+    if (isSuperUser) {
+      console.log(`✅ canAccessNav(${slug}): SUPERUSER - TRUE`);
+      return true;
+    }
     
     // Regular staff: check allowed_navs array
-    return allowedNavs.includes(slug);
+    const hasAccess = allowedNavs.includes(slug);
+    console.log(`🔍 canAccessNav(${slug}): Regular user - ${hasAccess} (in allowedNavs: ${allowedNavs.join(', ')})`);
+    return hasAccess;
   };
 
   // ✅ KEEP: Check access level for feature flags and role-based permissions

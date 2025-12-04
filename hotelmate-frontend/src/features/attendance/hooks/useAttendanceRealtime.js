@@ -48,6 +48,10 @@ function safeEventHandler(onEvent, type, data) {
 export function useAttendanceRealtime(hotelSlug, onEvent) {
   // Use ref to avoid dependency on onEvent changing
   const handlerRef = useRef(onEvent);
+  
+  // Event deduplication to prevent processing the same event multiple times
+  const processedEventsRef = useRef(new Set());
+  const eventTimeoutRef = useRef(new Map());
   const pusherRef = useRef(null);
   const channelRef = useRef(null);
   
@@ -144,7 +148,17 @@ export function useAttendanceRealtime(hotelSlug, onEvent) {
         // ✅ MAIN EVENT: Real-time clock status updates (clock in/out, break start/end)
         // Backend sends: { staff_id, user_id, duty_status, current_status, ... }
         channelRef.current.bind('clock-status-updated', (data) => {
+          // Create unique event ID for deduplication
+          const eventId = `${data?.staff_id}-${data?.user_id}-${data?.action}-${data?.timestamp || Date.now()}`;
+          
+          // Check if we've already processed this event recently
+          if (processedEventsRef.current.has(eventId)) {
+            console.log('[Attendance Pusher] 🔄 Duplicate event detected, skipping:', eventId);
+            return;
+          }
+          
           console.log('[Attendance Pusher] 📡 MAIN EVENT clock-status-updated received:', {
+            eventId,
             data,
             hasStaffId: !!data?.staff_id,
             hasUserId: !!data?.user_id,
@@ -152,6 +166,17 @@ export function useAttendanceRealtime(hotelSlug, onEvent) {
             hasCurrentStatus: !!data?.current_status,
             timestamp: new Date().toISOString()
           });
+          
+          // Mark event as processed
+          processedEventsRef.current.add(eventId);
+          
+          // Remove from processed events after 5 seconds to allow future legitimate events
+          const timeoutId = setTimeout(() => {
+            processedEventsRef.current.delete(eventId);
+            eventTimeoutRef.current.delete(eventId);
+          }, 5000);
+          
+          eventTimeoutRef.current.set(eventId, timeoutId);
           
           // Normalize to { type, payload } format as expected by handlers
           safeEventHandler(handlerRef.current, 'clock-status-updated', data);
@@ -291,6 +316,11 @@ export function useAttendanceRealtime(hotelSlug, onEvent) {
           pusherRef.current.disconnect();
           pusherRef.current = null;
         }
+        
+        // Clear event deduplication timeouts
+        eventTimeoutRef.current.forEach(timeoutId => clearTimeout(timeoutId));
+        eventTimeoutRef.current.clear();
+        processedEventsRef.current.clear();
       } catch (error) {
         console.error(`[Attendance Pusher] Error during cleanup [${hookId}]:`, error);
       }

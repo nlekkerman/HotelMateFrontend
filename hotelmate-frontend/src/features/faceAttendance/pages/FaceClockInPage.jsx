@@ -77,17 +77,51 @@ export default function FaceClockInPage() {
     }, 7000);
   };
 
-  // Cleanup timeouts on unmount
+  // Cleanup timeouts on unmount and add camera event listeners
   useEffect(() => {
+    // Camera cleanup event handlers
+    const handleStopCameraAfterClockAction = (event) => {
+      console.log('[FaceClockIn] 📹 Received camera stop event:', event.detail);
+      
+      // Stop camera and reset to inactive for kiosk mode
+      if (mode === "success" || mode === "processing") {
+        setTimeout(() => {
+          stopCamera();
+          console.log('[FaceClockIn] 📹 Camera stopped after clock action');
+        }, 1000);
+      }
+    };
+
+    const handleForceStopCamera = (event) => {
+      console.log('[FaceClockIn] 📹 Received force camera stop event:', event.detail);
+      stopCamera();
+      
+      // Auto-reset for kiosk mode after break end
+      if (event.detail?.action === 'end_break') {
+        setTimeout(() => {
+          handleReset();
+        }, 2000);
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener('stopCameraAfterClockAction', handleStopCameraAfterClockAction);
+    window.addEventListener('forceStopCamera', handleForceStopCamera);
+
     return () => {
+      // Cleanup timeouts
       if (resetTimeoutRef.current) {
         clearTimeout(resetTimeoutRef.current);
       }
       if (countdownRef.current) {
         clearInterval(countdownRef.current);
       }
+      
+      // Remove event listeners
+      window.removeEventListener('stopCameraAfterClockAction', handleStopCameraAfterClockAction);
+      window.removeEventListener('forceStopCamera', handleForceStopCamera);
     };
-  }, []);
+  }, [mode, stopCamera]);
 
   const handleImageCapture = (base64Image) => {
     setCapturedImage(base64Image);
