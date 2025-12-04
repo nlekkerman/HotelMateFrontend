@@ -25,6 +25,7 @@ import BigScreenNavbar from "@/components/layout/BigScreenNavbar";
 import NetworkHandler from "@/components/offline/NetworkHandler";
 import LogoBanner from "./components/layout/LogoBanner";
 import PusherDebugger from "@/components/utils/PusherDebugger";
+import UserDebugInfo from "@/components/debug/UserDebugInfo";
 import MessengerWidget from "@/staff_chat/components/MessengerWidget";
 import PusherProvider from "@/staff_chat/context/PusherProvider";
 import { MessengerProvider } from "@/staff_chat/context/MessengerContext";
@@ -323,8 +324,9 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               {/* Protected Routes - Require Authentication */}
               <Route path="/reception" element={<ProtectedRoute><Reception /></ProtectedRoute>} />
 
-              {/* Debug Route - REMOVE IN PRODUCTION */}
+              {/* Debug Routes - REMOVE IN PRODUCTION */}
               <Route path="/pusher-debug" element={<ProtectedRoute><PusherDebugger /></ProtectedRoute>} />
+              <Route path="/user-debug" element={<ProtectedRoute><UserDebugInfo /></ProtectedRoute>} />
 
               {/* Settings */}
               <Route path="/staff/:hotelSlug/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

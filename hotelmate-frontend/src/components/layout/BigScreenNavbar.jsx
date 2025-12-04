@@ -13,7 +13,7 @@ import { useBookingNotifications } from "@/context/BookingNotificationContext";
 import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationContext";
 import { useAttendanceRealtime } from "@/features/attendance/hooks/useAttendanceRealtime";
 import { handleClockAction as performClockActionAPI, showClockOptionsModal } from "@/features/attendance/utils/clockActions";
-import { AttendanceEventDebugger } from "@/features/attendance/components";
+
 import EnhancedAttendanceStatusBadge from "@/features/attendance/components/EnhancedAttendanceStatusBadge";
 
 const BigScreenNavbar = ({ chatUnreadCount }) => {
@@ -1243,11 +1243,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
           </div>
         </div>
       )}
-      
-      {/* Development Debug Tool - Shows attendance Pusher events in real-time */}
-      {process.env.NODE_ENV === 'development' && hotelIdentifier && (
-        <AttendanceEventDebugger hotelIdentifier={hotelIdentifier} />
-      )}
+
     </>
   );
 };

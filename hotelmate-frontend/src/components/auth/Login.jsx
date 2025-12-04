@@ -32,7 +32,7 @@ const Login = () => {
       setLocalError("No data received from server.");
       return;
     }
-    navigate("/");
+    navigate(`/staff/${data.hotel_slug}/feed`);
   } catch {
     setLocalError("Login failed.");
   }

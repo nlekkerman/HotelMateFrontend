@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api from "@/services/api";
 import { useNavigate,useParams  } from "react-router-dom";
+import { DEFAULT_NAV_ITEMS } from "@/hooks/useNavigation";
 
 const StaffCreate = () => {
   const [users, setUsers] = useState([]);
@@ -10,6 +11,8 @@ const StaffCreate = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedHotelId, setSelectedHotelId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [availableNavItems, setAvailableNavItems] = useState([]);
+  const [selectedNavItems, setSelectedNavItems] = useState([]);
   const [staffData, setStaffData] = useState({
     first_name: "",
     last_name: "",
@@ -18,6 +21,7 @@ const StaffCreate = () => {
     access_level: "regular_staff",
     email: "",
     is_active: true,
+    allowed_navs: [],
   });
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -121,7 +125,40 @@ const StaffCreate = () => {
 
     fetchPendingRegistrations();
     fetchMetadata();
+    fetchNavigationItems();
   }, []);
+
+  const fetchNavigationItems = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user"));
+      const hotelSlug = user?.hotel_slug;
+      
+      if (!hotelSlug) {
+        console.warn("No hotel slug found, using default navigation items");
+        setAvailableNavItems(DEFAULT_NAV_ITEMS);
+        return;
+      }
+
+      // Try to fetch from backend first
+      try {
+        const response = await api.get(`/staff/navigation-items/?hotel_slug=${hotelSlug}`);
+        const items = Array.isArray(response.data) ? response.data : [];
+        
+        if (items.length > 0) {
+          setAvailableNavItems(items);
+        } else {
+          // Fallback to default items if backend returns empty
+          setAvailableNavItems(DEFAULT_NAV_ITEMS);
+        }
+      } catch (navError) {
+        console.warn("Navigation items API not available, using defaults:", navError);
+        setAvailableNavItems(DEFAULT_NAV_ITEMS);
+      }
+    } catch (err) {
+      console.error("Error setting up navigation items:", err);
+      setAvailableNavItems(DEFAULT_NAV_ITEMS);
+    }
+  };
 
   const openModal = (user) => {
     setSelectedUser(user);
@@ -134,6 +171,7 @@ const StaffCreate = () => {
       email: "",
       is_active: true,
     });
+    setSelectedNavItems([]); // Reset navigation selection
     setError(null);
   };
 
@@ -141,6 +179,23 @@ const StaffCreate = () => {
     setSelectedUser(null);
     setError(null);
     setSelectedHotelId("");
+    setSelectedNavItems([]);
+  };
+
+  const handleNavItemToggle = (itemSlug) => {
+    setSelectedNavItems(prev => 
+      prev.includes(itemSlug)
+        ? prev.filter(slug => slug !== itemSlug)
+        : [...prev, itemSlug]
+    );
+  };
+
+  const handleSelectAllNavItems = () => {
+    setSelectedNavItems(availableNavItems.map(item => item.slug));
+  };
+
+  const handleDeselectAllNavItems = () => {
+    setSelectedNavItems([]);
   };
 
   const handleChange = (e) => {
@@ -189,6 +244,7 @@ const StaffCreate = () => {
       role_id: Number(staffData.role),
       access_level: staffData.access_level,
       is_active: staffData.is_active,
+      allowed_navs: selectedNavItems, // Add selected navigation items
     };
 
     console.log("Sending staff creation payload:", payload);
@@ -422,6 +478,81 @@ const StaffCreate = () => {
                         <label className="form-check-label fw-bold" htmlFor="isActiveCheck">
                           <i className="bi bi-check-circle me-2"></i>Active
                         </label>
+                      </div>
+                    </div>
+
+                    {/* Navigation Permissions Section */}
+                    <div className="col-12 mt-4">
+                      <div className="card">
+                        <div className="card-header bg-light">
+                          <h6 className="mb-0">
+                            <i className="bi bi-list-ul me-2"></i>
+                            Navigation Permissions
+                          </h6>
+                          <small className="text-muted">
+                            Select which navigation items this staff member can access. 
+                            Superusers will see all items regardless of these settings.
+                          </small>
+                        </div>
+                        <div className="card-body p-3">
+                          {/* Quick Actions */}
+                          <div className="btn-group mb-3" role="group">
+                            <button 
+                              type="button"
+                              onClick={handleSelectAllNavItems}
+                              className="btn btn-outline-primary btn-sm"
+                            >
+                              <i className="bi bi-check-all me-1"></i>
+                              Select All
+                            </button>
+                            <button 
+                              type="button"
+                              onClick={handleDeselectAllNavItems}
+                              className="btn btn-outline-secondary btn-sm"
+                            >
+                              <i className="bi bi-x-circle me-1"></i>
+                              Clear All
+                            </button>
+                          </div>
+
+                          {/* Stats */}
+                          <div className="alert alert-info py-2 mb-3">
+                            <small>
+                              <i className="bi bi-info-circle me-1"></i>
+                              {selectedNavItems.length} of {availableNavItems.length} navigation items selected
+                            </small>
+                          </div>
+
+                          {/* Navigation Items List */}
+                          <div className="row g-2" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                            {availableNavItems.map((item) => (
+                              <div key={item.slug || item.id} className="col-md-6">
+                                <div className="form-check">
+                                  <input
+                                    className="form-check-input"
+                                    type="checkbox"
+                                    id={`nav-${item.slug || item.id}`}
+                                    checked={selectedNavItems.includes(item.slug)}
+                                    onChange={() => handleNavItemToggle(item.slug)}
+                                  />
+                                  <label className="form-check-label" htmlFor={`nav-${item.slug || item.id}`}>
+                                    <i className={`bi bi-${item.icon} me-2`}></i>
+                                    <strong>{item.name}</strong>
+                                    <br />
+                                    <small className="text-muted">{item.slug}</small>
+                                  </label>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {availableNavItems.length === 0 && (
+                            <div className="alert alert-warning">
+                              <i className="bi bi-exclamation-triangle me-2"></i>
+                              No navigation items available. Using default items.
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

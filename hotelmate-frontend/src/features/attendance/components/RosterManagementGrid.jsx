@@ -738,6 +738,11 @@ export default function RosterManagementGrid({
 
   // Handle cell click for creating/editing shifts
   const handleCellClick = (staff, date, forceNew = false) => {
+    // Disable editing if period is finalized
+    if (selectedPeriod?.is_finalized) {
+      return;
+    }
+    
     const dateStr = format(date, "yyyy-MM-dd");
     const existingShifts = getShiftsForStaffAndDate(staff.id, date);
 
@@ -758,6 +763,10 @@ export default function RosterManagementGrid({
 
   // Handle adding additional shift
   const handleAddShift = (staff, date, event) => {
+    // Disable editing if period is finalized
+    if (selectedPeriod?.is_finalized) {
+      return;
+    }
     event.stopPropagation(); // Prevent cell click
     handleCellClick(staff, date, true);
   };
@@ -1249,17 +1258,20 @@ export default function RosterManagementGrid({
             </Badge>
           )}
           
-          {/* Debug: Always show copied count */}
-          <Badge bg="secondary" className="d-flex align-items-center gap-1">
-            DEBUG: {draftCopiedShifts.length} in state
-          </Badge>
+          {/* Show finalized badge if period is finalized */}
+          {selectedPeriod?.is_finalized && (
+            <Badge bg="danger" className="d-flex align-items-center gap-1">
+              FINALIZED
+            </Badge>
+          )}
 
           {/* Global copy controls */}
           <div className="global-copy-controls">
             <span
-              className="global-copy-btn copy-tooltip"
+              className={`global-copy-btn copy-tooltip ${selectedPeriod?.is_finalized ? 'disabled' : ''}`}
               data-tooltip="Copy week roster"
-              onClick={() => setShowCopyBulkModal(true)}
+              onClick={selectedPeriod?.is_finalized ? undefined : () => setShowCopyBulkModal(true)}
+              style={selectedPeriod?.is_finalized ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
             >
               <i className="bi bi-calendar-week"></i>
               Copy Week Roster
@@ -1376,9 +1388,10 @@ export default function RosterManagementGrid({
                               key={day.toISOString()}
                               className={`roster-cell text-center ${
                                 dayShifts.length > 0 ? "has-shift" : ""
-                              } ${getDraftShiftsForStaffAndDate(staff.id, day).length > 0 ? "has-draft" : ""} ${getCopiedDraftShiftsForStaffAndDate(staff.id, day).length > 0 ? "has-copied-draft" : ""} ${hasOverlappingShifts(dayShifts) ? "has-overlapping-shifts" : ""}`}
+                              } ${getDraftShiftsForStaffAndDate(staff.id, day).length > 0 ? "has-draft" : ""} ${getCopiedDraftShiftsForStaffAndDate(staff.id, day).length > 0 ? "has-copied-draft" : ""} ${hasOverlappingShifts(dayShifts) ? "has-overlapping-shifts" : ""} ${selectedPeriod?.is_finalized ? "finalized-readonly" : ""}`}
                               data-debug-copied={getCopiedDraftShiftsForStaffAndDate(staff.id, day).length}
-                              onClick={() => handleCellClick(staff, day)}
+                              onClick={selectedPeriod?.is_finalized ? undefined : () => handleCellClick(staff, day)}
+                              style={selectedPeriod?.is_finalized ? { cursor: 'not-allowed', opacity: 0.7 } : {}}
                               title={`Click to ${
                                 dayShifts.length > 0 ? "edit" : "create"
                               } shift for ${fullName || "Unnamed"} on ${format(
@@ -1454,14 +1467,14 @@ export default function RosterManagementGrid({
                 variant="outline-danger"
                 size="sm"
                 onClick={handleClearDrafts}
-                disabled={bulkSaving}
+                disabled={bulkSaving || selectedPeriod?.is_finalized}
               >
                 <i className="bi bi-trash"></i> Clear All
               </Button>
               <Button
                 variant="success"
                 onClick={handleBulkSave}
-                disabled={bulkSaving}
+                disabled={bulkSaving || selectedPeriod?.is_finalized}
               >
                 {bulkSaving ? (
                   <><Spinner size="sm" className="me-2" />Publishing...</>

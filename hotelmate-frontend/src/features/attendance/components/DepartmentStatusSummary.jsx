@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, Row, Col, Badge, Button, Alert, Toast, ToastContainer } from 'react-bootstrap';
 import { useDepartmentAttendanceStatus, useAttendanceApproval } from '../hooks/useDepartmentAttendanceStatus';
+import { useAuth } from '@/context/AuthContext';
 import { safeString } from '../utils/safeUtils';
 
 /**
@@ -12,9 +13,13 @@ const DepartmentStatusSummary = ({
   refreshKey = 0
 }) => {
   const [toasts, setToasts] = useState([]);
+  const [internalRefreshKey, setInternalRefreshKey] = useState(0);
+  const { user } = useAuth();
+  const pusherRef = useRef(null);
+  const channelRef = useRef(null);
   
   // Fetch real-time department attendance data
-  const { data: departmentData, loading, error } = useDepartmentAttendanceStatus(hotelSlug, refreshKey);
+  const { data: departmentData, loading, error, refresh } = useDepartmentAttendanceStatus(hotelSlug, refreshKey + internalRefreshKey);
   
   // Handle approval/rejection with toast feedback
   const handleSuccess = (action, logId) => {
@@ -35,6 +40,105 @@ const DepartmentStatusSummary = ({
   };
   
   const { approveLog, rejectLog, isApproving } = useAttendanceApproval(hotelSlug, handleSuccess);
+
+  // Pusher real-time integration for approval updates
+  useEffect(() => {
+    if (!hotelSlug || !user?.staff_id) return;
+
+    const initializePusher = async () => {
+      try {
+        const pusherKey = import.meta.env.VITE_PUSHER_KEY;
+        const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER;
+        
+        if (!pusherKey || !pusherCluster) {
+          console.warn('[DepartmentStatus] Pusher configuration missing');
+          return;
+        }
+
+        // Dynamic import Pusher
+        let Pusher;
+        try {
+          Pusher = (await import('pusher-js')).default;
+        } catch (importError) {
+          console.warn('[DepartmentStatus] Pusher not available:', importError);
+          return;
+        }
+
+        // Initialize Pusher
+        pusherRef.current = new Pusher(pusherKey, {
+          cluster: pusherCluster,
+          encrypted: true,
+        });
+
+        // Subscribe to personal staff channel for approval notifications
+        const personalChannel = `attendance-hotel-${hotelSlug}-staff-${user.staff_id}`;
+        console.log('[DepartmentStatus] Subscribing to personal channel:', personalChannel);
+        
+        const staffChannel = pusherRef.current.subscribe(personalChannel);
+        
+        // Listen for approval events on personal channel
+        staffChannel.bind('clocklog-approved', (data) => {
+          console.log('[DepartmentStatus] Received approval notification:', data);
+          setToasts(prev => [...prev, {
+            id: Date.now(),
+            message: `✅ ${data.message} (by ${data.approved_by})`,
+            variant: 'success'
+          }]);
+          // Refresh department status
+          setInternalRefreshKey(prev => prev + 1);
+        });
+        
+        staffChannel.bind('clocklog-rejected', (data) => {
+          console.log('[DepartmentStatus] Received rejection notification:', data);
+          setToasts(prev => [...prev, {
+            id: Date.now(),
+            message: `❌ ${data.message} (by ${data.rejected_by})`,
+            variant: 'warning'
+          }]);
+          // Refresh department status
+          setInternalRefreshKey(prev => prev + 1);
+        });
+
+        // Subscribe to manager channel for department-wide updates
+        const managerChannel = `attendance-hotel-${hotelSlug}-managers`;
+        console.log('[DepartmentStatus] Subscribing to manager channel:', managerChannel);
+        
+        channelRef.current = pusherRef.current.subscribe(managerChannel);
+        
+        // Listen for any approval/rejection events to refresh department status
+        channelRef.current.bind('clocklog-approved', () => {
+          console.log('[DepartmentStatus] Manager channel: clocklog approved, refreshing status');
+          setInternalRefreshKey(prev => prev + 1);
+        });
+        
+        channelRef.current.bind('clocklog-rejected', () => {
+          console.log('[DepartmentStatus] Manager channel: clocklog rejected, refreshing status');
+          setInternalRefreshKey(prev => prev + 1);
+        });
+
+        pusherRef.current.connection.bind('connected', () => {
+          console.log('[DepartmentStatus] Pusher connected');
+        });
+
+      } catch (error) {
+        console.error('[DepartmentStatus] Failed to initialize Pusher:', error);
+      }
+    };
+
+    initializePusher();
+
+    // Cleanup
+    return () => {
+      if (channelRef.current) {
+        channelRef.current.unbind_all();
+        channelRef.current = null;
+      }
+      if (pusherRef.current) {
+        pusherRef.current.disconnect();
+        pusherRef.current = null;
+      }
+    };
+  }, [hotelSlug, user?.staff_id]);
   
   // Process data from new API format
   const allCurrentlyLoggedIn = [];
@@ -67,6 +171,8 @@ const DepartmentStatusSummary = ({
   const handleApprove = async (staff) => {
     try {
       await approveLog(staff.log_id);  // Use log_id not staff_id
+      // Refresh department status after approval
+      setInternalRefreshKey(prev => prev + 1);
     } catch (error) {
       setToasts(prev => [...prev, {
         id: Date.now(),
@@ -79,6 +185,8 @@ const DepartmentStatusSummary = ({
   const handleReject = async (staff) => {
     try {
       await rejectLog(staff.log_id);  // Use log_id not staff_id
+      // Refresh department status after rejection
+      setInternalRefreshKey(prev => prev + 1);
     } catch (error) {
       setToasts(prev => [...prev, {
         id: Date.now(),

@@ -41,6 +41,8 @@ export default function useLogin() {
         access_level: data.access_level,
         department: data.department,
         role: data.role,
+        allowed_navs: data.allowed_navs || [],
+        navigation_items: data.navigation_items || [],
         profile_image_url: profileImageUrl,
         hotel: {
           id: data.hotel_id,

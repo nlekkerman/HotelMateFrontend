@@ -8,6 +8,7 @@ export const useDepartmentAttendanceStatus = (hotelSlug, refreshKey = 0) => {
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     if (!hotelSlug) {
@@ -31,9 +32,11 @@ export const useDepartmentAttendanceStatus = (hotelSlug, refreshKey = 0) => {
     };
 
     fetchData();
-  }, [hotelSlug, refreshKey]);
+  }, [hotelSlug, refreshKey, refreshTrigger]);
 
-  return { data, loading, error };
+  const refresh = () => setRefreshTrigger(prev => prev + 1);
+
+  return { data, loading, error, refresh };
 };
 
 /**

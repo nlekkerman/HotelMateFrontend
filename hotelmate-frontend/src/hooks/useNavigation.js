@@ -7,7 +7,7 @@ import {
 } from "@/config/navigationCategories";
 
 // Default navigation items (fallback if not in localStorage)
-const DEFAULT_NAV_ITEMS = [
+export const DEFAULT_NAV_ITEMS = [
   { slug: 'home', name: 'Home', path: '/staff/{hotelSlug}/feed', icon: 'house' },
   { slug: 'chat', name: 'Chat', path: '/hotel/{hotelSlug}/chat', icon: 'chat-dots' },
   // Removed 'staff-chat' - using MessengerWidget instead
@@ -39,7 +39,7 @@ const DEFAULT_NAV_ITEMS = [
  */
 export function useNavigation() {
   const { user } = useAuth();
-  const { canAccessNav, isSuperUser } = usePermissions();
+  const { canAccessNav, isSuperUser, allowedNavs } = usePermissions();
   
   const hotelSlug = user?.hotel_slug || '';
 
@@ -73,6 +73,12 @@ export function useNavigation() {
         return canAccessNav(item.slug);
       });
 
+  // FALLBACK: If no navigation items are visible and user has empty allowed_navs,
+  // show basic navigation items to prevent complete lockout
+  const finalVisibleItems = visibleNavItems.length === 0 && !isSuperUser && allowedNavs.length === 0
+    ? allNavItems.filter(item => ['home', 'reception', 'rooms', 'stock_tracker', 'chat'].includes(item.slug))
+    : visibleNavItems;
+
   // Group navigation items by category
   const groupItemsByCategory = (items) => {
     const categorized = {};
@@ -99,7 +105,7 @@ export function useNavigation() {
   };
 
   // Create categorized navigation structure
-  const { categorized: categorizedItems, uncategorized } = groupItemsByCategory(visibleNavItems);
+  const { categorized: categorizedItems, uncategorized } = groupItemsByCategory(finalVisibleItems);
   
   // Build categories with items and filter out empty categories
   const categories = NAVIGATION_CATEGORIES
@@ -112,10 +118,10 @@ export function useNavigation() {
 
 
   return { 
-    visibleNavItems, 
+    visibleNavItems: finalVisibleItems, 
     allNavItems,
     categories,
     uncategorizedItems: uncategorized,
-    hasNavigation: visibleNavItems.length > 0
+    hasNavigation: finalVisibleItems.length > 0
   };
 }

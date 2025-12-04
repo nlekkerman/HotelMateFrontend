@@ -8,6 +8,7 @@ export default function RosterPeriodSummary({
   error,
   onExportCsv,
   onExportXlsx,
+  onShowFinalizedRosters,
 }) {
   if (!period) {
     return null;
@@ -85,6 +86,14 @@ export default function RosterPeriodSummary({
                   </button>
                 )}
               </div>
+              
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-primary mt-1"
+                onClick={onShowFinalizedRosters}
+              >
+                Finalized Rosters
+              </button>
             </div>
           </div>
         </div>

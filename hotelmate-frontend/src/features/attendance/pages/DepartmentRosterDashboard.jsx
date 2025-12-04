@@ -13,6 +13,7 @@ import RosterPeriodSummary from "../components/RosterPeriodSummary";
 import PeriodStaffSummary from "../components/PeriodStaffSummary";
 import PeriodCreationModal from "../components/PeriodCreationModal";
 import PeriodFinalizeModal from "../components/PeriodFinalizeModal";
+import FinalizedRostersModal from "../components/FinalizedRostersModal";
 import DepartmentStatusSummary from "../components/DepartmentStatusSummary";
 import AttendanceErrorBoundary from "../components/AttendanceErrorBoundary";
 import AttendanceToasts from "../components/AttendanceToasts";
@@ -49,6 +50,9 @@ function DepartmentRosterDashboardComponent() {
   
   // Period finalize modal state
   const [showFinalizeModal, setShowFinalizeModal] = useState(false);
+  
+  // Finalized rosters modal state
+  const [showFinalizedRostersModal, setShowFinalizedRostersModal] = useState(false);
   
   // Staff metadata
   const { departments, isLoading: departmentsLoading } = useStaffMetadata(hotelSlug);
@@ -336,6 +340,7 @@ function DepartmentRosterDashboardComponent() {
                 onFinalize={handleShowFinalizeModal}
                 finalizing={finalizing}
                 error={null}
+                onShowFinalizedRosters={() => setShowFinalizedRostersModal(true)}
               />
             </div>
           )}
@@ -461,6 +466,15 @@ function DepartmentRosterDashboardComponent() {
         finalizing={finalizing}
         error={finalizeError}
         canForce={finalizeCanForce}
+      />
+      
+      {/* Finalized Rosters Modal */}
+      <FinalizedRostersModal
+        show={showFinalizedRostersModal}
+        onHide={() => setShowFinalizedRostersModal(false)}
+        hotelSlug={hotelSlug}
+        department={selectedDepartment}
+        onSelectPeriod={(period) => setSelectedPeriodId(period.id)}
       />
       
       {/* Toast notifications */}

@@ -60,7 +60,7 @@ body {
 /* Stocktake Navigation - Collapsed by default, expands on hover */
 .stocktake-nav-sticky {
   position: fixed;
-  top: 80px;
+  top: 100px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 999;
