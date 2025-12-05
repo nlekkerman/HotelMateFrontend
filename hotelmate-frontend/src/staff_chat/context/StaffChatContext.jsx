@@ -2,7 +2,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { fetchConversations, sendMessage as apiSendMessage, markConversationAsRead } from "../services/staffChatApi";
 import { useAuth } from "@/context/AuthContext";
-import { useChatState, useChatDispatch, CHAT_ACTIONS } from "@/realtime/stores/chatStore.jsx";
+import { useChatState, useChatDispatch } from "@/realtime/stores/chatStore.jsx";
+import { CHAT_ACTIONS } from "@/realtime/stores/chatActions.js";
 
 const StaffChatContext = createContext(undefined);
 

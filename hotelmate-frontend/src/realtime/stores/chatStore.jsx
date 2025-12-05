@@ -1,5 +1,9 @@
 // src/realtime/stores/chatStore.jsx
 import React, { createContext, useContext, useReducer } from 'react';
+import { CHAT_ACTIONS } from './chatActions.js';
+
+// Re-export for backward compatibility
+export { CHAT_ACTIONS };
 
 const ChatStateContext = createContext(null);
 const ChatDispatchContext = createContext(null);
@@ -9,19 +13,6 @@ const initialState = {
   conversationsById: {},
   activeConversationId: null,
   lastEventTimestamps: {} // for deduplication: "eventType:convId:messageId" -> timestamp
-};
-
-// Action types
-export const CHAT_ACTIONS = {
-  INIT_CONVERSATIONS_FROM_API: 'INIT_CONVERSATIONS_FROM_API',
-  INIT_MESSAGES_FOR_CONVERSATION: 'INIT_MESSAGES_FOR_CONVERSATION',
-  SET_ACTIVE_CONVERSATION: 'SET_ACTIVE_CONVERSATION',
-  RECEIVE_MESSAGE: 'RECEIVE_MESSAGE',
-  MESSAGE_UPDATED: 'MESSAGE_UPDATED',
-  MESSAGE_DELETED: 'MESSAGE_DELETED',
-  RECEIVE_READ_RECEIPT: 'RECEIVE_READ_RECEIPT',
-  MARK_CONVERSATION_READ: 'MARK_CONVERSATION_READ',
-  UPDATE_CONVERSATION_METADATA: 'UPDATE_CONVERSATION_METADATA'
 };
 
 // Reducer
