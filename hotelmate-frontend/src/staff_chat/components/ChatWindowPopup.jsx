@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { fetchMessages, sendMessage, uploadFiles, markConversationAsRead } from '../services/staffChatApi';
 import { useStaffChat } from '../context/StaffChatContext';
@@ -212,6 +212,72 @@ const ChatWindowPopup = ({
     console.log(`✅ [POPUP SYNC] Found ${updatedCount} messages with read receipts`);
   }, [readReceipts, messages]);
 
+  // Intersection Observer to mark messages as read when they become visible
+  const observerRef = useRef(null);
+  const observedMessages = useRef(new Set());
+
+  const handleMessageVisible = useCallback(async (messageId, senderId) => {
+    // Don't mark own messages as read
+    if (senderId === currentUserId) return;
+    
+    // Don't mark if already processed
+    if (observedMessages.current.has(messageId)) return;
+    
+    // Only mark if popup is not minimized
+    if (isMinimized) return;
+
+    try {
+      observedMessages.current.add(messageId);
+      console.log('👁️ [POPUP] Marking message as read due to visibility:', messageId);
+      await markAsRead(messageId);
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+      observedMessages.current.delete(messageId); // Remove on error so it can be retried
+    }
+  }, [markAsRead, currentUserId, isMinimized]);
+
+  // Set up intersection observer for message visibility
+  useEffect(() => {
+    if (isMinimized || !messagesContainerRef.current) return;
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const messageId = entry.target.dataset.messageId;
+            const senderId = entry.target.dataset.senderId;
+            if (messageId && senderId) {
+              handleMessageVisible(parseInt(messageId), parseInt(senderId));
+            }
+          }
+        });
+      },
+      {
+        root: messagesContainerRef.current,
+        rootMargin: '0px',
+        threshold: 0.5, // Message must be 50% visible
+      }
+    );
+
+    // Observe all existing message elements
+    const messageElements = messagesContainerRef.current.querySelectorAll('[data-message-id]');
+    messageElements.forEach((element) => {
+      observerRef.current?.observe(element);
+    });
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, [handleMessageVisible, isMinimized, messages.length]);
+
+  // Clear observed messages when popup is minimized
+  useEffect(() => {
+    if (isMinimized) {
+      observedMessages.current.clear();
+      observerRef.current?.disconnect();
+    }
+  }, [isMinimized]);
+
   // Subscribe to messages from StaffChatContext (single source of truth!)
   useEffect(() => {
     if (!conversation?.id) {
@@ -283,6 +349,15 @@ const ChatWindowPopup = ({
       console.log('🎯 [POPUP MARK ALL] Conversation ID:', conversation.id);
       console.log('🎯 [POPUP MARK ALL] Total messages:', messages.length);
       
+      // Set this conversation as active to prevent notifications
+      if (chatDispatch) {
+        console.log('🎯 [POPUP OPEN] Setting conversation as active:', conversation.id);
+        chatDispatch({
+          type: CHAT_ACTIONS.SET_ACTIVE_CONVERSATION,
+          payload: { conversationId: conversation.id }
+        });
+      }
+      
       const timer = setTimeout(async () => {
         console.log('📮 [POPUP MARK ALL] Calling markConversationRead...');
         await markConversationRead();
@@ -291,7 +366,18 @@ const ChatWindowPopup = ({
       
       return () => clearTimeout(timer);
     }
-  }, [conversation?.id, messages.length, isMinimized, markConversationRead]);
+  }, [conversation?.id, messages.length, isMinimized, markConversationRead, chatDispatch]);
+
+  // Clear active conversation when popup is minimized
+  useEffect(() => {
+    if (isMinimized && conversation?.id && chatDispatch) {
+      console.log('🎯 [POPUP MINIMIZE] Clearing active conversation:', conversation.id);
+      chatDispatch({
+        type: CHAT_ACTIONS.SET_ACTIVE_CONVERSATION,
+        payload: { conversationId: null }
+      });
+    }
+  }, [isMinimized, conversation?.id, chatDispatch]);
 
   // ✅ UNIFIED: Infinite scroll removed - chatStore loads messages automatically via API
   // No need for infinite scroll with unified architecture
@@ -427,6 +513,15 @@ const ChatWindowPopup = ({
     console.log('🎯🎯🎯 [POPUP MARK ALL] Input focused, marking ALL messages as read');
     console.log('🎯 [POPUP MARK ALL] This handles new messages received while popup was open');
     console.log('🎯 [POPUP MARK ALL] Current messages count:', messages.length);
+    
+    // Set this conversation as active to prevent notifications
+    if (conversation?.id && chatDispatch) {
+      console.log('🎯 [POPUP FOCUS] Setting conversation as active:', conversation.id);
+      chatDispatch({
+        type: CHAT_ACTIONS.SET_ACTIVE_CONVERSATION,
+        payload: { conversationId: conversation.id }
+      });
+    }
     
     console.log('📮 [POPUP MARK ALL] Calling markConversationRead...');
     await markConversationRead();
@@ -639,6 +734,8 @@ const ChatWindowPopup = ({
                         <div
                           key={message.id}
                           className={`staff-chat-message ${isOwn ? 'staff-chat-message--own' : 'staff-chat-message--other'}`}
+                          data-message-id={message.id}
+                          data-sender-id={senderId}
                         >
                           {/* Message Actions Dropdown */}
                           <MessageActions
