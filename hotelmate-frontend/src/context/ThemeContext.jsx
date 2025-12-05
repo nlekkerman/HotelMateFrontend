@@ -51,12 +51,40 @@ const ThemeProvider = ({ children }) => {
     queryKey: ["theme", hotelSlug, user?.is_staff, user?.hotel_slug], // Include user state in key
     queryFn: async () => {
       console.log('[ThemeContext] Fetching theme for:', hotelSlug);
+      console.log('[ThemeContext] User from AuthContext:', user);
       console.log('[ThemeContext] User is staff:', user?.is_staff, 'User hotel_slug:', user?.hotel_slug);
       
+      // Debug: Check what's actually in localStorage
+      const storedUser = localStorage.getItem('user');
+      let actualIsStaff = user?.is_staff;
+      let actualHotelSlug = user?.hotel_slug;
+      
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        console.log('[ThemeContext] User in localStorage:', parsedUser);
+        console.log('[ThemeContext] localStorage is_staff:', parsedUser.is_staff);
+        
+        // Fix: If user has staff-level access but is_staff is false, correct it
+        const shouldBeStaff = parsedUser.is_superuser || 
+                             parsedUser.access_level === 'staff_admin' || 
+                             parsedUser.access_level === 'super_staff_admin' ||
+                             parsedUser.staff_id;
+                             
+        if (shouldBeStaff && !parsedUser.is_staff) {
+          console.log('[ThemeContext] 🔧 FIXING: User should be staff but is_staff=false, correcting...');
+          actualIsStaff = true;
+          actualHotelSlug = parsedUser.hotel_slug;
+        } else if (!user?.is_staff && parsedUser.is_staff) {
+          console.log('[ThemeContext] Using localStorage data as AuthContext seems incorrect');
+          actualIsStaff = parsedUser.is_staff;
+          actualHotelSlug = parsedUser.hotel_slug;
+        }
+      }
+      
       // For staff users, use staff endpoint
-      if (user?.is_staff && user?.hotel_slug) {
+      if (actualIsStaff && actualHotelSlug) {
         console.log('[ThemeContext] Using STAFF endpoint for theme');
-        const res = await api.get(`/staff/hotel/${user.hotel_slug}/settings/`);
+        const res = await api.get(`/staff/hotel/${actualHotelSlug}/settings/`);
         console.log('[ThemeContext] Staff settings response:', res.data);
         // Map to ThemeContext format with ALL colors
         return {
@@ -186,6 +214,16 @@ useEffect(() => {
       if (!user?.hotel_slug) {
         return Promise.reject(new Error('Not authorized to update theme'));
       }
+      
+      // Check if user has permission to update theme settings
+      // Only superusers or super staff admins can update themes
+      const isSuperUser = user?.is_superuser;
+      const isSuperStaffAdmin = user?.access_level === 'super_staff_admin';
+      
+      if (!isSuperUser && !isSuperStaffAdmin) {
+        return Promise.reject(new Error('Theme updates are only allowed for superusers and super staff admins'));
+      }
+      
       // Send all theme colors to backend
       return api.patch(`/staff/hotel/${hotelSlug}/settings/`, updatedTheme);
     },
@@ -215,6 +253,15 @@ useEffect(() => {
     if (!user?.hotel_slug) {
       throw new Error('Not authorized to update theme');
     }
+    
+    // Check if user has permission to update theme settings
+    const isSuperUser = user?.is_superuser;
+    const isSuperStaffAdmin = user?.access_level === 'super_staff_admin';
+    
+    if (!isSuperUser && !isSuperStaffAdmin) {
+      throw new Error('Theme updates are only allowed for superusers and super staff admins');
+    }
+    
     const result = await mutation.mutateAsync(updates);
     return result;
   };

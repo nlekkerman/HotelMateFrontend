@@ -58,7 +58,7 @@ export function useNavigation() {
   // Replace {hotelSlug} placeholder in paths with actual hotel slug
   allNavItems = allNavItems.map(item => ({
     ...item,
-    path: item.path.replace('{hotelSlug}', hotelSlug)
+    path: item.path ? item.path.replace('{hotelSlug}', hotelSlug) : '#'
   }));
 
 

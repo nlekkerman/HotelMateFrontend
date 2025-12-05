@@ -20,8 +20,12 @@ export const AuthProvider = ({ children }) => {
     return stored ? JSON.parse(stored) : null;
   });
 
-  // Derived: check if user is staff
-  const isStaff = user?.is_staff || false;
+  // Derived: check if user is staff (with fallback logic)
+  const isStaff = user?.is_staff || 
+                  user?.is_superuser || 
+                  user?.access_level === 'staff_admin' || 
+                  user?.access_level === 'super_staff_admin' ||
+                  user?.staff_id;
 
   // Set view mode with validation (non-staff can only be 'guest')
   const setViewMode = (mode) => {
@@ -64,9 +68,23 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setViewModeState('guest');
     setSelectedHotel(null);
+    
+    // Clear all authentication and session related localStorage items
     localStorage.removeItem('user');
     localStorage.removeItem('viewMode');
     localStorage.removeItem('selectedHotel');
+    localStorage.removeItem('fcm_token');
+    localStorage.removeItem('hotelmate_guest_chat_session');
+    localStorage.removeItem('guest_fcm_token_saved');
+    
+    // Clear game-related tokens if they exist (optional cleanup)
+    localStorage.removeItem('tournament_player_token');
+    localStorage.removeItem('quiz_player_token');
+    localStorage.removeItem('quiz_session_id');
+    localStorage.removeItem('player_name');
+    localStorage.removeItem('room_number');
+    
+    console.log('🧹 [AuthContext] Logout: All localStorage items cleared');
     // Navigation handled by components calling logout
   };
 
