@@ -62,7 +62,7 @@ export const BookingNotificationProvider = ({ children }) => {
     setLastSeenBookingCount(currentBookingCount);
   }, [allBookings.length, isEligibleForNotifications, lastSeenBookingCount]);
 
-  const handleNewDinnerBooking = async (booking) => {
+  const handleNewDinnerBooking = (booking) => {
     console.log("🍽️ New dinner booking received:", booking);
     
     setHasNewBooking(true);
@@ -80,18 +80,18 @@ export const BookingNotificationProvider = ({ children }) => {
 
     // Browser notification
     if (canShowNotifications()) {
-      const notification = await showNotification("New Dinner Booking!", {
+      showNotification("New Dinner Booking!", {
         body: `Room ${booking.room_number} - ${booking.total_guests} guests at ${booking.start_time}`,
         icon: "/favicons/favicon.svg",
         tag: `booking-${booking.booking_id}`,
-      });
-
-      if (notification && notification.onclick !== undefined) {
-        notification.onclick = () => {
-          window.focus();
-          window.location.href = `/${user.hotel_slug}/bookings`;
-        };
-      }
+      }).then(notification => {
+        if (notification && notification.onclick !== undefined) {
+          notification.onclick = () => {
+            window.focus();
+            window.location.href = `/${user.hotel_slug}/bookings`;
+          };
+        }
+      }).catch(console.error);
     }
   };
 

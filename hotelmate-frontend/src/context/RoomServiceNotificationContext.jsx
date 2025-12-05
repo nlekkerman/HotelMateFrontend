@@ -67,7 +67,7 @@ export const RoomServiceNotificationProvider = ({ children }) => {
   }, [allOrders.length, isEligibleForNotifications, lastSeenOrderCount]);
 
   // Handler for new room service orders
-  const handleNewRoomServiceOrder = async (data) => {
+  const handleNewRoomServiceOrder = (data) => {
     setHasNewRoomService(true);
 
     // Show toast notification
@@ -84,22 +84,21 @@ export const RoomServiceNotificationProvider = ({ children }) => {
 
     // Browser notification
     if (canShowNotifications()) {
-      const notification = await showNotification("New Room Service Order", {
+      showNotification("New Room Service Order", {
         body: `Room ${data.room_number} - €${data.total_price}`,
         icon: "/favicons/favicon.svg",
         tag: `room-service-${data.order_id}`,
         data: {
           url: `/${user.hotel_slug}/room-service-orders`
         }
-      });
-
-      if (notification && notification.onclick !== undefined) {
-        notification.onclick = () => {
-          window.focus();
-          window.location.href = `/${user.hotel_slug}/room-service-orders`;
-        };
-      }
-    }
+      }).then(notification => {
+        if (notification && notification.onclick !== undefined) {
+          notification.onclick = () => {
+            window.focus();
+            window.location.href = `/${user.hotel_slug}/room-service-orders`;
+          };
+        }
+      }).catch(console.error);
     }
 
     // Play notification sound (optional)
