@@ -263,24 +263,18 @@ export const chatActions = {
       return;
     }
 
-    // ✅ NEW: Handle unified backend event format {category, type, payload, meta}
-    let eventType, payload, eventId, conversationId;
-    
-    if (event.category && event.type && event.payload) {
-      // New format from backend
-      eventType = event.type;
-      payload = event.payload;
-      eventId = event.meta?.event_id;
-      conversationId = payload.conversation_id; // ✅ CRITICAL: Must use payload.conversation_id as source of truth
-    } else {
-      // Legacy format for backward compatibility
-      eventType = event.eventType;
-      payload = event.data;
-      eventId = null;
-      conversationId = payload?.conversation_id || payload?.conversationId;
+    // ✅ Handle unified eventBus format {category, eventType, data}
+    if (event.category !== 'staff_chat') {
+      console.log('💬 Chat store ignoring non-staff-chat event:', event.category);
+      return;
     }
 
-    console.log('💬 Chat store handling event:', eventType, conversationId, payload);
+    const eventType = event.eventType;  // ✅ from eventBus
+    const payload = event.data;        // ✅ from eventBus
+    const eventId = event.meta?.event_id || null;
+    const conversationId = payload?.conversation_id || payload?.conversationId;
+    
+    console.log('💬 Chat store handling staff chat event:', { eventType, conversationId, payload });
 
     // ✅ CRITICAL: Validate conversation_id exists
     if (!conversationId) {
@@ -314,13 +308,39 @@ export const chatActions = {
     // ✅ Handle events from the guide
     switch (eventType) {
       case 'message_created': {
-        globalChatDispatch({
-          type: CHAT_ACTIONS.RECEIVE_MESSAGE,
-          payload: {
-            conversationId: parseInt(conversationId),
-            message: payload
-          }
-        });
+        // Check if payload is a full message object or just FCM metadata
+        if (payload.id && payload.message) {
+          // Full message object (from Pusher)
+          globalChatDispatch({
+            type: CHAT_ACTIONS.RECEIVE_MESSAGE,
+            payload: {
+              conversationId: parseInt(conversationId),
+              message: payload
+            }
+          });
+        } else if (payload.notification && payload.sender_id) {
+          // FCM notification metadata - construct a temporary message
+          console.log('📱 FCM message notification received - constructing message from metadata');
+          const fcmMessage = {
+            id: `fcm-${Date.now()}`, // Temporary ID
+            message: payload.notification.body || 'New message',
+            sender: parseInt(payload.sender_id),
+            sender_name: payload.sender_name,
+            timestamp: new Date().toISOString(),
+            conversation: parseInt(conversationId),
+            is_fcm_placeholder: true // Mark as placeholder for later replacement
+          };
+          
+          globalChatDispatch({
+            type: CHAT_ACTIONS.RECEIVE_MESSAGE,
+            payload: {
+              conversationId: parseInt(conversationId),
+              message: fcmMessage
+            }
+          });
+          
+          // TODO: Optionally fetch the real message from API to replace placeholder
+        }
         break;
       }
 

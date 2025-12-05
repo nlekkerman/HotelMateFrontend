@@ -78,13 +78,22 @@ function normalizeFCMEvent(payload, timestamp) {
   const notification = payload.notification || {};
   const data = payload.data || {};
   
+  console.log('🔥 FCM payload normalization:', { notification, data });
+  
   // Try to determine category from FCM data
   let category = 'system';
   let eventType = 'fcm_message';
   
-  if (data.type === 'chat' || data.category === 'staff_chat') {
+  // Enhanced detection for staff chat messages
+  if (data.type === 'chat' || 
+      data.category === 'staff_chat' || 
+      data.action === 'new_message' ||
+      data.conversation_id ||
+      notification.title?.includes('New Message') ||
+      notification.body?.includes('sent you a message')) {
     category = 'staff_chat';
-    eventType = 'new_message';
+    eventType = 'message_created';
+    console.log('🔥 Detected FCM as staff_chat message');
   } else if (data.type === 'attendance' || data.category === 'attendance') {
     category = 'attendance';
     eventType = 'attendance_notification';
@@ -475,7 +484,14 @@ function routeToDomainStores(event) {
       case "booking":
         bookingActions.handleEvent(event);
         break;
+      case "system":
+        // Handle system events (FCM notifications, etc.)
+        console.log('📢 System event received:', event.eventType, event.data);
+        // Add to notification center for user awareness
+        maybeAddToNotificationCenter(event);
+        break;
       default:
+        console.warn('🚫 Unhandled event category:', event.category, event);
         break;
     }
   }
@@ -492,7 +508,8 @@ function maybeAddToNotificationCenter(event) {
     'guest_chat', 
     'room_service',
     'booking',
-    'attendance' // Only for personal attendance notifications
+    'attendance', // Only for personal attendance notifications
+    'system' // FCM and other system notifications
   ];
   
   const category = event.category;
@@ -530,6 +547,7 @@ function generateNotificationTitle(category, eventType) {
     case 'guest_chat': return 'Guest Chat';
     case 'room_service': return 'Room Service';
     case 'booking': return 'Booking Update';
+    case 'system': return 'System Notification';
     default: return 'Notification';
   }
 }

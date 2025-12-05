@@ -1,4 +1,17 @@
-# Staff Chat - Complete Frontend Integration Guide
+# ⚠️ DEPRECATED: Staff Chat - Legacy Integration Guide
+
+**⚠️ THIS DOCUMENT IS DEPRECATED ⚠️**
+
+This guide contains legacy Pusher patterns that have been replaced by the unified realtime architecture.
+
+**Use instead:** 
+- `src/realtime/channelRegistry.js` for subscriptions
+- `src/realtime/eventBus.js` for event handling  
+- `src/realtime/stores/chatStore.jsx` for state management
+
+---
+
+# Staff Chat - Complete Frontend Integration Guide (LEGACY)
 
 ## 📋 Table of Contents
 1. [Setup & Authentication](#setup--authentication)

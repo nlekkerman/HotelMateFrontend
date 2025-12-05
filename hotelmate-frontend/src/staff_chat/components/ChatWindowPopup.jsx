@@ -17,8 +17,9 @@ import useReactions from '../hooks/useReactions';
 import useEditMessage from '../hooks/useEditMessage';
 import useDeleteMessage from '../hooks/useDeleteMessage';
 import useReadReceipts from '../hooks/useReadReceipts';
-import useMessagePagination from '../hooks/useMessagePagination';
 import { subscribeToStaffChatConversation } from '../../realtime/channelRegistry';
+import { useChatState, useChatDispatch } from '@/realtime/stores/chatStore.jsx';
+import { CHAT_ACTIONS } from '@/realtime/stores/chatActions.js';
 
 /**
  * ChatWindowPopup Component
@@ -40,7 +41,6 @@ const ChatWindowPopup = ({
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
-  const sentinelRef = useRef(null);
   
   // Get event subscription from StaffChatContext
   const { subscribeToMessages } = useStaffChat();
@@ -71,17 +71,38 @@ const ChatWindowPopup = ({
     }
   }
 
-  // Use pagination hook
-  const {
-    messages,
-    loading,
-    loadingMore,
-    hasMore,
-    setupInfiniteScroll,
-    addMessage: addPaginatedMessage,
-    updateMessage: updatePaginatedMessage,
-    removeMessage: removePaginatedMessage
-  } = useMessagePagination(hotelSlug, conversation?.id, 20);
+  // ✅ UNIFIED: Use chatStore for messages (single source of truth)
+  const chatState = useChatState();
+  const chatDispatch = useChatDispatch();
+  const messages = chatState.conversationsById[conversation?.id]?.messages || [];
+  
+  // Initialize conversation messages if needed
+  useEffect(() => {
+    if (conversation?.id && messages.length === 0) {
+      // Load initial messages into chatStore
+      const loadMessages = async () => {
+        try {
+          console.log('📥 Loading messages for conversation:', conversation.id);
+          const response = await fetchMessages(hotelSlug, conversation.id, 20, null);
+          const fetchedMessages = response.messages || response.results || response || [];
+          
+          chatDispatch({
+            type: CHAT_ACTIONS.INIT_MESSAGES_FOR_CONVERSATION,
+            payload: {
+              conversationId: conversation.id,
+              messages: fetchedMessages
+            }
+          });
+          
+          console.log('✅ Loaded', fetchedMessages.length, 'messages into chatStore');
+        } catch (error) {
+          console.error('❌ Failed to load messages:', error);
+        }
+      };
+      
+      loadMessages();
+    }
+  }, [conversation?.id, messages.length, hotelSlug, chatDispatch]);
 
   // Use send message hook
   const {
@@ -98,8 +119,8 @@ const ChatWindowPopup = ({
     toggleReaction,
     groupReactions
   } = useReactions(hotelSlug, conversation?.id, (messageId, data) => {
-    // Update message reactions in real-time
-    updatePaginatedMessage(messageId, { reactions: data.reactions });
+    // ✅ UNIFIED: Reactions updated via chatStore through realtime events
+    console.log('🎯 Reaction updated - handled via chatStore realtime');
   });
 
   // Use edit message hook
@@ -110,7 +131,8 @@ const ChatWindowPopup = ({
     isEditing,
     editingMessageId
   } = useEditMessage(hotelSlug, conversation?.id, (messageId, updatedData) => {
-    updatePaginatedMessage(messageId, updatedData);
+    // ✅ UNIFIED: Message edits updated via chatStore through realtime events
+    console.log('✏️ Message edit updated - handled via chatStore realtime');
   });
 
   // Use delete message hook with proper callback
@@ -118,28 +140,14 @@ const ChatWindowPopup = ({
     deleteMsg,
     deleting: isDeletingMessage
   } = useDeleteMessage(hotelSlug, conversation?.id, (messageId, hardDelete, result) => {
-    // console.log('🗑️ Message deleted callback:', { messageId, hardDelete, result });
-    
-    if (hardDelete) {
-      // Hard delete - remove from UI
-      //
-      removePaginatedMessage(messageId);
-    } else {
-      // Soft delete - update message to show deleted state
-      const deletedMessage = result?.message?.message || 'Message deleted';
-      // Soft delete - updating message to deleted state
-      
-      updatePaginatedMessage(messageId, {
-        is_deleted: true,
-        message: deletedMessage
-      });
+    // ✅ UNIFIED: All message deletions handled via chatStore through realtime events
+    console.log('🗑️ Message deletion completed - handled via chatStore realtime:', { messageId, hardDelete });
       
       // Verify the update
       setTimeout(() => {
         const updatedMessages = messages.find(m => m.id === messageId);
         // console.log('🗑️ Message after update:', updatedMessages);
       }, 100);
-    }
   });
 
   // Use read receipts hook
@@ -194,19 +202,15 @@ const ChatWindowPopup = ({
             newList: receipt.read_by?.length
           });
           
-          // Update message directly in pagination state
-          updatePaginatedMessage(msgId, {
-            read_by_list: receipt.read_by,
-            read_by_count: receipt.read_count,
-            is_read: receipt.read_count > 0
-          });
+          // ✅ UNIFIED: Read receipts are handled by chatStore via realtime events
+          // No need to manually update message state - chatStore handles this automatically
           updatedCount++;
         }
       }
     });
     
-    console.log(`✅ [POPUP SYNC] Updated ${updatedCount} messages`);
-  }, [readReceipts, messages, updatePaginatedMessage]);
+    console.log(`✅ [POPUP SYNC] Found ${updatedCount} messages with read receipts`);
+  }, [readReceipts, messages]);
 
   // Subscribe to messages from StaffChatContext (single source of truth!)
   useEffect(() => {
@@ -221,8 +225,8 @@ const ChatWindowPopup = ({
     const unsubscribe = subscribeToMessages((message) => {
       // Only process messages for this conversation
       if (message.conversation === conversation.id || message.conversation_id === conversation.id) {
-        console.log('📨 [ChatWindowPopup] Received message for this conversation:', message.id);
-        addPaginatedMessage(message);
+        console.log('📨 [ChatWindowPopup] Received message for this conversation via chatStore');
+        // Messages automatically appear via chatStore
         scrollToBottom();
       }
     });
@@ -234,7 +238,7 @@ const ChatWindowPopup = ({
       console.log('🧹 [ChatWindowPopup] Unsubscribing from StaffChatContext');
       unsubscribe();
     };
-  }, [conversation?.id, subscribeToMessages, addPaginatedMessage]);
+  }, [conversation?.id, subscribeToMessages]);
 
   // Subscribe to centralized realtime system for read receipts and new messages
   useEffect(() => {
@@ -289,12 +293,8 @@ const ChatWindowPopup = ({
     }
   }, [conversation?.id, messages.length, isMinimized, markConversationRead]);
 
-  // Setup infinite scroll
-  useEffect(() => {
-    if (sentinelRef.current && !isMinimized) {
-      return setupInfiniteScroll(sentinelRef);
-    }
-  }, [setupInfiniteScroll, isMinimized]);
+  // ✅ UNIFIED: Infinite scroll removed - chatStore loads messages automatically via API
+  // No need for infinite scroll with unified architecture
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -321,9 +321,29 @@ const ChatWindowPopup = ({
       return;
     }
 
-    const sentMessage = await sendMsg(messageText, replyTo, mentions);
+    // The useSendMessage hook only expects messageText - replyTo is handled internally
+    const sentMessage = await sendMsg(messageText);
     if (sentMessage) {
-      addPaginatedMessage(sentMessage);
+      console.log('📤 Raw message from API:', sentMessage);
+      
+      // Ensure the message has the correct timestamp field
+      const normalizedMessage = {
+        ...sentMessage,
+        timestamp: sentMessage.timestamp || sentMessage.created_at || new Date().toISOString()
+      };
+      
+      console.log('📤 Normalized message:', normalizedMessage);
+      
+      // ✅ Immediately add message to chatStore for instant feedback
+      chatDispatch({
+        type: CHAT_ACTIONS.RECEIVE_MESSAGE,
+        payload: {
+          message: normalizedMessage,
+          conversationId: conversation.id
+        }
+      });
+      
+      console.log('📤 Message dispatched to chatStore');
       scrollToBottom();
     }
   };
@@ -345,8 +365,24 @@ const ChatWindowPopup = ({
       // console.log('✅ Upload successful:', result);
 
       if (result.success && result.message) {
-        // console.log('📨 Adding message to UI:', result.message);
-        addPaginatedMessage(result.message);
+        console.log('📤 Raw file message from API:', result.message);
+        
+        // Ensure the message has the correct timestamp field
+        const normalizedMessage = {
+          ...result.message,
+          timestamp: result.message.timestamp || result.message.created_at || new Date().toISOString()
+        };
+        
+        // ✅ Immediately add message to chatStore for instant feedback
+        chatDispatch({
+          type: CHAT_ACTIONS.RECEIVE_MESSAGE,
+          payload: {
+            message: normalizedMessage,
+            conversationId: conversation.id
+          }
+        });
+        
+        console.log('📤 File message dispatched to chatStore');
         setSelectedFiles([]);
         if (replyTo) cancelReply();
         scrollToBottom();
@@ -567,28 +603,11 @@ const ChatWindowPopup = ({
       {!isMinimized && (
         <>
           <div className="chat-window-popup__messages" ref={messagesContainerRef}>
-            {loading ? (
-              <div className="chat-window-popup__loading">
-                <div className="spinner-small" />
-              </div>
-            ) : (
-              <>
-                {/* Sentinel for infinite scroll */}
-                {hasMore && (
-                  <div ref={sentinelRef} className="pagination-sentinel">
-                    {loadingMore && (
-                      <div className="pagination-loading">
-                        <span className="pagination-loading__spinner" />
-                        <span className="pagination-loading__text">Loading older messages...</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {messages.length === 0 ? (
-                  <div className="chat-window-popup__empty">
-                    <p>No messages yet</p>
-                    <p className="text-muted-small">Start the conversation!</p>
+            {/* ✅ UNIFIED: No pagination UI needed - chatStore loads messages automatically */}
+            {messages.length === 0 ? (
+              <div className="chat-window-popup__empty">
+                <p>No messages yet</p>
+                <p className="text-muted-small">Start the conversation!</p>
                   </div>
                 ) : (
                   <>
@@ -698,8 +717,6 @@ const ChatWindowPopup = ({
                     <div ref={messagesEndRef} />
                   </>
                 )}
-              </>
-            )}
           </div>
 
           {/* Input with new MessageInput component */}

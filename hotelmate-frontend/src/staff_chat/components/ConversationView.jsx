@@ -408,16 +408,8 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     try {
       const result = await deleteAttachment(hotelSlug, attachmentId);
       
-      // Update message to remove attachment
-      setMessages(prev => prev.map(msg => {
-        if (msg.id === result.message_id) {
-          return {
-            ...msg,
-            attachments: (msg.attachments || []).filter(att => att.id !== attachmentId)
-          };
-        }
-        return msg;
-      }));
+      // ✅ UNIFIED: Attachment deletion will be updated via chatStore through realtime events
+      console.log('📎 Attachment deleted - will be updated via chatStore realtime:', result.message_id);
     } catch (err) {
       console.error('Error deleting attachment:', err);
       alert('Failed to delete file. Please try again.');

@@ -22,12 +22,18 @@ export const usePusherContext = () => {
 };
 
 /**
- * PusherProvider Component
- * LEGACY: Wraps the app with Pusher real-time functionality
+ * ⚠️ DEPRECATED: PusherProvider Component
  * 
- * NOTE: Staff chat now uses centralized realtime system (src/realtime/realtimeClient.js)
- * This provider is kept temporarily for compatibility with any remaining components
- * that haven't been migrated to the new system yet.
+ * 🚨 THIS COMPONENT IS DEPRECATED AND SHOULD NOT BE USED 🚨
+ * 
+ * Staff chat now uses the unified realtime system:
+ * - src/realtime/realtimeClient.js
+ * - src/realtime/channelRegistry.js  
+ * - src/realtime/eventBus.js
+ * - src/realtime/stores/chatStore.jsx
+ * 
+ * Use subscribeToStaffChatConversation() instead of direct Pusher calls.
+ * This provider is kept only for legacy compatibility.
  * 
  * Usage:
  * ```jsx

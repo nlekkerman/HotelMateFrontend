@@ -1,4 +1,17 @@
-# Staff Chat - Forward/Share Messages Frontend Guide
+# ⚠️ DEPRECATED: Staff Chat - Legacy Pagination Guide
+
+**⚠️ THIS DOCUMENT IS DEPRECATED ⚠️**
+
+Legacy Pusher patterns in this guide have been replaced by unified realtime architecture.
+
+**Use instead:**
+- `subscribeToStaffChatConversation()` from channelRegistry
+- Events automatically flow through eventBus → chatStore
+- No direct `channel.bind()` calls needed
+
+---
+
+# Staff Chat - Forward/Share Messages Frontend Guide (LEGACY)
 
 ## 📤 Complete Frontend Implementation for Forwarding Messages
 

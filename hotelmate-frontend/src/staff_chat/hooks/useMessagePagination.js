@@ -2,13 +2,18 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { fetchMessages } from '../services/staffChatApi';
 
 /**
- * Custom hook for message pagination with infinite scroll
- * Loads messages in chunks and supports loading older messages
+ * ⚠️ DEPRECATED: Custom hook for message pagination
  * 
- * @param {string} hotelSlug - The hotel slug
- * @param {number} conversationId - The conversation ID
- * @param {number} pageSize - Number of messages per page (default: 20)
- * @returns {Object} Pagination functions and state
+ * 🚨 THIS HOOK IS DEPRECATED - DO NOT USE 🚨
+ * 
+ * This hook maintains separate message state which violates the unified architecture.
+ * 
+ * ✅ Use instead:
+ * - useChatState() from '@/realtime/stores/chatStore.jsx'
+ * - subscribeToStaffChatConversation() from '@/realtime/channelRegistry'
+ * - Messages automatically flow: Pusher → eventBus → chatStore → React
+ * 
+ * @deprecated Use unified chatStore instead
  */
 const useMessagePagination = (hotelSlug, conversationId, pageSize = 20) => {
   const [messages, setMessages] = useState([]);
