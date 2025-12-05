@@ -726,7 +726,7 @@ export default function FaceClockInPage() {
   }
 
   return (
-    <div className="fullscreen-kiosk">
+    <div className={`fullscreen-kiosk ${phase !== 'inactive' ? 'overlay-active' : ''}`}>
               
               {/* Inactive State - Show Clock Button */}
               {phase === 'inactive' && (

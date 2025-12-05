@@ -435,8 +435,15 @@
   background: #7f8c8d;
 }
 
-/* Full Screen Kiosk */
+/* Full Screen Kiosk - Modified for Browser Compatibility */
 .fullscreen-kiosk {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  /* Remove fixed positioning and high z-index to allow page interactions */
+}
+
+/* Fullscreen overlay for specific states only */
+.fullscreen-kiosk.overlay-active {
   position: fixed;
   top: 0;
   left: 0;
@@ -541,6 +548,17 @@
 }
 
 /* Full Screen Processing State */
+/* Inactive State - Normal Page Layout */
+.fullscreen-inactive {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
 .fullscreen-processing {
   position: fixed;
   top: 0;
