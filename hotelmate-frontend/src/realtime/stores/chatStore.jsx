@@ -319,14 +319,15 @@ export const chatActions = {
       return;
     }
 
-    // ✅ Handle unified eventBus format {category, eventType, data}
+    // ✅ Handle both legacy and new event formats
     if (event.category !== 'staff_chat') {
       console.log('💬 Chat store ignoring non-staff-chat event:', event.category);
       return;
     }
 
-    const eventType = event.eventType;  // ✅ from eventBus
-    const payload = event.data;        // ✅ from eventBus
+    // Handle both legacy format {eventType, data} and new format {type, payload}
+    const eventType = event.eventType || event.type;  // ✅ support both formats
+    const payload = event.data || event.payload;      // ✅ support both formats
     const eventId = event.meta?.event_id || null;
     const conversationId = payload?.conversation_id || payload?.conversationId;
     
@@ -449,7 +450,8 @@ export const chatActions = {
       }
 
       case 'read_receipt':
-      case 'message_read': {
+      case 'message_read':
+      case 'messages_read': {
         // Handle both old single-message format and new multi-message format
         const messageIds = payload.message_ids || (payload.message_id ? [payload.message_id] : []);
         
