@@ -4,6 +4,7 @@ import { fetchConversations, sendMessage as apiSendMessage, markConversationAsRe
 import { useAuth } from "@/context/AuthContext";
 import { useChatState, useChatDispatch } from "@/realtime/stores/chatStore.jsx";
 import { CHAT_ACTIONS } from "@/realtime/stores/chatActions.js";
+import { showNotification, canShowNotifications } from "@/utils/notificationUtils";
 
 const StaffChatContext = createContext(undefined);
 
@@ -110,15 +111,13 @@ export const StaffChatProvider = ({ children }) => {
         const isActiveConv = chatState.activeConversationId === conversation.id;
         const isMyMessage = lastMessage.sender_info?.id === staffId || lastMessage.sender_id === staffId;
         
-        if (!isActiveConv && !isMyMessage && 
-            "Notification" in window && 
-            Notification.permission === "granted") {
+        if (!isActiveConv && !isMyMessage && canShowNotifications()) {
           const senderName = lastMessage.sender_info?.full_name || lastMessage.sender_name || 'Staff member';
-          new Notification(`New message from ${senderName}`, {
+          showNotification(`New message from ${senderName}`, {
             body: lastMessage.message || lastMessage.content || 'New message',
-            icon: lastMessage.sender_info?.profile_image || "/favicon-32x32.png",
+            icon: lastMessage.sender_info?.profile_image || "/favicons/favicon.svg",
             tag: `staff-msg-${lastMessage.id}`,
-          });
+          }).catch(console.error);
         }
       }
       

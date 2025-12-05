@@ -8,6 +8,7 @@ import App from "./App";
 import { OrderCountProvider } from "@/hooks/useOrderCount.jsx";
 import { PresetsProvider } from "@/context/PresetsContext";
 import { listenForFirebaseMessages } from "@/utils/firebaseNotifications";
+import { showNotification } from "@/utils/notificationUtils";
 import { handleIncomingRealtimeEvent } from "@/realtime/eventBus";
 
 
@@ -56,16 +57,16 @@ async function bootstrap() {
           payload?.notification
         ) {
           console.log("🔔 [FCM] Legacy notification display for type:", notificationType);
-          new Notification(payload.notification.title, {
+          showNotification(payload.notification.title, {
             body: payload.notification.body,
-            icon: "/favicon.svg",
-          });
+            icon: "/favicons/favicon.svg",
+          }).catch(console.error);
         } else if (hasOrderId && payload?.notification) {
           console.log("🔔 [FCM] Legacy order status notification for order:", payload.data.order_id);
-          new Notification(payload.notification.title, {
+          showNotification(payload.notification.title, {
             body: payload.notification.body,
-            icon: "/favicon.ico",
-          });
+            icon: "/favicons/favicon.svg",
+          }).catch(console.error);
         }
       });
     } catch (err) {

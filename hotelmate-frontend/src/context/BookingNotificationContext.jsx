@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-toastify";
 import api from "@/services/api";
 import { useBookingState } from "@/realtime/stores/bookingStore";
+import { showNotification, canShowNotifications } from "@/utils/notificationUtils";
 
 const BookingNotificationContext = createContext();
 
@@ -61,7 +62,7 @@ export const BookingNotificationProvider = ({ children }) => {
     setLastSeenBookingCount(currentBookingCount);
   }, [allBookings.length, isEligibleForNotifications, lastSeenBookingCount]);
 
-  const handleNewDinnerBooking = (booking) => {
+  const handleNewDinnerBooking = async (booking) => {
     console.log("🍽️ New dinner booking received:", booking);
     
     setHasNewBooking(true);
@@ -78,17 +79,19 @@ export const BookingNotificationProvider = ({ children }) => {
     );
 
     // Browser notification
-    if ("Notification" in window && Notification.permission === "granted") {
-      const notification = new Notification("New Dinner Booking!", {
+    if (canShowNotifications()) {
+      const notification = await showNotification("New Dinner Booking!", {
         body: `Room ${booking.room_number} - ${booking.total_guests} guests at ${booking.start_time}`,
-        icon: "/favicon-32x32.png",
+        icon: "/favicons/favicon.svg",
         tag: `booking-${booking.booking_id}`,
       });
 
-      notification.onclick = () => {
-        window.focus();
-        window.location.href = `/${user.hotel_slug}/bookings`;
-      };
+      if (notification && notification.onclick !== undefined) {
+        notification.onclick = () => {
+          window.focus();
+          window.location.href = `/${user.hotel_slug}/bookings`;
+        };
+      }
     }
   };
 

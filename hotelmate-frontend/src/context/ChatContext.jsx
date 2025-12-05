@@ -64,19 +64,20 @@ export const ChatProvider = ({ children }) => {
         if (
           storeConv.last_message &&
           storeConv.conversation_id !== currentConversationId &&
-          "Notification" in window &&
-          Notification.permission === "granted"
+          canShowNotifications()
         ) {
-          const notification = new Notification(`New Message from Room ${storeConv.room_number}`, {
+          const notification = await showNotification(`New Message from Room ${storeConv.room_number}`, {
             body: storeConv.last_message,
             icon: "/favicon-32x32.png",
             tag: `chat-${storeConv.conversation_id}`,
           });
 
-          notification.onclick = () => {
-            window.focus();
-            window.location.href = `/${user.hotel_slug}/chat`;
-          };
+          if (notification && notification.onclick !== undefined) {
+            notification.onclick = () => {
+              window.focus();
+              window.location.href = `/${user.hotel_slug}/chat`;
+            };
+          }
         }
       });
       

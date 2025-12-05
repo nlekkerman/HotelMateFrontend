@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-toastify";
 import { useRoomServiceState } from "@/realtime/stores/roomServiceStore";
+import { showNotification, canShowNotifications } from "@/utils/notificationUtils";
 
 const RoomServiceNotificationContext = createContext();
 
@@ -66,7 +67,7 @@ export const RoomServiceNotificationProvider = ({ children }) => {
   }, [allOrders.length, isEligibleForNotifications, lastSeenOrderCount]);
 
   // Handler for new room service orders
-  const handleNewRoomServiceOrder = (data) => {
+  const handleNewRoomServiceOrder = async (data) => {
     setHasNewRoomService(true);
 
     // Show toast notification
@@ -82,32 +83,23 @@ export const RoomServiceNotificationProvider = ({ children }) => {
     );
 
     // Browser notification
-    if ("Notification" in window && Notification.permission === "granted") {
-      // Use service worker registration if available
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.ready.then((registration) => {
-          registration.showNotification("New Room Service Order", {
-            body: `Room ${data.room_number} - €${data.total_price}`,
-            icon: "/favicon-32x32.png",
-            tag: `room-service-${data.order_id}`,
-            data: {
-              url: `/${user.hotel_slug}/room-service-orders`
-            }
-          });
-        });
-      } else {
-        // Fallback for browsers without service worker
-        const notification = new Notification("New Room Service Order", {
-          body: `Room ${data.room_number} - €${data.total_price}`,
-          icon: "/favicon-32x32.png",
-          tag: `room-service-${data.order_id}`,
-        });
+    if (canShowNotifications()) {
+      const notification = await showNotification("New Room Service Order", {
+        body: `Room ${data.room_number} - €${data.total_price}`,
+        icon: "/favicons/favicon.svg",
+        tag: `room-service-${data.order_id}`,
+        data: {
+          url: `/${user.hotel_slug}/room-service-orders`
+        }
+      });
 
+      if (notification && notification.onclick !== undefined) {
         notification.onclick = () => {
           window.focus();
           window.location.href = `/${user.hotel_slug}/room-service-orders`;
         };
       }
+    }
     }
 
     // Play notification sound (optional)

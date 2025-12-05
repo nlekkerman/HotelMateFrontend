@@ -1,6 +1,7 @@
 import { getToken, onMessage } from 'firebase/messaging';
 import { messaging } from '../firebase';
 import axios from 'axios';
+import { showNotification, canShowNotifications } from '@/utils/notificationUtils';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -196,23 +197,25 @@ class FirebaseService {
       const notificationData = payload.data || {};
 
       // Show browser notification (even when app is in foreground)
-      if (Notification.permission === 'granted') {
-        const notification = new Notification(notificationTitle, {
+      if (canShowNotifications()) {
+        showNotification(notificationTitle, {
           body: notificationBody,
-          icon: '/favicon.ico',
+          icon: '/favicons/favicon.svg',
           data: notificationData,
           tag: notificationData.type || 'notification',
-        });
-
-        notification.onclick = () => {
-          window.focus();
-          notification.close();
-          
-          // Call custom callback if provided
-          if (callback) {
-            callback(payload);
+        }).then(notification => {
+          if (notification && notification.onclick !== undefined) {
+            notification.onclick = () => {
+              window.focus();
+              if (notification.close) notification.close();
+              
+              // Call custom callback if provided
+              if (callback) {
+                callback(payload);
+              }
+            };
           }
-        };
+        }).catch(console.error);
       }
 
       // Also call callback for custom handling (e.g., update UI, show toast)
@@ -317,10 +320,10 @@ class FirebaseService {
    * Show a test notification
    */
   async showTestNotification() {
-    if (Notification.permission === 'granted') {
-      new Notification('Test Notification', {
+    if (canShowNotifications()) {
+      await showNotification('Test Notification', {
         body: 'FCM is working correctly!',
-        icon: '/favicon.ico',
+        icon: '/favicons/favicon.svg',
       });
     } else {
       console.warn('Cannot show test notification: permission not granted');
