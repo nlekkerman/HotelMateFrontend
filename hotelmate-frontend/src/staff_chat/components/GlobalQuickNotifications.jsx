@@ -78,9 +78,16 @@ const GlobalQuickNotifications = () => {
             return;
           }
 
+          // 🚫 Don't create notifications for active conversation (when window is open)
+          if (chatState.activeConversationId === conversationId) {
+            console.log(`🪟 [GlobalQuickNotifications] Skipping notification for active conversation ${conversationId} - window is open`);
+            return;
+          }
+
           console.log(
             '🔔 [GlobalQuickNotifications] New message from OTHER USER detected! Adding notification button'
           );
+          console.log(`🔍 [GlobalQuickNotifications] Active conversation: ${chatState.activeConversationId}, Current conversation: ${conversationId}`);
 
           const senderName =
             message.sender_info?.full_name ||
@@ -148,13 +155,16 @@ const GlobalQuickNotifications = () => {
       const unreadConversationsWithoutNotifications = conversations.filter(conv => {
         const hasUnread = (conv.unread_count > 0 || conv.unreadCount > 0);
         const hasNotification = notifications.some(n => n.conversationId === conv.id);
-        const shouldHaveNotification = hasUnread && !hasNotification;
+        const isActiveConversation = chatState.activeConversationId === conv.id;
+        const shouldHaveNotification = hasUnread && !hasNotification && !isActiveConversation;
         
-        if (shouldHaveNotification) {
-          console.log(`🚨 [GlobalQuickNotifications] MISSING NOTIFICATION for conversation ${conv.id}:`, {
+        if (hasUnread && !hasNotification) {
+          console.log(`🚨 [GlobalQuickNotifications] Checking conversation ${conv.id}:`, {
             unread_count: conv.unread_count,
             unreadCount: conv.unreadCount,
             hasNotification,
+            isActiveConversation,
+            shouldHaveNotification,
             existingNotifications: notifications.map(n => n.conversationId)
           });
         }

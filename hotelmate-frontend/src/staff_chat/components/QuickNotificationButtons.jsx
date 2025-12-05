@@ -60,9 +60,11 @@ const QuickNotificationButtons = ({
         console.error('   - Notification object:', JSON.stringify(notification, null, 2));
       }
       
-      if (isDesktop && messengerReady && conversationId) {
-        // Desktop: Open pocket window (ChatWindowPopup)
-        console.log('🪟 [QuickNotificationButtons] Opening pocket window for conversation:', conversationId);
+      if (messengerReady && conversationId) {
+        // Always open chat popup window (both desktop and mobile)
+        console.log('🪟 [QuickNotificationButtons] Opening chat popup window for conversation:', conversationId);
+        console.log('   - Device type:', isDesktop ? 'Desktop' : 'Mobile');
+        console.log('   - messengerReady:', messengerReady);
         
         // Find the ACTUAL conversation from StaffChatContext
         console.log('🔍 [QuickNotificationButtons] Searching conversations:', conversations?.length || 0);
@@ -86,20 +88,15 @@ const QuickNotificationButtons = ({
           openChat(conversation, null);
         }
       } else {
-        // Mobile or messenger not ready: Navigate to staff-chat page
-        console.log('📱 [QuickNotificationButtons] Navigating to staff-chat page');
+        // Messenger not ready or no conversation ID - just log and do nothing (no redirect)
+        console.log('⚠️ [QuickNotificationButtons] Cannot open chat popup - conditions not met');
         console.log('   - isDesktop:', isDesktop);
         console.log('   - messengerReady:', messengerReady);
         console.log('   - conversationId:', conversationId);
+        console.log('   - Action: Staying on current page, no redirect');
         
-        if (conversationId) {
-          const navUrl = `/${hotelSlug}/staff-chat?conversation=${conversationId}`;
-          console.log('🔗 [QuickNotificationButtons] Navigation URL:', navUrl);
-          navigate(navUrl);
-        } else {
-          console.warn('⚠️ [QuickNotificationButtons] No conversation ID - navigating to main chat');
-          navigate(`/${hotelSlug}/staff-chat`);
-        }
+        // Don't redirect anywhere - just stay on the current page
+        return;
       }
       
       // Dismiss this notification
