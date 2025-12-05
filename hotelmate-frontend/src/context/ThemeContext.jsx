@@ -21,7 +21,7 @@ const ThemeContext = createContext({
   settings: null,
 });
 
-export function ThemeProvider({ children }) {
+const ThemeProvider = ({ children }) => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   
@@ -259,8 +259,10 @@ useEffect(() => {
       {children}
     </ThemeContext.Provider>
   );
-}
+};
 
-export function useTheme() {
+const useTheme = () => {
   return useContext(ThemeContext);
-}
+};
+
+export { ThemeProvider, useTheme };
