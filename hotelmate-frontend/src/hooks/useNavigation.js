@@ -48,12 +48,29 @@ export function useNavigation() {
   try {
     const storedUser = JSON.parse(localStorage.getItem('user'));
     savedNavItems = storedUser?.navigation_items || [];
+    
+    // 🔍 DEBUG: Log if we have unusual navigation items
+    if (savedNavItems.length > 0) {
+      const itemsWithoutSlugs = savedNavItems.filter(item => !item || !item.slug);
+      if (itemsWithoutSlugs.length > 0) {
+        console.warn('🚨 [useNavigation] Found navigation items without slugs in localStorage:', itemsWithoutSlugs);
+      }
+    }
   } catch {
     savedNavItems = [];
   }
 
   // Use saved nav items if available, otherwise use defaults
   let allNavItems = savedNavItems.length > 0 ? savedNavItems : DEFAULT_NAV_ITEMS;
+
+  // 🛡️ DEFENSIVE: Filter out items with missing slugs to prevent undefined errors
+  allNavItems = allNavItems.filter(item => {
+    if (!item || !item.slug) {
+      console.warn('🚨 [useNavigation] Filtering out navigation item with missing slug:', item);
+      return false;
+    }
+    return true;
+  });
 
   // Replace {hotelSlug} placeholder in paths with actual hotel slug
   allNavItems = allNavItems.map(item => ({

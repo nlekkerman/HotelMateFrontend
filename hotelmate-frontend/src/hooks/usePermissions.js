@@ -30,8 +30,27 @@ export function usePermissions() {
     const accessLevel = fixedUser.access_level;
   }
 
+  // 🧹 CLEANUP: Fix malformed navigation items in localStorage  
+  if (storedUser?.navigation_items) {
+    const cleanNavItems = storedUser.navigation_items.filter(item => item && item.slug);
+    if (cleanNavItems.length !== storedUser.navigation_items.length) {
+      console.log('🧹 Cleaning up malformed navigation items in localStorage');
+      const cleanedUser = {
+        ...storedUser,
+        navigation_items: cleanNavItems
+      };
+      localStorage.setItem('user', JSON.stringify(cleanedUser));
+    }
+  }
+
   // ✅ NEW: Check if user can access navigation by slug
   const canAccessNav = (slug) => {
+    // 🛡️ DEFENSIVE: Handle undefined/null slug gracefully
+    if (!slug) {
+      console.warn(`🚨 canAccessNav: Received undefined/null slug, returning false`);
+      return false;
+    }
+    
     if (!storedUser) {
       console.log(`🚫 canAccessNav(${slug}): No stored user`);
       return false;
@@ -39,13 +58,16 @@ export function usePermissions() {
     
     // ⭐ Django superuser sees EVERYTHING (bypass all checks)
     if (isSuperUser) {
-      console.log(`✅ canAccessNav(${slug}): SUPERUSER - TRUE`);
+      // 🔇 REDUCED LOGGING: Only log first time or for specific debugging
       return true;
     }
     
     // Regular staff: check allowed_navs array
     const hasAccess = allowedNavs.includes(slug);
-    console.log(`🔍 canAccessNav(${slug}): Regular user - ${hasAccess} (in allowedNavs: ${allowedNavs.join(', ')})`);
+    // 🔇 REDUCED LOGGING: Only log when access is denied or for debugging specific slugs
+    if (!hasAccess) {
+      console.log(`🔍 canAccessNav(${slug}): Regular user - DENIED (allowed: ${allowedNavs.join(', ')})`);
+    }
     return hasAccess;
   };
 
