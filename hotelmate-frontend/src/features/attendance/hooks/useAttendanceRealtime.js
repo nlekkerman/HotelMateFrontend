@@ -68,7 +68,7 @@ export function useAttendanceRealtime(hotelSlug, onEvent) {
     const loadInitialData = async () => {
       try {
         // Load current user attendance status if available
-        const userResponse = await api.get(`/staff/hotel/${hotelSlug}/attendance/current-status/`);
+        const userResponse = await api.get(`/staff/hotel/${hotelSlug}/attendance/clock-logs/status/`);
         if (userResponse.data) {
           attendanceActions.initFromAPI(null, userResponse.data);
         }
