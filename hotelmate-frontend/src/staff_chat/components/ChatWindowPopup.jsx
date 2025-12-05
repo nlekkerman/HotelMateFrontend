@@ -166,10 +166,17 @@ const ChatWindowPopup = ({
       console.log('📖📖📖 [POPUP LOAD] Loading read receipts from messages on initial load');
       console.log('📖 [POPUP LOAD] Messages count:', messages.length);
       console.log('📖 [POPUP LOAD] Sample message read data:', messages[0]?.read_by_count, messages[0]?.read_by_list);
+      console.log('📖 [POPUP LOAD] All messages read data:', messages.map(m => ({
+        id: m.id,
+        text: m.message_text?.substring(0, 20) + '...',
+        read_by_count: m.read_by_count,
+        read_by_list: m.read_by_list,
+        is_read_by_current_user: m.is_read_by_current_user
+      })));
       loadReadReceipts(messages);
       console.log('✅ [POPUP LOAD] Read receipts loaded from messages');
     }
-  }, [messages.length]); // Only run when messages.length changes
+  }, [messages.length, loadReadReceipts]); // Include loadReadReceipts in dependencies
 
   // Sync readReceipts state changes to messages array (CRITICAL FOR UI UPDATES!)
   useEffect(() => {

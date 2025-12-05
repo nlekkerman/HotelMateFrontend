@@ -246,21 +246,29 @@ const useReadReceipts = (hotelSlug, conversationId, currentUserId) => {
   const loadReadReceipts = useCallback((messages) => {
     if (!messages || messages.length === 0) return;
 
+    console.log('📋 [LOAD RECEIPTS] Processing', messages.length, 'messages');
     const updates = {};
     messages.forEach(msg => {
       if (msg.id) {
-        updates[msg.id] = {
+        const readReceipt = {
           read_by: msg.read_by_list || [],
           read_count: msg.read_by_count || 0,
           is_read_by_current_user: msg.is_read_by_current_user || false
         };
+        updates[msg.id] = readReceipt;
+        console.log(`📋 [LOAD RECEIPTS] Message ${msg.id}:`, readReceipt);
       }
     });
     
-    setReadReceipts(prev => ({
-      ...prev,
-      ...updates
-    }));
+    console.log('📋 [LOAD RECEIPTS] Final updates:', updates);
+    setReadReceipts(prev => {
+      const newState = {
+        ...prev,
+        ...updates
+      };
+      console.log('📋 [LOAD RECEIPTS] New readReceipts state:', newState);
+      return newState;
+    });
   }, []);
 
   /**
