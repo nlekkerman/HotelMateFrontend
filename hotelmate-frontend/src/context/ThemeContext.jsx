@@ -48,12 +48,15 @@ export function ThemeProvider({ children }) {
 
   // 1️⃣ Fetch theme from public settings (includes both content AND theme)
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["theme", hotelSlug],
+    queryKey: ["theme", hotelSlug, user?.is_staff, user?.hotel_slug], // Include user state in key
     queryFn: async () => {
       console.log('[ThemeContext] Fetching theme for:', hotelSlug);
+      console.log('[ThemeContext] User is staff:', user?.is_staff, 'User hotel_slug:', user?.hotel_slug);
+      
       // For staff users, use staff endpoint
-      if (user?.hotel_slug) {
-        const res = await api.get(`/staff/hotel/${hotelSlug}/settings/`);
+      if (user?.is_staff && user?.hotel_slug) {
+        console.log('[ThemeContext] Using STAFF endpoint for theme');
+        const res = await api.get(`/staff/hotel/${user.hotel_slug}/settings/`);
         console.log('[ThemeContext] Staff settings response:', res.data);
         // Map to ThemeContext format with ALL colors
         return {
@@ -70,22 +73,40 @@ export function ThemeProvider({ children }) {
           link_hover_color: res.data.link_hover_color || '#1f6391',
         };
       }
-      // For guests, use public endpoint
-      const res = await api.get(`/public/hotels/${hotelSlug}/settings/`);
-      console.log('[ThemeContext] Public settings response:', res.data);
-      return {
-        ...res.data,
-        main_color: res.data.main_color || res.data.primary_color || '#3498db',
-        secondary_color: res.data.secondary_color || '#2ecc71',
-        button_color: res.data.button_color || '#2980b9',
-        button_text_color: res.data.button_text_color || '#ffffff',
-        button_hover_color: res.data.button_hover_color || '#1f6391',
-        text_color: res.data.text_color || '#333333',
-        background_color: res.data.background_color || '#ffffff',
-        border_color: res.data.border_color || '#dddddd',
-        link_color: res.data.link_color || '#2980b9',
-        link_hover_color: res.data.link_hover_color || '#1f6391',
-      };
+      // For guests, try public hotel page endpoint which might have theme data
+      console.log('[ThemeContext] Using PUBLIC hotel page endpoint for theme');
+      try {
+        const res = await api.get(`/public/hotel/${hotelSlug}/page/`);
+        console.log('[ThemeContext] Public hotel page response:', res.data);
+        return {
+          ...res.data,
+          main_color: res.data.main_color || res.data.primary_color || '#3498db',
+          secondary_color: res.data.secondary_color || '#2ecc71',
+          button_color: res.data.button_color || '#2980b9',
+          button_text_color: res.data.button_text_color || '#ffffff',
+          button_hover_color: res.data.button_hover_color || '#1f6391',
+          text_color: res.data.text_color || '#333333',
+          background_color: res.data.background_color || '#ffffff',
+          border_color: res.data.border_color || '#dddddd',
+          link_color: res.data.link_color || '#2980b9',
+          link_hover_color: res.data.link_hover_color || '#1f6391',
+        };
+      } catch (error) {
+        console.warn('[ThemeContext] Public hotel page not found, using default theme');
+        // Return default theme if public endpoint doesn't exist
+        return {
+          main_color: '#3498db',
+          secondary_color: '#2ecc71',
+          button_color: '#2980b9',
+          button_text_color: '#ffffff',
+          button_hover_color: '#1f6391',
+          text_color: '#333333',
+          background_color: '#ffffff',
+          border_color: '#dddddd',
+          link_color: '#2980b9',
+          link_hover_color: '#1f6391',
+        };
+      }
     },
     enabled: !!hotelSlug,
     refetchOnWindowFocus: false,
