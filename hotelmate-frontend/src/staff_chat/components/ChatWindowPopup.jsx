@@ -266,6 +266,42 @@ const ChatWindowPopup = ({
     return cleanup;
   }, [hotelSlug, conversation?.id]);
 
+  // Subscribe to staff chat events for useReadReceipts hook
+  useEffect(() => {
+    if (!hotelSlug || !conversation?.id) return;
+
+    console.log('📋 [READ RECEIPTS] Setting up direct event listener for useReadReceipts');
+    
+    // Listen to chatStore events to also update useReadReceipts hook
+    const handleStoreEvent = (event) => {
+      if (event.detail?.type === 'STAFF_CHAT_READ_RECEIPT_RECEIVED') {
+        const { conversationId, staffId, staffName, messageIds, timestamp } = event.detail.payload;
+        
+        // Only handle events for this conversation
+        if (conversationId === conversation.id) {
+          console.log('📋 [READ RECEIPTS] Received read receipt event for conversation:', conversationId);
+          
+          // Update useReadReceipts hook state
+          if (updateReadReceipts) {
+            updateReadReceipts({
+              staffId,
+              staffName,
+              messageIds,
+              timestamp
+            });
+          }
+        }
+      }
+    };
+
+    // Add event listener for chatStore events
+    window.addEventListener('chatStoreEvent', handleStoreEvent);
+
+    return () => {
+      window.removeEventListener('chatStoreEvent', handleStoreEvent);
+    };
+  }, [hotelSlug, conversation?.id, updateReadReceipts]);
+
   const [showReactionPicker, setShowReactionPicker] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);

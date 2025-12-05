@@ -196,6 +196,11 @@ function normalizePusherEvent(channel, eventName, payload, timestamp) {
       normalizedEventType = 'message_deleted';
     } else if (eventName === 'read-receipt' || eventName === 'messages-read' || eventName === 'message-read' || eventName === 'realtime_staff_chat_message_read') {
       normalizedEventType = 'read_receipt';
+      // Extract conversationId from channel pattern: hotel-{slug}.staff-chat.{conversationId}
+      const channelMatch = channel.match(/\.staff-chat\.(\d+)$/);
+      if (channelMatch) {
+        payload.conversationId = parseInt(channelMatch[1]);
+      }
     } else if (eventName === 'message-delivered' || eventName === 'realtime_staff_chat_message_delivered') {
       normalizedEventType = 'message_delivered';
     } else if (eventName === 'conversation-updated') {

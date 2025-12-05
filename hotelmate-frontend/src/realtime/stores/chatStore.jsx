@@ -190,6 +190,62 @@ function chatReducer(state, action) {
       return state;
     }
 
+    case CHAT_ACTIONS.STAFF_CHAT_READ_RECEIPT_RECEIVED: {
+      const { conversationId, staffId, staffName, messageIds, timestamp } = action.payload;
+      const conversation = state.conversationsById[conversationId];
+      
+      if (!conversation) return state;
+
+      const updatedMessages = conversation.messages.map((msg) => {
+        if (!messageIds.includes(msg.id)) return msg;
+
+        // Ensure read_by_list exists
+        const existingList = msg.read_by_list || [];
+        const alreadyThere = existingList.some((r) => Number(r.id || r.staff_id) === Number(staffId));
+
+        const nextList = alreadyThere
+          ? existingList
+          : [
+              ...existingList,
+              {
+                id: staffId,
+                staff_id: staffId,
+                name: staffName,
+                staff_name: staffName,
+                read_at: timestamp,
+              },
+            ];
+
+        return {
+          ...msg,
+          read_by_list: nextList,
+          read_by_count: nextList.length,
+          is_read: msg.is_read || false,
+        };
+      });
+
+      // Emit event for useReadReceipts hook to listen to
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('chatStoreEvent', {
+          detail: {
+            type: 'STAFF_CHAT_READ_RECEIPT_RECEIVED',
+            payload: action.payload
+          }
+        }));
+      }
+
+      return {
+        ...state,
+        conversationsById: {
+          ...state.conversationsById,
+          [conversationId]: {
+            ...conversation,
+            messages: updatedMessages,
+          },
+        },
+      };
+    }
+
     case CHAT_ACTIONS.UPDATE_CONVERSATION_METADATA: {
       const { conversationId, metadata } = action.payload;
       const conversation = state.conversationsById[conversationId];
@@ -394,6 +450,24 @@ export const chatActions = {
 
       case 'read_receipt':
       case 'message_read': {
+        // Handle both old single-message format and new multi-message format
+        const messageIds = payload.message_ids || (payload.message_id ? [payload.message_id] : []);
+        
+        if (messageIds.length > 0) {
+          // Use new action for multi-message read receipts
+          globalChatDispatch({
+            type: CHAT_ACTIONS.STAFF_CHAT_READ_RECEIPT_RECEIVED,
+            payload: {
+              conversationId: parseInt(conversationId),
+              staffId: parseInt(payload.staff_id || payload.readByStaffId),
+              staffName: payload.staff_name || payload.readByStaffName || 'Unknown Staff',
+              messageIds: messageIds.map(id => parseInt(id)),
+              timestamp: payload.timestamp || new Date().toISOString()
+            }
+          });
+        }
+        
+        // Also dispatch legacy action for backward compatibility
         globalChatDispatch({
           type: CHAT_ACTIONS.RECEIVE_READ_RECEIPT,
           payload: {
