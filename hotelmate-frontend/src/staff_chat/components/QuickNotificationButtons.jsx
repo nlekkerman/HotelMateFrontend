@@ -47,11 +47,27 @@ const QuickNotificationButtons = ({
     if (notification.category.startsWith('staff_chat')) {
       const conversationId = notification.conversationId || notification.data?.conversation_id;
       
+      console.log('🔍 [QuickNotificationButtons] DEBUGGING CONVERSATION ID EXTRACTION:');
+      console.log('   - notification.conversationId:', notification.conversationId);
+      console.log('   - notification.data?.conversation_id:', notification.data?.conversation_id);
+      console.log('   - Final conversationId:', conversationId);
+      console.log('   - Notification data:', notification.data);
+      console.log('   - Full notification object:', notification);
+      
+      if (!conversationId) {
+        console.error('❌ [QuickNotificationButtons] CRITICAL: No conversation ID found!');
+        console.error('   - This is why navigation fails!');
+        console.error('   - Notification object:', JSON.stringify(notification, null, 2));
+      }
+      
       if (isDesktop && messengerReady && conversationId) {
         // Desktop: Open pocket window (ChatWindowPopup)
         console.log('🪟 [QuickNotificationButtons] Opening pocket window for conversation:', conversationId);
         
         // Find the ACTUAL conversation from StaffChatContext
+        console.log('🔍 [QuickNotificationButtons] Searching conversations:', conversations?.length || 0);
+        console.log('🔍 [QuickNotificationButtons] Available conversation IDs:', conversations?.map(c => c.id));
+        
         const actualConversation = conversations?.find(c => c.id === conversationId);
         
         if (actualConversation) {
@@ -59,19 +75,29 @@ const QuickNotificationButtons = ({
           openChat(actualConversation, null);
         } else {
           console.warn('⚠️ [QuickNotificationButtons] Conversation not found in context, creating minimal object');
+          console.warn('   - ConversationId:', conversationId, 'Type:', typeof conversationId);
+          console.warn('   - Available conversations:', conversations?.map(c => ({ id: c.id, type: typeof c.id })));
           // Fallback: Create minimal conversation object
           const conversation = {
             id: conversationId,
             ...(notification.data || {})
           };
+          console.log('🔧 [QuickNotificationButtons] Created fallback conversation:', conversation);
           openChat(conversation, null);
         }
       } else {
         // Mobile or messenger not ready: Navigate to staff-chat page
         console.log('📱 [QuickNotificationButtons] Navigating to staff-chat page');
+        console.log('   - isDesktop:', isDesktop);
+        console.log('   - messengerReady:', messengerReady);
+        console.log('   - conversationId:', conversationId);
+        
         if (conversationId) {
-          navigate(`/${hotelSlug}/staff-chat?conversation=${conversationId}`);
+          const navUrl = `/${hotelSlug}/staff-chat?conversation=${conversationId}`;
+          console.log('🔗 [QuickNotificationButtons] Navigation URL:', navUrl);
+          navigate(navUrl);
         } else {
+          console.warn('⚠️ [QuickNotificationButtons] No conversation ID - navigating to main chat');
           navigate(`/${hotelSlug}/staff-chat`);
         }
       }
