@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Dropdown } from 'react-bootstrap';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useMessenger } from '../context/MessengerContext';
 import { useStaffChat } from '../context/StaffChatContext';
@@ -19,6 +20,7 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   const hotelSlug = user?.hotel_slug;
   const { registerOpenChatHandler } = useMessenger();
   const { conversations, totalUnread, markConversationRead } = useStaffChat();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [internalExpanded, setInternalExpanded] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [openChats, setOpenChats] = useState(() => {
@@ -136,6 +138,32 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   useEffect(() => {
     registerOpenChatHandler(handleOpenChat);
   }, [registerOpenChatHandler, openChats]);
+
+  // Handle URL parameter for auto-opening conversations (mobile navigation)
+  useEffect(() => {
+    const conversationId = searchParams.get('conversation');
+    if (conversationId && conversations && conversations.length > 0) {
+      console.log('🔗 [MessengerWidget] Auto-opening conversation from URL:', conversationId);
+      
+      // Find the conversation by ID
+      const targetConversation = conversations.find(c => c.id === parseInt(conversationId));
+      
+      if (targetConversation) {
+        console.log('✅ [MessengerWidget] Found conversation for auto-open:', targetConversation);
+        
+        // Open the conversation (this will also mark it as read)
+        handleOpenChat(targetConversation, null);
+        
+        // Clear the URL parameter so it doesn't auto-open again
+        setSearchParams(params => {
+          params.delete('conversation');
+          return params;
+        });
+      } else {
+        console.warn('⚠️ [MessengerWidget] Conversation not found for auto-open:', conversationId);
+      }
+    }
+  }, [searchParams, conversations, handleOpenChat, setSearchParams]);
 
   if (!hotelSlug) return null;
 

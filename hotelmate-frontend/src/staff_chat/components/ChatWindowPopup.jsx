@@ -152,7 +152,6 @@ const ChatWindowPopup = ({
 
   // Use read receipts hook
   const {
-    markAsRead,
     markConversationRead,
     getReadStatus,
     isRead,
@@ -211,72 +210,6 @@ const ChatWindowPopup = ({
     
     console.log(`✅ [POPUP SYNC] Found ${updatedCount} messages with read receipts`);
   }, [readReceipts, messages]);
-
-  // Intersection Observer to mark messages as read when they become visible
-  const observerRef = useRef(null);
-  const observedMessages = useRef(new Set());
-
-  const handleMessageVisible = useCallback(async (messageId, senderId) => {
-    // Don't mark own messages as read
-    if (senderId === currentUserId) return;
-    
-    // Don't mark if already processed
-    if (observedMessages.current.has(messageId)) return;
-    
-    // Only mark if popup is not minimized
-    if (isMinimized) return;
-
-    try {
-      observedMessages.current.add(messageId);
-      console.log('👁️ [POPUP] Marking message as read due to visibility:', messageId);
-      await markAsRead(messageId);
-    } catch (error) {
-      console.error('Error marking message as read:', error);
-      observedMessages.current.delete(messageId); // Remove on error so it can be retried
-    }
-  }, [markAsRead, currentUserId, isMinimized]);
-
-  // Set up intersection observer for message visibility
-  useEffect(() => {
-    if (isMinimized || !messagesContainerRef.current) return;
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const messageId = entry.target.dataset.messageId;
-            const senderId = entry.target.dataset.senderId;
-            if (messageId && senderId) {
-              handleMessageVisible(parseInt(messageId), parseInt(senderId));
-            }
-          }
-        });
-      },
-      {
-        root: messagesContainerRef.current,
-        rootMargin: '0px',
-        threshold: 0.5, // Message must be 50% visible
-      }
-    );
-
-    // Observe all existing message elements
-    const messageElements = messagesContainerRef.current.querySelectorAll('[data-message-id]');
-    messageElements.forEach((element) => {
-      observerRef.current?.observe(element);
-    });
-
-    return () => {
-      observerRef.current?.disconnect();
-    };
-  }, [handleMessageVisible, isMinimized, messages.length]);
-
-  // Clear observed messages when popup is minimized
-  useEffect(() => {
-    if (isMinimized) {
-      observedMessages.current.clear();
-      observerRef.current?.disconnect();
-    }
-  }, [isMinimized]);
 
   // Subscribe to messages from StaffChatContext (single source of truth!)
   useEffect(() => {
@@ -734,8 +667,6 @@ const ChatWindowPopup = ({
                         <div
                           key={message.id}
                           className={`staff-chat-message ${isOwn ? 'staff-chat-message--own' : 'staff-chat-message--other'}`}
-                          data-message-id={message.id}
-                          data-sender-id={senderId}
                         >
                           {/* Message Actions Dropdown */}
                           <MessageActions
