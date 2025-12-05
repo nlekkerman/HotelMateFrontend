@@ -732,12 +732,21 @@ const ChatWindowPopup = ({
 
                           {/* Read Status for own messages */}
                           {isOwn && (
-                            <ReadStatus
-                              isRead={readByCount > 0}
-                              readBy={readByList}
-                              showDetails={true}
-                              size="small"
-                            />
+                            <>
+                              {/* Debug log for read status values */}
+                              {console.log(`[READ DEBUG] Message ${message.id}:`, {
+                                receipt: receipt,
+                                readByList: readByList,
+                                readByCount: readByCount,
+                                isRead: readByCount > 0
+                              })}
+                              <ReadStatus
+                                isRead={readByCount > 0}
+                                readBy={readByList}
+                                showDetails={true}
+                                size="small"
+                              />
+                            </>
                           )}
                         </div>
                       );

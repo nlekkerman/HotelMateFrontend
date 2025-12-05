@@ -75,29 +75,39 @@ const useReadReceipts = (hotelSlug, conversationId, currentUserId) => {
       
       // IMMEDIATELY update local state (don't wait for Pusher)
       if (response.message_ids && response.message_ids.length > 0) {
-        console.log('🔄 [useReadReceipts] Updating local readReceipts state...');
-        const updates = {};
-        response.message_ids.forEach(msgId => {
-          // Add current user to read_by list
-          updates[msgId] = {
-            read_by: [{ 
-              id: currentUserId, 
-              name: 'You',
-              timestamp: new Date().toISOString()
-            }],
-            read_count: 1,
-            is_read_by_current_user: true
-          };
-        });
+        console.log('🔄 [READ] Updating readReceipts for message IDs:', response.message_ids);
         
         setReadReceipts(prev => {
-          const newState = {
-            ...prev,
-            ...updates
-          };
-          console.log('✅ [useReadReceipts] readReceipts state updated');
-          console.log('✅ [useReadReceipts] New readReceipts keys:', Object.keys(newState));
-          return newState;
+          const next = { ...prev };
+          response.message_ids.forEach(msgId => {
+            const existing = next[msgId] || {};
+            const existingReadBy = existing.read_by || [];
+            
+            // Check if current user is already in the read_by list
+            const currentUserExists = existingReadBy.some(reader => 
+              reader.id === currentUserId || reader === currentUserId
+            );
+            
+            // Add current user to read_by if not already there
+            const updatedReadBy = currentUserExists ? existingReadBy : [
+              ...existingReadBy,
+              { 
+                id: currentUserId, 
+                name: 'You',
+                timestamp: new Date().toISOString()
+              }
+            ];
+            
+            next[msgId] = {
+              ...existing,
+              read_count: Math.max(existing.read_count || 0, updatedReadBy.length),
+              read_by: updatedReadBy,
+              is_read_by_current_user: true
+            };
+          });
+          
+          console.log('✅ [READ] markConversationRead updated readReceipts for', response.message_ids.length, 'messages');
+          return next;
         });
       }
       
