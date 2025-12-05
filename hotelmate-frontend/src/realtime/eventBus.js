@@ -18,6 +18,16 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
   try {
     console.log('📡 Incoming realtime event:', { source, channel, eventName, payload });
     
+    // ✅ NEW: Check if payload is already in normalized format from backend
+    if (payload && typeof payload === 'object' && payload.category && payload.type && payload.payload) {
+      // Backend already sending normalized events - use directly
+      console.log('📦 Using pre-normalized event from backend:', payload);
+      routeToDomainStores(payload);
+      maybeAddToNotificationCenter(payload);
+      return;
+    }
+    
+    // Legacy event handling for backward compatibility
     const normalized = normalizeEvent({ source, channel, eventName, payload });
     
     if (normalized) {
@@ -397,41 +407,74 @@ function normalizePusherEvent(channel, eventName, payload, timestamp) {
 }
 
 /**
- * Route normalized events to appropriate domain stores
- * @param {Object} normalized - Normalized event object
+ * Route events to appropriate domain stores
+ * @param {Object} event - Event object (either new format with {category, type, payload, meta} or legacy)
  */
-function routeToDomainStores(normalized) {
-  if (!import.meta.env.PROD) {
-    console.log('🚏 Routing to domain stores:', normalized.category, normalized.eventType);
+function routeToDomainStores(event) {
+  // Handle new normalized format from backend
+  if (event.category && event.type && event.payload) {
+    if (!import.meta.env.PROD) {
+      console.log('🚏 Routing NEW format event:', event.category, event.type);
+    }
+
+    switch (event.category) {
+      case "attendance":
+        attendanceActions.handleEvent(event);
+        break;
+      case "staff_chat":
+        chatActions.handleEvent(event);
+        break;
+      case "guest_chat":
+        guestChatActions.handleEvent(event);
+        break;
+      case "room_service":
+        roomServiceActions.handleEvent(event);
+        break;
+      case "booking":
+        bookingActions.handleEvent(event);
+        break;
+      default:
+        if (!import.meta.env.PROD) {
+          console.log('🚏 Unknown category:', event.category, event);
+        }
+        break;
+    }
+    return;
   }
 
-  switch (normalized.category) {
-    case "attendance":
-      attendanceActions.handleEvent(normalized);
-      break;
-    case "staff_chat":
-      chatActions.handleEvent(normalized);
-      break;
-    case "guest_chat":
-      guestChatActions.handleEvent(normalized);
-      break;
-    case "room_service":
-      roomServiceActions.handleEvent(normalized);
-      break;
-    case "booking":
-      bookingActions.handleEvent(normalized);
-      break;
-    // other categories (gallery, etc.) will be wired in future phases
-    default:
-      break;
+  // Legacy format handling (for backward compatibility)
+  if (event.eventType) {
+    if (!import.meta.env.PROD) {
+      console.log('🚏 Routing LEGACY format event:', event.category, event.eventType);
+    }
+
+    switch (event.category) {
+      case "attendance":
+        attendanceActions.handleEvent(event);
+        break;
+      case "staff_chat":
+        chatActions.handleEvent(event);
+        break;
+      case "guest_chat":
+        guestChatActions.handleEvent(event);
+        break;
+      case "room_service":
+        roomServiceActions.handleEvent(event);
+        break;
+      case "booking":
+        bookingActions.handleEvent(event);
+        break;
+      default:
+        break;
+    }
   }
 }
 
 /**
  * Add event to notification center if appropriate
- * @param {Object} normalized - Normalized event object
+ * @param {Object} event - Event object (new or legacy format)
  */
-function maybeAddToNotificationCenter(normalized) {
+function maybeAddToNotificationCenter(event) {
   // Only add user-facing notifications, not all events
   const notificationCategories = [
     'staff_chat',
@@ -441,12 +484,61 @@ function maybeAddToNotificationCenter(normalized) {
     'attendance' // Only for personal attendance notifications
   ];
   
-  if (notificationCategories.includes(normalized.category)) {
+  const category = event.category;
+  const eventType = event.type || event.eventType;
+  
+  if (notificationCategories.includes(category)) {
     // For attendance, only notify on personal events (approvals, rejections)
-    if (normalized.category === 'attendance' && !normalized.eventType.includes('approved') && !normalized.eventType.includes('rejected')) {
+    if (category === 'attendance' && !eventType.includes('approved') && !eventType.includes('rejected')) {
       return; // Skip general attendance updates
     }
     
-    addNotificationFromEvent(normalized);
+    // Convert to legacy format for notification system (for now)
+    const legacyFormat = {
+      category,
+      eventType,
+      data: event.payload || event.data,
+      timestamp: event.meta?.ts || event.timestamp || new Date().toISOString(),
+      source: event.meta ? 'pusher' : (event.source || 'pusher'),
+      title: generateNotificationTitle(category, eventType),
+      message: generateNotificationMessage(category, eventType, event.payload || event.data),
+      level: 'info'
+    };
+    
+    addNotificationFromEvent(legacyFormat);
+  }
+}
+
+/**
+ * Generate notification title based on category and type
+ */
+function generateNotificationTitle(category, eventType) {
+  switch (category) {
+    case 'attendance': return 'Attendance Update';
+    case 'staff_chat': return 'Staff Chat';
+    case 'guest_chat': return 'Guest Chat';
+    case 'room_service': return 'Room Service';
+    case 'booking': return 'Booking Update';
+    default: return 'Notification';
+  }
+}
+
+/**
+ * Generate notification message based on category, type, and payload
+ */
+function generateNotificationMessage(category, eventType, payload) {
+  switch (category) {
+    case 'attendance':
+      return `Staff ${eventType.replace('_', ' ')}`;
+    case 'staff_chat':
+      return eventType === 'message_created' ? 'New message received' : `Message ${eventType.replace('_', ' ')}`;
+    case 'guest_chat':
+      return eventType === 'guest_message_created' ? 'New guest message' : `Guest chat ${eventType.replace('_', ' ')}`;
+    case 'room_service':
+      return `Order ${eventType.replace('_', ' ')}`;
+    case 'booking':
+      return `Booking ${eventType.replace('_', ' ')}`;
+    default:
+      return `${eventType.replace('_', ' ')}`;
   }
 }

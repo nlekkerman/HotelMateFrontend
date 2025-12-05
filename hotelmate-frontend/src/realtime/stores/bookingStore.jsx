@@ -196,59 +196,90 @@ export const useBookingDispatch = () => {
 
 // Actions object for handling events from eventBus
 export const bookingActions = {
-  handleEvent(normalizedEvt) {
+  _processedEventIds: new Set(), // Event ID-based deduplication
+
+  handleEvent(event) {
     if (!dispatchRef) {
       console.warn("[bookingStore] handleEvent called before store is ready");
       return;
     }
 
-    const { eventType, data, timestamp, channelName } = normalizedEvt;
-
-    // Deduplication logic
-    const dedupeKey = `booking:${data?.id || data?.bookingId || 'unknown'}:${eventType}`;
-    const lastTimestamp = bookingActions._lastEventTimestamps?.[dedupeKey];
+    // ✅ NEW: Handle unified backend event format {category, type, payload, meta}
+    let eventType, payload, eventId;
     
-    if (lastTimestamp && timestamp && timestamp <= lastTimestamp) {
-      console.log("[bookingStore] Ignoring duplicate event:", dedupeKey, timestamp);
+    if (event.category && event.type && event.payload) {
+      // New format from backend
+      eventType = event.type;
+      payload = event.payload;
+      eventId = event.meta?.event_id;
+    } else {
+      // Legacy format for backward compatibility
+      eventType = event.eventType;
+      payload = event.data;
+      eventId = null;
+    }
+
+    // ✅ Event deduplication using event.meta.event_id (preferred) or timestamp window
+    let deduplicationKey;
+    if (eventId) {
+      deduplicationKey = eventId;
+    } else {
+      deduplicationKey = `booking:${payload?.booking_id || payload?.id || 'unknown'}:${eventType}`;
+    }
+
+    if (bookingActions._processedEventIds.has(deduplicationKey)) {
+      console.log("[bookingStore] Duplicate event detected, skipping:", deduplicationKey);
       return;
     }
 
-    // Update timestamp (simple cleanup after 10 seconds)
-    if (!bookingActions._lastEventTimestamps) {
-      bookingActions._lastEventTimestamps = {};
+    // Store event ID to prevent duplicates
+    bookingActions._processedEventIds.add(deduplicationKey);
+
+    // Clean up old event IDs (keep only last 1000)
+    if (bookingActions._processedEventIds.size > 1000) {
+      const eventIds = Array.from(bookingActions._processedEventIds);
+      const toDelete = eventIds.slice(0, 500);
+      toDelete.forEach(id => bookingActions._processedEventIds.delete(id));
     }
-    bookingActions._lastEventTimestamps[dedupeKey] = timestamp;
-    
-    setTimeout(() => {
-      if (bookingActions._lastEventTimestamps) {
-        delete bookingActions._lastEventTimestamps[dedupeKey];
-      }
-    }, 10000);
 
-    console.log("[bookingStore] Processing event:", eventType, data);
+    console.log("[bookingStore] Processing event:", eventType, payload);
 
+    // ✅ Handle events from the guide
     switch (eventType) {
       case "booking_created":
-      case "new_dinner_booking":
-      case "new_booking":
         dispatchRef({
           type: ACTIONS.BOOKING_CREATED,
-          payload: { booking: data },
+          payload: { booking: payload },
         });
         break;
 
       case "booking_updated":
-      case "booking_confirmed":
         dispatchRef({
           type: ACTIONS.BOOKING_UPDATED,
-          payload: { booking: data, bookingId: data?.id || data?.bookingId },
+          payload: { booking: payload, bookingId: payload?.booking_id || payload?.id },
         });
         break;
 
       case "booking_cancelled":
         dispatchRef({
           type: ACTIONS.BOOKING_CANCELLED,
-          payload: { bookingId: data?.id || data?.bookingId },
+          payload: { bookingId: payload?.booking_id || payload?.id },
+        });
+        break;
+
+      // Legacy event types (for backward compatibility)
+      case "new_dinner_booking":
+      case "new_booking":
+        dispatchRef({
+          type: ACTIONS.BOOKING_CREATED,
+          payload: { booking: payload },
+        });
+        break;
+
+      case "booking_confirmed":
+        dispatchRef({
+          type: ACTIONS.BOOKING_UPDATED,
+          payload: { booking: payload, bookingId: payload?.id || payload?.bookingId },
         });
         break;
 
@@ -256,7 +287,7 @@ export const bookingActions = {
       case "table_assigned":
         dispatchRef({
           type: ACTIONS.BOOKING_SEATED,
-          payload: { booking: data, bookingId: data?.id || data?.bookingId },
+          payload: { booking: payload, bookingId: payload?.id || payload?.bookingId },
         });
         break;
 
@@ -264,13 +295,13 @@ export const bookingActions = {
       case "booking_table_changed":
         dispatchRef({
           type: ACTIONS.BOOKING_TABLE_CHANGED,
-          payload: { booking: data, bookingId: data?.id || data?.bookingId },
+          payload: { booking: payload, bookingId: payload?.id || payload?.bookingId },
         });
         break;
 
       default:
         if (import.meta.env && !import.meta.env.PROD) {
-          console.log("[bookingStore] Ignoring eventType:", eventType, normalizedEvt);
+          console.log("[bookingStore] Ignoring eventType:", eventType, event);
         }
         break;
     }

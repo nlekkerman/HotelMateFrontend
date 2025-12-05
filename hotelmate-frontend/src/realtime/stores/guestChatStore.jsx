@@ -305,9 +305,9 @@ function registerGuestChatHandlers(dispatch, stateRef) {
 
 // Actions object for eventBus integration
 export const guestChatActions = {
-  _lastEventTimestamps: {}, // Internal dedup tracking
+  _processedEventIds: new Set(), // Event ID-based deduplication
 
-  handleEvent: (normalizedEvt, dispatchRef = null) => {
+  handleEvent: (event, dispatchRef = null) => {
     // Use provided dispatch or global fallback
     const dispatch = dispatchRef || globalGuestChatDispatch;
     
@@ -316,35 +316,62 @@ export const guestChatActions = {
       return;
     }
 
-    const { eventType, data, timestamp, conversationId, messageId } = normalizedEvt;
-
-    // Deduplication logic
-    const dedupeKey = `guest:${eventType}:${conversationId || 'unknown'}:${messageId || 'unknown'}`;
-    const lastTimestamp = guestChatActions._lastEventTimestamps[dedupeKey];
+    // ✅ NEW: Handle unified backend event format {category, type, payload, meta}
+    let eventType, payload, eventId, conversationId;
     
-    if (lastTimestamp && timestamp && (timestamp - lastTimestamp) < 3000) {
-      console.log("[guestChatStore] Ignoring duplicate event:", dedupeKey, timestamp);
+    if (event.category && event.type && event.payload) {
+      // New format from backend
+      eventType = event.type;
+      payload = event.payload;
+      eventId = event.meta?.event_id;
+      conversationId = payload.conversation_id; // ✅ CRITICAL: Must use payload.conversation_id as source of truth
+    } else {
+      // Legacy format for backward compatibility
+      eventType = event.eventType;
+      payload = event.data;
+      eventId = null;
+      conversationId = event.conversationId || payload?.conversation_id;
+    }
+
+    // ✅ CRITICAL: Validate conversation_id exists
+    if (!conversationId) {
+      console.warn("[guestChatStore] Event missing conversation_id, ignoring:", event);
       return;
     }
 
-    // Update timestamp (cleanup after 10 seconds)
-    guestChatActions._lastEventTimestamps[dedupeKey] = timestamp || Date.now();
-    
-    setTimeout(() => {
-      if (guestChatActions._lastEventTimestamps) {
-        delete guestChatActions._lastEventTimestamps[dedupeKey];
-      }
-    }, 10000);
+    // ✅ Event deduplication using event.meta.event_id (preferred) or timestamp window
+    let deduplicationKey;
+    if (eventId) {
+      deduplicationKey = eventId;
+    } else {
+      deduplicationKey = `guest:${eventType}:${conversationId}:${payload?.message_id || Date.now()}`;
+    }
 
-    console.log("[guestChatStore] Processing event:", eventType, data);
+    if (guestChatActions._processedEventIds.has(deduplicationKey)) {
+      console.log("[guestChatStore] Duplicate event detected, skipping:", deduplicationKey);
+      return;
+    }
 
+    // Store event ID to prevent duplicates
+    guestChatActions._processedEventIds.add(deduplicationKey);
+
+    // Clean up old event IDs (keep only last 1000)
+    if (guestChatActions._processedEventIds.size > 1000) {
+      const eventIds = Array.from(guestChatActions._processedEventIds);
+      const toDelete = eventIds.slice(0, 500);
+      toDelete.forEach(id => guestChatActions._processedEventIds.delete(id));
+    }
+
+    console.log("[guestChatStore] Processing event:", eventType, conversationId, payload);
+
+    // ✅ Handle events from the guide
     switch (eventType) {
       case 'guest_message_created':
         dispatch({
           type: GUEST_CHAT_ACTIONS.GUEST_MESSAGE_RECEIVED,
           payload: {
-            message: data,
-            conversationId: conversationId || data.conversation_id
+            message: payload,
+            conversationId
           }
         });
         break;
@@ -353,8 +380,22 @@ export const guestChatActions = {
         dispatch({
           type: GUEST_CHAT_ACTIONS.STAFF_MESSAGE_SENT,
           payload: {
-            message: data,
-            conversationId: conversationId || data.conversation_id
+            message: payload,
+            conversationId
+          }
+        });
+        break;
+
+      case 'unread_updated':
+        // Update unread count for the conversation
+        dispatch({
+          type: GUEST_CHAT_ACTIONS.CONVERSATION_METADATA_UPDATED,
+          payload: {
+            conversationId,
+            metadata: {
+              unreadCountForStaff: payload.unread_count || 0,
+              updatedAt: payload.updated_at || new Date().toISOString()
+            }
           }
         });
         break;
@@ -363,10 +404,10 @@ export const guestChatActions = {
         dispatch({
           type: GUEST_CHAT_ACTIONS.MESSAGE_READ_UPDATE,
           payload: {
-            messageId: messageId || data.message_id,
-            conversationId: conversationId || data.conversation_id,
-            readByStaff: data.read_by_staff,
-            readByGuest: data.read_by_guest
+            messageId: payload.message_id,
+            conversationId,
+            readByStaff: payload.read_by_staff,
+            readByGuest: payload.read_by_guest
           }
         });
         break;
@@ -375,7 +416,7 @@ export const guestChatActions = {
         dispatch({
           type: GUEST_CHAT_ACTIONS.CONVERSATION_CREATED,
           payload: {
-            conversation: data
+            conversation: payload
           }
         });
         break;
@@ -384,14 +425,14 @@ export const guestChatActions = {
         dispatch({
           type: GUEST_CHAT_ACTIONS.CONVERSATION_METADATA_UPDATED,
           payload: {
-            conversationId: conversationId || data.conversation_id || data.id,
-            metadata: data
+            conversationId,
+            metadata: payload
           }
         });
         break;
 
       default:
-        console.log('[guestChatStore] Unknown event type:', eventType);
+        console.log('[guestChatStore] Unknown event type:', eventType, event);
     }
   },
 

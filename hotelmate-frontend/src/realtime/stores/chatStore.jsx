@@ -264,109 +264,150 @@ export function registerChatHandlers(dispatch, getState) {
 
 // Domain handler for eventBus
 export const chatActions = {
-  handleEvent(normalizedEvent) {
+  _processedEventIds: new Set(), // Event ID-based deduplication
+
+  handleEvent(event) {
     if (!globalChatDispatch || !globalChatGetState) {
-      console.warn('💬 Chat store not initialized, skipping event:', normalizedEvent);
+      console.warn('💬 Chat store not initialized, skipping event:', event);
       return;
     }
 
-    const { eventType, data } = normalizedEvent;
-    const state = globalChatGetState();
+    // ✅ NEW: Handle unified backend event format {category, type, payload, meta}
+    let eventType, payload, eventId, conversationId;
     
-    console.log('💬 Chat store handling event:', eventType, data);
+    if (event.category && event.type && event.payload) {
+      // New format from backend
+      eventType = event.type;
+      payload = event.payload;
+      eventId = event.meta?.event_id;
+      conversationId = payload.conversation_id; // ✅ CRITICAL: Must use payload.conversation_id as source of truth
+    } else {
+      // Legacy format for backward compatibility
+      eventType = event.eventType;
+      payload = event.data;
+      eventId = null;
+      conversationId = payload?.conversation_id || payload?.conversationId;
+    }
 
-    // Extract conversation/message IDs for deduplication
-    const conversationId = data.conversation_id || data.conversationId;
-    const messageId = data.id || data.message_id || data.messageId;
+    console.log('💬 Chat store handling event:', eventType, conversationId, payload);
 
-    // Check for duplicates
-    if (!shouldProcessEvent(eventType, conversationId, messageId, state.lastEventTimestamps)) {
+    // ✅ CRITICAL: Validate conversation_id exists
+    if (!conversationId) {
+      console.warn("💬 Chat event missing conversation_id, ignoring:", event);
       return;
     }
 
-    // Update timestamp for deduplication
-    const updatedTimestamps = updateEventTimestamp(eventType, conversationId, messageId, state.lastEventTimestamps);
-    
+    // ✅ Event deduplication using event.meta.event_id (preferred) or timestamp window
+    let deduplicationKey;
+    if (eventId) {
+      deduplicationKey = eventId;
+    } else {
+      deduplicationKey = `staff:${eventType}:${conversationId}:${payload?.message_id || Date.now()}`;
+    }
+
+    if (chatActions._processedEventIds.has(deduplicationKey)) {
+      console.log("💬 Chat store duplicate event detected, skipping:", deduplicationKey);
+      return;
+    }
+
+    // Store event ID to prevent duplicates
+    chatActions._processedEventIds.add(deduplicationKey);
+
+    // Clean up old event IDs (keep only last 1000)
+    if (chatActions._processedEventIds.size > 1000) {
+      const eventIds = Array.from(chatActions._processedEventIds);
+      const toDelete = eventIds.slice(0, 500);
+      toDelete.forEach(id => chatActions._processedEventIds.delete(id));
+    }
+
+    // ✅ Handle events from the guide
     switch (eventType) {
-      case 'new_message':
-      case 'message_sent': {
-        if (data && conversationId) {
-          globalChatDispatch({
-            type: CHAT_ACTIONS.RECEIVE_MESSAGE,
-            payload: {
-              conversationId: parseInt(conversationId),
-              message: data
-            }
-          });
-        }
+      case 'message_created': {
+        globalChatDispatch({
+          type: CHAT_ACTIONS.RECEIVE_MESSAGE,
+          payload: {
+            conversationId: parseInt(conversationId),
+            message: payload
+          }
+        });
         break;
       }
 
-      case 'message_updated':
       case 'message_edited': {
-        if (data && conversationId && messageId) {
-          globalChatDispatch({
-            type: CHAT_ACTIONS.MESSAGE_UPDATED,
-            payload: {
-              conversationId: parseInt(conversationId),
-              messageId: parseInt(messageId),
-              updatedFields: data
-            }
-          });
-        }
+        globalChatDispatch({
+          type: CHAT_ACTIONS.MESSAGE_UPDATED,
+          payload: {
+            conversationId: parseInt(conversationId),
+            messageId: parseInt(payload.message_id),
+            updatedFields: payload
+          }
+        });
         break;
       }
 
       case 'message_deleted': {
-        if (conversationId && messageId) {
-          globalChatDispatch({
-            type: CHAT_ACTIONS.MESSAGE_DELETED,
-            payload: {
-              conversationId: parseInt(conversationId),
-              messageId: parseInt(messageId)
-            }
-          });
-        }
+        globalChatDispatch({
+          type: CHAT_ACTIONS.MESSAGE_DELETED,
+          payload: {
+            conversationId: parseInt(conversationId),
+            messageId: parseInt(payload.message_id)
+          }
+        });
+        break;
+      }
+
+      case 'staff_mentioned': {
+        // Handle staff mentions from personal notification channel
+        globalChatDispatch({
+          type: CHAT_ACTIONS.RECEIVE_MESSAGE,
+          payload: {
+            conversationId: parseInt(conversationId),
+            message: payload
+          }
+        });
+        break;
+      }
+
+      // Legacy event types (for backward compatibility)
+      case 'new_message':
+      case 'message_sent': {
+        globalChatDispatch({
+          type: CHAT_ACTIONS.RECEIVE_MESSAGE,
+          payload: {
+            conversationId: parseInt(conversationId),
+            message: payload
+          }
+        });
         break;
       }
 
       case 'read_receipt': {
-        if (data && conversationId) {
-          globalChatDispatch({
-            type: CHAT_ACTIONS.RECEIVE_READ_RECEIPT,
-            payload: {
-              conversationId: parseInt(conversationId),
-              readByStaffId: data.staff_id || data.readByStaffId,
-              messageId: data.message_id || data.messageId
-            }
-          });
-        }
+        globalChatDispatch({
+          type: CHAT_ACTIONS.RECEIVE_READ_RECEIPT,
+          payload: {
+            conversationId: parseInt(conversationId),
+            readByStaffId: payload.staff_id || payload.readByStaffId,
+            messageId: payload.message_id || payload.messageId
+          }
+        });
         break;
       }
 
       case 'conversation_update':
       case 'conversation_updated': {
-        if (data && conversationId) {
-          globalChatDispatch({
-            type: CHAT_ACTIONS.UPDATE_CONVERSATION_METADATA,
-            payload: {
-              conversationId: parseInt(conversationId),
-              metadata: data
-            }
-          });
-        }
+        globalChatDispatch({
+          type: CHAT_ACTIONS.UPDATE_CONVERSATION_METADATA,
+          payload: {
+            conversationId: parseInt(conversationId),
+            metadata: payload
+          }
+        });
         break;
       }
 
       default:
-        console.log('🤷 Unknown staff chat event type:', eventType);
+        console.log('💬 Unknown staff chat event type:', eventType, event);
     }
-
-    // Update timestamps after processing
-    globalChatDispatch({
-      type: 'UPDATE_EVENT_TIMESTAMPS',
-      payload: { lastEventTimestamps: updatedTimestamps }
-    });
   }
 };
 

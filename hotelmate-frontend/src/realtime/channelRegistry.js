@@ -29,35 +29,30 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
   console.log('🔗 Subscribing to base hotel channels:', { hotelSlug, staffId });
 
   try {
-    // Hotel-wide channel (offers, general hotel events)
-    const hotelChannel = pusher.subscribe(`hotel-${hotelSlug}`);
-    channels.push(hotelChannel);
+    // ✅ NEW STANDARDIZED CHANNEL FORMAT: hotel-{slug}.{domain}
+    
+    // Attendance (hotel-wide)
+    const attendanceChannel = pusher.subscribe(`hotel-${hotelSlug}.attendance`);
+    channels.push(attendanceChannel);
 
-    // Staff chat channel
-    const staffChatChannel = pusher.subscribe(`staff-chat-hotel-${hotelSlug}`);
-    channels.push(staffChatChannel);
-
-    // Room service channel
-    const roomServiceChannel = pusher.subscribe(`room-service-hotel-${hotelSlug}`);
+    // Room Service (hotel-wide) 
+    const roomServiceChannel = pusher.subscribe(`hotel-${hotelSlug}.room-service`);
     channels.push(roomServiceChannel);
 
-    // Guest chat channel
-    const guestChatChannel = pusher.subscribe(`guest-chat-hotel-${hotelSlug}`);
-    channels.push(guestChatChannel);
-
-    // Gallery channel
-    const galleryChannel = pusher.subscribe(`gallery-hotel-${hotelSlug}`);
-    channels.push(galleryChannel);
-
-    // Booking channel
-    const bookingChannel = pusher.subscribe(`booking-hotel-${hotelSlug}`);
+    // Booking (hotel-wide)
+    const bookingChannel = pusher.subscribe(`hotel-${hotelSlug}.booking`);
     channels.push(bookingChannel);
 
-    // Personal attendance channel (only if staffId provided)
+    // Personal staff notifications (if staffId provided)
     if (staffId) {
-      const attendanceChannel = pusher.subscribe(`attendance-hotel-${hotelSlug}-staff-${staffId}`);
-      channels.push(attendanceChannel);
+      const personalNotifications = pusher.subscribe(`hotel-${hotelSlug}.staff-${staffId}-notifications`);
+      channels.push(personalNotifications);
     }
+
+    // Note: Staff chat and guest chat channels are conversation-specific and will be 
+    // subscribed to dynamically when users enter specific conversations:
+    // - hotel-{slug}.staff-chat.{conversation_id}
+    // - hotel-{slug}.guest-chat.{room_pin}
 
     // Bind global event handlers to all channels
     channels.forEach(channel => {
@@ -108,6 +103,156 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
     });
 
     return () => {};
+  }
+}
+
+/**
+ * Subscribe to specific staff chat conversation
+ * @param {string} hotelSlug - Hotel slug
+ * @param {string} conversationId - Staff chat conversation ID
+ * @returns {Function} Cleanup function for this channel
+ */
+export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
+  if (!hotelSlug || !conversationId) {
+    console.warn('⚠️ Missing hotelSlug or conversationId for staff chat subscription');
+    return () => {};
+  }
+
+  const pusher = getPusherClient();
+  const channelName = `hotel-${hotelSlug}.staff-chat.${conversationId}`;
+  
+  try {
+    const channel = pusher.subscribe(channelName);
+    
+    channel.bind_global((eventName, payload) => {
+      handleIncomingRealtimeEvent({
+        source: 'pusher',
+        channel: channel.name,
+        eventName,
+        payload
+      });
+    });
+
+    console.log(`✅ Subscribed to staff chat: ${channelName}`);
+    currentChannels.push(channel);
+
+    return () => {
+      try {
+        channel.unbind_all();
+        channel.unsubscribe();
+        const index = currentChannels.indexOf(channel);
+        if (index > -1) {
+          currentChannels.splice(index, 1);
+        }
+        console.log(`🗑️ Unsubscribed from staff chat: ${channelName}`);
+      } catch (error) {
+        console.error('❌ Error unsubscribing from staff chat channel:', channelName, error);
+      }
+    };
+  } catch (error) {
+    console.error('❌ Error subscribing to staff chat channel:', channelName, error);
+    return () => {};
+  }
+}
+
+/**
+ * Subscribe to specific guest chat conversation
+ * @param {string} hotelSlug - Hotel slug
+ * @param {string} roomPin - Guest chat room PIN
+ * @returns {Function} Cleanup function for this channel
+ */
+export function subscribeToGuestChatConversation(hotelSlug, roomPin) {
+  if (!hotelSlug || !roomPin) {
+    console.warn('⚠️ Missing hotelSlug or roomPin for guest chat subscription');
+    return () => {};
+  }
+
+  const pusher = getPusherClient();
+  const channelName = `hotel-${hotelSlug}.guest-chat.${roomPin}`;
+  
+  try {
+    const channel = pusher.subscribe(channelName);
+    
+    channel.bind_global((eventName, payload) => {
+      handleIncomingRealtimeEvent({
+        source: 'pusher',
+        channel: channel.name,
+        eventName,
+        payload
+      });
+    });
+
+    console.log(`✅ Subscribed to guest chat: ${channelName}`);
+    currentChannels.push(channel);
+
+    return () => {
+      try {
+        channel.unbind_all();
+        channel.unsubscribe();
+        const index = currentChannels.indexOf(channel);
+        if (index > -1) {
+          currentChannels.splice(index, 1);
+        }
+        console.log(`🗑️ Unsubscribed from guest chat: ${channelName}`);
+      } catch (error) {
+        console.error('❌ Error unsubscribing from guest chat channel:', channelName, error);
+      }
+    };
+  } catch (error) {
+    console.error('❌ Error subscribing to guest chat channel:', channelName, error);
+    return () => {};
+  }
+}
+
+/**
+ * Mark conversation as read - calls API and updates store
+ * ✅ CRITICAL: Only call when conversation_id exists and user is active
+ * @param {string|number} conversationId - Must be valid conversation ID
+ * @param {string} conversationType - "guest" | "staff"
+ * @param {boolean} isWindowActive - Only mark read if window is active
+ * @param {string} hotelSlug - Hotel slug for API endpoint
+ */
+export async function markConversationRead(conversationId, conversationType = "guest", isWindowActive = true, hotelSlug = null) {
+  if (!conversationId) {
+    console.warn("⚠️ markConversationRead called with undefined conversationId");
+    return;
+  }
+
+  if (!isWindowActive) {
+    console.log("📖 Window not active, skipping markConversationRead");
+    return;
+  }
+
+  if (!hotelSlug) {
+    console.warn("⚠️ markConversationRead called without hotelSlug");
+    return;
+  }
+
+  try {
+    if (conversationType === "staff") {
+      // Use existing staff chat API
+      const { markConversationAsRead } = await import('../staff_chat/services/staffChatApi.js');
+      await markConversationAsRead(hotelSlug, conversationId);
+      console.log(`✅ Marked staff conversation ${conversationId} as read`);
+    } else {
+      // Guest chat API call
+      const endpoint = `/api/guest_chat/${hotelSlug}/conversations/${conversationId}/mark_read/`;
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Auth headers will be added by interceptors
+        }
+      });
+
+      if (response.ok) {
+        console.log(`✅ Marked guest conversation ${conversationId} as read`);
+      } else {
+        console.error('❌ Failed to mark guest conversation as read:', response.status);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error marking conversation as read:', error);
   }
 }
 

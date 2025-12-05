@@ -4,6 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import { subscribeBaseHotelChannels } from './channelRegistry';
 import { NotificationsProviderWithCallback } from './stores/notificationsStore.jsx';
 import { ChatProvider } from './stores/chatStore.jsx';
+import { GuestChatProvider } from './stores/guestChatStore.jsx';
+import { AttendanceProvider } from './stores/attendanceStore.jsx';
+import { RoomServiceProvider } from './stores/roomServiceStore.jsx';
+import { BookingProvider } from './stores/bookingStore.jsx';
 
 /**
  * RealtimeProvider - Manages centralized realtime subscriptions
@@ -61,16 +65,25 @@ function RealtimeManager({ children }) {
 }
 
 /**
- * Complete RealtimeProvider with notification and chat stores
+ * Complete RealtimeProvider with all domain stores
+ * ✅ Provides unified realtime architecture with all 5 domain stores
  */
 export function RealtimeProvider({ children }) {
   return (
     <NotificationsProviderWithCallback>
-      <ChatProvider>
-        <RealtimeManager>
-          {children}
-        </RealtimeManager>
-      </ChatProvider>
+      <AttendanceProvider>
+        <ChatProvider>
+          <GuestChatProvider>
+            <RoomServiceProvider>
+              <BookingProvider>
+                <RealtimeManager>
+                  {children}
+                </RealtimeManager>
+              </BookingProvider>
+            </RoomServiceProvider>
+          </GuestChatProvider>
+        </ChatProvider>
+      </AttendanceProvider>
     </NotificationsProviderWithCallback>
   );
 }

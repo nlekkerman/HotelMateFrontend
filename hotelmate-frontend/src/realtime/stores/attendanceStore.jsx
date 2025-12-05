@@ -164,50 +164,78 @@ export function useAttendanceDispatch() {
 
 // Non-hook interface for eventBus
 export const attendanceActions = {
-  handleEvent(normalizedEvt) {
+  handleEvent(event) {
     if (!dispatchRef) {
       if (import.meta.env && !import.meta.env.PROD) {
-        console.warn("[attendanceStore] handleEvent called before dispatchRef is ready", normalizedEvt);
+        console.warn("[attendanceStore] handleEvent called before dispatchRef is ready", event);
       }
       return;
     }
 
-    const { eventType, data, timestamp } = normalizedEvt;
-
-    // Event deduplication (5-second window like original useAttendanceRealtime)
-    const deduplicationKey = `${eventType}:${data?.staff_id || data?.user_id || 'global'}`;
-    const now = Date.now();
-    const lastEventTime = attendanceActions._lastEventTimestamps?.[deduplicationKey];
+    // ✅ NEW: Handle unified backend event format {category, type, payload, meta}
+    let eventType, payload, eventId;
     
-    if (lastEventTime && (now - lastEventTime) < 5000) {
+    if (event.category && event.type && event.payload) {
+      // New format from backend
+      eventType = event.type;
+      payload = event.payload;
+      eventId = event.meta?.event_id;
+    } else {
+      // Legacy format for backward compatibility
+      eventType = event.eventType;
+      payload = event.data;
+      eventId = null;
+    }
+
+    // ✅ Event deduplication using event.meta.event_id (preferred) or timestamp window
+    let deduplicationKey;
+    if (eventId) {
+      // Use backend-provided event ID for perfect deduplication
+      deduplicationKey = eventId;
+    } else {
+      // Fallback to timestamp-based deduplication
+      deduplicationKey = `${eventType}:${payload?.staff_id || payload?.user_id || 'global'}:${Date.now().toString().slice(0, -3)}`;
+    }
+
+    if (attendanceActions._processedEventIds?.has(deduplicationKey)) {
       if (import.meta.env && !import.meta.env.PROD) {
-        console.log("[attendanceStore] Duplicate event detected, skipping:", deduplicationKey, normalizedEvt);
+        console.log("[attendanceStore] Duplicate event detected, skipping:", deduplicationKey, event);
       }
       return;
     }
 
-    // Store timestamp for deduplication
-    if (!attendanceActions._lastEventTimestamps) {
-      attendanceActions._lastEventTimestamps = {};
+    // Store event ID to prevent duplicates
+    if (!attendanceActions._processedEventIds) {
+      attendanceActions._processedEventIds = new Set();
     }
-    attendanceActions._lastEventTimestamps[deduplicationKey] = now;
+    attendanceActions._processedEventIds.add(deduplicationKey);
 
-    // Clean up old timestamps (keep only last 10 seconds worth)
-    setTimeout(() => {
-      if (attendanceActions._lastEventTimestamps?.[deduplicationKey] === now) {
-        delete attendanceActions._lastEventTimestamps[deduplicationKey];
-      }
-    }, 10000);
+    // Clean up old event IDs (keep only last 1000 to prevent memory leak)
+    if (attendanceActions._processedEventIds.size > 1000) {
+      const eventIds = Array.from(attendanceActions._processedEventIds);
+      const toDelete = eventIds.slice(0, 500); // Remove oldest half
+      toDelete.forEach(id => attendanceActions._processedEventIds.delete(id));
+    }
 
-    console.log("[attendanceStore] Processing event:", eventType, data);
+    console.log("[attendanceStore] Processing event:", eventType, payload);
 
+    // ✅ Handle events from the guide
     switch (eventType) {
+      // New backend event names
+      case "clock_status_updated":
+        dispatchRef({
+          type: ACTIONS.UPDATE_CLOCK_STATUS,
+          payload,
+        });
+        break;
+
+      // Legacy event names (for backward compatibility)
       case "clock-status-updated":
       case "clock-status-changed":
       case "attendance_update":
         dispatchRef({
           type: ACTIONS.UPDATE_CLOCK_STATUS,
-          payload: data,
+          payload,
         });
         break;
 
@@ -218,13 +246,13 @@ export const attendanceActions = {
       case "log-rejected":
         dispatchRef({
           type: ACTIONS.UPDATE_PERSONAL_STATUS,
-          payload: data,
+          payload,
         });
         break;
 
       default:
         if (import.meta.env && !import.meta.env.PROD) {
-          console.log("[attendanceStore] Ignoring eventType:", eventType, normalizedEvt);
+          console.log("[attendanceStore] Ignoring eventType:", eventType, event);
         }
         break;
     }

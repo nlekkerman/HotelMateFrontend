@@ -189,48 +189,79 @@ export const useRoomServiceDispatch = () => {
 
 // Actions object for handling events from eventBus
 export const roomServiceActions = {
-  handleEvent(normalizedEvt) {
+  _processedEventIds: new Set(), // Event ID-based deduplication
+
+  handleEvent(event) {
     if (!dispatchRef) {
       console.warn("[roomServiceStore] handleEvent called before store is ready");
       return;
     }
 
-    const { eventType, data, timestamp, channelName } = normalizedEvt;
-
-    // Deduplication logic
-    const dedupeKey = `order:${data?.id || data?.orderId || 'unknown'}:${eventType}`;
-    const lastTimestamp = roomServiceActions._lastEventTimestamps?.[dedupeKey];
+    // ✅ NEW: Handle unified backend event format {category, type, payload, meta}
+    let eventType, payload, eventId;
     
-    if (lastTimestamp && timestamp && timestamp <= lastTimestamp) {
-      console.log("[roomServiceStore] Ignoring duplicate event:", dedupeKey, timestamp);
+    if (event.category && event.type && event.payload) {
+      // New format from backend
+      eventType = event.type;
+      payload = event.payload;
+      eventId = event.meta?.event_id;
+    } else {
+      // Legacy format for backward compatibility
+      eventType = event.eventType;
+      payload = event.data;
+      eventId = null;
+    }
+
+    // ✅ Event deduplication using event.meta.event_id (preferred) or timestamp window
+    let deduplicationKey;
+    if (eventId) {
+      deduplicationKey = eventId;
+    } else {
+      deduplicationKey = `order:${payload?.order_id || payload?.id || 'unknown'}:${eventType}`;
+    }
+
+    if (roomServiceActions._processedEventIds.has(deduplicationKey)) {
+      console.log("[roomServiceStore] Duplicate event detected, skipping:", deduplicationKey);
       return;
     }
 
-    // Update timestamp (simple cleanup after 10 seconds)
-    if (!roomServiceActions._lastEventTimestamps) {
-      roomServiceActions._lastEventTimestamps = {};
+    // Store event ID to prevent duplicates
+    roomServiceActions._processedEventIds.add(deduplicationKey);
+
+    // Clean up old event IDs (keep only last 1000)
+    if (roomServiceActions._processedEventIds.size > 1000) {
+      const eventIds = Array.from(roomServiceActions._processedEventIds);
+      const toDelete = eventIds.slice(0, 500);
+      toDelete.forEach(id => roomServiceActions._processedEventIds.delete(id));
     }
-    roomServiceActions._lastEventTimestamps[dedupeKey] = timestamp;
-    
-    setTimeout(() => {
-      if (roomServiceActions._lastEventTimestamps) {
-        delete roomServiceActions._lastEventTimestamps[dedupeKey];
-      }
-    }, 10000);
 
-    console.log("[roomServiceStore] Processing event:", eventType, data);
+    console.log("[roomServiceStore] Processing event:", eventType, payload);
 
+    // ✅ Handle events from the guide
     switch (eventType) {
       case "order_created":
-      case "new_room_service_order":
-      case "new_breakfast_order":
         dispatchRef({
           type: ACTIONS.ORDER_CREATED,
-          payload: { order: data },
+          payload: { order: payload },
         });
         break;
 
       case "order_updated":
+        dispatchRef({
+          type: ACTIONS.ORDER_STATUS_CHANGED,
+          payload: { order: payload, orderId: payload?.order_id || payload?.id },
+        });
+        break;
+
+      // Legacy event types (for backward compatibility)
+      case "new_room_service_order":
+      case "new_breakfast_order":
+        dispatchRef({
+          type: ACTIONS.ORDER_CREATED,
+          payload: { order: payload },
+        });
+        break;
+
       case "order_status_changed":
       case "order_accepted":
       case "order_preparing":
@@ -239,20 +270,20 @@ export const roomServiceActions = {
       case "order_cancelled":
         dispatchRef({
           type: ACTIONS.ORDER_STATUS_CHANGED,
-          payload: { order: data, orderId: data?.id || data?.orderId },
+          payload: { order: payload, orderId: payload?.id || payload?.orderId },
         });
         break;
 
       case "order_deleted":
         dispatchRef({
           type: ACTIONS.ORDER_DELETED,
-          payload: { orderId: data?.id || data?.orderId },
+          payload: { orderId: payload?.id || payload?.orderId },
         });
         break;
 
       default:
         if (import.meta.env && !import.meta.env.PROD) {
-          console.log("[roomServiceStore] Ignoring eventType:", eventType, normalizedEvt);
+          console.log("[roomServiceStore] Ignoring eventType:", eventType, event);
         }
         break;
     }
