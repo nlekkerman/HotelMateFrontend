@@ -381,13 +381,47 @@ export const chatActions = {
         break;
       }
 
-      case 'read_receipt': {
+      case 'read_receipt':
+      case 'message_read': {
         globalChatDispatch({
           type: CHAT_ACTIONS.RECEIVE_READ_RECEIPT,
           payload: {
             conversationId: parseInt(conversationId),
             readByStaffId: payload.staff_id || payload.readByStaffId,
             messageId: payload.message_id || payload.messageId
+          }
+        });
+        break;
+      }
+
+      case 'message_delivered': {
+        // Handle message delivery status
+        globalChatDispatch({
+          type: CHAT_ACTIONS.MESSAGE_UPDATED,
+          payload: {
+            conversationId: parseInt(conversationId),
+            messageId: parseInt(payload.message_id),
+            updatedFields: { delivery_status: 'delivered' }
+          }
+        });
+        break;
+      }
+
+      case 'typing_indicator': {
+        // Handle typing indicators (can be added to state if needed)
+        console.log('💬 Typing indicator received:', payload);
+        break;
+      }
+
+      case 'attachment_uploaded':
+      case 'attachment_deleted': {
+        // Handle attachment events by refreshing the message
+        globalChatDispatch({
+          type: CHAT_ACTIONS.MESSAGE_UPDATED,
+          payload: {
+            conversationId: parseInt(conversationId),
+            messageId: parseInt(payload.message_id),
+            updatedFields: { attachments: payload.attachments || [] }
           }
         });
         break;

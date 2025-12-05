@@ -179,18 +179,26 @@ function normalizePusherEvent(channel, eventName, payload, timestamp) {
     let normalizedEventType = eventName;
     if (eventName === 'new-message' || eventName === 'message') {
       normalizedEventType = 'new_message';
-    } else if (eventName === 'message-created') {
+    } else if (eventName === 'message-created' || eventName === 'realtime_staff_chat_message_created') {
       normalizedEventType = 'message_created';
-    } else if (eventName === 'message-updated' || eventName === 'message-edited') {
+    } else if (eventName === 'message-updated' || eventName === 'message-edited' || eventName === 'realtime_staff_chat_message_edited') {
       normalizedEventType = 'message_edited';
-    } else if (eventName === 'message-deleted') {
+    } else if (eventName === 'message-deleted' || eventName === 'realtime_staff_chat_message_deleted') {
       normalizedEventType = 'message_deleted';
-    } else if (eventName === 'read-receipt' || eventName === 'messages-read' || eventName === 'message-read') {
+    } else if (eventName === 'read-receipt' || eventName === 'messages-read' || eventName === 'message-read' || eventName === 'realtime_staff_chat_message_read') {
       normalizedEventType = 'read_receipt';
+    } else if (eventName === 'message-delivered' || eventName === 'realtime_staff_chat_message_delivered') {
+      normalizedEventType = 'message_delivered';
     } else if (eventName === 'conversation-updated') {
       normalizedEventType = 'conversation_update';
-    } else if (eventName === 'typing') {
+    } else if (eventName === 'typing' || eventName === 'realtime_staff_chat_typing_indicator') {
       normalizedEventType = 'typing_indicator';
+    } else if (eventName === 'realtime_staff_chat_attachment_uploaded') {
+      normalizedEventType = 'attachment_uploaded';
+    } else if (eventName === 'realtime_staff_chat_attachment_deleted') {
+      normalizedEventType = 'attachment_deleted';
+    } else if (eventName === 'realtime_staff_chat_mention') {
+      normalizedEventType = 'staff_mentioned';
     }
     
     return {
