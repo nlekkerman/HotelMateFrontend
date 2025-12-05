@@ -18,6 +18,7 @@ import useEditMessage from '../hooks/useEditMessage';
 import useDeleteMessage from '../hooks/useDeleteMessage';
 import useReadReceipts from '../hooks/useReadReceipts';
 import useMessagePagination from '../hooks/useMessagePagination';
+import { subscribeToStaffChatConversation } from '../../realtime/channelRegistry';
 
 /**
  * ChatWindowPopup Component
@@ -41,8 +42,8 @@ const ChatWindowPopup = ({
   const messagesContainerRef = useRef(null);
   const sentinelRef = useRef(null);
   
-  // Get event subscription AND Pusher instance from StaffChatContext
-  const { subscribeToMessages, pusherInstance } = useStaffChat();
+  // Get event subscription from StaffChatContext
+  const { subscribeToMessages } = useStaffChat();
   
   // Get current user ID from localStorage or use a fallback
   const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
@@ -235,47 +236,25 @@ const ChatWindowPopup = ({
     };
   }, [conversation?.id, subscribeToMessages, addPaginatedMessage]);
 
-  // Subscribe to Pusher for read receipts (messages-read event)
+  // Subscribe to centralized realtime system for read receipts and new messages
   useEffect(() => {
-    console.log('🔄 [POPUP PUSHER] Running Pusher subscription effect');
-    
-    if (!pusherInstance || !hotelSlug || !conversation?.id) {
-      console.warn('⚠️ [POPUP PUSHER] Missing required data:', {
-        hasPusher: !!pusherInstance,
-        hasHotelSlug: !!hotelSlug,
-        hasConversationId: !!conversation?.id
-      });
+    if (!hotelSlug || !conversation?.id) {
+      console.warn('⚠️ [POPUP REALTIME] Missing required data for subscription');
       return;
     }
 
-    const channelName = `${hotelSlug}-staff-conversation-${conversation.id}`;
-    console.log('📡 [POPUP PUSHER] Subscribing to:', channelName);
+    console.log('🔔 [POPUP REALTIME] Subscribing to conversation via centralized system');
+
+    // Use the centralized subscription
+    const cleanup = subscribeToStaffChatConversation(hotelSlug, conversation.id);
     
-    let channel = pusherInstance.channel(channelName);
-    if (!channel) {
-      channel = pusherInstance.subscribe(channelName);
-    }
+    // The events will be automatically routed to chatStore via eventBus
+    // Read receipts will be handled by the centralized system
+    console.log('✅ [POPUP REALTIME] Subscribed to staff chat conversation');
 
-    // Handle read receipts
-    const handleReadReceipt = (data) => {
-      console.log('🚨🚨🚨 [POPUP READ RECEIPT] Pusher event received!');
-      console.log('📖 [POPUP READ RECEIPT] Data:', JSON.stringify(data, null, 2));
-      
-      updateReadReceipts(data);
-      console.log('✅ [POPUP READ RECEIPT] updateReadReceipts completed');
-    };
-
-    // Bind read receipt event
-    console.log('🎧 [POPUP PUSHER] Binding messages-read event');
-    channel.bind('messages-read', handleReadReceipt);
-    console.log('✅ [POPUP PUSHER] messages-read event bound');
-
-    // Cleanup
-    return () => {
-      console.log('🔌 [POPUP PUSHER] Cleaning up messages-read event');
-      channel.unbind('messages-read', handleReadReceipt);
-    };
-  }, [hotelSlug, conversation?.id, updateReadReceipts]);
+    // Return cleanup function
+    return cleanup;
+  }, [hotelSlug, conversation?.id]);
 
   const [showReactionPicker, setShowReactionPicker] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState([]);

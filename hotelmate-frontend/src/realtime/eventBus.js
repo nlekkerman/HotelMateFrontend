@@ -172,17 +172,20 @@ function normalizePusherEvent(channel, eventName, payload, timestamp) {
   // Staff chat events - improved channel detection for staff chat
   if (channel.includes('staff-chat-hotel-') || 
       (channel.includes('-staff-') && channel.includes('-notifications')) ||
-      (channel.includes('-staff-conversation-'))) {
+      (channel.includes('-staff-conversation-')) ||
+      (channel.includes('.staff-chat.'))) {
     
     // Normalize event names to match chatStore expectations
     let normalizedEventType = eventName;
     if (eventName === 'new-message' || eventName === 'message') {
       normalizedEventType = 'new_message';
-    } else if (eventName === 'message-updated') {
-      normalizedEventType = 'message_updated';
+    } else if (eventName === 'message-created') {
+      normalizedEventType = 'message_created';
+    } else if (eventName === 'message-updated' || eventName === 'message-edited') {
+      normalizedEventType = 'message_edited';
     } else if (eventName === 'message-deleted') {
       normalizedEventType = 'message_deleted';
-    } else if (eventName === 'read-receipt') {
+    } else if (eventName === 'read-receipt' || eventName === 'messages-read' || eventName === 'message-read') {
       normalizedEventType = 'read_receipt';
     } else if (eventName === 'conversation-updated') {
       normalizedEventType = 'conversation_update';
