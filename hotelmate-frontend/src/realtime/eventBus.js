@@ -17,6 +17,11 @@ import { bookingActions } from './stores/bookingStore.jsx';
 export function handleIncomingRealtimeEvent({ source, channel, eventName, payload }) {
   try {
     console.log('📡 Incoming realtime event:', { source, channel, eventName, payload });
+    
+    // 🔥 DEBUG: Log staff chat events specifically
+    if (channel?.includes('staff-chat') && !eventName?.startsWith('pusher:')) {
+      console.log('🔥 [EventBus] STAFF CHAT EVENT:', { channel, eventName, payload });
+    }
 
     // 1️⃣ IGNORE PUSHER SYSTEM EVENTS (like pusher:subscription_succeeded)
     if (source === 'pusher' && eventName?.startsWith('pusher:')) {
@@ -185,4 +190,47 @@ function generateNotificationMessage(category, eventType, payload) {
     default:
       return `${eventType.replace('_', ' ')}`;
   }
+}
+
+// Debug function for testing unread updates
+if (typeof window !== 'undefined') {
+  window.debugRealtimeUnread = (conversationId, unreadCount, totalUnread = null) => {
+    console.log('🧪 DEBUG: Manually triggering unread_updated event:', { conversationId, unreadCount, totalUnread });
+    handleIncomingRealtimeEvent({
+      source: "debug",
+      payload: {
+        category: "staff_chat",
+        type: "unread_updated", 
+        payload: {
+          conversation_id: conversationId,
+          unread_count: unreadCount,
+          total_unread: totalUnread,
+          updated_at: new Date().toISOString()
+        },
+        meta: {
+          event_id: `debug-${Date.now()}`,
+          ts: new Date().toISOString()
+        }
+      }
+    });
+  };
+  
+  window.debugTotalUnread = (totalUnread) => {
+    console.log('🧪 DEBUG: Manually triggering total unread update:', { totalUnread });
+    handleIncomingRealtimeEvent({
+      source: "debug",
+      payload: {
+        category: "staff_chat",
+        type: "unread_updated",
+        payload: {
+          total_unread: totalUnread,
+          updated_at: new Date().toISOString()
+        },
+        meta: {
+          event_id: `debug-total-${Date.now()}`,
+          ts: new Date().toISOString()
+        }
+      }
+    });
+  };
 }

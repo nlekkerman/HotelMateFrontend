@@ -296,10 +296,12 @@ function chatReducer(state, action) {
 
     case CHAT_ACTIONS.UPDATE_CONVERSATION_UNREAD: {
       const { conversationId, unreadCount = 0, metadata = {} } = action.payload;
+      console.log('📊 [chatReducer] UPDATE_CONVERSATION_UNREAD:', { conversationId, unreadCount, metadata });
       if (!conversationId) return state;
 
       const existing = state.conversationsById[conversationId];
       const previousUnread = existing?.unread_count || 0;
+      console.log('📊 [chatReducer] Previous unread:', previousUnread, '-> New unread:', unreadCount);
       const updatedConversation = existing
         ? {
             ...existing,
@@ -321,6 +323,14 @@ function chatReducer(state, action) {
           ? Math.max(0, state.totalUnreadOverride + (unreadCount - previousUnread))
           : state.totalUnreadOverride;
 
+      console.log('📊 [chatReducer] UPDATE_CONVERSATION_UNREAD:', { 
+        conversationId,
+        previousUnread, 
+        newUnread: unreadCount,
+        previousTotal: state.totalUnreadOverride,
+        adjustedTotal
+      });
+
       return {
         ...state,
         totalUnreadOverride: adjustedTotal,
@@ -336,6 +346,10 @@ function chatReducer(state, action) {
         typeof action.payload.totalUnread === 'number'
           ? Math.max(0, action.payload.totalUnread)
           : null;
+      console.log('📊 [chatReducer] SET_TOTAL_UNREAD:', { 
+        previous: state.totalUnreadOverride, 
+        new: totalUnread 
+      });
       return {
         ...state,
         totalUnreadOverride: totalUnread,
@@ -452,11 +466,14 @@ export const chatActions = {
     }
 
     // ✅ Handle events from the guide
+    console.log(`📨 [chatStore] Processing ${eventType}:`, { conversationId: numericConversationId, payload });
     switch (eventType) {
       case 'message_created': {
+        console.log('📨 [chatStore] Processing message_created:', { numericConversationId, payload });
         // Check if payload is a full message object or just FCM metadata
         if (payload.id && payload.message) {
           // Full message object (from Pusher)
+          console.log('📨 [chatStore] Dispatching RECEIVE_MESSAGE for full message');
           globalChatDispatch({
             type: CHAT_ACTIONS.RECEIVE_MESSAGE,
             payload: {
@@ -486,6 +503,8 @@ export const chatActions = {
           });
           
           // TODO: Optionally fetch the real message from API to replace placeholder
+        } else {
+          console.warn('📨 [chatStore] message_created payload missing required fields:', payload);
         }
         break;
       }
@@ -616,7 +635,10 @@ export const chatActions = {
       }
 
       case 'unread_updated': {
+        console.log('📊 [chatStore] Processing unread_updated:', { numericConversationId, payload });
+        
         if (typeof payload.total_unread === 'number') {
+          console.log('📊 [chatStore] Updating total unread to:', payload.total_unread);
           globalChatDispatch({
             type: CHAT_ACTIONS.SET_TOTAL_UNREAD,
             payload: { totalUnread: payload.total_unread }
@@ -628,7 +650,8 @@ export const chatActions = {
             typeof payload.unread_count === 'number'
               ? payload.unread_count
               : 0;
-
+          
+          console.log('📊 [chatStore] Updating conversation unread:', { conversationId: numericConversationId, unreadCount });
           globalChatDispatch({
             type: CHAT_ACTIONS.UPDATE_CONVERSATION_UNREAD,
             payload: {
@@ -660,6 +683,25 @@ export function ChatProvider({ children }) {
   // Register global handlers for eventBus integration
   React.useEffect(() => {
     registerChatHandlers(dispatch, () => state);
+    
+    // Add debug functions to window for testing
+    if (typeof window !== 'undefined') {
+      window.debugRealtimeUnread = (conversationId, unreadCount) => {
+        console.log('🧪 Debug: Simulating unread_updated event:', { conversationId, unreadCount });
+        dispatch({
+          type: CHAT_ACTIONS.UPDATE_CONVERSATION_UNREAD,
+          payload: { conversationId: parseInt(conversationId), unreadCount }
+        });
+      };
+      
+      window.debugTotalUnread = (totalUnread) => {
+        console.log('🧪 Debug: Setting total unread:', totalUnread);
+        dispatch({
+          type: CHAT_ACTIONS.SET_TOTAL_UNREAD,
+          payload: { totalUnread }
+        });
+      };
+    }
     
     return () => {
       // Cleanup on unmount
