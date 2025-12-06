@@ -299,6 +299,7 @@ function chatReducer(state, action) {
       if (!conversationId) return state;
 
       const existing = state.conversationsById[conversationId];
+      const previousUnread = existing?.unread_count || 0;
       const updatedConversation = existing
         ? {
             ...existing,
@@ -315,8 +316,14 @@ function chatReducer(state, action) {
             updatedAt: metadata.updatedAt || new Date().toISOString(),
           };
 
+      const adjustedTotal =
+        typeof state.totalUnreadOverride === 'number'
+          ? Math.max(0, state.totalUnreadOverride + (unreadCount - previousUnread))
+          : state.totalUnreadOverride;
+
       return {
         ...state,
+        totalUnreadOverride: adjustedTotal,
         conversationsById: {
           ...state.conversationsById,
           [conversationId]: updatedConversation,

@@ -5,7 +5,6 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useMessenger } from '../context/MessengerContext';
 import { useStaffChat } from '../context/StaffChatContext';
-import { useChatState } from '@/realtime/stores/chatStore.jsx';
 import ConversationsList from './ConversationsList';
 import ChatWindowPopup from './ChatWindowPopup';
 import GroupChatModal from './GroupChatModal';
@@ -91,25 +90,12 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   
   const { registerOpenChatHandler } = useMessenger();
   
-  // Use both StaffChatContext AND direct chatStore for real-time updates
-  const chatState = useChatState();
   const { 
     conversations = [], 
     totalUnread = 0, 
     markConversationRead = () => {} 
   } = useStaffChat();
-  
-  // Also get direct store data for comparison
-  const storeConversations = Object.values(chatState.conversationsById || {});
-  const storeTotalUnread = storeConversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
-  const overrideTotalUnread =
-    typeof chatState.totalUnreadOverride === 'number'
-      ? chatState.totalUnreadOverride
-      : 0;
-  const contextTotalUnread = typeof totalUnread === 'number' ? totalUnread : 0;
-  
-  // Use the higher unread count between context and store to ensure real-time updates
-  const actualTotalUnread = Math.max(contextTotalUnread, storeTotalUnread, overrideTotalUnread);
+  const unreadTotal = typeof totalUnread === 'number' ? totalUnread : 0;
   
   const [searchParams, setSearchParams] = useSearchParams();
   const [internalExpanded, setInternalExpanded] = useState(false);
@@ -117,16 +103,12 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   // Debug logging for unread count changes - add more detail
   useEffect(() => {
     console.log('🔄 [MessengerWidget] Unread count updated:', {
-      contextTotalUnread: totalUnread,
-      storeTotalUnread: storeTotalUnread,
-      actualTotalUnread,
+      totalUnread: unreadTotal,
       conversationsLength: conversations.length,
-      storeConversationsLength: storeConversations.length,
       conversationsWithUnread: conversations.filter(c => (c.unread_count || 0) > 0),
-      storeConversationsWithUnread: storeConversations.filter(c => (c.unread_count || 0) > 0),
       timestamp: new Date().toISOString()
     });
-  }, [totalUnread, storeTotalUnread, actualTotalUnread, conversations, storeConversations]);
+  }, [unreadTotal, conversations]);
   
   // Debug logging removed to clean up console
   const [showGroupModal, setShowGroupModal] = useState(false);
@@ -354,7 +336,7 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
           {/* Header - Always visible, acts as toggle */}
           <div 
             className={`messenger-widget__header text-white ${
-              actualTotalUnread > 0 ? 'messenger-widget__header--unread' : 'main-bg'
+              unreadTotal > 0 ? 'messenger-widget__header--unread' : 'main-bg'
             }`}
             onClick={toggleWidget}
             style={{ cursor: 'pointer' }}
@@ -369,11 +351,11 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
                 <circle cx="8" cy="10" r="1.5" fill="currentColor" />
                 <circle cx="16" cy="10" r="1.5" fill="currentColor" />
               </svg>
-              Staff Chat ({actualTotalUnread})
+              Staff Chat ({unreadTotal})
               {/* Unread Badge Counter */}
-              {actualTotalUnread > 0 && (
+              {unreadTotal > 0 && (
                 <span className="messenger-widget__badge">
-                  {actualTotalUnread > 99 ? '99+' : actualTotalUnread}
+                  {unreadTotal > 99 ? '99+' : unreadTotal}
                 </span>
               )}
             </h3>

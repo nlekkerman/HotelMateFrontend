@@ -34,8 +34,10 @@ function RealtimeManager({ children }) {
       hotelSlug = user.hotel.slug;
     }
 
-    // Get staff ID if user is staff
-    const staffId = user?.is_staff ? user.id : null;
+    // Resolve staff ID (prefer dedicated staff_id, fallback to user id when flagged as staff)
+    const staffId =
+      user?.staff_id ??
+      (user?.is_staff || user?.role === 'staff' || user?.isStaff ? user?.id : null);
 
     console.log('🔄 RealtimeProvider effect:', { 
       hotelSlug, 

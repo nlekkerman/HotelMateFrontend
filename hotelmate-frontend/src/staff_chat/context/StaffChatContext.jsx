@@ -1,5 +1,5 @@
 // src/staff_chat/context/StaffChatContext.jsx
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { fetchConversations, sendMessage as apiSendMessage, markConversationAsRead } from "../services/staffChatApi";
 import { useAuth } from "@/context/AuthContext";
 import { useChatState, useChatDispatch } from "@/realtime/stores/chatStore.jsx";
@@ -163,20 +163,22 @@ export const StaffChatProvider = ({ children }) => {
   }, [chatDispatch]);
 
   // Derived values from chatStore
-  const conversations = Object.values(chatState.conversationsById);
+  const conversations = useMemo(
+    () => Object.values(chatState.conversationsById),
+    [chatState.conversationsById]
+  );
   const activeConversation = chatState.activeConversationId 
     ? chatState.conversationsById[chatState.activeConversationId] 
     : null;
   const messagesForActiveConversation = activeConversation ? activeConversation.messages : [];
-  const derivedTotalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
-  const overrideTotalUnread =
-    typeof chatState.totalUnreadOverride === 'number'
-      ? chatState.totalUnreadOverride
-      : null;
-  const totalUnread =
-    overrideTotalUnread !== null
-      ? Math.max(overrideTotalUnread, derivedTotalUnread)
-      : derivedTotalUnread;
+  const totalUnread = useMemo(() => {
+    const derived = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+    const override =
+      typeof chatState.totalUnreadOverride === 'number'
+        ? chatState.totalUnreadOverride
+        : null;
+    return override !== null ? Math.max(override, derived) : derived;
+  }, [conversations, chatState.totalUnreadOverride]);
   
   // Subscribe to individual conversation channels when conversations change
   const subscriptionsRef = useRef(new Map());
