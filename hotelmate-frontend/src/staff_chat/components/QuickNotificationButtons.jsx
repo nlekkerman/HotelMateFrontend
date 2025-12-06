@@ -155,13 +155,21 @@ const QuickNotificationButtons = ({
             </span>
 
             {/* Dismiss button */}
-            <button
+            <span
               className="notification-dismiss-btn"
+              role="button"
+              tabIndex={0}
               onClick={(e) => handleDismiss(e, notification.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleDismiss(e, notification.id);
+                }
+              }}
               title="Dismiss"
             >
               <i className="bi bi-x" />
-            </button>
+            </span>
           </button>
         );
       })}

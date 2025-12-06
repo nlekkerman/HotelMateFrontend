@@ -184,6 +184,30 @@ function normalizePusherEvent(channel, eventName, payload, timestamp) {
       (channel.includes('-staff-conversation-')) ||
       (channel.includes('.staff-chat.'))) {
     
+    // Extract conversation_id from channel patterns for all staff chat events
+    let extractedConversationId = null;
+    
+    // Try different channel patterns to extract conversation ID
+    const channelPatterns = [
+      /\.staff-chat\.(\d+)$/,                    // hotel-{slug}.staff-chat.{conversationId}
+      /-staff-conversation-(\d+)-/,             // hotel-{slug}-staff-conversation-{conversationId}-
+      /staff-chat-hotel-[^-]+-conversation-(\d+)/, // staff-chat-hotel-{slug}-conversation-{conversationId}
+      /-staff-(\d+)-notifications$/              // hotel-{slug}-staff-{conversationId}-notifications
+    ];
+    
+    for (const pattern of channelPatterns) {
+      const match = channel.match(pattern);
+      if (match) {
+        extractedConversationId = parseInt(match[1]);
+        break;
+      }
+    }
+    
+    // Ensure conversation_id is in payload
+    if (extractedConversationId && !payload.conversation_id && !payload.conversationId) {
+      payload.conversation_id = extractedConversationId;
+    }
+    
     // Normalize event names to match chatStore expectations
     let normalizedEventType = eventName;
     if (eventName === 'new-message' || eventName === 'message') {
@@ -196,11 +220,6 @@ function normalizePusherEvent(channel, eventName, payload, timestamp) {
       normalizedEventType = 'message_deleted';
     } else if (eventName === 'read-receipt' || eventName === 'messages-read' || eventName === 'message-read' || eventName === 'realtime_staff_chat_message_read') {
       normalizedEventType = 'read_receipt';
-      // Extract conversationId from channel pattern: hotel-{slug}.staff-chat.{conversationId}
-      const channelMatch = channel.match(/\.staff-chat\.(\d+)$/);
-      if (channelMatch) {
-        payload.conversationId = parseInt(channelMatch[1]);
-      }
     } else if (eventName === 'message-delivered' || eventName === 'realtime_staff_chat_message_delivered') {
       normalizedEventType = 'message_delivered';
     } else if (eventName === 'conversation-updated') {

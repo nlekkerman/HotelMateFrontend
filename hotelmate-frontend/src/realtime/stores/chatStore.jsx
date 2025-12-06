@@ -20,23 +20,25 @@ function chatReducer(state, action) {
   switch (action.type) {
     case CHAT_ACTIONS.INIT_CONVERSATIONS_FROM_API: {
       const { conversations } = action.payload;
-      const conversationsById = {};
-      
+      const conversationsById = { ...state.conversationsById };
+
       conversations.forEach(conv => {
+        const existing = conversationsById[conv.id] || {};
+
         conversationsById[conv.id] = {
           id: conv.id,
-          title: conv.title || '',
-          participants: conv.participants || [],
-          messages: [], // messages loaded separately
-          unreadCount: conv.unread_count || 0,
-          lastMessage: conv.last_message || null,
-          updatedAt: conv.updated_at || new Date().toISOString()
+          title: conv.title || existing.title || '',
+          participants: conv.participants || existing.participants || [],
+          messages: existing.messages || [],                        // keep existing messages
+          unreadCount: conv.unread_count ?? existing.unreadCount ?? 0,
+          lastMessage: conv.last_message || existing.lastMessage || null,
+          updatedAt: conv.updated_at || existing.updatedAt || new Date().toISOString(),
         };
       });
 
       return {
         ...state,
-        conversationsById: { ...state.conversationsById, ...conversationsById }
+        conversationsById,
       };
     }
 
@@ -71,9 +73,21 @@ function chatReducer(state, action) {
 
     case CHAT_ACTIONS.RECEIVE_MESSAGE: {
       const { message, conversationId } = action.payload;
-      const conversation = state.conversationsById[conversationId];
+      let conversation = state.conversationsById[conversationId];
       
-      if (!conversation) return state;
+      // If conversation doesn't exist, create a stub conversation from message data
+      if (!conversation) {
+        console.log('💬 Creating stub conversation for incoming message:', { conversationId, message });
+        conversation = {
+          id: conversationId,
+          title: message.conversation_title || message.title || '',
+          participants: message.participants || [],
+          messages: [],
+          unreadCount: 0,
+          lastMessage: null,
+          updatedAt: message.timestamp || new Date().toISOString(),
+        };
+      }
 
       // Check if message already exists (avoid duplicates)
       const messageExists = conversation.messages.some(m => m.id === message.id);
