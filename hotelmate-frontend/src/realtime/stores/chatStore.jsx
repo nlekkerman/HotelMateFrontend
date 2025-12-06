@@ -12,7 +12,8 @@ const ChatDispatchContext = createContext(null);
 const initialState = {
   conversationsById: {},
   activeConversationId: null,
-  lastEventTimestamps: {} // for deduplication: "eventType:convId:messageId" -> timestamp
+  lastEventTimestamps: {}, // for deduplication: "eventType:convId:messageId" -> timestamp
+  totalUnreadOverride: null
 };
 
 // Reducer
@@ -21,24 +22,33 @@ function chatReducer(state, action) {
     case CHAT_ACTIONS.INIT_CONVERSATIONS_FROM_API: {
       const { conversations } = action.payload;
       const conversationsById = { ...state.conversationsById };
+      let computedTotalUnread = 0;
 
       conversations.forEach(conv => {
         const existing = conversationsById[conv.id] || {};
+        const unreadCount = conv.unread_count ?? existing.unread_count ?? 0;
+        computedTotalUnread += unreadCount;
 
         conversationsById[conv.id] = {
           id: conv.id,
           title: conv.title || existing.title || '',
           participants: conv.participants || existing.participants || [],
           messages: existing.messages || [],                        // keep existing messages
-          unread_count: conv.unread_count ?? existing.unread_count ?? 0,
+          unread_count: unreadCount,
           lastMessage: conv.last_message || existing.lastMessage || null,
           updatedAt: conv.updated_at || existing.updatedAt || new Date().toISOString(),
         };
       });
 
+      const nextTotalOverride =
+        typeof state.totalUnreadOverride === 'number'
+          ? state.totalUnreadOverride
+          : computedTotalUnread;
+
       return {
         ...state,
         conversationsById,
+        totalUnreadOverride: nextTotalOverride,
       };
     }
 
@@ -168,8 +178,14 @@ function chatReducer(state, action) {
       
       if (!conversation) return state;
 
+      const updatedTotalOverride =
+        typeof state.totalUnreadOverride === 'number'
+          ? Math.max(0, state.totalUnreadOverride - (conversation.unread_count || 0))
+          : state.totalUnreadOverride;
+
       return {
         ...state,
+        totalUnreadOverride: updatedTotalOverride,
         conversationsById: {
           ...state.conversationsById,
           [conversationId]: {
@@ -278,6 +294,47 @@ function chatReducer(state, action) {
       };
     }
 
+    case CHAT_ACTIONS.UPDATE_CONVERSATION_UNREAD: {
+      const { conversationId, unreadCount = 0, metadata = {} } = action.payload;
+      if (!conversationId) return state;
+
+      const existing = state.conversationsById[conversationId];
+      const updatedConversation = existing
+        ? {
+            ...existing,
+            unread_count: unreadCount,
+            updatedAt: metadata.updatedAt || existing.updatedAt,
+          }
+        : {
+            id: conversationId,
+            title: metadata.title || '',
+            participants: metadata.participants || [],
+            messages: [],
+            unread_count: unreadCount,
+            lastMessage: metadata.lastMessage || null,
+            updatedAt: metadata.updatedAt || new Date().toISOString(),
+          };
+
+      return {
+        ...state,
+        conversationsById: {
+          ...state.conversationsById,
+          [conversationId]: updatedConversation,
+        },
+      };
+    }
+
+    case CHAT_ACTIONS.SET_TOTAL_UNREAD: {
+      const totalUnread =
+        typeof action.payload.totalUnread === 'number'
+          ? Math.max(0, action.payload.totalUnread)
+          : null;
+      return {
+        ...state,
+        totalUnreadOverride: totalUnread,
+      };
+    }
+
     case 'UPDATE_EVENT_TIMESTAMPS': {
       return {
         ...state,
@@ -343,13 +400,22 @@ export const chatActions = {
     const eventType = event.eventType || event.type;  // ✅ support both formats
     const payload = event.data || event.payload;      // ✅ support both formats
     const eventId = event.meta?.event_id || null;
-    const conversationId = payload?.conversation_id || payload?.conversationId;
-    
-    console.log('💬 Chat store handling staff chat event:', { eventType, conversationId, payload });
+    const rawConversationId =
+      payload?.conversation_id !== undefined
+        ? payload?.conversation_id
+        : payload?.conversationId;
+    const parsedConversationId =
+      rawConversationId !== null && rawConversationId !== undefined && rawConversationId !== ''
+        ? parseInt(rawConversationId, 10)
+        : null;
+    const numericConversationId = Number.isNaN(parsedConversationId) ? null : parsedConversationId;
 
-    // ✅ CRITICAL: Validate conversation_id exists
-    if (!conversationId) {
-      console.warn("💬 Chat event missing conversation_id, ignoring:", event);
+    console.log('💬 Chat store handling staff chat event:', { eventType, conversationId: numericConversationId, payload });
+
+    const eventRequiresConversationId = !['unread_updated'].includes(eventType);
+
+    if (eventRequiresConversationId && numericConversationId === null) {
+      console.warn('💬 Chat event missing conversation_id, ignoring:', event);
       return;
     }
 
@@ -358,7 +424,9 @@ export const chatActions = {
     if (eventId) {
       deduplicationKey = eventId;
     } else {
-      deduplicationKey = `staff:${eventType}:${conversationId}:${payload?.message_id || Date.now()}`;
+      const dedupConversationKey = numericConversationId ?? 'global';
+      const dedupMessageKey = payload?.message_id || payload?.messageId || payload?.event_id || Date.now();
+      deduplicationKey = `staff:${eventType}:${dedupConversationKey}:${dedupMessageKey}`;
     }
 
     if (chatActions._processedEventIds.has(deduplicationKey)) {
@@ -385,7 +453,7 @@ export const chatActions = {
           globalChatDispatch({
             type: CHAT_ACTIONS.RECEIVE_MESSAGE,
             payload: {
-              conversationId: parseInt(conversationId),
+              conversationId: numericConversationId,
               message: payload
             }
           });
@@ -398,14 +466,14 @@ export const chatActions = {
             sender: parseInt(payload.sender_id),
             sender_name: payload.sender_name,
             timestamp: new Date().toISOString(),
-            conversation: parseInt(conversationId),
+            conversation: numericConversationId,
             is_fcm_placeholder: true // Mark as placeholder for later replacement
           };
           
           globalChatDispatch({
             type: CHAT_ACTIONS.RECEIVE_MESSAGE,
             payload: {
-              conversationId: parseInt(conversationId),
+              conversationId: numericConversationId,
               message: fcmMessage
             }
           });
@@ -419,7 +487,7 @@ export const chatActions = {
         globalChatDispatch({
           type: CHAT_ACTIONS.MESSAGE_UPDATED,
           payload: {
-            conversationId: parseInt(conversationId),
+            conversationId: numericConversationId,
             messageId: parseInt(payload.message_id),
             updatedFields: payload
           }
@@ -431,7 +499,7 @@ export const chatActions = {
         globalChatDispatch({
           type: CHAT_ACTIONS.MESSAGE_DELETED,
           payload: {
-            conversationId: parseInt(conversationId),
+            conversationId: numericConversationId,
             messageId: parseInt(payload.message_id)
           }
         });
@@ -443,7 +511,7 @@ export const chatActions = {
         globalChatDispatch({
           type: CHAT_ACTIONS.RECEIVE_MESSAGE,
           payload: {
-            conversationId: parseInt(conversationId),
+            conversationId: numericConversationId,
             message: payload
           }
         });
@@ -456,7 +524,7 @@ export const chatActions = {
         globalChatDispatch({
           type: CHAT_ACTIONS.RECEIVE_MESSAGE,
           payload: {
-            conversationId: parseInt(conversationId),
+            conversationId: numericConversationId,
             message: payload
           }
         });
@@ -474,7 +542,7 @@ export const chatActions = {
           globalChatDispatch({
             type: CHAT_ACTIONS.STAFF_CHAT_READ_RECEIPT_RECEIVED,
             payload: {
-              conversationId: parseInt(conversationId),
+              conversationId: numericConversationId,
               staffId: parseInt(payload.staff_id || payload.readByStaffId),
               staffName: payload.staff_name || payload.readByStaffName || 'Unknown Staff',
               messageIds: messageIds.map(id => parseInt(id)),
@@ -487,7 +555,7 @@ export const chatActions = {
         globalChatDispatch({
           type: CHAT_ACTIONS.RECEIVE_READ_RECEIPT,
           payload: {
-            conversationId: parseInt(conversationId),
+            conversationId: numericConversationId,
             readByStaffId: payload.staff_id || payload.readByStaffId,
             messageId: payload.message_id || payload.messageId
           }
@@ -500,7 +568,7 @@ export const chatActions = {
         globalChatDispatch({
           type: CHAT_ACTIONS.MESSAGE_UPDATED,
           payload: {
-            conversationId: parseInt(conversationId),
+            conversationId: numericConversationId,
             messageId: parseInt(payload.message_id),
             updatedFields: { delivery_status: 'delivered' }
           }
@@ -520,7 +588,7 @@ export const chatActions = {
         globalChatDispatch({
           type: CHAT_ACTIONS.MESSAGE_UPDATED,
           payload: {
-            conversationId: parseInt(conversationId),
+            conversationId: numericConversationId,
             messageId: parseInt(payload.message_id),
             updatedFields: { attachments: payload.attachments || [] }
           }
@@ -533,10 +601,37 @@ export const chatActions = {
         globalChatDispatch({
           type: CHAT_ACTIONS.UPDATE_CONVERSATION_METADATA,
           payload: {
-            conversationId: parseInt(conversationId),
+            conversationId: numericConversationId,
             metadata: payload
           }
         });
+        break;
+      }
+
+      case 'unread_updated': {
+        if (typeof payload.total_unread === 'number') {
+          globalChatDispatch({
+            type: CHAT_ACTIONS.SET_TOTAL_UNREAD,
+            payload: { totalUnread: payload.total_unread }
+          });
+        }
+
+        if (numericConversationId !== null) {
+          const unreadCount =
+            typeof payload.unread_count === 'number'
+              ? payload.unread_count
+              : 0;
+
+          globalChatDispatch({
+            type: CHAT_ACTIONS.UPDATE_CONVERSATION_UNREAD,
+            payload: {
+              conversationId: numericConversationId,
+              unreadCount,
+              metadata: { updatedAt: payload.updated_at }
+            }
+          });
+        }
+
         break;
       }
 

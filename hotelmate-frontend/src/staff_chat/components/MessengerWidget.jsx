@@ -102,9 +102,14 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   // Also get direct store data for comparison
   const storeConversations = Object.values(chatState.conversationsById || {});
   const storeTotalUnread = storeConversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+  const overrideTotalUnread =
+    typeof chatState.totalUnreadOverride === 'number'
+      ? chatState.totalUnreadOverride
+      : 0;
+  const contextTotalUnread = typeof totalUnread === 'number' ? totalUnread : 0;
   
   // Use the higher unread count between context and store to ensure real-time updates
-  const actualTotalUnread = Math.max(totalUnread, storeTotalUnread);
+  const actualTotalUnread = Math.max(contextTotalUnread, storeTotalUnread, overrideTotalUnread);
   
   const [searchParams, setSearchParams] = useSearchParams();
   const [internalExpanded, setInternalExpanded] = useState(false);

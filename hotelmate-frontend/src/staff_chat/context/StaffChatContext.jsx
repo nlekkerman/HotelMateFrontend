@@ -168,7 +168,15 @@ export const StaffChatProvider = ({ children }) => {
     ? chatState.conversationsById[chatState.activeConversationId] 
     : null;
   const messagesForActiveConversation = activeConversation ? activeConversation.messages : [];
-  const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+  const derivedTotalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+  const overrideTotalUnread =
+    typeof chatState.totalUnreadOverride === 'number'
+      ? chatState.totalUnreadOverride
+      : null;
+  const totalUnread =
+    overrideTotalUnread !== null
+      ? Math.max(overrideTotalUnread, derivedTotalUnread)
+      : derivedTotalUnread;
   
   // Subscribe to individual conversation channels when conversations change
   const subscriptionsRef = useRef(new Map());
