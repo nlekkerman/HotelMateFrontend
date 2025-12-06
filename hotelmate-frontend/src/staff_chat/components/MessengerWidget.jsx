@@ -20,7 +20,6 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   const hotelSlug = user?.hotel_slug;
   const { registerOpenChatHandler } = useMessenger();
   const { conversations, totalUnread, markConversationRead } = useStaffChat();
-  console.log('🎯 [MessengerWidget] totalUnread from context:', totalUnread);
   const [searchParams, setSearchParams] = useSearchParams();
   const [internalExpanded, setInternalExpanded] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
@@ -74,11 +73,6 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
 
   // Total unread count is now provided directly by useStaffChat hook from chatStore
   // No need for manual subscription - it's reactive to store changes
-  
-  // Debug: Track totalUnread changes
-  useEffect(() => {
-    console.log('🔄 [MessengerWidget] totalUnread changed to:', totalUnread);
-  }, [totalUnread]);
 
   const handleOpenChat = async (conversation, staff) => {
     // console.log('🎯 handleOpenChat called with:', { conversation, staff });

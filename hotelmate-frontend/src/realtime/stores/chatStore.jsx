@@ -30,7 +30,7 @@ function chatReducer(state, action) {
           title: conv.title || existing.title || '',
           participants: conv.participants || existing.participants || [],
           messages: existing.messages || [],                        // keep existing messages
-          unreadCount: conv.unread_count ?? existing.unreadCount ?? 0,
+          unread_count: conv.unread_count ?? existing.unread_count ?? 0,
           lastMessage: conv.last_message || existing.lastMessage || null,
           updatedAt: conv.updated_at || existing.updatedAt || new Date().toISOString(),
         };
@@ -83,7 +83,7 @@ function chatReducer(state, action) {
           title: message.conversation_title || message.title || '',
           participants: message.participants || [],
           messages: [],
-          unreadCount: 0,
+          unread_count: 0,
           lastMessage: null,
           updatedAt: message.timestamp || new Date().toISOString(),
         };
@@ -99,7 +99,7 @@ function chatReducer(state, action) {
 
       // Update unread count if not active conversation
       const isActive = state.activeConversationId === conversationId;
-      const newUnreadCount = isActive ? 0 : conversation.unreadCount + 1;
+      const newUnreadCount = isActive ? 0 : (conversation.unread_count || 0) + 1;
 
       return {
         ...state,
@@ -108,7 +108,7 @@ function chatReducer(state, action) {
           [conversationId]: {
             ...conversation,
             messages: updatedMessages,
-            unreadCount: newUnreadCount,
+            unread_count: newUnreadCount,
             lastMessage: {
               message: message.message || '',
               has_attachments: message.attachments && message.attachments.length > 0,
@@ -174,7 +174,7 @@ function chatReducer(state, action) {
           ...state.conversationsById,
           [conversationId]: {
             ...conversation,
-            unreadCount: 0
+            unread_count: 0
           }
         }
       };
@@ -195,7 +195,7 @@ function chatReducer(state, action) {
             ...state.conversationsById,
             [conversationId]: {
               ...conversation,
-              unreadCount: 0
+              unread_count: 0
             }
           }
         };
