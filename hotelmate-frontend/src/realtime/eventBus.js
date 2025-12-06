@@ -17,442 +17,57 @@ import { bookingActions } from './stores/bookingStore.jsx';
 export function handleIncomingRealtimeEvent({ source, channel, eventName, payload }) {
   try {
     console.log('📡 Incoming realtime event:', { source, channel, eventName, payload });
-    
-    // ✅ NEW: Check if payload is already in normalized format from backend
-    if (payload && typeof payload === 'object' && payload.category && payload.type && payload.payload) {
-      // Backend already sending normalized events - use directly
-      console.log('📦 Using pre-normalized event from backend:', payload);
-      routeToDomainStores(payload);
-      maybeAddToNotificationCenter(payload);
-      return;
+
+    // 1️⃣ IGNORE PUSHER SYSTEM EVENTS (like pusher:subscription_succeeded)
+    if (source === 'pusher' && eventName?.startsWith('pusher:')) {
+      if (!import.meta.env.PROD) {
+        console.log('🔄 [eventBus] Skipping Pusher system event:', eventName);
+      }
+      return; // ⬅️ nothing else, no warning, no routing
     }
-    
-    // Legacy event handling for backward compatibility
-    const normalized = normalizeEvent({ source, channel, eventName, payload });
-    
-    if (normalized) {
+
+    // 2️⃣ NEW FORMAT (backend-normalized)
+    if (
+      payload &&
+      typeof payload === 'object' &&
+      payload.category &&
+      (payload.type || payload.eventType) &&
+      (payload.payload || payload.data)
+    ) {
+      const normalized = {
+        category: payload.category,
+        type: payload.type || payload.eventType,
+        eventType: payload.eventType || payload.type,
+        payload: payload.payload || payload.data,
+        data: payload.data || payload.payload,
+        source: payload.source || source,
+        timestamp: payload.timestamp || new Date().toISOString(),
+        meta: payload.meta || { channel, eventName },
+      };
+
       routeToDomainStores(normalized);
       maybeAddToNotificationCenter(normalized);
+      return;
     }
+
+    // 3️⃣ (Optional) if you *still* want legacy support, call normalizePusherEvent/normalizeFCMEvent here.
+    // Right now you just warn:
+
+    console.warn('⚠️ Received non-normalized event - backend should send normalized format:', {
+      source,
+      channel,
+      eventName,
+      payload,
+    });
   } catch (error) {
     console.error('❌ Error handling realtime event:', error, { source, channel, eventName, payload });
   }
 }
 
-/**
- * Normalize events from different sources into a common format
- * @param {Object} params - Event parameters
- * @returns {Object} Normalized event object
- */
-function normalizeEvent({ source, channel, eventName, payload }) {
-  const timestamp = new Date().toISOString();
-  
-  // Handle FCM events
-  if (source === 'fcm') {
-    return normalizeFCMEvent(payload, timestamp);
-  }
-  
-  // Handle Pusher events by channel and event type
-  if (source === 'pusher' && channel && eventName) {
-    return normalizePusherEvent(channel, eventName, payload, timestamp);
-  }
-  
-  // Default fallback for unknown events
-  return {
-    category: 'system',
-    eventType: 'unknown_event',
-    data: payload,
-    timestamp,
-    source,
-    title: 'Unknown Event',
-    message: `Received ${source} event: ${eventName || 'unknown'}`,
-    level: 'info'
-  };
-}
-
-/**
- * Normalize FCM payload to standard event format
- */
-function normalizeFCMEvent(payload, timestamp) {
-  // Extract notification data from FCM payload
-  const notification = payload.notification || {};
-  const data = payload.data || {};
-  
-  console.log('🔥 FCM payload normalization:', { notification, data });
-  
-  // Try to determine category from FCM data
-  let category = 'system';
-  let eventType = 'fcm_message';
-  
-  // Enhanced detection for staff chat messages
-  if (data.type === 'chat' || 
-      data.category === 'staff_chat' || 
-      data.action === 'new_message' ||
-      data.conversation_id ||
-      notification.title?.includes('New Message') ||
-      notification.body?.includes('sent you a message')) {
-    category = 'staff_chat';
-    eventType = 'message_created';
-    console.log('🔥 Detected FCM as staff_chat message');
-  } else if (data.type === 'attendance' || data.category === 'attendance') {
-    category = 'attendance';
-    eventType = 'attendance_notification';
-  } else if (data.type === 'room_service') {
-    category = 'room_service';
-    eventType = 'order_notification';
-  }
-  
-  return {
-    category,
-    eventType,
-    data: { ...data, notification },
-    timestamp,
-    source: 'fcm',
-    title: notification.title || 'Notification',
-    message: notification.body || 'You have a new notification',
-    level: 'info'
-  };
-}
-
-/**
- * Normalize Pusher events based on channel and event patterns
- */
-function normalizePusherEvent(channel, eventName, payload, timestamp) {
-  // Attendance events
-  if (channel.includes('hotel-') && (eventName === 'clock-status-updated' || eventName === 'clock-status-changed' || eventName === 'attendance_update')) {
-    return {
-      category: 'attendance',
-      eventType: eventName,
-      data: payload,
-      timestamp,
-      source: 'pusher',
-      title: 'Attendance Update',
-      message: `Staff ${eventName.replace('-', ' ')}`,
-      level: 'info'
-    };
-  }
-  
-  // Personal attendance events
-  if (channel.includes('attendance-hotel-') && channel.includes('-staff-')) {
-    return {
-      category: 'attendance',
-      eventType: eventName.includes('approved') ? 'timesheet-approved' : 
-                eventName.includes('rejected') ? 'timesheet-rejected' : 
-                'personal-attendance-update',
-      data: payload,
-      timestamp,
-      source: 'pusher',
-      title: 'Attendance Status',
-      message: `Your timesheet was ${eventName.includes('approved') ? 'approved' : 'updated'}`,
-      level: eventName.includes('approved') ? 'success' : 'info'
-    };
-  }
-
-  // Additional attendance events from useAttendanceRealtime patterns
-  if (channel.includes('hotel-') && (
-    eventName.includes('attendance-') || 
-    eventName.includes('clocklog-') ||
-    eventName === 'clock-status-changed'
-  )) {
-    let normalizedEventType = eventName;
-    
-    // Map specific event types to normalized ones
-    if (eventName === 'clocklog-approved') normalizedEventType = 'log-approved';
-    else if (eventName === 'clocklog-rejected') normalizedEventType = 'log-rejected';
-    else if (eventName === 'clocklog-created') normalizedEventType = 'log-created';
-    else if (eventName === 'clocklog-updated') normalizedEventType = 'log-updated';
-    else if (eventName === 'attendance-unrostered-request') normalizedEventType = 'unrostered-request';
-    else if (eventName === 'attendance-break-warning') normalizedEventType = 'break-warning';
-    else if (eventName === 'attendance-overtime-warning') normalizedEventType = 'overtime-warning';
-    else if (eventName === 'attendance-hard-limit-warning') normalizedEventType = 'hard-limit';
-
-    return {
-      category: 'attendance',
-      eventType: normalizedEventType,
-      data: payload,
-      timestamp,
-      source: 'pusher',
-      title: 'Attendance Update',
-      message: `Staff ${eventName.replace('-', ' ')}`,
-      level: 'info'
-    };
-  }
-  
-  // Staff chat events - improved channel detection for staff chat
-  if (channel.includes('staff-chat-hotel-') || 
-      (channel.includes('-staff-') && channel.includes('-notifications')) ||
-      (channel.includes('-staff-conversation-')) ||
-      (channel.includes('.staff-chat.'))) {
-    
-    // Extract conversation_id from channel patterns for all staff chat events
-    let extractedConversationId = null;
-    
-    // Try different channel patterns to extract conversation ID
-    const channelPatterns = [
-      /\.staff-chat\.(\d+)$/,                    // hotel-{slug}.staff-chat.{conversationId}
-      /-staff-conversation-(\d+)-/,             // hotel-{slug}-staff-conversation-{conversationId}-
-      /staff-chat-hotel-[^-]+-conversation-(\d+)/, // staff-chat-hotel-{slug}-conversation-{conversationId}
-      /-staff-(\d+)-notifications$/              // hotel-{slug}-staff-{conversationId}-notifications
-    ];
-    
-    for (const pattern of channelPatterns) {
-      const match = channel.match(pattern);
-      if (match) {
-        extractedConversationId = parseInt(match[1]);
-        break;
-      }
-    }
-    
-    // Ensure conversation_id is in payload
-    if (extractedConversationId && !payload.conversation_id && !payload.conversationId) {
-      payload.conversation_id = extractedConversationId;
-    }
-    
-    // Normalize event names to match chatStore expectations
-    let normalizedEventType = eventName;
-    if (eventName === 'new-message' || eventName === 'message') {
-      normalizedEventType = 'new_message';
-    } else if (eventName === 'message-created' || eventName === 'realtime_staff_chat_message_created') {
-      normalizedEventType = 'message_created';
-    } else if (eventName === 'message-updated' || eventName === 'message-edited' || eventName === 'realtime_staff_chat_message_edited') {
-      normalizedEventType = 'message_edited';
-    } else if (eventName === 'message-deleted' || eventName === 'realtime_staff_chat_message_deleted') {
-      normalizedEventType = 'message_deleted';
-    } else if (eventName === 'read-receipt' || eventName === 'messages-read' || eventName === 'message-read' || eventName === 'realtime_staff_chat_message_read') {
-      normalizedEventType = 'read_receipt';
-    } else if (eventName === 'message-delivered' || eventName === 'realtime_staff_chat_message_delivered') {
-      normalizedEventType = 'message_delivered';
-    } else if (eventName === 'conversation-updated') {
-      normalizedEventType = 'conversation_update';
-    } else if (eventName === 'typing' || eventName === 'realtime_staff_chat_typing_indicator') {
-      normalizedEventType = 'typing_indicator';
-    } else if (eventName === 'realtime_staff_chat_attachment_uploaded') {
-      normalizedEventType = 'attachment_uploaded';
-    } else if (eventName === 'realtime_staff_chat_attachment_deleted') {
-      normalizedEventType = 'attachment_deleted';
-    } else if (eventName === 'realtime_staff_chat_mention') {
-      normalizedEventType = 'staff_mentioned';
-    }
-    
-    return {
-      category: 'staff_chat',
-      eventType: normalizedEventType,
-      data: payload,
-      timestamp,
-      source: 'pusher',
-      title: 'Staff Chat',
-      message: eventName === 'new-message' ? 'New message received' : `Message ${eventName}`,
-      level: 'info'
-    };
-  }
-  
-  // Room Service Events - Enhanced to handle multiple channel patterns
-  if (channel.includes('room-service-hotel-') ||
-      (channel.includes('-staff-') && (
-        channel.includes('-kitchen') || 
-        channel.includes('-food-and-beverage') ||
-        channel.includes('-porter') ||
-        channel.includes('-room_service_waiter')
-      )) ||
-      (channel.includes('kitchen-hotel-')) ||
-      (channel.includes('breakfast-hotel-'))) {
-    
-    // Normalize room service event types
-    let normalizedEventType = eventName;
-    if (eventName === 'new-room-service-order') {
-      normalizedEventType = 'order_created';
-    } else if (eventName === 'new-breakfast-order') {
-      normalizedEventType = 'order_created';
-    } else if (eventName === 'order-status-update') {
-      normalizedEventType = 'order_status_changed';
-    } else if (eventName === 'order-accepted') {
-      normalizedEventType = 'order_status_changed';
-    } else if (eventName === 'order-preparing') {
-      normalizedEventType = 'order_status_changed';
-    } else if (eventName === 'order-ready') {
-      normalizedEventType = 'order_status_changed';
-    } else if (eventName === 'order-delivered') {
-      normalizedEventType = 'order_status_changed';
-    } else if (eventName === 'order-cancelled') {
-      normalizedEventType = 'order_status_changed';
-    }
-    
-    return {
-      category: 'room_service',
-      eventType: normalizedEventType,
-      data: payload,
-      timestamp,
-      source: 'pusher',
-      title: 'Room Service',
-      message: `Order ${eventName.replace('-', ' ')}`,
-      level: eventName.includes('completed') || eventName.includes('delivered') ? 'success' : 'info'
-    };
-  }
-  
-  // Guest chat events - Enhanced detection based on actual channel patterns
-  if (channel.includes('-room-') && channel.includes('-chat') ||
-      channel.includes('-conversation-') && channel.includes('-chat') ||
-      channel.includes('-room-') && channel.includes('-deletions')) {
-    
-    // Extract room number and conversation ID from channel name
-    let hotelSlug = null;
-    let conversationId = null;
-    let roomNumber = null;
-    
-    // Parse hotel slug
-    const hotelMatch = channel.match(/^([^-]+)-/);
-    if (hotelMatch) {
-      hotelSlug = hotelMatch[1];
-    }
-    
-    // Parse room channel: ${hotelSlug}-room-${roomNumber}-chat
-    const roomMatch = channel.match(/-room-(\d+)-chat$/);
-    if (roomMatch) {
-      roomNumber = roomMatch[1];
-    }
-    
-    // Parse conversation channel: ${hotelSlug}-conversation-${conversationId}-chat
-    const convMatch = channel.match(/-conversation-(\d+)-chat$/);
-    if (convMatch) {
-      conversationId = parseInt(convMatch[1]);
-    }
-    
-    // Parse deletion channel: ${hotelSlug}-room-${roomNumber}-deletions
-    const deletionMatch = channel.match(/-room-(\d+)-deletions$/);
-    if (deletionMatch) {
-      roomNumber = deletionMatch[1];
-    }
-    
-    // Normalize event types based on actual backend event names
-    let normalizedEventType = eventName;
-    let messageId = null;
-    
-    if (eventName === 'new-staff-message' || eventName === 'staff-message-created') {
-      normalizedEventType = 'staff_message_created';
-      messageId = payload?.id || payload?.message_id;
-    } else if (eventName === 'new-message' || eventName === 'guest-message-created') {
-      normalizedEventType = 'guest_message_created';
-      messageId = payload?.id || payload?.message_id;
-    } else if (eventName === 'messages-read-by-staff' || eventName === 'guest-message-read') {
-      normalizedEventType = 'message_read';
-      messageId = payload?.message_id || payload?.id;
-    } else if (eventName === 'staff-message-read') {
-      normalizedEventType = 'message_read';
-      messageId = payload?.message_id || payload?.id;
-    } else if (eventName === 'staff-assigned') {
-      normalizedEventType = 'conversation_updated';
-    } else if (eventName === 'message-deleted' || eventName === 'message-removed') {
-      normalizedEventType = 'message_deleted';
-      messageId = payload?.message_id || payload?.id;
-    } else if (eventName === 'content-deleted') {
-      normalizedEventType = 'message_content_deleted';
-      messageId = payload?.message_id || payload?.id;
-    } else if (eventName === 'attachment-deleted') {
-      normalizedEventType = 'message_attachment_deleted';
-      messageId = payload?.message_id || payload?.id;
-    }
-    
-    return {
-      category: 'guest_chat',
-      eventType: normalizedEventType,
-      hotelSlug,
-      conversationId: conversationId || payload?.conversation_id,
-      messageId: messageId,
-      roomNumber,
-      data: payload,
-      timestamp,
-      source: 'pusher',
-      rawEvent: { channelName: channel, eventName, rawData: payload },
-      title: 'Guest Chat',
-      message: eventName === 'new-staff-message' ? 'New staff message' : 
-               eventName === 'new-message' ? 'New guest message' : 
-               `Guest chat ${eventName.replace('-', ' ')}`,
-      level: 'info'
-    };
-  }
-  
-  // Gallery events
-  if (channel.includes('gallery-hotel-')) {
-    return {
-      category: 'gallery',
-      eventType: eventName,
-      data: payload,
-      timestamp,
-      source: 'pusher',
-      title: 'Gallery Update',
-      message: `Gallery ${eventName.replace('-', ' ')}`,
-      level: 'info'
-    };
-  }
-  
-  // Booking Events - Enhanced to handle multiple channel patterns  
-  if (channel.includes('booking-hotel-') ||
-      channel.includes('restaurant-booking-hotel-') ||
-      (channel.includes('-staff-') && (
-        channel.includes('-food-and-beverage') ||
-        channel.includes('-receptionist') ||
-        channel.includes('-manager') ||
-        channel.includes('-food_and_beverage_manager')
-      ))) {
-    
-    // Normalize booking event types
-    let normalizedEventType = eventName;
-    if (eventName === 'new-dinner-booking') {
-      normalizedEventType = 'booking_created';
-    } else if (eventName === 'new-booking') {
-      normalizedEventType = 'booking_created';
-    } else if (eventName === 'booking-confirmed') {
-      normalizedEventType = 'booking_updated';
-    } else if (eventName === 'booking-cancelled') {
-      normalizedEventType = 'booking_cancelled';
-    } else if (eventName === 'table-assigned') {
-      normalizedEventType = 'booking_seated';
-    } else if (eventName === 'table-changed') {
-      normalizedEventType = 'booking_table_changed';
-    }
-    
-    return {
-      category: 'booking',
-      eventType: normalizedEventType,
-      data: payload,
-      timestamp,
-      source: 'pusher',
-      title: 'Booking Update',
-      message: `Booking ${eventName.replace('-', ' ')}`,
-      level: eventName.includes('confirmed') ? 'success' : 'info'
-    };
-  }
-  
-  // Hotel offers (general hotel channel)
-  if (channel.includes('hotel-') && (eventName.includes('offer-') || eventName === 'offer-image-updated')) {
-    return {
-      category: 'offer',
-      eventType: eventName,
-      data: payload,
-      timestamp,
-      source: 'pusher',
-      title: 'Hotel Offer',
-      message: `Offer ${eventName.replace('offer-', '').replace('-', ' ')}`,
-      level: 'info'
-    };
-  }
-  
-  // Default fallback
-  return {
-    category: 'system',
-    eventType: eventName,
-    data: payload,
-    timestamp,
-    source: 'pusher',
-    title: 'System Update',
-    message: `${eventName.replace('-', ' ')}`,
-    level: 'info'
-  };
-}
 
 /**
  * Route events to appropriate domain stores
- * @param {Object} event - Event object (either new format with {category, type, payload, meta} or legacy)
+ * @param {Object} event - Event object with {category, type, payload, meta}
  */
 function routeToDomainStores(event) {
   // Handle new normalized format from backend
@@ -466,7 +81,14 @@ function routeToDomainStores(event) {
         attendanceActions.handleEvent(event);
         break;
       case "staff_chat":
-        chatActions.handleEvent(event);
+        // Filter out Pusher system events before processing
+        if (event.type?.startsWith('pusher:') || event.eventType?.startsWith('pusher:')) {
+          if (!import.meta.env.PROD) {
+            console.log('🔄 [eventBus] Skipping Pusher system event:', event.type || event.eventType);
+          }
+        } else {
+          chatActions.handleEvent(event);
+        }
         break;
       case "guest_chat":
         guestChatActions.handleEvent(event);
@@ -486,39 +108,8 @@ function routeToDomainStores(event) {
     return;
   }
 
-  // Legacy format handling (for backward compatibility)
-  if (event.eventType) {
-    if (!import.meta.env.PROD) {
-      console.log('🚏 Routing LEGACY format event:', event.category, event.eventType);
-    }
-
-    switch (event.category) {
-      case "attendance":
-        attendanceActions.handleEvent(event);
-        break;
-      case "staff_chat":
-        chatActions.handleEvent(event);
-        break;
-      case "guest_chat":
-        guestChatActions.handleEvent(event);
-        break;
-      case "room_service":
-        roomServiceActions.handleEvent(event);
-        break;
-      case "booking":
-        bookingActions.handleEvent(event);
-        break;
-      case "system":
-        // Handle system events (FCM notifications, etc.)
-        console.log('📢 System event received:', event.eventType, event.data);
-        // Add to notification center for user awareness
-        maybeAddToNotificationCenter(event);
-        break;
-      default:
-        console.warn('🚫 Unhandled event category:', event.category, event);
-        break;
-    }
-  }
+  // All events should now be in NEW format with event.type property
+  console.warn('⚠️ Event missing type property - should be pre-normalized:', event);
 }
 
 /**

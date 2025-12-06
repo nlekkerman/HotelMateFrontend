@@ -541,7 +541,12 @@ export const chatActions = {
       }
 
       default:
-        console.log('💬 Unknown staff chat event type:', eventType, event);
+        // Filter out Pusher system events (pusher:subscription_succeeded, etc.)
+        if (eventType?.startsWith('pusher:')) {
+          console.log('🔄 [chatStore] Pusher system event:', eventType);
+        } else {
+          console.log('💬 Unknown staff chat event type:', eventType, event);
+        }
     }
   }
 };

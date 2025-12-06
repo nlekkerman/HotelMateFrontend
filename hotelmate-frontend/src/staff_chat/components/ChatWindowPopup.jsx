@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { fetchMessages, sendMessage, uploadFiles, markConversationAsRead } from '../services/staffChatApi';
 import { useStaffChat } from '../context/StaffChatContext';
@@ -53,28 +53,44 @@ const ChatWindowPopup = ({
   // Debug: Log current user info
   // Current user data loaded
   
+  // ✅ UNIFIED: Use chatStore for messages (single source of truth)
+  const chatState = useChatState();
+  const chatDispatch = useChatDispatch();
+  const messages = chatState.conversationsById[conversation?.id]?.messages || [];
+  const storeConversation = conversation?.id ? chatState.conversationsById[conversation.id] : null;
+  const conversationData = useMemo(() => {
+    if (!conversation && !storeConversation) {
+      return {};
+    }
+    const base = conversation || {};
+    const store = storeConversation || {};
+    return {
+      ...base,
+      ...store,
+      participants: store.participants || base.participants || [],
+      title: store.title ?? base.title,
+      is_group: store.is_group ?? base.is_group,
+    };
+  }, [conversation, storeConversation]);
+  const participants = conversationData.participants || [];
+
   // For 1-on-1 chats, if staff prop is not provided or is the current user,
   // find the other participant from the conversation
   let displayStaff = staff;
-  if (!conversation?.is_group && conversation?.participants) {
+  if (!conversationData?.is_group && participants.length > 0) {
     // Find the participant who is NOT the current user
-    const otherParticipant = conversation.participants.find(
-      p => p.id !== currentUserId
+    const otherParticipant = participants.find(
+      p => Number(p.id) !== Number(currentUserId)
     );
     
     // If we found a different participant and either:
     // 1. No staff prop was provided, OR
     // 2. The staff prop is actually the current user (wrong!)
-    if (otherParticipant && (!staff || staff.id === currentUserId)) {
+    if (otherParticipant && (!staff || Number(staff.id) === Number(currentUserId))) {
       // console.log('🔄 Correcting staff display - using other participant:', otherParticipant.full_name);
       displayStaff = otherParticipant;
     }
   }
-
-  // ✅ UNIFIED: Use chatStore for messages (single source of truth)
-  const chatState = useChatState();
-  const chatDispatch = useChatDispatch();
-  const messages = chatState.conversationsById[conversation?.id]?.messages || [];
   
   // Initialize conversation messages if needed
   useEffect(() => {
@@ -607,9 +623,9 @@ const ChatWindowPopup = ({
           
           <div className="chat-window-popup__staff-info">
             <h4 className="chat-window-popup__staff-name">
-              {conversation?.title || displayStaff?.full_name || 'Chat'}
+              {conversationData?.title || displayStaff?.full_name || 'Chat'}
             </h4>
-            {conversation?.is_group ? (
+            {conversationData?.is_group ? (
               <p className="chat-window-popup__staff-role">
                 <button
                   onClick={(e) => {
@@ -619,7 +635,7 @@ const ChatWindowPopup = ({
                   className="chat-window-popup__participants-btn"
                 >
                   <i className="bi bi-people-fill me-1"></i>
-                  {conversation.participants?.length || 0} participants
+                  {participants.length || 0} participants
                 </button>
               </p>
             ) : (
@@ -867,10 +883,10 @@ const ChatWindowPopup = ({
       <ParticipantsModal
         show={showParticipantsModal}
         onHide={() => setShowParticipantsModal(false)}
-        participants={conversation?.participants || []}
+        participants={participants}
         currentUserId={currentUserId}
-        groupTitle={conversation?.title}
-        conversationId={conversation?.id}
+        groupTitle={conversationData?.title}
+        conversationId={conversationData?.id}
         hotelSlug={hotelSlug}
         canManageParticipants={true}
         onParticipantRemoved={(participantId) => {

@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useMessenger } from '../context/MessengerContext';
 import { useStaffChat } from '../context/StaffChatContext';
+import { useChatState } from '@/realtime/stores/chatStore.jsx';
 import ConversationsList from './ConversationsList';
 import ChatWindowPopup from './ChatWindowPopup';
 import GroupChatModal from './GroupChatModal';
@@ -16,12 +17,113 @@ import '../staffChat.css';
  * Expands to show conversations list and allows opening multiple chat windows
  */
 const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpanded, onExpandChange }) => {
+  console.log('🎯 [MessengerWidget] COMPONENT ENTRY - render attempt');
+  
   const { user } = useAuth();
-  const hotelSlug = user?.hotel_slug;
+  
+  console.log('👤 [MessengerWidget] User data:', {
+    userId: user?.id || user?.staff_id,
+    hotelSlug: user?.hotel_slug,
+    userObject: user
+  });
+  
+  // Get hotelSlug from localStorage as fallback - should always be available
+  const getHotelSlug = () => {
+  // 1) Primary source: logged-in user
+  if (user?.hotel_slug) return user.hotel_slug;
+  if (user?.hotel?.slug) return user.hotel.slug;
+
+  // 2) LocalStorage: user object
+  try {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const parsedUser = JSON.parse(userData);
+      if (parsedUser?.hotel_slug) return parsedUser.hotel_slug;
+      if (parsedUser?.hotel?.slug) return parsedUser.hotel.slug;
+    }
+  } catch (error) {
+    console.error('Error parsing user from localStorage:', error);
+  }
+
+  // 3) LocalStorage: standalone key
+  try {
+    const directHotelSlug = localStorage.getItem('hotelSlug');
+    if (directHotelSlug) return directHotelSlug;
+  } catch (error) {
+    console.error('Error reading hotelSlug from localStorage:', error);
+  }
+
+  // 4) URL-based slug (works for numeric IDs too)
+  try {
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+
+    // Known non-hotel prefixes we want to ignore
+    const IGNORE = new Set([
+      'login',
+      'logout',
+      'register',
+      'forgot-password',
+      'reset-password',
+      'no-internet',
+      'public',
+      'booking',
+      'games',
+      'stock_tracker',
+      'hotel',
+      'staff',
+      'chat'
+    ]);
+
+    const candidate = pathParts.find(part => !IGNORE.has(part));
+    if (candidate) return candidate;
+  } catch (error) {
+    console.error('Error extracting hotelSlug from URL:', error);
+  }
+
+  // ❌ No fallback slug – we simply don't know it
+  console.warn('[MessengerWidget] Could not resolve hotelSlug – widget will not render.');
+  return null;
+};
+
+  
+  const hotelSlug = getHotelSlug();
+  console.log('🏨 [MessengerWidget] HotelSlug resolved:', hotelSlug, 'from user:', user?.hotel_slug, 'localStorage check done');
+  
   const { registerOpenChatHandler } = useMessenger();
-  const { conversations, totalUnread, markConversationRead } = useStaffChat();
+  
+  // Use both StaffChatContext AND direct chatStore for real-time updates
+  const chatState = useChatState();
+  const { 
+    conversations = [], 
+    totalUnread = 0, 
+    markConversationRead = () => {} 
+  } = useStaffChat();
+  
+  // Also get direct store data for comparison
+  const storeConversations = Object.values(chatState.conversationsById || {});
+  const storeTotalUnread = storeConversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+  
+  // Use the higher unread count between context and store to ensure real-time updates
+  const actualTotalUnread = Math.max(totalUnread, storeTotalUnread);
+  
   const [searchParams, setSearchParams] = useSearchParams();
   const [internalExpanded, setInternalExpanded] = useState(false);
+  
+  // Debug logging for unread count changes - add more detail
+  useEffect(() => {
+    console.log('🔄 [MessengerWidget] Unread count updated:', {
+      contextTotalUnread: totalUnread,
+      storeTotalUnread: storeTotalUnread,
+      actualTotalUnread,
+      conversationsLength: conversations.length,
+      storeConversationsLength: storeConversations.length,
+      conversationsWithUnread: conversations.filter(c => (c.unread_count || 0) > 0),
+      storeConversationsWithUnread: storeConversations.filter(c => (c.unread_count || 0) > 0),
+      timestamp: new Date().toISOString()
+    });
+  }, [totalUnread, storeTotalUnread, actualTotalUnread, conversations, storeConversations]);
+  
+  // Debug logging removed to clean up console
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [openChats, setOpenChats] = useState(() => {
     // Restore open chats from localStorage on mount
@@ -165,7 +267,9 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
     }
   }, [searchParams, conversations, handleOpenChat, setSearchParams]);
 
-  if (!hotelSlug) return null;
+  console.log('🏨 [MessengerWidget] Always rendering - hotelSlug:', hotelSlug, 'user:', user?.id);
+  
+  // Now we always have a hotelSlug, so always render the full widget
 
   const toggleWidget = () => {
     const newExpandedState = !isExpanded;
@@ -245,7 +349,7 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
           {/* Header - Always visible, acts as toggle */}
           <div 
             className={`messenger-widget__header text-white ${
-              totalUnread > 0 ? 'messenger-widget__header--unread' : 'main-bg'
+              actualTotalUnread > 0 ? 'messenger-widget__header--unread' : 'main-bg'
             }`}
             onClick={toggleWidget}
             style={{ cursor: 'pointer' }}
@@ -260,11 +364,11 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
                 <circle cx="8" cy="10" r="1.5" fill="currentColor" />
                 <circle cx="16" cy="10" r="1.5" fill="currentColor" />
               </svg>
-              Staff Chat
+              Staff Chat ({actualTotalUnread})
               {/* Unread Badge Counter */}
-              {totalUnread > 0 && (
+              {actualTotalUnread > 0 && (
                 <span className="messenger-widget__badge">
-                  {totalUnread > 99 ? '99+' : totalUnread}
+                  {actualTotalUnread > 99 ? '99+' : actualTotalUnread}
                 </span>
               )}
             </h3>

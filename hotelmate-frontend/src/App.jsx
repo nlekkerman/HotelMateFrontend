@@ -948,9 +948,6 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
           </div>
         </div>
       </div>
-
-      {/* Messenger Widget */}
-      { <MessengerWidget position="bottom-right" />}
     </>
   );
 }
@@ -988,6 +985,7 @@ export default function App() {
                                 <BookingNotificationProvider>
                                   <RoomServiceNotificationProvider>
                                     <NetworkHandler />
+                                    <MessengerWidget position="bottom-right" />
                                     <AppLayout
                                       collapsed={collapsed}
                                       setCollapsed={setCollapsed}

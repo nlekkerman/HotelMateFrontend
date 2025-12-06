@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useChatState, useChatDispatch } from "@/realtime/stores/chatStore.jsx";
 import { CHAT_ACTIONS } from "@/realtime/stores/chatActions.js";
 import { showNotification, canShowNotifications } from "@/utils/notificationUtils";
+import { subscribeToStaffChatConversation } from "@/realtime/channelRegistry";
 
 const StaffChatContext = createContext(undefined);
 
@@ -168,6 +169,48 @@ export const StaffChatProvider = ({ children }) => {
     : null;
   const messagesForActiveConversation = activeConversation ? activeConversation.messages : [];
   const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+  
+  // Subscribe to individual conversation channels when conversations change
+  const subscriptionsRef = useRef(new Map());
+  
+  useEffect(() => {
+    if (!hotelSlug || conversations.length === 0) return;
+    
+    // Subscribe to new conversations
+    conversations.forEach(conversation => {
+      if (!subscriptionsRef.current.has(conversation.id)) {
+        console.log('🔗 [StaffChatContext] Subscribing to conversation:', conversation.id);
+        const cleanup = subscribeToStaffChatConversation(hotelSlug, conversation.id);
+        subscriptionsRef.current.set(conversation.id, cleanup);
+      }
+    });
+    
+    // Cleanup removed conversations
+    const currentConversationIds = new Set(conversations.map(c => c.id));
+    subscriptionsRef.current.forEach((cleanup, conversationId) => {
+      if (!currentConversationIds.has(conversationId)) {
+        console.log('🧹 [StaffChatContext] Unsubscribing from conversation:', conversationId);
+        cleanup();
+        subscriptionsRef.current.delete(conversationId);
+      }
+    });
+    
+    // Cleanup all subscriptions on unmount
+    return () => {
+      console.log('🧹 [StaffChatContext] Cleaning up all conversation subscriptions');
+      subscriptionsRef.current.forEach(cleanup => cleanup());
+      subscriptionsRef.current.clear();
+    };
+  }, [conversations, hotelSlug]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔄 [StaffChatContext] Store update:', {
+      conversationsCount: conversations.length,
+      totalUnread,
+      unreadBreakdown: conversations.map(c => ({ id: c.id, unread: c.unread_count }))
+    });
+  }, [conversations, totalUnread]);
 
   return (
     <StaffChatContext.Provider value={{
