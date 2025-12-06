@@ -167,7 +167,10 @@ export const StaffChatProvider = ({ children }) => {
     ? chatState.conversationsById[chatState.activeConversationId] 
     : null;
   const messagesForActiveConversation = activeConversation ? activeConversation.messages : [];
-  const totalUnread = conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+  const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || c.unreadCount || 0), 0);
+  
+  // Debug: Log totalUnread changes
+  console.log('🔄 [StaffChatContext] totalUnread:', totalUnread, 'conversations:', conversations.map(c => ({ id: c.id, unread: c.unread_count || c.unreadCount })));
 
   return (
     <StaffChatContext.Provider value={{

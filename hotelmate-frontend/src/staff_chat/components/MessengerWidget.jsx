@@ -20,6 +20,7 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   const hotelSlug = user?.hotel_slug;
   const { registerOpenChatHandler } = useMessenger();
   const { conversations, totalUnread, markConversationRead } = useStaffChat();
+  console.log('🎯 [MessengerWidget] totalUnread from context:', totalUnread);
   const [searchParams, setSearchParams] = useSearchParams();
   const [internalExpanded, setInternalExpanded] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
@@ -73,6 +74,11 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
 
   // Total unread count is now provided directly by useStaffChat hook from chatStore
   // No need for manual subscription - it's reactive to store changes
+  
+  // Debug: Track totalUnread changes
+  useEffect(() => {
+    console.log('🔄 [MessengerWidget] totalUnread changed to:', totalUnread);
+  }, [totalUnread]);
 
   const handleOpenChat = async (conversation, staff) => {
     // console.log('🎯 handleOpenChat called with:', { conversation, staff });
@@ -244,7 +250,9 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
         <div className="messenger-widget__panel bg-light">
           {/* Header - Always visible, acts as toggle */}
           <div 
-            className="messenger-widget__header main-bg text-white"
+            className={`messenger-widget__header text-white ${
+              totalUnread > 0 ? 'messenger-widget__header--unread' : 'main-bg'
+            }`}
             onClick={toggleWidget}
             style={{ cursor: 'pointer' }}
           >
@@ -259,6 +267,12 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
                 <circle cx="16" cy="10" r="1.5" fill="currentColor" />
               </svg>
               Staff Chat
+              {/* Unread Badge Counter */}
+              {totalUnread > 0 && (
+                <span className="messenger-widget__badge">
+                  {totalUnread > 99 ? '99+' : totalUnread}
+                </span>
+              )}
             </h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {/* Dropdown Menu - Only show when expanded */}

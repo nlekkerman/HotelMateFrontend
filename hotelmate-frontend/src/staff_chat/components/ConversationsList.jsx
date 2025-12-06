@@ -284,10 +284,25 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
             )}
           </div>
         ) : conversations.length > 0 ? (
-          // Show Existing Conversations
+          // Show ALL Existing Conversations - sorted by latest message, unread first
           <div className="p-2">
             <div className="d-flex flex-column gap-2">
-              {conversations.map((conversation) => {
+              {conversations
+                .sort((a, b) => {
+                  // First, prioritize conversations with unread messages
+                  const aHasUnread = (a.unread_count || 0) > 0;
+                  const bHasUnread = (b.unread_count || 0) > 0;
+                  
+                  if (aHasUnread && !bHasUnread) return -1;
+                  if (!aHasUnread && bHasUnread) return 1;
+                  
+                  // Then sort by latest message timestamp (most recent first)
+                  const aTimestamp = a.last_message?.created_at || a.updated_at || a.created_at || 0;
+                  const bTimestamp = b.last_message?.created_at || b.updated_at || b.created_at || 0;
+                  
+                  return new Date(bTimestamp) - new Date(aTimestamp);
+                })
+                .map((conversation) => {
                 // Get the other participant (not current user)
                 // Filter out the current user from participants to show the OTHER person
                 const otherParticipant = conversation.participants?.find(
@@ -297,7 +312,9 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
                 return (
                   <div
                     key={conversation.id}
-                    className="conversation-card"
+                    className={`conversation-card ${
+                      conversation.unread_count > 0 ? 'conversation-card--unread' : ''
+                    }`}
                     onClick={() => onOpenChat(conversation, otherParticipant)}
                     role="button"
                     tabIndex={0}

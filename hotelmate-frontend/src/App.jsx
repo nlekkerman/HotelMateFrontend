@@ -34,7 +34,6 @@ import LogoBanner from "./components/layout/LogoBanner";
 import MessengerWidget from "@/staff_chat/components/MessengerWidget";
 
 import { MessengerProvider } from "@/staff_chat/context/MessengerContext";
-import GlobalQuickNotifications from "@/staff_chat/components/GlobalQuickNotifications";
 import RealtimeProvider from "@/realtime/RealtimeProvider";
 import { AttendanceProvider } from "@/realtime/stores/attendanceStore.jsx";
 import { RoomServiceProvider } from "@/realtime/stores/roomServiceStore.jsx";
@@ -952,9 +951,6 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
 
       {/* Messenger Widget */}
       { <MessengerWidget position="bottom-right" />}
-
-      {/* Global Quick Notifications - Always visible when logged in */}
-      {user && !hideNavigation && <GlobalQuickNotifications />}
     </>
   );
 }
