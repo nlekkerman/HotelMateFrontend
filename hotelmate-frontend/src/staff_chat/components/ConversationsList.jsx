@@ -25,7 +25,7 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
   const currentUserId = user?.staff_id || user?.id || null;
 
   // Get conversations from StaffChatContext (real-time updates via Pusher)
-  const { conversations, fetchStaffConversations, subscribeToConversationUpdates } = useStaffChat();
+  const { conversations, fetchStaffConversations } = useStaffChat();
   
   // Calculate unread counts from conversations in real-time
   const totalUnread = conversations.reduce((sum, conv) => sum + (conv.unread_count || 0), 0);
