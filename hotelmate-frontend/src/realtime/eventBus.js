@@ -39,26 +39,35 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
       return; // ⬅️ nothing else, no warning, no routing
     }
 
-    // 2️⃣ NEW FORMAT (backend-normalized) - EXACT STRUCTURE FROM notification_manager.py
-    if (
-      payload &&
-      typeof payload === 'object' &&
-      payload.category &&
-      payload.type &&
-      payload.payload
-    ) {
-      const normalized = {
-        category: payload.category,     // must match backend category exactly
-        type: payload.type,             // must match backend event_type exactly  
-        payload: payload.payload,       // backend data payload
-        meta: payload.meta || { channel, eventName },
-        source,
-        timestamp: payload.meta?.ts || new Date().toISOString(),
-      };
+    // Accept normalized OR direct-message payloads
+    if (payload?.category && payload?.type) {
+        // FULL normalized
+        const normalized = {
+          category: payload.category,
+          type: payload.type,
+          payload: payload.payload ?? payload.data ?? {},
+          meta: payload.meta || { channel, eventName },
+          source,
+          timestamp: payload.meta?.ts || new Date().toISOString(),
+        };
+        routeToDomainStores(normalized);
+        maybeAddToNotificationCenter(normalized);
+        return;
+    }
 
-      routeToDomainStores(normalized);
-      maybeAddToNotificationCenter(normalized);
-      return;
+    // SUPPORT raw Pusher event (e.g. direct message payload)
+    if (channel?.includes("staff-chat") && eventName?.startsWith("realtime_staff_chat_")) {
+        const normalized = {
+          category: "staff_chat",
+          type: eventName,
+          payload: payload,           // <---- PAYLOAD IS THE MESSAGE
+          meta: { channel, eventName, event_id: payload?.event_id },
+          source,
+          timestamp: new Date().toISOString()
+        };
+        routeToDomainStores(normalized);
+        maybeAddToNotificationCenter(normalized);
+        return;
     }
 
     // 3️⃣ (Optional) if you *still* want legacy support, call normalizePusherEvent/normalizeFCMEvent here.
