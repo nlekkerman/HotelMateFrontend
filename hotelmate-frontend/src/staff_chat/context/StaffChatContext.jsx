@@ -126,11 +126,27 @@ export const StaffChatProvider = ({ children }) => {
   
   // Stable subscription management - only subscribe/unsubscribe when actually needed
   useEffect(() => {
-    if (!hotelSlug) return;
+    console.log('🚨🚨 [StaffChatContext] SUBSCRIPTION EFFECT TRIGGERED 🚨🚨');
+    console.log('🔍 [StaffChatContext] Subscription effect running with:', {
+      hotelSlug,
+      conversationsCount: conversations.length,
+      conversationIds: conversations.map(c => c.id),
+      conversations: conversations
+    });
+    
+    if (!hotelSlug) {
+      console.warn('⚠️ [StaffChatContext] No hotelSlug, skipping subscriptions');
+      return;
+    }
     
     // Get current conversation IDs
     const currentConversationIds = new Set(conversations.map(c => c.id));
     const subscribedIds = new Set(subscriptionsRef.current.keys());
+    
+    console.log('🔍 [StaffChatContext] Subscription state:', {
+      currentConversations: Array.from(currentConversationIds),
+      alreadySubscribed: Array.from(subscribedIds)
+    });
     
     // Subscribe to NEW conversations only
     currentConversationIds.forEach(conversationId => {

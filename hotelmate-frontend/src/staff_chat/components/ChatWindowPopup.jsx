@@ -29,7 +29,7 @@ import useReactions from "../hooks/useReactions";
 import useEditMessage from "../hooks/useEditMessage";
 import useDeleteMessage from "../hooks/useDeleteMessage";
 import useReadReceipts from "../hooks/useReadReceipts";
-import { subscribeToStaffChatConversation } from "../../realtime/channelRegistry";
+// ✅ UNIFIED: No individual popup subscriptions - handled globally by StaffChatContext
 import { useChatState, useChatDispatch } from "@/realtime/stores/chatStore.jsx";
 import { CHAT_ACTIONS } from "@/realtime/stores/chatActions.js";
 
@@ -148,7 +148,7 @@ const ChatWindowPopup = ({
           const response = await fetchMessages(
             hotelSlug,
             conversation.id,
-            20,
+            100, // Increased from 20 to 100 to see more recent messages
             null
           );
           const fetchedMessages =
@@ -305,37 +305,8 @@ const ChatWindowPopup = ({
 
   // ✅ UNIFIED: Messages come through chatStore automatically - no legacy subscriptions needed
 
-  // Subscribe to centralized realtime system for read receipts and new messages
-  useEffect(() => {
-    if (!hotelSlug || !conversation?.id) {
-      console.warn(
-        "⚠️ [POPUP REALTIME] Missing required data for subscription"
-      );
-      return;
-    }
-
-    console.log(
-      "🔔 [POPUP REALTIME] Subscribing to conversation via centralized system"
-    );
-    console.log("🔥 [POPUP REALTIME] Subscription details:", {
-      hotelSlug,
-      conversationId: conversation.id,
-      channelName: `${hotelSlug}.staff-chat.${conversation.id}`,
-    });
-
-    // Use the centralized subscription
-    const cleanup = subscribeToStaffChatConversation(
-      hotelSlug,
-      conversation.id
-    );
-
-    // The events will be automatically routed to chatStore via eventBus
-    // Read receipts will be handled by the centralized system
-    console.log("✅ [POPUP REALTIME] Subscribed to staff chat conversation");
-
-    // Return cleanup function
-    return cleanup;
-  }, [hotelSlug, conversation?.id]);
+  // ✅ UNIFIED: Global subscription handled by StaffChatContext - no individual popup subscriptions needed
+  // This prevents the unsubscribe/resubscribe cycle when opening/closing popups
 
   // Subscribe to staff chat events for useReadReceipts hook
   useEffect(() => {

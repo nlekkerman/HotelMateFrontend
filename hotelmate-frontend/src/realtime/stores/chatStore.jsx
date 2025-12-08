@@ -58,9 +58,34 @@ function chatReducer(state, action) {
       
       if (!conversation) return state;
 
-      const sortedMessages = [...messages].sort((a, b) => 
+      // Merge existing messages (may include realtime ones) with API messages
+      const existingMessages = conversation.messages || [];
+      const newMessages = messages || [];
+      
+      // Create a map to avoid duplicates by ID
+      const messageMap = new Map();
+      
+      // Add existing messages first (including realtime ones)
+      existingMessages.forEach(msg => {
+        if (msg.id) messageMap.set(msg.id, msg);
+      });
+      
+      // Add/update with API messages (may be more complete)
+      newMessages.forEach(msg => {
+        if (msg.id) messageMap.set(msg.id, msg);
+      });
+      
+      // Convert back to array and sort by timestamp
+      const mergedMessages = Array.from(messageMap.values()).sort((a, b) => 
         new Date(a.timestamp) - new Date(b.timestamp)
       );
+
+      console.log('🔄 [INIT_MESSAGES] Merged messages:', {
+        conversationId,
+        existingCount: existingMessages.length,
+        newFromAPI: newMessages.length,
+        finalCount: mergedMessages.length
+      });
 
       return {
         ...state,
@@ -68,7 +93,7 @@ function chatReducer(state, action) {
           ...state.conversationsById,
           [conversationId]: {
             ...conversation,
-            messages: sortedMessages
+            messages: mergedMessages
           }
         }
       };
