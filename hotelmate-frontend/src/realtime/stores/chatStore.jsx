@@ -498,7 +498,7 @@ export const chatActions = {
           console.log('📨 [chatStore] Dispatching RECEIVE_MESSAGE for full message');
           const mappedMessage = {
             id: payload.id,
-            message: payload.text || payload.message, // Backend uses 'text', frontend expects 'message'
+            message: payload.text, // Backend sends 'text' field
             sender: payload.sender_id,
             sender_name: payload.sender_name,
             timestamp: payload.timestamp,

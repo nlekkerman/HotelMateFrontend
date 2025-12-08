@@ -126,7 +126,7 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
   }
 
   const pusher = getPusherClient();
-  // ✅ BACKEND HANDLES PREFIXING: Use hotel slug exactly as backend provides it
+  // ✅ BACKEND SENDS TO: hotel-killarney.staff-chat.100 (no extra hotel- prefix)
   const channelName = `${hotelSlug}.staff-chat.${conversationId}`;
   
   console.log('🔥 [channelRegistry] Attempting to subscribe to:', channelName);
@@ -147,6 +147,15 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
     });
     
     channel.bind_global((eventName, payload) => {
+      // 🚨 CATCH ALL EVENTS on staff-chat channels
+      if (channelName.includes('staff-chat')) {
+        console.log('🚨 [channelRegistry] ===== ANY EVENT ON STAFF CHAT CHANNEL =====');
+        console.log('🚨 Channel:', channelName);
+        console.log('🚨 Event Name:', eventName);
+        console.log('🚨 Payload:', JSON.stringify(payload, null, 2));
+        console.log('🚨 =================================================');
+      }
+      
       if (!eventName.startsWith('pusher:')) {
         console.log('🔥 [channelRegistry] Received event on channel:', channelName, 'event:', eventName);
       }
