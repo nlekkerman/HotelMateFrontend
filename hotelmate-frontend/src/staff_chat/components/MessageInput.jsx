@@ -142,7 +142,7 @@ const MessageInput = ({
       {replyTo && (
         <div className="message-input__reply-preview">
           <div className="message-input__reply-content">
-            <div>
+            <div style={{ flex: 1 }}>
               <div className="message-input__reply-label text-muted">
                 Replied to {replyTo.sender_name || replyTo.sender_info?.full_name || 'User'}
               </div>
@@ -150,6 +150,72 @@ const MessageInput = ({
                 {(replyTo.message || replyTo.content || '').substring(0, 50)}
                 {(replyTo.message || replyTo.content || '').length > 50 ? '...' : ''}
               </div>
+
+              {/* Show image attachments in reply preview */}
+              {replyTo.attachments && replyTo.attachments.length > 0 && (
+                <div style={{ marginTop: '6px', display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  {replyTo.attachments.slice(0, 3).map((att, idx) => {
+                    const isImage = att.file_type === 'image' || att.mime_type?.startsWith('image/') || 
+                                  /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(att.file_name || att.filename);
+                    
+                    if (isImage) {
+                      const imageUrl = att.file_url || att.url;
+                      return (
+                        <img
+                          key={idx}
+                          src={imageUrl}
+                          alt={att.file_name || att.filename || 'Image'}
+                          style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '4px',
+                            objectFit: 'cover',
+                            border: '1px solid #ddd'
+                          }}
+                        />
+                      );
+                    } else {
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '4px',
+                            border: '1px solid #ddd',
+                            backgroundColor: '#f8f9fa',
+                            fontSize: '12px'
+                          }}
+                          title={att.file_name || att.filename}
+                        >
+                          📎
+                        </div>
+                      );
+                    }
+                  })}
+                  {replyTo.attachments.length > 3 && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '4px',
+                        backgroundColor: '#e9ecef',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        color: '#6c757d'
+                      }}
+                    >
+                      +{replyTo.attachments.length - 3}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           {onCancelReply && (

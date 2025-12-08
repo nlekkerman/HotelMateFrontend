@@ -101,6 +101,71 @@ export const ReplyPreview = ({ replyToMessage, messages, isMine, onClickReply })
         >
           {replyToMessage.message || '📎 Attachment'}
         </div>
+
+        {/* Show image attachments in reply preview */}
+        {replyToMessage.attachments && replyToMessage.attachments.length > 0 && (
+          <div style={{ marginTop: '6px', display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {replyToMessage.attachments.slice(0, 3).map((att, idx) => {
+              const isImage = att.file_type === 'image' || att.mime_type?.startsWith('image/') || 
+                            /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(att.file_name || att.filename);
+              
+              if (isImage) {
+                const imageUrl = att.file_url || att.url;
+                return (
+                  <img
+                    key={idx}
+                    src={imageUrl}
+                    alt={att.file_name || att.filename || 'Image'}
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '4px',
+                      objectFit: 'cover',
+                      border: '1px solid rgba(0, 123, 255, 0.3)'
+                    }}
+                  />
+                );
+              } else {
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '4px',
+                      border: '1px solid rgba(0, 123, 255, 0.3)',
+                      backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                      fontSize: '12px'
+                    }}
+                    title={att.file_name || att.filename}
+                  >
+                    📎
+                  </div>
+                );
+              }
+            })}
+            {replyToMessage.attachments.length > 3 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '4px',
+                  backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                  fontSize: '10px',
+                  fontWeight: 'bold'
+                }}
+              >
+                +{replyToMessage.attachments.length - 3}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -191,13 +256,78 @@ export const ReplyInputPreview = ({ replyingTo, onCancel }) => {
           </div>
         )}
         {replyingTo.attachments?.length > 0 && (
-          <div style={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic' }}>
-            📎 {replyingTo.attachments.length} attachment{replyingTo.attachments.length > 1 ? 's' : ''}
-            {replyingTo.attachments.map((att, idx) => (
-              <span key={idx} style={{ display: 'block', marginLeft: '1.2rem', marginTop: '2px' }}>
-                • {att.file_name}
-              </span>
-            ))}
+          <div style={{ marginTop: '8px' }}>
+            <div style={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic', marginBottom: '6px' }}>
+              📎 {replyingTo.attachments.length} attachment{replyingTo.attachments.length > 1 ? 's' : ''}
+            </div>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {replyingTo.attachments.slice(0, 4).map((att, idx) => {
+                const isImage = att.file_type === 'image' || att.mime_type?.startsWith('image/') || 
+                              /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(att.file_name || att.filename);
+                
+                if (isImage) {
+                  const imageUrl = att.file_url || att.url;
+                  return (
+                    <img
+                      key={idx}
+                      src={imageUrl}
+                      alt={att.file_name || att.filename || 'Image'}
+                      style={{
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '6px',
+                        objectFit: 'cover',
+                        border: '2px solid rgba(0, 123, 255, 0.4)'
+                      }}
+                    />
+                  );
+                } else {
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '6px',
+                        border: '2px solid rgba(0, 123, 255, 0.4)',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        fontSize: '16px',
+                        textAlign: 'center',
+                        padding: '4px'
+                      }}
+                      title={att.file_name || att.filename}
+                    >
+                      📄
+                      <span style={{ fontSize: '8px', marginTop: '2px', lineHeight: '1' }}>
+                        {(att.file_name || att.filename || '').split('.').pop()?.toUpperCase() || 'FILE'}
+                      </span>
+                    </div>
+                  );
+                }
+              })}
+              {replyingTo.attachments.length > 4 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '50px',
+                    height: '50px',
+                    borderRadius: '6px',
+                    backgroundColor: 'rgba(0, 123, 255, 0.3)',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    color: '#007bff'
+                  }}
+                >
+                  +{replyingTo.attachments.length - 4}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

@@ -136,6 +136,74 @@ const MessageBubble = ({
                   }
                   {!replyTo.is_deleted && (replyTo.message || replyTo.content || '').length > 50 ? '...' : ''}
                 </div>
+
+                {/* Show image attachments in reply preview */}
+                {!replyTo.is_deleted && replyTo.attachments && replyTo.attachments.length > 0 && (
+                  <div className="staff-chat-message__reply-attachments" style={{ marginTop: '4px', display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+                    {replyTo.attachments.slice(0, 2).map((att, idx) => {
+                      const isImage = att.file_type === 'image' || att.mime_type?.startsWith('image/') || 
+                                    /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(att.file_name || att.filename);
+                      
+                      if (isImage) {
+                        const imageUrl = att.file_url || att.url;
+                        return (
+                          <img
+                            key={idx}
+                            src={imageUrl}
+                            alt={att.file_name || att.filename || 'Image'}
+                            style={{
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '3px',
+                              objectFit: 'cover',
+                              border: '1px solid rgba(0, 0, 0, 0.2)',
+                              opacity: 0.8
+                            }}
+                          />
+                        );
+                      } else {
+                        return (
+                          <div
+                            key={idx}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '3px',
+                              border: '1px solid rgba(0, 0, 0, 0.2)',
+                              backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                              fontSize: '10px',
+                              opacity: 0.7
+                            }}
+                            title={att.file_name || att.filename}
+                          >
+                            📎
+                          </div>
+                        );
+                      }
+                    })}
+                    {replyTo.attachments.length > 2 && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '3px',
+                          backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                          fontSize: '8px',
+                          fontWeight: 'bold',
+                          color: 'rgba(0, 0, 0, 0.7)'
+                        }}
+                      >
+                        +{replyTo.attachments.length - 2}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
