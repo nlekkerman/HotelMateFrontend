@@ -438,14 +438,14 @@ export const chatActions = {
     let eventType = event.eventType || event.type;  // ✅ support both formats
     const payload = event.data || event.payload;      // ✅ support both formats
     
-   
-    
     console.log('🔥 [chatStore] Mapped event type:', { original: event.eventType || event.type, mapped: eventType });
     const eventId = event.meta?.event_id || null;
     const rawConversationId =
       payload?.conversation_id !== undefined
-        ? payload?.conversation_id
-        : payload?.conversationId;
+        ? payload.conversation_id
+        : payload?.conversationId !== undefined
+          ? payload.conversationId
+          : payload?.conversation; // ✅ from StaffChatMessageSerializer
     const parsedConversationId =
       rawConversationId !== null && rawConversationId !== undefined && rawConversationId !== ''
         ? parseInt(rawConversationId, 10)
@@ -495,60 +495,59 @@ export const chatActions = {
           hasId: !!payload.id,
           hasText: !!payload.text,
           hasMessage: !!payload.message,
-          senderId: payload.sender_id,
-          conversationId: payload.conversation_id
+          senderId: payload.sender_id ?? payload.sender,
+          conversation: payload.conversation,
         });
-        
-        // Check if payload is a full message object or just FCM metadata  
-        if (payload.id && payload.text) {
-          // Full message object from backend notification_manager.py
-          console.log('📨 [chatStore] Dispatching RECEIVE_MESSAGE for full message');
+
+        // Full message object if we have an id and some text
+        const hasFullMessage = payload.id && (payload.message || payload.text);
+
+        if (hasFullMessage) {
+          const text = payload.message ?? payload.text ?? '';
+
           const mappedMessage = {
             id: payload.id,
-            message: payload.text, // Backend sends message.message as 'text' field
-            sender: payload.sender_id,
-            sender_name: payload.sender_name,
+            message: text,
+            sender: payload.sender_id ?? payload.sender,
+            sender_name: payload.sender_name ?? payload.sender_info?.name,
             timestamp: payload.timestamp,
             conversation: numericConversationId,
             attachments: payload.attachments || [],
-            is_system_message: payload.is_system_message || false
+            is_system_message: payload.is_system_message || false,
+            is_edited: payload.is_edited || false,
+            is_deleted: payload.is_deleted || false,
+            status: payload.status,
+            delivered_at: payload.delivered_at,
+            read_by_list: payload.read_by_list || [],
+            read_by_count: payload.read_by_count || 0,
           };
-          
-          console.log('🚀 [chatStore] Mapped message object:', mappedMessage);
-          console.log('🚀 [chatStore] Dispatching to conversation ID:', numericConversationId);
-          console.log('🚀 [chatStore] DISPATCH ACTION:', CHAT_ACTIONS.RECEIVE_MESSAGE);
-          
+
           globalChatDispatch({
             type: CHAT_ACTIONS.RECEIVE_MESSAGE,
             payload: {
               conversationId: numericConversationId,
-              message: mappedMessage
-            }
+              message: mappedMessage,
+            },
           });
-          
-          console.log('✅ [chatStore] RECEIVE_MESSAGE dispatched successfully!');
         } else if (payload.notification && payload.sender_id) {
-          // FCM notification metadata - construct a temporary message
-          console.log('📱 FCM message notification received - constructing message from metadata');
+          // FCM fallback
           const fcmMessage = {
-            id: `fcm-${Date.now()}`, // Temporary ID
+            id: `fcm-${Date.now()}`,
             message: payload.notification.body || 'New message',
             sender: parseInt(payload.sender_id),
             sender_name: payload.sender_name,
             timestamp: new Date().toISOString(),
             conversation: numericConversationId,
-            is_fcm_placeholder: true // Mark as placeholder for later replacement
+            is_fcm_placeholder: true,
           };
-          
+
           globalChatDispatch({
             type: CHAT_ACTIONS.RECEIVE_MESSAGE,
             payload: {
               conversationId: numericConversationId,
-              message: fcmMessage
-            }
+              message: fcmMessage,
+            },
           });
-          
-          // TODO: Optionally fetch the real message from API to replace placeholder
         } else {
           console.warn('📨 [chatStore] message_created payload missing required fields:', payload);
         }
