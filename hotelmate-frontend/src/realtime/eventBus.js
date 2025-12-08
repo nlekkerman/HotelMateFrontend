@@ -39,23 +39,21 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
       return; // ⬅️ nothing else, no warning, no routing
     }
 
-    // 2️⃣ NEW FORMAT (backend-normalized)
+    // 2️⃣ NEW FORMAT (backend-normalized) - EXACT STRUCTURE FROM notification_manager.py
     if (
       payload &&
       typeof payload === 'object' &&
       payload.category &&
-      (payload.type || payload.eventType) &&
-      (payload.payload || payload.data)
+      payload.type &&
+      payload.payload
     ) {
       const normalized = {
-        category: payload.category,
-        type: payload.type || payload.eventType,
-        eventType: payload.eventType || payload.type,
-        payload: payload.payload || payload.data,
-        data: payload.data || payload.payload,
-        source: payload.source || source,
-        timestamp: payload.timestamp || new Date().toISOString(),
+        category: payload.category,     // must match backend category exactly
+        type: payload.type,             // must match backend event_type exactly  
+        payload: payload.payload,       // backend data payload
         meta: payload.meta || { channel, eventName },
+        source,
+        timestamp: payload.meta?.ts || new Date().toISOString(),
       };
 
       routeToDomainStores(normalized);
@@ -66,30 +64,7 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
     // 3️⃣ (Optional) if you *still* want legacy support, call normalizePusherEvent/normalizeFCMEvent here.
     // Right now you just warn:
 
-    // 🔥 DEBUG: For staff chat, try to handle the event anyway
-    if (channel?.includes('staff-chat') && !eventName?.startsWith('pusher:')) {
-      console.log('🔥 [EventBus] ATTEMPTING TO HANDLE NON-NORMALIZED STAFF CHAT EVENT');
-      console.log('🔥 [EventBus] Event name:', eventName);
-      console.log('🔥 [EventBus] Attempting to call chatActions.handleEvent with legacy format');
-      
-      // Try to call the chat actions directly with the raw event
-      try {
-        chatActions.handleEvent({
-          category: 'staff_chat',
-          type: eventName,
-          eventType: eventName,
-          payload: payload,
-          data: payload,
-          source: source,
-          timestamp: new Date().toISOString(),
-          meta: { channel, eventName }
-        });
-        console.log('✅ [EventBus] Successfully handled staff chat event with legacy format');
-        return;
-      } catch (error) {
-        console.error('❌ [EventBus] Failed to handle staff chat event with legacy format:', error);
-      }
-    }
+    // Backend should always send normalized events - no legacy fallback needed
     
     console.warn('⚠️ Received non-normalized event - backend should send normalized format:', {
       source,
@@ -213,29 +188,39 @@ function generateNotificationTitle(category, eventType) {
 function generateNotificationMessage(category, eventType, payload) {
   switch (category) {
     case 'attendance':
-      return `Staff ${eventType.replace('_', ' ')}`;
+      return eventType === 'clock_status_updated' ? 'Attendance status updated' : `Attendance ${eventType.replace('_', ' ')}`;
     case 'staff_chat':
-      return eventType === 'message_created' ? 'New message received' : `Message ${eventType.replace('_', ' ')}`;
+      if (eventType === 'realtime_staff_chat_message_created') return 'New message received';
+      if (eventType === 'realtime_staff_chat_staff_mentioned') return 'You were mentioned';
+      if (eventType === 'realtime_staff_chat_unread_updated') return 'Unread messages updated';
+      return `Staff chat ${eventType.replace('realtime_staff_chat_', '').replace('_', ' ')}`;
     case 'guest_chat':
-      return eventType === 'guest_message_created' ? 'New guest message' : `Guest chat ${eventType.replace('_', ' ')}`;
+      return eventType === 'guest_message_created' ? 'New guest message' : 
+             eventType === 'staff_message_created' ? 'Staff reply sent' :
+             `Guest chat ${eventType.replace('_', ' ')}`;
     case 'room_service':
-      return `Order ${eventType.replace('_', ' ')}`;
+      return eventType === 'order_created' ? 'New order received' : 
+             eventType === 'order_updated' ? 'Order status updated' :
+             `Room service ${eventType.replace('_', ' ')}`;
     case 'booking':
-      return `Booking ${eventType.replace('_', ' ')}`;
+      return eventType === 'booking_created' ? 'New booking received' :
+             eventType === 'booking_updated' ? 'Booking updated' :
+             eventType === 'booking_cancelled' ? 'Booking cancelled' :
+             `Booking ${eventType.replace('_', ' ')}`;
     default:
-      return `${eventType.replace('_', ' ')}`;
+      return eventType.replace('_', ' ');
   }
 }
 
 // Debug function for testing unread updates
 if (typeof window !== 'undefined') {
   window.debugRealtimeUnread = (conversationId, unreadCount, totalUnread = null) => {
-    console.log('🧪 DEBUG: Manually triggering unread_updated event:', { conversationId, unreadCount, totalUnread });
+    console.log('🧪 DEBUG: Manually triggering realtime_staff_chat_unread_updated event:', { conversationId, unreadCount, totalUnread });
     handleIncomingRealtimeEvent({
       source: "debug",
       payload: {
         category: "staff_chat",
-        type: "unread_updated", 
+        type: "realtime_staff_chat_unread_updated", 
         payload: {
           conversation_id: conversationId,
           unread_count: unreadCount,
@@ -256,7 +241,7 @@ if (typeof window !== 'undefined') {
       source: "debug",
       payload: {
         category: "staff_chat",
-        type: "unread_updated",
+        type: "realtime_staff_chat_unread_updated",
         payload: {
           total_unread: totalUnread,
           updated_at: new Date().toISOString()

@@ -58,8 +58,8 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
 
     // Note: Staff chat and guest chat channels are conversation-specific and will be 
     // subscribed to dynamically when users enter specific conversations:
-    // - hotel-{slug}.staff-chat.{conversation_id}
-    // - hotel-{slug}.guest-chat.{room_pin}
+    // - {slug}.staff-chat.{conversation_id}
+    // - {slug}.guest-chat.{room_pin}
 
     // Bind global event handlers to all channels
     channels.forEach(channel => {
@@ -126,7 +126,7 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
   }
 
   const pusher = getPusherClient();
-  // ✅ BACKEND SENDS TO: hotel-killarney.staff-chat.100 (no extra hotel- prefix)
+  // ✅ BACKEND SENDS TO: killarney.staff-chat.100 (exact pattern from notification_manager.py)
   const channelName = `${hotelSlug}.staff-chat.${conversationId}`;
   
   console.log('🔥 [channelRegistry] Attempting to subscribe to:', channelName);
@@ -203,7 +203,7 @@ export function subscribeToGuestChatConversation(hotelSlug, roomPin) {
   }
 
   const pusher = getPusherClient();
-  const channelName = `hotel-${hotelSlug}.guest-chat.${roomPin}`;
+  const channelName = `${hotelSlug}.guest-chat.${roomPin}`;
   
   try {
     const channel = pusher.subscribe(channelName);

@@ -438,10 +438,7 @@ export const chatActions = {
     let eventType = event.eventType || event.type;  // ✅ support both formats
     const payload = event.data || event.payload;      // ✅ support both formats
     
-    // 🔥 Map backend event names to frontend event types
-    if (eventType === 'realtime_staff_chat_message_created') {
-      eventType = 'message_created';
-    }
+   
     
     console.log('🔥 [chatStore] Mapped event type:', { original: event.eventType || event.type, mapped: eventType });
     const eventId = event.meta?.event_id || null;
@@ -457,7 +454,7 @@ export const chatActions = {
 
     console.log('💬 Chat store handling staff chat event:', { eventType, conversationId: numericConversationId, payload });
 
-    const eventRequiresConversationId = !['unread_updated'].includes(eventType);
+    const eventRequiresConversationId = !['realtime_staff_chat_unread_updated'].includes(eventType);
 
     if (eventRequiresConversationId && numericConversationId === null) {
       console.warn('💬 Chat event missing conversation_id, ignoring:', event);
@@ -489,10 +486,10 @@ export const chatActions = {
       toDelete.forEach(id => chatActions._processedEventIds.delete(id));
     }
 
-    // ✅ Handle events from the guide
+    // ✅ Handle events with EXACT backend event names from notification_manager.py
     console.log(`📨 [chatStore] Processing ${eventType}:`, { conversationId: numericConversationId, payload });
     switch (eventType) {
-      case 'message_created': {
+      case 'realtime_staff_chat_message_created': {
         console.log('📨 [chatStore] Processing message_created:', { numericConversationId, payload });
         console.log('🔥 [chatStore] Message payload structure:', {
           hasId: !!payload.id,
@@ -502,13 +499,13 @@ export const chatActions = {
           conversationId: payload.conversation_id
         });
         
-        // Check if payload is a full message object or just FCM metadata
-        if (payload.id && (payload.text || payload.message)) {
-          // Full message object (from Pusher) - map backend format to frontend format
+        // Check if payload is a full message object or just FCM metadata  
+        if (payload.id && payload.text) {
+          // Full message object from backend notification_manager.py
           console.log('📨 [chatStore] Dispatching RECEIVE_MESSAGE for full message');
           const mappedMessage = {
             id: payload.id,
-            message: payload.text, // Backend sends 'text' field
+            message: payload.text, // Backend sends message.message as 'text' field
             sender: payload.sender_id,
             sender_name: payload.sender_name,
             timestamp: payload.timestamp,
@@ -558,19 +555,19 @@ export const chatActions = {
         break;
       }
 
-      case 'message_edited': {
+      case 'realtime_staff_chat_message_edited': {
         globalChatDispatch({
           type: CHAT_ACTIONS.MESSAGE_UPDATED,
           payload: {
             conversationId: numericConversationId,
-            messageId: parseInt(payload.message_id),
+            messageId: parseInt(payload.id || payload.message_id),
             updatedFields: payload
           }
         });
         break;
       }
 
-      case 'message_deleted': {
+      case 'realtime_staff_chat_message_deleted': {
         globalChatDispatch({
           type: CHAT_ACTIONS.MESSAGE_DELETED,
           payload: {
@@ -581,7 +578,7 @@ export const chatActions = {
         break;
       }
 
-      case 'staff_mentioned': {
+      case 'realtime_staff_chat_staff_mentioned': {
         // Handle staff mentions from personal notification channel
         globalChatDispatch({
           type: CHAT_ACTIONS.RECEIVE_MESSAGE,
@@ -593,23 +590,10 @@ export const chatActions = {
         break;
       }
 
-      // Legacy event types (for backward compatibility)
-      case 'new_message':
-      case 'message_sent': {
-        globalChatDispatch({
-          type: CHAT_ACTIONS.RECEIVE_MESSAGE,
-          payload: {
-            conversationId: numericConversationId,
-            message: payload
-          }
-        });
-        break;
-      }
+      // No other event types supported - backend sends only exact normalized event names
 
-      case 'read_receipt':
-      case 'message_read':
-      case 'messages_read': {
-        // Handle both old single-message format and new multi-message format
+      case 'realtime_staff_chat_messages_read': {
+        // Handle multi-message read receipts from backend
         const messageIds = payload.message_ids || (payload.message_id ? [payload.message_id] : []);
         
         if (messageIds.length > 0) {
@@ -638,7 +622,7 @@ export const chatActions = {
         break;
       }
 
-      case 'message_delivered': {
+      case 'realtime_staff_chat_message_delivered': {
         // Handle message delivery status
         globalChatDispatch({
           type: CHAT_ACTIONS.MESSAGE_UPDATED,
@@ -651,14 +635,14 @@ export const chatActions = {
         break;
       }
 
-      case 'typing_indicator': {
+      case 'realtime_staff_chat_typing': {
         // Handle typing indicators (can be added to state if needed)
         console.log('💬 Typing indicator received:', payload);
         break;
       }
 
-      case 'attachment_uploaded':
-      case 'attachment_deleted': {
+      case 'realtime_staff_chat_attachment_uploaded':
+      case 'realtime_staff_chat_attachment_deleted': {
         // Handle attachment events by refreshing the message
         globalChatDispatch({
           type: CHAT_ACTIONS.MESSAGE_UPDATED,
@@ -671,19 +655,10 @@ export const chatActions = {
         break;
       }
 
-      case 'conversation_update':
-      case 'conversation_updated': {
-        globalChatDispatch({
-          type: CHAT_ACTIONS.UPDATE_CONVERSATION_METADATA,
-          payload: {
-            conversationId: numericConversationId,
-            metadata: payload
-          }
-        });
-        break;
-      }
+      // Note: Backend doesn't send conversation_update events in notification_manager.py
+      // Conversation updates come through other event types
 
-      case 'unread_updated': {
+      case 'realtime_staff_chat_unread_updated': {
         console.log('📊 [chatStore] Processing unread_updated:', { numericConversationId, payload });
         
         if (typeof payload.total_unread === 'number') {
