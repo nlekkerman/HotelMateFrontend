@@ -406,6 +406,8 @@ export const chatActions = {
   _processedEventIds: new Set(), // Event ID-based deduplication
 
   handleEvent(event) {
+    console.log('🔥 [chatActions.handleEvent] CALLED with event:', event);
+    
     if (!globalChatDispatch || !globalChatGetState) {
       console.warn('💬 Chat store not initialized, skipping event:', event);
       return;
@@ -418,8 +420,15 @@ export const chatActions = {
     }
 
     // Handle both legacy format {eventType, data} and new format {type, payload}
-    const eventType = event.eventType || event.type;  // ✅ support both formats
+    let eventType = event.eventType || event.type;  // ✅ support both formats
     const payload = event.data || event.payload;      // ✅ support both formats
+    
+    // 🔥 Map backend event names to frontend event types
+    if (eventType === 'realtime_staff_chat_message_created') {
+      eventType = 'message_created';
+    }
+    
+    console.log('🔥 [chatStore] Mapped event type:', { original: event.eventType || event.type, mapped: eventType });
     const eventId = event.meta?.event_id || null;
     const rawConversationId =
       payload?.conversation_id !== undefined
@@ -470,15 +479,36 @@ export const chatActions = {
     switch (eventType) {
       case 'message_created': {
         console.log('📨 [chatStore] Processing message_created:', { numericConversationId, payload });
+        console.log('🔥 [chatStore] Message payload structure:', {
+          hasId: !!payload.id,
+          hasText: !!payload.text,
+          hasMessage: !!payload.message,
+          senderId: payload.sender_id,
+          conversationId: payload.conversation_id
+        });
+        
         // Check if payload is a full message object or just FCM metadata
-        if (payload.id && payload.message) {
-          // Full message object (from Pusher)
+        if (payload.id && (payload.text || payload.message)) {
+          // Full message object (from Pusher) - map backend format to frontend format
           console.log('📨 [chatStore] Dispatching RECEIVE_MESSAGE for full message');
+          const mappedMessage = {
+            id: payload.id,
+            message: payload.text || payload.message, // Backend uses 'text', frontend expects 'message'
+            sender: payload.sender_id,
+            sender_name: payload.sender_name,
+            timestamp: payload.timestamp,
+            conversation: numericConversationId,
+            attachments: payload.attachments || [],
+            is_system_message: payload.is_system_message || false
+          };
+          
+          console.log('🔥 [chatStore] Mapped message:', mappedMessage);
+          
           globalChatDispatch({
             type: CHAT_ACTIONS.RECEIVE_MESSAGE,
             payload: {
               conversationId: numericConversationId,
-              message: payload
+              message: mappedMessage
             }
           });
         } else if (payload.notification && payload.sender_id) {

@@ -21,6 +21,11 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
     // 🔥 DEBUG: Log staff chat events specifically
     if (channel?.includes('staff-chat') && !eventName?.startsWith('pusher:')) {
       console.log('🔥 [EventBus] STAFF CHAT EVENT:', { channel, eventName, payload });
+      console.log('🔥 [EventBus] PAYLOAD TYPE:', typeof payload);
+      console.log('🔥 [EventBus] PAYLOAD STRUCTURE:', JSON.stringify(payload, null, 2));
+      console.log('🔥 [EventBus] HAS CATEGORY?', !!payload?.category);
+      console.log('🔥 [EventBus] HAS TYPE?', !!payload?.type);
+      console.log('🔥 [EventBus] HAS PAYLOAD?', !!payload?.payload);
     }
 
     // 1️⃣ IGNORE PUSHER SYSTEM EVENTS (like pusher:subscription_succeeded)
@@ -58,6 +63,31 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
     // 3️⃣ (Optional) if you *still* want legacy support, call normalizePusherEvent/normalizeFCMEvent here.
     // Right now you just warn:
 
+    // 🔥 DEBUG: For staff chat, try to handle the event anyway
+    if (channel?.includes('staff-chat') && !eventName?.startsWith('pusher:')) {
+      console.log('🔥 [EventBus] ATTEMPTING TO HANDLE NON-NORMALIZED STAFF CHAT EVENT');
+      console.log('🔥 [EventBus] Event name:', eventName);
+      console.log('🔥 [EventBus] Attempting to call chatActions.handleEvent with legacy format');
+      
+      // Try to call the chat actions directly with the raw event
+      try {
+        chatActions.handleEvent({
+          category: 'staff_chat',
+          type: eventName,
+          eventType: eventName,
+          payload: payload,
+          data: payload,
+          source: source,
+          timestamp: new Date().toISOString(),
+          meta: { channel, eventName }
+        });
+        console.log('✅ [EventBus] Successfully handled staff chat event with legacy format');
+        return;
+      } catch (error) {
+        console.error('❌ [EventBus] Failed to handle staff chat event with legacy format:', error);
+      }
+    }
+    
     console.warn('⚠️ Received non-normalized event - backend should send normalized format:', {
       source,
       channel,
