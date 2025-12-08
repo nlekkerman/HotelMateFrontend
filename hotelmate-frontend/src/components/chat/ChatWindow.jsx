@@ -19,7 +19,7 @@ import {
   ReplyInputPreview,
   formatReplyData,
   scrollToOriginalMessage
-} from "./utils/messageReply";
+} from "./utils";
 import {
   handleMessageDeletion,
   handlePusherDeletion,
