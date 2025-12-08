@@ -57,6 +57,15 @@ const ChatWindowPopup = ({
   const chatState = useChatState();
   const chatDispatch = useChatDispatch();
   const messages = chatState.conversationsById[conversation?.id]?.messages || [];
+  
+  // 🔥 DEBUG: Log message state
+  console.log('🔥 [ChatWindowPopup] Message state:', {
+    conversationId: conversation?.id,
+    messagesCount: messages.length,
+    conversationsInStore: Object.keys(chatState.conversationsById),
+    storeHasThisConv: !!chatState.conversationsById[conversation?.id],
+    messages: messages.map(m => ({ id: m.id, text: (m.message || m.content || '').substring(0, 20) }))
+  });
   const storeConversation = conversation?.id ? chatState.conversationsById[conversation.id] : null;
   const conversationData = useMemo(() => {
     if (!conversation && !storeConversation) {
@@ -245,11 +254,20 @@ const ChatWindowPopup = ({
 
     // Listen to messages broadcasted by StaffChatContext
     const unsubscribe = subscribeToMessages((message) => {
+      console.log('🔥 [ChatWindowPopup] Received message from subscribeToMessages:', {
+        messageConvId: message.conversation || message.conversation_id,
+        expectedConvId: conversation.id,
+        matches: (message.conversation === conversation.id || message.conversation_id === conversation.id),
+        messageText: (message.message || message.content || '').substring(0, 30)
+      });
+      
       // Only process messages for this conversation
       if (message.conversation === conversation.id || message.conversation_id === conversation.id) {
-        console.log('📨 [ChatWindowPopup] Received message for this conversation via chatStore');
+        console.log('📨 [ChatWindowPopup] ✅ Message matches this conversation - should appear now');
         // Messages automatically appear via chatStore
         scrollToBottom();
+      } else {
+        console.log('📨 [ChatWindowPopup] ❌ Message for different conversation - ignoring');
       }
     });
 
@@ -270,6 +288,11 @@ const ChatWindowPopup = ({
     }
 
     console.log('🔔 [POPUP REALTIME] Subscribing to conversation via centralized system');
+    console.log('🔥 [POPUP REALTIME] Subscription details:', {
+      hotelSlug,
+      conversationId: conversation.id,
+      channelName: `hotel-${hotelSlug}.staff-chat.${conversation.id}`
+    });
 
     // Use the centralized subscription
     const cleanup = subscribeToStaffChatConversation(hotelSlug, conversation.id);

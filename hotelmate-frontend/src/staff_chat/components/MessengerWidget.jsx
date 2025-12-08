@@ -26,67 +26,45 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
     userObject: user
   });
   
-  // Get hotelSlug from localStorage as fallback - should always be available
+  // ✅ SIMPLIFIED: Get hotel slug - everyone in same hotel has same slug!
   const getHotelSlug = () => {
-  // 1) Primary source: logged-in user
-  if (user?.hotel_slug) return user.hotel_slug;
-  if (user?.hotel?.slug) return user.hotel.slug;
-
-  // 2) LocalStorage: user object
-  try {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      const parsedUser = JSON.parse(userData);
-      if (parsedUser?.hotel_slug) return parsedUser.hotel_slug;
-      if (parsedUser?.hotel?.slug) return parsedUser.hotel.slug;
+    // 1) Auth context (primary)
+    if (user?.hotel_slug) {
+      console.log('🏨 Hotel slug from auth:', user.hotel_slug);
+      return user.hotel_slug;
     }
-  } catch (error) {
-    console.error('Error parsing user from localStorage:', error);
-  }
-
-  // 3) LocalStorage: standalone key
-  try {
-    const directHotelSlug = localStorage.getItem('hotelSlug');
-    if (directHotelSlug) return directHotelSlug;
-  } catch (error) {
-    console.error('Error reading hotelSlug from localStorage:', error);
-  }
-
-  // 4) URL-based slug (works for numeric IDs too)
-  try {
-    const pathParts = window.location.pathname.split('/').filter(Boolean);
-
-    // Known non-hotel prefixes we want to ignore
-    const IGNORE = new Set([
-      'login',
-      'logout',
-      'register',
-      'forgot-password',
-      'reset-password',
-      'no-internet',
-      'public',
-      'booking',
-      'games',
-      'stock_tracker',
-      'hotel',
-      'staff',
-      'chat'
-    ]);
-
-    const candidate = pathParts.find(part => !IGNORE.has(part));
-    if (candidate) return candidate;
-  } catch (error) {
-    console.error('Error extracting hotelSlug from URL:', error);
-  }
-
-  // ❌ No fallback slug – we simply don't know it
-  console.warn('[MessengerWidget] Could not resolve hotelSlug – widget will not render.');
-  return null;
-};
+    
+    // 2) localStorage fallback
+    try {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        const parsedUser = JSON.parse(userData);
+        if (parsedUser?.hotel_slug) {
+          console.log('🏨 Hotel slug from localStorage:', parsedUser.hotel_slug);
+          return parsedUser.hotel_slug;
+        }
+      }
+    } catch (error) {
+      console.error('Error getting hotel slug from localStorage:', error);
+    }
+    
+    console.warn('❌ No hotel slug found - chat will not work');
+    return null;
+  };
 
   
-  const hotelSlug = getHotelSlug();
-  console.log('🏨 [MessengerWidget] HotelSlug resolved:', hotelSlug, 'from user:', user?.hotel_slug, 'localStorage check done');
+  const rawHotelSlug = getHotelSlug();
+  
+  // ✅ NORMALIZE: Ensure consistent format (remove "hotel-" prefix if present for channel names)
+  const hotelSlug = rawHotelSlug?.startsWith('hotel-') 
+    ? rawHotelSlug.substring(6)  // Remove "hotel-" prefix -> "killarney"  
+    : rawHotelSlug;              // Keep as-is -> "killarney"
+    
+  console.log('🏨 [MessengerWidget] HotelSlug normalized:', {
+    raw: rawHotelSlug,
+    normalized: hotelSlug,
+    channelWillBe: `hotel-${hotelSlug}.staff-chat.X`
+  });
   
   const { registerOpenChatHandler } = useMessenger();
   

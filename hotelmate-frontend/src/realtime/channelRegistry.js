@@ -31,8 +31,12 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
   try {
     // ✅ NEW STANDARDIZED CHANNEL FORMAT: hotel-{slug}.{domain}
     
+    console.log('🔥 [channelRegistry] Base hotel channels - hotelSlug:', hotelSlug);
+    
     // Attendance (hotel-wide)
-    const attendanceChannel = pusher.subscribe(`hotel-${hotelSlug}.attendance`);
+    const attendanceChannelName = `hotel-${hotelSlug}.attendance`;
+    console.log('🔥 [channelRegistry] Subscribing to attendance:', attendanceChannelName);
+    const attendanceChannel = pusher.subscribe(attendanceChannelName);
     channels.push(attendanceChannel);
 
     // Room Service (hotel-wide) 
@@ -119,12 +123,30 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
   }
 
   const pusher = getPusherClient();
+  // ✅ REVERTED: Keep original channel format - the issue was the hotelSlug value
   const channelName = `hotel-${hotelSlug}.staff-chat.${conversationId}`;
+  
+  console.log('🔥 [channelRegistry] Attempting to subscribe to:', channelName);
+  console.log('🔥 [channelRegistry] Raw hotelSlug value:', hotelSlug);
+  console.log('🔥 [channelRegistry] Pusher connection state:', pusher.connection.state);
+  console.log('🔥 [channelRegistry] Auth token available:', !!localStorage.getItem('token'));
   
   try {
     const channel = pusher.subscribe(channelName);
     
+    // Add subscription error handlers
+    channel.bind('pusher:subscription_error', (error) => {
+      console.error('❌ [channelRegistry] Subscription error for channel:', channelName, error);
+    });
+    
+    channel.bind('pusher:subscription_succeeded', () => {
+      console.log('✅ [channelRegistry] Successfully subscribed to:', channelName);
+    });
+    
     channel.bind_global((eventName, payload) => {
+      if (!eventName.startsWith('pusher:')) {
+        console.log('🔥 [channelRegistry] Received event on channel:', channelName, 'event:', eventName);
+      }
       handleIncomingRealtimeEvent({
         source: 'pusher',
         channel: channel.name,
@@ -138,8 +160,9 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
 
     return () => {
       try {
+        console.log('🔥 [channelRegistry] Attempting cleanup for channel:', channelName);
         channel.unbind_all();
-        channel.unsubscribe();
+        pusher.unsubscribe(channelName); // Use pusher.unsubscribe() instead of channel.unsubscribe()
         const index = currentChannels.indexOf(channel);
         if (index > -1) {
           currentChannels.splice(index, 1);
