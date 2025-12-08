@@ -81,14 +81,15 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
   const handleStartNewChat = async (staff) => {
     // console.log('🚀 Starting chat with staff:', staff);
     
-    // ✅ FIX: Prevent race condition - check if already creating conversation with this staff member
-    if (creatingConversationsWith.has(staff.id)) {
-      console.log('🔒 Already creating conversation with staff:', staff.id, '- skipping duplicate request');
+    // ✅ FIX: Prevent race condition - create unique key for user pair
+    const conversationKey = [currentUserId, staff.id].sort().join('-');
+    if (creatingConversationsWith.has(conversationKey)) {
+      console.log('🔒 Already creating conversation between users:', conversationKey, '- skipping duplicate request');
       return;
     }
     
     setStartingChatWithId(staff.id);
-    setCreatingConversationsWith(prev => new Set(prev).add(staff.id));
+    setCreatingConversationsWith(prev => new Set(prev).add(conversationKey));
     
     try {
       // Check if a 1-on-1 conversation already exists with this staff member
@@ -138,10 +139,11 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
       alert(errorMessage);
     } finally {
       setStartingChatWithId(null);
-      // ✅ FIX: Clear the conversation creation lock
+      // ✅ FIX: Clear the conversation creation lock using the same key
+      const conversationKey = [currentUserId, staff.id].sort().join('-');
       setCreatingConversationsWith(prev => {
         const newSet = new Set(prev);
-        newSet.delete(staff.id);
+        newSet.delete(conversationKey);
         return newSet;
       });
     }
