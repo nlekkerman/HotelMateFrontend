@@ -72,7 +72,20 @@ function chatReducer(state, action) {
       
       // Add/update with API messages (may be more complete)
       newMessages.forEach(msg => {
-        if (msg.id) messageMap.set(msg.id, msg);
+        if (msg.id) {
+          // Normalize attachment field names for API messages too
+          const normalizedMessage = {
+            ...msg,
+            attachments: (msg.attachments || []).map(att => ({
+              ...att,
+              file_url: att.file_url || att.url,
+              file_name: att.file_name || att.filename,
+              file_type: att.file_type || att.type,
+              file_size: att.file_size || att.size
+            }))
+          };
+          messageMap.set(msg.id, normalizedMessage);
+        }
       });
       
       // Convert back to array and sort by timestamp
@@ -563,6 +576,15 @@ export const chatActions = {
         if (hasFullMessage) {
           const text = payload.message ?? payload.text ?? '';
 
+          // Normalize attachment field names (backend sends 'url', frontend expects 'file_url')
+          const normalizedAttachments = (payload.attachments || []).map(att => ({
+            ...att,
+            file_url: att.file_url || att.url, // Backend sends 'url', normalize to 'file_url'
+            file_name: att.file_name || att.filename, // Ensure consistent naming
+            file_type: att.file_type || att.type,
+            file_size: att.file_size || att.size
+          }));
+
           const mappedMessage = {
             id: payload.id,
             message: text,
@@ -570,7 +592,7 @@ export const chatActions = {
             sender_name: payload.sender_name ?? payload.sender_info?.name,
             timestamp: payload.timestamp,
             conversation: numericConversationId,
-            attachments: payload.attachments || [],
+            attachments: normalizedAttachments,
             is_system_message: payload.is_system_message || false,
             is_edited: payload.is_edited || false,
             is_deleted: payload.is_deleted || false,
@@ -581,11 +603,20 @@ export const chatActions = {
           };
 
           console.log('✅ [chatStore] Message validation PASSED - creating mapped message:', mappedMessage);
+          console.log('📎 [chatStore] Attachment normalization:', {
+            originalAttachments: payload.attachments,
+            normalizedAttachments: normalizedAttachments,
+            attachmentCount: normalizedAttachments.length,
+            firstAttachmentUrls: normalizedAttachments.length > 0 ? {
+              original_url: payload.attachments[0]?.url,
+              normalized_file_url: normalizedAttachments[0]?.file_url
+            } : null
+          });
           console.log('🚀 [chatStore] DISPATCHING RECEIVE_MESSAGE:', { 
             conversationId: numericConversationId, 
             messageId: payload.id, 
             messageText: text,
-            mappedMessage: mappedMessage
+            hasAttachments: normalizedAttachments.length > 0
           });
           
           globalChatDispatch({
@@ -710,13 +741,22 @@ export const chatActions = {
 
       case 'realtime_staff_chat_attachment_uploaded':
       case 'realtime_staff_chat_attachment_deleted': {
+        // Normalize attachment field names for consistency
+        const normalizedAttachments = (payload.attachments || []).map(att => ({
+          ...att,
+          file_url: att.file_url || att.url,
+          file_name: att.file_name || att.filename,
+          file_type: att.file_type || att.type,
+          file_size: att.file_size || att.size
+        }));
+
         // Handle attachment events by refreshing the message
         globalChatDispatch({
           type: CHAT_ACTIONS.MESSAGE_UPDATED,
           payload: {
             conversationId: numericConversationId,
             messageId: parseInt(payload.message_id),
-            updatedFields: { attachments: payload.attachments || [] }
+            updatedFields: { attachments: normalizedAttachments }
           }
         });
         break;
