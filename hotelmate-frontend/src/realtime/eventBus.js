@@ -59,6 +59,17 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
 
     // Accept normalized OR direct-message payloads
     if (payload?.category && payload?.type) {
+  // 🔥 For staff_chat, prefer the Pusher eventName (realtime_staff_chat_*)
+  let effectiveType = payload.type;
+
+  if (
+    payload.category === 'staff_chat' &&
+    typeof eventName === 'string' &&
+    eventName.startsWith('realtime_staff_chat_')
+  ) {
+    effectiveType = eventName; // 👈 use the LONG name that chatStore expects
+  }
+
         // FULL normalized
         const normalized = {
           category: payload.category,
