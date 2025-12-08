@@ -53,17 +53,11 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   };
 
   
-  const rawHotelSlug = getHotelSlug();
+  const hotelSlug = getHotelSlug();
   
-  // ✅ NORMALIZE: Ensure consistent format (remove "hotel-" prefix if present for channel names)
-  const hotelSlug = rawHotelSlug?.startsWith('hotel-') 
-    ? rawHotelSlug.substring(6)  // Remove "hotel-" prefix -> "killarney"  
-    : rawHotelSlug;              // Keep as-is -> "killarney"
-    
-  console.log('🏨 [MessengerWidget] HotelSlug normalized:', {
-    raw: rawHotelSlug,
-    normalized: hotelSlug,
-    channelWillBe: `hotel-${hotelSlug}.staff-chat.X`
+  console.log('🏨 [MessengerWidget] HotelSlug from backend:', {
+    hotelSlug,
+    channelWillBe: `${hotelSlug}.staff-chat.X`
   });
   
   const { registerOpenChatHandler } = useMessenger();

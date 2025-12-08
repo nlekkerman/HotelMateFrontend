@@ -34,22 +34,25 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
     console.log('🔥 [channelRegistry] Base hotel channels - hotelSlug:', hotelSlug);
     
     // Attendance (hotel-wide)
-    const attendanceChannelName = `hotel-${hotelSlug}.attendance`;
+    const attendanceChannelName = `${hotelSlug}.attendance`;
     console.log('🔥 [channelRegistry] Subscribing to attendance:', attendanceChannelName);
     const attendanceChannel = pusher.subscribe(attendanceChannelName);
     channels.push(attendanceChannel);
 
     // Room Service (hotel-wide) 
-    const roomServiceChannel = pusher.subscribe(`hotel-${hotelSlug}.room-service`);
+    const roomServiceChannelName = `${hotelSlug}.room-service`;
+    const roomServiceChannel = pusher.subscribe(roomServiceChannelName);
     channels.push(roomServiceChannel);
 
     // Booking (hotel-wide)
-    const bookingChannel = pusher.subscribe(`hotel-${hotelSlug}.booking`);
+    const bookingChannelName = `${hotelSlug}.booking`;
+    const bookingChannel = pusher.subscribe(bookingChannelName);
     channels.push(bookingChannel);
 
     // Personal staff notifications (if staffId provided)
     if (staffId) {
-      const personalNotifications = pusher.subscribe(`hotel-${hotelSlug}.staff-${staffId}-notifications`);
+      const personalChannelName = `${hotelSlug}.staff-${staffId}-notifications`;
+      const personalNotifications = pusher.subscribe(personalChannelName);
       channels.push(personalNotifications);
     }
 
@@ -123,8 +126,8 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
   }
 
   const pusher = getPusherClient();
-  // ✅ REVERTED: Keep original channel format - the issue was the hotelSlug value
-  const channelName = `hotel-${hotelSlug}.staff-chat.${conversationId}`;
+  // ✅ BACKEND HANDLES PREFIXING: Use hotel slug exactly as backend provides it
+  const channelName = `${hotelSlug}.staff-chat.${conversationId}`;
   
   console.log('🔥 [channelRegistry] Attempting to subscribe to:', channelName);
   console.log('🔥 [channelRegistry] Raw hotelSlug value:', hotelSlug);
