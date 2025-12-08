@@ -56,24 +56,7 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
     }
   }, [hotelSlug, fetchStaffConversations]);
 
-  // Subscribe to conversation updates from StaffChatContext
-  useEffect(() => {
-    console.log('📋 [CONVERSATIONS LIST] Subscribing to conversation updates');
-
-    const unsubscribe = subscribeToConversationUpdates((conversationId, updates) => {
-      console.log('📋 [CONVERSATIONS LIST] Received conversation update:', {
-        conversationId,
-        updates
-      });
-      // Context already handles updating the conversations array
-      // This is just for logging/debugging
-    });
-
-    return () => {
-      console.log('🧹 [CONVERSATIONS LIST] Unsubscribing from conversation updates');
-      unsubscribe();
-    };
-  }, [subscribeToConversationUpdates]);
+  // ✅ UNIFIED: No legacy subscription needed - conversations update automatically via chatStore
 
   // Start new conversation
   const { startConversation } = useStartConversation(hotelSlug);

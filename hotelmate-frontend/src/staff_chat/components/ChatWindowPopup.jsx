@@ -303,62 +303,7 @@ const ChatWindowPopup = ({
     );
   }, [readReceipts, messages]);
 
-  // Subscribe to messages from StaffChatContext (single source of truth!)
-  useEffect(() => {
-    if (!conversation?.id) {
-      console.log("⚠️ [ChatWindowPopup] No conversation ID");
-      return;
-    }
-
-    console.log(
-      "🎯 [ChatWindowPopup] Subscribing to StaffChatContext messages for conversation:",
-      conversation.id
-    );
-
-    // Listen to messages broadcasted by StaffChatContext
-    const unsubscribe = subscribeToMessages((message) => {
-      console.log(
-        "🔥 [ChatWindowPopup] Received message from subscribeToMessages:",
-        {
-          messageConvId: message.conversation || message.conversation_id,
-          expectedConvId: conversation.id,
-          matches:
-            message.conversation === conversation.id ||
-            message.conversation_id === conversation.id,
-          messageText: (message.message || message.content || "").substring(
-            0,
-            30
-          ),
-        }
-      );
-
-      // Only process messages for this conversation
-      if (
-        message.conversation === conversation.id ||
-        message.conversation_id === conversation.id
-      ) {
-        console.log(
-          "📨 [ChatWindowPopup] ✅ Message matches this conversation - should appear now"
-        );
-        // Messages automatically appear via chatStore
-        scrollToBottom();
-      } else {
-        console.log(
-          "📨 [ChatWindowPopup] ❌ Message for different conversation - ignoring"
-        );
-      }
-    });
-
-    console.log(
-      "✅ [ChatWindowPopup] Subscribed to StaffChatContext message events"
-    );
-
-    // Cleanup
-    return () => {
-      console.log("🧹 [ChatWindowPopup] Unsubscribing from StaffChatContext");
-      unsubscribe();
-    };
-  }, [conversation?.id, subscribeToMessages]);
+  // ✅ UNIFIED: Messages come through chatStore automatically - no legacy subscriptions needed
 
   // Subscribe to centralized realtime system for read receipts and new messages
   useEffect(() => {
