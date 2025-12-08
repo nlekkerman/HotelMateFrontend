@@ -310,7 +310,7 @@ const ChatWindowPopup = ({
     console.log('🔥 [POPUP REALTIME] Subscription details:', {
       hotelSlug,
       conversationId: conversation.id,
-      channelName: `hotel-${hotelSlug}.staff-chat.${conversation.id}`
+      channelName: `${hotelSlug}.staff-chat.${conversation.id}`
     });
 
     // Use the centralized subscription

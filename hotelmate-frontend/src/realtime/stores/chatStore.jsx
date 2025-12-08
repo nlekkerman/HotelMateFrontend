@@ -112,11 +112,18 @@ function chatReducer(state, action) {
         new Date(a.timestamp) - new Date(b.timestamp)
       );
 
+      console.log('🎯 [REDUCER] UPDATING CONVERSATION STATE:', {
+        conversationId,
+        oldMessageCount: conversation.messages.length,
+        newMessageCount: updatedMessages.length,
+        newMessage: { id: message.id, text: message.message, sender: message.sender }
+      });
+
       // Update unread count if not active conversation
       const isActive = state.activeConversationId === conversationId;
       const newUnreadCount = isActive ? 0 : (conversation.unread_count || 0) + 1;
 
-      return {
+      const updatedState = {
         ...state,
         conversationsById: {
           ...state.conversationsById,
@@ -133,6 +140,9 @@ function chatReducer(state, action) {
           }
         }
       };
+      
+      console.log('✅ [REDUCER] RETURNING UPDATED STATE - message added to conversation', conversationId);
+      return updatedState;
     }
 
     case CHAT_ACTIONS.MESSAGE_UPDATED: {

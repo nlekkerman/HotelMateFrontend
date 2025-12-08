@@ -183,35 +183,43 @@ export const StaffChatProvider = ({ children }) => {
   // Subscribe to individual conversation channels when conversations change
   const subscriptionsRef = useRef(new Map());
   
+  // Stable subscription management - only subscribe/unsubscribe when actually needed
   useEffect(() => {
-    if (!hotelSlug || conversations.length === 0) return;
+    if (!hotelSlug) return;
     
-    // Subscribe to new conversations
-    conversations.forEach(conversation => {
-      if (!subscriptionsRef.current.has(conversation.id)) {
-        console.log('🔗 [StaffChatContext] Subscribing to conversation:', conversation.id);
-        const cleanup = subscribeToStaffChatConversation(hotelSlug, conversation.id);
-        subscriptionsRef.current.set(conversation.id, cleanup);
+    // Get current conversation IDs
+    const currentConversationIds = new Set(conversations.map(c => c.id));
+    const subscribedIds = new Set(subscriptionsRef.current.keys());
+    
+    // Subscribe to NEW conversations only
+    currentConversationIds.forEach(conversationId => {
+      if (!subscribedIds.has(conversationId)) {
+        console.log('🔗 [StaffChatContext] Subscribing to conversation:', conversationId);
+        const cleanup = subscribeToStaffChatConversation(hotelSlug, conversationId);
+        subscriptionsRef.current.set(conversationId, cleanup);
       }
     });
     
-    // Cleanup removed conversations
-    const currentConversationIds = new Set(conversations.map(c => c.id));
-    subscriptionsRef.current.forEach((cleanup, conversationId) => {
+    // Unsubscribe from REMOVED conversations only  
+    subscribedIds.forEach(conversationId => {
       if (!currentConversationIds.has(conversationId)) {
-        console.log('🧹 [StaffChatContext] Unsubscribing from conversation:', conversationId);
-        cleanup();
+        console.log('🧹 [StaffChatContext] Unsubscribing from removed conversation:', conversationId);
+        const cleanup = subscriptionsRef.current.get(conversationId);
+        if (cleanup) cleanup();
         subscriptionsRef.current.delete(conversationId);
       }
     });
     
-    // Cleanup all subscriptions on unmount
+  }, [hotelSlug, conversations.map(c => c.id).join(',')]); // Only re-run if conversation IDs actually change
+  
+  // Cleanup ALL subscriptions only on unmount
+  useEffect(() => {
     return () => {
-      console.log('🧹 [StaffChatContext] Cleaning up all conversation subscriptions');
+      console.log('🧹 [StaffChatContext] Component unmounting - cleaning up all subscriptions');
       subscriptionsRef.current.forEach(cleanup => cleanup());
       subscriptionsRef.current.clear();
     };
-  }, [conversations, hotelSlug]);
+  }, []); // Empty dependency array - only runs on mount/unmount
 
   // Debug logging
   useEffect(() => {
