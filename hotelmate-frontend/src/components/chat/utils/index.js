@@ -5,15 +5,19 @@
  * Import from this file to access any chat message action functionality.
  */
 
-// Reply utilities
+// Reply utilities - React components
+export {
+  ReplyPreview,
+  ReplyInputPreview
+} from './messageReply.jsx';
+
+// Reply utilities - Helper functions
 export {
   createReplyHandlers,
-  ReplyPreview,
-  ReplyInputPreview,
   formatReplyData,
   scrollToOriginalMessage,
   getReplySenderName
-} from './messageReply.jsx';
+} from './replyUtils.js';
 
 // Delete utilities
 export {
