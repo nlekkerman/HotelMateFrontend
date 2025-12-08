@@ -112,32 +112,17 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   
   // Debug logging removed to clean up console
   const [showGroupModal, setShowGroupModal] = useState(false);
-  const [openChats, setOpenChats] = useState(() => {
-    // Restore open chats from localStorage on mount
-    try {
-      const saved = localStorage.getItem('staff-chat-open-windows');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return Array.isArray(parsed) ? parsed : [];
-      }
-    } catch (error) {
-      console.error('Failed to restore open chats:', error);
-    }
-    return [];
-  });
+  // ✅ BETTER FIX: Remove localStorage persistence - keep chat windows session-only
+  // This prevents stale conversation IDs and sync issues in realtime chat
+  const [openChats, setOpenChats] = useState([]);
   const [currentPage, setCurrentPage] = useState(0); // For navigating through chat groups
   
   // Use controlled or internal state
   const isExpanded = controlledExpanded !== undefined ? controlledExpanded : internalExpanded;
 
-  // Persist open chats to localStorage whenever they change
-  useEffect(() => {
-    try {
-      localStorage.setItem('staff-chat-open-windows', JSON.stringify(openChats));
-    } catch (error) {
-      console.error('Failed to save open chats:', error);
-    }
-  }, [openChats]);
+  // ✅ REMOVED: No longer persist open chats to localStorage
+  // This prevents stale conversation IDs in realtime chat environment
+  // Chat windows are now session-only and reset on page refresh
 
   // Calculate visible chats (max 3 at a time)
   const CHATS_PER_PAGE = 3;
@@ -173,6 +158,12 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
       return;
     }
     
+    // ✅ FIX: Additional validation - ensure conversation ID is valid
+    if (typeof conversation.id !== 'number' && !Number.isInteger(parseInt(conversation.id))) {
+      console.error('❌ Invalid conversation ID format:', conversation.id);
+      return;
+    }
+    
     // Auto-mark conversation as read when opening
     if (conversation.unread_count > 0 || conversation.unreadCount > 0) {
       console.log('📖 [MessengerWidget] Auto-marking conversation as read:', conversation.id);
@@ -185,14 +176,16 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
     }
     
     // Check if chat is already open
-    const existingChat = openChats.find(chat => chat.conversationId === conversation.id);
+    // ✅ FIX: Ensure type consistency for conversation ID comparison
+    const conversationId = parseInt(conversation.id);
+    const existingChat = openChats.find(chat => parseInt(chat.conversationId) === conversationId);
     
     if (existingChat) {
       //
       // If minimized, restore it
       if (existingChat.isMinimized) {
         setOpenChats(openChats.map(chat => 
-          chat.conversationId === conversation.id 
+          parseInt(chat.conversationId) === conversationId 
             ? { ...chat, isMinimized: false }
             : chat
         ));
@@ -201,7 +194,7 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
       //
       // Add new chat window (no limit, but only show 3 at a time)
       setOpenChats([...openChats, {
-        conversationId: conversation.id,
+        conversationId: conversationId, // ✅ FIX: Use parsed conversationId for consistency
         conversation,
         staff,
         isMinimized: false
@@ -271,8 +264,10 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   };
 
   const handleMinimizeChat = (conversationId) => {
+    // ✅ FIX: Ensure type consistency for conversation ID comparison
+    const numericConversationId = parseInt(conversationId);
     setOpenChats(openChats.map(chat => 
-      chat.conversationId === conversationId 
+      parseInt(chat.conversationId) === numericConversationId 
         ? { ...chat, isMinimized: !chat.isMinimized }
         : chat
     ));
@@ -286,7 +281,9 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   };
 
   const handleCloseChat = (conversationId) => {
-    setOpenChats(openChats.filter(chat => chat.conversationId !== conversationId));
+    // ✅ FIX: Ensure type consistency for conversation ID comparison
+    const numericConversationId = parseInt(conversationId);
+    setOpenChats(openChats.filter(chat => parseInt(chat.conversationId) !== numericConversationId));
   };
 
   const handleNextPage = () => {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
+import { useAuth } from '@/context/AuthContext';
 import { fetchMessages, sendMessage, uploadFiles, markConversationAsRead } from '../services/staffChatApi';
 import { useStaffChat } from '../context/StaffChatContext';
 import MessageInput from './MessageInput';
@@ -45,10 +46,9 @@ const ChatWindowPopup = ({
   // Get event subscription from StaffChatContext
   const { subscribeToMessages } = useStaffChat();
   
-  // Get current user ID from localStorage or use a fallback
-  const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
-  // Try multiple possible fields for the current user ID
-  const currentUserId = currentUserData?.staff_id || currentUserData?.id || null;
+  // ✅ FIX: Get current user ID from auth context instead of localStorage
+  const { user } = useAuth();
+  const currentUserId = user?.staff_id || user?.id || null;
   
   // Debug: Log current user info
   // Current user data loaded

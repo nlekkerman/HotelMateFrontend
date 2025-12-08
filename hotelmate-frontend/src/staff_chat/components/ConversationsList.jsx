@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import { useAuth } from '@/context/AuthContext';
 import useStaffList from '../hooks/useStaffList';
 import useStaffSearch from '../hooks/useStaffSearch';
 import useStartConversation from '../hooks/useStartConversation';
@@ -16,9 +17,12 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
   const [startingChatWithId, setStartingChatWithId] = useState(null);
   const [markingAllAsRead, setMarkingAllAsRead] = useState(false);
   
-  // Get current user ID from localStorage
-  const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
-  const currentUserId = currentUserData?.staff_id || currentUserData?.id || null;
+  // ✅ FIX: Track ongoing conversation creation attempts to prevent race conditions
+  const [creatingConversationsWith, setCreatingConversationsWith] = useState(new Set());
+  
+  // ✅ FIX: Get current user ID from auth context instead of localStorage
+  const { user } = useAuth();
+  const currentUserId = user?.staff_id || user?.id || null;
 
   // Get conversations from StaffChatContext (real-time updates via Pusher)
   const { conversations, fetchStaffConversations, subscribeToConversationUpdates } = useStaffChat();
@@ -76,7 +80,15 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
 
   const handleStartNewChat = async (staff) => {
     // console.log('🚀 Starting chat with staff:', staff);
+    
+    // ✅ FIX: Prevent race condition - check if already creating conversation with this staff member
+    if (creatingConversationsWith.has(staff.id)) {
+      console.log('🔒 Already creating conversation with staff:', staff.id, '- skipping duplicate request');
+      return;
+    }
+    
     setStartingChatWithId(staff.id);
+    setCreatingConversationsWith(prev => new Set(prev).add(staff.id));
     
     try {
       // Check if a 1-on-1 conversation already exists with this staff member
@@ -85,8 +97,13 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
         if (conv.is_group || !conv.participants || conv.participants.length !== 2) {
           return false;
         }
-        // Check if this staff member is in the conversation
-        return conv.participants.some(participant => participant.id === staff.id);
+        
+        // ✅ FIX: Check if BOTH current user AND target staff are in the same conversation
+        const participantIds = conv.participants.map(p => p.id);
+        const hasCurrentUser = participantIds.includes(currentUserId);
+        const hasTargetStaff = participantIds.includes(staff.id);
+        
+        return hasCurrentUser && hasTargetStaff;
       });
 
       if (existingConv) {
@@ -121,6 +138,12 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
       alert(errorMessage);
     } finally {
       setStartingChatWithId(null);
+      // ✅ FIX: Clear the conversation creation lock
+      setCreatingConversationsWith(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(staff.id);
+        return newSet;
+      });
     }
   };
 
