@@ -152,13 +152,16 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
         console.log('🚨 [channelRegistry] ===== ANY EVENT ON STAFF CHAT CHANNEL =====');
         console.log('🚨 Channel:', channelName);
         console.log('🚨 Event Name:', eventName);
+        console.log('🚨 Payload Type:', typeof payload);
         console.log('🚨 Payload:', JSON.stringify(payload, null, 2));
         console.log('🚨 =================================================');
       }
       
       if (!eventName.startsWith('pusher:')) {
-        console.log('🔥 [channelRegistry] Received event on channel:', channelName, 'event:', eventName);
+        console.log('🔥 [channelRegistry] Non-system event received:', { channel: channelName, eventName, payloadType: typeof payload });
       }
+      
+      // Route all events to the event bus
       handleIncomingRealtimeEvent({
         source: 'pusher',
         channel: channel.name,

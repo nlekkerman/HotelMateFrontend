@@ -18,6 +18,11 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
   try {
     console.log('📡 Incoming realtime event:', { source, channel, eventName, payload });
     
+    // 🚨 CATCH ALL REALTIME EVENTS TO DEBUG MISSING MESSAGE EVENTS
+    if (eventName?.includes('message') || eventName?.includes('created')) {
+      console.log('🚨🚨 [EventBus] MESSAGE-RELATED EVENT DETECTED:', { channel, eventName, payload });
+    }
+    
     // 🔥 DEBUG: Log staff chat events specifically
     if (channel?.includes('staff-chat') && !eventName?.startsWith('pusher:')) {
       console.log('🚨 [EventBus] ===== STAFF CHAT EVENT RECEIVED =====');
@@ -28,6 +33,14 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
       console.log('🔥 [EventBus] Has category?', !!payload?.category, 'Value:', payload?.category);
       console.log('🔥 [EventBus] Has type?', !!payload?.type, 'Value:', payload?.type);
       console.log('🔥 [EventBus] Has payload.payload?', !!payload?.payload);
+      console.log('🔥 [EventBus] Event will be normalized and routed to chatStore');
+      
+      // 🚨 SPECIAL CHECK FOR MESSAGE EVENTS
+      if (eventName === 'realtime_staff_chat_message_created') {
+        console.log('🚨🚨🚨 [EventBus] FOUND THE MESSAGE EVENT WE NEED! 🚨🚨🚨');
+      } else {
+        console.log('🔍 [EventBus] This is NOT a message_created event, looking for that...');
+      }
       console.log('🚨 [EventBus] ===================================');
     }
 
@@ -55,8 +68,9 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
         return;
     }
 
-    // SUPPORT raw Pusher event (e.g. direct message payload)
+    // SUPPORT raw Pusher event (e.g. direct message payload) - ALWAYS process staff-chat events
     if (channel?.includes("staff-chat") && eventName?.startsWith("realtime_staff_chat_")) {
+        console.log('🔥 [EventBus] Processing RAW staff-chat event:', { eventName, channel, payload });
         const normalized = {
           category: "staff_chat",
           type: eventName,
@@ -65,6 +79,7 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           source,
           timestamp: new Date().toISOString()
         };
+        console.log('🚀 [EventBus] Normalized staff-chat event:', normalized);
         routeToDomainStores(normalized);
         maybeAddToNotificationCenter(normalized);
         return;
@@ -73,8 +88,23 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
     // 3️⃣ (Optional) if you *still* want legacy support, call normalizePusherEvent/normalizeFCMEvent here.
     // Right now you just warn:
 
-    // Backend should always send normalized events - no legacy fallback needed
+    // FALLBACK: Process ANY staff-chat event that doesn't match above patterns
+    if (channel?.includes("staff-chat") && eventName && !eventName.startsWith('pusher:')) {
+        console.log('🆘 [EventBus] FALLBACK: Processing unmatched staff-chat event:', { eventName, channel, payload });
+        const normalized = {
+          category: "staff_chat",
+          type: eventName,
+          payload: payload,
+          meta: { channel, eventName, event_id: payload?.event_id || payload?.id },
+          source,
+          timestamp: new Date().toISOString()
+        };
+        console.log('🆘 [EventBus] FALLBACK normalized event:', normalized);
+        routeToDomainStores(normalized);
+        return;
+    }
     
+    // Backend should send normalized events - log unhandled events
     console.warn('⚠️ Received non-normalized event - backend should send normalized format:', {
       source,
       channel,
@@ -93,7 +123,7 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
  */
 function routeToDomainStores(event) {
   // Handle new normalized format from backend
-  if (event.category && event.type && event.payload) {
+  if (event.category && event.type) {
     if (!import.meta.env.PROD) {
       console.log('🚏 Routing NEW format event:', event.category, event.type);
     }

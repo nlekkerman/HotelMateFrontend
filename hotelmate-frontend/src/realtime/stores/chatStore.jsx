@@ -84,7 +84,12 @@ function chatReducer(state, action) {
     case CHAT_ACTIONS.RECEIVE_MESSAGE: {
       const { message, conversationId } = action.payload;
       console.log('🎯 [REDUCER] RECEIVE_MESSAGE called:', { conversationId, messageId: message.id, messageText: message.message });
+      console.log('🎯 [REDUCER] Full action payload:', action.payload);
       console.log('🎯 [REDUCER] Available conversations:', Object.keys(state.conversationsById));
+      console.log('🎯 [REDUCER] Current state snapshot:', {
+        totalConversations: Object.keys(state.conversationsById).length,
+        activeConversationId: state.activeConversationId
+      });
       
       let conversation = state.conversationsById[conversationId];
       
@@ -422,6 +427,13 @@ export const chatActions = {
 
   handleEvent(event) {
     console.log('🔥 [chatActions.handleEvent] CALLED with event:', event);
+    console.log('🔥 [chatActions.handleEvent] Event structure:', {
+      category: event.category,
+      type: event.type,
+      eventType: event.eventType,
+      hasPayload: !!event.payload,
+      payloadKeys: event.payload ? Object.keys(event.payload) : []
+    });
     
     if (!globalChatDispatch || !globalChatGetState) {
       console.warn('💬 Chat store not initialized, skipping event:', event);
@@ -441,11 +453,11 @@ export const chatActions = {
     console.log('🔥 [chatStore] Mapped event type:', { original: event.eventType || event.type, mapped: eventType });
     const eventId = event.meta?.event_id || null;
     const rawConversationId =
-      payload?.conversation_id !== undefined
-        ? payload.conversation_id
-        : payload?.conversationId !== undefined
-          ? payload.conversationId
-          : payload?.conversation; // ✅ from StaffChatMessageSerializer
+      payload?.conversation !== undefined
+        ? payload.conversation
+        : payload?.conversation_id !== undefined
+          ? payload.conversation_id
+          : payload?.conversationId; // ✅ backend sends 'conversation' field first
     const parsedConversationId =
       rawConversationId !== null && rawConversationId !== undefined && rawConversationId !== ''
         ? parseInt(rawConversationId, 10)
@@ -491,16 +503,37 @@ export const chatActions = {
     switch (eventType) {
       case 'realtime_staff_chat_message_created': {
         console.log('📨 [chatStore] Processing message_created:', { numericConversationId, payload });
+        console.log('🔥 [chatStore] Raw payload fields:', Object.keys(payload));
+        console.log('🔥 [chatStore] Full payload:', JSON.stringify(payload, null, 2));
         console.log('🔥 [chatStore] Message payload structure:', {
           hasId: !!payload.id,
           hasText: !!payload.text,
           hasMessage: !!payload.message,
           senderId: payload.sender_id ?? payload.sender,
           conversation: payload.conversation,
+          conversationId: payload.conversation_id,
         });
 
-        // Full message object if we have an id and some text
-        const hasFullMessage = payload.id && (payload.message || payload.text);
+        // Full message object - be flexible with field names from backend
+        const hasId = payload.id;
+        const hasMessage = payload.message || payload.text;
+        const hasSender = payload.sender || payload.sender_id;
+        const hasFullMessage = hasId && hasMessage && hasSender;
+
+        console.log('🔥 [chatStore] Message validation details:', { 
+          hasId: !!hasId, 
+          idValue: hasId,
+          hasMessage: !!hasMessage, 
+          messageValue: hasMessage,
+          hasSender: !!hasSender, 
+          senderValue: hasSender,
+          hasFullMessage 
+        });
+
+        if (!hasFullMessage) {
+          console.error('❌ [chatStore] Message validation FAILED - missing required fields');
+          console.error('❌ Raw payload that failed validation:', payload);
+        }
 
         if (hasFullMessage) {
           const text = payload.message ?? payload.text ?? '';
@@ -522,6 +555,14 @@ export const chatActions = {
             read_by_count: payload.read_by_count || 0,
           };
 
+          console.log('✅ [chatStore] Message validation PASSED - creating mapped message:', mappedMessage);
+          console.log('🚀 [chatStore] DISPATCHING RECEIVE_MESSAGE:', { 
+            conversationId: numericConversationId, 
+            messageId: payload.id, 
+            messageText: text,
+            mappedMessage: mappedMessage
+          });
+          
           globalChatDispatch({
             type: CHAT_ACTIONS.RECEIVE_MESSAGE,
             payload: {
@@ -529,6 +570,8 @@ export const chatActions = {
               message: mappedMessage,
             },
           });
+          
+          console.log('✅ [chatStore] RECEIVE_MESSAGE dispatch completed successfully');
         } else if (payload.notification && payload.sender_id) {
           // FCM fallback
           const fcmMessage = {
