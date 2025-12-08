@@ -15,65 +15,13 @@ export const StaffChatProvider = ({ children }) => {
   const chatDispatch = useChatDispatch();
   
   // Event listeners for broadcasting messages to all components (maintain compatibility)
-  const messageListenersRef = useRef(new Set());
-  const conversationUpdateListenersRef = useRef(new Set());
+  // ✅ UNIFIED: No legacy listener refs needed
 
   // Get staff ID and hotel slug from user
   const staffId = user?.staff_id || user?.id;
   const hotelSlug = user?.hotel_slug;
   
-  /**
-   * Subscribe to new message events
-   * Components can register callbacks to receive all new messages
-   */
-  const subscribeToMessages = useCallback((callback) => {
-    messageListenersRef.current.add(callback);
-    
-    // Return unsubscribe function
-    return () => {
-      messageListenersRef.current.delete(callback);
-    };
-  }, []);
-  
-  /**
-   * Subscribe to conversation update events
-   * Components can register callbacks to receive conversation updates
-   */
-  const subscribeToConversationUpdates = useCallback((callback) => {
-    conversationUpdateListenersRef.current.add(callback);
-    
-    // Return unsubscribe function
-    return () => {
-      conversationUpdateListenersRef.current.delete(callback);
-    };
-  }, []);
-  
-  /**
-   * Broadcast new message to all listeners
-   */
-  const broadcastMessage = useCallback((message) => {
-    messageListenersRef.current.forEach(callback => {
-      try {
-        callback(message);
-      } catch (error) {
-        console.error('❌ [StaffChatContext] Error in message listener:', error);
-      }
-    });
-  }, []);
-  
-  /**
-   * Broadcast conversation update to all listeners
-   */
-  const broadcastConversationUpdate = useCallback((conversationId, updates) => {
-    console.log('📣 [StaffChatContext] Broadcasting conversation update to', conversationUpdateListenersRef.current.size, 'listeners');
-    conversationUpdateListenersRef.current.forEach(callback => {
-      try {
-        callback(conversationId, updates);
-      } catch (error) {
-        console.error('❌ [StaffChatContext] Error in conversation update listener:', error);
-      }
-    });
-  }, []);
+  // ✅ UNIFIED: No legacy subscription functions needed - use chatStore directly
 
   // Fetch staff conversations and load into store
   const fetchStaffConversations = useCallback(async () => {
@@ -97,17 +45,13 @@ export const StaffChatProvider = ({ children }) => {
     fetchStaffConversations();
   }, [fetchStaffConversations]);
 
-  // Monitor chatStore for changes and broadcast to legacy listeners
+  // ✅ UNIFIED: Desktop notifications only - no legacy broadcasting
   useEffect(() => {
-    // Watch for new messages in any conversation and broadcast to legacy message listeners
     const conversations = Object.values(chatState.conversationsById);
     
     conversations.forEach(conversation => {
       const lastMessage = conversation.messages[conversation.messages.length - 1];
       if (lastMessage) {
-        // Broadcast to legacy message listeners for compatibility
-        broadcastMessage(lastMessage);
-        
         // Show desktop notification if not active conversation and not sent by current user
         const isActiveConv = chatState.activeConversationId === conversation.id;
         const isMyMessage = lastMessage.sender_info?.id === staffId || lastMessage.sender_id === staffId;
@@ -121,11 +65,8 @@ export const StaffChatProvider = ({ children }) => {
           }).catch(console.error);
         }
       }
-      
-      // Broadcast conversation updates to legacy listeners
-      broadcastConversationUpdate(conversation.id, conversation);
     });
-  }, [chatState.conversationsById, chatState.activeConversationId, staffId, broadcastMessage, broadcastConversationUpdate]);
+  }, [chatState.conversationsById, chatState.activeConversationId, staffId]);
 
   const markConversationRead = async (conversationId) => {
     try {
@@ -242,9 +183,7 @@ export const StaffChatProvider = ({ children }) => {
       totalUnread,
       currentConversationId: chatState.activeConversationId, // Legacy compatibility
       setCurrentConversationId: openConversation, // Legacy compatibility
-      // 🔥 NEW: Event subscription methods for components (maintain compatibility)
-      subscribeToMessages,
-      subscribeToConversationUpdates,
+      // ✅ UNIFIED: Legacy subscription methods removed - use chatStore directly
       hotelSlug,
       staffId
     }}>

@@ -13,7 +13,7 @@ import {
   uploadFiles,
   markConversationAsRead,
 } from "../services/staffChatApi";
-import { useStaffChat } from "../context/StaffChatContext";
+// ✅ UNIFIED: No legacy useStaffChat needed - using chatStore directly
 import MessageInput from "./MessageInput";
 import MessageBubble from "./MessageBubble";
 import MessageActions from "./MessageActions";
@@ -55,7 +55,7 @@ const ChatWindowPopup = ({
   const messagesContainerRef = useRef(null);
 
   // Get event subscription from StaffChatContext
-  const { subscribeToMessages } = useStaffChat();
+  // ✅ UNIFIED: Using chatStore only - no legacy useStaffChat subscriptions
 
   // ✅ FIX: Get current user ID from auth context instead of localStorage
   const { user } = useAuth();

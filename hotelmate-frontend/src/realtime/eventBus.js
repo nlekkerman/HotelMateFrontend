@@ -23,6 +23,11 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
       console.log('🚨🚨 [EventBus] MESSAGE-RELATED EVENT DETECTED:', { channel, eventName, payload });
     }
     
+    // 🔍 LOG ALL STAFF CHAT EVENTS TO DEBUG MISSING MESSAGES
+    if (eventName?.includes('staff_chat') || channel?.includes('staff-chat')) {
+      console.log('🔍🔍 [EventBus] ANY STAFF CHAT EVENT:', { source, channel, eventName, payloadKeys: Object.keys(payload || {}) });
+    }
+    
     // 🔥 DEBUG: Log staff chat events specifically
     if (channel?.includes('staff-chat') && !eventName?.startsWith('pusher:')) {
       console.log('🚨 [EventBus] ===== STAFF CHAT EVENT RECEIVED =====');

@@ -171,6 +171,7 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
     });
 
     console.log(`✅ Subscribed to staff chat: ${channelName}`);
+    console.log('🔍 [channelRegistry] All subscribed channels:', pusher.allChannels().map(c => c.name));
     currentChannels.push(channel);
 
     return () => {
