@@ -83,6 +83,9 @@ function chatReducer(state, action) {
 
     case CHAT_ACTIONS.RECEIVE_MESSAGE: {
       const { message, conversationId } = action.payload;
+      console.log('🎯 [REDUCER] RECEIVE_MESSAGE called:', { conversationId, messageId: message.id, messageText: message.message });
+      console.log('🎯 [REDUCER] Available conversations:', Object.keys(state.conversationsById));
+      
       let conversation = state.conversationsById[conversationId];
       
       // If conversation doesn't exist, create a stub conversation from message data
@@ -97,6 +100,8 @@ function chatReducer(state, action) {
           lastMessage: null,
           updatedAt: message.timestamp || new Date().toISOString(),
         };
+      } else {
+        console.log('🎯 [REDUCER] Found existing conversation, current message count:', conversation.messages?.length || 0);
       }
 
       // Check if message already exists (avoid duplicates)
@@ -502,7 +507,9 @@ export const chatActions = {
             is_system_message: payload.is_system_message || false
           };
           
-          console.log('🔥 [chatStore] Mapped message:', mappedMessage);
+          console.log('🚀 [chatStore] Mapped message object:', mappedMessage);
+          console.log('🚀 [chatStore] Dispatching to conversation ID:', numericConversationId);
+          console.log('🚀 [chatStore] DISPATCH ACTION:', CHAT_ACTIONS.RECEIVE_MESSAGE);
           
           globalChatDispatch({
             type: CHAT_ACTIONS.RECEIVE_MESSAGE,
@@ -511,6 +518,8 @@ export const chatActions = {
               message: mappedMessage
             }
           });
+          
+          console.log('✅ [chatStore] RECEIVE_MESSAGE dispatched successfully!');
         } else if (payload.notification && payload.sender_id) {
           // FCM notification metadata - construct a temporary message
           console.log('📱 FCM message notification received - constructing message from metadata');

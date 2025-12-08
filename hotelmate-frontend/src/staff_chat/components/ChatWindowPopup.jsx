@@ -58,13 +58,32 @@ const ChatWindowPopup = ({
   const chatDispatch = useChatDispatch();
   const messages = chatState.conversationsById[conversation?.id]?.messages || [];
   
-  // 🔥 DEBUG: Log message state
+  // 🔥 DEBUG: Log message state changes
+  const prevMessageCount = useRef(messages.length);
+  if (prevMessageCount.current !== messages.length) {
+    console.log('🆕 [ChatWindowPopup] MESSAGE COUNT CHANGED!', {
+      conversationId: conversation?.id,
+      oldCount: prevMessageCount.current,
+      newCount: messages.length,
+      newMessages: messages.slice(prevMessageCount.current).map(m => ({
+        id: m.id,
+        text: (m.message || m.content || '').substring(0, 30),
+        sender: m.sender
+      }))
+    });
+    prevMessageCount.current = messages.length;
+  }
+  
   console.log('🔥 [ChatWindowPopup] Message state:', {
     conversationId: conversation?.id,
     messagesCount: messages.length,
     conversationsInStore: Object.keys(chatState.conversationsById),
     storeHasThisConv: !!chatState.conversationsById[conversation?.id],
-    messages: messages.map(m => ({ id: m.id, text: (m.message || m.content || '').substring(0, 20) }))
+    lastMessage: messages[messages.length - 1] ? {
+      id: messages[messages.length - 1].id,
+      text: (messages[messages.length - 1].message || '').substring(0, 30),
+      sender: messages[messages.length - 1].sender
+    } : null
   });
   const storeConversation = conversation?.id ? chatState.conversationsById[conversation.id] : null;
   const conversationData = useMemo(() => {

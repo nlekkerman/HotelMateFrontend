@@ -20,12 +20,15 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
     
     // 🔥 DEBUG: Log staff chat events specifically
     if (channel?.includes('staff-chat') && !eventName?.startsWith('pusher:')) {
-      console.log('🔥 [EventBus] STAFF CHAT EVENT:', { channel, eventName, payload });
-      console.log('🔥 [EventBus] PAYLOAD TYPE:', typeof payload);
-      console.log('🔥 [EventBus] PAYLOAD STRUCTURE:', JSON.stringify(payload, null, 2));
-      console.log('🔥 [EventBus] HAS CATEGORY?', !!payload?.category);
-      console.log('🔥 [EventBus] HAS TYPE?', !!payload?.type);
-      console.log('🔥 [EventBus] HAS PAYLOAD?', !!payload?.payload);
+      console.log('🚨 [EventBus] ===== STAFF CHAT EVENT RECEIVED =====');
+      console.log('🔥 [EventBus] Channel:', channel);
+      console.log('🔥 [EventBus] Event Name:', eventName);
+      console.log('🔥 [EventBus] Full Payload:', JSON.stringify(payload, null, 2));
+      console.log('🔥 [EventBus] Payload Type:', typeof payload);
+      console.log('🔥 [EventBus] Has category?', !!payload?.category, 'Value:', payload?.category);
+      console.log('🔥 [EventBus] Has type?', !!payload?.type, 'Value:', payload?.type);
+      console.log('🔥 [EventBus] Has payload.payload?', !!payload?.payload);
+      console.log('🚨 [EventBus] ===================================');
     }
 
     // 1️⃣ IGNORE PUSHER SYSTEM EVENTS (like pusher:subscription_succeeded)
@@ -122,6 +125,8 @@ function routeToDomainStores(event) {
             console.log('🔄 [eventBus] Skipping Pusher system event:', event.type || event.eventType);
           }
         } else {
+          console.log('🚀 [EventBus] Routing staff_chat event to chatActions.handleEvent');
+          console.log('🚀 [EventBus] Event being routed:', { category: event.category, type: event.type, hasPayload: !!event.payload });
           chatActions.handleEvent(event);
         }
         break;
