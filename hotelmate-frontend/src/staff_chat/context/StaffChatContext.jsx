@@ -118,7 +118,27 @@ export const StaffChatProvider = ({ children }) => {
       typeof chatState.totalUnreadOverride === 'number'
         ? chatState.totalUnreadOverride
         : null;
-    return override !== null ? Math.max(override, derived) : derived;
+    const finalTotal = override !== null ? override : derived;
+    
+    console.log('📊 [StaffChatContext] Calculating totalUnread:', {
+      conversationsCount: conversations.length,
+      derivedFromConversations: derived,
+      overrideFromStore: override,
+      finalTotal,
+      conversationBreakdown: conversations.map(c => ({ 
+        id: c.id, 
+        title: c.title?.substring(0, 20),
+        unread: c.unread_count,
+        hasMessages: c.messages?.length || 0
+      })),
+      logicUsed: override !== null ? `OVERRIDE (${override})` : `DERIVED (${derived})`,
+      problemDetected: override === 0 && derived > 0 ? 'YES - override is 0 but conversations still have unread!' : 'NO',
+      conversationsWithUnread: conversations.filter(c => (c.unread_count || 0) > 0).map(c => `Conv ${c.id}: ${c.unread_count}`),
+      chatStateOverride: chatState.totalUnreadOverride,
+      timestamp: new Date().toISOString()
+    });
+    
+    return finalTotal;
   }, [conversations, chatState.totalUnreadOverride]);
   
   // Subscribe to individual conversation channels when conversations change
@@ -183,9 +203,20 @@ export const StaffChatProvider = ({ children }) => {
     console.log('🔄 [StaffChatContext] Store update:', {
       conversationsCount: conversations.length,
       totalUnread,
-      unreadBreakdown: conversations.map(c => ({ id: c.id, unread: c.unread_count }))
+      unreadBreakdown: conversations.map(c => ({ id: c.id, unread: c.unread_count, title: c.title })),
+      storeOverride: chatState.totalUnreadOverride,
+      timestamp: new Date().toISOString()
     });
-  }, [conversations, totalUnread]);
+    
+    // Additional verification - ensure total matches sum of individual unreads
+    const calculatedTotal = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+    if (calculatedTotal !== totalUnread && chatState.totalUnreadOverride === null) {
+      console.warn('⚠️ [StaffChatContext] Mismatch between calculated and actual total unread:', {
+        calculated: calculatedTotal,
+        actual: totalUnread
+      });
+    }
+  }, [conversations, totalUnread, chatState.totalUnreadOverride]);
 
   return (
     <StaffChatContext.Provider value={{

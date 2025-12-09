@@ -163,6 +163,7 @@ function chatReducer(state, action) {
       });
 
       // Update unread count if not active conversation
+      // Note: Backend will send unread_updated event with correct total, so we rely on that for accuracy
       const isActive = state.activeConversationId === conversationId;
       const newUnreadCount = isActive ? 0 : (conversation.unread_count || 0) + 1;
 
@@ -767,6 +768,7 @@ export const chatActions = {
 
       case 'realtime_staff_chat_unread_updated': {
         console.log('📊 [chatStore] Processing unread_updated:', { numericConversationId, payload });
+        console.log('📊 [chatStore] Backend authoritative unread update - this should override any local counting');
         
         if (typeof payload.total_unread === 'number') {
           console.log('📊 [chatStore] Updating total unread to:', payload.total_unread);

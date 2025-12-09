@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { fetchMessages, sendMessage, uploadFiles, deleteMessage, deleteAttachment } from '../services/staffChatApi';
 import { useChatState, useChatDispatch } from '@/realtime/stores/chatStore.jsx';
@@ -18,13 +18,7 @@ import { useStaffChat } from '../context/StaffChatContext';
  * Auto-marks messages as read when scrolled into view
  */
 const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
-  console.log('🎬 [CONVERSATION VIEW] Component rendered/updated with:', {
-    hotelSlug,
-    conversationId: conversation?.id,
-    conversationTitle: conversation?.title,
-    staffId: currentUser?.id || currentUser?.staff_id,
-    timestamp: new Date().toISOString()
-  });
+  // Removed excessive logging for performance
   
   // Get chat state from store
   const chatState = useChatState();
@@ -64,14 +58,13 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
   useEffect(() => {
     if (Object.keys(readReceipts).length === 0 || !conversation?.id) return;
     
-    console.log('🔄🔄🔄 [SYNC] readReceipts state changed, syncing to store');
-    console.log('🔄 [SYNC] readReceipts keys:', Object.keys(readReceipts));
+    // Syncing readReceipts to store (logging reduced for performance)
     
     // Update messages with read receipt data in the store
     Object.keys(readReceipts).forEach(messageId => {
       const receipt = readReceipts[messageId];
       if (receipt) {
-        console.log(`🔄 [SYNC] Updating message ${messageId} in store with read receipts`);
+        // Updating message in store with read receipts
         
         // Dispatch read receipt update to store
         chatDispatch({
@@ -86,7 +79,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
       }
     });
     
-    console.log('✅ [SYNC] Store updated with read receipts');
+    // Store updated with read receipts
   }, [readReceipts, conversation?.id, chatDispatch]);
 
   // Get setCurrentConversationId from StaffChatContext (for compatibility)
@@ -95,7 +88,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
   // Set active conversation in store when conversation changes
   useEffect(() => {
     if (conversation?.id && chatState.activeConversationId !== conversation.id) {
-      console.log('🔄 [CHAT STORE] Setting active conversation:', conversation.id);
+      // Setting active conversation in store
       
       chatDispatch({
         type: 'SET_ACTIVE_CONVERSATION',
@@ -234,13 +227,22 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
 
   // Mark ALL messages as read when user focuses input (handles new messages while chat was open)
   const handleInputFocus = async () => {
-    console.log('🎯🎯🎯 [MARK ALL AS READ] Input focused, marking ALL messages as read');
-    console.log('🎯 [MARK ALL AS READ] This handles new messages received while chat window was open');
-    console.log('🎯 [MARK ALL AS READ] Current messages count:', messages.length);
+    console.log('🎯🎯🎯 [MARK ALL AS READ] Input focused, marking conversation as read');
+    console.log('🎯 [MARK ALL AS READ] Conversation ID:', conversation?.id);
+    console.log('🎯 [MARK ALL AS READ] Current unread count:', storeConversation?.unread_count || 0);
+    console.log('🎯 [MARK ALL AS READ] Messages count:', messages.length);
     
-    console.log('📮 [MARK ALL AS READ] Calling markConversationRead...');
-    await markConversationRead();
-    console.log('✅ [MARK ALL AS READ] markConversationRead completed');
+    try {
+      if (conversation?.id && (storeConversation?.unread_count || 0) > 0) {
+        console.log('📮 [MARK ALL AS READ] Calling markConversationRead for conversation:', conversation.id);
+        await markConversationRead(conversation.id);
+        console.log('✅ [MARK ALL AS READ] Successfully marked conversation as read');
+      } else {
+        console.log('ℹ️ [MARK ALL AS READ] No unread messages or invalid conversation ID');
+      }
+    } catch (error) {
+      console.error('❌ [MARK ALL AS READ] Error marking conversation as read:', error);
+    }
   };
 
   const handleSendMessage = async (messageText, mentions) => {
@@ -312,7 +314,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     }
   };
 
-  const handleReply = (message) => {
+  const handleReply = useCallback((message) => {
     //
     //
     // console.log('🔄 Reply button clicked, message object:', message);
@@ -338,7 +340,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     // console.log('🔄 Setting replyTo state to:', replyMessage);
     //
     setReplyTo(replyMessage);
-  };
+  }, []);
 
   const handleCancelReply = () => {
     //
@@ -367,12 +369,12 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleShare = (message) => {
+  const handleShare = useCallback((message) => {
     setMessageToShare(message);
     setShowShareModal(true);
-  };
+  }, []);
 
-  const handleDelete = async (messageId, hardDelete = false) => {
+  const handleDelete = useCallback(async (messageId, hardDelete = false) => {
     const confirmText = hardDelete 
       ? 'Permanently delete this message? This cannot be undone.'
       : 'Delete this message?';
@@ -400,7 +402,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     } finally {
       setDeleting(false);
     }
-  };
+  }, [hotelSlug, conversation?.id, chatDispatch]);
 
   const handleDeleteAttachment = async (attachmentId) => {
     if (!confirm('Delete this file?')) return;
@@ -437,6 +439,20 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
       </div>
     );
   }
+
+  // Memoized handlers to prevent MessageBubble re-renders
+  const handleSaveEdit = useCallback((newText) => {
+    // Handle edit save (you can implement editMessage API call)
+    setEditingMessageId(null);
+  }, []);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessageId(null);
+  }, []);
+
+  const handleReaction = useCallback((messageId) => {
+    setShowReactionPicker(messageId);
+  }, []);
 
   return (
     <div className="conversation-view__content">
@@ -528,18 +544,10 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
                     isSending={message.is_sending || false}
                     readByList={readStatus.read_by}
                     readByCount={readStatus.read_count}
-                    onSaveEdit={(newText) => {
-                      // Handle edit save (you can implement editMessage API call)
-                      setEditingMessageId(null);
-                    }}
-                    onCancelEdit={() => setEditingMessageId(null)}
-                    onReply={() => {
-                      //
-                      // console.log('📣 Message ID:', message.id);
-                      // console.log('📣 Full message object:', message);
-                      handleReply(message);
-                    }}
-                    onReaction={() => setShowReactionPicker(message.id)}
+                    onSaveEdit={handleSaveEdit}
+                    onCancelEdit={handleCancelEdit}
+                    onReply={() => handleReply(message)}
+                    onReaction={() => handleReaction(message.id)}
                     onShare={() => handleShare(message)}
                     onDelete={isOwn || isManagerOrAdmin ? () => handleDelete(message.id, false) : null}
                     reactions={

@@ -71,16 +71,78 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   
   const [searchParams, setSearchParams] = useSearchParams();
   const [internalExpanded, setInternalExpanded] = useState(false);
+  const [lastUnreadCount, setLastUnreadCount] = useState(unreadTotal);
+  const [forceUpdateKey, setForceUpdateKey] = useState(0);
   
-  // Debug logging for unread count changes - add more detail
+  // Force component re-render when unread count changes
+  const forceUpdate = () => {
+    console.log('🔄 [MessengerWidget] FORCING COMPONENT UPDATE');
+    setForceUpdateKey(prev => prev + 1);
+  };
+  
+  // Debug logging for unread count changes - add more detail and force re-render
   useEffect(() => {
-    console.log('🔄 [MessengerWidget] Unread count updated:', {
-      totalUnread: unreadTotal,
+    const conversationsWithUnread = conversations.filter(c => (c.unread_count || 0) > 0);
+    const calculatedUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+    
+    console.log('🔄 [MessengerWidget] Conversations/unread state changed:', {
+      totalUnreadFromContext: unreadTotal,
+      calculatedUnread,
       conversationsLength: conversations.length,
-      conversationsWithUnread: conversations.filter(c => (c.unread_count || 0) > 0),
+      conversationsWithUnread: conversationsWithUnread.map(c => ({ id: c.id, unread: c.unread_count, title: c.title })),
+      lastUnreadCount,
+      hasChanged: lastUnreadCount !== unreadTotal,
+      willShowBadge: unreadTotal > 0,
+      headerWillBe: unreadTotal > 0 ? 'RED (unread)' : 'GREEN (main-bg)',
       timestamp: new Date().toISOString()
     });
-  }, [unreadTotal, conversations]);
+    
+    // Force state update if unread count changed
+    if (lastUnreadCount !== unreadTotal) {
+      console.log('🚨🚨 [MessengerWidget] UNREAD COUNT CHANGED - FORCING UPDATE:', {
+        from: lastUnreadCount,
+        to: unreadTotal,
+        badgeWillShow: unreadTotal > 0,
+        headerColorWillBe: unreadTotal > 0 ? 'RED (messenger-widget__header--unread)' : 'GREEN (main-bg)',
+        forcingReRender: true
+      });
+      setLastUnreadCount(unreadTotal);
+      forceUpdate(); // Force component re-render
+      
+      // Also force a DOM check after short delay
+      setTimeout(() => {
+        const badge = document.querySelector('.messenger-widget__badge');
+        const header = document.querySelector('.messenger-widget__header');
+        console.log('🔍 [MessengerWidget] POST-UPDATE DOM CHECK:', {
+          badgeExists: !!badge,
+          badgeText: badge?.textContent,
+          headerClasses: header?.className,
+          expectedBadge: unreadTotal > 0 ? 'SHOULD EXIST' : 'SHOULD NOT EXIST'
+        });
+      }, 100);
+    }
+  }, [unreadTotal, conversations, lastUnreadCount]);
+  
+  // Additional effect to track JUST unreadTotal changes
+  useEffect(() => {
+    console.log('📊 [MessengerWidget] unreadTotal EFFECT TRIGGERED:', {
+      unreadTotal,
+      type: typeof unreadTotal,
+      badge: unreadTotal > 0 ? 'VISIBLE' : 'HIDDEN',
+      headerClass: unreadTotal > 0 ? 'messenger-widget__header--unread' : 'main-bg'
+    });
+  }, [unreadTotal]);
+  
+  // Listen for force update events from debug functions
+  useEffect(() => {
+    const handleForceUpdate = (e) => {
+      console.log('🔥 [MessengerWidget] Received force update event:', e.detail);
+      forceUpdate();
+    };
+    
+    window.addEventListener('forceMessengerUpdate', handleForceUpdate);
+    return () => window.removeEventListener('forceMessengerUpdate', handleForceUpdate);
+  }, []);
   
   // Debug logging removed to clean up console
   const [showGroupModal, setShowGroupModal] = useState(false);
@@ -300,7 +362,10 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   return (
     <>
       {/* Main Widget - Always shows header at bottom */}
-      <div className={`messenger-widget  ${positionClasses[position]} ${isExpanded ? 'messenger-widget--expanded' : ''}`}>
+      <div 
+        key={`messenger-widget-${unreadTotal}-${conversations.length}-${forceUpdateKey}`} 
+        className={`messenger-widget  ${positionClasses[position]} ${isExpanded ? 'messenger-widget--expanded' : ''}`}
+      >
         <div className="messenger-widget__panel bg-light">
           {/* Header - Always visible, acts as toggle */}
           <div 
@@ -320,13 +385,21 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
                 <circle cx="8" cy="10" r="1.5" fill="currentColor" />
                 <circle cx="16" cy="10" r="1.5" fill="currentColor" />
               </svg>
-              Staff Chat ({unreadTotal})
+              Staff Chat
               {/* Unread Badge Counter */}
-              {unreadTotal > 0 && (
-                <span className="messenger-widget__badge">
-                  {unreadTotal > 99 ? '99+' : unreadTotal}
-                </span>
-              )}
+              {(() => {
+                console.log('🎨 [MessengerWidget] Rendering badge:', {
+                  unreadTotal,
+                  showBadge: unreadTotal > 0,
+                  headerClass: unreadTotal > 0 ? 'messenger-widget__header--unread' : 'main-bg',
+                  renderTime: new Date().toISOString()
+                });
+                return unreadTotal > 0 ? (
+                  <span className="messenger-widget__badge" key={`badge-${unreadTotal}`}>
+                    {unreadTotal > 99 ? '99+' : unreadTotal}
+                  </span>
+                ) : null;
+              })()}
             </h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {/* Dropdown Menu - Only show when expanded */}

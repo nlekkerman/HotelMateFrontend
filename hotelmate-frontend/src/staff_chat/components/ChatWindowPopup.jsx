@@ -556,28 +556,31 @@ const ChatWindowPopup = ({
 
   // Mark ALL messages as read when user focuses input (handles new messages while popup was open)
   const handleInputFocus = async () => {
-    console.log(
-      "🎯🎯🎯 [POPUP MARK ALL] Input focused, marking ALL messages as read"
-    );
-    console.log(
-      "🎯 [POPUP MARK ALL] This handles new messages received while popup was open"
-    );
-    console.log("🎯 [POPUP MARK ALL] Current messages count:", messages.length);
+    console.log('🎯🎯🎯 [POPUP MARK ALL] Input focused, marking conversation as read');
+    console.log('🎯 [POPUP MARK ALL] Conversation ID:', conversation?.id);
+    console.log('🎯 [POPUP MARK ALL] Current unread count:', conversation?.unread_count || 0);
+    console.log('🎯 [POPUP MARK ALL] Messages count:', messages.length);
 
-    // Set this conversation as active to prevent notifications
-    if (conversation?.id && chatDispatch) {
-      console.log(
-        "🎯 [POPUP FOCUS] Setting conversation as active:",
-        conversation.id
-      );
-      chatDispatch({
-        type: CHAT_ACTIONS.SET_ACTIVE_CONVERSATION,
-        payload: { conversationId: conversation.id },
-      });
+    try {
+      // Set this conversation as active to prevent notifications
+      if (conversation?.id && chatDispatch) {
+        console.log('🎯 [POPUP FOCUS] Setting conversation as active:', conversation.id);
+        chatDispatch({
+          type: CHAT_ACTIONS.SET_ACTIVE_CONVERSATION,
+          payload: { conversationId: conversation.id },
+        });
+      }
+
+      if (conversation?.id && (conversation?.unread_count || 0) > 0) {
+        console.log('📮 [POPUP MARK ALL] Calling markConversationRead for conversation:', conversation.id);
+        await markConversationRead();
+        console.log('✅ [POPUP MARK ALL] Successfully marked conversation as read');
+      } else {
+        console.log('ℹ️ [POPUP MARK ALL] No unread messages or invalid conversation ID');
+      }
+    } catch (error) {
+      console.error('❌ [POPUP MARK ALL] Error marking conversation as read:', error);
     }
-
-    console.log("📮 [POPUP MARK ALL] Calling markConversationRead...");
-    await markConversationRead();
     console.log("✅ [POPUP MARK ALL] markConversationRead completed");
   };
 

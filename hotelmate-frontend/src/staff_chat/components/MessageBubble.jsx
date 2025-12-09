@@ -32,17 +32,7 @@ const MessageBubble = ({
   const messageTime = timestamp;
   const displayName = isOwn ? 'You' : senderName;
 
-  // Debug log for props received
-  if (isOwn && !isDeleted) {
-    console.log(`💬 [MessageBubble] Rendering own message:`, {
-      text: messageText.substring(0, 30),
-      readByCount,
-      readByListLength: readByList.length,
-      readByList,
-      willShowAsSeen: readByCount > 0,
-      timestamp: new Date().toISOString()
-    });
-  }
+  // Removed debug logging for performance
 
   // If in editing mode, show the editor
   if (isEditing) {
@@ -272,17 +262,7 @@ const MessageBubble = ({
                 color: isSending ? '#6c757d' : (readByCount > 0 ? '#fd790dff' : '#f7f7f7ff'),
                 fontWeight: '500'
               }}>
-                {(() => {
-                  console.log('🔍 [STATUS RENDER] Deciding status:', {
-                    isSending,
-                    readByCount,
-                    readByCountType: typeof readByCount,
-                    isGreaterThanZero: readByCount > 0,
-                    readByListLength: readByList.length,
-                    willShow: isSending ? 'SENDING' : (readByCount > 0 ? 'SEEN' : 'DELIVERED')
-                  });
-                  return null;
-                })()}
+
                 {isSending ? (
                   // Sending...
                   <>
@@ -522,4 +502,4 @@ MessageBubble.propTypes = {
   reactions: PropTypes.node
 };
 
-export default MessageBubble;
+export default React.memo(MessageBubble);

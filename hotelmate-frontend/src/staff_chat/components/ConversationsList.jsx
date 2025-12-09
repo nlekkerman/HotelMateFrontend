@@ -31,11 +31,17 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
   const totalUnread = conversations.reduce((sum, conv) => sum + (conv.unread_count || 0), 0);
   const conversationsWithUnread = conversations.filter(c => c.unread_count > 0).length;
   
-  console.log('📋 [CONVERSATIONS LIST] Rendering with conversations from context:', {
-    count: conversations.length,
-    conversationIds: conversations.map(c => c.id),
-    unreadCounts: conversations.map(c => ({ id: c.id, unread: c.unread_count }))
-  });
+  // Debug logging for conversation updates
+  useEffect(() => {
+    console.log('📋 [CONVERSATIONS LIST] Conversations updated:', {
+      count: conversations.length,
+      totalUnread,
+      conversationsWithUnread,
+      conversationIds: conversations.map(c => c.id),
+      unreadCounts: conversations.map(c => ({ id: c.id, unread: c.unread_count, title: c.title })),
+      timestamp: new Date().toISOString()
+    });
+  }, [conversations, totalUnread, conversationsWithUnread]);
 
   // Search functionality
   const { searchTerm, debouncedSearchTerm, handleSearchChange, clearSearch } = useStaffSearch();

@@ -337,7 +337,7 @@ const useStaffChatNotifications = ({
 
   // Calculate total unread count from store
   const totalUnreadCount = Object.values(chatState.conversationsById).reduce((total, conv) => {
-    return total + (conv.unreadCount || 0);
+    return total + (conv.unread_count || 0);
   }, 0);
 
   // Trigger unread count callback when count changes

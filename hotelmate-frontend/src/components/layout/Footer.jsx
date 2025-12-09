@@ -1,22 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '@/context/AuthContext';
-import MessengerWidget from '@/staff_chat/components/MessengerWidget';
 import './Footer.css';
 
 const Footer = () => {
   const { user } = useAuth();
-  const [isExpanded, setIsExpanded] = useState(false);
 
   // Don't render if no user
   if (!user) return null;
 
   return (
-    <footer className={`app-footer ${isExpanded ? 'app-footer--expanded' : ''}`}>
+    <footer className="app-footer">
       <div className="app-footer__content">
-        <MessengerWidget 
-          position="bottom-right"
-          onExpandChange={setIsExpanded}
-        />
+        {/* MessengerWidget moved to Navbar.jsx to prevent duplicate rendering */}
+        {/* Footer can contain other content if needed */}
       </div>
     </footer>
   );

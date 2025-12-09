@@ -59,29 +59,31 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
 
     // Accept normalized OR direct-message payloads
     if (payload?.category && payload?.type) {
-  // 🔥 For staff_chat, prefer the Pusher eventName (realtime_staff_chat_*)
-  let effectiveType = payload.type;
+      // 🔥 For staff_chat, prefer the Pusher eventName (realtime_staff_chat_*)
+      let effectiveType = payload.type;
 
-  if (
-    payload.category === 'staff_chat' &&
-    typeof eventName === 'string' &&
-    eventName.startsWith('realtime_staff_chat_')
-  ) {
-    effectiveType = eventName; // 👈 use the LONG name that chatStore expects
-  }
+      if (
+        payload.category === 'staff_chat' &&
+        typeof eventName === 'string' &&
+        eventName.startsWith('realtime_staff_chat_')
+      ) {
+        effectiveType = eventName; // 👈 use the LONG name that chatStore expects
+        console.log('🔥 [EventBus] Using eventName as effectiveType:', effectiveType);
+      }
 
-        // FULL normalized
-        const normalized = {
-          category: payload.category,
-          type: payload.type,
-          payload: payload.payload ?? payload.data ?? {},
-          meta: payload.meta || { channel, eventName },
-          source,
-          timestamp: payload.meta?.ts || new Date().toISOString(),
-        };
-        routeToDomainStores(normalized);
-        maybeAddToNotificationCenter(normalized);
-        return;
+      // FULL normalized - FIXED: Use effectiveType instead of payload.type
+      const normalized = {
+        category: payload.category,
+        type: effectiveType, // 👈 FIXED: Use the effectiveType we calculated
+        payload: payload.payload ?? payload.data ?? {},
+        meta: payload.meta || { channel, eventName },
+        source,
+        timestamp: payload.meta?.ts || new Date().toISOString(),
+      };
+      console.log('🚀 [EventBus] Normalized event with effectiveType:', normalized);
+      routeToDomainStores(normalized);
+      maybeAddToNotificationCenter(normalized);
+      return;
     }
 
     // SUPPORT raw Pusher event (e.g. direct message payload) - ALWAYS process staff-chat events
@@ -307,5 +309,135 @@ if (typeof window !== 'undefined') {
         }
       }
     });
+    
+    // Force MessengerWidget to update after a short delay
+    setTimeout(() => {
+      console.log('🔥 [DEBUG] Dispatching forceMessengerUpdate event');
+      window.dispatchEvent(new CustomEvent('forceMessengerUpdate', { 
+        detail: { 
+          totalUnread, 
+          source: 'debugTotalUnread',
+          timestamp: new Date().toISOString()
+        } 
+      }));
+    }, 100);
+  };
+  
+  // Function to completely reset all unread counts
+  window.resetAllUnreadCounts = () => {
+    console.log('🔥 DEBUG: RESETTING ALL UNREAD COUNTS TO ZERO');
+    
+    // First set total unread to 0
+    handleIncomingRealtimeEvent({
+      source: "debug",
+      payload: {
+        category: "staff_chat",
+        type: "realtime_staff_chat_unread_updated",
+        payload: {
+          total_unread: 0,
+          updated_at: new Date().toISOString()
+        },
+        meta: {
+          event_id: `debug-reset-total-${Date.now()}`,
+          ts: new Date().toISOString()
+        }
+      }
+    });
+    
+    // Then reset each conversation to 0 (you may need to adjust conversation IDs)
+    [100, 101, 102].forEach(conversationId => {
+      handleIncomingRealtimeEvent({
+        source: "debug",
+        payload: {
+          category: "staff_chat",
+          type: "realtime_staff_chat_unread_updated",
+          payload: {
+            conversation_id: conversationId,
+            unread_count: 0,
+            updated_at: new Date().toISOString()
+          },
+          meta: {
+            event_id: `debug-reset-conv-${conversationId}-${Date.now()}`,
+            ts: new Date().toISOString()
+          }
+        }
+      });
+    });
+    
+    console.log('🔥 DEBUG: All unread counts reset to 0');
+  };
+  
+  // Debug function to test messenger widget visual updates
+  window.testMessengerBadge = (count = 0) => {
+    console.log('🧪 [DEBUG] Testing messenger badge with count:', count);
+    window.debugTotalUnread(count);
+    
+    setTimeout(() => {
+      console.log('🧪 [DEBUG] After 1 second, check if badge updated properly');
+      const badge = document.querySelector('.messenger-widget__badge');
+      const header = document.querySelector('.messenger-widget__header');
+      console.log('🧪 [DEBUG] Badge element:', badge ? `EXISTS (${badge.textContent})` : 'NOT FOUND');
+      console.log('🧪 [DEBUG] Header classes:', header?.className || 'HEADER NOT FOUND');
+      
+      // Try to force a React re-render by dispatching a custom event
+      console.log('🧪 [DEBUG] Dispatching custom event to force React update');
+      window.dispatchEvent(new CustomEvent('forceMessengerUpdate', { detail: { count } }));
+    }, 1000);
+  };
+  
+  // Quick test functions
+  window.setBadge5 = () => window.testMessengerBadge(5);
+  window.setBadge0 = () => {
+    console.log('🚨 Setting badge to 0 - using complete reset');
+    window.resetAllUnreadCounts();
+    setTimeout(() => window.testMessengerBadge(0), 500);
+  };
+  window.setBadge10 = () => window.testMessengerBadge(10);
+  
+  // Debug function to check current state
+  window.debugCurrentState = () => {
+    console.log('🔍 [DEBUG] Current badge state check:');
+    const badge = document.querySelector('.messenger-widget__badge');
+    const header = document.querySelector('.messenger-widget__header');
+    
+    console.log('🎯 Current DOM State:', {
+      badgeExists: !!badge,
+      badgeText: badge?.textContent || 'NO BADGE',
+      badgeVisible: badge ? getComputedStyle(badge).display : 'NO BADGE',
+      headerClasses: header?.className || 'NO HEADER',
+      headerHasUnreadClass: header?.classList.contains('messenger-widget__header--unread') || false
+    });
+  };
+  
+  // Comprehensive test function to check entire badge update chain
+  window.testBadgeChain = (count = 5) => {
+    console.log(`🧪 [DEBUG] Testing complete badge update chain with count: ${count}`);
+    
+    // Step 1: Update via Pusher simulation
+    console.log('📡 Step 1: Simulating Pusher event...');
+    window.debugTotalUnread(count);
+    
+    // Step 2: Check store state after delay
+    setTimeout(() => {
+      console.log('📊 Step 2: Checking chatStore state...');
+      // This would need access to the store - will be logged by the store itself
+      
+      // Step 3: Check DOM elements
+      console.log('🔍 Step 3: Checking DOM elements...');
+      const badge = document.querySelector('.messenger-widget__badge');
+      const header = document.querySelector('.messenger-widget__header');
+      
+      console.log('🎯 Badge Update Test Results:', {
+        badgeExists: !!badge,
+        badgeText: badge?.textContent,
+        badgeVisible: badge && getComputedStyle(badge).display !== 'none',
+        headerClasses: header?.className,
+        headerHasUnreadClass: header?.classList.contains('messenger-widget__header--unread'),
+        expectedBadgeText: count > 99 ? '99+' : count.toString(),
+        expectedHeaderClass: count > 0 ? 'Should have messenger-widget__header--unread' : 'Should have main-bg',
+        testPassed: badge?.textContent === (count > 99 ? '99+' : count.toString()) && 
+                   (count > 0 ? header?.classList.contains('messenger-widget__header--unread') : header?.classList.contains('main-bg'))
+      });
+    }, 200);
   };
 }
