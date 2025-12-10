@@ -1,7 +1,7 @@
 // src/realtime/eventBus.js
 import { addNotificationFromEvent } from './stores/notificationsStore.jsx';
 import { attendanceActions } from './stores/attendanceStore.jsx';
-import { chatActions } from './stores/chatStore.jsx';
+import { chatActions, dispatchUnreadCountsUpdate } from './stores/chatStore.jsx';
 import { guestChatActions } from './stores/guestChatStore.jsx';
 import { roomServiceActions } from './stores/roomServiceStore.jsx';
 import { bookingActions } from './stores/bookingStore.jsx';
@@ -81,6 +81,9 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
         timestamp: payload.meta?.ts || new Date().toISOString(),
       };
       console.log('🚀 [EventBus] Normalized event with effectiveType:', normalized);
+      if (maybeHandleStaffChatUnreadUpdate(normalized)) {
+        return;
+      }
       routeToDomainStores(normalized);
       maybeAddToNotificationCenter(normalized);
       return;
@@ -98,6 +101,9 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           timestamp: new Date().toISOString()
         };
         console.log('🚀 [EventBus] Normalized staff-chat event:', normalized);
+        if (maybeHandleStaffChatUnreadUpdate(normalized)) {
+          return;
+        }
         routeToDomainStores(normalized);
         maybeAddToNotificationCenter(normalized);
         return;
@@ -118,6 +124,9 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           timestamp: new Date().toISOString()
         };
         console.log('🆘 [EventBus] FALLBACK normalized event:', normalized);
+        if (maybeHandleStaffChatUnreadUpdate(normalized)) {
+          return;
+        }
         routeToDomainStores(normalized);
         return;
     }
@@ -182,6 +191,27 @@ function routeToDomainStores(event) {
 
   // All events should now be in NEW format with event.type property
   console.warn('⚠️ Event missing type property - should be pre-normalized:', event);
+}
+
+function maybeHandleStaffChatUnreadUpdate(event) {
+  if (event.category !== 'staff_chat' || event.type !== 'realtime_staff_chat_unread_updated') {
+    return false;
+  }
+
+  const payload = event.payload || {};
+  const rawConversationId = payload.conversation_id ?? payload.conversationId ?? payload.conversation ?? null;
+  const normalizedPayload = {
+    conversationId: rawConversationId,
+    conversationUnread: payload.conversation_unread ?? payload.unread_count ?? payload.conversationUnread ?? 0,
+    totalUnread: payload.total_unread ?? payload.totalUnread ?? null,
+    isTotalUpdate:
+      Boolean(payload.is_total_update ?? payload.isTotalUpdate) || rawConversationId === null,
+    timestamp: payload.updated_at || payload.timestamp || event.timestamp || new Date().toISOString(),
+  };
+
+  console.log('📡 [EventBus] Dispatching staff chat unread counts update:', normalizedPayload);
+  dispatchUnreadCountsUpdate(normalizedPayload);
+  return true;
 }
 
 /**
@@ -280,8 +310,10 @@ if (typeof window !== 'undefined') {
         type: "realtime_staff_chat_unread_updated", 
         payload: {
           conversation_id: conversationId,
+          conversation_unread: unreadCount,
           unread_count: unreadCount,
           total_unread: totalUnread,
+          is_total_update: false,
           updated_at: new Date().toISOString()
         },
         meta: {
@@ -300,6 +332,7 @@ if (typeof window !== 'undefined') {
         category: "staff_chat",
         type: "realtime_staff_chat_unread_updated",
         payload: {
+          is_total_update: true,
           total_unread: totalUnread,
           updated_at: new Date().toISOString()
         },
@@ -353,7 +386,10 @@ if (typeof window !== 'undefined') {
           type: "realtime_staff_chat_unread_updated",
           payload: {
             conversation_id: conversationId,
+            conversation_unread: 0,
             unread_count: 0,
+            total_unread: 0,
+            is_total_update: false,
             updated_at: new Date().toISOString()
           },
           meta: {

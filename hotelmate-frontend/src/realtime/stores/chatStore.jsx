@@ -415,6 +415,77 @@ function chatReducer(state, action) {
       };
     }
 
+    case CHAT_ACTIONS.UPDATE_UNREAD_COUNTS: {
+      const {
+        conversationId,
+        conversationUnread,
+        totalUnread,
+        isTotalUpdate,
+        timestamp
+      } = action.payload;
+
+      const normalizedTotalUnread =
+        typeof totalUnread === 'number'
+          ? Math.max(0, totalUnread)
+          : typeof state.totalUnreadOverride === 'number'
+            ? state.totalUnreadOverride
+            : 0;
+
+      if (isTotalUpdate || conversationId === undefined || conversationId === null) {
+        console.log('📊 [chatReducer] UPDATE_UNREAD_COUNTS (total only):', { normalizedTotalUnread });
+        return {
+          ...state,
+          totalUnreadOverride: normalizedTotalUnread,
+        };
+      }
+
+      const numericConversationId = parseInt(conversationId, 10);
+      if (Number.isNaN(numericConversationId)) {
+        console.warn('⚠️ [chatReducer] Invalid conversationId for UPDATE_UNREAD_COUNTS:', conversationId);
+        return {
+          ...state,
+          totalUnreadOverride: normalizedTotalUnread,
+        };
+      }
+
+      const existingConversation = state.conversationsById[numericConversationId];
+      const nextUnread =
+        typeof conversationUnread === 'number'
+          ? Math.max(0, conversationUnread)
+          : existingConversation?.unread_count || 0;
+
+      console.log('📊 [chatReducer] UPDATE_UNREAD_COUNTS (conversation + total):', {
+        conversationId: numericConversationId,
+        nextUnread,
+        normalizedTotalUnread
+      });
+
+      const updatedConversation = existingConversation
+        ? {
+            ...existingConversation,
+            unread_count: nextUnread,
+            updatedAt: timestamp || existingConversation.updatedAt,
+          }
+        : {
+            id: numericConversationId,
+            title: '',
+            participants: [],
+            messages: [],
+            unread_count: nextUnread,
+            lastMessage: null,
+            updatedAt: timestamp || new Date().toISOString(),
+          };
+
+      return {
+        ...state,
+        conversationsById: {
+          ...state.conversationsById,
+          [numericConversationId]: updatedConversation,
+        },
+        totalUnreadOverride: normalizedTotalUnread,
+      };
+    }
+
     case 'UPDATE_EVENT_TIMESTAMPS': {
       return {
         ...state,
@@ -458,6 +529,21 @@ let globalChatGetState = null;
 export function registerChatHandlers(dispatch, getState) {
   globalChatDispatch = dispatch;
   globalChatGetState = getState;
+}
+
+export function dispatchChatAction(action) {
+  if (!globalChatDispatch) {
+    console.warn('⚠️ [chatStore] dispatchChatAction called before ChatProvider mounted');
+    return;
+  }
+  globalChatDispatch(action);
+}
+
+export function dispatchUnreadCountsUpdate(payload) {
+  dispatchChatAction({
+    type: CHAT_ACTIONS.UPDATE_UNREAD_COUNTS,
+    payload,
+  });
 }
 
 // Domain handler for eventBus
@@ -767,33 +853,42 @@ export const chatActions = {
       // Conversation updates come through other event types
 
       case 'realtime_staff_chat_unread_updated': {
-        console.log('📊 [chatStore] Processing unread_updated:', { numericConversationId, payload });
-        console.log('📊 [chatStore] Backend authoritative unread update - this should override any local counting');
+        console.log('📊 [chatStore] Processing unread_updated with new format:', { numericConversationId, payload });
         
-        if (typeof payload.total_unread === 'number') {
-          console.log('📊 [chatStore] Updating total unread to:', payload.total_unread);
-          globalChatDispatch({
-            type: CHAT_ACTIONS.SET_TOTAL_UNREAD,
-            payload: { totalUnread: payload.total_unread }
-          });
-        }
-
-        if (numericConversationId !== null) {
-          const unreadCount =
-            typeof payload.unread_count === 'number'
-              ? payload.unread_count
-              : 0;
-          
-          console.log('📊 [chatStore] Updating conversation unread:', { conversationId: numericConversationId, unreadCount });
-          globalChatDispatch({
-            type: CHAT_ACTIONS.UPDATE_CONVERSATION_UNREAD,
-            payload: {
-              conversationId: numericConversationId,
-              unreadCount,
-              metadata: { updatedAt: payload.updated_at }
-            }
-          });
-        }
+        // Extract new payload fields according to spec
+        const {
+          conversation_id,
+          unread_count,           // legacy, keep but don't rely on it alone
+          conversation_unread,    // ALWAYS the per-conversation count
+          total_unread,           // ALWAYS total across all conversations
+          is_total_update,        // true → only total update, false → convo + total update
+          updated_at
+        } = payload;
+        const normalizedConversationUnread =
+          typeof conversation_unread === 'number'
+            ? conversation_unread
+            : typeof unread_count === 'number'
+              ? unread_count
+              : null;
+        
+        console.log('📊 [chatStore] Enhanced unread update:', {
+          conversationId: conversation_id,
+          conversationUnread: normalizedConversationUnread,
+          totalUnread: total_unread,
+          isTotal: is_total_update
+        });
+        
+        // Dispatch UPDATE_UNREAD_COUNTS action to properly handle both counts
+        globalChatDispatch({
+          type: CHAT_ACTIONS.UPDATE_UNREAD_COUNTS,
+          payload: {
+            conversationId: conversation_id,
+            conversationUnread: normalizedConversationUnread,
+            totalUnread: total_unread,
+            isTotalUpdate: is_total_update,
+            timestamp: updated_at
+          }
+        });
 
         break;
       }

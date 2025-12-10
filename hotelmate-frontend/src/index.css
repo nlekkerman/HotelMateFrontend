@@ -188,3 +188,43 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Warning Message Pulse Animation */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* More Aggressive Warning Animation */
+@keyframes pulseWarning {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 30px rgba(220, 38, 38, 0.6);
+  }
+  25% {
+    transform: scale(1.03);
+    box-shadow: 0 0 40px rgba(220, 38, 38, 0.8);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 50px rgba(220, 38, 38, 1);
+  }
+  75% {
+    transform: scale(1.03);
+    box-shadow: 0 0 40px rgba(220, 38, 38, 0.8);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 30px rgba(220, 38, 38, 0.6);
+  }
+}

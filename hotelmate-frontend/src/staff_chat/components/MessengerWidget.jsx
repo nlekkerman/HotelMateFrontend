@@ -18,7 +18,17 @@ import '../staffChat.css';
 const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpanded, onExpandChange }) => {
   console.log('🎯 [MessengerWidget] COMPONENT ENTRY - render attempt');
   
-  const { user } = useAuth();
+  const { user, isStaff } = useAuth();
+  
+  // 🚫 HIDE WIDGET FOR NON-AUTHENTICATED STAFF USERS
+  if (!user || !isStaff) {
+    console.log('🚫 [MessengerWidget] Hidden - user not authenticated as staff:', { 
+      hasUser: !!user, 
+      isStaff: !!isStaff,
+      userId: user?.id 
+    });
+    return null;
+  }
   
   console.log('👤 [MessengerWidget] User data:', {
     userId: user?.id || user?.staff_id,
@@ -62,87 +72,15 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   
   const { registerOpenChatHandler } = useMessenger();
   
-  const { 
-    conversations = [], 
-    totalUnread = 0, 
-    markConversationRead = () => {} 
+  const {
+    conversations = [],
+    markConversationRead = () => {},
   } = useStaffChat();
-  const unreadTotal = typeof totalUnread === 'number' ? totalUnread : 0;
   
   const [searchParams, setSearchParams] = useSearchParams();
   const [internalExpanded, setInternalExpanded] = useState(false);
-  const [lastUnreadCount, setLastUnreadCount] = useState(unreadTotal);
-  const [forceUpdateKey, setForceUpdateKey] = useState(0);
-  
-  // Force component re-render when unread count changes
-  const forceUpdate = () => {
-    console.log('🔄 [MessengerWidget] FORCING COMPONENT UPDATE');
-    setForceUpdateKey(prev => prev + 1);
-  };
-  
-  // Debug logging for unread count changes - add more detail and force re-render
-  useEffect(() => {
-    const conversationsWithUnread = conversations.filter(c => (c.unread_count || 0) > 0);
-    const calculatedUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
-    
-    console.log('🔄 [MessengerWidget] Conversations/unread state changed:', {
-      totalUnreadFromContext: unreadTotal,
-      calculatedUnread,
-      conversationsLength: conversations.length,
-      conversationsWithUnread: conversationsWithUnread.map(c => ({ id: c.id, unread: c.unread_count, title: c.title })),
-      lastUnreadCount,
-      hasChanged: lastUnreadCount !== unreadTotal,
-      willShowBadge: unreadTotal > 0,
-      headerWillBe: unreadTotal > 0 ? 'RED (unread)' : 'GREEN (main-bg)',
-      timestamp: new Date().toISOString()
-    });
-    
-    // Force state update if unread count changed
-    if (lastUnreadCount !== unreadTotal) {
-      console.log('🚨🚨 [MessengerWidget] UNREAD COUNT CHANGED - FORCING UPDATE:', {
-        from: lastUnreadCount,
-        to: unreadTotal,
-        badgeWillShow: unreadTotal > 0,
-        headerColorWillBe: unreadTotal > 0 ? 'RED (messenger-widget__header--unread)' : 'GREEN (main-bg)',
-        forcingReRender: true
-      });
-      setLastUnreadCount(unreadTotal);
-      forceUpdate(); // Force component re-render
-      
-      // Also force a DOM check after short delay
-      setTimeout(() => {
-        const badge = document.querySelector('.messenger-widget__badge');
-        const header = document.querySelector('.messenger-widget__header');
-        console.log('🔍 [MessengerWidget] POST-UPDATE DOM CHECK:', {
-          badgeExists: !!badge,
-          badgeText: badge?.textContent,
-          headerClasses: header?.className,
-          expectedBadge: unreadTotal > 0 ? 'SHOULD EXIST' : 'SHOULD NOT EXIST'
-        });
-      }, 100);
-    }
-  }, [unreadTotal, conversations, lastUnreadCount]);
-  
-  // Additional effect to track JUST unreadTotal changes
-  useEffect(() => {
-    console.log('📊 [MessengerWidget] unreadTotal EFFECT TRIGGERED:', {
-      unreadTotal,
-      type: typeof unreadTotal,
-      badge: unreadTotal > 0 ? 'VISIBLE' : 'HIDDEN',
-      headerClass: unreadTotal > 0 ? 'messenger-widget__header--unread' : 'main-bg'
-    });
-  }, [unreadTotal]);
-  
-  // Listen for force update events from debug functions
-  useEffect(() => {
-    const handleForceUpdate = (e) => {
-      console.log('🔥 [MessengerWidget] Received force update event:', e.detail);
-      forceUpdate();
-    };
-    
-    window.addEventListener('forceMessengerUpdate', handleForceUpdate);
-    return () => window.removeEventListener('forceMessengerUpdate', handleForceUpdate);
-  }, []);
+
+
   
   // Debug logging removed to clean up console
   const [showGroupModal, setShowGroupModal] = useState(false);
@@ -178,9 +116,6 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
       setCurrentPage(totalPages - 1);
     }
   }, [totalPages, currentPage]);
-
-  // Total unread count is now provided directly by useStaffChat hook from chatStore
-  // No need for manual subscription - it's reactive to store changes
 
   const handleOpenChat = async (conversation, staff) => {
     // console.log('🎯 handleOpenChat called with:', { conversation, staff });
@@ -363,15 +298,13 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
     <>
       {/* Main Widget - Always shows header at bottom */}
       <div 
-        key={`messenger-widget-${unreadTotal}-${conversations.length}-${forceUpdateKey}`} 
+        key={`messenger-widget-${conversations.length}`} 
         className={`messenger-widget  ${positionClasses[position]} ${isExpanded ? 'messenger-widget--expanded' : ''}`}
       >
         <div className="messenger-widget__panel bg-light">
           {/* Header - Always visible, acts as toggle */}
           <div 
-            className={`messenger-widget__header text-white ${
-              unreadTotal > 0 ? 'messenger-widget__header--unread' : 'main-bg'
-            }`}
+            className="messenger-widget__header text-white main-bg"
             onClick={toggleWidget}
             style={{ cursor: 'pointer' }}
           >
@@ -386,20 +319,6 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
                 <circle cx="16" cy="10" r="1.5" fill="currentColor" />
               </svg>
               Staff Chat
-              {/* Unread Badge Counter */}
-              {(() => {
-                console.log('🎨 [MessengerWidget] Rendering badge:', {
-                  unreadTotal,
-                  showBadge: unreadTotal > 0,
-                  headerClass: unreadTotal > 0 ? 'messenger-widget__header--unread' : 'main-bg',
-                  renderTime: new Date().toISOString()
-                });
-                return unreadTotal > 0 ? (
-                  <span className="messenger-widget__badge" key={`badge-${unreadTotal}`}>
-                    {unreadTotal > 99 ? '99+' : unreadTotal}
-                  </span>
-                ) : null;
-              })()}
             </h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {/* Dropdown Menu - Only show when expanded */}

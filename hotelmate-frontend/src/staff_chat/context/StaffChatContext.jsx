@@ -69,15 +69,10 @@ export const StaffChatProvider = ({ children }) => {
   }, [chatState.conversationsById, chatState.activeConversationId, staffId]);
 
   const markConversationRead = async (conversationId) => {
+    if (!conversationId) return;
     try {
-      // Call API to mark as read
       await markConversationAsRead(hotelSlug, conversationId);
-      
-      // Update local state immediately
-      chatDispatch({
-        type: CHAT_ACTIONS.MARK_CONVERSATION_READ,
-        payload: { conversationId: parseInt(conversationId) }
-      });
+      console.log('[StaffChatContext] markConversationRead awaiting backend sync', { conversationId });
     } catch (err) {
       console.error("Failed to mark conversation as read:", err);
     }
@@ -113,33 +108,11 @@ export const StaffChatProvider = ({ children }) => {
     : null;
   const messagesForActiveConversation = activeConversation ? activeConversation.messages : [];
   const totalUnread = useMemo(() => {
-    const derived = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
-    const override =
-      typeof chatState.totalUnreadOverride === 'number'
-        ? chatState.totalUnreadOverride
-        : null;
-    const finalTotal = override !== null ? override : derived;
-    
-    console.log('📊 [StaffChatContext] Calculating totalUnread:', {
-      conversationsCount: conversations.length,
-      derivedFromConversations: derived,
-      overrideFromStore: override,
-      finalTotal,
-      conversationBreakdown: conversations.map(c => ({ 
-        id: c.id, 
-        title: c.title?.substring(0, 20),
-        unread: c.unread_count,
-        hasMessages: c.messages?.length || 0
-      })),
-      logicUsed: override !== null ? `OVERRIDE (${override})` : `DERIVED (${derived})`,
-      problemDetected: override === 0 && derived > 0 ? 'YES - override is 0 but conversations still have unread!' : 'NO',
-      conversationsWithUnread: conversations.filter(c => (c.unread_count || 0) > 0).map(c => `Conv ${c.id}: ${c.unread_count}`),
-      chatStateOverride: chatState.totalUnreadOverride,
-      timestamp: new Date().toISOString()
-    });
-    
-    return finalTotal;
-  }, [conversations, chatState.totalUnreadOverride]);
+    if (typeof chatState.totalUnreadOverride === 'number') {
+      return chatState.totalUnreadOverride;
+    }
+    return conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+  }, [chatState.totalUnreadOverride, conversations]);
   
   // Subscribe to individual conversation channels when conversations change
   const subscriptionsRef = useRef(new Map());
@@ -200,23 +173,12 @@ export const StaffChatProvider = ({ children }) => {
 
   // Debug logging
   useEffect(() => {
-    console.log('🔄 [StaffChatContext] Store update:', {
-      conversationsCount: conversations.length,
+    console.log('[StaffChatContext] Unread snapshot:', {
       totalUnread,
-      unreadBreakdown: conversations.map(c => ({ id: c.id, unread: c.unread_count, title: c.title })),
-      storeOverride: chatState.totalUnreadOverride,
-      timestamp: new Date().toISOString()
+      override: chatState.totalUnreadOverride,
+      conversations: conversations.length,
     });
-    
-    // Additional verification - ensure total matches sum of individual unreads
-    const calculatedTotal = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
-    if (calculatedTotal !== totalUnread && chatState.totalUnreadOverride === null) {
-      console.warn('⚠️ [StaffChatContext] Mismatch between calculated and actual total unread:', {
-        calculated: calculatedTotal,
-        actual: totalUnread
-      });
-    }
-  }, [conversations, totalUnread, chatState.totalUnreadOverride]);
+  }, [conversations.length, totalUnread, chatState.totalUnreadOverride]);
 
   return (
     <StaffChatContext.Provider value={{

@@ -116,6 +116,10 @@ const HotelsLandingPage = () => {
     window.location.href = '/login';
   };
 
+  // Cache bust verification
+  console.log('🚨 HotelsLandingPage LOADED at:', new Date().toISOString());
+  console.log('🚨 WARNINGS SHOULD BE VISIBLE NOW!');
+
   return (
     <div className="hotels-landing-page min-vh-100 bg-light">
       {/* Header */}
@@ -230,6 +234,88 @@ const HotelsLandingPage = () => {
 
       {/* Main Content */}
       <Container className="py-4">
+        {/* 🚨🚨🚨 ULTRA MASSIVE WARNING - CACHE BUST {Date.now()} 🚨🚨🚨 */}
+        <div style={{ 
+          background: 'red !important', 
+          backgroundColor: '#dc2626 !important',
+          color: 'white !important', 
+          fontSize: '2rem !important',
+          fontWeight: '900 !important',
+          textAlign: 'center !important',
+          borderRadius: '20px !important',
+          border: '8px solid #000 !important',
+          boxShadow: '0 0 50px rgba(255, 0, 0, 1) !important',
+          padding: '40px 30px !important',
+          margin: '30px 0 !important',
+          position: 'relative !important',
+          zIndex: '99999 !important',
+          display: 'block !important',
+          width: '100% !important',
+          minHeight: '200px !important',
+          textShadow: '3px 3px 6px rgba(0,0,0,1) !important'
+        }}>
+          <div style={{ 
+            fontSize: '3.5rem', 
+            marginBottom: '20px',
+            textShadow: '3px 3px 6px rgba(0,0,0,0.9)',
+            letterSpacing: '2px'
+          }}>
+            🚨⚠️ CRITICAL WARNING ⚠️🚨
+          </div>
+          <div style={{ 
+            fontSize: '2rem', 
+            marginBottom: '20px',
+            fontWeight: '900',
+            textTransform: 'uppercase',
+            letterSpacing: '1px'
+          }}>
+            THIS IS NOT OPERATIONAL!
+          </div>
+          <div style={{ 
+            fontSize: '1.4rem', 
+            lineHeight: '1.6',
+            fontWeight: '700'
+          }}>
+            🚫 THESE ARE FAKE/MOCK HOTELS 🚫<br />
+            ❌ YOU CANNOT MAKE REAL BOOKINGS ❌<br />
+            🛠️ DEVELOPMENT/TESTING ONLY 🛠️
+          </div>
+        </div>
+        
+        {/* SECOND ULTRA MASSIVE WARNING - FORCE VISIBLE */}
+        <div style={{ 
+          background: 'orange !important',
+          backgroundColor: '#ea580c !important', 
+          color: 'white !important', 
+          fontSize: '1.8rem !important',
+          fontWeight: '900 !important',
+          textAlign: 'center !important',
+          borderRadius: '15px !important',
+          border: '6px solid #000 !important',
+          boxShadow: '0 0 40px rgba(255, 165, 0, 1) !important',
+          padding: '30px 20px !important',
+          margin: '20px 0 !important',
+          display: 'block !important',
+          width: '100% !important',
+          minHeight: '150px !important',
+          textShadow: '3px 3px 6px rgba(0,0,0,1) !important'
+        }}>
+          <div style={{ 
+            fontSize: '2.5rem', 
+            marginBottom: '15px',
+            textShadow: '3px 3px 6px rgba(0,0,0,0.8)'
+          }}>
+            🚫🏨 NO REAL HOTELS 🏨🚫
+          </div>
+          <div style={{ 
+            fontSize: '1.2rem',
+            fontWeight: '700'
+          }}>
+            All hotels below are DEMO DATA ONLY!<br />
+            This is a software testing environment.
+          </div>
+        </div>
+
         <Row className="mb-4">
           <Col>
             <h2 className="text-center fw-bold mb-2">Select Your Hotel</h2>
@@ -238,6 +324,8 @@ const HotelsLandingPage = () => {
             </p>
           </Col>
         </Row>
+
+
 
         {/* Filters Bar - Positioned right below the header */}
         <HotelsFiltersBar
