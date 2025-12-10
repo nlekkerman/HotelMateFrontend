@@ -233,7 +233,7 @@ const HotelsLandingPage = () => {
       />
 
       {/* Main Content */}
-      <Container className="py-4">
+      <Container className="py-4 ">
         {/* 🚨🚨🚨 ULTRA MASSIVE WARNING - CACHE BUST {Date.now()} 🚨🚨🚨 */}
         <div style={{ 
           background: 'red !important', 
@@ -262,7 +262,7 @@ const HotelsLandingPage = () => {
           }}>
             🚨⚠️ CRITICAL WARNING ⚠️🚨
           </div>
-          <div style={{ 
+          <div className='text-center'  style={{ 
             fontSize: '2rem', 
             marginBottom: '20px',
             fontWeight: '900',
@@ -271,7 +271,7 @@ const HotelsLandingPage = () => {
           }}>
             THIS IS NOT OPERATIONAL!
           </div>
-          <div style={{ 
+          <div className='text-center bg-danger' style={{ 
             fontSize: '1.4rem', 
             lineHeight: '1.6',
             fontWeight: '700'
@@ -283,7 +283,7 @@ const HotelsLandingPage = () => {
         </div>
         
         {/* SECOND ULTRA MASSIVE WARNING - FORCE VISIBLE */}
-        <div style={{ 
+        <div className='text-center py-4 bg-warning'  style={{ 
           background: 'orange !important',
           backgroundColor: '#ea580c !important', 
           color: 'white !important', 
