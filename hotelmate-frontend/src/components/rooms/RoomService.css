@@ -1,0 +1,170 @@
+/* Room Service Component Styles */
+
+.room-service-menu-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+  padding: 5px;
+}
+
+@media (min-width: 992px) {
+  .room-service-menu-container {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1400px) {
+  .room-service-menu-container {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.room-service-orders-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  padding: 0;
+}
+
+@media (min-width: 768px) {
+  .room-service-orders-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1200px) {
+  .room-service-orders-container {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.room-service-menu-item {
+  transition: all 0.3s ease;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+  border: 2px solid transparent;
+  width: 100%;
+  margin: 0;
+}
+
+.room-service-menu-item:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 45px rgba(0,0,0,0.2);
+  border-color: #007bff;
+}
+
+.room-service-menu-item.out-of-stock {
+  opacity: 0.6;
+  filter: grayscale(30%);
+}
+
+.room-service-menu-item.out-of-stock:hover {
+  transform: none;
+  box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+  border-color: transparent;
+}
+
+.room-service-item-image {
+  height: 260px;
+  transition: transform 0.3s ease;
+}
+
+.room-service-item-image img {
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.room-service-item-image:hover img {
+  transform: scale(1.08);
+}
+
+.room-service-price-badge {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+}
+
+.room-service-out-of-stock-overlay {
+  background-color: rgba(0,0,0,0.7);
+}
+
+.room-service-floating-cart {
+  border-radius: 50px;
+  padding: 15px 25px;
+  font-size: 16px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  border: none;
+  box-shadow: 0 8px 25px rgba(0,123,255,0.4);
+}
+
+.room-service-floating-cart:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 35px rgba(0,123,255,0.5);
+}
+
+.room-service-order-panel {
+  width: 90%;
+  max-width: 600px;
+  max-height: 90%;
+  overflow-y: auto;
+  border-radius: 25px;
+}
+
+.room-service-quantity-input {
+  width: 140px;
+}
+
+.room-service-quantity-input input {
+  background-color: #f8f9fa;
+  border-radius: 10px;
+}
+
+.room-service-quantity-input .btn {
+  border-radius: 10px;
+  border-color: #007bff;
+  color: #007bff;
+}
+
+.room-service-quantity-input .btn:hover {
+  background-color: #007bff;
+  color: white;
+}
+
+.room-service-add-to-cart {
+  border-radius: 50px !important;
+  padding: 12px 20px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+}
+
+.room-service-add-to-cart.btn-primary {
+  background: linear-gradient(135deg, #007bff, #0056b3) !important;
+  border: none !important;
+  box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+}
+
+.room-service-add-to-cart.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,123,255,0.4);
+}
+
+.room-service-add-to-cart.btn-secondary {
+  background: linear-gradient(135deg, #6c757d, #495057) !important;
+  border: none !important;
+}
+
+.room-service-history-button {
+  transition: all 0.3s ease;
+  font-weight: 600;
+  border-width: 2px;
+}
+
+.room-service-history-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,123,255,0.3);
+}

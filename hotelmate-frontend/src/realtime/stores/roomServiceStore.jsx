@@ -85,13 +85,7 @@ function roomServiceReducer(state, action) {
       const { order, orderId } = action.payload;
       const targetOrderId = order?.id || orderId;
       
-      console.log('[roomServiceStore] 🔄 Processing ORDER_STATUS_CHANGED:', {
-        targetOrderId,
-        hasOrder: !!order,
-        orderExists: !!state.ordersById[targetOrderId],
-        newStatus: order?.status,
-        existingStatus: state.ordersById[targetOrderId]?.status
-      });
+
       
       if (!targetOrderId) {
         console.warn('[roomServiceStore] ❌ ORDER_UPDATED: Missing order ID');
@@ -107,13 +101,7 @@ function roomServiceReducer(state, action) {
         updatedOrder.id = targetOrderId;
       }
       
-      console.log('[roomServiceStore] 📦 Order data after merge:', {
-        orderId: updatedOrder.id,
-        status: updatedOrder.status,
-        room_number: updatedOrder.room_number,
-        wasExisting: !!existingOrder.id,
-        isNewOrder: !existingOrder.id
-      });
+
 
       const newOrdersById = {
         ...state.ordersById,
@@ -131,11 +119,7 @@ function roomServiceReducer(state, action) {
         newPendingOrders = newPendingOrders.filter(id => id !== targetOrderId);
       }
 
-      console.log('[roomServiceStore] ✅ Store updated:', {
-        totalOrders: Object.keys(newOrdersById).length,
-        pendingCount: newPendingOrders.length,
-        orderStatus: newOrdersById[targetOrderId]?.status
-      });
+
 
       return {
         ...state,
@@ -263,7 +247,7 @@ export const roomServiceActions = {
       toDelete.forEach(id => roomServiceActions._processedEventIds.delete(id));
     }
 
-    console.log("[roomServiceStore] Processing event:", eventType, payload);
+
 
     // ✅ Handle events from the guide
     switch (eventType) {
