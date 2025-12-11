@@ -35,19 +35,37 @@ export default function RoomService({ isAdmin }) {
         status: storeOrder.status
       }));
       
-      // Show toast notification
+      // Show enhanced toast notification with new status messages
       const statusMessages = {
-        'accepted': '✅ Your order has been accepted!',
-        'preparing': '👨‍🍳 Your order is being prepared!',
-        'ready': '🎉 Your order is ready!',
-        'delivered': '✅ Your order has been delivered!',
-        'completed': '✅ Order completed!',
+        'pending': '📋 Your order is being reviewed by our kitchen staff',
+        'accepted': '✅ Great! Your order is being prepared',
+        'completed': '🏁 Your order is ready and on its way to your room!',
         'cancelled': '❌ Your order has been cancelled.'
       };
       
-      toast.info(statusMessages[storeOrder.status] || `Order status: ${storeOrder.status}`, {
-        autoClose: 5000
+      const message = statusMessages[storeOrder.status] || `Order status: ${storeOrder.status}`;
+      
+      // Use different toast types based on status
+      const toastType = storeOrder.status === 'completed' ? 'success' : 
+                      storeOrder.status === 'cancelled' ? 'error' : 'info';
+      
+      toast[toastType](message, {
+        autoClose: storeOrder.status === 'completed' ? 6000 : 5000,
+        position: 'top-center'
       });
+
+      // Play notification sound for completed orders
+      if (storeOrder.status === 'completed') {
+        try {
+          const audio = new Audio("/notification.mp3");
+          audio.volume = 0.6;
+          audio.play().catch(() => {
+            // Autoplay might be blocked by browser
+          });
+        } catch (err) {
+          // Error playing notification sound
+        }
+      }
     }
   }, [roomServiceState, currentOrder]);
 
@@ -247,13 +265,21 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
             </h4>
             <div className="row">
               {activeOrders.map((ord) => {
-                // Status messages
+                // Status messages - Updated for new workflow (pending → accepted → completed)
                 const statusMessage = {
-                  'pending': '⏳ Your order has been received and is waiting to be confirmed.',
-                  'accepted': '✅ Your order has been accepted and will be prepared shortly.',
-                  'preparing': '👨‍🍳 Your order is being prepared. It will be delivered to your room soon!',
-                  'ready': '🎉 Your order is ready and will be delivered to your room shortly!',
-                  'delivered': '✅ Your order has been delivered to your room. Enjoy!'
+                  'pending': '📋 Your order is being reviewed by our kitchen staff',
+                  'accepted': '✅ Great! Your order is being prepared',
+                  'completed': '🏁 Your order is ready and on its way to your room!'
+                };
+                
+                // Calculate progress percentage
+                const getProgressPercentage = (status) => {
+                  switch (status) {
+                    case 'pending': return 33;
+                    case 'accepted': return 66;
+                    case 'completed': return 100;
+                    default: return 0;
+                  }
                 };
                 
                 return (
@@ -267,12 +293,8 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
                               ord.status === "pending"
                                 ? "bg-warning text-dark"
                                 : ord.status === "accepted"
-                                ? "bg-info text-dark"
-                                : ord.status === "preparing"
-                                ? "bg-primary text-white"
-                                : ord.status === "ready"
-                                ? "bg-success text-white"
-                                : ord.status === "delivered"
+                                ? "bg-info text-white"
+                                : ord.status === "completed"
                                 ? "bg-success text-white"
                                 : "bg-secondary"
                             }`}
@@ -281,6 +303,29 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
                           </span>
                         </div>
                         
+                        {/* Progress bar */}
+                        <div className="mb-3">
+                          <div className="d-flex justify-content-between align-items-center mb-1">
+                            <small className="text-muted">Order Progress</small>
+                            <small className="text-muted">{getProgressPercentage(ord.status)}%</small>
+                          </div>
+                          <div className="progress" style={{ height: '6px' }}>
+                            <div 
+                              className="progress-bar bg-gradient"
+                              role="progressbar" 
+                              style={{ 
+                                width: `${getProgressPercentage(ord.status)}%`,
+                                background: ord.status === 'completed' 
+                                  ? 'linear-gradient(90deg, #51cf66 0%, #51cf66 100%)'
+                                  : ord.status === 'accepted'
+                                  ? 'linear-gradient(90deg, #ffd43b 0%, #74c0fc 100%)'
+                                  : 'linear-gradient(90deg, #ffd43b 0%, #ffd43b 100%)',
+                                transition: 'width 0.3s ease'
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+
                         {/* Status message */}
                         <div className="alert alert-light mb-3 py-2 px-3 small">
                           {statusMessage[ord.status] || 'Your order is being processed.'}

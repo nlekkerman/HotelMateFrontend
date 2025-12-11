@@ -159,12 +159,25 @@ export default function RoomServiceOrdersManagement() {
   const handleStatusChange = (order, newStatus) => {
     const prev = order.status;
 
+    // Get current orders based on view mode
+    const currentOrders = viewMode === 'active' ? activeOrders : historyOrders;
+    
     // Optimistically update UI
     const updatedOrders = newStatus === "completed"
-      ? orders.filter((o) => o.id !== order.id)
-      : orders.map((o) => (o.id === order.id ? { ...o, status: newStatus } : o));
+      ? currentOrders.filter((o) => o.id !== order.id)
+      : currentOrders.map((o) => (o.id === order.id ? { ...o, status: newStatus } : o));
     
-    setOrders(updatedOrders);
+    // Update the appropriate state based on view mode
+    if (viewMode === 'active') {
+      // For active orders, update the store
+      dispatch({
+        type: 'ORDER_STATUS_CHANGED',
+        payload: { order: { ...order, status: newStatus }, orderId: order.id }
+      });
+    } else {
+      // For history orders, update local state
+      setHistoryOrders(updatedOrders);
+    }
     
     // Update status breakdown for active orders
     if (viewMode === 'active') {
@@ -194,20 +207,29 @@ export default function RoomServiceOrdersManagement() {
         }
       })
       .catch(() => {
-        // Revert on error
-        setOrders(orders);
-        
-        // Revert status breakdown
+        // Revert on error - restore original order status
         if (viewMode === 'active') {
-          const breakdown = [
-            { status: 'pending', count: orders.filter(o => o.status === 'pending').length },
-            { status: 'accepted', count: orders.filter(o => o.status === 'accepted').length }
-          ];
-          setStatusBreakdown(breakdown);
+          // Revert the store update
+          dispatch({
+            type: 'ORDER_STATUS_CHANGED',
+            payload: { order: { ...order, status: prev }, orderId: order.id }
+          });
           
+          // Revert status breakdown to original values
+          const originalBreakdown = [
+            { status: 'pending', count: activeOrders.filter(o => o.status === 'pending').length },
+            { status: 'accepted', count: activeOrders.filter(o => o.status === 'accepted').length }
+          ];
+          setStatusBreakdown(originalBreakdown);
+        } else {
+          // Revert history orders
+          setHistoryOrders(currentOrders);
+        }
+          
+        if (viewMode === 'active') {
           setPagination({
             ...pagination,
-            total_orders: orders.length
+            total_orders: activeOrders.length
           });
         }
         

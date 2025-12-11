@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { toast } from "react-toastify";
 
 import api from "@/services/api";
 import ViewOrders from "@/components/rooms/ViewOrders";
+import { useRoomServiceState } from "@/realtime/stores/roomServiceStore.jsx";
 
 const TIME_SLOTS = [
   "7:00-8:00",
@@ -23,6 +25,9 @@ const Breakfast = ({ isAdmin = false }) => {
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [showOrders, setShowOrders] = useState(false);
+  
+  // Use room service store for real-time updates
+  const roomServiceState = useRoomServiceState();
   // Fetch breakfast items
   useEffect(() => {
     console.log(`Fetching breakfast items for room ${roomNumber}...`);
@@ -37,6 +42,64 @@ const Breakfast = ({ isAdmin = false }) => {
         console.error("Failed to fetch breakfast items:", err);
       });
   }, [roomNumber]);
+
+  // Monitor room service store for real-time breakfast order updates
+  useEffect(() => {
+    if (!roomServiceState) return;
+
+    // Get breakfast orders for this room from the store
+    const roomBreakfastOrders = Object.values(roomServiceState.ordersById)
+      .filter(order => 
+        (order.type === 'breakfast' || order.breakfast_order === true) && 
+        order.room_number === parseInt(roomNumber) &&
+        order.hotel_identifier === hotelIdentifier
+      )
+      .sort((a, b) => new Date(b.created_at || b.timestamp) - new Date(a.created_at || a.timestamp));
+
+    // Update local orders state with real-time data
+    if (roomBreakfastOrders.length > 0) {
+      setOrders(roomBreakfastOrders);
+      
+      // Show notifications for status changes
+      roomBreakfastOrders.forEach(order => {
+        if (order.status && order.updated_at) {
+          const updatedTime = new Date(order.updated_at);
+          const now = new Date();
+          const timeDiff = now - updatedTime;
+          
+          // Show notification if order was updated within the last 30 seconds
+          if (timeDiff < 30000) {
+            const statusMessages = {
+              'pending': '📋 Your breakfast order is being reviewed',
+              'accepted': '✅ Great! Your breakfast order is being prepared',
+              'completed': '🏁 Your breakfast is ready for delivery!'
+            };
+            
+            const message = statusMessages[order.status] || `Breakfast order status: ${order.status}`;
+            const toastType = order.status === 'completed' ? 'success' : 'info';
+            
+            toast[toastType](message, {
+              autoClose: order.status === 'completed' ? 6000 : 5000,
+              position: 'top-center'
+            });
+
+            // Play sound for completed breakfast orders
+            if (order.status === 'completed') {
+              try {
+                const audio = new Audio("/notification.mp3");
+                audio.volume = 0.6;
+                audio.play().catch(() => {
+                  // Autoplay might be blocked
+                });
+              } catch (err) {
+                // Error playing sound
+              }
+            }
+          }
+        }
+      });
+    }
+  }, [roomServiceState, roomNumber, hotelIdentifier]);
 
   // Handle item checkbox toggle
   const toggleItem = (itemId) => {

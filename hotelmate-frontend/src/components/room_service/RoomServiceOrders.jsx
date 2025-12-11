@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
@@ -73,6 +74,25 @@ export default function RoomServiceOrders() {
   const handleStatusChange = (order, newStatus) => {
     const prev = order.status;
 
+    // Validate status transition workflow: pending → accepted → completed
+    const isValidTransition = 
+      (prev === "pending" && (newStatus === "accepted" || newStatus === "pending")) ||
+      (prev === "accepted" && (newStatus === "completed" || newStatus === "accepted")) ||
+      (prev === "completed" && newStatus === "completed");
+
+    if (!isValidTransition) {
+      const workflowMessage = prev === "pending" 
+        ? "Orders must be accepted before they can be completed."
+        : prev === "accepted"
+        ? "Accepted orders can only be marked as completed."
+        : "Completed orders cannot be changed.";
+      
+      setError(`Invalid status transition: ${workflowMessage}`);
+      toast.error(`Cannot change status from "${prev}" to "${newStatus}". ${workflowMessage}`);
+      return;
+    }
+
+    // Optimistically update UI
     setOrders((all) =>
       newStatus === "completed"
         ? all.filter((o) => o.id !== order.id)
@@ -83,12 +103,21 @@ export default function RoomServiceOrders() {
       .patch(`/room_services/${hotelSlug}/orders/${order.id}/`, {
         status: newStatus,
       })
-      .then(() => refreshCount())
-      .catch(() => {
+      .then(() => {
+        refreshCount();
+        toast.success(`Order #${order.id} status updated to ${newStatus}`);
+        setError(null);
+      })
+      .catch((err) => {
+        // Revert optimistic update on error
         setOrders((all) =>
           all.map((o) => (o.id === order.id ? { ...o, status: prev } : o))
         );
-        setError("Error updating status.");
+        
+        const errorMsg = err.response?.data?.error || err.response?.data?.detail || "Error updating status.";
+        setError(errorMsg);
+        toast.error(`Failed to update status: ${errorMsg}`);
+        console.error("Failed to update status:", err.response?.data || err);
       });
   };
 

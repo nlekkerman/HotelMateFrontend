@@ -247,9 +247,27 @@ export const roomServiceActions = {
         break;
 
       case "order_updated":
+        console.log("[roomServiceStore] Processing order_updated event:", payload);
+        
+        // Enhanced handling for order_updated events with proper status validation
+        const orderData = {
+          ...payload,
+          id: payload?.order_id || payload?.id,
+          // Ensure we have all required fields from the event payload
+          room_number: payload?.room_number,
+          status: payload?.status,
+          total_price: payload?.total_price,
+          items: payload?.items || payload?.orderitem_set || [],
+          created_at: payload?.created_at,
+          updated_at: payload?.updated_at,
+          special_instructions: payload?.special_instructions,
+          estimated_delivery: payload?.estimated_delivery,
+          type: payload?.type || (payload?.breakfast_order ? 'breakfast' : 'room_service')
+        };
+        
         dispatchRef({
           type: ACTIONS.ORDER_STATUS_CHANGED,
-          payload: { order: payload, orderId: payload?.order_id || payload?.id },
+          payload: { order: orderData, orderId: orderData.id },
         });
         break;
 

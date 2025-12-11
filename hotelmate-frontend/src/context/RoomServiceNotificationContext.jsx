@@ -70,9 +70,21 @@ export const RoomServiceNotificationProvider = ({ children }) => {
   const handleNewRoomServiceOrder = (data) => {
     setHasNewRoomService(true);
 
+    // Enhanced notification messages based on order status
+    const getOrderMessage = (orderData) => {
+      if (orderData.status === 'pending') {
+        return `New Room Service Order - Room ${orderData.room_number} (€${orderData.total_price})`;
+      } else if (orderData.status === 'accepted') {
+        return `Room Service Order Accepted - Room ${orderData.room_number}`;
+      } else if (orderData.status === 'completed') {
+        return `Room Service Order Ready - Room ${orderData.room_number}`;
+      }
+      return `Room Service Order Update - Room ${orderData.room_number}`;
+    };
+
     // Show toast notification
     toast.info(
-      `New Room Service Order - Room ${data.room_number}`,
+      getOrderMessage(data),
       {
         autoClose: 5000,
         onClick: () => {
@@ -109,9 +121,21 @@ export const RoomServiceNotificationProvider = ({ children }) => {
   const handleNewBreakfastOrder = (data) => {
     setHasNewBreakfast(true);
 
+    // Enhanced breakfast notification messages
+    const getBreakfastMessage = (orderData) => {
+      if (orderData.status === 'pending') {
+        return `New Breakfast Order - Room ${orderData.room_number} (${orderData.delivery_time})`;
+      } else if (orderData.status === 'accepted') {
+        return `Breakfast Order Accepted - Room ${orderData.room_number}`;
+      } else if (orderData.status === 'completed') {
+        return `Breakfast Order Ready - Room ${orderData.room_number}`;
+      }
+      return `Breakfast Order Update - Room ${orderData.room_number}`;
+    };
+
     // Show toast notification
     toast.info(
-      `New Breakfast Order - Room ${data.room_number} at ${data.delivery_time}`,
+      getBreakfastMessage(data),
       {
         autoClose: 5000,
         onClick: () => {
