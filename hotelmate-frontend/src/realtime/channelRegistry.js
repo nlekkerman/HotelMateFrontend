@@ -29,37 +29,37 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
   console.log('🔗 Subscribing to base hotel channels:', { hotelSlug, staffId });
 
   try {
-    // ✅ NEW STANDARDIZED CHANNEL FORMAT: hotel-{slug}.{domain}
+    // ✅ BACKEND USES HOTEL- PREFIX: hotel-{slug}.{domain}
     
     console.log('🔥 [channelRegistry] Base hotel channels - hotelSlug:', hotelSlug);
     
     // Attendance (hotel-wide)
-    const attendanceChannelName = `${hotelSlug}.attendance`;
+    const attendanceChannelName = `hotel-${hotelSlug}.attendance`;
     console.log('🔥 [channelRegistry] Subscribing to attendance:', attendanceChannelName);
     const attendanceChannel = pusher.subscribe(attendanceChannelName);
     channels.push(attendanceChannel);
 
     // Room Service (hotel-wide) 
-    const roomServiceChannelName = `${hotelSlug}.room-service`;
+    const roomServiceChannelName = `hotel-${hotelSlug}.room-service`;
     const roomServiceChannel = pusher.subscribe(roomServiceChannelName);
     channels.push(roomServiceChannel);
 
     // Booking (hotel-wide)
-    const bookingChannelName = `${hotelSlug}.booking`;
+    const bookingChannelName = `hotel-${hotelSlug}.booking`;
     const bookingChannel = pusher.subscribe(bookingChannelName);
     channels.push(bookingChannel);
 
     // Personal staff notifications (if staffId provided)
     if (staffId) {
-      const personalChannelName = `${hotelSlug}.staff-${staffId}-notifications`;
+      const personalChannelName = `hotel-${hotelSlug}.staff-${staffId}-notifications`;
       const personalNotifications = pusher.subscribe(personalChannelName);
       channels.push(personalNotifications);
     }
 
     // Note: Staff chat and guest chat channels are conversation-specific and will be 
     // subscribed to dynamically when users enter specific conversations:
-    // - {slug}.staff-chat.{conversation_id}
-    // - {slug}.guest-chat.{room_pin}
+    // - hotel-{slug}.staff-chat.{conversation_id}
+    // - hotel-{slug}.guest-chat.{room_pin}
 
     // Bind global event handlers to all channels
     channels.forEach(channel => {
@@ -126,8 +126,8 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
   }
 
   const pusher = getPusherClient();
-  // ✅ BACKEND SENDS TO: killarney.staff-chat.100 (exact pattern from notification_manager.py)
-  const channelName = `${hotelSlug}.staff-chat.${conversationId}`;
+  // ✅ BACKEND SENDS TO: hotel-killarney.staff-chat.100 (exact pattern from backend logs)
+  const channelName = `hotel-${hotelSlug}.staff-chat.${conversationId}`;
   
   console.log('🔥 [channelRegistry] Attempting to subscribe to:', channelName);
   console.log('🔥 [channelRegistry] Raw hotelSlug value:', hotelSlug);
@@ -207,7 +207,7 @@ export function subscribeToGuestChatConversation(hotelSlug, roomPin) {
   }
 
   const pusher = getPusherClient();
-  const channelName = `${hotelSlug}.guest-chat.${roomPin}`;
+  const channelName = `hotel-${hotelSlug}.guest-chat.${roomPin}`;
   
   try {
     const channel = pusher.subscribe(channelName);

@@ -50,5 +50,18 @@ export async function requestFirebaseNotificationPermission() {
 
 // Listen for foreground push messages
 export function listenForFirebaseMessages(callback) {
-  return onMessage(messaging, callback);
+  console.log("🔥 [FCM] Setting up onMessage listener with messaging:", !!messaging);
+  console.log("🔥 [FCM] Callback type:", typeof callback);
+  
+  try {
+    const unsubscribe = onMessage(messaging, (payload) => {
+      console.log("🚨 [FCM] onMessage triggered! Raw payload:", payload);
+      callback(payload);
+    });
+    console.log("✅ [FCM] onMessage listener set up successfully");
+    return unsubscribe;
+  } catch (error) {
+    console.error("❌ [FCM] Error setting up onMessage listener:", error);
+    return () => {};
+  }
 }

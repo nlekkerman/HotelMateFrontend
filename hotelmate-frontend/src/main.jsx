@@ -36,10 +36,16 @@ async function bootstrap() {
         "/firebase-messaging-sw.js"
       );
       console.log("🚀 Firebase SW registered:", registration);
+      console.log("🚀 SW registration state:", registration.installing ? 'installing' : registration.waiting ? 'waiting' : registration.active ? 'active' : 'none');
 
-      // Handle foreground FCM messages
-      listenForFirebaseMessages((payload) => {
-        console.log("🔥 [FCM] Message received, routing through event bus");
+      // Handle foreground FCM messages  
+      console.log("🔥 [FCM] Setting up foreground message listener...");
+      const unsubscribe = listenForFirebaseMessages((payload) => {
+        console.log("🚨🚨🚨 [FCM] FOREGROUND MESSAGE RECEIVED! 🚨🚨🚨");
+        console.log("🔥 [FCM] Full payload:", JSON.stringify(payload, null, 2));
+        console.log("🔥 [FCM] Payload data:", payload?.data);
+        console.log("🔥 [FCM] Payload notification:", payload?.notification);
+        console.log("🔥 [FCM] Message type:", payload?.data?.type);
         
         // Route through centralized event bus
         handleIncomingRealtimeEvent({
@@ -61,6 +67,15 @@ async function bootstrap() {
             body: payload.notification.body,
             icon: "/favicons/favicon.svg",
           }).catch(console.error);
+
+        } else if (notificationType === "staff_chat_message" && payload?.notification) {
+          // ✅ NEW: show staff chat push notification
+          console.log("🔔 [FCM] Staff chat notification");
+          showNotification(payload.notification.title, {
+            body: payload.notification.body,
+            icon: "/favicons/favicon.svg",
+          }).catch(console.error);
+
         } else if (hasOrderId && payload?.notification) {
           console.log("🔔 [FCM] Legacy order status notification for order:", payload.data.order_id);
           showNotification(payload.notification.title, {
@@ -69,9 +84,12 @@ async function bootstrap() {
           }).catch(console.error);
         }
       });
+      console.log("✅ [FCM] Foreground message listener set up successfully, unsubscribe function:", typeof unsubscribe);
     } catch (err) {
       console.error("❌ SW registration failed:", err);
     }
+  } else {
+    console.error("❌ Service Worker not supported in this browser");
   }
 
   ReactDOM.createRoot(document.getElementById("root")).render(

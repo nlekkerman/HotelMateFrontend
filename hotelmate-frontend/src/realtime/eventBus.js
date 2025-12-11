@@ -7,6 +7,107 @@ import { roomServiceActions } from './stores/roomServiceStore.jsx';
 import { bookingActions } from './stores/bookingStore.jsx';
 
 /**
+ * Normalize FCM payload to domain event format
+ * @param {Object} fcmPayload - Raw FCM payload from Firebase SDK
+ * @returns {Object|null} Normalized event or null if unhandled
+ */
+function normalizeFcmEvent(fcmPayload) {
+  console.log('🔥 [FCM] normalizeFcmEvent called with payload:', JSON.stringify(fcmPayload, null, 2));
+  
+  const data = fcmPayload?.data || {};
+  console.log('🔥 [FCM] Extracted data:', data);
+  console.log('🔥 [FCM] Data type:', data.type);
+  
+  if (data.type === "staff_chat_message") {
+    console.log('🔥 [FCM] Normalizing staff_chat_message:', data);
+    
+    try {
+      const normalized = {
+      category: "staff_chat",
+      type: "realtime_staff_chat_message_created",
+      payload: {
+        id: data.message_id ? parseInt(data.message_id) : undefined,
+        conversation_id: data.conversation_id ? parseInt(data.conversation_id) : undefined,
+        sender_id: data.sender_id ? parseInt(data.sender_id) : undefined,
+        sender_name: data.sender_name,
+        message: fcmPayload?.notification?.body || data.message || "",
+        timestamp: new Date().toISOString()
+      },
+      meta: {
+        hotel_slug: data.hotel_slug,
+        source: "fcm",
+        event_id: `fcm-${Date.now()}`,
+        ts: new Date().toISOString()
+      }
+      };
+      console.log('🔥 [FCM] Normalized staff_chat_message:', normalized);
+      return normalized;
+    } catch (error) {
+      console.error('❌ [FCM] Error normalizing staff_chat_message:', error);
+      console.error('❌ [FCM] Data causing error:', data);
+      return null;
+    }
+  }
+  
+  if (data.type === "staff_chat_conversations_with_unread") {
+    console.log('🔥 [FCM] Normalizing staff_chat_conversations_with_unread:', data);
+    const normalized = {
+      category: "staff_chat",
+      type: "realtime_staff_chat_conversations_with_unread",
+      payload: {
+        conversations_with_unread: data.conversations_with_unread_count
+          ? parseInt(data.conversations_with_unread_count)
+          : 0
+      },
+      meta: {
+        hotel_slug: data.hotel_slug,
+        source: "fcm",
+        event_id: `fcm-${Date.now()}`,
+        ts: new Date().toISOString()
+      }
+    };
+    console.log('🔥 [FCM] Normalized conversations_with_unread:', normalized);
+    return normalized;
+  }
+  
+  console.log('🔥 [FCM] No handler found for FCM type:', data.type);
+  return null;
+}
+
+// Debug function to test if FCM listener is working at all
+if (typeof window !== 'undefined') {
+  window.testFCMConnection = () => {
+    console.log('🧪 [FCM] Testing FCM connection and listener setup...');
+    
+    // Check if Firebase messaging is available
+    import('../firebase.js').then(({ messaging }) => {
+      console.log('✅ [FCM] Firebase messaging imported successfully:', !!messaging);
+      
+      // Check if notification permission is granted
+      console.log('🔔 [FCM] Notification permission:', Notification.permission);
+      
+      // Check if service worker is registered
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          const firebaseSW = registrations.find(reg => 
+            reg.active?.scriptURL.includes('firebase-messaging-sw.js')
+          );
+          console.log('🔧 [FCM] Firebase service worker registered:', !!firebaseSW);
+          if (firebaseSW) {
+            console.log('🔧 [FCM] Service worker scriptURL:', firebaseSW.active?.scriptURL);
+          }
+        });
+      }
+      
+      // Check if FCM token exists
+      const fcmToken = localStorage.getItem('fcm_token');
+      console.log('🎟️ [FCM] FCM token in localStorage:', fcmToken ? `${fcmToken.substring(0, 20)}...` : 'NOT FOUND');
+      
+    }).catch(error => {
+      console.error('❌ [FCM] Error importing Firebase:', error);
+    });
+  };
+}/**
  * Main entry point for all realtime events from Pusher and FCM
  * @param {Object} evt - Event object
  * @param {string} evt.source - Event source: "pusher" | "fcm" | "local"
@@ -18,48 +119,43 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
   try {
     console.log('📡 Incoming realtime event:', { source, channel, eventName, payload });
     
-    // 🚨 CATCH ALL REALTIME EVENTS TO DEBUG MISSING MESSAGE EVENTS
-    if (eventName?.includes('message') || eventName?.includes('created')) {
-      console.log('🚨🚨 [EventBus] MESSAGE-RELATED EVENT DETECTED:', { channel, eventName, payload });
-    }
-    
-    // 🔍 LOG ALL STAFF CHAT EVENTS TO DEBUG MISSING MESSAGES
+    // Essential debug logging for staff chat events
     if (eventName?.includes('staff_chat') || channel?.includes('staff-chat')) {
-      console.log('🔍🔍 [EventBus] ANY STAFF CHAT EVENT:', { source, channel, eventName, payloadKeys: Object.keys(payload || {}) });
-    }
-    
-    // 🔥 DEBUG: Log staff chat events specifically
-    if (channel?.includes('staff-chat') && !eventName?.startsWith('pusher:')) {
-      console.log('🚨 [EventBus] ===== STAFF CHAT EVENT RECEIVED =====');
-      console.log('🔥 [EventBus] Channel:', channel);
-      console.log('🔥 [EventBus] Event Name:', eventName);
-      console.log('🔥 [EventBus] Full Payload:', JSON.stringify(payload, null, 2));
-      console.log('🔥 [EventBus] Payload Type:', typeof payload);
-      console.log('🔥 [EventBus] Has category?', !!payload?.category, 'Value:', payload?.category);
-      console.log('🔥 [EventBus] Has type?', !!payload?.type, 'Value:', payload?.type);
-      console.log('🔥 [EventBus] Has payload.payload?', !!payload?.payload);
-      console.log('🔥 [EventBus] Event will be normalized and routed to chatStore');
-      
-      // 🚨 SPECIAL CHECK FOR MESSAGE EVENTS
-      if (eventName === 'realtime_staff_chat_message_created') {
-        console.log('🚨🚨🚨 [EventBus] FOUND THE MESSAGE EVENT WE NEED! 🚨🚨🚨');
-      } else {
-        console.log('🔍 [EventBus] This is NOT a message_created event, looking for that...');
-      }
-      console.log('🚨 [EventBus] ===================================');
+      console.log('🔍 [EventBus] Staff chat event detected:', { source, channel, eventName, payloadKeys: Object.keys(payload || {}) });
     }
 
-    // 1️⃣ IGNORE PUSHER SYSTEM EVENTS (like pusher:subscription_succeeded)
+    // 1️⃣ SKIP PUSHER SYSTEM EVENTS
     if (source === 'pusher' && eventName?.startsWith('pusher:')) {
       if (!import.meta.env.PROD) {
-        console.log('🔄 [eventBus] Skipping Pusher system event:', eventName);
+        console.log('🔄 [EventBus] Skipping Pusher system event:', eventName);
       }
-      return; // ⬅️ nothing else, no warning, no routing
+      return;
     }
 
-    // Accept normalized OR direct-message payloads
+    // 2️⃣ FCM BRANCH - NORMALIZE AND PROCESS
+    if (source === 'fcm') {
+      console.log('🔥 [EventBus] FCM event received - processing:', payload);
+      const event = normalizeFcmEvent(payload);
+
+      if (!event) {
+        console.warn('⚠️ [EventBus] FCM event ignored - no handler for type:', payload?.data?.type);
+        return;
+      }
+
+      console.log('🚀 [EventBus] Normalized FCM event:', event);
+
+      if (maybeHandleStaffChatUnreadUpdate(event)) {
+        return;
+      }
+
+      routeToDomainStores(event);
+      maybeAddToNotificationCenter(event);
+      return;
+    }
+
+    // 3️⃣ ALREADY-NORMALIZED EVENTS (BACKEND/DEBUG)
     if (payload?.category && payload?.type) {
-      // 🔥 For staff_chat, prefer the Pusher eventName (realtime_staff_chat_*)
+      // For staff_chat, prefer the Pusher eventName if available
       let effectiveType = payload.type;
 
       if (
@@ -67,71 +163,87 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
         typeof eventName === 'string' &&
         eventName.startsWith('realtime_staff_chat_')
       ) {
-        effectiveType = eventName; // 👈 use the LONG name that chatStore expects
+        effectiveType = eventName;
         console.log('🔥 [EventBus] Using eventName as effectiveType:', effectiveType);
       }
 
-      // FULL normalized - FIXED: Use effectiveType instead of payload.type
       const normalized = {
         category: payload.category,
-        type: effectiveType, // 👈 FIXED: Use the effectiveType we calculated
+        type: effectiveType,
         payload: payload.payload ?? payload.data ?? {},
         meta: payload.meta || { channel, eventName },
         source,
         timestamp: payload.meta?.ts || new Date().toISOString(),
       };
-      console.log('🚀 [EventBus] Normalized event with effectiveType:', normalized);
+
+      console.log('🚀 [EventBus] Normalized backend/debug event:', normalized);
+
       if (maybeHandleStaffChatUnreadUpdate(normalized)) {
         return;
       }
+
       routeToDomainStores(normalized);
       maybeAddToNotificationCenter(normalized);
       return;
     }
 
-    // SUPPORT raw Pusher event (e.g. direct message payload) - ALWAYS process staff-chat events
-    if (channel?.includes("staff-chat") && eventName?.startsWith("realtime_staff_chat_")) {
-        console.log('🔥 [EventBus] Processing RAW staff-chat event:', { eventName, channel, payload });
-        const normalized = {
-          category: "staff_chat",
-          type: eventName,
-          payload: payload,           // <---- PAYLOAD IS THE MESSAGE
-          meta: { channel, eventName, event_id: payload?.event_id },
-          source,
-          timestamp: new Date().toISOString()
-        };
-        console.log('🚀 [EventBus] Normalized staff-chat event:', normalized);
-        if (maybeHandleStaffChatUnreadUpdate(normalized)) {
-          return;
-        }
-        routeToDomainStores(normalized);
-        maybeAddToNotificationCenter(normalized);
+    // 4️⃣ RAW PUSHER STAFF-CHAT EVENTS
+    if (
+      source === 'pusher' &&
+      channel?.includes("staff-chat") &&
+      eventName?.startsWith("realtime_staff_chat_")
+    ) {
+      console.log('🔥 [EventBus] Processing raw Pusher staff-chat event:', { eventName, channel });
+
+      const normalized = {
+        category: "staff_chat",
+        type: eventName,
+        payload: payload,
+        meta: { channel, eventName, event_id: payload?.event_id },
+        source,
+        timestamp: new Date().toISOString()
+      };
+
+      console.log('🚀 [EventBus] Normalized Pusher staff-chat event:', normalized);
+
+      if (maybeHandleStaffChatUnreadUpdate(normalized)) {
         return;
+      }
+
+      routeToDomainStores(normalized);
+      maybeAddToNotificationCenter(normalized);
+      return;
     }
 
-    // 3️⃣ (Optional) if you *still* want legacy support, call normalizePusherEvent/normalizeFCMEvent here.
-    // Right now you just warn:
+    // 5️⃣ FALLBACK STAFF-CHAT BRANCH (NON-SYSTEM PUSHER)
+    if (
+      source === 'pusher' &&
+      channel?.includes("staff-chat") &&
+      eventName &&
+      !eventName.startsWith('pusher:')
+    ) {
+      console.log('🆘 [EventBus] FALLBACK: Processing unmatched staff-chat event:', { eventName, channel });
 
-    // FALLBACK: Process ANY staff-chat event that doesn't match above patterns
-    if (channel?.includes("staff-chat") && eventName && !eventName.startsWith('pusher:')) {
-        console.log('🆘 [EventBus] FALLBACK: Processing unmatched staff-chat event:', { eventName, channel, payload });
-        const normalized = {
-          category: "staff_chat",
-          type: eventName,
-          payload: payload,
-          meta: { channel, eventName, event_id: payload?.event_id || payload?.id },
-          source,
-          timestamp: new Date().toISOString()
-        };
-        console.log('🆘 [EventBus] FALLBACK normalized event:', normalized);
-        if (maybeHandleStaffChatUnreadUpdate(normalized)) {
-          return;
-        }
-        routeToDomainStores(normalized);
+      const normalized = {
+        category: "staff_chat",
+        type: eventName,
+        payload: payload,
+        meta: { channel, eventName, event_id: payload?.event_id || payload?.id },
+        source,
+        timestamp: new Date().toISOString()
+      };
+
+      console.log('🆘 [EventBus] FALLBACK normalized event:', normalized);
+
+      if (maybeHandleStaffChatUnreadUpdate(normalized)) {
         return;
+      }
+
+      routeToDomainStores(normalized);
+      return;
     }
     
-    // Backend should send normalized events - log unhandled events
+    // 6️⃣ UNHANDLED EVENTS
     console.warn('⚠️ Received non-normalized event - backend should send normalized format:', {
       source,
       channel,
@@ -142,6 +254,7 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
     console.error('❌ Error handling realtime event:', error, { source, channel, eventName, payload });
   }
 }
+
 
 
 /**
