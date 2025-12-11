@@ -29,6 +29,7 @@ export const DEFAULT_NAV_ITEMS = [
   { slug: 'settings', name: 'Settings', path: '/staff/{hotelSlug}/settings', icon: 'gear', requiresHotelSlug: true },
   { slug: 'room_service', name: 'Room Service', path: '/room_services/{hotelSlug}/orders-management', icon: 'box' },
   { slug: 'breakfast', name: 'Breakfast', path: '/room_services/{hotelSlug}/breakfast-orders', icon: 'egg-fried' },
+  { slug: 'menus_management', name: 'Menus Management', path: '/menus_management/{hotelSlug}', icon: 'menu-button-wide', allowedRoles: ['staff_admin', 'super_staff_admin'] },
 ];
 
 
@@ -87,8 +88,17 @@ export function useNavigation() {
         if (item.slug === 'settings') {
           return false;
         }
-        const canAccess = canAccessNav(item.slug);
-        return canAccess;
+        
+        // Check role-based permissions for items with allowedRoles
+        if (item.allowedRoles && item.allowedRoles.length > 0) {
+          const hasRoleAccess = canAccess(item.allowedRoles);
+          if (!hasRoleAccess) {
+            return false;
+          }
+        }
+        
+        const hasNavAccess = canAccessNav(item.slug);
+        return hasNavAccess;
       });
 
   // FALLBACK: If no navigation items are visible and user has empty allowed_navs,

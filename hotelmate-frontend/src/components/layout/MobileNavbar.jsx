@@ -464,6 +464,7 @@ const MobileNavbar = () => {
                               );
                             }
 
+
                             // Special handling for Stock Tracker with sub-items
                             if (item.slug === 'stock_tracker') {
                               return (

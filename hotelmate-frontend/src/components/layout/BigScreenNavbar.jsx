@@ -895,7 +895,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                               </div>
                             );
                           }
-                          
+
                           // Regular category items
                           return (
                             <Link

@@ -77,6 +77,8 @@ import RoomServiceOrders from "@/components/room_service/RoomServiceOrders";
 import OrdersSummary from "@/components/room_service/OrdersSummary";
 import RoomServiceOrdersManagement from "@/components/room_service/RoomServiceOrdersManagement";
 
+import MenusManagement from "@/components/menus/MenusManagement";
+
 import Staff from "@/components/staff/Staff";
 import StaffCreate from "@/components/staff/StaffCreate";
 import StaffDetails from "@/components/staff/StaffDetails";
@@ -536,6 +538,14 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 element={
                   <ProtectedRoute>
                     <BreakfastRoomService />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/menus_management/:hotelSlug"
+                element={
+                  <ProtectedRoute>
+                    <MenusManagement />
                   </ProtectedRoute>
                 }
               />

@@ -57,6 +57,7 @@ export const NAV_ITEM_CATEGORY_MAP = {
   'bookings': 'fnb', // Restaurant bookings
   'room_service': 'fnb',
   'breakfast': 'fnb',
+  'menus_management': 'fnb',
   
   // Staff
   'staff': 'staff',
@@ -120,7 +121,8 @@ export const SUBCATEGORIES = {
     { slug: 'bookings', name: 'Restaurant Bookings', order: 2 },
     { slug: 'room_service', name: 'Room Service', order: 3 },
     { slug: 'breakfast', name: 'Breakfast', order: 4 },
-    { slug: 'menus', name: 'Menus', order: 5 },
+    { slug: 'menus_management', name: 'Menus Management', order: 5 },
+    { slug: 'menus', name: 'Menus', order: 6 },
   ],
   'staff': [
     { slug: 'staff', name: 'Staff', order: 1 },

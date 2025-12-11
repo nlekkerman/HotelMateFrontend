@@ -93,7 +93,8 @@ publicAPI.interceptors.response.use(
  */
 export function buildStaffURL(hotelSlug, app, path = '') {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  return `/staff/hotel/${hotelSlug}/${app}${cleanPath}`;
+  const appPath = app ? `/${app}` : '';
+  return `/staff/hotel/${hotelSlug}${appPath}${cleanPath}`;
 }
 
 /**
