@@ -2,13 +2,9 @@ import axios from "axios";
 import { Capacitor } from "@capacitor/core";
 
 // Detect if we're in a native Capacitor runtime (Android/iOS)
-const isNative = (() => {
-  try {
-    return Capacitor?.isNativePlatform?.() ?? false;
-  } catch {
-    return false;
-  }
-})();
+// Detect if we're in a native Capacitor runtime (Android/iOS)
+const platform = Capacitor.getPlatform(); // 'web' | 'ios' | 'android'
+const isNative = platform === "ios" || platform === "android";
 // Determine the baseURL dynamically
 const baseURL = (() => {
   if (isNative) {
