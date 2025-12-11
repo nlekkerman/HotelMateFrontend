@@ -3,6 +3,34 @@ import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { toast } from "react-toastify";
 import api, { buildStaffURL } from "@/services/api";
+import './MenusManagement.css';
+
+const cloudinaryBase = import.meta.env.VITE_CLOUDINARY_BASE || "";
+
+
+
+// Helper function to build proper image URLs
+function buildImageUrl(img) {
+  if (!img || typeof img !== "string") return null;
+  if (img.startsWith("data:")) return img;
+  
+  // If it's already a proper Cloudinary URL, use it directly
+  if (/^https?:\/\/res\.cloudinary\.com/.test(img)) return img;
+  
+  // If it's a full HTTP/HTTPS URL but not Cloudinary, use it as-is
+  if (/^https?:\/\//.test(img)) {
+    // Check if it's a malformed URL with double encoding
+    const cloudinaryMatch = img.match(/https%3A\/(.*\.jpg|.*\.png|.*\.jpeg|.*\.webp)/i);
+    if (cloudinaryMatch) {
+      // Extract and decode the Cloudinary URL
+      return decodeURIComponent('https:/' + cloudinaryMatch[1]);
+    }
+    return img;
+  }
+  
+  // Use cloudinary base if available
+  return cloudinaryBase ? `${cloudinaryBase}${img}` : img;
+}
 
 export default function MenusManagement() {
   const { user } = useAuth();
@@ -20,6 +48,8 @@ export default function MenusManagement() {
   
   // Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -152,6 +182,22 @@ export default function MenusManagement() {
     }
   };
 
+  // Handle edit item
+  const handleEditItem = (item) => {
+    setEditingItem(item);
+    setFormData({
+      name: item.name || '',
+      price: item.price || '',
+      description: item.description || '',
+      category: item.category || '',
+      is_on_stock: item.is_on_stock ?? true,
+      quantity: item.quantity || 1
+    });
+    setImageFile(null);
+    setImagePreview(buildImageUrl(item.image));
+    setShowEditModal(true);
+  };
+
   // Category options based on menu type
   const getCategoryOptions = (menuType) => {
     if (menuType === 'room_service') {
@@ -228,7 +274,113 @@ export default function MenusManagement() {
     setImagePreview(null);
   };
 
-  // Handle form submission
+  // Handle update item
+  const handleUpdateItem = async (e) => {
+    e.preventDefault();
+    
+    if (!editingItem) return;
+    
+    if (!formData.name || !formData.description) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    if (activeMenu === 'room_service' && !formData.price) {
+      toast.error('Price is required for room service items');
+      return;
+    }
+
+    setModalLoading(true);
+    
+    try {
+      const endpoint = activeMenu === 'room_service' 
+        ? buildStaffURL(hotelSlug, '', `room-service-items/${editingItem.id}/`)
+        : buildStaffURL(hotelSlug, '', `breakfast-items/${editingItem.id}/`);
+
+      // Prepare FormData for multipart upload
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('is_on_stock', formData.is_on_stock);
+
+      if (activeMenu === 'room_service') {
+        formDataToSend.append('price', parseFloat(formData.price));
+      } else {
+        formDataToSend.append('quantity', parseInt(formData.quantity));
+      }
+
+      // Add image if selected
+      if (imageFile) {
+        formDataToSend.append('image', imageFile);
+      }
+
+      const response = await api.patch(endpoint, formDataToSend, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      if (response.status === 200) {
+        console.log('✅ Item updated successfully:', response.data);
+        toast.success(`${formData.name} updated successfully!`);
+        setShowEditModal(false);
+        setEditingItem(null);
+        
+        // Refresh the menu items
+        console.log('🔄 Refreshing menu items for:', activeMenu);
+        if (activeMenu === 'room_service') {
+          fetchRoomServiceMenu();
+        } else {
+          fetchBreakfastMenu();
+        }
+      }
+    } catch (err) {
+      console.error('Failed to update menu item:', err);
+      toast.error('Failed to update menu item');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Handle delete item
+  const handleDeleteItem = async () => {
+    if (!editingItem) return;
+    
+    if (!confirm(`Are you sure you want to delete "${editingItem.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setModalLoading(true);
+    
+    try {
+      const endpoint = activeMenu === 'room_service' 
+        ? buildStaffURL(hotelSlug, '', `room-service-items/${editingItem.id}/`)
+        : buildStaffURL(hotelSlug, '', `breakfast-items/${editingItem.id}/`);
+
+      const response = await api.delete(endpoint);
+      
+      if (response.status === 204 || response.status === 200) {
+        console.log('✅ Item deleted successfully');
+        toast.success(`${editingItem.name} deleted successfully!`);
+        setShowEditModal(false);
+        setEditingItem(null);
+        
+        // Refresh the menu items
+        console.log('🔄 Refreshing menu items for:', activeMenu);
+        if (activeMenu === 'room_service') {
+          fetchRoomServiceMenu();
+        } else {
+          fetchBreakfastMenu();
+        }
+      }
+    } catch (err) {
+      console.error('Failed to delete menu item:', err);
+      toast.error('Failed to delete menu item');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Handle form submission (for create)
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -309,50 +461,96 @@ export default function MenusManagement() {
       <div className="row">
         {items.map((item) => (
           <div key={item.id} className="col-12 col-md-6 col-lg-4 mb-4">
-            <div className="card h-100 shadow-sm">
-              {/* Image Section */}
-              {item.image ? (
-                <img 
-                  src={item.image} 
-                  alt={item.name}
-                  className="card-img-top"
-                  style={{ height: '200px', objectFit: 'cover' }}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
-                  }}
-                />
-              ) : (
-                <div 
-                  className="card-img-top d-flex align-items-center justify-content-center bg-light"
-                  style={{ height: '200px', display: item.image ? 'none' : 'flex' }}
-                >
-                  <i className="bi bi-image text-muted" style={{ fontSize: '3rem' }}></i>
-                </div>
-              )}
+            <div className="card h-100 shadow-sm overflow-hidden menus-card">
+              {/* Enhanced Image Container */}
+              <div className="position-relative menus-image-container">
+                {buildImageUrl(item.image) ? (
+                  <div className="w-100 h-100 position-relative overflow-hidden">
+                    <img 
+                      src={buildImageUrl(item.image)} 
+                      alt={item.name}
+                      className="menus-image"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.parentNode.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                    {/* Image overlay with gradient */}
+                    <div className="position-absolute bottom-0 start-0 end-0 menus-image-overlay"></div>
+                    {/* Stock status badge on image */}
+                    <div className="position-absolute top-0 end-0 m-2">
+                      <span className={`badge ${item.is_on_stock ? 'bg-success' : 'bg-danger'} fs-6 px-2 py-1 menus-stock-badge`}>
+                        {item.is_on_stock ? (
+                          <>
+                            <i className="bi bi-check-circle me-1"></i>
+                            In Stock
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-x-circle me-1"></i>
+                            Out of Stock
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div 
+                    className="d-flex flex-column align-items-center justify-content-center position-relative menus-no-image-container"
+                    style={{ display: item.image ? 'none' : 'flex' }}
+                  >
+                    <div className="text-center">
+                      <i className="bi bi-image text-muted mb-2 menus-no-image-icon"></i>
+                      <p className="text-muted small mb-0">No Image</p>
+                    </div>
+                    {/* Stock status badge for no-image items */}
+                    <div className="position-absolute top-0 end-0 m-2">
+                      <span className={`badge ${item.is_on_stock ? 'bg-success' : 'bg-danger'} fs-6 px-2 py-1 menus-stock-badge`}>
+                        {item.is_on_stock ? (
+                          <>
+                            <i className="bi bi-check-circle me-1"></i>
+                            In Stock
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-x-circle me-1"></i>
+                            Out of Stock
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
               
               <div className="card-body">
-                <div className="d-flex justify-content-between align-items-start mb-2">
-                  <h5 className="card-title mb-0">{item.name}</h5>
-                  <span className={`badge ${item.is_on_stock ? 'bg-success' : 'bg-secondary'}`}>
-                    {item.is_on_stock ? 'In Stock' : 'Out of Stock'}
-                  </span>
+                <div className="mb-3">
+                  <h5 className="card-title mb-1 fw-bold">{item.name}</h5>
+                  {item.category && (
+                    <small className="menus-category-badge">
+                      <i className="bi bi-tag me-1"></i>
+                      {item.category}
+                    </small>
+                  )}
                 </div>
                 
                 {item.description && (
                   <p className="card-text text-muted">{item.description}</p>
                 )}
                 
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
+                <div className="d-flex justify-content-between align-items-center mt-3">
+                  <div className="d-flex flex-column">
                     {item.price && (
-                      <span className="h5 mb-0 text-primary">€{Number(item.price).toFixed(2)}</span>
+                      <span className="h4 mb-0 fw-bold menus-price-text">
+                        <i className="bi bi-currency-euro me-1"></i>
+                        {Number(item.price).toFixed(2)}
+                      </span>
                     )}
                     {item.quantity && (
-                      <span className="h6 mb-0 text-info">Qty: {item.quantity}</span>
-                    )}
-                    {item.category && (
-                      <small className="d-block text-muted">{item.category}</small>
+                      <span className="h5 mb-0 text-info fw-medium">
+                        <i className="bi bi-box me-1"></i>
+                        Qty: {item.quantity}
+                      </span>
                     )}
                   </div>
                   
@@ -360,6 +558,7 @@ export default function MenusManagement() {
                     <button 
                       className="btn btn-outline-primary btn-sm"
                       title="Edit Item"
+                      onClick={() => handleEditItem(item)}
                     >
                       <i className="bi bi-pencil"></i>
                     </button>
@@ -549,12 +748,8 @@ export default function MenusManagement() {
       {!activeMenu && (
         <div className="text-center py-5">
           <div 
-            className="rounded-circle p-4 mx-auto mb-4"
-            style={{ 
-              backgroundColor: `${mainColor || '#3498db'}10`,
-              width: '80px',
-              height: '80px'
-            }}
+            className="rounded-circle p-4 mx-auto mb-4 menus-hero-icon"
+            style={{ backgroundColor: `${mainColor || '#3498db'}10` }}
           >
             <i 
               className="bi bi-menu-button-wide fs-1"
@@ -786,6 +981,231 @@ export default function MenusManagement() {
                       </>
                     )}
                   </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Item Modal */}
+      {showEditModal && editingItem && (
+        <div className="modal show d-block menus-modal-overlay">
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <form onSubmit={handleUpdateItem}>
+                <div className="modal-header">
+                  <h5 className="modal-title">
+                    <i className="bi bi-pencil me-2"></i>
+                    Edit {activeMenu === 'room_service' ? 'Room Service' : 'Breakfast'} Item
+                  </h5>
+                  <button 
+                    type="button" 
+                    className="btn-close" 
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setEditingItem(null);
+                    }}
+                  ></button>
+                </div>
+                
+                <div className="modal-body">
+                  <div className="row g-3">
+                    {/* Name */}
+                    <div className="col-md-6">
+                      <label htmlFor="edit-name" className="form-label">
+                        Item Name <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        id="edit-name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        placeholder="Enter item name"
+                        maxLength={255}
+                        required
+                      />
+                    </div>
+
+                    {/* Price (Room Service Only) */}
+                    {activeMenu === 'room_service' && (
+                      <div className="col-md-6">
+                        <label htmlFor="edit-price" className="form-label">
+                          Price (€) <span className="text-danger">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          id="edit-price"
+                          name="price"
+                          value={formData.price}
+                          onChange={handleInputChange}
+                          placeholder="0.00"
+                          min="0"
+                          step="0.01"
+                          required
+                        />
+                      </div>
+                    )}
+
+                    {/* Quantity (Breakfast Only) */}
+                    {activeMenu === 'breakfast' && (
+                      <div className="col-md-6">
+                        <label htmlFor="edit-quantity" className="form-label">
+                          Default Quantity
+                        </label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          id="edit-quantity"
+                          name="quantity"
+                          value={formData.quantity}
+                          onChange={handleInputChange}
+                          min="1"
+                          max="999"
+                        />
+                      </div>
+                    )}
+
+                    {/* Category */}
+                    <div className="col-md-6">
+                      <label htmlFor="edit-category" className="form-label">Category</label>
+                      <select
+                        className="form-select"
+                        id="edit-category"
+                        name="category"
+                        value={formData.category}
+                        onChange={handleInputChange}
+                      >
+                        {getCategoryOptions(activeMenu).map(option => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Description */}
+                    <div className="col-12">
+                      <label htmlFor="edit-description" className="form-label">
+                        Description <span className="text-danger">*</span>
+                      </label>
+                      <textarea
+                        className="form-control"
+                        id="edit-description"
+                        name="description"
+                        value={formData.description}
+                        onChange={handleInputChange}
+                        rows={3}
+                        placeholder="Describe the item, ingredients, etc."
+                        required
+                      />
+                    </div>
+
+                    {/* Image Upload */}
+                    <div className="col-12">
+                      <label className="form-label">Item Image</label>
+                      <div className="border rounded p-3">
+                        {/* Current Image Preview */}
+                        {imagePreview && (
+                          <div className="mb-3">
+                            <label className="form-label text-muted">Current Image:</label>
+                            <div className="d-flex align-items-center gap-3">
+                              <img
+                                src={imagePreview}
+                                alt="Current item"
+                                style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+                                className="rounded border"
+                              />
+                              <button
+                                type="button"
+                                className="btn btn-outline-danger btn-sm"
+                                onClick={removeImage}
+                              >
+                                <i className="bi bi-trash"></i> Remove
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* File Upload */}
+                        <div>
+                          <input
+                            type="file"
+                            className="form-control"
+                            id="edit-image"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                          />
+                          <div className="form-text">
+                            Choose a new image to replace the current one. Max size: 5MB
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Stock Status */}
+                    <div className="col-12">
+                      <div className="form-check">
+                        <input
+                          type="checkbox"
+                          className="form-check-input"
+                          id="edit-is_on_stock"
+                          name="is_on_stock"
+                          checked={formData.is_on_stock}
+                          onChange={handleInputChange}
+                        />
+                        <label className="form-check-label" htmlFor="edit-is_on_stock">
+                          Item is currently in stock
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="modal-footer d-flex justify-content-between">
+                  <button 
+                    type="button" 
+                    className="btn btn-danger"
+                    onClick={handleDeleteItem}
+                    disabled={modalLoading}
+                  >
+                    <i className="bi bi-trash me-2"></i>
+                    Delete Item
+                  </button>
+                  
+                  <div className="d-flex gap-2">
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setShowEditModal(false);
+                        setEditingItem(null);
+                      }}
+                      disabled={modalLoading}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit" 
+                      className="btn btn-primary"
+                      disabled={modalLoading}
+                    >
+                      {modalLoading ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          <i className="bi bi-check-circle me-2"></i>
+                          Update Item
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>

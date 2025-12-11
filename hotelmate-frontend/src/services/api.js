@@ -1,21 +1,35 @@
-
 import axios from "axios";
+import { Capacitor } from "@capacitor/core";
 
+// Detect if we're in a native Capacitor runtime (Android/iOS)
+const isNative = (() => {
+  try {
+    return Capacitor?.isNativePlatform?.() ?? false;
+  } catch {
+    return false;
+  }
+})();
 // Determine the baseURL dynamically
 const baseURL = (() => {
+  if (isNative) {
+    return "https://hotel-porter-d25ad83b12cf.herokuapp.com/api/";
+  }
+
   // If VITE_API_URL is set in .env, always use it (for both dev and prod)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
-  
-  const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+
+  const isLocal =
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1";
   const isDev = import.meta.env.DEV;
-  
+
   if (isLocal && isDev) {
     // For development with local backend
     return "http://localhost:8000/api/";
   }
-  
+
   // Fallback to production URL
   return "https://hotel-porter-d25ad83b12cf.herokuapp.com/api";
 })();
@@ -30,9 +44,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     // Handle CORS and connection errors
-    if (error.code === 'ERR_NETWORK' || error.message.includes('CORS')) {
+    if (error.code === "ERR_NETWORK" || error.message.includes("CORS")) {
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -76,8 +90,8 @@ export const publicAPI = axios.create({
 publicAPI.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.code === 'ERR_NETWORK' || error.message.includes('CORS')) {
-      console.error('Network error:', error);
+    if (error.code === "ERR_NETWORK" || error.message.includes("CORS")) {
+      console.error("Network error:", error);
     }
     return Promise.reject(error);
   }
@@ -91,9 +105,9 @@ publicAPI.interceptors.response.use(
  * @param {string} path - Additional path after app (optional)
  * @returns {string} - Formatted URL path
  */
-export function buildStaffURL(hotelSlug, app, path = '') {
-  const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  const appPath = app ? `/${app}` : '';
+export function buildStaffURL(hotelSlug, app, path = "") {
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  const appPath = app ? `/${app}` : "";
   return `/staff/hotel/${hotelSlug}${appPath}${cleanPath}`;
 }
 
@@ -102,7 +116,7 @@ export function buildStaffURL(hotelSlug, app, path = '') {
  * @returns {string|null}
  */
 export function getHotelSlug() {
-  const storedUser = localStorage.getItem('user');
+  const storedUser = localStorage.getItem("user");
   const userData = storedUser ? JSON.parse(storedUser) : null;
   return userData?.hotel_slug || null;
 }
