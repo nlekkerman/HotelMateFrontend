@@ -163,8 +163,23 @@ const Breakfast = ({ isAdmin = false }) => {
         `room_services/${hotelIdentifier}/breakfast-orders/`,
         payload
       );
+      
+      // Integrate with real-time store for proper Pusher updates
+      const newBreakfastOrder = {
+        ...response.data,
+        type: 'breakfast',
+        breakfast_order: true,
+        hotel_identifier: hotelIdentifier,
+        room_number: parseInt(roomNumber)
+      };
+      
       console.log("Order submitted successfully:", response.data);
-      alert(`Breakfast order #${response.data.id} submitted successfully! Kitchen staff have been notified.`);
+      
+      toast.success(`Breakfast order #${response.data.id} submitted successfully! You'll receive updates as it's prepared.`, {
+        autoClose: 4000,
+        position: 'top-center'
+      });
+      
       setSubmitted(true);
       setSelectedItems({});
       setTimeSlot("");

@@ -4,8 +4,7 @@ import api, { setHotelIdentifier } from "@/services/apiWithHotel";
 import { toast } from "react-toastify";
 import DeletionModal from "@/components/modals/DeletionModal";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
-import useOrdersWebSocket from "@/hooks/useOrdersWebSocket";
-import { useRoomServiceState, useRoomServiceDispatch, roomServiceActions } from "@/realtime/stores/roomServiceStore.jsx";
+import { useRoomServiceState, useRoomServiceDispatch } from "@/realtime/stores/roomServiceStore.jsx";
 
 
 export default function RoomService({ isAdmin }) {
@@ -21,67 +20,110 @@ export default function RoomService({ isAdmin }) {
   const roomServiceState = useRoomServiceState();
   const roomServiceDispatch = useRoomServiceDispatch();
 
-  // Handle realtime order updates from store
+  // Enhanced real-time tracking of current active order
   useEffect(() => {
     if (!roomServiceState || !currentOrder) return;
 
     const orderId = currentOrder.id;
     const storeOrder = roomServiceState.ordersById[orderId];
     
-    if (storeOrder && storeOrder.status !== currentOrder.status) {
-      // Update current order with new status from store
-      setCurrentOrder(prev => ({
-        ...prev,
-        status: storeOrder.status
-      }));
+    if (storeOrder) {
+      // Always sync the current order with store data
+      setCurrentOrder(storeOrder);
       
-      // Show enhanced toast notification with new status messages
-      const statusMessages = {
-        'pending': '📋 Your order is being reviewed by our kitchen staff',
-        'accepted': '✅ Great! Your order is being prepared',
-        'completed': '🏁 Your order is ready and on its way to your room!',
-        'cancelled': '❌ Your order has been cancelled.'
-      };
-      
-      const message = statusMessages[storeOrder.status] || `Order status: ${storeOrder.status}`;
-      
-      // Use different toast types based on status
-      const toastType = storeOrder.status === 'completed' ? 'success' : 
-                      storeOrder.status === 'cancelled' ? 'error' : 'info';
-      
-      toast[toastType](message, {
-        autoClose: storeOrder.status === 'completed' ? 6000 : 5000,
-        position: 'top-center'
-      });
-
-      // Play notification sound for completed orders
-      if (storeOrder.status === 'completed') {
-        try {
-          const audio = new Audio("/notification.mp3");
-          audio.volume = 0.6;
-          audio.play().catch(() => {
-            // Autoplay might be blocked by browser
+      // Check if this is a recent status change (within last 10 seconds)
+      if (storeOrder.updated_at) {
+        const updatedTime = new Date(storeOrder.updated_at);
+        const now = new Date();
+        const timeDiff = now - updatedTime;
+        
+        if (timeDiff < 10000 && timeDiff > 0 && storeOrder.status !== currentOrder.status) {
+          const statusMessages = {
+            'pending': '📋 Your order is being reviewed by our kitchen staff',
+            'accepted': '✅ Great! Your order is being prepared',
+            'completed': '🏁 Your order is ready and on its way to your room!',
+            'cancelled': '❌ Your order has been cancelled.'
+          };
+          
+          const message = statusMessages[storeOrder.status] || `Order status: ${storeOrder.status}`;
+          
+          // Use different toast types based on status
+          const toastType = storeOrder.status === 'completed' ? 'success' : 
+                          storeOrder.status === 'cancelled' ? 'error' : 'info';
+          
+          toast[toastType](message, {
+            autoClose: storeOrder.status === 'completed' ? 6000 : 5000,
+            position: 'top-center'
           });
-        } catch (err) {
-          // Error playing notification sound
+
+          // Play notification sound for completed orders
+          if (storeOrder.status === 'completed') {
+            try {
+              const audio = new Audio("/notification.mp3");
+              audio.volume = 0.6;
+              audio.play().catch(() => {});
+            } catch (err) {}
+          }
         }
       }
     }
-  }, [roomServiceState, currentOrder]);
+  }, [roomServiceState, currentOrder?.id]);
 
-  // Also sync previousOrders with store
+  // Real-time sync of all orders for this room using new Pusher logic
   useEffect(() => {
     if (!roomServiceState) return;
     
     const storeOrders = Object.values(roomServiceState.ordersById);
-    const roomOrders = storeOrders.filter(order => 
-      order.room_number === roomNumber && 
-      order.hotel_identifier === hotelIdentifier
-    );
+    const roomOrders = storeOrders.filter(order => {
+      // Match room number (convert both to numbers for comparison)
+      const orderRoomNum = parseInt(order.room_number);
+      const currentRoomNum = parseInt(roomNumber);
+      
+      // Match hotel identifier
+      const orderHotel = order.hotel_identifier || order.hotel_slug;
+      
+      return orderRoomNum === currentRoomNum && orderHotel === hotelIdentifier;
+    }).sort((a, b) => new Date(b.created_at || b.timestamp) - new Date(a.created_at || a.timestamp));
     
-    if (roomOrders.length > 0) {
-      setPreviousOrders(roomOrders);
-    }
+    // Always update previousOrders with latest data from store
+    setPreviousOrders(roomOrders);
+    
+    // Check for recent status updates to show notifications
+    roomOrders.forEach(order => {
+      if (order.status && order.updated_at) {
+        const updatedTime = new Date(order.updated_at);
+        const now = new Date();
+        const timeDiff = now - updatedTime;
+        
+        // Show notification if order was updated within the last 15 seconds
+        if (timeDiff < 15000 && timeDiff > 0) {
+          const statusMessages = {
+            'pending': '📋 Your order is being reviewed by our kitchen staff',
+            'accepted': '✅ Great! Your order is being prepared',
+            'completed': '🏁 Your order is ready and on its way to your room!'
+          };
+          
+          const message = statusMessages[order.status];
+          if (message) {
+            const toastType = order.status === 'completed' ? 'success' : 'info';
+            
+            toast[toastType](message, {
+              autoClose: order.status === 'completed' ? 6000 : 5000,
+              position: 'top-center'
+            });
+
+            // Play sound for completed orders
+            if (order.status === 'completed') {
+              try {
+                const audio = new Audio("/notification.mp3");
+                audio.volume = 0.6;
+                audio.play().catch(() => {});
+              } catch (err) {}
+            }
+          }
+        }
+      }
+    });
   }, [roomServiceState, roomNumber, hotelIdentifier]);
 
   const [previousOrders, setPreviousOrders] = useState([]);
@@ -189,25 +231,28 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
         payload
       );
 
-      // 1) Update local state
-      setCurrentOrder(orderResp.data);
+      // 1) Update local state and integrate with real-time store
+      const newOrder = {
+        ...orderResp.data,
+        hotel_identifier: hotelIdentifier,
+        room_number: Number(roomNumber)
+      };
+      
+      setCurrentOrder(newOrder);
       setOrderItems({});
       setShowOrderPanel(false);
-      toast.success("Order submitted successfully!");
       
-      // Add to the beginning of the list (only if not already present)
-      setPreviousOrders((prev) => {
-        // Check if order already exists in the list
-        const alreadyExists = prev.some(order => order.id === orderResp.data.id);
-        if (alreadyExists) {
-          return prev;
-        }
-        
-        const newList = [orderResp.data, ...prev];
-        return newList;
+      // 2) Add to real-time store for proper Pusher integration
+      roomServiceDispatch({
+        type: 'ORDER_CREATED',
+        payload: { order: newOrder }
+      });
+      
+      toast.success("Order submitted successfully! You'll receive updates as it's prepared.", {
+        autoClose: 4000
       });
 
-      // 2) Refresh the navbar badge count
+      // 3) Refresh the navbar badge count
       refreshCount();
     } catch (err) {
       setSubmitError(err.response?.data || err.message);

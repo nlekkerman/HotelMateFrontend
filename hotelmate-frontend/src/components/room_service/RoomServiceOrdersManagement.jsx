@@ -7,6 +7,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationContext";
 import { useRoomServiceState, useRoomServiceDispatch } from "@/realtime/stores/roomServiceStore";
 import { roomServiceActions } from "@/realtime/stores/roomServiceStore";
+import { subscribeBaseHotelChannels } from "@/realtime/channelRegistry";
 import { toast } from "react-toastify";
 
 export default function RoomServiceOrdersManagement() {
@@ -21,14 +22,9 @@ export default function RoomServiceOrdersManagement() {
 
   // View mode: 'active' or 'history'
   const [viewMode, setViewMode] = useState('active');
-  
-  const [historyOrders, setHistoryOrders] = useState([]); // For history view only
+  const [historyOrders, setHistoryOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
-  // Pagination and stats
-  const [pagination, setPagination] = useState({});
-  const [statusBreakdown, setStatusBreakdown] = useState([]);
   
   // Filters for history only
   const [historyFilters, setHistoryFilters] = useState({
@@ -39,14 +35,45 @@ export default function RoomServiceOrdersManagement() {
     page_size: 20
   });
 
-  // Get active orders from store, history orders from local state (since they're filtered/paginated)
+  // Separate pagination state for history view
+  const [historyPagination, setHistoryPagination] = useState({
+    total_orders: 0,
+    page: 1,
+    page_size: 20,
+    total_pages: 1,
+    has_next: false,
+    has_previous: false
+  });
+
+  // 100% Real-time data from Pusher store - NO legacy API calls!
+  // Get active orders (pending + accepted) from real-time store
   const activeOrders = Object.values(roomServiceState.ordersById)
-    .filter(order => order.status !== 'completed' && order.status !== 'cancelled')
+    .filter(order => order.type !== 'breakfast' && !order.breakfast_order && 
+                    (order.status === 'pending' || order.status === 'accepted'))
     .sort((a, b) => new Date(b.created_at || b.timestamp) - new Date(a.created_at || a.timestamp));
+
+  // Calculate real-time status breakdown
+  const statusBreakdown = useMemo(() => [
+    { status: 'pending', count: activeOrders.filter(o => o.status === 'pending').length },
+    { status: 'accepted', count: activeOrders.filter(o => o.status === 'accepted').length }
+  ], [activeOrders]);
+
+  // Get pagination based on view mode
+  const pagination = viewMode === 'active' 
+    ? {
+        total_orders: activeOrders.length,
+        page: 1,
+        page_size: activeOrders.length,
+        total_pages: 1,
+        has_next: false,
+        has_previous: false
+      }
+    : historyPagination;
   
   const displayOrders = viewMode === 'active' ? activeOrders : historyOrders;
 
-  const fetchActiveOrders = async () => {
+  // Initialize store with API data only once on component mount
+  const initializeStoreData = async () => {
     if (!hotelSlug) {
       setError("No hotel identifier found.");
       return;
@@ -56,43 +83,27 @@ export default function RoomServiceOrdersManagement() {
     setError(null);
 
     try {
-      // Fetch active orders (pending + accepted only)
-      const response = await api.get(
-        `/room_services/${hotelSlug}/orders/`
-      );
-
-      let activeOrders = response.data;
-      if (Array.isArray(activeOrders.results)) {
-        activeOrders = activeOrders.results;
+      // Only fetch initial data to populate the store - after this, everything is real-time
+      const response = await api.get(`/room_services/${hotelSlug}/orders/`);
+      
+      let initialOrders = response.data;
+      if (Array.isArray(initialOrders.results)) {
+        initialOrders = initialOrders.results;
       }
       
-      // Initialize store with active orders
-      roomServiceActions.initFromAPI(activeOrders);
-      
-      // Calculate status breakdown for active orders
-      const breakdown = [
-        { status: 'pending', count: activeOrders.filter(o => o.status === 'pending').length },
-        { status: 'accepted', count: activeOrders.filter(o => o.status === 'accepted').length }
-      ];
-      setStatusBreakdown(breakdown);
-      
-      setPagination({
-        total_orders: activeOrders.length,
-        page: 1,
-        page_size: activeOrders.length,
-        total_pages: 1,
-        has_next: false,
-        has_previous: false
-      });
+      // Initialize store ONCE with API data - after this, Pusher handles all updates
+      roomServiceActions.initFromAPI(initialOrders);
       
       // Mark notifications as read when viewing the page
       if (hasNewRoomService) {
         markRoomServiceRead();
       }
+      
+      setError(null);
     } catch (err) {
-      console.error('Error fetching active orders:', err);
-      setError("Error fetching active orders.");
-      toast.error("Failed to load active orders");
+      console.error('Error initializing store:', err);
+      setError("Error loading initial data.");
+      toast.error("Failed to load orders");
     } finally {
       setLoading(false);
     }
@@ -130,7 +141,7 @@ export default function RoomServiceOrdersManagement() {
 
       const data = response.data;
       setHistoryOrders(data.orders || []);
-      setPagination(data.pagination || {});
+      setHistoryPagination(data.pagination || {});
       
     } catch (err) {
       console.error('Error fetching order history:', err);
@@ -141,20 +152,46 @@ export default function RoomServiceOrdersManagement() {
     }
   };
 
+  // Subscribe to Pusher channels for real-time events
   useEffect(() => {
-    if (viewMode === 'active') {
-      fetchActiveOrders();
-    } else {
+    if (!hotelSlug) return;
+
+    console.log('🔥 [RoomServiceManagement] Subscribing to real-time channels for:', hotelSlug);
+    
+    // Subscribe to base hotel channels including room-service
+    const cleanup = subscribeBaseHotelChannels({ 
+      hotelSlug, 
+      staffId: user?.id 
+    });
+    
+    return cleanup; // Cleanup subscription when component unmounts
+  }, [hotelSlug, user?.id]);
+
+  // Initialize store data only once on mount
+  useEffect(() => {
+    if (hotelSlug) {
+      initializeStoreData();
+    }
+  }, [hotelSlug]);
+
+  // Load history when switching to history view
+  useEffect(() => {
+    if (viewMode === 'history') {
       fetchOrderHistory();
     }
-  }, [hotelSlug, viewMode, historyFilters]);
+  }, [viewMode, historyFilters]);
 
-  // Refresh active orders when new room service notification arrives
+  // Mark notifications as read when new orders arrive (no need to refetch - store updates automatically!)
   useEffect(() => {
-    if (hasNewRoomService && viewMode === 'active') {
-      fetchActiveOrders();
+    if (hasNewRoomService) {
+      markRoomServiceRead();
     }
   }, [hasNewRoomService]);
+
+  // Real-time order count updates - no API calls needed!
+  useEffect(() => {
+    refreshCount();
+  }, [activeOrders.length]);
 
   const handleStatusChange = (order, newStatus) => {
     const prev = order.status;
@@ -187,10 +224,7 @@ export default function RoomServiceOrdersManagement() {
       ];
       setStatusBreakdown(breakdown);
       
-      setPagination({
-        ...pagination,
-        total_orders: updatedOrders.length
-      });
+      // No need to update pagination for active orders - it's computed automatically
     }
 
     api
@@ -201,10 +235,8 @@ export default function RoomServiceOrdersManagement() {
         refreshCount();
         toast.success(`Order #${order.id} status updated to ${newStatus}`);
         
-        // If completed, refresh to ensure sync with backend
-        if (newStatus === 'completed' && viewMode === 'active') {
-          fetchActiveOrders();
-        }
+        // No need to fetchActiveOrders() - Pusher will send order_updated event automatically!
+        // The store will update and component will re-render with new data
       })
       .catch(() => {
         // Revert on error - restore original order status
@@ -226,12 +258,7 @@ export default function RoomServiceOrdersManagement() {
           setHistoryOrders(currentOrders);
         }
           
-        if (viewMode === 'active') {
-          setPagination({
-            ...pagination,
-            total_orders: activeOrders.length
-          });
-        }
+        // Pagination is handled automatically for active view (computed) and history view (separate state)
         
         setError("Error updating status.");
         toast.error("Failed to update order status");
@@ -344,7 +371,7 @@ export default function RoomServiceOrdersManagement() {
                   <i className="bi bi-bar-chart me-2"></i>
                   Status Breakdown
                 </h5>
-                <div className="row g-3">
+                <div className="row g-3 d-flex justify-content-center">
                   {statusBreakdown.map((item) => (
                     <div key={item.status} className="col-md-3 col-sm-4 col-6">
                       <div className={`badge ${getStatusBadgeClass(item.status)} w-100 p-3`}>
@@ -354,7 +381,7 @@ export default function RoomServiceOrdersManagement() {
                     </div>
                   ))}
                   <div className="col-md-3 col-sm-4 col-6">
-                    <div className="badge bg-dark w-100 p-3">
+                    <div className="badge bg-dark text-white w-100 p-3">
                       <div className="fs-6">TOTAL</div>
                       <div className="fs-4 fw-bold">{pagination.total_orders || 0}</div>
                     </div>
