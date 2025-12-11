@@ -103,9 +103,45 @@ if (typeof window !== 'undefined') {
       const fcmToken = localStorage.getItem('fcm_token');
       console.log('🎟️ [FCM] FCM token in localStorage:', fcmToken ? `${fcmToken.substring(0, 20)}...` : 'NOT FOUND');
       
+      // Also check all localStorage keys for debugging
+      console.log('🔍 [FCM] All localStorage keys:', Object.keys(localStorage));
+      
     }).catch(error => {
       console.error('❌ [FCM] Error importing Firebase:', error);
     });
+  };
+
+  // Helper to manually register FCM token
+  window.registerFCMToken = async () => {
+    console.log('🎟️ [FCM] Manually registering FCM token...');
+    try {
+      const { requestFirebaseNotificationPermission } = await import('../utils/firebaseNotifications.js');
+      const token = await requestFirebaseNotificationPermission();
+      if (token) {
+        localStorage.setItem('fcm_token', token);
+        console.log('✅ [FCM] Token registered and saved:', token.substring(0, 20) + '...');
+        return token;
+      } else {
+        console.error('❌ [FCM] Failed to get FCM token');
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ [FCM] Error registering FCM token:', error);
+      return null;
+    }
+  };
+
+  // Helper to just log the current FCM token
+  window.logFCMToken = () => {
+    const token = localStorage.getItem('fcm_token');
+    if (token) {
+      console.log('🎟️ [FCM] Current FCM token:', token);
+      console.log('🎟️ [FCM] Token length:', token.length);
+      return token;
+    } else {
+      console.log('❌ [FCM] No FCM token found in localStorage');
+      return null;
+    }
   };
 }/**
  * Main entry point for all realtime events from Pusher and FCM
