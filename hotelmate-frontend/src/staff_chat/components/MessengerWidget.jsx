@@ -77,8 +77,6 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
     markConversationRead = () => {},
   } = useStaffChat();
   
-
-  
   const [searchParams, setSearchParams] = useSearchParams();
   const [internalExpanded, setInternalExpanded] = useState(false);
 

@@ -34,24 +34,24 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
     console.log('🔥 [channelRegistry] Base hotel channels - hotelSlug:', hotelSlug);
     
     // Attendance (hotel-wide)
-    const attendanceChannelName = `hotel-${hotelSlug}.attendance`;
+    const attendanceChannelName = `${hotelSlug}.attendance`;
     console.log('🔥 [channelRegistry] Subscribing to attendance:', attendanceChannelName);
     const attendanceChannel = pusher.subscribe(attendanceChannelName);
     channels.push(attendanceChannel);
 
     // Room Service (hotel-wide) 
-    const roomServiceChannelName = `hotel-${hotelSlug}.room-service`;
+    const roomServiceChannelName = `${hotelSlug}.room-service`;
     const roomServiceChannel = pusher.subscribe(roomServiceChannelName);
     channels.push(roomServiceChannel);
 
     // Booking (hotel-wide)
-    const bookingChannelName = `hotel-${hotelSlug}.booking`;
+    const bookingChannelName = `${hotelSlug}.booking`;
     const bookingChannel = pusher.subscribe(bookingChannelName);
     channels.push(bookingChannel);
 
     // Personal staff notifications (if staffId provided)
     if (staffId) {
-      const personalChannelName = `hotel-${hotelSlug}.staff-${staffId}-notifications`;
+      const personalChannelName = `${hotelSlug}.staff-${staffId}-notifications`;
       const personalNotifications = pusher.subscribe(personalChannelName);
       channels.push(personalNotifications);
     }
@@ -127,7 +127,7 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
 
   const pusher = getPusherClient();
   // ✅ BACKEND SENDS TO: hotel-killarney.staff-chat.100 (exact pattern from backend logs)
-  const channelName = `hotel-${hotelSlug}.staff-chat.${conversationId}`;
+  const channelName = `${hotelSlug}.staff-chat.${conversationId}`;
   
   console.log('🔥 [channelRegistry] Attempting to subscribe to:', channelName);
   console.log('🔥 [channelRegistry] Raw hotelSlug value:', hotelSlug);
@@ -207,7 +207,7 @@ export function subscribeToGuestChatConversation(hotelSlug, roomPin) {
   }
 
   const pusher = getPusherClient();
-  const channelName = `hotel-${hotelSlug}.guest-chat.${roomPin}`;
+  const channelName = `${hotelSlug}.guest-chat.${roomPin}`;
   
   try {
     const channel = pusher.subscribe(channelName);
