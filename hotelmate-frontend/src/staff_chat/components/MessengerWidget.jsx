@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Dropdown } from 'react-bootstrap';
 import { useSearchParams } from 'react-router-dom';
@@ -77,33 +77,7 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
     markConversationRead = () => {},
   } = useStaffChat();
   
-  // Force re-render state
-  const [, forceUpdate] = useState({});
-  
-  // Calculate unread conversations count
-  const unreadCount = useMemo(() => {
-    return conversations.filter(conv => conv.unread_count > 0).length;
-  }, [conversations]);
-  
-  // Force update every time - aggressive but works
-  useEffect(() => {
-    console.log('📊 [MessengerWidget] FORCING UPDATE - unread:', unreadCount);
-    forceUpdate({});
-  }, [conversations, unreadCount]);
-  
 
-  // Also force update on any conversation change via interval (backup)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const newUnreadCount = conversations.filter(conv => conv.unread_count > 0).length;
-      if (newUnreadCount !== unreadCount) {
-        console.log('📊 [MessengerWidget] INTERVAL FORCE UPDATE');
-        forceUpdate({});
-      }
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }, [conversations, unreadCount]);
   
   const [searchParams, setSearchParams] = useSearchParams();
   const [internalExpanded, setInternalExpanded] = useState(false);
@@ -326,19 +300,15 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
     <>
       {/* Main Widget - Always shows header at bottom */}
       <div 
-        key={`messenger-widget-${conversations.length}-${unreadCount}`} 
+        key={`messenger-widget-${conversations.length}`} 
         className={`messenger-widget  ${positionClasses[position]} ${isExpanded ? 'messenger-widget--expanded' : ''}`}
       >
         <div className="messenger-widget__panel bg-light">
           {/* Header - Always visible, acts as toggle */}
           <div 
-            className={`messenger-widget__header text-white ${unreadCount > 0 ? '' : 'main-bg'}`}
+            className="messenger-widget__header text-white main-bg"
             onClick={toggleWidget}
-            style={{ 
-              cursor: 'pointer',
-              backgroundColor: unreadCount > 0 ? '#28a745' : undefined,
-              transition: 'background-color 0.3s ease'
-            }}
+            style={{ cursor: 'pointer' }}
           >
             <h3 className="messenger-widget__title">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ marginRight: '8px' }}>
@@ -351,24 +321,6 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
                 <circle cx="16" cy="10" r="1.5" fill="currentColor" />
               </svg>
               Staff Chat
-              {unreadCount > 0 && (
-                <span 
-                  style={{
-                    backgroundColor: '#dc3545',
-                    color: 'white',
-                    borderRadius: '50%',
-                    padding: '2px 6px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    marginLeft: '8px',
-                    minWidth: '20px',
-                    textAlign: 'center',
-                    display: 'inline-block'
-                  }}
-                >
-                  {unreadCount}
-                </span>
-              )}
             </h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {/* Dropdown Menu - Only show when expanded */}
