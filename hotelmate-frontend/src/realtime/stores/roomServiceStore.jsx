@@ -85,13 +85,35 @@ function roomServiceReducer(state, action) {
       const { order, orderId } = action.payload;
       const targetOrderId = order?.id || orderId;
       
-      if (!targetOrderId || !state.ordersById[targetOrderId]) {
-        console.warn('[roomServiceStore] ORDER_UPDATED: Order not found', targetOrderId);
+      console.log('[roomServiceStore] 🔄 Processing ORDER_STATUS_CHANGED:', {
+        targetOrderId,
+        hasOrder: !!order,
+        orderExists: !!state.ordersById[targetOrderId],
+        newStatus: order?.status,
+        existingStatus: state.ordersById[targetOrderId]?.status
+      });
+      
+      if (!targetOrderId) {
+        console.warn('[roomServiceStore] ❌ ORDER_UPDATED: Missing order ID');
         return state;
       }
 
-      const existingOrder = state.ordersById[targetOrderId];
+      // If order doesn't exist in store, create it (this can happen with Pusher events)
+      const existingOrder = state.ordersById[targetOrderId] || {};
       const updatedOrder = order ? { ...existingOrder, ...order } : existingOrder;
+
+      // Ensure order has minimum required fields
+      if (!updatedOrder.id) {
+        updatedOrder.id = targetOrderId;
+      }
+      
+      console.log('[roomServiceStore] 📦 Order data after merge:', {
+        orderId: updatedOrder.id,
+        status: updatedOrder.status,
+        room_number: updatedOrder.room_number,
+        wasExisting: !!existingOrder.id,
+        isNewOrder: !existingOrder.id
+      });
 
       const newOrdersById = {
         ...state.ordersById,
@@ -108,6 +130,12 @@ function roomServiceReducer(state, action) {
       } else if (!isPending && isCurrentlyPending) {
         newPendingOrders = newPendingOrders.filter(id => id !== targetOrderId);
       }
+
+      console.log('[roomServiceStore] ✅ Store updated:', {
+        totalOrders: Object.keys(newOrdersById).length,
+        pendingCount: newPendingOrders.length,
+        orderStatus: newOrdersById[targetOrderId]?.status
+      });
 
       return {
         ...state,
@@ -240,16 +268,35 @@ export const roomServiceActions = {
     // ✅ Handle events from the guide
     switch (eventType) {
       case "order_created":
+        // Normalize order data for created orders
+        const newOrderData = {
+          ...payload,
+          id: payload?.order_id || payload?.id,
+          room_number: payload?.room_number,
+          status: payload?.status || 'pending',
+          total_price: payload?.total_price,
+          items: payload?.items || payload?.orderitem_set || [],
+          created_at: payload?.created_at || new Date().toISOString(),
+          updated_at: payload?.updated_at || new Date().toISOString(),
+          special_instructions: payload?.special_instructions,
+          estimated_delivery: payload?.estimated_delivery,
+          type: payload?.type || (payload?.breakfast_order ? 'breakfast' : 'room_service')
+        };
+        
+        if (!newOrderData.id) {
+          console.error("[roomServiceStore] ❌ Cannot process order_created: missing order ID");
+          return;
+        }
+        
         dispatchRef({
           type: ACTIONS.ORDER_CREATED,
-          payload: { order: payload },
+          payload: { order: newOrderData },
         });
         break;
 
       case "order_updated":
-        console.log("[roomServiceStore] Processing order_updated event:", payload);
-        
         // Enhanced handling for order_updated events with proper status validation
+        // Handle both backend format (order_id) and frontend format (id)
         const orderData = {
           ...payload,
           id: payload?.order_id || payload?.id,
@@ -259,11 +306,17 @@ export const roomServiceActions = {
           total_price: payload?.total_price,
           items: payload?.items || payload?.orderitem_set || [],
           created_at: payload?.created_at,
-          updated_at: payload?.updated_at,
+          updated_at: payload?.updated_at || new Date().toISOString(),
           special_instructions: payload?.special_instructions,
           estimated_delivery: payload?.estimated_delivery,
           type: payload?.type || (payload?.breakfast_order ? 'breakfast' : 'room_service')
         };
+        
+        // Validate required fields
+        if (!orderData.id) {
+          console.error("[roomServiceStore] ❌ Cannot process order_updated: missing order ID");
+          return;
+        }
         
         dispatchRef({
           type: ACTIONS.ORDER_STATUS_CHANGED,

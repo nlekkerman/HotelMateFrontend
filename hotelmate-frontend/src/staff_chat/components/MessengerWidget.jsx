@@ -21,7 +21,6 @@ const MessengerWidget = ({
   isExpanded: controlledExpanded,
   onExpandChange,
 }) => {
-  console.log("🎯 [MessengerWidget] COMPONENT ENTRY - render attempt");
 
   const { user, isStaff } = useAuth();
 
@@ -38,17 +37,12 @@ const MessengerWidget = ({
     return null;
   }
 
-  console.log("👤 [MessengerWidget] User data:", {
-    userId: user?.id || user?.staff_id,
-    hotelSlug: user?.hotel_slug,
-    userObject: user,
-  });
+ 
 
   // ✅ SIMPLIFIED: Get hotel slug - everyone in same hotel has same slug!
   const getHotelSlug = () => {
     // 1) Auth context (primary)
     if (user?.hotel_slug) {
-      console.log("🏨 Hotel slug from auth:", user.hotel_slug);
       return user.hotel_slug;
     }
 
@@ -58,10 +52,7 @@ const MessengerWidget = ({
       if (userData) {
         const parsedUser = JSON.parse(userData);
         if (parsedUser?.hotel_slug) {
-          console.log(
-            "🏨 Hotel slug from localStorage:",
-            parsedUser.hotel_slug
-          );
+         
           return parsedUser.hotel_slug;
         }
       }
@@ -75,10 +66,7 @@ const MessengerWidget = ({
 
   const hotelSlug = getHotelSlug();
 
-  console.log("🏨 [MessengerWidget] HotelSlug from backend:", {
-    hotelSlug,
-    channelWillBe: `${hotelSlug}.staff-chat.X`,
-  });
+  
 
   const { registerOpenChatHandler } = useMessenger();
 
@@ -88,29 +76,19 @@ const MessengerWidget = ({
   // Get chat state for unread count badge
   const chatState = useChatState();
 
-  // Debug: Log every render to see if hook is working
-  console.log("🔍 [MessengerWidget] useChatState result:", { chatState });
-
+ 
   // Use the backend-provided unread count from chat state
   const totalUnreadCount = useMemo(() => {
-    console.log("🔍 [MessengerWidget] Getting unread from backend data:", {
-      chatState: chatState,
-      conversationsById: chatState?.conversationsById,
-      totalUnreadOverride: chatState?.totalUnreadOverride,
-    });
+   
 
     // First check if backend sent a total unread override
     if (typeof chatState?.totalUnreadOverride === "number") {
-      console.log(
-        "📈 [MessengerWidget] Using backend total unread override:",
-        chatState.totalUnreadOverride
-      );
+    
       return chatState.totalUnreadOverride;
     }
 
     // Otherwise count how many conversations have unread messages (not sum of all messages)
     if (!chatState?.conversationsById) {
-      console.log("❌ [MessengerWidget] No conversations found");
       return 0;
     }
 
@@ -123,10 +101,7 @@ const MessengerWidget = ({
       return hasUnread;
     }).length;
 
-    console.log(
-      "📈 [MessengerWidget] Conversations with unread messages:",
-      conversationsWithUnread
-    );
+  
     return conversationsWithUnread;
   }, [chatState?.conversationsById, chatState?.totalUnreadOverride]);
 
@@ -158,8 +133,7 @@ const MessengerWidget = ({
 
   // Debug: Log when openChats changes
   React.useEffect(() => {
-    // console.log('🔄 openChats state changed:', openChats);
-    // console.log('📄 Current page:', currentPage, '| Total pages:', totalPages);
+   
   }, [openChats, currentPage, totalPages]);
 
   // Reset to last page if current page becomes invalid
@@ -170,9 +144,7 @@ const MessengerWidget = ({
   }, [totalPages, currentPage]);
 
   const handleOpenChat = async (conversation, staff) => {
-    // console.log('🎯 handleOpenChat called with:', { conversation, staff });
-    // console.log('🎯 Conversation ID:', conversation?.id);
-    // console.log('🎯 Current open chats:', openChats);
+    
 
     if (!conversation?.id) {
       console.error("❌ No conversation ID provided!");
@@ -295,12 +267,7 @@ const MessengerWidget = ({
     }
   }, [searchParams, conversations, handleOpenChat, setSearchParams]);
 
-  console.log(
-    "🏨 [MessengerWidget] Always rendering - hotelSlug:",
-    hotelSlug,
-    "user:",
-    user?.id
-  );
+
 
   // Now we always have a hotelSlug, so always render the full widget
 

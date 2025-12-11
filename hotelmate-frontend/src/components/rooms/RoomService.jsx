@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import DeletionModal from "@/components/modals/DeletionModal";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useRoomServiceState, useRoomServiceDispatch } from "@/realtime/stores/roomServiceStore.jsx";
+import { subscribeBaseHotelChannels } from "@/realtime/channelRegistry";
 
 
 export default function RoomService({ isAdmin }) {
@@ -15,17 +16,51 @@ export default function RoomService({ isAdmin }) {
   const [orderItems, setOrderItems] = useState({});
   const [currentOrder, setCurrentOrder] = useState(null);
   const currentOrderId = currentOrder?.id ?? null;
+  
+  // Additional state variables
+  const [previousOrders, setPreviousOrders] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+  const [showOrderPanel, setShowOrderPanel] = useState(false);
+  const [specialInstructions, setSpecialInstructions] = useState('');
+  const [delModal, setDelModal] = useState({ show: false, itemId: null });
 
   // Use roomServiceStore for realtime updates
   const roomServiceState = useRoomServiceState();
   const roomServiceDispatch = useRoomServiceDispatch();
 
+  // 🔍 DEBUG: Log store state changes
+  useEffect(() => {
+    console.log('🏨 [RoomService] Store state updated:', {
+      ordersCount: Object.keys(roomServiceState.ordersById || {}).length,
+      orders: roomServiceState.ordersById,
+      roomNumber,
+      hotelIdentifier
+    });
+  }, [roomServiceState, roomNumber, hotelIdentifier]);
+
   // Enhanced real-time tracking of current active order
   useEffect(() => {
+    console.log('🔄 [RoomService] Current order tracking effect triggered:', {
+      hasRoomServiceState: !!roomServiceState,
+      hasCurrentOrder: !!currentOrder,
+      currentOrderId: currentOrder?.id,
+      currentOrderStatus: currentOrder?.status
+    });
+    
     if (!roomServiceState || !currentOrder) return;
 
     const orderId = currentOrder.id;
     const storeOrder = roomServiceState.ordersById[orderId];
+    
+    console.log('🎯 [RoomService] Order comparison:', {
+      orderId,
+      storeOrderExists: !!storeOrder,
+      storeOrderStatus: storeOrder?.status,
+      currentOrderStatus: currentOrder?.status,
+      storeOrderUpdatedAt: storeOrder?.updated_at,
+      storeOrder: storeOrder
+    });
     
     if (storeOrder) {
       // Always sync the current order with store data
@@ -38,6 +73,14 @@ export default function RoomService({ isAdmin }) {
         const timeDiff = now - updatedTime;
         
         if (timeDiff < 10000 && timeDiff > 0 && storeOrder.status !== currentOrder.status) {
+          console.log('🚨 [RoomService] Status change detected!', {
+            orderId,
+            oldStatus: currentOrder.status,
+            newStatus: storeOrder.status,
+            timeDiff,
+            updatedAt: storeOrder.updated_at
+          });
+          
           const statusMessages = {
             'pending': '📋 Your order is being reviewed by our kitchen staff',
             'accepted': '✅ Great! Your order is being prepared',
@@ -71,19 +114,50 @@ export default function RoomService({ isAdmin }) {
 
   // Real-time sync of all orders for this room using new Pusher logic
   useEffect(() => {
+    console.log('🏠 [RoomService] Room orders sync effect triggered:', {
+      hasRoomServiceState: !!roomServiceState,
+      storeOrdersCount: roomServiceState ? Object.keys(roomServiceState.ordersById).length : 0,
+      roomNumber,
+      hotelIdentifier
+    });
+    
     if (!roomServiceState) return;
     
     const storeOrders = Object.values(roomServiceState.ordersById);
+    console.log('📋 [RoomService] All store orders:', storeOrders);
     const roomOrders = storeOrders.filter(order => {
       // Match room number (convert both to numbers for comparison)
       const orderRoomNum = parseInt(order.room_number);
       const currentRoomNum = parseInt(roomNumber);
       
-      // Match hotel identifier
-      const orderHotel = order.hotel_identifier || order.hotel_slug;
+      // Match hotel identifier - be more flexible with hotel matching
+      const orderHotel = order.hotel_identifier || order.hotel_slug || hotelIdentifier;
       
-      return orderRoomNum === currentRoomNum && orderHotel === hotelIdentifier;
+      // For orders from API, they might not have hotel identifier, so just match by room
+      const roomMatch = orderRoomNum === currentRoomNum;
+      const hotelMatch = !orderHotel || orderHotel === hotelIdentifier;
+      const matches = roomMatch && hotelMatch;
+      
+      console.log('🔍 [RoomService] Order filter check:', {
+        orderId: order.id,
+        orderRoomNum,
+        currentRoomNum,
+        roomMatch,
+        orderHotel,
+        hotelIdentifier,
+        hotelMatch,
+        overallMatch: matches,
+        orderStatus: order.status
+      });
+      
+      return matches;
     }).sort((a, b) => new Date(b.created_at || b.timestamp) - new Date(a.created_at || a.timestamp));
+    
+    console.log('🎯 [RoomService] Filtered room orders:', {
+      totalStoreOrders: storeOrders.length,
+      roomOrdersCount: roomOrders.length,
+      roomOrders: roomOrders.map(o => ({ id: o.id, status: o.status, room_number: o.room_number }))
+    });
     
     // Always update previousOrders with latest data from store
     setPreviousOrders(roomOrders);
@@ -126,14 +200,267 @@ export default function RoomService({ isAdmin }) {
     });
   }, [roomServiceState, roomNumber, hotelIdentifier]);
 
-  const [previousOrders, setPreviousOrders] = useState([]);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState(null);
-  const [showOrderPanel, setShowOrderPanel] = useState(false);
+  // 🔥 Subscribe to Pusher channels for real-time events
+  useEffect(() => {
+    if (!hotelIdentifier) return;
 
-const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
+    console.log('🔥 [RoomService] Subscribing to real-time channels:', {
+      hotelIdentifier,
+      roomNumber,
+      userType: 'guest'
+    });
+    
+    // Subscribe to base hotel channels including room-service
+    const cleanup = subscribeBaseHotelChannels({ 
+      hotelSlug: hotelIdentifier
+    });
+    
+    console.log('✅ [RoomService] Pusher subscription initialized for hotel:', hotelIdentifier);
+    
+    return () => {
+      console.log('🧹 [RoomService] Cleaning up Pusher subscriptions');
+      cleanup();
+    };
+  }, [hotelIdentifier, roomNumber]);
 
-  const [delModal, setDelModal] = useState({ show: false, itemId: null });
+  // 🚨 DEBUG: Listen for FCM notifications and other events
+  useEffect(() => {
+    const handleFCMMessage = (event) => {
+      console.log('📱 [RoomService] FCM notification received:', event.detail || event);
+    };
+
+    const handlePusherEvent = (event) => {
+      console.log('📡 [RoomService] Pusher event received:', event.detail || event);
+    };
+
+    const handleCustomEvent = (event) => {
+      if (event.type.includes('room') || event.type.includes('order') || event.type.includes('service')) {
+        console.log('🔔 [RoomService] Custom event received:', event.type, event.detail || event);
+      }
+    };
+
+    // 🔥 NEW: Listen for status updates from orders management page
+    const handleStatusUpdate = (event) => {
+      console.log('🚨 [RoomService] Status update event from orders management:', event.detail);
+      
+      const { orderId, oldStatus, newStatus, order, source } = event.detail;
+      
+      // Check if this affects our current room
+      if (order.room_number == roomNumber) {
+        console.log('✨ [RoomService] Status update is for our room!', {
+          roomNumber,
+          orderId,
+          oldStatus,
+          newStatus,
+          source
+        });
+        
+        // Update the store manually to ensure synchronization
+        roomServiceDispatch({
+          type: 'ORDER_UPDATED',
+          payload: {
+            order: order,
+            orderId: orderId,
+            event_type: 'order_updated',
+            source: 'custom_event_listener'
+          }
+        });
+        
+        // Show toast notification
+        const statusMessages = {
+          'pending': '📋 Your order is being reviewed by our kitchen staff',
+          'accepted': '✅ Great! Your order is being prepared',
+          'completed': '🏁 Your order is ready and on its way to your room!',
+          'cancelled': '❌ Your order has been cancelled.'
+        };
+        
+        const message = statusMessages[newStatus];
+        if (message) {
+          const toastType = newStatus === 'completed' ? 'success' : 
+                          newStatus === 'cancelled' ? 'error' : 'info';
+          
+          toast[toastType](message, {
+            autoClose: newStatus === 'completed' ? 6000 : 5000,
+            position: 'top-center'
+          });
+          
+          // Play sound for completed orders
+          if (newStatus === 'completed') {
+            try {
+              const audio = new Audio("/notification.mp3");
+              audio.volume = 0.6;
+              audio.play().catch(() => {});
+            } catch (err) {}
+          }
+        }
+      }
+    };
+
+    // Listen for various event types
+    if (typeof window !== 'undefined') {
+      window.addEventListener('fcm-message', handleFCMMessage);
+      window.addEventListener('pusher-event', handlePusherEvent);
+      window.addEventListener('room-service-update', handleCustomEvent);
+      window.addEventListener('room-service-status-updated', handleStatusUpdate);
+      
+      // Debug: Log if we're listening
+      console.log('👂 [RoomService] Event listeners registered for FCM, Pusher, and status update events');
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('fcm-message', handleFCMMessage);
+        window.removeEventListener('pusher-event', handlePusherEvent);
+        window.removeEventListener('room-service-update', handleCustomEvent);
+        window.removeEventListener('room-service-status-updated', handleStatusUpdate);
+      }
+    };
+  }, [roomNumber, roomServiceDispatch]);
+
+  // 🛠️ DEBUG: Expose debug functions to window
+  useEffect(() => {
+    if (typeof window !== 'undefined' && import.meta.env.DEV) {
+      window.debugRoomService = {
+        // Test order creation
+        testOrderCreated: (orderId = 999) => {
+          console.log('🧪 [DEBUG] Testing order_created event');
+          const testOrder = {
+            id: orderId,
+            room_number: parseInt(roomNumber),
+            hotel_identifier: hotelIdentifier,
+            status: 'pending',
+            items: [{ id: 1, name: 'Test Item', quantity: 1, price: 10 }],
+            total_price: 15,
+            created_at: new Date().toISOString()
+          };
+          roomServiceDispatch({
+            type: 'ORDER_CREATED',
+            payload: { order: testOrder }
+          });
+        },
+        
+        // Test order update
+        testOrderUpdated: (orderId = 999, status = 'accepted') => {
+          console.log('🧪 [DEBUG] Testing order_updated event');
+          roomServiceDispatch({
+            type: 'ORDER_UPDATED',
+            payload: { 
+              order: { id: orderId, status, updated_at: new Date().toISOString() },
+              orderId 
+            }
+          });
+        },
+        
+        // Test backend-style event (simulates what orders management page should trigger)
+        testBackendStyleEvent: (orderId = 101, roomNum = 101, status = 'completed') => {
+          console.log('🧪 [DEBUG] Testing backend-style order_updated event');
+          const backendStylePayload = {
+            order_id: orderId,
+            room_number: roomNum,
+            status: status,
+            total_price: 25.50,
+            created_at: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+            updated_at: new Date().toISOString(),
+            items: [
+              { id: 1, name: 'Test Burger', quantity: 1, price: 15.50 },
+              { id: 2, name: 'Test Fries', quantity: 1, price: 8.00 }
+            ],
+            special_instructions: 'Test order from debug',
+            type: 'room_service'
+          };
+          
+          // Simulate the eventBus routing this to the store
+          roomServiceDispatch({
+            type: 'ORDER_STATUS_CHANGED',
+            payload: { 
+              order: backendStylePayload,
+              orderId: orderId
+            }
+          });
+          
+          // Also trigger the custom event that RoomService listens for
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('room-service-status-updated', {
+              detail: {
+                orderId: orderId,
+                oldStatus: 'accepted',
+                newStatus: status,
+                order: backendStylePayload,
+                timestamp: new Date().toISOString(),
+                source: 'debug-test'
+              }
+            }));
+          }
+        },
+        
+        // Show current state
+        showState: () => {
+          console.log('📊 [DEBUG] Current Room Service State:', {
+            roomServiceState,
+            currentOrder,
+            previousOrders,
+            orderItems,
+            roomNumber,
+            hotelIdentifier
+          });
+        },
+        
+        // Clear store
+        clearStore: () => {
+          console.log('🗑️ [DEBUG] Clearing room service store');
+          // This would need to be implemented in the store
+        },
+        
+        // Test the complete flow
+        testCompleteFlow: () => {
+          console.log('🧪 [DEBUG] Testing complete room service status flow');
+          console.log('Step 1: Creating test order...');
+          window.debugRoomService.testBackendStyleEvent(567, parseInt(roomNumber), 'pending');
+          
+          setTimeout(() => {
+            console.log('Step 2: Accepting order...');
+            window.debugRoomService.testBackendStyleEvent(567, parseInt(roomNumber), 'accepted');
+          }, 2000);
+          
+          setTimeout(() => {
+            console.log('Step 3: Completing order...');
+            window.debugRoomService.testBackendStyleEvent(567, parseInt(roomNumber), 'completed');
+          }, 4000);
+        },
+        
+        // Test real order status update (for existing order #567)
+        testRealOrder567: () => {
+          console.log('🧪 [DEBUG] Testing status update for real order #567');
+          window.debugRoomService.testBackendStyleEvent(567, 101, 'completed');
+        },
+        
+        // Test current order status update
+        testCurrentOrder: () => {
+          const current = currentOrder;
+          if (current) {
+            console.log('🧪 [DEBUG] Testing status update for current order:', current.id);
+            window.debugRoomService.testBackendStyleEvent(current.id, current.room_number, 'completed');
+          } else {
+            console.log('❌ [DEBUG] No current order to test with');
+          }
+        }
+      };
+      
+      const debugFunctions = Object.keys(window.debugRoomService);
+      console.log('🛠️ [DEBUG] Room service debug functions available:', debugFunctions);
+      console.log('💡 [DEBUG] Test complete flow: window.debugRoomService.testCompleteFlow()');
+      console.log('💡 [DEBUG] Test status update: window.debugRoomService.testBackendStyleEvent(567, 101, "completed")');
+      console.log('💡 [DEBUG] Show current state: window.debugRoomService.showState()');
+    }
+    
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete window.debugRoomService;
+      }
+    };
+  }, [roomServiceState, currentOrder, previousOrders, orderItems, roomNumber, hotelIdentifier, roomServiceDispatch]);
+
+  const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
 
   const openDeleteModal = (itemId) => setDelModal({ show: true, itemId });
   const closeDeleteModal = () => setDelModal({ show: false, itemId: null });
@@ -180,12 +507,39 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
 
         setPreviousOrders(filtered);
 
+        // 🔄 Initialize the Pusher store with fetched orders
+        console.log('🔄 [RoomService] Initializing store with API-fetched orders:', {
+          totalOrders: filtered.length,
+          orderIds: filtered.map(o => o.id),
+          statuses: filtered.map(o => `${o.id}:${o.status}`)
+        });
+        
+        // Convert API orders to store format and initialize
+        const storeOrders = filtered.map(order => ({
+          ...order,
+          // Ensure consistent field names for store
+          order_id: order.id,
+          type: order.type || 'room_service',
+          hotel_identifier: hotelIdentifier,
+          hotel_slug: hotelIdentifier
+        }));
+        
+        // Initialize store with API data using dispatch
+        storeOrders.forEach(order => {
+          roomServiceDispatch({
+            type: 'ORDER_CREATED',
+            payload: { order }
+          });
+        });
+        console.log('✅ [RoomService] Store initialized with', storeOrders.length, 'orders via dispatch');
+
         // Latest active (non-completed)
         const latestForRoom = filtered.find(
           (ord) => ord.status !== "completed" && ord.status !== "cancelled"
         );
         
         setCurrentOrder(latestForRoom || null);
+        console.log('🎯 [RoomService] Current active order set:', latestForRoom?.id || 'none');
       })
       .catch((err) => {
         setPreviousOrders([]);
@@ -211,11 +565,20 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
   };
 
   const handlePlaceOrder = async () => {
+    console.log('📤 [RoomService] Starting order submission:', {
+      roomNumber,
+      hotelIdentifier,
+      orderItems,
+      specialInstructions,
+      itemCount: Object.keys(orderItems).length
+    });
+    
     setSubmitting(true);
     setSubmitError(null);
 
     const payload = {
       room_number: Number(roomNumber),
+      special_instructions: specialInstructions.trim(),
       items: Object.entries(orderItems).map(([itemId, qty]) => ({
         item_id: Number(itemId),
         quantity: qty,
@@ -238,11 +601,19 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
         room_number: Number(roomNumber)
       };
       
+      console.log('✅ [RoomService] Order created successfully:', {
+        orderId: newOrder.id,
+        orderData: newOrder,
+        apiResponse: orderResp.data
+      });
+      
       setCurrentOrder(newOrder);
       setOrderItems({});
+      setSpecialInstructions('');
       setShowOrderPanel(false);
       
       // 2) Add to real-time store for proper Pusher integration
+      console.log('🔄 [RoomService] Dispatching ORDER_CREATED to store:', newOrder);
       roomServiceDispatch({
         type: 'ORDER_CREATED',
         payload: { order: newOrder }
@@ -293,8 +664,19 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
 
 
   return (
-    <div className="container my-4">
-      <h2>Room Service — Room {roomNumber}</h2>
+    <div className="container-fluid px-4 py-3" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <div className="d-flex align-items-center justify-content-between mb-4">
+        <div>
+          <h1 className="display-6 mb-1 text-primary">🍽️ Room Service</h1>
+          <p className="text-muted mb-0 fs-5">Room {roomNumber} • Order freshly prepared meals</p>
+        </div>
+        <div className="text-end">
+          <div className="badge bg-light text-dark fs-6 px-3 py-2">
+            <i className="bi bi-clock me-1"></i>
+            Available 24/7
+          </div>
+        </div>
+      </div>
       
       {/* Active Orders Section */}
       {(() => {
@@ -303,12 +685,17 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
         );
         
         return activeOrders.length > 0 && (
-          <div className="mb-4">
-            <h4 className="mb-3">
-              <i className="bi bi-clock-history me-2"></i>
-              Active Orders ({activeOrders.length})
-            </h4>
-            <div className="row">
+          <div className="mb-5">
+            <div className="d-flex align-items-center mb-4">
+              <div className="bg-primary rounded-circle p-2 me-3">
+                <i className="bi bi-clock-history text-white fs-5"></i>
+              </div>
+              <div>
+                <h3 className="mb-0">Your Active Orders</h3>
+                <p className="text-muted mb-0">{activeOrders.length} order{activeOrders.length !== 1 ? 's' : ''} in progress</p>
+              </div>
+            </div>
+            <div className="row g-4">
               {activeOrders.map((ord) => {
                 // Status messages - Updated for new workflow (pending → accepted → completed)
                 const statusMessage = {
@@ -328,72 +715,134 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
                 };
                 
                 return (
-                  <div key={ord.id} className="col-md-6 mb-3">
-                    <div className="card border-primary shadow-sm">
-                      <div className="card-body">
-                        <div className="d-flex justify-content-between align-items-center mb-3">
-                          <h5 className="mb-0">Order #{ord.id}</h5>
+                  <div key={ord.id} className="col-lg-6">
+                    <div className="card h-100 shadow-sm border-0" style={{ 
+                      borderLeft: ord.status === 'completed' ? '4px solid #51cf66' : 
+                                 ord.status === 'accepted' ? '4px solid #74c0fc' : '4px solid #ffd43b'
+                    }}>
+                      <div className="card-body p-4">
+                        <div className="d-flex justify-content-between align-items-start mb-3">
+                          <div>
+                            <h4 className="mb-1 fw-bold text-dark">Order #{ord.id}</h4>
+                            <p className="text-muted mb-0 small">
+                              <i className="bi bi-calendar3 me-1"></i>
+                              {new Date(ord.created_at || ord.timestamp).toLocaleString()}
+                            </p>
+                          </div>
                           <span
-                            className={`badge px-3 py-2 fs-6 ${
+                            className={`badge rounded-pill px-3 py-2 fs-7 fw-semibold ${
                               ord.status === "pending"
-                                ? "bg-warning text-dark"
+                                ? "bg-warning-subtle text-warning-emphasis border border-warning"
                                 : ord.status === "accepted"
-                                ? "bg-info text-white"
+                                ? "bg-info-subtle text-info-emphasis border border-info"
                                 : ord.status === "completed"
-                                ? "bg-success text-white"
-                                : "bg-secondary"
+                                ? "bg-success-subtle text-success-emphasis border border-success"
+                                : "bg-secondary-subtle text-secondary-emphasis"
                             }`}
                           >
-                            {ord.status.toUpperCase()}
+                            {ord.status === 'pending' ? '📋 REVIEWING' : 
+                             ord.status === 'accepted' ? '👨‍🍳 PREPARING' : 
+                             ord.status === 'completed' ? '✅ READY' : ord.status.toUpperCase()}
                           </span>
                         </div>
                         
-                        {/* Progress bar */}
-                        <div className="mb-3">
-                          <div className="d-flex justify-content-between align-items-center mb-1">
-                            <small className="text-muted">Order Progress</small>
-                            <small className="text-muted">{getProgressPercentage(ord.status)}%</small>
+                        {/* Progress Steps */}
+                        <div className="mb-4">
+                          <div className="d-flex justify-content-between mb-2">
+                            <div className="d-flex align-items-center">
+                              <div className={`rounded-circle me-2 ${ord.status === 'pending' || ord.status === 'accepted' || ord.status === 'completed' ? 'bg-primary text-white' : 'bg-light text-muted'}`} 
+                                   style={{ width: '24px', height: '24px', fontSize: '12px' }}>
+                                <i className="bi bi-clipboard-check d-flex align-items-center justify-content-center" style={{ lineHeight: '24px' }}></i>
+                              </div>
+                              <small className="fw-semibold">Received</small>
+                            </div>
+                            <div className="d-flex align-items-center">
+                              <div className={`rounded-circle me-2 ${ord.status === 'accepted' || ord.status === 'completed' ? 'bg-primary text-white' : 'bg-light text-muted'}`} 
+                                   style={{ width: '24px', height: '24px', fontSize: '12px' }}>
+                                <i className="bi bi-tools d-flex align-items-center justify-content-center" style={{ lineHeight: '24px' }}></i>
+                              </div>
+                              <small className="fw-semibold">Preparing</small>
+                            </div>
+                            <div className="d-flex align-items-center">
+                              <div className={`rounded-circle me-2 ${ord.status === 'completed' ? 'bg-success text-white' : 'bg-light text-muted'}`} 
+                                   style={{ width: '24px', height: '24px', fontSize: '12px' }}>
+                                <i className="bi bi-check-lg d-flex align-items-center justify-content-center" style={{ lineHeight: '24px' }}></i>
+                              </div>
+                              <small className="fw-semibold">Ready</small>
+                            </div>
                           </div>
-                          <div className="progress" style={{ height: '6px' }}>
+                          <div className="progress" style={{ height: '4px' }}>
                             <div 
-                              className="progress-bar bg-gradient"
+                              className="progress-bar"
                               role="progressbar" 
                               style={{ 
                                 width: `${getProgressPercentage(ord.status)}%`,
-                                background: ord.status === 'completed' 
-                                  ? 'linear-gradient(90deg, #51cf66 0%, #51cf66 100%)'
-                                  : ord.status === 'accepted'
-                                  ? 'linear-gradient(90deg, #ffd43b 0%, #74c0fc 100%)'
-                                  : 'linear-gradient(90deg, #ffd43b 0%, #ffd43b 100%)',
-                                transition: 'width 0.3s ease'
+                                backgroundColor: ord.status === 'completed' ? '#51cf66' : ord.status === 'accepted' ? '#74c0fc' : '#ffd43b',
+                                transition: 'width 0.6s ease'
                               }}
                             ></div>
                           </div>
                         </div>
 
                         {/* Status message */}
-                        <div className="alert alert-light mb-3 py-2 px-3 small">
-                          {statusMessage[ord.status] || 'Your order is being processed.'}
+                        <div className={`alert mb-3 py-3 px-3 border-0 ${
+                          ord.status === 'completed' ? 'alert-success bg-success-subtle' :
+                          ord.status === 'accepted' ? 'alert-info bg-info-subtle' :
+                          'alert-warning bg-warning-subtle'
+                        }`}>
+                          <div className="d-flex align-items-center">
+                            <i className={`me-2 ${
+                              ord.status === 'completed' ? 'bi bi-check-circle-fill text-success' :
+                              ord.status === 'accepted' ? 'bi bi-clock-fill text-info' :
+                              'bi bi-hourglass-split text-warning'
+                            }`}></i>
+                            <span className="fw-medium">{statusMessage[ord.status] || 'Your order is being processed.'}</span>
+                          </div>
                         </div>
+
+                        {/* Special instructions if any */}
+                        {ord.special_instructions && (
+                          <div className="mb-3 p-3 bg-light rounded-3">
+                            <h6 className="mb-2 text-dark">
+                              <i className="bi bi-chat-square-text me-2"></i>Special Instructions
+                            </h6>
+                            <p className="mb-0 text-muted small">{ord.special_instructions}</p>
+                          </div>
+                        )}
                         
-                        <ul className="list-group list-group-flush">
-                          {ord.items.map((oi) => (
-                            <li
-                              key={oi.id}
-                              className="list-group-item d-flex justify-content-between px-0"
-                            >
-                              <span>
-                                {oi.item.name} × {oi.quantity}
-                              </span>
-                              <span className="text-muted">
-                                €{(Number(oi.item.price) * oi.quantity).toFixed(2)}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                        <div className="d-flex justify-content-between mt-3 pt-2 border-top">
-                          <strong>Total</strong>
-                          <strong className="text-primary">€{Number(ord.total_price).toFixed(2)}</strong>
+                        <div className="bg-light rounded-3 p-3 mb-3">
+                          <h6 className="mb-3 text-dark fw-semibold">
+                            <i className="bi bi-bag-check me-2"></i>Order Items ({ord.items.length})
+                          </h6>
+                          <div className="row g-2">
+                            {ord.items.map((oi) => (
+                              <div key={oi.id} className="col-12">
+                                <div className="d-flex justify-content-between align-items-center py-2 px-3 bg-white rounded-2 shadow-sm">
+                                  <div className="d-flex align-items-center">
+                                    <div className="badge bg-primary rounded-circle me-3" style={{ width: '28px', height: '28px', fontSize: '12px' }}>
+                                      {oi.quantity}
+                                    </div>
+                                    <div>
+                                      <div className="fw-medium text-dark">{oi.item?.name || oi.name || 'Unknown Item'}</div>
+                                      <small className="text-muted">€{Number(oi.item?.price || oi.price || 0).toFixed(2)} each</small>
+                                    </div>
+                                  </div>
+                                  <div className="text-end">
+                                    <div className="fw-bold text-primary">€{(Number(oi.item?.price || oi.price || 0) * (oi.quantity || 1)).toFixed(2)}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="d-flex justify-content-between align-items-center p-3 bg-primary-subtle rounded-3">
+                          <div>
+                            <div className="fw-bold text-dark fs-5">Total Amount</div>
+                            <small className="text-muted">Including tray charge</small>
+                          </div>
+                          <div className="text-end">
+                            <div className="display-6 fw-bold text-primary">€{Number(ord.total_price).toFixed(2)}</div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -405,199 +854,355 @@ const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
         );
       })()}
 
-      {/* Menu grid */}
-      <h4 className="mb-3 mt-4">Menu</h4>
-      <div className="row">
-        {items.map((item) => {
-          const price = Number(item.price) || 0;
-          return (
-            <div key={item.id} className="col-md-4 mb-4">
-              <div className="card h-100">
-                {item.image && (
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="card-img-top"
-                    style={{ objectFit: "cover", height: "180px" }}
-                  />
-                )}
-                <div className="card-body d-flex flex-column">
-                  <h5 className="card-title">
-                    {item.name} — €{price.toFixed(2)}
-                  </h5>
-                  <p className="card-text flex-grow-1">{item.description}</p>
-                  <div className="mb-2 d-flex align-items-center">
-                    <label className="form-label me-2 mb-0">Qty:</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="99"
-                      value={quantities[item.id]}
-                      onChange={(e) =>
-                        handleQuantityChange(item.id, e.target.value)
-                      }
-                      className="form-control d-inline-block"
-                      style={{ width: "70px" }}
-                      disabled={!item.is_on_stock}
-                    />
+      {/* Menu Section */}
+      <div className="mb-5">
+        <div className="d-flex align-items-center justify-content-between mb-4">
+          <div className="d-flex align-items-center">
+            <div className="bg-primary rounded-circle p-2 me-3">
+              <i className="bi bi-menu-button-wide text-white fs-5"></i>
+            </div>
+            <div>
+              <h3 className="mb-0">Our Menu</h3>
+              <p className="text-muted mb-0">Fresh ingredients, prepared with care</p>
+            </div>
+          </div>
+          <div className="badge bg-success-subtle text-success-emphasis border border-success px-3 py-2">
+            <i className="bi bi-check-circle me-1"></i>{items.filter(item => item.is_on_stock).length} Available
+          </div>
+        </div>
+        <div className="row g-4">
+          {items.map((item) => {
+            const price = Number(item.price) || 0;
+            return (
+              <div key={item.id} className="col-lg-4 col-md-6">
+                <div className={`card h-100 shadow-sm border-0 ${!item.is_on_stock ? 'opacity-75' : ''}`}
+                     style={{ transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}
+                     onMouseEnter={(e) => {
+                       if (item.is_on_stock) {
+                         e.currentTarget.style.transform = 'translateY(-2px)';
+                         e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+                       }
+                     }}
+                     onMouseLeave={(e) => {
+                       e.currentTarget.style.transform = 'translateY(0)';
+                       e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+                     }}>
+                  {item.image && (
+                    <div className="position-relative overflow-hidden" style={{ height: "200px" }}>
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="card-img-top w-100 h-100"
+                        style={{ objectFit: "cover" }}
+                      />
+                      {!item.is_on_stock && (
+                        <div className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-50">
+                          <span className="badge bg-danger fs-6 px-3 py-2">Out of Stock</span>
+                        </div>
+                      )}
+                      <div className="position-absolute top-0 end-0 m-3">
+                        <span className="badge bg-primary fs-6 px-3 py-2 fw-bold">€{price.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="card-body d-flex flex-column p-4">
+                    <div className="mb-3">
+                      <h5 className="card-title fw-bold text-dark mb-2">{item.name}</h5>
+                      {!item.image && (
+                        <div className="d-flex align-items-center justify-content-between mb-2">
+                          <span className="fs-4 fw-bold text-primary">€{price.toFixed(2)}</span>
+                          {!item.is_on_stock && (
+                            <span className="badge bg-danger">Out of Stock</span>
+                          )}
+                        </div>
+                      )}
+                      <p className="card-text text-muted flex-grow-1 mb-0">{item.description}</p>
+                    </div>
+                    <div className="mt-auto">
+                      <div className="d-flex align-items-center justify-content-between mb-3">
+                        <label className="form-label mb-0 fw-medium">Quantity:</label>
+                        <div className="input-group" style={{ width: "120px" }}>
+                          <button 
+                            className="btn btn-outline-secondary btn-sm"
+                            type="button"
+                            onClick={() => handleQuantityChange(item.id, Math.max(1, quantities[item.id] - 1))}
+                            disabled={!item.is_on_stock || quantities[item.id] <= 1}
+                          >
+                            <i className="bi bi-dash"></i>
+                          </button>
+                          <input
+                            type="number"
+                            min="1"
+                            max="99"
+                            value={quantities[item.id]}
+                            onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                            className="form-control form-control-sm text-center border-0"
+                            disabled={!item.is_on_stock}
+                            style={{ backgroundColor: '#f8f9fa' }}
+                          />
+                          <button 
+                            className="btn btn-outline-secondary btn-sm"
+                            type="button"
+                            onClick={() => handleQuantityChange(item.id, Math.min(99, quantities[item.id] + 1))}
+                            disabled={!item.is_on_stock || quantities[item.id] >= 99}
+                          >
+                            <i className="bi bi-plus"></i>
+                          </button>
+                        </div>
+                      </div>
+                      <button
+                        className={`btn w-100 py-2 fw-semibold ${item.is_on_stock ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => handleAddToOrder(item)}
+                        disabled={!item.is_on_stock}
+                      >
+                        {item.is_on_stock ? (
+                          <>
+                            <i className="bi bi-cart-plus me-2"></i>Add to Order
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-x-circle me-2"></i>Unavailable
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    className="btn btn-primary mt-auto"
-                    onClick={() => handleAddToOrder(item)}
-                    disabled={!item.is_on_stock}
-                  >
-                    Add to Order
-                  </button>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* Floating Cart Button */}
-      <button
-        className={`btn position-fixed bottom-0 end-0 m-5 rounded-circle p-3 ${
-          showOrderPanel ? "bg-warning text-dark" : "bg-danger text-white"
-        }`}
-        onClick={() => setShowOrderPanel((p) => !p)}
-      >
-        <i className={`bi bi-cart${showOrderPanel ? "-fill" : ""} fs-4`} />
-      </button>
+      {Object.keys(orderItems).length > 0 && (
+        <div className="position-fixed bottom-0 end-0 m-4">
+          <button
+            className={`btn btn-primary shadow-lg position-relative ${showOrderPanel ? 'btn-warning' : ''}`}
+            style={{ 
+              borderRadius: '50px',
+              padding: '12px 20px',
+              fontSize: '16px',
+              fontWeight: '600'
+            }}
+            onClick={() => setShowOrderPanel((p) => !p)}
+          >
+            <i className={`bi bi-cart${showOrderPanel ? "-fill" : ""} me-2`}></i>
+            View Cart ({Object.keys(orderItems).length})
+            <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+              {Object.values(orderItems).reduce((sum, qty) => sum + qty, 0)}
+              <span className="visually-hidden">items in cart</span>
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* Order Panel */}
       {showOrderPanel && (
         <div
-          className="position-fixed bottom-0 bg-black border-top p-3"
-          style={{ maxHeight: "70%", overflowY: "auto", zIndex: 1000 }}
+          className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50"
+          style={{ zIndex: 1050 }}
+          onClick={(e) => e.target === e.currentTarget && setShowOrderPanel(false)}
         >
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h3 className="mb-0 text-white">Active Order</h3>
-            <button
-              className="btn-close bg-white"
-              onClick={() => setShowOrderPanel(false)}
-            />
-          </div>
-
-          {Object.keys(orderItems).length > 0 ? (
-            <ul className="list-group mb-3 bg-transparent">
-              {Object.entries(orderItems).map(([id, qty]) => {
-                const item = items.find((i) => i.id === +id);
-                const price = Number(item?.price) || 0;
-                return (
-                  <li
-                    key={id}
-                    className="list-group-item d-flex justify-content-between align-items-center bg-transparent text-white"
-                  >
-                    <div className="d-flex align-items-center">
-                      <span>{item?.name}</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max="99"
-                        value={qty}
-                        onChange={(e) =>
-                          handleActiveQtyChange(item.id, e.target.value)
-                        }
-                        className="form-control form-control-sm mx-2"
-                        style={{ width: "60px" }}
-                      />
-                      <button
-                        className="btn btn-outline-danger btn-sm"
-                        onClick={() => openDeleteModal(item.id)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <span>€{(price * qty).toFixed(2)}</span>
-                  </li>
-                );
-              })}
-              <li className="list-group-item d-flex justify-content-between bg-transparent text-white">
-                <em>Tray charge</em>
-                <span>€{trayCharge.toFixed(2)}</span>
-              </li>
-              <li className="list-group-item d-flex justify-content-between fw-bold bg-warning text-black">
-                <span>Total</span>
-                <span>€{total.toFixed(2)}</span>
-              </li>
-            </ul>
-          ) : (
-            <p className="text-white bg-dark p-2">No active items.</p>
-          )}
-
-          {submitError && (
-            <div className="alert alert-danger">{String(submitError)}</div>
-          )}
-
-          <button
-            className="btn btn-success w-100 mb-4"
-            onClick={handlePlaceOrder}
-            disabled={submitting || !Object.keys(orderItems).length}
+          <div 
+            className="position-absolute top-50 start-50 translate-middle bg-white rounded-4 shadow-lg"
+            style={{ width: '90%', maxWidth: '600px', maxHeight: '90%', overflowY: 'auto' }}
           >
-            {submitting ? "Placing Order…" : "Place Order"}
-          </button>
+            <div className="p-4">
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                  <h3 className="mb-1 text-dark fw-bold">
+                    <i className="bi bi-cart-check me-2 text-primary"></i>Review Your Order
+                  </h3>
+                  <p className="text-muted mb-0">Room {roomNumber} • Double check before placing</p>
+                </div>
+                <button
+                  className="btn-close"
+                  onClick={() => setShowOrderPanel(false)}
+                />
+              </div>
 
-          {/* All Orders */}
-          <div className="all-orders bg-black bg-opacity-75 text-white">
-            <h5 className="mb-3">Your Orders ({previousOrders.length})</h5>
-            {previousOrders.length === 0 ? (
-              <p className="text-muted">No orders yet.</p>
-            ) : (
-              <>
-                {previousOrders.map((ord) => (
-                  <div key={ord.id} className="card mb-3 bg-dark border-light">
-                    <div className="card-body">
-                      <div className="d-flex justify-content-between align-items-center mb-2">
-                        <span className="text-white">
-                          <strong>Order #{ord.id}</strong>
-                        </span>
-                        <span
-                          className={`badge px-3 py-2 ${
-                            ord.status === "pending"
-                              ? "bg-warning text-dark"
-                              : ord.status === "accepted"
-                              ? "bg-info text-dark"
-                              : ord.status === "preparing"
-                              ? "bg-primary"
-                              : ord.status === "ready"
-                              ? "bg-success"
-                              : ord.status === "delivered"
-                              ? "bg-success"
-                              : ord.status === "completed"
-                              ? "bg-secondary"
-                              : ord.status === "cancelled"
-                              ? "bg-danger"
-                              : "bg-secondary"
-                          }`}
-                        >
-                          {ord.status.toUpperCase()}
-                        </span>
-                      </div>
-                      <ul className="list-group mt-2">
-                        {ord.items.map((oi) => (
-                          <li
-                            key={oi.id}
-                            className="list-group-item d-flex justify-content-between bg-transparent text-white border-secondary"
-                          >
-                            <span>
-                              {oi.item.name} × {oi.quantity}
-                            </span>
-                            <span>
-                              €{(Number(oi.item.price) * oi.quantity).toFixed(2)}
-                            </span>
-                          </li>
-                        ))}
-                        <li className="list-group-item d-flex justify-content-between bg-transparent text-white border-secondary fw-bold">
-                          <span>Total</span>
-                          <span>€{Number(ord.total_price).toFixed(2)}</span>
-                        </li>
-                      </ul>
+              {Object.keys(orderItems).length > 0 ? (
+                <>
+                  {/* Order Items */}
+                  <div className="mb-4">
+                    <h5 className="mb-3 text-dark fw-semibold">
+                      <i className="bi bi-bag-check me-2"></i>Order Items ({Object.keys(orderItems).length})
+                    </h5>
+                    <div className="bg-light rounded-3 p-3">
+                      {Object.entries(orderItems).map(([id, qty]) => {
+                        const item = items.find((i) => i.id === +id);
+                        const price = Number(item?.price) || 0;
+                        return (
+                          <div key={id} className="d-flex justify-content-between align-items-center py-3 px-3 bg-white rounded-2 shadow-sm mb-2">
+                            <div className="d-flex align-items-center flex-grow-1">
+                              <div className="me-3">
+                                <h6 className="mb-1 fw-semibold text-dark">{item?.name}</h6>
+                                <small className="text-muted">€{price.toFixed(2)} each</small>
+                              </div>
+                            </div>
+                            <div className="d-flex align-items-center">
+                              <div className="input-group me-3" style={{ width: "120px" }}>
+                                <button 
+                                  className="btn btn-outline-secondary btn-sm"
+                                  type="button"
+                                  onClick={() => handleActiveQtyChange(item.id, Math.max(1, qty - 1))}
+                                >
+                                  <i className="bi bi-dash"></i>
+                                </button>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="99"
+                                  value={qty}
+                                  onChange={(e) => handleActiveQtyChange(item.id, e.target.value)}
+                                  className="form-control form-control-sm text-center"
+                                />
+                                <button 
+                                  className="btn btn-outline-secondary btn-sm"
+                                  type="button"
+                                  onClick={() => handleActiveQtyChange(item.id, Math.min(99, qty + 1))}
+                                >
+                                  <i className="bi bi-plus"></i>
+                                </button>
+                              </div>
+                              <div className="text-end me-3" style={{ minWidth: '80px' }}>
+                                <div className="fw-bold text-primary">€{(price * qty).toFixed(2)}</div>
+                              </div>
+                              <button
+                                className="btn btn-outline-danger btn-sm"
+                                onClick={() => openDeleteModal(item.id)}
+                                title="Remove item"
+                              >
+                                <i className="bi bi-trash"></i>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                ))}
-              </>
-            )}
+
+                  {/* Special Instructions */}
+                  <div className="mb-4">
+                    <h5 className="mb-3 text-dark fw-semibold">
+                      <i className="bi bi-chat-square-text me-2"></i>Special Instructions
+                      <small className="text-muted fw-normal ms-2">(Optional)</small>
+                    </h5>
+                    <div className="bg-light rounded-3 p-3">
+                      <textarea
+                        className="form-control border-0"
+                        rows="3"
+                        placeholder="Any special requests? (e.g., no onions, extra spicy, allergies, delivery preferences...)"
+                        value={specialInstructions}
+                        onChange={(e) => setSpecialInstructions(e.target.value)}
+                        maxLength={500}
+                        style={{ backgroundColor: 'white', resize: 'none' }}
+                      />
+                      <div className="d-flex justify-content-between align-items-center mt-2">
+                        <small className="text-muted">
+                          <i className="bi bi-info-circle me-1"></i>
+                          Help our kitchen prepare your order exactly how you like it
+                        </small>
+                        <small className="text-muted">{specialInstructions.length}/500</small>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Order Summary */}
+                  <div className="mb-4">
+                    <div className="bg-primary-subtle rounded-3 p-4">
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <span className="text-dark">Subtotal ({Object.values(orderItems).reduce((sum, qty) => sum + qty, 0)} items)</span>
+                        <span className="text-dark fw-semibold">€{subTotal.toFixed(2)}</span>
+                      </div>
+                      <div className="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-secondary">
+                        <span className="text-muted small">
+                          <i className="bi bi-truck me-1"></i>Tray & delivery charge
+                        </span>
+                        <span className="text-dark">€{trayCharge.toFixed(2)}</span>
+                      </div>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <span className="fs-5 fw-bold text-dark">Total Amount</span>
+                        <span className="fs-4 fw-bold text-primary">€{total.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {submitError && (
+                    <div className="alert alert-danger mb-4">
+                      <i className="bi bi-exclamation-triangle me-2"></i>
+                      {String(submitError)}
+                    </div>
+                  )}
+
+                  <button
+                    className="btn btn-success w-100 py-3 fw-semibold fs-5"
+                    onClick={handlePlaceOrder}
+                    disabled={submitting || !Object.keys(orderItems).length}
+                  >
+                    {submitting ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Placing Order...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-check-circle me-2"></i>Place Order • €{total.toFixed(2)}
+                      </>
+                    )}
+                  </button>
+                </>
+              ) : (
+                <div className="text-center py-5">
+                  <i className="bi bi-cart-x text-muted" style={{ fontSize: '3rem' }}></i>
+                  <h5 className="mt-3 text-muted">Your cart is empty</h5>
+                  <p className="text-muted">Add some delicious items from our menu!</p>
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => setShowOrderPanel(false)}
+                  >
+                    <i className="bi bi-arrow-left me-2"></i>Back to Menu
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🔍 DEBUG CONSOLE */}
+      {import.meta.env.DEV && (
+        <div className="position-fixed bottom-0 start-0 m-3 bg-dark text-white p-3 rounded-3 shadow-lg" style={{ zIndex: 1000, maxWidth: '400px', maxHeight: '300px', overflowY: 'auto', fontSize: '12px' }}>
+          <div className="d-flex justify-content-between align-items-center mb-2">
+            <strong className="text-warning">🔍 Room Service Debug</strong>
+            <button 
+              className="btn btn-sm btn-outline-light"
+              onClick={() => {
+                console.clear();
+                console.log('🧹 [DEBUG] Console cleared');
+              }}
+            >
+              Clear
+            </button>
+          </div>
+          <div className="mb-2">
+            <strong>Room:</strong> {roomNumber} | <strong>Hotel:</strong> {hotelIdentifier}
+          </div>
+          <div className="mb-2">
+            <strong>Store Orders:</strong> {Object.keys(roomServiceState.ordersById || {}).length}
+          </div>
+          <div className="mb-2">
+            <strong>Current Order:</strong> {currentOrder ? `#${currentOrder.id} (${currentOrder.status})` : 'None'}
+          </div>
+          <div className="mb-2">
+            <strong>Previous Orders:</strong> {previousOrders.length}
+          </div>
+          <div className="mb-2">
+            <strong>Cart Items:</strong> {Object.keys(orderItems).length}
+          </div>
+          <div className="small text-muted">
+            Check browser console for detailed logs
           </div>
         </div>
       )}

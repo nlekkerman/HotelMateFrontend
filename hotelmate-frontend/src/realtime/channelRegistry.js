@@ -43,6 +43,16 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
     const roomServiceChannelName = `${hotelSlug}.room-service`;
     const roomServiceChannel = pusher.subscribe(roomServiceChannelName);
     channels.push(roomServiceChannel);
+    
+    // Enhanced room service event binding for debugging
+    roomServiceChannel.bind_global((eventName, data) => {
+      console.log('🍽️ [channelRegistry] Room service event received:', {
+        channel: roomServiceChannelName,
+        eventName,
+        data,
+        timestamp: new Date().toISOString()
+      });
+    });
 
     // Booking (hotel-wide)
     const bookingChannelName = `${hotelSlug}.booking`;
@@ -128,12 +138,7 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
   const pusher = getPusherClient();
   // ✅ BACKEND SENDS TO: hotel-killarney.staff-chat.100 (exact pattern from backend logs)
   const channelName = `${hotelSlug}.staff-chat.${conversationId}`;
-  
-  console.log('🔥 [channelRegistry] Attempting to subscribe to:', channelName);
-  console.log('🔥 [channelRegistry] Raw hotelSlug value:', hotelSlug);
-  console.log('🔥 [channelRegistry] Pusher connection state:', pusher.connection.state);
-  console.log('🔥 [channelRegistry] Auth token available:', !!localStorage.getItem('token'));
-  
+
   try {
     const channel = pusher.subscribe(channelName);
     
@@ -147,15 +152,7 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
     });
     
     channel.bind_global((eventName, payload) => {
-      // 🚨 CATCH ALL EVENTS on staff-chat channels
-      if (channelName.includes('staff-chat')) {
-        console.log('🚨 [channelRegistry] ===== ANY EVENT ON STAFF CHAT CHANNEL =====');
-        console.log('🚨 Channel:', channelName);
-        console.log('🚨 Event Name:', eventName);
-        console.log('🚨 Payload Type:', typeof payload);
-        console.log('🚨 Payload:', JSON.stringify(payload, null, 2));
-        console.log('🚨 =================================================');
-      }
+     
       
       if (!eventName.startsWith('pusher:')) {
         console.log('🔥 [channelRegistry] Non-system event received:', { channel: channelName, eventName, payloadType: typeof payload });
@@ -170,8 +167,7 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
       });
     });
 
-    console.log(`✅ Subscribed to staff chat: ${channelName}`);
-    console.log('🔍 [channelRegistry] All subscribed channels:', pusher.allChannels().map(c => c.name));
+   
     currentChannels.push(channel);
 
     return () => {
@@ -232,7 +228,6 @@ export function subscribeToGuestChatConversation(hotelSlug, roomPin) {
         if (index > -1) {
           currentChannels.splice(index, 1);
         }
-        console.log(`🗑️ Unsubscribed from guest chat: ${channelName}`);
       } catch (error) {
         console.error('❌ Error unsubscribing from guest chat channel:', channelName, error);
       }

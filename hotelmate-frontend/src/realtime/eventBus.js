@@ -266,7 +266,16 @@ function routeToDomainStores(event) {
         guestChatActions.handleEvent(event);
         break;
       case "room_service":
+        console.log('🍽️ [EventBus] Processing room service event:', {
+          type: event.type,
+          hasPayload: !!event.payload,
+          payloadKeys: event.payload ? Object.keys(event.payload) : [],
+          orderId: event.payload?.order_id || event.payload?.id,
+          roomNumber: event.payload?.room_number,
+          status: event.payload?.status
+        });
         roomServiceActions.handleEvent(event);
+        console.log('✅ [EventBus] Room service event sent to store');
         break;
       case "booking":
         bookingActions.handleEvent(event);

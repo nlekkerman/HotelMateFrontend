@@ -196,72 +196,90 @@ export default function RoomServiceOrdersManagement() {
   const handleStatusChange = (order, newStatus) => {
     const prev = order.status;
 
-    // Get current orders based on view mode
-    const currentOrders = viewMode === 'active' ? activeOrders : historyOrders;
-    
-    // Optimistically update UI
-    const updatedOrders = newStatus === "completed"
-      ? currentOrders.filter((o) => o.id !== order.id)
-      : currentOrders.map((o) => (o.id === order.id ? { ...o, status: newStatus } : o));
-    
-    // Update the appropriate state based on view mode
-    if (viewMode === 'active') {
-      // For active orders, update the store
-      dispatch({
-        type: 'ORDER_STATUS_CHANGED',
-        payload: { order: { ...order, status: newStatus }, orderId: order.id }
-      });
-    } else {
-      // For history orders, update local state
-      setHistoryOrders(updatedOrders);
-    }
-    
-    // Update status breakdown for active orders
-    if (viewMode === 'active') {
-      const breakdown = [
-        { status: 'pending', count: updatedOrders.filter(o => o.status === 'pending').length },
-        { status: 'accepted', count: updatedOrders.filter(o => o.status === 'accepted').length }
-      ];
-      setStatusBreakdown(breakdown);
-      
-      // No need to update pagination for active orders - it's computed automatically
-    }
+    console.log('🔄 [OrdersManagement] Status change initiated:', {
+      orderId: order.id,
+      oldStatus: prev,
+      newStatus,
+      roomNumber: order.room_number,
+      hotelSlug,
+      viewMode
+    });
 
+    // 🚀 PURE REAL-TIME APPROACH - NO OPTIMISTIC UPDATES
+    // Only send API request and let Pusher handle all UI updates
+    
+    console.log('🌐 [OrdersManagement] Sending API PATCH request - waiting for Pusher event');
     api
       .patch(`/room_services/${hotelSlug}/orders/${order.id}/`, {
         status: newStatus,
       })
-      .then(() => {
+      .then((response) => {
+        console.log('✅ [OrdersManagement] API status update successful:', {
+          orderId: order.id,
+          newStatus,
+          responseData: response.data,
+          timestamp: new Date().toISOString()
+        });
+        
         refreshCount();
         toast.success(`Order #${order.id} status updated to ${newStatus}`);
         
-        // No need to fetchActiveOrders() - Pusher will send order_updated event automatically!
-        // The store will update and component will re-render with new data
-      })
-      .catch(() => {
-        // Revert on error - restore original order status
-        if (viewMode === 'active') {
-          // Revert the store update
-          dispatch({
-            type: 'ORDER_STATUS_CHANGED',
-            payload: { order: { ...order, status: prev }, orderId: order.id }
-          });
-          
-          // Revert status breakdown to original values
-          const originalBreakdown = [
-            { status: 'pending', count: activeOrders.filter(o => o.status === 'pending').length },
-            { status: 'accepted', count: activeOrders.filter(o => o.status === 'accepted').length }
-          ];
-          setStatusBreakdown(originalBreakdown);
-        } else {
-          // Revert history orders
-          setHistoryOrders(currentOrders);
+        // 🔥 MANUAL PUSHER EVENT AS BACKUP (in case backend doesn't send it)
+        console.log('📡 [OrdersManagement] Dispatching backup Pusher-style event');
+        const enhancedOrderData = {
+          ...order,
+          status: newStatus,
+          updated_at: new Date().toISOString(),
+          // Include all fields that guest page expects
+          id: order.id,
+          order_id: order.id, // Backend format compatibility
+          room_number: order.room_number,
+          total_price: order.total_price,
+          items: order.items || order.orderitem_set || [],
+          created_at: order.created_at,
+          special_instructions: order.special_instructions,
+          type: order.type || 'room_service'
+        };
+        
+        // Dispatch backup event to store
+        dispatch({
+          type: 'ORDER_UPDATED',
+          payload: { 
+            order: enhancedOrderData,
+            orderId: order.id,
+            event_type: 'order_updated',
+            source: 'api_success_backup'
+          }
+        });
+        
+        // Trigger custom browser event for cross-component communication
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('room-service-status-updated', {
+            detail: {
+              orderId: order.id,
+              oldStatus: prev,
+              newStatus: newStatus,
+              order: enhancedOrderData,
+              timestamp: new Date().toISOString(),
+              source: 'orders-management'
+            }
+          }));
+          console.log('🔔 [OrdersManagement] Backup real-time event dispatched');
         }
-          
-        // Pagination is handled automatically for active view (computed) and history view (separate state)
+      })
+      .catch((err) => {
+        console.error('❌ [OrdersManagement] API status update failed:', {
+          orderId: order.id,
+          attemptedStatus: newStatus,
+          error: err.response?.data || err.message,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Show error to user
+        const errorMsg = err.response?.data?.error || err.response?.data?.detail || "Error updating status.";
+        toast.error(`Failed to update order #${order.id}: ${errorMsg}`);
         
         setError("Error updating status.");
-        toast.error("Failed to update order status");
       });
   };
 
