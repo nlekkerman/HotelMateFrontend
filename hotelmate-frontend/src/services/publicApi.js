@@ -55,7 +55,7 @@ export const publicHotelPageAPI = {
    */
   getPresets: async (params = {}) => {
     try {
-      const response = await publicApi.get('/public/presets/', { params });
+      const response = await publicAPI.get('/public/presets/', { params });
       return response.data;
     } catch (error) {
       console.error('[PublicAPI] Failed to fetch presets:', error);
@@ -70,7 +70,7 @@ export const publicHotelPageAPI = {
    */
   getPreset: async (key) => {
     try {
-      const response = await publicApi.get(`/public/presets/${key}/`);
+      const response = await publicAPI.get(`/public/presets/${key}/`);
       return response.data;
     } catch (error) {
       console.error(`[PublicAPI] Failed to fetch preset ${key}:`, error);
@@ -79,4 +79,10 @@ export const publicHotelPageAPI = {
   },
 };
 
-export default publicApi;
+export default {
+  getHotels: publicHotelPageAPI.getHotels,
+  getFilterOptions: publicHotelPageAPI.getFilterOptions,
+  getHotelPage: publicHotelPageAPI.getHotelPage,
+  getPresets: publicHotelPageAPI.getPresets,
+  getPreset: publicHotelPageAPI.getPreset
+};
