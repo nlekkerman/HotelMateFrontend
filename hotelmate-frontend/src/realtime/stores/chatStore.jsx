@@ -705,6 +705,17 @@ export const chatActions = {
             delivered_at: payload.delivered_at,
             read_by_list: payload.read_by_list || [],
             read_by_count: payload.read_by_count || 0,
+            reply_to_message: payload.reply_to ? {
+              id: payload.reply_to.id,
+              message: payload.reply_to.message,
+              content: payload.reply_to.content,
+              sender_name: payload.reply_to.sender_name,
+              sender_info: payload.reply_to.sender_info,
+              sender_avatar: payload.reply_to.sender_avatar,
+              attachments: payload.reply_to.attachments || [],
+              timestamp: payload.reply_to.timestamp,
+              is_deleted: payload.reply_to.is_deleted || false
+            } : null,
           };
 
           console.log('✅ [chatStore] Message validation PASSED - creating mapped message:', mappedMessage);

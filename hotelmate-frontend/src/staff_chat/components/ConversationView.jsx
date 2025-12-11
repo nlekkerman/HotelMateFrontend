@@ -288,12 +288,15 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
       console.log('✅ [SEND MESSAGE] Message sent successfully:', {
         messageId: result.message?.id || result.id,
         hasMessage: !!result.message,
-        hasId: !!result.id
+        hasId: !!result.id,
+        isReply: !!replyTo?.id
       });
       
       const messageToAdd = result.message || result;
-      if (messageToAdd && messageToAdd.id) {
-        console.log('📝 [SEND MESSAGE] Adding message to store:', messageToAdd.id);
+      const isReply = replyTo?.id !== null && replyTo?.id !== undefined;
+      
+      if (messageToAdd && messageToAdd.id && !isReply) {
+        console.log('📝 [SEND MESSAGE] Adding non-reply message to store:', messageToAdd.id);
         chatDispatch({
           type: 'RECEIVE_MESSAGE',
           payload: {
@@ -301,6 +304,8 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
             conversationId: conversation.id
           }
         });
+      } else if (isReply) {
+        console.log('📝 [SEND MESSAGE] Reply sent - waiting for Pusher event for proper display');
       }
       
       // Clear inputs
@@ -335,6 +340,8 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
                    message.sender_name ||
                    'User',
       sender_info: message.sender_info || message.sender,
+      attachments: message.attachments || [],
+      is_deleted: message.is_deleted || false,
     };
     
     // console.log('🔄 Setting replyTo state to:', replyMessage);

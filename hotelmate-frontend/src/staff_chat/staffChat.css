@@ -2279,8 +2279,8 @@
 /* Reply Preview in Message */
 .staff-chat-message__reply-preview {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  align-items: flex-start;
+  gap: 0;
   padding: 6px 8px;
   background: rgba(0, 0, 0, 0.05);
   border-left: 2px solid rgba(0, 0, 0, 0.2);
@@ -2290,7 +2290,7 @@
 }
 
 .staff-chat-message--own .staff-chat-message__reply-preview {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(58, 1, 1, 0.2);
   border-left-color: rgba(255, 255, 255, 0.4);
 }
 
@@ -2299,6 +2299,8 @@
   flex-direction: column;
   min-width: 0;
   flex: 1;
+
+  background-color: transparent;
 }
 
 .staff-chat-message__reply-label {
@@ -2333,6 +2335,97 @@
 
 .staff-chat-message--own .staff-chat-message__reply-text {
   color: rgba(255, 255, 255, 0.8);
+}
+
+/* Reply Avatar */
+.staff-chat-message__reply-avatar {
+  position: relative;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+.staff-chat-message__reply-avatar-img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.staff-chat-message__reply-avatar-initial {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #0d6efd;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.staff-chat-message__reply-avatar-initial.hidden {
+  display: none;
+}
+
+.staff-chat-message--own .staff-chat-message__reply-avatar-img {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.staff-chat-message--own .staff-chat-message__reply-avatar-initial {
+  border-color: rgba(255, 255, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Reply Attachments */
+.staff-chat-message__reply-attachments {
+  margin-top: 4px;
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.staff-chat-message__reply-attachment-thumbnail {
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+  object-fit: cover;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.staff-chat-message__reply-attachment-thumbnail:hover {
+  opacity: 1;
+}
+
+.staff-chat-message__reply-attachment-file {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background-color: rgba(0, 0, 0, 0.1);
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.staff-chat-message__reply-attachment-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+  background-color: rgba(0, 0, 0, 0.2);
+  font-size: 8px;
+  font-weight: bold;
+  color: rgba(0, 0, 0, 0.7);
 }
 
 /* Edited Badge */

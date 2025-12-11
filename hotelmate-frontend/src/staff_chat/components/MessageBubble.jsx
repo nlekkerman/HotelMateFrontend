@@ -115,39 +115,81 @@ const MessageBubble = ({
           {/* Reply Preview (if replying to another message) */}
           {replyTo && (
             <div className="staff-chat-message__reply-preview">
+              {/* Sender Avatar */}
+              <div className="staff-chat-message__reply-avatar">
+                {(replyTo.sender_avatar || replyTo.avatar) ? (
+                  <img 
+                    src={replyTo.sender_avatar || replyTo.avatar} 
+                    alt={replyTo.sender_name || replyTo.sender_info?.full_name || 'User'}
+                    className="staff-chat-message__reply-avatar-img"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div className={`staff-chat-message__reply-avatar-initial ${(replyTo.sender_avatar || replyTo.avatar) ? 'hidden' : ''}`}>
+                  {(replyTo.sender_name || replyTo.sender_info?.full_name || 'U').charAt(0).toUpperCase()}
+                </div>
+              </div>
+              
               <div className="staff-chat-message__reply-content">
                 <div className="staff-chat-message__reply-label">
                   Replied to {replyTo.sender_name || replyTo.sender_info?.full_name || 'User'}
                 </div>
-                <div className={`staff-chat-message__reply-text ${replyTo.is_deleted ? 'text-muted fst-italic' : ''}`}>
-                  {replyTo.is_deleted 
-                    ? '[Message deleted]'
-                    : (replyTo.message || replyTo.content || '').substring(0, 50)
+{(() => {
+                  if (replyTo.is_deleted) {
+                    return (
+                      <div className="staff-chat-message__reply-text text-muted fst-italic">
+                        [Message deleted]
+                      </div>
+                    );
                   }
-                  {!replyTo.is_deleted && (replyTo.message || replyTo.content || '').length > 50 ? '...' : ''}
-                </div>
+                  
+                  const messageText = replyTo.message || replyTo.content || '';
+                  const hasAttachments = (replyTo.attachments || replyTo.attachments_preview || []).length > 0;
+                  
+                  // Only hide text if it's EXACTLY "[File shared]" and we have attachments to show
+                  const shouldHideText = hasAttachments && messageText.trim() === '[File shared]';
+                  
+                  if (shouldHideText) {
+                    return null; // Don't render text div at all for "[File shared]"
+                  }
+                  
+                  // Show text if it has actual content or if there are no attachments
+                  if (messageText.trim()) {
+                    return (
+                      <div className="staff-chat-message__reply-text">
+                        {messageText.substring(0, 50)}
+                        {messageText.length > 50 ? '...' : ''}
+                      </div>
+                    );
+                  }
+                  
+                  return null; // Don't show empty text
+                })()}
 
                 {/* Show image attachments in reply preview */}
-                {!replyTo.is_deleted && replyTo.attachments && replyTo.attachments.length > 0 && (
-                  <div className="staff-chat-message__reply-attachments" style={{ marginTop: '4px', display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
-                    {replyTo.attachments.slice(0, 2).map((att, idx) => {
+                {!replyTo.is_deleted && (replyTo.attachments || replyTo.attachments_preview) && (replyTo.attachments || replyTo.attachments_preview).length > 0 && (
+                  <div className="staff-chat-message__reply-attachments">
+                    {(replyTo.attachments || replyTo.attachments_preview || []).slice(0, 2).map((att, idx) => {
                       const isImage = att.file_type === 'image' || att.mime_type?.startsWith('image/') || 
                                     /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(att.file_name || att.filename);
                       
                       if (isImage) {
-                        const imageUrl = att.file_url || att.url;
+                        // Use thumbnail URL if available for smaller preview, otherwise use full image
+                        const imageUrl = att.thumbnail_url || att.file_url || att.url;
                         return (
                           <img
                             key={idx}
                             src={imageUrl}
                             alt={att.file_name || att.filename || 'Image'}
-                            style={{
-                              width: '28px',
-                              height: '28px',
-                              borderRadius: '3px',
-                              objectFit: 'cover',
-                              border: '1px solid rgba(0, 0, 0, 0.2)',
-                              opacity: 0.8
+                            className="staff-chat-message__reply-attachment-thumbnail"
+                            onError={(e) => {
+                              // Fallback to full image if thumbnail fails
+                              if (att.file_url && e.target.src !== att.file_url) {
+                                e.target.src = att.file_url || att.url;
+                              }
                             }}
                           />
                         );
@@ -155,18 +197,7 @@ const MessageBubble = ({
                         return (
                           <div
                             key={idx}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              width: '28px',
-                              height: '28px',
-                              borderRadius: '3px',
-                              border: '1px solid rgba(0, 0, 0, 0.2)',
-                              backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                              fontSize: '10px',
-                              opacity: 0.7
-                            }}
+                            className="staff-chat-message__reply-attachment-file"
                             title={att.file_name || att.filename}
                           >
                             📎
@@ -174,22 +205,9 @@ const MessageBubble = ({
                         );
                       }
                     })}
-                    {replyTo.attachments.length > 2 && (
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '28px',
-                          height: '28px',
-                          borderRadius: '3px',
-                          backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                          fontSize: '8px',
-                          fontWeight: 'bold',
-                          color: 'rgba(0, 0, 0, 0.7)'
-                        }}
-                      >
-                        +{replyTo.attachments.length - 2}
+                    {(replyTo.attachments || replyTo.attachments_preview || []).length > 2 && (
+                      <div className="staff-chat-message__reply-attachment-count">
+                        +{(replyTo.attachments || replyTo.attachments_preview || []).length - 2}
                       </div>
                     )}
                   </div>
@@ -282,16 +300,16 @@ const MessageBubble = ({
                           <div
                             key={reader.id || index}
                             className="staff-chat-message__read-avatar"
-                            title={reader.name || 'User'}
+                            title={reader.name || reader.staff_name || reader.sender_name || 'User'}
                             style={{
                               marginLeft: index > 0 ? '-8px' : '0',
                               zIndex: readByList.length - index
                             }}
                           >
-                            {reader.avatar ? (
+                            {(reader.avatar || reader.sender_avatar || reader.staff_avatar) ? (
                               <img 
-                                src={reader.avatar} 
-                                alt={reader.name}
+                                src={reader.avatar || reader.sender_avatar || reader.staff_avatar} 
+                                alt={reader.name || reader.staff_name || reader.sender_name}
                                 style={{
                                   width: '14px',
                                   height: '14px',
@@ -299,26 +317,29 @@ const MessageBubble = ({
                                   border: '1px solid white',
                                   objectFit: 'cover'
                                 }}
-                              />
-                            ) : (
-                              <div
-                                style={{
-                                  width: '14px',
-                                  height: '14px',
-                                  borderRadius: '50%',
-                                  border: '1px solid white',
-                                  backgroundColor: '#0d6efd',
-                                  color: 'white',
-                                  fontSize: '7px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontWeight: 'bold'
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.nextSibling.style.display = 'flex';
                                 }}
-                              >
-                                {(reader.name || 'U').charAt(0).toUpperCase()}
-                              </div>
-                            )}
+                              />
+                            ) : null}
+                            <div
+                              style={{
+                                width: '14px',
+                                height: '14px',
+                                borderRadius: '50%',
+                                border: '1px solid white',
+                                backgroundColor: '#0d6efd',
+                                color: 'white',
+                                fontSize: '7px',
+                                display: (reader.avatar || reader.sender_avatar || reader.staff_avatar) ? 'none' : 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 'bold'
+                              }}
+                            >
+                              {(reader.name || reader.staff_name || reader.sender_name || 'U').charAt(0).toUpperCase()}
+                            </div>
                           </div>
                         ))}
                         {readByCount > 3 && (

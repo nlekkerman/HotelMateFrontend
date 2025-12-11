@@ -463,17 +463,25 @@ const ChatWindowPopup = ({
 
       console.log("📤 Normalized message:", normalizedMessage);
 
-      // ✅ Immediately add message to chatStore for instant feedback
-      chatDispatch({
-        type: CHAT_ACTIONS.RECEIVE_MESSAGE,
-        payload: {
-          message: normalizedMessage,
-          conversationId: conversation.id,
-        },
-      });
+      // Only add optimistic updates for NON-REPLY messages
+      // Replies will be handled via Pusher to ensure proper original message display
+      const isReply = replyTo !== null;
+      
+      if (!isReply) {
+        // ✅ Immediately add message to chatStore for instant feedback
+        chatDispatch({
+          type: CHAT_ACTIONS.RECEIVE_MESSAGE,
+          payload: {
+            message: normalizedMessage,
+            conversationId: conversation.id,
+          },
+        });
 
-      console.log("📤 Message dispatched to chatStore");
-      scrollToBottom();
+        console.log("📤 Message dispatched to chatStore");
+        scrollToBottom();
+      } else {
+        console.log("📤 Reply sent - waiting for Pusher event for proper display");
+      }
     }
   };
 
