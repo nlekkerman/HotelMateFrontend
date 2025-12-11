@@ -439,6 +439,18 @@ const ChatWindowPopup = ({
     }
   }, [messages.length, isMinimized, markConversationRead]);
 
+  // Auto-scroll to bottom when chat window opens
+  useEffect(() => {
+    if (!isMinimized && messages.length > 0) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isMinimized, messages.length > 0]);
+
   // Handle send message
   const handleSendMessage = async (messageText, mentions) => {
     // If files are selected, upload them instead
