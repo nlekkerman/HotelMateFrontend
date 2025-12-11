@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { Dropdown } from 'react-bootstrap';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useMessenger } from '../context/MessengerContext';
 import { useStaffChat } from '../context/StaffChatContext';
+import { useChatState } from '@/realtime/stores/chatStore.jsx';
 import ConversationsList from './ConversationsList';
 import ChatWindowPopup from './ChatWindowPopup';
 import GroupChatModal from './GroupChatModal';
@@ -76,6 +77,47 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
     conversations = [],
     markConversationRead = () => {},
   } = useStaffChat();
+  
+  // Get chat state for unread count badge
+  const chatState = useChatState();
+  
+  // Debug: Log every render to see if hook is working
+  console.log('🔍 [MessengerWidget] useChatState result:', { chatState });
+  
+  // Use the backend-provided unread count from chat state
+  const totalUnreadCount = useMemo(() => {
+    console.log('🔍 [MessengerWidget] Getting unread from backend data:', {
+      chatState: chatState,
+      conversationsById: chatState?.conversationsById,
+      totalUnreadOverride: chatState?.totalUnreadOverride
+    });
+    
+    // First check if backend sent a total unread override
+    if (typeof chatState?.totalUnreadOverride === 'number') {
+      console.log('📈 [MessengerWidget] Using backend total unread override:', chatState.totalUnreadOverride);
+      return chatState.totalUnreadOverride;
+    }
+    
+    // Otherwise count how many conversations have unread messages (not sum of all messages)
+    if (!chatState?.conversationsById) {
+      console.log('❌ [MessengerWidget] No conversations found');
+      return 0;
+    }
+    
+    const conversationsWithUnread = Object.values(chatState.conversationsById).filter(conversation => {
+      const unreadCount = conversation?.unread_count || 0;
+      const hasUnread = unreadCount > 0;
+      console.log('📊 [MessengerWidget] Conversation unread check:', { 
+        id: conversation?.id, 
+        unread_count: unreadCount,
+        hasUnread: hasUnread
+      });
+      return hasUnread;
+    }).length;
+    
+    console.log('📈 [MessengerWidget] Conversations with unread messages:', conversationsWithUnread);
+    return conversationsWithUnread;
+  }, [chatState?.conversationsById, chatState?.totalUnreadOverride]);
   
   const [searchParams, setSearchParams] = useSearchParams();
   const [internalExpanded, setInternalExpanded] = useState(false);
@@ -308,18 +350,43 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
             onClick={toggleWidget}
             style={{ cursor: 'pointer' }}
           >
-            <h3 className="messenger-widget__title">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ marginRight: '8px' }}>
-                <path
-                  d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
-                  fill="currentColor"
-                />
-                <circle cx="12" cy="10" r="1.5" fill="currentColor" />
-                <circle cx="8" cy="10" r="1.5" fill="currentColor" />
-                <circle cx="16" cy="10" r="1.5" fill="currentColor" />
-              </svg>
-              Staff Chat
-            </h3>
+            <div className="messenger-widget__title-row" style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+              <h3 className="messenger-widget__title" style={{ margin: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ marginRight: '8px' }}>
+                  <path
+                    d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
+                    fill="currentColor"
+                  />
+                  <circle cx="12" cy="10" r="1.5" fill="currentColor" />
+                  <circle cx="8" cy="10" r="1.5" fill="currentColor" />
+                  <circle cx="16" cy="10" r="1.5" fill="currentColor" />
+                </svg>
+                Staff Chat
+              </h3>
+              {/* Unread Count Badge */}
+              {totalUnreadCount > 0 && (
+                <span 
+                  className="unread-badge"
+                  style={{
+                    backgroundColor: '#dc3545',
+                    color: 'white',
+                    borderRadius: '10px',
+                    padding: '2px 6px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    minWidth: '18px',
+                    height: '18px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginLeft: '8px',
+                    lineHeight: '1'
+                  }}
+                >
+                  {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                </span>
+              )}
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {/* Dropdown Menu - Only show when expanded */}
               {isExpanded && (

@@ -71,16 +71,20 @@ export const StaffChatProvider = ({ children }) => {
   const markConversationRead = async (conversationId) => {
     if (!conversationId) return;
     try {
-      // Update local state immediately
+      console.log('🔥 [StaffChatContext] markConversationRead called:', { conversationId });
+      
+      // Update chat store immediately
+      console.log('🔥 [StaffChatContext] Dispatching MARK_CONVERSATION_READ to chatStore');
       chatDispatch({
         type: CHAT_ACTIONS.MARK_CONVERSATION_READ,
         payload: { conversationId }
       });
       
+      console.log('🔥 [StaffChatContext] Calling backend markConversationAsRead API');
       await markConversationAsRead(hotelSlug, conversationId);
-      console.log('[StaffChatContext] markConversationRead awaiting backend sync', { conversationId });
+      console.log('✅ [StaffChatContext] markConversationRead completed successfully', { conversationId });
     } catch (err) {
-      console.error("Failed to mark conversation as read:", err);
+      console.error("❌ [StaffChatContext] Failed to mark conversation as read:", err);
     }
   };
 

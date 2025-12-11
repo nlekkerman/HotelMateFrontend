@@ -235,14 +235,23 @@ function chatReducer(state, action) {
       const { conversationId } = action.payload;
       const conversation = state.conversationsById[conversationId];
       
-      if (!conversation) return state;
+      console.log('🔥 [chatStore] MARK_CONVERSATION_READ reducer called:', { 
+        conversationId, 
+        conversation: conversation,
+        currentUnreadCount: conversation?.unread_count 
+      });
+      
+      if (!conversation) {
+        console.log('❌ [chatStore] No conversation found for ID:', conversationId);
+        return state;
+      }
 
       const updatedTotalOverride =
         typeof state.totalUnreadOverride === 'number'
           ? Math.max(0, state.totalUnreadOverride - (conversation.unread_count || 0))
           : state.totalUnreadOverride;
 
-      return {
+      const newState = {
         ...state,
         totalUnreadOverride: updatedTotalOverride,
         conversationsById: {
@@ -253,6 +262,15 @@ function chatReducer(state, action) {
           }
         }
       };
+      
+      console.log('✅ [chatStore] MARK_CONVERSATION_READ completed:', { 
+        conversationId, 
+        oldUnreadCount: conversation.unread_count,
+        newUnreadCount: 0,
+        updatedTotalOverride 
+      });
+      
+      return newState;
     }
 
     case CHAT_ACTIONS.RECEIVE_READ_RECEIPT: {

@@ -699,9 +699,11 @@ const ChatWindowPopup = ({
           </div>
 
           <div className="chat-window-popup__staff-info">
-            <h4 className="chat-window-popup__staff-name">
-              {conversationData?.title || displayStaff?.full_name || "Chat"}
-            </h4>
+            <div className="chat-window-popup__title-row">
+              <h4 className="chat-window-popup__staff-name">
+                {conversationData?.title || displayStaff?.full_name || "Chat"}
+              </h4>
+            </div>
             {conversationData?.is_group ? (
               <p className="chat-window-popup__staff-role">
                 <button
