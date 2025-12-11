@@ -298,7 +298,7 @@ function chatReducer(state, action) {
     }
 
     case CHAT_ACTIONS.STAFF_CHAT_READ_RECEIPT_RECEIVED: {
-      const { conversationId, staffId, staffName, messageIds, timestamp } = action.payload;
+      const { conversationId, staffId, staffName, staffAvatar, messageIds, timestamp } = action.payload;
       const conversation = state.conversationsById[conversationId];
       
       if (!conversation) return state;
@@ -319,6 +319,8 @@ function chatReducer(state, action) {
                 staff_id: staffId,
                 name: staffName,
                 staff_name: staffName,
+                avatar: staffAvatar,
+                staff_avatar: staffAvatar,
                 read_at: timestamp,
               },
             ];
@@ -819,6 +821,7 @@ export const chatActions = {
               conversationId: numericConversationId,
               staffId: parseInt(payload.staff_id || payload.readByStaffId),
               staffName: payload.staff_name || payload.readByStaffName || 'Unknown Staff',
+              staffAvatar: payload.staff_avatar || payload.avatar || payload.profile_image_url,
               messageIds: messageIds.map(id => parseInt(id)),
               timestamp: payload.timestamp || new Date().toISOString()
             }

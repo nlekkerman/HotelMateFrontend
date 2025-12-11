@@ -148,7 +148,7 @@ const MessageBubble = ({
                   }
                   
                   const messageText = replyTo.message || replyTo.content || '';
-                  const hasAttachments = (replyTo.attachments || replyTo.attachments_preview || []).length > 0;
+                  const hasAttachments = (replyTo.images || replyTo.attachments || replyTo.attachments_preview || []).length > 0;
                   
                   // Only hide text if it's EXACTLY "[File shared]" and we have attachments to show
                   const shouldHideText = hasAttachments && messageText.trim() === '[File shared]';
@@ -171,15 +171,15 @@ const MessageBubble = ({
                 })()}
 
                 {/* Show image attachments in reply preview */}
-                {!replyTo.is_deleted && (replyTo.attachments || replyTo.attachments_preview) && (replyTo.attachments || replyTo.attachments_preview).length > 0 && (
+                {!replyTo.is_deleted && (replyTo.images || replyTo.attachments || replyTo.attachments_preview) && (replyTo.images || replyTo.attachments || replyTo.attachments_preview).length > 0 && (
                   <div className="staff-chat-message__reply-attachments">
-                    {(replyTo.attachments || replyTo.attachments_preview || []).slice(0, 2).map((att, idx) => {
+                    {(replyTo.images || replyTo.attachments || replyTo.attachments_preview || []).slice(0, 2).map((att, idx) => {
                       const isImage = att.file_type === 'image' || att.mime_type?.startsWith('image/') || 
                                     /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(att.file_name || att.filename);
                       
                       if (isImage) {
                         // Use thumbnail URL if available for smaller preview, otherwise use full image
-                        const imageUrl = att.thumbnail_url || att.file_url || att.url;
+                        const imageUrl = att.thumbnail_url || att.image_url || att.file_url || att.url;
                         return (
                           <img
                             key={idx}
@@ -188,8 +188,9 @@ const MessageBubble = ({
                             className="staff-chat-message__reply-attachment-thumbnail"
                             onError={(e) => {
                               // Fallback to full image if thumbnail fails
-                              if (att.file_url && e.target.src !== att.file_url) {
-                                e.target.src = att.file_url || att.url;
+                              const fallbackUrl = att.image_url || att.file_url || att.url;
+                              if (fallbackUrl && e.target.src !== fallbackUrl) {
+                                e.target.src = fallbackUrl;
                               }
                             }}
                           />
