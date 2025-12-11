@@ -1,4 +1,4 @@
-import api from "./api";
+import api, { publicAPI } from "./api";
 
 class MemoryGameAPI {
   constructor() {
@@ -116,7 +116,7 @@ class MemoryGameAPI {
       // Try public API first for guest tournament play, fallback to authenticated API
       let response;
       try {
-        response = await publicApi.post(`entertainment/memory-sessions/`, gameData);
+        response = await publicAPI.post(`entertainment/memory-sessions/`, gameData);
       } catch (publicError) {
         // Fallback to authenticated API
         response = await api.post(`${this.baseURL}/memory-sessions/`, gameData);
