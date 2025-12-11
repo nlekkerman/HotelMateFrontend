@@ -148,7 +148,8 @@ const MessageBubble = ({
                   }
                   
                   const messageText = replyTo.message || replyTo.content || '';
-                  const hasAttachments = (replyTo.images || replyTo.attachments || replyTo.attachments_preview || []).length > 0;
+                  const attachmentArray = replyTo.images || replyTo.attachments || replyTo.attachments_preview || [];
+                  const hasAttachments = attachmentArray.length > 0;
                   
                   // Only hide text if it's EXACTLY "[File shared]" and we have attachments to show
                   const shouldHideText = hasAttachments && messageText.trim() === '[File shared]';
@@ -171,9 +172,14 @@ const MessageBubble = ({
                 })()}
 
                 {/* Show image attachments in reply preview */}
-                {!replyTo.is_deleted && (replyTo.images || replyTo.attachments || replyTo.attachments_preview) && (replyTo.images || replyTo.attachments || replyTo.attachments_preview).length > 0 && (
+                {!replyTo.is_deleted && (() => {
+                  const attachmentArray = replyTo.images || replyTo.attachments || replyTo.attachments_preview || [];
+                  return attachmentArray.length > 0;
+                })() && (
                   <div className="staff-chat-message__reply-attachments">
-                    {(replyTo.images || replyTo.attachments || replyTo.attachments_preview || []).slice(0, 2).map((att, idx) => {
+                    {(() => {
+                      const attachmentArray = replyTo.images || replyTo.attachments || replyTo.attachments_preview || [];
+                      return attachmentArray.slice(0, 2).map((att, idx) => {
                       const isImage = att.file_type === 'image' || att.mime_type?.startsWith('image/') || 
                                     /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(att.file_name || att.filename);
                       
@@ -206,12 +212,16 @@ const MessageBubble = ({
                           </div>
                         );
                       }
-                    })}
-                    {(replyTo.attachments || replyTo.attachments_preview || []).length > 2 && (
-                      <div className="staff-chat-message__reply-attachment-count">
-                        +{(replyTo.attachments || replyTo.attachments_preview || []).length - 2}
-                      </div>
-                    )}
+                    });
+                    })()}
+                    {(() => {
+                      const attachmentArray = replyTo.images || replyTo.attachments || replyTo.attachments_preview || [];
+                      return attachmentArray.length > 2 && (
+                        <div className="staff-chat-message__reply-attachment-count">
+                          +{attachmentArray.length - 2}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>

@@ -715,7 +715,9 @@ export const chatActions = {
               sender_name: payload.reply_to.sender_name,
               sender_info: payload.reply_to.sender_info,
               sender_avatar: payload.reply_to.sender_avatar,
-              attachments: payload.reply_to.attachments || [],
+              images: payload.reply_to.images || [],
+              attachments: payload.reply_to.attachments || payload.reply_to.attachments_preview || [],
+              attachments_preview: payload.reply_to.attachments_preview || [],
               timestamp: payload.reply_to.timestamp,
               is_deleted: payload.reply_to.is_deleted || false
             } : null,
