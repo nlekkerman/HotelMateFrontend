@@ -1,138 +1,148 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import PropTypes from 'prop-types';
-import { Dropdown } from 'react-bootstrap';
-import { useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { useMessenger } from '../context/MessengerContext';
-import { useStaffChat } from '../context/StaffChatContext';
-import { useChatState } from '@/realtime/stores/chatStore.jsx';
-import ConversationsList from './ConversationsList';
-import ChatWindowPopup from './ChatWindowPopup';
-import GroupChatModal from './GroupChatModal';
-import '../staffChat.css';
+import React, { useState, useEffect, useMemo } from "react";
+import PropTypes from "prop-types";
+import { Dropdown } from "react-bootstrap";
+import { useSearchParams } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { useMessenger } from "../context/MessengerContext";
+import { useStaffChat } from "../context/StaffChatContext";
+import { useChatState } from "@/realtime/stores/chatStore.jsx";
+import ConversationsList from "./ConversationsList";
+import ChatWindowPopup from "./ChatWindowPopup";
+import GroupChatModal from "./GroupChatModal";
+import "../staffChat.css";
 
 /**
  * MessengerWidget Component
  * Facebook Messenger-style chat widget that floats in bottom right
  * Expands to show conversations list and allows opening multiple chat windows
  */
-const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpanded, onExpandChange }) => {
-  console.log('🎯 [MessengerWidget] COMPONENT ENTRY - render attempt');
-  
+const MessengerWidget = ({
+  position = "bottom-right",
+  isExpanded: controlledExpanded,
+  onExpandChange,
+}) => {
+  console.log("🎯 [MessengerWidget] COMPONENT ENTRY - render attempt");
+
   const { user, isStaff } = useAuth();
-  
+
   // 🚫 HIDE WIDGET FOR NON-AUTHENTICATED STAFF USERS
   if (!user || !isStaff) {
-    console.log('🚫 [MessengerWidget] Hidden - user not authenticated as staff:', { 
-      hasUser: !!user, 
-      isStaff: !!isStaff,
-      userId: user?.id 
-    });
+    console.log(
+      "🚫 [MessengerWidget] Hidden - user not authenticated as staff:",
+      {
+        hasUser: !!user,
+        isStaff: !!isStaff,
+        userId: user?.id,
+      }
+    );
     return null;
   }
-  
-  console.log('👤 [MessengerWidget] User data:', {
+
+  console.log("👤 [MessengerWidget] User data:", {
     userId: user?.id || user?.staff_id,
     hotelSlug: user?.hotel_slug,
-    userObject: user
+    userObject: user,
   });
-  
+
   // ✅ SIMPLIFIED: Get hotel slug - everyone in same hotel has same slug!
   const getHotelSlug = () => {
     // 1) Auth context (primary)
     if (user?.hotel_slug) {
-      console.log('🏨 Hotel slug from auth:', user.hotel_slug);
+      console.log("🏨 Hotel slug from auth:", user.hotel_slug);
       return user.hotel_slug;
     }
-    
+
     // 2) localStorage fallback
     try {
-      const userData = localStorage.getItem('user');
+      const userData = localStorage.getItem("user");
       if (userData) {
         const parsedUser = JSON.parse(userData);
         if (parsedUser?.hotel_slug) {
-          console.log('🏨 Hotel slug from localStorage:', parsedUser.hotel_slug);
+          console.log(
+            "🏨 Hotel slug from localStorage:",
+            parsedUser.hotel_slug
+          );
           return parsedUser.hotel_slug;
         }
       }
     } catch (error) {
-      console.error('Error getting hotel slug from localStorage:', error);
+      console.error("Error getting hotel slug from localStorage:", error);
     }
-    
-    console.warn('❌ No hotel slug found - chat will not work');
+
+    console.warn("❌ No hotel slug found - chat will not work");
     return null;
   };
 
-  
   const hotelSlug = getHotelSlug();
-  
-  console.log('🏨 [MessengerWidget] HotelSlug from backend:', {
+
+  console.log("🏨 [MessengerWidget] HotelSlug from backend:", {
     hotelSlug,
-    channelWillBe: `${hotelSlug}.staff-chat.X`
+    channelWillBe: `${hotelSlug}.staff-chat.X`,
   });
-  
+
   const { registerOpenChatHandler } = useMessenger();
-  
-  const {
-    conversations = [],
-    markConversationRead = () => {},
-  } = useStaffChat();
-  
+
+  const { conversations = [], markConversationRead = () => {} } =
+    useStaffChat();
+
   // Get chat state for unread count badge
   const chatState = useChatState();
-  
+
   // Debug: Log every render to see if hook is working
-  console.log('🔍 [MessengerWidget] useChatState result:', { chatState });
-  
+  console.log("🔍 [MessengerWidget] useChatState result:", { chatState });
+
   // Use the backend-provided unread count from chat state
   const totalUnreadCount = useMemo(() => {
-    console.log('🔍 [MessengerWidget] Getting unread from backend data:', {
+    console.log("🔍 [MessengerWidget] Getting unread from backend data:", {
       chatState: chatState,
       conversationsById: chatState?.conversationsById,
-      totalUnreadOverride: chatState?.totalUnreadOverride
+      totalUnreadOverride: chatState?.totalUnreadOverride,
     });
-    
+
     // First check if backend sent a total unread override
-    if (typeof chatState?.totalUnreadOverride === 'number') {
-      console.log('📈 [MessengerWidget] Using backend total unread override:', chatState.totalUnreadOverride);
+    if (typeof chatState?.totalUnreadOverride === "number") {
+      console.log(
+        "📈 [MessengerWidget] Using backend total unread override:",
+        chatState.totalUnreadOverride
+      );
       return chatState.totalUnreadOverride;
     }
-    
+
     // Otherwise count how many conversations have unread messages (not sum of all messages)
     if (!chatState?.conversationsById) {
-      console.log('❌ [MessengerWidget] No conversations found');
+      console.log("❌ [MessengerWidget] No conversations found");
       return 0;
     }
-    
-    const conversationsWithUnread = Object.values(chatState.conversationsById).filter(conversation => {
+
+    const conversationsWithUnread = Object.values(
+      chatState.conversationsById
+    ).filter((conversation) => {
       const unreadCount = conversation?.unread_count || 0;
       const hasUnread = unreadCount > 0;
-      console.log('📊 [MessengerWidget] Conversation unread check:', { 
-        id: conversation?.id, 
-        unread_count: unreadCount,
-        hasUnread: hasUnread
-      });
+
       return hasUnread;
     }).length;
-    
-    console.log('📈 [MessengerWidget] Conversations with unread messages:', conversationsWithUnread);
+
+    console.log(
+      "📈 [MessengerWidget] Conversations with unread messages:",
+      conversationsWithUnread
+    );
     return conversationsWithUnread;
   }, [chatState?.conversationsById, chatState?.totalUnreadOverride]);
-  
+
   const [searchParams, setSearchParams] = useSearchParams();
   const [internalExpanded, setInternalExpanded] = useState(false);
 
-
-  
   // Debug logging removed to clean up console
   const [showGroupModal, setShowGroupModal] = useState(false);
   // ✅ BETTER FIX: Remove localStorage persistence - keep chat windows session-only
   // This prevents stale conversation IDs and sync issues in realtime chat
   const [openChats, setOpenChats] = useState([]);
   const [currentPage, setCurrentPage] = useState(0); // For navigating through chat groups
-  
+
   // Use controlled or internal state
-  const isExpanded = controlledExpanded !== undefined ? controlledExpanded : internalExpanded;
+  const isExpanded =
+    controlledExpanded !== undefined ? controlledExpanded : internalExpanded;
 
   // ✅ REMOVED: No longer persist open chats to localStorage
   // This prevents stale conversation IDs in realtime chat environment
@@ -163,62 +173,78 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
     // console.log('🎯 handleOpenChat called with:', { conversation, staff });
     // console.log('🎯 Conversation ID:', conversation?.id);
     // console.log('🎯 Current open chats:', openChats);
-    
+
     if (!conversation?.id) {
-      console.error('❌ No conversation ID provided!');
+      console.error("❌ No conversation ID provided!");
       return;
     }
-    
+
     // ✅ FIX: Additional validation - ensure conversation ID is valid
-    if (typeof conversation.id !== 'number' && !Number.isInteger(parseInt(conversation.id))) {
-      console.error('❌ Invalid conversation ID format:', conversation.id);
+    if (
+      typeof conversation.id !== "number" &&
+      !Number.isInteger(parseInt(conversation.id))
+    ) {
+      console.error("❌ Invalid conversation ID format:", conversation.id);
       return;
     }
-    
+
     // Auto-mark conversation as read when opening
     if (conversation.unread_count > 0 || conversation.unreadCount > 0) {
-      console.log('📖 [MessengerWidget] Auto-marking conversation as read:', conversation.id);
+      console.log(
+        "📖 [MessengerWidget] Auto-marking conversation as read:",
+        conversation.id
+      );
       try {
         await markConversationRead(conversation.id);
-        console.log('✅ [MessengerWidget] Conversation marked as read');
+        console.log("✅ [MessengerWidget] Conversation marked as read");
       } catch (error) {
-        console.error('❌ [MessengerWidget] Failed to mark conversation as read:', error);
+        console.error(
+          "❌ [MessengerWidget] Failed to mark conversation as read:",
+          error
+        );
       }
     }
-    
+
     // Check if chat is already open
     // ✅ FIX: Ensure type consistency for conversation ID comparison
     const conversationId = parseInt(conversation.id);
-    const existingChat = openChats.find(chat => parseInt(chat.conversationId) === conversationId);
-    
+    const existingChat = openChats.find(
+      (chat) => parseInt(chat.conversationId) === conversationId
+    );
+
     if (existingChat) {
       //
       // If minimized, restore it
       if (existingChat.isMinimized) {
-        setOpenChats(openChats.map(chat => 
-          parseInt(chat.conversationId) === conversationId 
-            ? { ...chat, isMinimized: false }
-            : chat
-        ));
+        setOpenChats(
+          openChats.map((chat) =>
+            parseInt(chat.conversationId) === conversationId
+              ? { ...chat, isMinimized: false }
+              : chat
+          )
+        );
       }
     } else {
       //
       // Add new chat window (no limit, but only show 3 at a time)
-      setOpenChats([...openChats, {
-        conversationId: conversationId, // ✅ FIX: Use parsed conversationId for consistency
-        conversation,
-        staff,
-        isMinimized: false
-      }]);
-      
+      setOpenChats([
+        ...openChats,
+        {
+          conversationId: conversationId, // ✅ FIX: Use parsed conversationId for consistency
+          conversation,
+          staff,
+          isMinimized: false,
+        },
+      ]);
+
       // Navigate to the page with the new chat
       const newTotalChats = openChats.length + 1;
       const newLastPage = Math.ceil(newTotalChats / CHATS_PER_PAGE) - 1;
       setCurrentPage(newLastPage);
-      
+
       //
     }
-    
+
     // Close the widget after opening chat (both mobile and desktop)
     if (controlledExpanded !== undefined && onExpandChange) {
       onExpandChange(false);
@@ -234,37 +260,53 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
 
   // Handle URL parameter for auto-opening conversations (mobile navigation)
   useEffect(() => {
-    const conversationId = searchParams.get('conversation');
+    const conversationId = searchParams.get("conversation");
     if (conversationId && conversations && conversations.length > 0) {
-      console.log('🔗 [MessengerWidget] Auto-opening conversation from URL:', conversationId);
-      
+      console.log(
+        "🔗 [MessengerWidget] Auto-opening conversation from URL:",
+        conversationId
+      );
+
       // Find the conversation by ID
-      const targetConversation = conversations.find(c => c.id === parseInt(conversationId));
-      
+      const targetConversation = conversations.find(
+        (c) => c.id === parseInt(conversationId)
+      );
+
       if (targetConversation) {
-        console.log('✅ [MessengerWidget] Found conversation for auto-open:', targetConversation);
-        
+        console.log(
+          "✅ [MessengerWidget] Found conversation for auto-open:",
+          targetConversation
+        );
+
         // Open the conversation (this will also mark it as read)
         handleOpenChat(targetConversation, null);
-        
+
         // Clear the URL parameter so it doesn't auto-open again
-        setSearchParams(params => {
-          params.delete('conversation');
+        setSearchParams((params) => {
+          params.delete("conversation");
           return params;
         });
       } else {
-        console.warn('⚠️ [MessengerWidget] Conversation not found for auto-open:', conversationId);
+        console.warn(
+          "⚠️ [MessengerWidget] Conversation not found for auto-open:",
+          conversationId
+        );
       }
     }
   }, [searchParams, conversations, handleOpenChat, setSearchParams]);
 
-  console.log('🏨 [MessengerWidget] Always rendering - hotelSlug:', hotelSlug, 'user:', user?.id);
-  
+  console.log(
+    "🏨 [MessengerWidget] Always rendering - hotelSlug:",
+    hotelSlug,
+    "user:",
+    user?.id
+  );
+
   // Now we always have a hotelSlug, so always render the full widget
 
   const toggleWidget = () => {
     const newExpandedState = !isExpanded;
-    
+
     // If controlled, notify parent
     if (controlledExpanded !== undefined && onExpandChange) {
       onExpandChange(newExpandedState);
@@ -277,12 +319,14 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   const handleMinimizeChat = (conversationId) => {
     // ✅ FIX: Ensure type consistency for conversation ID comparison
     const numericConversationId = parseInt(conversationId);
-    setOpenChats(openChats.map(chat => 
-      parseInt(chat.conversationId) === numericConversationId 
-        ? { ...chat, isMinimized: !chat.isMinimized }
-        : chat
-    ));
-    
+    setOpenChats(
+      openChats.map((chat) =>
+        parseInt(chat.conversationId) === numericConversationId
+          ? { ...chat, isMinimized: !chat.isMinimized }
+          : chat
+      )
+    );
+
     // Collapse the widget when minimizing/maximizing a chat
     if (controlledExpanded !== undefined && onExpandChange) {
       onExpandChange(false);
@@ -294,7 +338,11 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   const handleCloseChat = (conversationId) => {
     // ✅ FIX: Ensure type consistency for conversation ID comparison
     const numericConversationId = parseInt(conversationId);
-    setOpenChats(openChats.filter(chat => parseInt(chat.conversationId) !== numericConversationId));
+    setOpenChats(
+      openChats.filter(
+        (chat) => parseInt(chat.conversationId) !== numericConversationId
+      )
+    );
   };
 
   const handleNextPage = () => {
@@ -319,17 +367,17 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
 
   const handleGroupCreated = (conversation) => {
     // console.log('✅ Group created:', conversation);
-    
+
     // Open the newly created group chat
     handleOpenChat(conversation, null);
-    
+
     // Close the modal
     setShowGroupModal(false);
   };
 
   const positionClasses = {
-    'bottom-right': 'messenger-widget--bottom-right',
-    'bottom-left': 'messenger-widget--bottom-left'
+    "bottom-right": "messenger-widget--bottom-right",
+    "bottom-left": "messenger-widget--bottom-left",
   };
 
   // console.log('🎨 MessengerWidget render - openChats:', openChats);
@@ -339,20 +387,35 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
   return (
     <>
       {/* Main Widget - Always shows header at bottom */}
-      <div 
-        key={`messenger-widget-${conversations.length}`} 
-        className={`messenger-widget  ${positionClasses[position]} ${isExpanded ? 'messenger-widget--expanded' : ''}`}
+      <div
+        key={`messenger-widget-${conversations.length}`}
+        className={`messenger-widget  ${positionClasses[position]} ${
+          isExpanded ? "messenger-widget--expanded" : ""
+        }`}
       >
         <div className="messenger-widget__panel bg-light">
           {/* Header - Always visible, acts as toggle */}
-          <div 
+          <div
             className="messenger-widget__header text-white main-bg"
             onClick={toggleWidget}
-            style={{ cursor: 'pointer' }}
+            style={{ cursor: "pointer" }}
           >
-            <div className="messenger-widget__title-row" style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+            <div
+              className="messenger-widget__title-row"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                position: "relative",
+              }}
+            >
               <h3 className="messenger-widget__title" style={{ margin: 0 }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ marginRight: '8px' }}>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style={{ marginRight: "8px" }}
+                >
                   <path
                     d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
                     fill="currentColor"
@@ -365,48 +428,72 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
               </h3>
               {/* Unread Count Badge */}
               {totalUnreadCount > 0 && (
-                <span 
-                  className="unread-badge"
+                <div className="mx-2"
                   style={{
-                    backgroundColor: '#dc3545',
-                    color: 'white',
-                    borderRadius: '10px',
-                    padding: '2px 6px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    minWidth: '18px',
-                    height: '18px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginLeft: '8px',
-                    lineHeight: '1'
+                    display: "flex",
+                    alignItems: "center",
+                    backgroundColor: "#2b2b2b", // PARENT BACKGROUND (3rd)
+                    borderRadius: "12px",
+                    padding: "3px 8px",
+                    gap: "6px",
                   }}
                 >
-                  {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-                </span>
+                  {/* LEFT TEXT */}
+                  <span
+                    style={{
+                      color: "#ffffff", // TEXT COLOR (1st)
+                      fontWeight: "600",
+                      fontSize: "12px",
+                    }}
+                  >
+                    Unread Conversations
+                  </span>
+
+                  {/* NUMBER BADGE */}
+                  <span
+                    style={{
+                      backgroundColor: "#dc3545", // BADGE BACKGROUND (2nd)
+                      color: "#ffe680", // NUMBER COLOR
+                      borderRadius: "8px",
+                      padding: "2px 6px",
+                      fontWeight: "700",
+                      fontSize: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      minWidth: "20px",
+                    }}
+                  >
+                    {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
+                  </span>
+                </div>
               )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               {/* Dropdown Menu - Only show when expanded */}
               {isExpanded && (
                 <Dropdown onClick={(e) => e.stopPropagation()}>
-                  <Dropdown.Toggle 
-                    variant="link" 
+                  <Dropdown.Toggle
+                    variant="link"
                     className="p-0 border-0 text-white"
-                    style={{ 
-                      boxShadow: 'none',
-                      background: 'transparent',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '50%',
-                      transition: 'background 0.2s'
+                    style={{
+                      boxShadow: "none",
+                      background: "transparent",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "28px",
+                      height: "28px",
+                      borderRadius: "50%",
+                      transition: "background 0.2s",
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background =
+                        "rgba(255, 255, 255, 0.2)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "transparent")
+                    }
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                       <circle cx="12" cy="5" r="2" fill="currentColor" />
@@ -415,37 +502,42 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
                     </svg>
                   </Dropdown.Toggle>
 
-                  <Dropdown.Menu 
+                  <Dropdown.Menu
                     align="end"
                     className="shadow-sm"
-                    style={{ minWidth: '180px' }}
+                    style={{ minWidth: "180px" }}
                   >
-                    <Dropdown.Item 
+                    <Dropdown.Item
                       onClick={(e) => {
                         e.stopPropagation();
                         handleOpenGroupModal();
                       }}
                       className="d-flex align-items-center gap-2"
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path 
-                          d="M17 11a1 1 0 0 1 0 2h-4v4a1 1 0 0 1-2 0v-4H7a1 1 0 0 1 0-2h4V7a1 1 0 0 1 2 0v4h4z" 
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M17 11a1 1 0 0 1 0 2h-4v4a1 1 0 0 1-2 0v-4H7a1 1 0 0 1 0-2h4V7a1 1 0 0 1 2 0v4h4z"
                           fill="currentColor"
                         />
-                        <path 
-                          d="M9 2C7.34315 2 6 3.34315 6 5C6 6.65685 7.34315 8 9 8C10.6569 8 12 6.65685 12 5C12 3.34315 10.6569 2 9 2Z" 
+                        <path
+                          d="M9 2C7.34315 2 6 3.34315 6 5C6 6.65685 7.34315 8 9 8C10.6569 8 12 6.65685 12 5C12 3.34315 10.6569 2 9 2Z"
                           fill="currentColor"
                         />
-                        <path 
-                          d="M15 4C15 2.89543 15.8954 2 17 2C18.1046 2 19 2.89543 19 4C19 5.10457 18.1046 6 17 6C15.8954 6 15 5.10457 15 4Z" 
+                        <path
+                          d="M15 4C15 2.89543 15.8954 2 17 2C18.1046 2 19 2.89543 19 4C19 5.10457 18.1046 6 17 6C15.8954 6 15 5.10457 15 4Z"
                           fill="currentColor"
                         />
-                        <path 
-                          d="M6 10.5C4.067 10.5 2.5 12.067 2.5 14V15.5C2.5 16.8807 3.61929 18 5 18H9.17071C8.42384 17.0534 8 15.8801 8 14.6V14C8 12.067 9.567 10.5 11.5 10.5H6Z" 
+                        <path
+                          d="M6 10.5C4.067 10.5 2.5 12.067 2.5 14V15.5C2.5 16.8807 3.61929 18 5 18H9.17071C8.42384 17.0534 8 15.8801 8 14.6V14C8 12.067 9.567 10.5 11.5 10.5H6Z"
                           fill="currentColor"
                         />
-                        <path 
-                          d="M17.8293 18H22C23.3807 18 24.5 16.8807 24.5 15.5V14C24.5 12.067 22.933 10.5 21 10.5H15.5C14.5 10.5 13.6 10.9 13 11.5" 
+                        <path
+                          d="M17.8293 18H22C23.3807 18 24.5 16.8807 24.5 15.5V14C24.5 12.067 22.933 10.5 21 10.5H15.5C14.5 10.5 13.6 10.9 13 11.5"
                           fill="currentColor"
                         />
                       </svg>
@@ -501,7 +593,11 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
       {hasMultiplePages && (
         <>
           {/* Navigation Arrows */}
-          <div className={`chat-nav-controls ${hasMultiplePages ? 'chat-nav-controls--visible' : ''}`}>
+          <div
+            className={`chat-nav-controls ${
+              hasMultiplePages ? "chat-nav-controls--visible" : ""
+            }`}
+          >
             <button
               className="chat-nav-btn"
               onClick={handlePrevPage}
@@ -537,8 +633,13 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
           </div>
 
           {/* Chat Counter */}
-          <div className={`chat-counter ${hasMultiplePages ? 'chat-counter--visible' : ''}`}>
-            {startIndex + 1}-{Math.min(endIndex, openChats.length)} of {openChats.length}
+          <div
+            className={`chat-counter ${
+              hasMultiplePages ? "chat-counter--visible" : ""
+            }`}
+          >
+            {startIndex + 1}-{Math.min(endIndex, openChats.length)} of{" "}
+            {openChats.length}
           </div>
         </>
       )}
@@ -547,7 +648,7 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
       {openChats.map((chat, globalIndex) => {
         const isVisible = globalIndex >= startIndex && globalIndex < endIndex;
         const visibleIndex = globalIndex - startIndex;
-        
+
         return (
           <ChatWindowPopup
             key={chat.conversationId}
@@ -577,9 +678,9 @@ const MessengerWidget = ({ position = 'bottom-right', isExpanded: controlledExpa
 };
 
 MessengerWidget.propTypes = {
-  position: PropTypes.oneOf(['bottom-right', 'bottom-left']),
+  position: PropTypes.oneOf(["bottom-right", "bottom-left"]),
   isExpanded: PropTypes.bool,
-  onExpandChange: PropTypes.func
+  onExpandChange: PropTypes.func,
 };
 
 export default MessengerWidget;

@@ -556,10 +556,7 @@ const ChatWindowPopup = ({
 
   // Mark ALL messages as read when user focuses input (handles new messages while popup was open)
   const handleInputFocus = async () => {
-    console.log('🎯🎯🎯 [POPUP MARK ALL] Input focused, marking conversation as read');
-    console.log('🎯 [POPUP MARK ALL] Conversation ID:', conversation?.id);
-    console.log('🎯 [POPUP MARK ALL] Current unread count:', conversation?.unread_count || 0);
-    console.log('🎯 [POPUP MARK ALL] Messages count:', messages.length);
+ ;
 
     try {
       // Set this conversation as active to prevent notifications
