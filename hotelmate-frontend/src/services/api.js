@@ -29,7 +29,12 @@ const baseURL = (() => {
   // Fallback to production URL
   return "https://hotel-porter-d25ad83b12cf.herokuapp.com/api";
 })();
-
+console.log("[API INIT]", {
+  platform,
+  isNative,
+  origin: window.location.origin,
+  baseURL,
+});
 const api = axios.create({
   baseURL,
   timeout: 30000,
