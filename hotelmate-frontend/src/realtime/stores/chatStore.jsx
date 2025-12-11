@@ -695,6 +695,7 @@ export const chatActions = {
             message: text,
             sender: payload.sender_id ?? payload.sender,
             sender_name: payload.sender_name ?? payload.sender_info?.name,
+            sender_avatar: payload.sender_avatar,
             timestamp: payload.timestamp,
             conversation: numericConversationId,
             attachments: normalizedAttachments,

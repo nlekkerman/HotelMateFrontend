@@ -12,6 +12,7 @@ const MessageBubble = ({
   timestamp,
   isOwn = false,
   senderName = null,
+  senderAvatar = null,
   replyTo = null,
   isEdited = false,
   isDeleted = false,
@@ -478,6 +479,8 @@ MessageBubble.propTypes = {
   isOwn: PropTypes.bool,
   /** Sender's name to display */
   senderName: PropTypes.string,
+  /** Sender's avatar URL */
+  senderAvatar: PropTypes.string,
   /** Reply information if this is a reply */
   replyTo: PropTypes.shape({
     id: PropTypes.number,

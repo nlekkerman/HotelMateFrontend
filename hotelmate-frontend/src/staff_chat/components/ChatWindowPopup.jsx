@@ -799,6 +799,11 @@ const ChatWindowPopup = ({
                     message.sender_info?.full_name ||
                     "Unknown";
 
+                  const senderAvatar =
+                    message.sender_avatar ||
+                    message.sender_info?.avatar_url ||
+                    null;
+
                   // USE LIVE readReceipts STATE FOR REAL-TIME UPDATES!
                   const receipt = readReceipts[message.id];
                   const readByList =
@@ -848,6 +853,7 @@ const ChatWindowPopup = ({
                           timestamp={messageTime}
                           isOwn={isOwn}
                           senderName={senderName}
+                          senderAvatar={senderAvatar}
                           replyTo={message.reply_to_message || message.reply_to}
                           isEdited={message.is_edited}
                           isDeleted={message.is_deleted}
