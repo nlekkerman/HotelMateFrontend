@@ -71,19 +71,10 @@ async function bootstrap() {
         } else if (notificationType === "staff_chat_message" && payload?.notification) {
           // ✅ NEW: show staff chat push notification
           console.log("🔔 [FCM] Staff chat notification");
-          console.log("🔔 [FCM] Calling showNotification with:", {
-            title: payload.notification.title,
-            body: payload.notification.body,
-            icon: "/favicons/favicon.svg"
-          });
           showNotification(payload.notification.title, {
             body: payload.notification.body,
             icon: "/favicons/favicon.svg",
-          }).then(result => {
-            console.log("✅ [FCM] showNotification SUCCESS:", result);
-          }).catch(error => {
-            console.error("❌ [FCM] showNotification FAILED:", error);
-          });
+          }).catch(console.error);
 
         } else if (hasOrderId && payload?.notification) {
           console.log("🔔 [FCM] Legacy order status notification for order:", payload.data.order_id);

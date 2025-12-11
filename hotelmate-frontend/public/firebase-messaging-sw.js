@@ -32,7 +32,13 @@ messaging.onBackgroundMessage((payload) => {
     tag: payload.data?.type || 'notification',
   };
 
-  return self.registration.showNotification(notificationTitle, notificationOptions);
+  console.log('[SW] About to show notification:', { title: notificationTitle, options: notificationOptions });
+  
+  return self.registration.showNotification(notificationTitle, notificationOptions).then(() => {
+    console.log('[SW] ✅ Notification shown successfully');
+  }).catch(error => {
+    console.error('[SW] ❌ Failed to show notification:', error);
+  });
 });
 
 // Handle notification clicks

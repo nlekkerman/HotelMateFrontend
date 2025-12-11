@@ -893,6 +893,40 @@ export const chatActions = {
         break;
       }
 
+      case 'realtime_staff_chat_conversations_with_unread': {
+        console.log('📊 [chatStore] Processing conversations_with_unread:', payload);
+        
+        // Extract conversations_with_unread count from payload
+        const { conversations_with_unread, updated_at } = payload;
+        
+        if (typeof conversations_with_unread === 'number') {
+          console.log('📊 [chatStore] Updating conversation count badge:', conversations_with_unread);
+          
+          // Force MessengerWidget to update by dispatching a state change
+          // This event doesn't change individual conversation data, just triggers UI update
+          globalChatDispatch({
+            type: 'UPDATE_EVENT_TIMESTAMPS',
+            payload: {
+              lastEventTimestamps: {
+                [`conversations_with_unread_${Date.now()}`]: Date.now()
+              }
+            }
+          });
+          
+          // Emit custom event for MessengerWidget to listen to
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('conversationsWithUnreadUpdate', {
+              detail: {
+                conversationsWithUnread: conversations_with_unread,
+                updatedAt: updated_at
+              }
+            }));
+          }
+        }
+        
+        break;
+      }
+
       default:
         // Filter out Pusher system events (pusher:subscription_succeeded, etc.)
         if (eventType?.startsWith('pusher:')) {

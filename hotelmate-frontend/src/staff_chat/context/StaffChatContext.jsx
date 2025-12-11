@@ -71,6 +71,12 @@ export const StaffChatProvider = ({ children }) => {
   const markConversationRead = async (conversationId) => {
     if (!conversationId) return;
     try {
+      // Update local state immediately
+      chatDispatch({
+        type: CHAT_ACTIONS.MARK_CONVERSATION_READ,
+        payload: { conversationId }
+      });
+      
       await markConversationAsRead(hotelSlug, conversationId);
       console.log('[StaffChatContext] markConversationRead awaiting backend sync', { conversationId });
     } catch (err) {
