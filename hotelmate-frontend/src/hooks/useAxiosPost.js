@@ -1,6 +1,5 @@
 import { useState } from "react";
-import axios from "axios"; // Import raw axios
-import api from "@/services/api"; // Your custom axios with interceptors
+import api, { publicAPI } from "@/services/api"; // Centralized API services
 
 function useAxiosPost(endpoint) {
   const [data, setData] = useState(null);
@@ -12,27 +11,18 @@ function useAxiosPost(endpoint) {
     setError(null);
 
     try {
-      // Use raw axios (no auth) for login and register endpoints
-      const client = (endpoint === "staff/login/" || endpoint === "/staff/register/") ? axios : api;
+      // Use publicAPI for unauthenticated endpoints (login/register), otherwise use api
+      const client = (endpoint === "staff/login/" || endpoint === "/staff/register/") ? publicAPI : api;
       
-      // Get base URL - ensure it ends with /api or /api/
-      let baseURL = import.meta.env.VITE_API_URL || "https://hotel-porter-d25ad83b12cf.herokuapp.com/api";
-      
-      // Ensure baseURL ends with /
-      if (!baseURL.endsWith('/')) {
-        baseURL += '/';
-      }
-      
-      // Remove leading slash from endpoint if present
-      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+      // Ensure endpoint starts with / for proper API routing
+      const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
       
       console.log('🔗 API Request:', {
-        baseURL,
-        endpoint: cleanEndpoint,
-        fullURL: `${baseURL}${cleanEndpoint}`
+        client: client === publicAPI ? 'publicAPI' : 'api',
+        endpoint: cleanEndpoint
       });
       
-      const response = await client.post(`${baseURL}${cleanEndpoint}`, postData, {
+      const response = await client.post(cleanEndpoint, postData, {
         headers: {
           "Content-Type": "application/json",
         },

@@ -1,40 +1,6 @@
-import axios from "axios";
+import { publicAPI } from "./api";
 
-// Public API service for tournament QR code access - no authentication required
-const baseURL =
-  window.location.hostname === "localhost"
-    ? "http://127.0.0.1:8000/api/" // Local dev
-    : import.meta.env.VITE_API_URL || "https://hotel-porter-d25ad83b12cf.herokuapp.com/api/";
-
-const publicApi = axios.create({
-  baseURL,
-  timeout: 30000,
-});
-
-// No authentication interceptor for public endpoints
-publicApi.interceptors.request.use(
-  (config) => {
-    // Only add hotel context if available, but don't require authentication
-    const storedUser = localStorage.getItem("user");
-    const userData = storedUser ? JSON.parse(storedUser) : null;
-
-    const hotelId = userData?.hotel_id || null;
-    const hotelSlug = userData?.hotel_slug || null;
-
-    if (hotelId) {
-      config.headers["X-Hotel-ID"] = hotelId.toString();
-    }
-
-    if (hotelSlug) {
-      config.headers["X-Hotel-Slug"] = hotelSlug;
-    }
-
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+// Use centralized publicAPI from api.js for consistency and Capacitor support
 
 // API Methods for Public Hotel Page
 export const publicHotelPageAPI = {
@@ -45,7 +11,7 @@ export const publicHotelPageAPI = {
    */
   getHotels: async (params = {}) => {
     try {
-      const response = await publicApi.get('/public/hotels/', { params });
+      const response = await publicAPI.get('/public/hotels/', { params });
       return response.data;
     } catch (error) {
       console.error('[PublicAPI] Failed to fetch hotels:', error);
@@ -59,7 +25,7 @@ export const publicHotelPageAPI = {
    */
   getFilterOptions: async () => {
     try {
-      const response = await publicApi.get('/public/hotels/filters/');
+      const response = await publicAPI.get('/public/hotels/filters/');
       return response.data;
     } catch (error) {
       console.error('[PublicAPI] Failed to fetch filter options:', error);
@@ -74,7 +40,7 @@ export const publicHotelPageAPI = {
    */
   getHotelPage: async (slug) => {
     try {
-      const response = await publicApi.get(`/public/hotel/${slug}/page/`);
+      const response = await publicAPI.get(`/public/hotel/${slug}/page/`);
       return response.data;
     } catch (error) {
       console.error(`[PublicAPI] Failed to fetch hotel page for ${slug}:`, error);

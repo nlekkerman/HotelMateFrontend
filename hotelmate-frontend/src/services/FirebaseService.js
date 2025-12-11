@@ -1,6 +1,6 @@
 import { getToken, onMessage } from 'firebase/messaging';
 import { messaging } from '../firebase';
-import axios from 'axios';
+import api from './api';
 import { showNotification, canShowNotifications } from '@/utils/notificationUtils';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -156,17 +156,11 @@ class FirebaseService {
       }
 
       console.log('🔑 Auth token found:', authToken.substring(0, 20) + '...');
-      console.log('🌐 API URL:', `${API_BASE_URL}/api/staff/save-fcm-token/`);
+      console.log('🌐 Using centralized api service for FCM token');
 
-      const response = await axios.post(
-        `${API_BASE_URL}/api/staff/save-fcm-token/`,
-        { fcm_token: fcmToken },
-        {
-          headers: {
-            'Authorization': `Token ${authToken}`,
-            'Content-Type': 'application/json',
-          },
-        }
+      const response = await api.post(
+        '/staff/save-fcm-token/',
+        { fcm_token: fcmToken }
       );
 
       console.log('✅ FCM token saved to backend successfully!');
@@ -299,15 +293,9 @@ class FirebaseService {
         const authToken = user.token;
         
         if (authToken) {
-          await axios.post(
-            `${API_BASE_URL}/api/staff/save-fcm-token/`,
-            { fcm_token: null },
-            {
-              headers: {
-                'Authorization': `Token ${authToken}`,
-                'Content-Type': 'application/json',
-              },
-            }
+          await api.post(
+            '/staff/save-fcm-token/',
+            { fcm_token: null }
           );
         }
       }

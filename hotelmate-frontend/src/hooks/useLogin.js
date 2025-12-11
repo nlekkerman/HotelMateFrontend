@@ -1,9 +1,7 @@
 import { useState } from "react";
-import axios from "axios";
+import { publicAPI } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 import { requestFirebaseNotificationPermission } from "@/utils/firebaseNotifications";
-
-const LOGIN_ENDPOINT = `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/staff/login/`;
 
 export default function useLogin() {
   const [loading, setLoading] = useState(false);
@@ -16,8 +14,8 @@ export default function useLogin() {
 
 
     try {
-      const { data } = await axios.post(
-        LOGIN_ENDPOINT,
+      const { data } = await publicAPI.post(
+        "/staff/login/",
         { username, password },
         { headers: { "Content-Type": "application/json" } }
       );

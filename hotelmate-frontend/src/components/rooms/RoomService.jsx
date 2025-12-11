@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import api, { setHotelIdentifier } from "@/services/apiWithHotel";
+import api from "@/services/api";
 import { toast } from "react-toastify";
 import DeletionModal from "@/components/modals/DeletionModal";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
@@ -329,7 +329,6 @@ export default function RoomService({ isAdmin }) {
 
   useEffect(() => {
     if (!roomNumber || !hotelIdentifier) return;
-    setHotelIdentifier(hotelIdentifier);
     // Fetch menu
     api
       .get(`/room_services/${hotelIdentifier}/room/${roomNumber}/menu/`)
@@ -446,8 +445,6 @@ export default function RoomService({ isAdmin }) {
     };
 
     try {
-      setHotelIdentifier(hotelIdentifier);
-
       // POST to hotel-scoped orders endpoint
       const orderResp = await api.post(
         `/room_services/${hotelIdentifier}/orders/`,

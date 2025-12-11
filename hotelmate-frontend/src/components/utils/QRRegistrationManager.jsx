@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '@/services/api';
 
 const QRRegistrationManager = () => {
   const [loading, setLoading] = useState(false);
@@ -7,21 +7,7 @@ const QRRegistrationManager = () => {
   const [packages, setPackages] = useState([]);
   const [currentPackage, setCurrentPackage] = useState(null);
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://hotel-porter-d25ad83b12cf.herokuapp.com/api';
-
-  // Get auth headers
-  const getAuthHeaders = () => {
-    const storedUser = localStorage.getItem('user');
-    const userData = storedUser ? JSON.parse(storedUser) : null;
-    const token = userData?.token;
-    const hotelSlug = userData?.hotel_slug;
-
-    return {
-      'Authorization': token ? `Token ${token}` : '',
-      'Content-Type': 'application/json',
-      'X-Hotel-Slug': hotelSlug || '',
-    };
-  };
+  // Auth headers and base URL are now handled automatically by api.js service
 
   // Generate a new registration package
   const generatePackage = async () => {
@@ -39,10 +25,9 @@ const QRRegistrationManager = () => {
 
       console.log('🎫 Generating registration package for:', hotelSlug);
 
-      const response = await axios.post(
-        `${API_BASE_URL}/staff/registration-package/`,
-        { hotel_slug: hotelSlug },
-        { headers: getAuthHeaders() }
+      const response = await api.post(
+        '/staff/registration-package/',
+        { hotel_slug: hotelSlug }
       );
 
       console.log('✅ Package generated:', response.data);

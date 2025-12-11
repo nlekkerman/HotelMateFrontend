@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import api, { setHotelIdentifier } from '@/services/apiWithHotel';
+import api from '@/services/api';
 import { useRoomServiceState } from '@/realtime/stores/roomServiceStore';
 import { roomServiceActions } from '@/realtime/stores/roomServiceStore';
 import { toast } from 'react-toastify';
@@ -27,8 +27,6 @@ export default function OrdersSummary() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      setHotelIdentifier(hotelIdentifier);
-      
       const params = new URLSearchParams();
       params.append('page', filters.page);
       params.append('page_size', filters.page_size);

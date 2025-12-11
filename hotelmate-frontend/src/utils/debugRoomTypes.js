@@ -3,18 +3,16 @@
  * This is a temporary file to debug the room types data structure
  */
 
+import { publicAPI } from '@/services/api';
+
 export const debugRoomTypesAPI = async (hotelSlug) => {
   try {
     console.log(`[Debug] 🔍 Fetching room types for hotel: ${hotelSlug}`);
     
-    // Try the public API endpoint from the guide
-    const response = await fetch(`/api/public/hotel/${hotelSlug}/page/`);
+    // Use centralized publicAPI service
+    const response = await publicAPI.get(`/public/hotel/${hotelSlug}/page/`);
     
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
+    const data = response.data;
     
     console.log('[Debug] 📦 Full API Response:', JSON.stringify(data, null, 2));
     

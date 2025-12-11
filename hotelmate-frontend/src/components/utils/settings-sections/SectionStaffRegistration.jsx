@@ -9,20 +9,7 @@ export default function SectionStaffRegistration() {
   const [requireBoth, setRequireBoth] = useState(true);
   const [hasExpiration, setHasExpiration] = useState(false);
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://hotel-porter-d25ad83b12cf.herokuapp.com/api';
-
-  const getAuthHeaders = () => {
-    const storedUser = localStorage.getItem('user');
-    const userData = storedUser ? JSON.parse(storedUser) : null;
-    const token = userData?.token;
-    const hotelSlug = userData?.hotel_slug;
-
-    return {
-      'Authorization': token ? `Token ${token}` : '',
-      'Content-Type': 'application/json',
-      'X-Hotel-Slug': hotelSlug || '',
-    };
-  };
+  // Auth headers and base URL are now handled automatically by api.js service
 
   const generatePackage = async () => {
     setLoading(true);
@@ -37,10 +24,9 @@ export default function SectionStaffRegistration() {
         throw new Error('Hotel slug not found. Please log in again.');
       }
 
-      const response = await axios.post(
-        `${API_BASE_URL}/staff/registration-package/`,
-        { hotel_slug: hotelSlug },
-        { headers: getAuthHeaders() }
+      const response = await api.post(
+        '/staff/registration-package/',
+        { hotel_slug: hotelSlug }
       );
 
       setCurrentPackage(response.data);
