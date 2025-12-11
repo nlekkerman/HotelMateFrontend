@@ -18,12 +18,6 @@ function RealtimeManager({ children }) {
   const cleanupRef = useRef(null);
 
   useEffect(() => {
-    // Clean up previous subscriptions
-    if (cleanupRef.current) {
-      cleanupRef.current();
-      cleanupRef.current = null;
-    }
-
     // Determine hotel slug - can come from selectedHotel or user data
     let hotelSlug = null;
     if (selectedHotel?.slug) {
@@ -46,22 +40,31 @@ function RealtimeManager({ children }) {
       hasSelectedHotel: !!selectedHotel 
     });
 
-    // Subscribe to channels if we have hotel info
-    if (hotelSlug) {
+    // Only subscribe if we don't already have an active subscription for this hotel/staff
+    if (hotelSlug && !cleanupRef.current) {
       console.log('🚀 Starting realtime subscriptions for hotel:', hotelSlug);
       cleanupRef.current = subscribeBaseHotelChannels({ hotelSlug, staffId });
-    } else {
+    } else if (!hotelSlug) {
       console.log('⚠️ No hotel slug available, skipping subscriptions');
+      // Clean up if we had subscriptions but no longer have hotel info
+      if (cleanupRef.current) {
+        console.log('🧹 Cleaning up subscriptions - no hotel slug');
+        cleanupRef.current();
+        cleanupRef.current = null;
+      }
+    } else {
+      console.log('📡 Realtime subscriptions already active for hotel:', hotelSlug);
     }
 
-    // Cleanup on unmount or dependency change
+    // Cleanup on unmount only
     return () => {
       if (cleanupRef.current) {
+        console.log('🧹 Component unmounting - cleaning up subscriptions');
         cleanupRef.current();
         cleanupRef.current = null;
       }
     };
-  }, [user, selectedHotel]);
+  }, [selectedHotel?.slug, user?.hotel_slug, user?.staff_id, user?.id, user?.is_staff, user?.role, user?.isStaff]);
 
   return children;
 }
