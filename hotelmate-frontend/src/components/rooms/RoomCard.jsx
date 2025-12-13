@@ -6,6 +6,7 @@ import { useSingleRoomQrPdfPrinter } from "@/components/rooms/hooks/useSingleRoo
 const RoomCard = ({ room, selectedRooms, onSelect }) => {
   const navigate = useNavigate();
   const [qrType, setQrType] = useState("");
+  const [isHovering, setIsHovering] = useState(false);
   const { generateSingleRoomQrPdf } = useSingleRoomQrPdfPrinter();
 
   const handleQrChange = (e) => setQrType(e.target.value);
@@ -26,15 +27,63 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
     return acc;
   }, {});
 
+  const calculateStayDuration = (checkInDate) => {
+    if (!checkInDate) return 'Unknown';
+    const checkIn = new Date(checkInDate);
+    const now = new Date();
+    const diffTime = Math.abs(now - checkIn);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays === 1 ? '1 day' : `${diffDays} days`;
+  };
+
   return (
-    <div
-      className="col"
-      style={{ cursor: "pointer" }}
-      onClick={() =>
-        navigate(`/rooms/${room.hotel_slug}/rooms/${room.room_number}`)
-      }
-    >
-      <div className="card h-100 shadow-sm">
+    <div className="col">
+      <div 
+        className="card h-100 shadow-sm position-relative"
+        style={{ cursor: "pointer" }}
+        onClick={() => navigate(`/rooms/${room.hotel_slug}/rooms/${room.room_number}`)}
+      >
+        {/* Hover Overlay for Occupied Rooms */}
+        {room.is_occupied && isHovering && (
+          <div 
+            className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center main-bg"
+            style={{
+              zIndex: 10,
+              borderRadius: 'inherit',
+              pointerEvents: 'none'
+            }}
+          >
+            <div className="text-center text-white p-3">
+              <h4 className="mb-3">
+                <i className="bi bi-person-fill me-2" />
+                Guest Information
+              </h4>
+              {room.guests_in_room && room.guests_in_room.map((guest, index) => (
+                <div key={guest.id || index} className="mb-3">
+                  <h5 className="text-light">
+                    {guest.first_name} {guest.last_name}
+                  </h5>
+                  <p className="mb-1">
+                    <i className="bi bi-calendar-check me-2" />
+                    Staying: {calculateStayDuration(guest.check_in_date || guest.created_at)}
+                  </p>
+                  {guest.check_in_date && (
+                    <small className="text-light opacity-75">
+                      Since: {new Date(guest.check_in_date).toLocaleDateString()}
+                    </small>
+                  )}
+                </div>
+              ))}
+              <div className="mt-3">
+                <small className="text-light opacity-75">
+                  <i className="bi bi-cursor-pointer me-1" />
+                  Click to view room details
+                </small>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="card-body d-flex flex-column">
           <h5 className="card-title mb-3 text-center text-white fw-bold py-2 main-bg">
             Room {room.room_number}
@@ -100,9 +149,21 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
           </div>
 
           {room.is_occupied && (
-            <div className="text-danger text-center mt-1">
-              Room is already occupied
-            </div>
+            room.guests_in_room.map((guest) => (
+                    <span 
+                      key={guest.id} 
+                      className="bg-danger text-white border text-center p-1 rounded-pill"
+                      style={{ cursor: "pointer" }}
+                      onMouseEnter={() => setIsHovering(true)}
+                      onMouseLeave={() => setIsHovering(false)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/rooms/${room.hotel_slug}/rooms/${room.room_number}`);
+                      }}
+                    >
+                     OCCUPIED
+                    </span>
+                  ))
           )}
         </div>
       </div>

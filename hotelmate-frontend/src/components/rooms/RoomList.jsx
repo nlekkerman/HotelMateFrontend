@@ -120,7 +120,7 @@ function RoomList() {
         </button>
       )}
 
-      <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-2">
+      <div className="row row-cols-1 row-cols-md-2 row-cols-lg-5 justify-content-center g-2">
         {localRooms.map((room) => (
           <RoomCard
             key={room.id}
