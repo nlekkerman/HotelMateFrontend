@@ -1,3 +1,5 @@
+import { publicAPI } from './api';
+
 /**
  * Presets Service
  * Manages preset configurations for all public page elements
@@ -23,25 +25,8 @@ class PresetsService {
     this.error = null;
     
     try {
-      const baseURL = window.location.hostname === "localhost"
-        ? "http://127.0.0.1:8000/api/"
-        : import.meta.env.VITE_API_URL || "https://hotel-porter-d25ad83b12cf.herokuapp.com/api/";
-      
-      const response = await fetch(`${baseURL}public/presets/`);
-      
-      if (!response.ok) {
-        // If presets endpoint doesn't exist, return empty presets
-        console.warn('[PresetsService] Presets endpoint not available, using fallback');
-        this.presets = {
-          section: {},
-          card: [],
-          room_card: [],
-          image: []
-        };
-        return this.presets;
-      }
-      
-      this.presets = await response.json();
+      const response = await publicAPI.get('/public/presets/');
+      this.presets = response.data;
       return this.presets;
     } catch (error) {
       console.warn('[PresetsService] Failed to fetch presets, using fallback:', error);

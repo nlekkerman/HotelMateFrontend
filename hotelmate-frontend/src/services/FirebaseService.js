@@ -3,7 +3,6 @@ import { messaging } from '../firebase';
 import api from './api';
 import { showNotification, canShowNotifications } from '@/utils/notificationUtils';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 // VAPID key from Firebase Console -> Project Settings -> Cloud Messaging -> Web Push certificates
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
