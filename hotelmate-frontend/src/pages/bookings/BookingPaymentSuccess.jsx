@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Container, Card, Spinner, Alert, Button } from 'react-bootstrap';
-import api from '@/services/api';
+import { publicAPI } from '@/services/api';
 
 /**
  * BookingPaymentSuccess - Handle successful Stripe payment redirect
@@ -10,65 +10,80 @@ const BookingPaymentSuccess = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const bookingId = searchParams.get('booking_id');
+  const sessionId = searchParams.get('session_id');
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(null);
   const [error, setError] = useState(null);
   const [preset, setPreset] = useState(1);
+  const [paymentStatus, setPaymentStatus] = useState(null);
+  
+  // Guard to prevent multiple verification calls
+  const didVerifyRef = useRef(false);
 
   useEffect(() => {
-    if (!bookingId) {
-      setError('No booking ID provided');
+    if (didVerifyRef.current) return;
+    if (!bookingId || !sessionId) {
+      setError('Missing booking ID or session ID');
       setLoading(false);
       return;
     }
 
-    // Wait a moment for webhook to process, then verify booking status
-    const timer = setTimeout(() => {
-      verifyBooking();
-    }, 2000);
+    didVerifyRef.current = true;
 
-    return () => clearTimeout(timer);
-  }, [bookingId]);
-
-  const verifyBooking = async () => {
-    try {
-      // Try to fetch booking details
-      const response = await api.get(`/bookings/${bookingId}/`);
-      console.log('Booking API Response:', response.data);
-      setBooking(response.data);
-      const hotelPreset = response.data.hotel_preset || response.data.hotel?.preset || response.data.hotel?.global_style_variant || 1;
-      console.log('Setting booking payment success preset to:', hotelPreset);
-      setPreset(hotelPreset);
-      setError(null);
-      
-      // Store booking in localStorage for My Bookings feature
-      const existingBookings = JSON.parse(localStorage.getItem('myBookings') || '[]');
-      const bookingExists = existingBookings.some(b => b.booking_id === response.data.booking_id);
-      
-      if (!bookingExists) {
-        existingBookings.push({
-          booking_id: response.data.booking_id,
-          confirmation_number: response.data.confirmation_number,
-          hotel_slug: response.data.hotel?.slug,
-          hotel_name: response.data.hotel?.name,
-          check_in: response.data.dates?.check_in,
-          check_out: response.data.dates?.check_out,
-          room_type: response.data.room?.type,
-          total: response.data.pricing?.total,
-          status: response.data.status || 'PAYMENT_COMPLETE',
-          payment_completed: true,
-          created_at: new Date().toISOString()
-        });
-        localStorage.setItem('myBookings', JSON.stringify(existingBookings));
+    (async () => {
+      try {
+        // Extract hotel slug from booking ID or use a default approach
+        // For now, we'll need to determine the hotel slug from the booking
+        const bookingResponse = await publicAPI.get(`/bookings/${bookingId}/`);
+        const hotelSlug = bookingResponse.data.hotel?.slug;
+        
+        if (hotelSlug) {
+          // Verify payment with Stripe session
+          const response = await publicAPI.get(
+            `/hotel/${hotelSlug}/room-bookings/${bookingId}/payment/verify/`,
+            { params: { session_id: sessionId } }
+          );
+          
+          setPaymentStatus(response.data?.payment_status || "verified");
+          setBooking(bookingResponse.data);
+          
+          const hotelPreset = bookingResponse.data.hotel_preset || bookingResponse.data.hotel?.preset || bookingResponse.data.hotel?.global_style_variant || 1;
+          setPreset(hotelPreset);
+          
+          // Store booking in localStorage for My Bookings feature
+          const existingBookings = JSON.parse(localStorage.getItem('myBookings') || '[]');
+          const bookingExists = existingBookings.some(b => b.booking_id === bookingResponse.data.booking_id);
+          
+          if (!bookingExists) {
+            existingBookings.push({
+              booking_id: bookingResponse.data.booking_id,
+              confirmation_number: bookingResponse.data.confirmation_number,
+              hotel_slug: bookingResponse.data.hotel?.slug,
+              hotel_name: bookingResponse.data.hotel?.name,
+              check_in: bookingResponse.data.dates?.check_in,
+              check_out: bookingResponse.data.dates?.check_out,
+              room_type: bookingResponse.data.room?.type,
+              total: bookingResponse.data.pricing?.total,
+              status: bookingResponse.data.status || 'PAYMENT_COMPLETE',
+              payment_completed: true,
+              created_at: new Date().toISOString()
+            });
+            localStorage.setItem('myBookings', JSON.stringify(existingBookings));
+          }
+        } else {
+          throw new Error('Hotel slug not found in booking data');
+        }
+      } catch (err) {
+        console.error('Failed to verify payment:', err);
+        setPaymentStatus("error");
+        setError('Unable to verify payment status');
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error('Failed to fetch booking:', err);
-      // Set a generic success message if we can't fetch details
-      setBooking({ booking_id: bookingId });
-    } finally {
-      setLoading(false);
-    }
-  };
+    })();
+  }, [bookingId, sessionId]);
+
+
 
   if (loading) {
     return (
