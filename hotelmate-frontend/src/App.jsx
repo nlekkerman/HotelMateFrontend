@@ -943,6 +943,15 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 element={<BookingConfirmation />}
               />
               <Route
+                path="/booking/:hotelSlug/payment/success"
+                element={<BookingPaymentSuccess />}
+              />
+              <Route
+                path="/booking/:hotelSlug/payment/cancel"
+                element={<BookingPaymentCancel />}
+              />
+              {/* Legacy routes without hotel slug for backward compatibility */}
+              <Route
                 path="/booking/payment/success"
                 element={<BookingPaymentSuccess />}
               />

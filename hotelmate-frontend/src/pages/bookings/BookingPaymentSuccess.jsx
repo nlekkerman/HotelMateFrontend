@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useSearchParams, useNavigate, useParams, Link } from 'react-router-dom';
 import { Container, Card, Spinner, Alert, Button } from 'react-bootstrap';
 import { publicAPI } from '@/services/api';
 
@@ -9,8 +9,14 @@ import { publicAPI } from '@/services/api';
 const BookingPaymentSuccess = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { hotelSlug } = useParams();
   const bookingId = searchParams.get('booking_id');
   const sessionId = searchParams.get('session_id');
+  
+  // Fallback: extract hotel slug from URL path if not in params (for legacy routes)
+  const pathParts = window.location.pathname.split('/');
+  const hotelSlugFromPath = pathParts[2]; // /booking/{hotelSlug}/payment/success
+  const finalHotelSlug = hotelSlug || hotelSlugFromPath;
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(null);
   const [error, setError] = useState(null);
@@ -32,46 +38,44 @@ const BookingPaymentSuccess = () => {
 
     (async () => {
       try {
-        // Extract hotel slug from booking ID or use a default approach
-        // For now, we'll need to determine the hotel slug from the booking
-        const bookingResponse = await publicAPI.get(`/bookings/${bookingId}/`);
-        const hotelSlug = bookingResponse.data.hotel?.slug;
+        if (!finalHotelSlug) {
+          throw new Error('Hotel slug not found in URL');
+        }
         
-        if (hotelSlug) {
-          // Verify payment with Stripe session
-          const response = await publicAPI.get(
-            `/hotel/${hotelSlug}/room-bookings/${bookingId}/payment/verify/`,
-            { params: { session_id: sessionId } }
-          );
-          
-          setPaymentStatus(response.data?.payment_status || "verified");
-          setBooking(bookingResponse.data);
-          
-          const hotelPreset = bookingResponse.data.hotel_preset || bookingResponse.data.hotel?.preset || bookingResponse.data.hotel?.global_style_variant || 1;
-          setPreset(hotelPreset);
-          
-          // Store booking in localStorage for My Bookings feature
-          const existingBookings = JSON.parse(localStorage.getItem('myBookings') || '[]');
-          const bookingExists = existingBookings.some(b => b.booking_id === bookingResponse.data.booking_id);
-          
-          if (!bookingExists) {
-            existingBookings.push({
-              booking_id: bookingResponse.data.booking_id,
-              confirmation_number: bookingResponse.data.confirmation_number,
-              hotel_slug: bookingResponse.data.hotel?.slug,
-              hotel_name: bookingResponse.data.hotel?.name,
-              check_in: bookingResponse.data.dates?.check_in,
-              check_out: bookingResponse.data.dates?.check_out,
-              room_type: bookingResponse.data.room?.type,
-              total: bookingResponse.data.pricing?.total,
-              status: bookingResponse.data.status || 'PAYMENT_COMPLETE',
-              payment_completed: true,
-              created_at: new Date().toISOString()
-            });
-            localStorage.setItem('myBookings', JSON.stringify(existingBookings));
-          }
-        } else {
-          throw new Error('Hotel slug not found in booking data');
+        // Verify payment with Stripe session
+        const verifyResponse = await publicAPI.get(
+          `/hotel/${finalHotelSlug}/room-bookings/${bookingId}/payment/verify/`,
+          { params: { session_id: sessionId } }
+        );
+        
+        // Fetch booking details
+        const bookingResponse = await publicAPI.get(`/hotel/${finalHotelSlug}/room-bookings/${bookingId}/`);
+        
+        setPaymentStatus(verifyResponse.data?.payment_status || "verified");
+        setBooking(bookingResponse.data);
+        
+        const hotelPreset = bookingResponse.data.hotel_preset || bookingResponse.data.hotel?.preset || bookingResponse.data.hotel?.global_style_variant || 1;
+        setPreset(hotelPreset);
+        
+        // Store booking in localStorage for My Bookings feature
+        const existingBookings = JSON.parse(localStorage.getItem('myBookings') || '[]');
+        const bookingExists = existingBookings.some(b => b.booking_id === bookingResponse.data.booking_id);
+        
+        if (!bookingExists) {
+          existingBookings.push({
+            booking_id: bookingResponse.data.booking_id,
+            confirmation_number: bookingResponse.data.confirmation_number,
+            hotel_slug: bookingResponse.data.hotel?.slug,
+            hotel_name: bookingResponse.data.hotel?.name,
+            check_in: bookingResponse.data.dates?.check_in,
+            check_out: bookingResponse.data.dates?.check_out,
+            room_type: bookingResponse.data.room?.type,
+            total: bookingResponse.data.pricing?.total,
+            status: bookingResponse.data.status || 'PAYMENT_COMPLETE',
+            payment_completed: true,
+            created_at: new Date().toISOString()
+          });
+          localStorage.setItem('myBookings', JSON.stringify(existingBookings));
         }
       } catch (err) {
         console.error('Failed to verify payment:', err);

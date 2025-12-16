@@ -272,8 +272,8 @@ const GuestRoomBookingPage = () => {
       const response = await publicAPI.post(
   `/hotel/${hotelSlug}/room-bookings/${bookingData.booking_id}/payment/session/`,
   {
-    success_url: `${window.location.origin}/booking/payment/success?booking_id=${bookingData.booking_id}`,
-    cancel_url: `${window.location.origin}/booking/payment/cancel?booking_id=${bookingData.booking_id}`,
+    success_url: `${window.location.origin}/booking/${hotelSlug}/payment/success?booking_id=${bookingData.booking_id}`,
+    cancel_url: `${window.location.origin}/booking/${hotelSlug}/payment/cancel?booking_id=${bookingData.booking_id}`,
   }
 );
       
