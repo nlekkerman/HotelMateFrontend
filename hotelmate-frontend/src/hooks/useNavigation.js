@@ -19,7 +19,7 @@ export const DEFAULT_NAV_ITEMS = [
   { slug: 'department_roster', name: 'Department Roster', path: '/department-roster/{hotelSlug}', icon: 'calendar-week' },
   { slug: 'management_analytics', name: 'Management Analytics', path: '/enhanced-attendance/{hotelSlug}', icon: 'bar-chart' },
   { slug: 'restaurants', name: 'Restaurants', path: '/{hotelSlug}/restaurants', icon: 'shop-window' },
-  { slug: 'room_bookings', name: 'Room Bookings', path: '/staff/hotel/{hotelSlug}/bookings', icon: 'bed', hasDropdown: true },
+  { slug: 'room_bookings', name: 'Room Bookings', path: '/staff/hotel/{hotelSlug}/room-bookings', icon: 'bed', hasDropdown: true },
   { slug: 'bookings', name: 'Restaurant Bookings', path: '/bookings', icon: 'calendar-check' },
   { slug: 'maintenance', name: 'Maintenance', path: '/maintenance', icon: 'tools' },
   { slug: 'hotel_info', name: 'Hotel Info', path: '/hotel_info/{hotelSlug}', icon: 'info-circle' },

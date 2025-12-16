@@ -3,12 +3,12 @@ import api from "@/services/api";
 import RestaurantReservationDetails from "@/components/bookings/RestaurantReservationDetails";
 import BookingsGrid from "@/components/bookings/BookingsGrid";
 import BookingsHistory from "@/components/bookings/BookingsHistory";
-import { useBookingState } from "@/realtime/stores/bookingStore";
+import { useServiceBookingState } from "@/realtime/stores/serviceBookingStore";
 import { bookingActions } from "@/realtime/stores/bookingStore";
 import { Modal } from "react-bootstrap";
 
 export default function RestaurantBookings({ hotelSlug, restaurantId }) {
-  const bookingState = useBookingState();
+  const bookingState = useServiceBookingState();
   const [bookings, setBookings] = useState([]);
   const [restaurantSlug, setRestaurantSlug] = useState(null);
   const [loading, setLoading] = useState(true);

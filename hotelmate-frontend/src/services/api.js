@@ -123,6 +123,18 @@ export function getHotelSlug() {
 }
 
 /**
+ * Helper function to build guest API URLs with canonical pattern
+ * /guest/hotels/<hotel_slug>/<path>
+ * @param {string} hotelSlug - The hotel slug
+ * @param {string} path - Additional path after hotels/<slug> (optional)
+ * @returns {string} - Formatted URL path
+ */
+export function buildGuestURL(hotelSlug, path = "") {
+  const cleanPath = path.startsWith("/") ? path.slice(1) : path;
+  return `/guest/hotels/${hotelSlug}/${cleanPath}`;
+}
+
+/**
  * Fetch public hotel page data (includes settings and hotel details)
  * @param {string} hotelSlug - The hotel slug
  * @returns {Promise} - Axios response with hotel data including settings

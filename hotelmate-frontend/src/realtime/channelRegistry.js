@@ -54,10 +54,15 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
       });
     });
 
-    // Booking (hotel-wide)
-    const bookingChannelName = `${hotelSlug}.booking`;
-    const bookingChannel = pusher.subscribe(bookingChannelName);
-    channels.push(bookingChannel);
+    // Service Booking (restaurant/porter/trips - hotel-wide)
+    const serviceBookingChannelName = `${hotelSlug}.booking`;
+    const serviceBookingChannel = pusher.subscribe(serviceBookingChannelName);
+    channels.push(serviceBookingChannel);
+    
+    // Room Booking (guest accommodations - hotel-wide)
+    const roomBookingChannelName = `${hotelSlug}.room-bookings`;
+    const roomBookingChannel = pusher.subscribe(roomBookingChannelName);
+    channels.push(roomBookingChannel);
 
     // Personal staff notifications (if staffId provided)
     if (staffId) {

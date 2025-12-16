@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
-import api from '@/services/api';
+import api, { publicAPI } from '@/services/api';
 
 /**
- * BookingPage - Custom booking flow for room reservations
+ * GuestRoomBookingPage - Guest room reservation flow (HTTP-first, no realtime)
  */
-const BookingPage = () => {
+const GuestRoomBookingPage = () => {
   const { hotelSlug } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -78,7 +78,7 @@ const BookingPage = () => {
       setLoading(true);
       setError(null);
       
-      const response = await api.get(`/hotel/${hotelSlug}/availability/`, {
+      const response = await publicAPI.get(`/public/hotel/${hotelSlug}/availability/`, {
         params: {
           check_in: dates.checkIn,
           check_out: dates.checkOut,
@@ -117,7 +117,7 @@ const BookingPage = () => {
       setLoading(true);
       setError(null);
       
-      const response = await api.post(`/hotel/${hotelSlug}/pricing/quote/`, {
+      const response = await publicAPI.post(`/public/hotel/${hotelSlug}/pricing/quote/`, {
         room_type_code: roomCode,
         check_in: dates.checkIn,
         check_out: dates.checkOut,
@@ -144,7 +144,7 @@ const BookingPage = () => {
       setLoading(true);
       setError(null);
       
-      const response = await api.post(`/hotel/${hotelSlug}/bookings/`, {
+      const response = await publicAPI.post(`/public/hotel/${hotelSlug}/bookings/`, {
         quote_id: quote?.quote_id,
         room_type_code: selectedRoom,
         check_in: dates.checkIn,
@@ -179,8 +179,8 @@ const BookingPage = () => {
       setLoading(true);
       setError(null);
       
-      const response = await api.post(
-        `/hotel/${hotelSlug}/bookings/${bookingData.booking_id}/payment/`,
+      const response = await publicAPI.post(
+        `/public/hotel/${hotelSlug}/room-bookings/${bookingData.booking_id}/payment/`,
         {
           booking: bookingData,
           payment_method: 'stripe',
@@ -694,4 +694,4 @@ const BookingPage = () => {
   );
 };
 
-export default BookingPage;
+export default GuestRoomBookingPage;

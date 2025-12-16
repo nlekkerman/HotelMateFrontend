@@ -3,14 +3,14 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-toastify";
 import api from "@/services/api";
-import { useBookingState } from "@/realtime/stores/bookingStore";
+import { useServiceBookingState } from "@/realtime/stores/serviceBookingStore";
 import { showNotification, canShowNotifications } from "@/utils/notificationUtils";
 
 const BookingNotificationContext = createContext();
 
 export const BookingNotificationProvider = ({ children }) => {
   const { user } = useAuth();
-  const bookingState = useBookingState();
+  const bookingState = useServiceBookingState();
   const [hasNewBooking, setHasNewBooking] = useState(false);
   const [lastSeenBookingCount, setLastSeenBookingCount] = useState(0);
   

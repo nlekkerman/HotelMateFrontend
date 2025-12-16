@@ -4,7 +4,8 @@ import { attendanceActions } from './stores/attendanceStore.jsx';
 import { chatActions, dispatchUnreadCountsUpdate } from './stores/chatStore.jsx';
 import { guestChatActions } from './stores/guestChatStore.jsx';
 import { roomServiceActions } from './stores/roomServiceStore.jsx';
-import { bookingActions } from './stores/bookingStore.jsx';
+import { serviceBookingActions } from './stores/serviceBookingStore.jsx';
+import { roomBookingActions } from './stores/roomBookingStore.jsx';
 
 /**
  * Normalize FCM payload to domain event format
@@ -277,8 +278,11 @@ function routeToDomainStores(event) {
         roomServiceActions.handleEvent(event);
         console.log('✅ [EventBus] Room service event sent to store');
         break;
+      case "room_booking":
+        roomBookingActions.handleEvent(event);
+        break;
       case "booking":
-        bookingActions.handleEvent(event);
+        serviceBookingActions.handleEvent(event);
         break;
       default:
         if (!import.meta.env.PROD) {

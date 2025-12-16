@@ -7,7 +7,8 @@ import { ChatProvider } from './stores/chatStore.jsx';
 import { GuestChatProvider } from './stores/guestChatStore.jsx';
 import { AttendanceProvider } from './stores/attendanceStore.jsx';
 import { RoomServiceProvider } from './stores/roomServiceStore.jsx';
-import { BookingProvider } from './stores/bookingStore.jsx';
+import { ServiceBookingProvider } from './stores/serviceBookingStore.jsx';
+import { RoomBookingProvider } from './stores/roomBookingStore.jsx';
 
 /**
  * RealtimeProvider - Manages centralized realtime subscriptions
@@ -80,11 +81,13 @@ export function RealtimeProvider({ children }) {
         <ChatProvider>
           <GuestChatProvider>
             <RoomServiceProvider>
-              <BookingProvider>
-                <RealtimeManager>
-                  {children}
-                </RealtimeManager>
-              </BookingProvider>
+              <ServiceBookingProvider>
+                <RoomBookingProvider>
+                  <RealtimeManager>
+                    {children}
+                  </RealtimeManager>
+                </RoomBookingProvider>
+              </ServiceBookingProvider>
             </RoomServiceProvider>
           </GuestChatProvider>
         </ChatProvider>

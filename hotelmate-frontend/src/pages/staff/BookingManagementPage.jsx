@@ -56,7 +56,7 @@ const BookingManagementPage = () => {
     if (urlFilter !== 'pending') {
       actions.push({
         label: 'Pending Bookings',
-        path: `/staff/hotel/${hotelSlug}/bookings?filter=pending`,
+        path: `/staff/hotel/${hotelSlug}/room-bookings/?filter=pending`,
         icon: 'clock',
         variant: 'warning'
       });
@@ -65,7 +65,7 @@ const BookingManagementPage = () => {
     if (urlFilter !== 'confirmed') {
       actions.push({
         label: 'Confirmed Bookings',
-        path: `/staff/hotel/${hotelSlug}/bookings?filter=confirmed`,
+        path: `/staff/hotel/${hotelSlug}/room-bookings/?filter=confirmed`,
         icon: 'check-circle',
         variant: 'success'
       });
@@ -74,7 +74,7 @@ const BookingManagementPage = () => {
     if (urlFilter !== 'cancelled') {
       actions.push({
         label: 'Cancelled Bookings',
-        path: `/staff/hotel/${hotelSlug}/bookings?filter=cancelled`,
+        path: `/staff/hotel/${hotelSlug}/room-bookings/?filter=cancelled`,
         icon: 'x-circle',
         variant: 'danger'
       });
@@ -83,7 +83,7 @@ const BookingManagementPage = () => {
     if (urlFilter !== '' && urlFilter !== null) {
       actions.push({
         label: 'All Bookings',
-        path: `/staff/hotel/${hotelSlug}/bookings`,
+        path: `/staff/hotel/${hotelSlug}/room-bookings/`,
         icon: 'calendar-event',
         variant: 'primary'
       });
@@ -92,7 +92,7 @@ const BookingManagementPage = () => {
     if (urlFilter !== 'history') {
       actions.push({
         label: 'Booking History',
-        path: `/staff/hotel/${hotelSlug}/bookings?filter=history`,
+        path: `/staff/hotel/${hotelSlug}/room-bookings/?filter=history`,
         icon: 'archive',
         variant: 'secondary'
       });

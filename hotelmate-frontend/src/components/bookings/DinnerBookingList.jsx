@@ -2,11 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import api from "@/services/api";
-import { useBookingState } from "@/realtime/stores/bookingStore";
+import { useServiceBookingState } from "@/realtime/stores/serviceBookingStore";
 import { bookingActions } from "@/realtime/stores/bookingStore";
 
 export default function DinnerBookingList() {
-  const bookingState = useBookingState();
+  const bookingState = useServiceBookingState();
   const [restaurants, setRestaurants] = useState([]);   // list of { id, name, slug }
   const [selectedSlug, setSelectedSlug] = useState(""); // slug of the restaurant to fetch
   const [bookings, setBookings] = useState([]);  // Keep local state for filtered bookings by restaurant

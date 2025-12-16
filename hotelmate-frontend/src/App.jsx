@@ -37,7 +37,7 @@ import { MessengerProvider } from "@/staff_chat/context/MessengerContext";
 import RealtimeProvider from "@/realtime/RealtimeProvider";
 import { AttendanceProvider } from "@/realtime/stores/attendanceStore.jsx";
 import { RoomServiceProvider } from "@/realtime/stores/roomServiceStore.jsx";
-import { BookingProvider } from "@/realtime/stores/bookingStore.jsx";
+import { ServiceBookingProvider } from "@/realtime/stores/serviceBookingStore.jsx";
 import { GuestChatProvider } from "@/realtime/stores/guestChatStore.jsx";
 import { ChatProvider as StaffChatStoreProvider } from "@/realtime/stores/chatStore.jsx";
 
@@ -48,7 +48,7 @@ import HotelPublicPage from "@/pages/hotels/HotelPublicPage";
 import HotelPortalPage from "@/pages/HotelPortalPage";
 import SectionEditorPage from "@/pages/sections/SectionEditorPage";
 import SectionBasedPublicPage from "@/pages/sections/SectionBasedPublicPage";
-import BookingPage from "@/pages/bookings/BookingPage";
+import GuestRoomBookingPage from "@/pages/bookings/GuestRoomBookingPage";
 import BookingConfirmation from "@/pages/bookings/BookingConfirmation";
 import BookingPaymentSuccess from "@/pages/bookings/BookingPaymentSuccess";
 import BookingPaymentCancel from "@/pages/bookings/BookingPaymentCancel";
@@ -928,7 +928,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 }
               />
               {/* Hotel Portal Routes - Must be at end to avoid catching other routes */}
-              <Route path="/:hotelSlug/book" element={<BookingPage />} />
+              <Route path="/:hotelSlug/book" element={<GuestRoomBookingPage />} />
               <Route
                 path="/public/booking/:hotelSlug"
                 element={<BookingPage />}
@@ -984,7 +984,7 @@ export default function App() {
           <RealtimeProvider>
             <AttendanceProvider>
               <RoomServiceProvider>
-                <BookingProvider>
+                <ServiceBookingProvider>
                   <GuestChatProvider>
                     <StaffChatStoreProvider>
                       <MessengerProvider>
@@ -1010,7 +1010,7 @@ export default function App() {
                       </MessengerProvider>
                     </StaffChatStoreProvider>
                   </GuestChatProvider>
-                </BookingProvider>
+                </ServiceBookingProvider>
               </RoomServiceProvider>
             </AttendanceProvider>
           </RealtimeProvider>

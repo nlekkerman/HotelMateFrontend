@@ -41,7 +41,7 @@ export const useBookingManagement = (hotelSlug) => {
       if (filters.end_date) params.append('end_date', filters.end_date);
 
       const queryString = params.toString();
-      const endpoint = `/staff/hotel/${hotelSlug}/bookings/${queryString ? `?${queryString}` : ''}`;
+      const endpoint = `/staff/hotel/${hotelSlug}/room-bookings/${queryString ? `?${queryString}` : ''}`;
 
       const response = await api.get(endpoint);
       
@@ -83,7 +83,7 @@ export const useBookingManagement = (hotelSlug) => {
     if (!hotelSlug || !bookingId) return false;
 
     try {
-      const response = await api.post(`/staff/hotel/${hotelSlug}/bookings/${bookingId}/confirm/`);
+      const response = await api.post(`/staff/hotel/${hotelSlug}/room-bookings/${bookingId}/confirm/`);
       
       if (response.data) {
         // Refresh bookings after successful confirmation
@@ -104,7 +104,7 @@ export const useBookingManagement = (hotelSlug) => {
     if (!hotelSlug || !bookingId) return false;
 
     try {
-      const response = await api.post(`/staff/hotel/${hotelSlug}/bookings/${bookingId}/cancel/`, {
+      const response = await api.post(`/staff/hotel/${hotelSlug}/room-bookings/${bookingId}/cancel/`, {
         reason
       });
       
