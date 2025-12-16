@@ -140,7 +140,7 @@ export function buildGuestURL(hotelSlug, path = "") {
  * @returns {Promise} - Axios response with hotel data including settings
  */
 export async function getHotelPublicPage(hotelSlug) {
-  return publicAPI.get(`/public/hotel/${hotelSlug}/page/`);
+  return publicAPI.get(`/hotel/${hotelSlug}/page/`);
 }
 
 export default api;

@@ -533,7 +533,7 @@ export const getPublicHotelPage = async (slug) => {
   console.log('[sectionEditorApi] 📤 getPublicHotelPage called for slug:', slug);
   console.log('[sectionEditorApi] 📤 GET URL:', `/public/hotel/${slug}/page/`);
   
-  const response = await publicAPI.get(`/public/hotel/${slug}/page/`);
+  const response = await publicAPI.get(`/hotel/${slug}/page/`);
   
   console.log('[sectionEditorApi] 📥 getPublicHotelPage response:', response.data);
   console.log('[sectionEditorApi] 📥 Sections count:', response.data.sections?.length);

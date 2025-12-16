@@ -89,7 +89,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
     }
 
     api
-      .get(`/staff/${hotelIdentifier}/me/`)
+      .get(`/staff/hotel/${hotelIdentifier}/me/`)
       .then((res) => {
         setStaffProfile(res.data);
         setIsOnDuty(res.data.is_on_duty);

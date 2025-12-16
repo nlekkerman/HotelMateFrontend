@@ -13,7 +13,7 @@ export function useStaffStatusPolling(hotelSlug, enabled = true) {
     if (!hotelSlug || !enabled) return;
     
     try {
-      const response = await api.get(`/staff/${hotelSlug}/me/`);
+      const response = await api.get(`/staff/hotel/${hotelSlug}/me/`);
       const staff = response.data;
       
       if (staff.current_status) {

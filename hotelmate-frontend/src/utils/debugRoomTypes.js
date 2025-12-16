@@ -10,7 +10,7 @@ export const debugRoomTypesAPI = async (hotelSlug) => {
     console.log(`[Debug] 🔍 Fetching room types for hotel: ${hotelSlug}`);
     
     // Use centralized publicAPI service
-    const response = await publicAPI.get(`/public/hotel/${hotelSlug}/page/`);
+    const response = await publicAPI.get(`/hotel/${hotelSlug}/page/`);
     
     const data = response.data;
     

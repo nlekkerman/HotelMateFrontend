@@ -25,7 +25,7 @@ class PresetsService {
     this.error = null;
     
     try {
-      const response = await publicAPI.get('/public/presets/');
+      const response = await publicAPI.get('/presets/');
       this.presets = response.data;
       return this.presets;
     } catch (error) {

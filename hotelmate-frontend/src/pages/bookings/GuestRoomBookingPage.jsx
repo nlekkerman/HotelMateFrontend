@@ -94,7 +94,7 @@ const GuestRoomBookingPage = () => {
   const fetchHotelData = async () => {
     try {
       setLoading(true);
-      const response = await publicAPI.get(`/public/hotel/${hotelSlug}/page/`);
+      const response = await publicAPI.get(`/hotel/${hotelSlug}/page/`);
       const data = unwrap(response);
       setHotel(data.hotel || data);
       setRoomTypes(data.room_types || []);
@@ -123,7 +123,7 @@ const GuestRoomBookingPage = () => {
       setLoading(true);
       setError(null);
       
-      const response = await publicAPI.get(`/public/hotel/${hotelSlug}/availability/`, {
+      const response = await publicAPI.get(`/hotel/${hotelSlug}/availability/`, {
         params: {
           check_in: dates.checkIn,
           check_out: dates.checkOut,
@@ -165,7 +165,7 @@ const GuestRoomBookingPage = () => {
       setLoading(true);
       setError(null);
       
-      const response = await publicAPI.post(`/public/hotel/${hotelSlug}/pricing/quote/`, {
+      const response = await publicAPI.post(`/hotel/${hotelSlug}/pricing/quote/`, {
         room_type_code: roomCode,
         check_in: dates.checkIn,
         check_out: dates.checkOut,
@@ -246,7 +246,7 @@ const GuestRoomBookingPage = () => {
               last_name: c.last_name.trim(),
             }));
 
-      const response = await publicAPI.post(`/public/hotel/${hotelSlug}/bookings/`, payload);
+      const response = await publicAPI.post(`/hotel/${hotelSlug}/bookings/`, payload);
       
       // Store booking data and move to payment step
       setBookingData(unwrap(response));
@@ -279,13 +279,18 @@ const GuestRoomBookingPage = () => {
       
       const data = unwrap(response);
       
-      // Redirect to Stripe Checkout
+      if (data.status === "paid") {
+        // Already paid — go straight to success
+        navigate(`/booking/payment/success?booking_id=${bookingData.booking_id}`);
+        return;
+      }
+
       if (data.payment_url) {
         window.location.href = data.payment_url;
       } else if (data.checkout_url) {
         window.location.href = data.checkout_url;
       } else {
-        setError('Payment URL not provided');
+        setError("Payment session could not be created");
       }
     } catch (err) {
       const errorMessage = err.response?.data?.detail 

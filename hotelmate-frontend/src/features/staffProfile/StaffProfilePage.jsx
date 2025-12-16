@@ -18,7 +18,7 @@ export default function StaffProfilePage() {
     if (!hotelSlug) {
       throw new Error("Hotel slug is missing from URL");
     }
-    const { data } = await api.get(`/staff/${hotelSlug}/me/`);
+    const { data } = await api.get(`/staff/hotel/${hotelSlug}/me/`);
     return data;
   };
 

@@ -17,7 +17,7 @@ export default function useHotel() {
 
       try {
         // ✅ use the hotel slug from the logged-in user
-        const res = await api.get(`/staff/${user.hotel_slug}/me/`);
+        const res = await api.get(`/staff/hotel/${user.hotel_slug}/me/`);
         const hotelData = res.data.user?.staff_profile?.hotel;
 
         if (hotelData) {
