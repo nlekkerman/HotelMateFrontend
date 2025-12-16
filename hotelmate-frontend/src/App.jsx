@@ -931,7 +931,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/:hotelSlug/book" element={<GuestRoomBookingPage />} />
               <Route
                 path="/public/booking/:hotelSlug"
-                element={<BookingPage />}
+                element={<GuestRoomBookingPage />}
               />
               <Route
                 path="/:hotelSlug/my-bookings"

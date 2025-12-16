@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
-import api, { publicAPI } from '@/services/api';
+import { publicAPI } from '@/services/api';
 
 /**
  * GuestRoomBookingPage - Guest room reservation flow (HTTP-first, no realtime)
@@ -10,6 +10,9 @@ const GuestRoomBookingPage = () => {
   const { hotelSlug } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  // Helper to safely unwrap API responses
+  const unwrap = (res) => res?.data?.data ?? res?.data;
   
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -33,14 +36,55 @@ const GuestRoomBookingPage = () => {
   });
   const [availability, setAvailability] = useState(null);
   const [quote, setQuote] = useState(null);
-  const [guestInfo, setGuestInfo] = useState({
+  
+  // Booking relationship
+  const [bookerType, setBookerType] = useState("SELF");
+  
+  // Primary guest (always required - the person staying)
+  const [primaryGuest, setPrimaryGuest] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    phone: '',
-    specialRequests: ''
+    phone: ''
   });
+  
+  // Booker (payer/contact - required only for THIRD_PARTY)
+  const [booker, setBooker] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: ''
+  });
+  
+  // Other booking details
+  const [specialRequests, setSpecialRequests] = useState('');
+  const [promoCode, setPromoCode] = useState('');
+  
+  const [companions, setCompanions] = useState([]);
+  const [addNamesLater, setAddNamesLater] = useState(false);
   const [bookingData, setBookingData] = useState(null);
+
+  // Derive party calculations
+  const partySize = (guests.adults || 0) + (guests.children || 0);
+  const companionsCount = Math.max(0, partySize - 1);
+
+  // Build companions array when needed (Step 3 only)
+  useEffect(() => {
+    if (step !== 3) return;
+    
+    if (addNamesLater) {
+      setCompanions([]);
+      return;
+    }
+    
+    setCompanions((prev) => {
+      const next = [...prev];
+      while (next.length < companionsCount) {
+        next.push({ first_name: "", last_name: "" });
+      }
+      return next.slice(0, companionsCount);
+    });
+  }, [step, addNamesLater, companionsCount]);
 
   // Fetch hotel data
   useEffect(() => {
@@ -50,16 +94,17 @@ const GuestRoomBookingPage = () => {
   const fetchHotelData = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/public/hotel/${hotelSlug}/page/`);
-      console.log('Hotel API Response:', response.data);
-      setHotel(response.data.hotel || response.data);
-      setRoomTypes(response.data.room_types || []);
-      const hotelPreset = response.data.hotel?.preset || response.data.preset || response.data.global_style_variant || 1;
-      console.log('Setting preset to:', hotelPreset);
+      const response = await publicAPI.get(`/public/hotel/${hotelSlug}/page/`);
+      const data = unwrap(response);
+      setHotel(data.hotel || data);
+      setRoomTypes(data.room_types || []);
+      const hotelPreset = data.hotel?.preset || data.preset || data.global_style_variant || 1;
       setPreset(hotelPreset);
     } catch (err) {
-      setError('Failed to load hotel information');
-      console.error(err);
+      const errorMessage = err.response?.data?.detail 
+        || err.response?.data?.error 
+        || 'Failed to load hotel information';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -87,11 +132,12 @@ const GuestRoomBookingPage = () => {
         }
       });
       
-      setAvailability(response.data);
+      const data = unwrap(response);
+      setAvailability(data);
       
       // If room_type_code was provided in URL, try to preselect it in Step 2
-      if (preselectedRoomCode && response.data.available_rooms) {
-        const preselectedRoom = response.data.available_rooms.find(
+      if (preselectedRoomCode && data.available_rooms) {
+        const preselectedRoom = data.available_rooms.find(
           room => room.room_type_code === preselectedRoomCode && room.is_available
         );
         
@@ -104,8 +150,10 @@ const GuestRoomBookingPage = () => {
       
       setStep(2);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to check availability');
-      console.error(err);
+      const errorMessage = err.response?.data?.detail 
+        || err.response?.data?.error 
+        || 'Failed to check availability';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -122,15 +170,18 @@ const GuestRoomBookingPage = () => {
         check_in: dates.checkIn,
         check_out: dates.checkOut,
         adults: guests.adults,
-        children: guests.children
+        children: guests.children,
+        ...(promoCode.trim() && { promo_code: promoCode.trim() })
       });
       
-      setQuote(response.data);
+      setQuote(unwrap(response));
       setSelectedRoom(roomCode);
       setStep(3);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to get price quote');
-      console.error(err);
+      const errorMessage = err.response?.data?.detail 
+        || err.response?.data?.error 
+        || 'Failed to get price quote';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -144,28 +195,67 @@ const GuestRoomBookingPage = () => {
       setLoading(true);
       setError(null);
       
-      const response = await publicAPI.post(`/public/hotel/${hotelSlug}/bookings/`, {
-        quote_id: quote?.quote_id,
+      const payload = {
+        quote_id: quote.quote_id,
         room_type_code: selectedRoom,
         check_in: dates.checkIn,
         check_out: dates.checkOut,
         adults: guests.adults,
         children: guests.children,
-        guest: {
-          first_name: guestInfo.firstName,
-          last_name: guestInfo.lastName,
-          email: guestInfo.email,
-          phone: guestInfo.phone
-        },
-        special_requests: guestInfo.specialRequests
-      });
+        booker_type: bookerType,
+
+        primary_first_name: primaryGuest.firstName,
+        primary_last_name: primaryGuest.lastName,
+        primary_email:
+          bookerType === "SELF"
+            ? primaryGuest.email
+            : primaryGuest.email || "",
+        primary_phone: primaryGuest.phone || "",
+
+        booker_first_name:
+          bookerType === "SELF"
+            ? primaryGuest.firstName
+            : booker.firstName,
+
+        booker_last_name:
+          bookerType === "SELF"
+            ? primaryGuest.lastName
+            : booker.lastName,
+
+        booker_email:
+          bookerType === "SELF"
+            ? primaryGuest.email
+            : booker.email,
+
+        booker_phone:
+          bookerType === "SELF"
+            ? primaryGuest.phone || ""
+            : booker.phone || "",
+
+        special_requests: specialRequests,
+        promo_code: promoCode?.trim() || undefined,
+      };
+
+      // Add companions
+      payload.companions = addNamesLater
+        ? []
+        : companions
+            .filter(c => c.first_name?.trim() || c.last_name?.trim())
+            .map(c => ({
+              first_name: c.first_name.trim(),
+              last_name: c.last_name.trim(),
+            }));
+
+      const response = await publicAPI.post(`/public/hotel/${hotelSlug}/bookings/`, payload);
       
       // Store booking data and move to payment step
-      setBookingData(response.data);
+      setBookingData(unwrap(response));
       setStep(4);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create booking');
-      console.error(err);
+      const errorMessage = err.response?.data?.detail 
+        || err.response?.data?.error 
+        || 'Failed to create booking';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -180,26 +270,28 @@ const GuestRoomBookingPage = () => {
       setError(null);
       
       const response = await publicAPI.post(
-        `/public/hotel/${hotelSlug}/room-bookings/${bookingData.booking_id}/payment/`,
+        `/public/hotel/${hotelSlug}/bookings/${bookingData.booking_id}/payment/session/`,
         {
-          booking: bookingData,
-          payment_method: 'stripe',
           success_url: `${window.location.origin}/booking/payment/success?booking_id=${bookingData.booking_id}`,
           cancel_url: `${window.location.origin}/booking/payment/cancel?booking_id=${bookingData.booking_id}`
         }
       );
       
+      const data = unwrap(response);
+      
       // Redirect to Stripe Checkout
-      if (response.data.payment_url) {
-        window.location.href = response.data.payment_url;
-      } else if (response.data.checkout_url) {
-        window.location.href = response.data.checkout_url;
+      if (data.payment_url) {
+        window.location.href = data.payment_url;
+      } else if (data.checkout_url) {
+        window.location.href = data.checkout_url;
       } else {
         setError('Payment URL not provided');
       }
     } catch (err) {
-      setError(err.response?.data?.error || err.response?.data?.detail || 'Failed to process payment');
-      console.error('Payment error:', err.response?.data || err);
+      const errorMessage = err.response?.data?.detail 
+        || err.response?.data?.error 
+        || 'Failed to process payment';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -358,20 +450,8 @@ const GuestRoomBookingPage = () => {
                 (room.room_type_code === selectedRoom || room.code === selectedRoom || room.name === preselectedRoomCode);
               const roomKey = `${room.room_type_code || room.code || room.name}-${index}`;
               
-              // Debug pricing - try multiple possible price fields
+              // Get room price from available fields
               const roomPrice = room.base_rate || room.current_price || room.price || room.starting_price_from || room.rate || 0;
-              
-              // Debug log to see what data we have
-              console.log('Room data for pricing:', {
-                name: room.name || room.room_type_name,
-                base_rate: room.base_rate,
-                current_price: room.current_price,
-                price: room.price,
-                starting_price_from: room.starting_price_from,
-                rate: room.rate,
-                finalPrice: roomPrice,
-                allRoomData: room
-              });
               
               return (
                 <Col sm={6} md={4} lg={4} xl={3} key={roomKey}>
@@ -506,50 +586,146 @@ const GuestRoomBookingPage = () => {
             <Col lg={8}>
               <Card className="mb-4">
                 <Card.Body className="p-4">
-                  <h4 className="mb-4">Guest Information</h4>
+                  <h4 className="mb-4">Booking Information</h4>
                   <Form onSubmit={createBooking}>
-                    <Row>
-                      <Col md={6}>
-                        <Form.Group className="mb-3">
-                          <Form.Label>First Name *</Form.Label>
-                          <Form.Control
-                            type="text"
-                            value={guestInfo.firstName}
-                            onChange={(e) => setGuestInfo({ ...guestInfo, firstName: e.target.value })}
-                            required
-                          />
-                        </Form.Group>
-                      </Col>
-                      <Col md={6}>
-                        <Form.Group className="mb-3">
-                          <Form.Label>Last Name *</Form.Label>
-                          <Form.Control
-                            type="text"
-                            value={guestInfo.lastName}
-                            onChange={(e) => setGuestInfo({ ...guestInfo, lastName: e.target.value })}
-                            required
-                          />
-                        </Form.Group>
-                      </Col>
-                    </Row>
-
-                    <Form.Group className="mb-3">
-                      <Form.Label>Email *</Form.Label>
-                      <Form.Control
-                        type="email"
-                        value={guestInfo.email}
-                        onChange={(e) => setGuestInfo({ ...guestInfo, email: e.target.value })}
-                        required
-                      />
+                    {/* Booking Relationship Selector */}
+                    <Form.Group className="mb-4">
+                      <Form.Label className="mb-3"><strong>Who is this booking for?</strong></Form.Label>
+                      <div className="d-flex gap-4">
+                        <Form.Check
+                          type="radio"
+                          id="booker-self"
+                          name="bookerType"
+                          value="SELF"
+                          checked={bookerType === "SELF"}
+                          onChange={(e) => setBookerType(e.target.value)}
+                          label="I am staying"
+                        />
+                        <Form.Check
+                          type="radio"
+                          id="booker-third-party"
+                          name="bookerType"
+                          value="THIRD_PARTY"
+                          checked={bookerType === "THIRD_PARTY"}
+                          onChange={(e) => setBookerType(e.target.value)}
+                          label="I'm booking for someone else"
+                        />
+                      </div>
                     </Form.Group>
 
+                    {/* Booker Section - Only show for THIRD_PARTY */}
+                    {bookerType === "THIRD_PARTY" && (
+                      <div className="mb-4">
+                        <h5 className="mb-3">Booking Contact (Payer)</h5>
+                        <Row>
+                          <Col md={6}>
+                            <Form.Group className="mb-3">
+                              <Form.Label>First Name *</Form.Label>
+                              <Form.Control
+                                type="text"
+                                value={booker.firstName}
+                                onChange={(e) => setBooker({ ...booker, firstName: e.target.value })}
+                                required
+                              />
+                            </Form.Group>
+                          </Col>
+                          <Col md={6}>
+                            <Form.Group className="mb-3">
+                              <Form.Label>Last Name *</Form.Label>
+                              <Form.Control
+                                type="text"
+                                value={booker.lastName}
+                                onChange={(e) => setBooker({ ...booker, lastName: e.target.value })}
+                                required
+                              />
+                            </Form.Group>
+                          </Col>
+                        </Row>
+
+                        <Form.Group className="mb-3">
+                          <Form.Label>Email *</Form.Label>
+                          <Form.Control
+                            type="email"
+                            value={booker.email}
+                            onChange={(e) => setBooker({ ...booker, email: e.target.value })}
+                            required
+                          />
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
+                          <Form.Label>Phone</Form.Label>
+                          <Form.Control
+                            type="tel"
+                            value={booker.phone}
+                            onChange={(e) => setBooker({ ...booker, phone: e.target.value })}
+                            placeholder="Optional"
+                          />
+                        </Form.Group>
+                      </div>
+                    )}
+
+                    {/* Primary Guest Section */}
+                    <div className="mb-4">
+                      <h5 className="mb-3">
+                        {bookerType === "SELF" ? "Your Information" : "Guest Information (Person Staying)"}
+                      </h5>
+                      <Row>
+                        <Col md={6}>
+                          <Form.Group className="mb-3">
+                            <Form.Label>First Name *</Form.Label>
+                            <Form.Control
+                              type="text"
+                              value={primaryGuest.firstName}
+                              onChange={(e) => setPrimaryGuest({ ...primaryGuest, firstName: e.target.value })}
+                              required
+                            />
+                          </Form.Group>
+                        </Col>
+                        <Col md={6}>
+                          <Form.Group className="mb-3">
+                            <Form.Label>Last Name *</Form.Label>
+                            <Form.Control
+                              type="text"
+                              value={primaryGuest.lastName}
+                              onChange={(e) => setPrimaryGuest({ ...primaryGuest, lastName: e.target.value })}
+                              required
+                            />
+                          </Form.Group>
+                        </Col>
+                      </Row>
+
+                      <Form.Group className="mb-3">
+                        <Form.Label>
+                          Email {bookerType === "SELF" ? "*" : "(Optional)"}
+                        </Form.Label>
+                        <Form.Control
+                          type="email"
+                          value={primaryGuest.email}
+                          onChange={(e) => setPrimaryGuest({ ...primaryGuest, email: e.target.value })}
+                          required={bookerType === "SELF"}
+                          placeholder={bookerType === "THIRD_PARTY" ? "Optional" : ""}
+                        />
+                      </Form.Group>
+
+                      <Form.Group className="mb-3">
+                        <Form.Label>Phone (Optional)</Form.Label>
+                        <Form.Control
+                          type="tel"
+                          value={primaryGuest.phone}
+                          onChange={(e) => setPrimaryGuest({ ...primaryGuest, phone: e.target.value })}
+                          placeholder="Optional"
+                        />
+                      </Form.Group>
+                    </div>
+
+                    {/* Promo Code and Special Requests */}
                     <Form.Group className="mb-3">
-                      <Form.Label>Phone *</Form.Label>
+                      <Form.Label>Promo Code (Optional)</Form.Label>
                       <Form.Control
-                        type="tel"
-                        value={guestInfo.phone}
-                        onChange={(e) => setGuestInfo({ ...guestInfo, phone: e.target.value })}
-                        required
+                        type="text"
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value)}
+                        placeholder="Enter promo code if you have one"
                       />
                     </Form.Group>
 
@@ -558,11 +734,73 @@ const GuestRoomBookingPage = () => {
                       <Form.Control
                         as="textarea"
                         rows={3}
-                        value={guestInfo.specialRequests}
-                        onChange={(e) => setGuestInfo({ ...guestInfo, specialRequests: e.target.value })}
-                          placeholder="e.g., Late check-in, specific floor preference..."
+                        value={specialRequests}
+                        onChange={(e) => setSpecialRequests(e.target.value)}
+                        placeholder="e.g., Late check-in, specific floor preference..."
                       />
                     </Form.Group>
+
+                    {/* Additional Guests Section */}
+                    {companionsCount > 0 && (
+                      <div className="mb-4">
+                        <Form.Check
+                          type="checkbox"
+                          id="add-names-later"
+                          checked={addNamesLater}
+                          onChange={(e) => setAddNamesLater(e.target.checked)}
+                          label="I'll add guest names later"
+                          className="mb-2"
+                        />
+                        <small className="text-muted d-block mb-3">
+                          You can provide guest names later from your confirmation email or by contacting the hotel.
+                        </small>
+
+                        {!addNamesLater && companionsCount > 0 && (
+                          <>
+                            <Form.Label className="mb-3">
+                              <strong>Additional guest names (optional)</strong>
+                            </Form.Label>
+                            <small className="text-muted d-block mb-3">
+                              Only names are needed. You can leave this blank and add later.
+                            </small>
+                            {companions.map((companion, index) => (
+                              <Row key={index} className="mb-3">
+                                <Col md={6}>
+                                  <Form.Group>
+                                    <Form.Label>Guest {index + 2} - First Name</Form.Label>
+                                    <Form.Control
+                                      type="text"
+                                      value={companion.first_name}
+                                      onChange={(e) => {
+                                        const updated = [...companions];
+                                        updated[index] = { ...updated[index], first_name: e.target.value };
+                                        setCompanions(updated);
+                                      }}
+                                      placeholder="First name"
+                                    />
+                                  </Form.Group>
+                                </Col>
+                                <Col md={6}>
+                                  <Form.Group>
+                                    <Form.Label>Guest {index + 2} - Last Name</Form.Label>
+                                    <Form.Control
+                                      type="text"
+                                      value={companion.last_name}
+                                      onChange={(e) => {
+                                        const updated = [...companions];
+                                        updated[index] = { ...updated[index], last_name: e.target.value };
+                                        setCompanions(updated);
+                                      }}
+                                      placeholder="Last name"
+                                    />
+                                  </Form.Group>
+                                </Col>
+                              </Row>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    )}
 
                     <Button type="submit" variant="success" size="lg" disabled={loading}>
                       {loading ? <Spinner animation="border" size="sm" /> : 'Confirm Booking'}
@@ -639,8 +877,11 @@ const GuestRoomBookingPage = () => {
                     <Col md={6}>
                       <p className="mb-2"><strong>Guests:</strong> {guests.adults} Adults, {guests.children} Children</p>
                       <p className="mb-2"><strong>Nights:</strong> {quote.breakdown?.number_of_nights}</p>
-                      <p className="mb-2"><strong>Guest:</strong> {guestInfo.firstName} {guestInfo.lastName}</p>
-                      <p className="mb-2"><strong>Email:</strong> {guestInfo.email}</p>
+                      <p className="mb-2"><strong>Primary Guest:</strong> {primaryGuest.firstName} {primaryGuest.lastName}</p>
+                      {bookerType === "THIRD_PARTY" && (
+                        <p className="mb-2"><strong>Booked By:</strong> {booker.firstName} {booker.lastName}</p>
+                      )}
+                      <p className="mb-2"><strong>Contact Email:</strong> {bookerType === "SELF" ? primaryGuest.email : booker.email}</p>
                     </Col>
                   </Row>
                   <hr />
@@ -658,6 +899,15 @@ const GuestRoomBookingPage = () => {
                 <Alert variant="warning" className="mb-4">
                   <i className="bi bi-info-circle me-2"></i>
                   <strong>Booking Reference:</strong> {bookingData.booking_id}
+                </Alert>
+
+                <Alert variant="info" className="mb-4">
+                  <i className="bi bi-person-check me-2"></i>
+                  <strong>Guest names:</strong>{' '}
+                  {addNamesLater || companions.filter(c => c.first_name?.trim() || c.last_name?.trim()).length === 0
+                    ? "You can add guest names later from your confirmation email or by contacting the hotel."
+                    : "Guest names saved. You can update them later if needed."
+                  }
                 </Alert>
 
                 <Form onSubmit={processPayment}>

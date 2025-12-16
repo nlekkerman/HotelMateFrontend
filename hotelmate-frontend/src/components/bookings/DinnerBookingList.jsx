@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import api from "@/services/api";
-import { useServiceBookingState } from "@/realtime/stores/serviceBookingStore";
-import { bookingActions } from "@/realtime/stores/bookingStore";
+import { useServiceBookingState, serviceBookingActions } from "@/realtime/stores/serviceBookingStore";
 
 export default function DinnerBookingList() {
   const bookingState = useServiceBookingState();
@@ -88,7 +87,7 @@ export default function DinnerBookingList() {
         
         // Initialize store with fetched bookings for realtime updates
         if (res.data && res.data.length > 0) {
-          bookingActions.initFromAPI(res.data);
+          serviceBookingActions.initFromAPI(res.data);
         }
       })
       .catch((err) => {

@@ -3,8 +3,7 @@ import api from "@/services/api";
 import RestaurantReservationDetails from "@/components/bookings/RestaurantReservationDetails";
 import BookingsGrid from "@/components/bookings/BookingsGrid";
 import BookingsHistory from "@/components/bookings/BookingsHistory";
-import { useServiceBookingState } from "@/realtime/stores/serviceBookingStore";
-import { bookingActions } from "@/realtime/stores/bookingStore";
+import { useServiceBookingState, serviceBookingActions } from "@/realtime/stores/serviceBookingStore";
 import { Modal } from "react-bootstrap";
 
 export default function RestaurantBookings({ hotelSlug, restaurantId }) {
@@ -76,7 +75,7 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
       .then(() => {
         setBookings(allResults);
         // Initialize store with fetched data
-        bookingActions.initFromAPI(allResults);
+        serviceBookingActions.initFromAPI(allResults);
       })
       .catch(() => setError("Failed to fetch bookings."))
       .finally(() => setLoading(false));
