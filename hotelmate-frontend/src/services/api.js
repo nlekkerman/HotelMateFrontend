@@ -98,6 +98,11 @@ publicAPI.interceptors.response.use(
   }
 );
 
+/**STAFF API */
+export const staffAuthAPI = axios.create({
+  baseURL: `${baseURL.replace(/\/$/, "")}`, // <- /api (no /public)
+  timeout: 30000,
+});
 /**
  * Helper function to build staff API URLs with new pattern
  * /api/staff/hotel/<hotel_slug>/<app>/

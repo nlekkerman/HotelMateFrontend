@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { publicAPI } from "@/services/api";
+import { staffAuthAPI } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 import { requestFirebaseNotificationPermission } from "@/utils/firebaseNotifications";
 
@@ -14,7 +14,7 @@ export default function useLogin() {
 
 
     try {
-      const { data } = await publicAPI.post(
+      const { data } = await staffAuthAPI.post(
         "/staff/login/",
         { username, password },
         { headers: { "Content-Type": "application/json" } }
