@@ -102,7 +102,7 @@ const RoomsListSection = ({ element }) => {
                     
                     {room.booking_url && (
                       <a 
-                        href={room.booking_url} 
+                        href={room.booking_url.replace('/public/booking/', '/booking/')} 
                         className="btn btn-primary w-100 mt-auto"
                       >
                         Book Now

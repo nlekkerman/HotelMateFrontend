@@ -84,7 +84,7 @@ api.interceptors.request.use(
 
 // Public API instance (no authentication headers)
 export const publicAPI = axios.create({
-  baseURL,
+  baseURL: `${baseURL.replace(/\/$/, "")}/public`,
   timeout: 30000,
 });
 

@@ -270,12 +270,12 @@ const GuestRoomBookingPage = () => {
       setError(null);
       
       const response = await publicAPI.post(
-        `/public/hotel/${hotelSlug}/bookings/${bookingData.booking_id}/payment/session/`,
-        {
-          success_url: `${window.location.origin}/booking/payment/success?booking_id=${bookingData.booking_id}`,
-          cancel_url: `${window.location.origin}/booking/payment/cancel?booking_id=${bookingData.booking_id}`
-        }
-      );
+  `/hotel/${hotelSlug}/room-bookings/${bookingData.booking_id}/payment/session/`,
+  {
+    success_url: `${window.location.origin}/booking/payment/success?booking_id=${bookingData.booking_id}`,
+    cancel_url: `${window.location.origin}/booking/payment/cancel?booking_id=${bookingData.booking_id}`,
+  }
+);
       
       const data = unwrap(response);
       
