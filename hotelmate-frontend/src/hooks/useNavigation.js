@@ -40,7 +40,7 @@ export const DEFAULT_NAV_ITEMS = [
  */
 export function useNavigation() {
   const { user } = useAuth();
-  const { canAccessNav, isSuperUser, allowedNavs } = usePermissions();
+  const { canAccessNav, canAccess, isSuperUser, allowedNavs } = usePermissions();
   
   const hotelSlug = user?.hotel_slug || '';
 
