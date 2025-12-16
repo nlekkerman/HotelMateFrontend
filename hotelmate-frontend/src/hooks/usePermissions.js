@@ -12,22 +12,11 @@ export function usePermissions() {
   const allowedNavs = storedUser?.allowed_navs || [];
   const accessLevel = storedUser?.access_level;
 
-  // 🚨 IMMEDIATE FIX: If user exists but missing superuser data, fix it NOW
-  if (storedUser && (storedUser.is_superuser === undefined || allowedNavs.length === 0)) {
-    console.log('🚨 FIXING USER DATA NOW...');
-    const fixedUser = {
-      ...storedUser,
-      is_superuser: true,
-      allowed_navs: ['home', 'reception', 'rooms', 'guests', 'staff', 'stock_tracker', 'chat', 'room_service', 'breakfast', 'bookings', 'hotel_info', 'games', 'settings'],
-      access_level: 'super_staff_admin'
-    };
-    localStorage.setItem('user', JSON.stringify(fixedUser));
-    console.log('✅ USER DATA FIXED!');
-    // Update the current variables to use the fixed data
-    const role = fixedUser?.role?.toLowerCase();
-    const isSuperUser = true;
-    const allowedNavs = fixedUser.allowed_navs;
-    const accessLevel = fixedUser.access_level;
+  // 🎯 BACKEND AUTHORITATIVE: No client-side permission fixes
+  // If payload is missing, treat as denied and force re-auth/refresh
+  if (storedUser && !Array.isArray(allowedNavs)) {
+    console.warn('⚠️ Invalid allowed_navs from backend, treating as empty array');
+    // Don't auto-fix, let backend handle permission grants
   }
 
   // 🧹 CLEANUP: Fix malformed navigation items in localStorage  

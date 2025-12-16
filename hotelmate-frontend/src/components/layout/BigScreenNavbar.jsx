@@ -61,11 +61,8 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
   
   const currentSection = getCurrentSection();
   
-  // Early return checks AFTER all hooks
-  const searchParams = new URLSearchParams(location.search);
-  const isMemoryMatchTournamentExact =
-    /^\/games\/memory-match\/tournaments\/?$/.test(location.pathname) &&
-    searchParams.get("hotel") === "hotel-killarney";
+  // 🎯 LAYOUT POLICY: Visibility controlled by App.jsx using layoutMode
+  // No internal visibility checks needed - App.jsx decides whether to render this component
 
   // Define active path helpers
   const isPartialActive = (path) => {

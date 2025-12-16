@@ -38,6 +38,9 @@ import RealtimeProvider from "@/realtime/RealtimeProvider";
 import { AttendanceProvider } from "@/realtime/stores/attendanceStore.jsx";
 import { RoomServiceProvider } from "@/realtime/stores/roomServiceStore.jsx";
 import { ServiceBookingProvider } from "@/realtime/stores/serviceBookingStore.jsx";
+
+// Layout Policy - Single source of truth for layout mode classification
+import { getLayoutMode } from "@/policy/layoutPolicy.js";
 import { GuestChatProvider } from "@/realtime/stores/guestChatStore.jsx";
 import { ChatProvider as StaffChatStoreProvider } from "@/realtime/stores/chatStore.jsx";
 
@@ -155,75 +158,20 @@ const defaultAudioSettings = {
   effects: true,
 };
 
-// 🔓 Guest routes that don't require staff authentication (PIN-based auth instead)
-const GUEST_ROUTE_PATTERNS = [
-  // PIN Validation Routes
-  "/:hotelIdentifier/room/:roomNumber/validate-pin",
-  "/chat/:hotelSlug/messages/room/:room_number/validate-chat-pin",
-  "/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin",
-
-  // Protected Guest Routes (use RequirePin/RequireChatPin/RequireDinnerPin)
-  "/room_services/:hotelIdentifier/room/:roomNumber/menu",
-  "/room_services/:hotelIdentifier/room/:roomNumber/breakfast",
-  "/chat/:hotelSlug/conversations/:conversationId/messages/send",
-  "/chat/:hotelSlug/conversations/:conversationId/messages",
-  "/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber",
-  "/guest-booking/:hotelSlug/restaurant/:restaurantSlug",
-
-  // Good to Know (Public)
-  "/good_to_know/:hotel_slug/:slug",
-
-  // Quiz Game (Public - Anonymous play via QR)
-  "/games/quiz",
-];
-
-// Helper function to check if current path is a guest route
-const isGuestRoute = (pathname) => {
-  return GUEST_ROUTE_PATTERNS.some((pattern) => matchPath(pattern, pathname));
-};
+// 🔓 Guest route patterns moved to src/policy/layoutPolicy.js
+// Layout mode classification is now handled by getLayoutMode() function
 
 // 🔁 Inner layout that uses `useLocation()` safely
 function AppLayout({ collapsed, setCollapsed, isMobile }) {
   const [audioSettings, setAudioSettings] = useState(defaultAudioSettings);
   const location = useLocation();
-  const isAuthPage =
-    location.pathname === "/login" ||
-    location.pathname === "/logout" ||
-    location.pathname === "/register" ||
-    location.pathname === "/forgot-password" ||
-    location.pathname === "/registration-success" ||
-    location.pathname.startsWith("/reset-password");
-
-  // Check if current page is a guest route (should also hide sidebar/navbar)
-  const isGuestPage = isGuestRoute(location.pathname);
-
-  // Staff routes that should ALWAYS show navigation
-  const isStaffRoute =
-    location.pathname.startsWith("/staff/") ||
-    location.pathname === "/reception" ||
-    location.pathname.startsWith("/rooms") ||
-    location.pathname.startsWith("/bookings") ||
-    location.pathname.startsWith("/maintenance") ||
-    location.pathname.startsWith("/stock_tracker/") ||
-    location.pathname.startsWith("/games") ||
-    location.pathname.startsWith("/hotel_info/") ||
-    location.pathname.startsWith("/good_to_know_console/");
-
-  // Public landing pages - hide navbar/sidebar
-  const isPublicLandingPage =
-    !isStaffRoute &&
-    (location.pathname === "/" ||
-      /^\/hotel\/[a-z0-9-]+$/.test(location.pathname) || // Public hotel pages
-      /^\/[a-z0-9-]+$/.test(location.pathname) ||
-      /^\/[a-z0-9-]+\/book/.test(location.pathname) ||
-      /^\/[a-z0-9-]+\/my-bookings/.test(location.pathname) ||
-      /^\/my-bookings/.test(location.pathname) ||
-      /^\/booking\/confirmation\//.test(location.pathname) ||
-      /^\/booking\/payment\//.test(location.pathname) ||
-      location.pathname === "/staff/login");
-
-  // Determine if navbar/sidebar should be hidden
-  const hideNavigation = isAuthPage || isGuestPage || isPublicLandingPage;
+  
+  // 🎯 SINGLE SOURCE OF TRUTH: Use layout policy for all chrome rendering decisions
+  const layoutMode = getLayoutMode(location.pathname);
+  const showStaffChrome = layoutMode === "staff";
+  
+  // Determine if navbar/sidebar should be hidden (inverse of showStaffChrome)
+  const hideNavigation = !showStaffChrome;
 
   const { user } = useAuth();
 
@@ -237,7 +185,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
   const HomeRedirect = () => {
     // Check if user is coming from a guest route (might have been redirected here)
     const fromGuestRoute =
-      location.state?.from && isGuestRoute(location.state.from.pathname);
+      location.state?.from && getLayoutMode(location.state.from.pathname) === "guest";
 
     if (!user && !fromGuestRoute) {
       console.log(

@@ -124,22 +124,8 @@ const MobileNavbar = () => {
     setExpandedCategoryId(expandedCategoryId === categoryId ? null : categoryId);
   };
 
-  const hiddenNavPatterns = [
-    /^\/room_services\/[^/]+\/room\/[^/]+\/breakfast\/?$/,
-    /^\/room_services\/[^/]+\/room\/[^/]+\/menu\/?$/,
-    /^\/hotel_info\/[^/]+(\/[^/]+)?\/?$/,
-  ];
-
-  // Hide mobile navbar for anonymous users on certain private routes or the
-  // exact public tournament view: /games/memory-match/tournaments?hotel=hotel-killarney
-  const searchParams = new URLSearchParams(location.search);
-  const isMemoryMatchTournamentExact =
-    /^\/games\/memory-match\/tournaments\/?$/.test(location.pathname) &&
-    searchParams.get("hotel") === "hotel-killarney";
-
-  // Hide navigation completely for non-authenticated users or users without permissions
-  if (!user && (hiddenNavPatterns.some((re) => re.test(location.pathname)) || isMemoryMatchTournamentExact))
-    return null;
+  // 🎯 LAYOUT POLICY: Visibility controlled by App.jsx using layoutMode
+  // No internal visibility logic needed - App.jsx decides whether to render this component
   if (!user || !hasNavigation) return null;
 
   return (
