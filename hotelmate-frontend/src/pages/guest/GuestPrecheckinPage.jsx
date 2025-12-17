@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
-import { guestAPI } from '@/services/api';
+import { publicAPI } from '@/services/api';
 import { toast } from 'react-toastify';
 
 /**
@@ -58,7 +58,7 @@ const GuestPrecheckinPage = () => {
         setLoading(true);
         setError(null);
         
-        const response = await guestAPI.get(
+        const response = await publicAPI.get(
           `/hotel/${hotelSlug}/precheckin/?token=${encodeURIComponent(token)}`
         );
         
@@ -180,7 +180,7 @@ const GuestPrecheckinPage = () => {
       
       const payload = buildPayload();
       
-      await guestAPI.post(
+      await publicAPI.post(
         `/hotel/${hotelSlug}/precheckin/?token=${encodeURIComponent(token)}`,
         payload
       );
