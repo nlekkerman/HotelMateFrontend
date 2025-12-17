@@ -1,15 +1,47 @@
-import React, { useState } from 'react';
-import { Modal, Button, Badge, Row, Col, Spinner, Alert, ListGroup } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Modal, Button, Badge, Row, Col, Spinner, Alert, ListGroup, Form } from 'react-bootstrap';
 import { format } from 'date-fns';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import api, { buildStaffURL } from '@/services/api';
+import { useStaffBookings } from '@/hooks/useStaffBookings';
 
 /**
  * BookingDetailModal - Display booking details and allow confirmation
  */
 const BookingDetailModal = ({ show, onHide, booking, hotelSlug, onBookingUpdated }) => {
   const [isConfirming, setIsConfirming] = useState(false);
+  const [selectedRoomId, setSelectedRoomId] = useState('');
+  const [assignmentNotes, setAssignmentNotes] = useState('');
+  const [availableRooms, setAvailableRooms] = useState([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
+  const [inlineError, setInlineError] = useState('');
+  const [flagsWarningShown, setFlagsWarningShown] = useState(false);
+
+  const staffBookings = useStaffBookings(hotelSlug);
+
+  // Defensive rendering - check for missing flags
+  const hasValidFlags = booking?.flags && typeof booking.flags === 'object';
+  const isDataIncomplete = !hasValidFlags;
+
+  // Log warning once for missing flags
+  useEffect(() => {
+    if (!hasValidFlags && !flagsWarningShown && booking) {
+      console.warn('[BookingDetailModal] Missing booking.flags - booking data incomplete:', booking);
+      setFlagsWarningShown(true);
+    }
+  }, [hasValidFlags, flagsWarningShown, booking]);
+
+  // Reset state when modal opens/closes
+  useEffect(() => {
+    if (show) {
+      setSelectedRoomId('');
+      setAssignmentNotes('');
+      setAvailableRooms([]);
+      setInlineError('');
+      setFlagsWarningShown(false);
+    }
+  }, [show]);
 
   // Confirm booking mutation
   const confirmMutation = useMutation({
@@ -45,6 +77,79 @@ const BookingDetailModal = ({ show, onHide, booking, hotelSlug, onBookingUpdated
   const handleConfirmBooking = () => {
     setIsConfirming(true);
     confirmMutation.mutate();
+  };
+
+  // Room assignment handlers
+  const handleLoadRooms = async () => {
+    if (!booking?.id) return;
+    
+    setLoadingRooms(true);
+    setInlineError('');
+    
+    try {
+      const rooms = await staffBookings.fetchAvailableRooms(booking.id);
+      setAvailableRooms(rooms);
+    } catch (error) {
+      console.error('Failed to load available rooms:', error);
+      setInlineError(error.response?.data?.message || 'Failed to load available rooms');
+    } finally {
+      setLoadingRooms(false);
+    }
+  };
+
+  const handleAssignRoom = () => {
+    if (!selectedRoomId || !booking?.id) return;
+    
+    setInlineError('');
+    staffBookings.safeAssignRoom.mutate(
+      { bookingId: booking.id, roomId: parseInt(selectedRoomId), notes: assignmentNotes },
+      {
+        onSuccess: () => {
+          toast.success('Room assigned successfully');
+          setSelectedRoomId('');
+          setAssignmentNotes('');
+          setAvailableRooms([]);
+          if (onBookingUpdated) onBookingUpdated();
+        },
+        onError: (error) => {
+          const errorMessage = error.response?.data?.message || error.message || 'Failed to assign room';
+          toast.error(errorMessage);
+          setInlineError(errorMessage);
+        }
+      }
+    );
+  };
+
+  const handleUnassignRoom = () => {
+    if (!booking?.id) return;
+    
+    setInlineError('');
+    staffBookings.unassignRoom.mutate(booking.id, {
+      onSuccess: () => {
+        toast.success('Room unassigned successfully');
+        if (onBookingUpdated) onBookingUpdated();
+      },
+      onError: (error) => {
+        const errorMessage = error.response?.data?.message || error.message || 'Failed to unassign room';
+        toast.error(errorMessage);
+        setInlineError(errorMessage);
+      }
+    });
+  };
+
+  const handleCheckIn = () => {
+    if (!booking?.id) return;
+    
+    staffBookings.checkInBooking.mutate(booking.id, {
+      onSuccess: () => {
+        toast.success('Checked in successfully');
+        if (onBookingUpdated) onBookingUpdated();
+      },
+      onError: (error) => {
+        const errorMessage = error.response?.data?.message || error.message || 'Failed to check in booking';
+        toast.error(errorMessage);
+      }
+    });
   };
 
   const getStatusBadge = (status) => {
@@ -220,6 +325,303 @@ const BookingDetailModal = ({ show, onHide, booking, hotelSlug, onBookingUpdated
             </Alert>
           </>
         )}
+
+        {/* Ops Panel - Room Assignment & Check-In */}
+        <div className="border-top pt-4 mt-4">
+          <h6 className="fw-bold mb-4">
+            <i className="bi bi-gear-fill me-2"></i>
+            Operations Panel
+          </h6>
+
+          {/* Defensive Rendering Warning */}
+          {isDataIncomplete && (
+            <Alert variant="warning" className="mb-4">
+              <i className="bi bi-exclamation-triangle-fill me-2"></i>
+              Booking data incomplete — refresh / contact dev
+            </Alert>
+          )}
+
+          <Row>
+            <Col md={6}>
+              {/* Section A: Guests (Party) */}
+              <div className="mb-4">
+                <h6 className="fw-bold mb-3">
+                  <i className="bi bi-people-fill me-2"></i>
+                  Party
+                </h6>
+                {booking?.party ? (
+                  <div>
+                    {/* Primary Guest */}
+                    {booking.party.primary && (
+                      <div className="mb-2">
+                        <strong>Primary:</strong> {booking.party.primary.name || booking.party.primary.guest_name || 'N/A'}
+                      </div>
+                    )}
+                    
+                    {/* Companions */}
+                    {booking.party.companions && booking.party.companions.length > 0 ? (
+                      <div>
+                        <strong>Companions:</strong>
+                        <ul className="mb-0 mt-1">
+                          {booking.party.companions.map((companion, index) => (
+                            <li key={index}>{companion.name || companion.guest_name || `Companion ${index + 1}`}</li>
+                          ))}
+                        </ul>
+                        {hasValidFlags && booking.flags.can_edit_party ? (
+                          <small className="text-muted mt-1 d-block">
+                            <i className="bi bi-info-circle me-1"></i>
+                            Companion editing available
+                          </small>
+                        ) : (
+                          <small className="text-muted mt-1 d-block">
+                            Editing companions coming next phase
+                          </small>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <strong>Companions:</strong> None
+                        {hasValidFlags && booking.flags.can_edit_party && (
+                          <small className="text-muted d-block mt-1">
+                            <i className="bi bi-info-circle me-1"></i>
+                            Can add companions
+                          </small>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-muted">
+                    <i className="bi bi-exclamation-circle me-1"></i>
+                    Party information not available
+                  </div>
+                )}
+              </div>
+
+              {/* Section C: Check-In */}
+              <div className="mb-4">
+                <h6 className="fw-bold mb-3">
+                  <i className="bi bi-door-open-fill me-2"></i>
+                  Check-In
+                </h6>
+                {hasValidFlags && booking.flags.can_check_in ? (
+                  <Button 
+                    variant="primary" 
+                    onClick={handleCheckIn}
+                    disabled={isDataIncomplete || staffBookings.isCheckingIn}
+                    className="w-100"
+                  >
+                    {staffBookings.isCheckingIn ? (
+                      <>
+                        <Spinner animation="border" size="sm" className="me-2" />
+                        Checking In...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-door-open me-2"></i>
+                        Check-In Booking
+                      </>
+                    )}
+                  </Button>
+                ) : hasValidFlags ? (
+                  <div className="text-muted">
+                    <i className="bi bi-x-circle me-1"></i>
+                    Check-in not available
+                  </div>
+                ) : (
+                  <Button variant="secondary" disabled className="w-100">
+                    <i className="bi bi-door-open me-2"></i>
+                    Check-In Booking
+                  </Button>
+                )}
+              </div>
+            </Col>
+
+            <Col md={6}>
+              {/* Section B: Room Assignment */}
+              <div className="mb-4">
+                <h6 className="fw-bold mb-3">
+                  <i className="bi bi-house-door-fill me-2"></i>
+                  Room Assignment
+                </h6>
+                
+                {booking?.room ? (
+                  <div>
+                    {/* Assigned Room Summary */}
+                    <div className="mb-3 p-3 bg-light rounded">
+                      <div className="d-flex justify-content-between align-items-start mb-2">
+                        <strong>Room {booking.room.room_number}</strong>
+                        <div>
+                          {booking.room.is_occupied && (
+                            <Badge bg="warning" className="me-1">Occupied</Badge>
+                          )}
+                          {booking.room.is_active === false && (
+                            <Badge bg="secondary" className="me-1">Inactive</Badge>
+                          )}
+                          {booking.room.is_out_of_order && (
+                            <Badge bg="danger">Out of Order</Badge>
+                          )}
+                          {booking.room.is_active && !booking.room.is_occupied && !booking.room.is_out_of_order && (
+                            <Badge bg="success">Active</Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Room Assignment Actions */}
+                    <div className="d-grid gap-2">
+                      {hasValidFlags && !booking.flags.is_checked_in ? (
+                        <>
+                          <Button 
+                            variant="outline-primary" 
+                            size="sm"
+                            onClick={handleLoadRooms}
+                            disabled={isDataIncomplete || loadingRooms}
+                          >
+                            {loadingRooms ? (
+                              <>
+                                <Spinner animation="border" size="sm" className="me-2" />
+                                Loading...
+                              </>
+                            ) : (
+                              <>
+                                <i className="bi bi-arrow-repeat me-2"></i>
+                                Reassign Room
+                              </>
+                            )}
+                          </Button>
+                          <Button 
+                            variant="outline-danger" 
+                            size="sm"
+                            onClick={handleUnassignRoom}
+                            disabled={isDataIncomplete || staffBookings.isUnassigning}
+                          >
+                            {staffBookings.isUnassigning ? (
+                              <>
+                                <Spinner animation="border" size="sm" className="me-2" />
+                                Unassigning...
+                              </>
+                            ) : (
+                              <>
+                                <i className="bi bi-x-circle me-2"></i>
+                                Unassign Room
+                              </>
+                            )}
+                          </Button>
+                        </>
+                      ) : (
+                        <small className="text-muted">
+                          <i className="bi bi-lock me-1"></i>
+                          {hasValidFlags && booking.flags.is_checked_in 
+                            ? 'Room assignment locked (checked in)' 
+                            : 'Room assignment unavailable'}
+                        </small>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    {/* No Room Assigned */}
+                    <div className="mb-3 p-3 bg-light rounded text-center text-muted">
+                      <i className="bi bi-house-door-fill fs-4 d-block mb-2"></i>
+                      No room assigned
+                    </div>
+
+                    {/* Load Available Rooms */}
+                    {availableRooms.length === 0 ? (
+                      <Button 
+                        variant="primary" 
+                        className="w-100"
+                        onClick={handleLoadRooms}
+                        disabled={isDataIncomplete || loadingRooms}
+                      >
+                        {loadingRooms ? (
+                          <>
+                            <Spinner animation="border" size="sm" className="me-2" />
+                            Loading rooms...
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-search me-2"></i>
+                            Load Available Rooms
+                          </>
+                        )}
+                      </Button>
+                    ) : (
+                      <div>
+                        {/* Room Selection Dropdown */}
+                        <Form.Select 
+                          value={selectedRoomId} 
+                          onChange={(e) => setSelectedRoomId(e.target.value)}
+                          className="mb-2"
+                          disabled={isDataIncomplete}
+                        >
+                          <option value="">Select a room...</option>
+                          {availableRooms.map((room) => (
+                            <option key={room.id} value={room.id}>
+                              Room {room.room_number}
+                            </option>
+                          ))}
+                        </Form.Select>
+
+                        {/* Assignment Notes */}
+                        <Form.Control
+                          type="text"
+                          placeholder="Assignment notes (optional)"
+                          value={assignmentNotes}
+                          onChange={(e) => setAssignmentNotes(e.target.value)}
+                          className="mb-2"
+                          disabled={isDataIncomplete}
+                        />
+
+                        {/* Assign Button */}
+                        <div className="d-grid gap-2">
+                          <Button 
+                            variant="success"
+                            onClick={handleAssignRoom}
+                            disabled={isDataIncomplete || !selectedRoomId || staffBookings.isAssigning}
+                          >
+                            {staffBookings.isAssigning ? (
+                              <>
+                                <Spinner animation="border" size="sm" className="me-2" />
+                                Assigning...
+                              </>
+                            ) : (
+                              <>
+                                <i className="bi bi-check-circle me-2"></i>
+                                Assign Room
+                              </>
+                            )}
+                          </Button>
+                          <Button 
+                            variant="outline-secondary" 
+                            size="sm"
+                            onClick={() => {
+                              setAvailableRooms([]);
+                              setSelectedRoomId('');
+                              setAssignmentNotes('');
+                            }}
+                            disabled={isDataIncomplete}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Inline Error Messages */}
+                {inlineError && (
+                  <Alert variant="danger" className="mt-3 mb-0">
+                    <i className="bi bi-exclamation-triangle me-2"></i>
+                    {inlineError}
+                  </Alert>
+                )}
+              </div>
+            </Col>
+          </Row>
+        </div>
 
         {/* Error Display */}
         {confirmMutation.isError && (

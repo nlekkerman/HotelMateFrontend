@@ -19,18 +19,9 @@ export function usePermissions() {
     // Don't auto-fix, let backend handle permission grants
   }
 
-  // 🧹 CLEANUP: Fix malformed navigation items in localStorage  
-  if (storedUser?.navigation_items) {
-    const cleanNavItems = storedUser.navigation_items.filter(item => item && item.slug);
-    if (cleanNavItems.length !== storedUser.navigation_items.length) {
-      console.log('🧹 Cleaning up malformed navigation items in localStorage');
-      const cleanedUser = {
-        ...storedUser,
-        navigation_items: cleanNavItems
-      };
-      localStorage.setItem('user', JSON.stringify(cleanedUser));
-    }
-  }
+  // 🎯 BACKEND AUTHORITATIVE: Trust navigation_items structure from backend
+  // Backend canonical resolver guarantees valid navigation items structure
+  // No client-side cleanup or repair needed
 
   // ✅ NEW: Check if user can access navigation by slug
   const canAccessNav = (slug) => {

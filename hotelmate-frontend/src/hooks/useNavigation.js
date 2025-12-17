@@ -44,19 +44,13 @@ export function useNavigation() {
   
   const hotelSlug = user?.hotel_slug || '';
 
-  // Try to get navigation items from localStorage first (saved on login)
+  // 🎯 BACKEND AUTHORITATIVE: Use navigation_items from canonical payload
+  // Backend resolver guarantees hotel-scoped, validated navigation structure
   let savedNavItems = [];
   try {
     const storedUser = JSON.parse(localStorage.getItem('user'));
     savedNavItems = storedUser?.navigation_items || [];
-    
-    // 🔍 DEBUG: Log if we have unusual navigation items
-    if (savedNavItems.length > 0) {
-      const itemsWithoutSlugs = savedNavItems.filter(item => !item || !item.slug);
-      if (itemsWithoutSlugs.length > 0) {
-        console.warn('🚨 [useNavigation] Found navigation items without slugs in localStorage:', itemsWithoutSlugs);
-      }
-    }
+    // Backend canonical resolver ensures valid structure - no client validation needed
   } catch {
     savedNavItems = [];
   }
@@ -64,14 +58,8 @@ export function useNavigation() {
   // Use saved nav items if available, otherwise use defaults
   let allNavItems = savedNavItems.length > 0 ? savedNavItems : DEFAULT_NAV_ITEMS;
 
-  // 🛡️ DEFENSIVE: Filter out items with missing slugs to prevent undefined errors
-  allNavItems = allNavItems.filter(item => {
-    if (!item || !item.slug) {
-      console.warn('🚨 [useNavigation] Filtering out navigation item with missing slug:', item);
-      return false;
-    }
-    return true;
-  });
+  // 🎯 BACKEND AUTHORITATIVE: Trust navigation_items structure from canonical resolver
+  // Backend guarantees valid slugs and structure - no client-side filtering needed
 
   // Replace {hotelSlug} placeholder in paths with actual hotel slug
   allNavItems = allNavItems.map(item => ({
@@ -101,15 +89,10 @@ export function useNavigation() {
         return hasNavAccess;
       });
 
-  // FALLBACK: If no navigation items are visible and user has empty allowed_navs,
-  // show basic navigation items to prevent complete lockout
-  // ⚠️ SUPERUSER FIX: Also handle case where superuser has empty allowed_navs from backend
-  const finalVisibleItems = (visibleNavItems.length === 0 && allowedNavs.length === 0) || (isSuperUser && allowedNavs.length === 0)
-    ? (isSuperUser 
-        ? allNavItems  // Superusers get ALL items when allowed_navs is empty
-        : allNavItems.filter(item => ['home', 'reception', 'rooms', 'stock_tracker', 'chat'].includes(item.slug))  // Regular users get basic items
-      )
-    : visibleNavItems;
+  // 🎯 BACKEND AUTHORITATIVE: Trust allowed_navs from canonical resolver
+  // Backend handles superuser bypass and M2M filtering correctly
+  // If allowed_navs is empty, staff has no access by design (no frontend fallback)
+  const finalVisibleItems = visibleNavItems;
 
   // Group navigation items by category
   const groupItemsByCategory = (items) => {

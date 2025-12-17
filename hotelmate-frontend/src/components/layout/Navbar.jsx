@@ -58,23 +58,9 @@ const Navbar = () => {
         .catch(() => setStaffProfile(null));
     }
   }, [user]);
-  // ─── Now we can decide whether to render ───
-  const { pathname } = location;
-  const hiddenNavPatterns = [
-    /^\/room_services\/[^/]+\/room\/[^/]+\/breakfast\/?$/,
-    /^\/room_services\/[^/]+\/room\/[^/]+\/menu\/?$/,
-    /^\/hotel_info\/[^/]+(\/[^/]+)?\/?$/,
-  ];
-  // Hide nav for certain private routes when user is anonymous.
-  // Also hide for the exact public tournament view: /games/memory-match/tournaments?hotel=hotel-killarney
-  const searchParams = new URLSearchParams(location.search);
-  const isMemoryMatchTournamentExact =
-    /^\/games\/memory-match\/tournaments\/?$/.test(pathname) &&
-    searchParams.get("hotel") === "hotel-killarney";
-
-  if (!user && (hiddenNavPatterns.some((re) => re.test(pathname)) || isMemoryMatchTournamentExact)) {
-    return null;
-  }
+  // 🎯 LAYOUT POLICY: Visibility controlled by App.jsx using layoutMode
+  // No internal regex-based hiding patterns - App.jsx decides whether to render this component
+  // Legacy navbar component should be deprecated in favor of BigScreenNavbar/MobileNavbar
 
   const toggleNavbar = () => setCollapsed((prev) => !prev);
   const handleLogout = () => {
