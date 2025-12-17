@@ -106,7 +106,7 @@ export const staffAuthAPI = axios.create({
 
 /** GUEST API (guest zone, no auth headers) */
 export const guestAPI = axios.create({
-  baseURL: `${baseURL.replace(/\/$/, "")}`, // /api
+  baseURL: `${baseURL.replace(/\/$/, "")}/guest`, // /api
   timeout: 30000,
 });
 /**

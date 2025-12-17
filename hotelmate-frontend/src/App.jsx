@@ -886,7 +886,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               />
               {/* Hotel Portal Routes - Must be at end to avoid catching other routes */}
               <Route path="/:hotelSlug/book" element={<GuestRoomBookingPage />} />
-              <Route path="/guest/:hotelSlug/precheckin" element={<GuestPrecheckinPage />} />
+              <Route path="/guest/hotel/:hotelSlug/precheckin" element={<GuestPrecheckinPage />} />
               <Route
                 path="/booking/:hotelSlug"
                 element={<GuestRoomBookingPage />}
