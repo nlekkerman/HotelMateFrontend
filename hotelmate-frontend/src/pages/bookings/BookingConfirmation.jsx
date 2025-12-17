@@ -94,7 +94,10 @@ const BookingConfirmation = () => {
                   <h6 className="text-muted mb-2">Guests</h6>
                   <p className="mb-0">
                     <i className="bi bi-people me-2"></i>
-                    {guests?.adults || booking.adults || 0} Adults, {guests?.children || booking.children || 0} Children
+                    {(() => {
+                      const guestCount = booking.party?.total_count || guests?.adults + guests?.children || 0;
+                      return `${guestCount} Guest${guestCount !== 1 ? 's' : ''}`;
+                    })()}
                   </p>
                 </Col>
                 <Col md={6} className="mb-3">

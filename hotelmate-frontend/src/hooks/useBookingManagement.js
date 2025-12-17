@@ -79,8 +79,7 @@ export const useBookingManagement = (hotelSlug) => {
         const parsedAmount = parseFloat(booking.total_amount) || 0;
         console.log(`Booking ${booking.booking_id}:`);
         console.log(`  - Amount: original="${originalAmount}", parsed=${parsedAmount}`);
-        console.log(`  - Adults: ${booking.adults}, Children: ${booking.children}`);
-        console.log(`  - Primary guest name: ${booking.primary_guest_name}`);
+        console.log(`  - Party:`, booking.party);
         console.log(`  - Primary email: ${booking.primary_email}`);
         console.log(`  - Booker email: ${booking.booker_email}`);
         console.log(`  - Party status: complete=${booking.party_complete}, missing=${booking.party_missing_count}`);
@@ -88,12 +87,10 @@ export const useBookingManagement = (hotelSlug) => {
         return {
           ...booking,
           id: booking.booking_id, // Map booking_id to id for table key
-          guest_name: booking.primary_guest_name || booking.guest_name || booking.booker_name || 'Guest',
+          party: booking.party || null, // Ensure party is available
           guest_email: booking.primary_email || booking.booker_email || booking.guest_email || '',
           guest_phone: booking.primary_phone || booking.guest_phone || booking.booker_phone || '',
           room_type_name: booking.room_type_name || 'Standard Room',
-          adults: parseInt(booking.adults) || (booking.adults === 0 ? 0 : 1),
-          children: parseInt(booking.children) || 0,
           total_amount: parsedAmount,
           currency: booking.currency || 'EUR',
           // Add party status fields for easy access

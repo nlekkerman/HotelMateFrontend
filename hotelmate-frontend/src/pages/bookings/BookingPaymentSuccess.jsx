@@ -199,12 +199,14 @@ const BookingPaymentSuccess = () => {
             </div>
           )}
 
-          {booking.guests && (
+          {(booking.party?.total_count || booking.guests) && (
             <div className="mb-4">
               <h5>Guests</h5>
               <p className="mb-0">
-                {booking.guests.adults} Adult{booking.guests.adults !== 1 ? 's' : ''}
-                {booking.guests.children > 0 && `, ${booking.guests.children} Child${booking.guests.children !== 1 ? 'ren' : ''}`}
+                {(() => {
+                  const guestCount = booking.party?.total_count || 0;
+                  return `${guestCount} Guest${guestCount !== 1 ? 's' : ''}`;
+                })()}
               </p>
             </div>
           )}

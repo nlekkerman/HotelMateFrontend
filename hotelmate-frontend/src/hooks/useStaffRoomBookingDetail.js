@@ -26,10 +26,8 @@ export const useRoomBookingDetail = (hotelSlug, bookingId) => {
       // Map field names if they're different from what the frontend expects
       const mappedBooking = {
         ...booking,
-        // Ensure party is always an array or null
+        // Ensure party is always available
         party: booking.party || booking.booking_party || booking.guests || null,
-        // Map other fields as needed
-        guest_name: booking.guest_name || booking.primary_guest_name,
       };
       
       console.log('Mapped booking:', mappedBooking);

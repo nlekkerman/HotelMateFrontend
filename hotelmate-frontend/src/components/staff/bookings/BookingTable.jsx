@@ -126,22 +126,28 @@ const BookingTable = ({ bookings, onConfirm, onCancel, onSendPrecheckin, loading
                 <td>
                   <div className="guest-info-cell">
                     <div className="guest-name fw-semibold">
-                      {booking.guest_name === 'Guest' ? (
-                        <span className="text-muted">Guest Information Pending</span>
-                      ) : (
-                        booking.guest_name
-                      )}
+                      {(() => {
+                        const displayName = booking.party?.primary?.full_name ?? 
+                          (booking.party?.primary?.first_name && booking.party?.primary?.last_name 
+                            ? `${booking.party.primary.first_name} ${booking.party.primary.last_name}` 
+                            : "Primary guest missing");
+                        return displayName === "Primary guest missing" ? (
+                          <span className="text-muted">Guest Information Pending</span>
+                        ) : (
+                          displayName
+                        );
+                      })()}
                     </div>
-                    {booking.guest_email && (
+                    {booking.party?.primary?.email && (
                       <small className="guest-email d-block text-muted">
                         <i className="bi bi-envelope me-1"></i>
-                        {booking.guest_email}
+                        {booking.party.primary.email}
                       </small>
                     )}
-                    {booking.guest_phone && (
+                    {booking.party?.primary?.phone && (
                       <small className="guest-phone d-block text-muted">
                         <i className="bi bi-telephone me-1"></i>
-                        {booking.guest_phone}
+                        {booking.party.primary.phone}
                       </small>
                     )}
                   </div>
@@ -166,23 +172,14 @@ const BookingTable = ({ bookings, onConfirm, onCancel, onSendPrecheckin, loading
                 <td>
                   <div className="guest-count">
                     <i className="bi bi-people me-1"></i>
-                    {/* Use party.total_party_size if available, else fallback to adults+children */}
-                    {booking.party?.total_party_size ? (
-                      <span>{booking.party.total_party_size} guest{booking.party.total_party_size !== 1 ? 's' : ''}</span>
-                    ) : booking.party && !booking.party.total_party_size ? (
-                      <span>—</span> // Party exists but total_party_size missing - don't guess
-                    ) : (
-                      // Fallback to adults+children calculation
-                      <>
-                        {booking.adults} adult{booking.adults !== 1 ? 's' : ''}
-                        {booking.children > 0 && (
-                          <div className="children-count">
-                            <i className="bi bi-person me-1"></i>
-                            {booking.children} child{booking.children !== 1 ? 'ren' : ''}
-                          </div>
-                        )}
-                      </>
-                    )}
+                    {(() => {
+                      const guestCount = booking.party?.total_count ?? 0;
+                      return guestCount > 0 ? (
+                        <span>{guestCount} guest{guestCount !== 1 ? 's' : ''}</span>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      );
+                    })()}
                   </div>
                 </td>
                 

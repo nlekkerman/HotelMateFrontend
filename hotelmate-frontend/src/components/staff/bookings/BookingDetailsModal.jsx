@@ -217,7 +217,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
   
   const renderCompanions = () => {
     const companions = booking?.party?.companions || [];
-    const totalPartySize = booking?.party?.total_party_size;
+    const totalPartySize = booking?.party?.total_count;
     
     if (companions.length === 0 && !totalPartySize) {
       return null;
@@ -512,8 +512,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
                   <small className="text-muted">
                     {format(new Date(booking.check_in), 'MMM dd')} - {format(new Date(booking.check_out), 'MMM dd, yyyy')}
                     <br />
-                    {booking.nights} nights, {booking.adults} adults
-                    {booking.children > 0 && `, ${booking.children} children`}
+                    {booking.nights} nights, {booking.party?.total_count || 0} guest{(booking.party?.total_count || 0) !== 1 ? 's' : ''}
                   </small>
                 </div>
               </Col>

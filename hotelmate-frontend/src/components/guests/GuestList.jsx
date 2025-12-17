@@ -53,9 +53,9 @@ const GuestList = () => {
 }
   if (error) return <p className="text-danger">{error}</p>;
 
-  // Filter by name or room #
+  // Filter by name or room # - only show guests who are actually checked in
   const filteredGuests = guests
-    .filter((g) => g.in_house) // 🔥 Only guests currently in-house
+    .filter((g) => g.checked_in_at && g.in_house) // Only guests currently in-house with valid check-in
     .filter(
       (g) =>
         `${g.first_name} ${g.last_name}`
@@ -163,20 +163,20 @@ const GuestList = () => {
                       <strong>Status:</strong>{" "}
                       <span
                         className={`badge ${
-                          g.in_house ? "bg-success" : "bg-secondary"
+                          (g.checked_in_at && g.in_house) ? "bg-success" : "bg-secondary"
                         }`}
                       >
-                        {g.in_house ? "In House" : "Checked Out"}
+                        {(g.checked_in_at && g.in_house) ? "In House" : "Checked Out"}
                       </span>
                     </div>
                     <div className="d-none d-lg-block">
                       <div className="fw-bold">Status:</div>
                       <span
                         className={`badge ${
-                          g.in_house ? "bg-success" : "bg-secondary"
+                          (g.checked_in_at && g.in_house) ? "bg-success" : "bg-secondary"
                         }`}
                       >
-                        {g.in_house ? "In House" : "Checked Out"}
+                        {(g.checked_in_at && g.in_house) ? "In House" : "Checked Out"}
                       </span>
                     </div>
                   </div>
