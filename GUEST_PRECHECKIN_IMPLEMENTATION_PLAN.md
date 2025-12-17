@@ -108,6 +108,50 @@ if (activeFields.length === 0) {
 }
 ```
 
+### 4A. Party Details Collection (EXTENSION)
+
+**Scope**
+- Primary guest + companions
+- Collected on the same page  
+- Submitted together with extras
+
+**Rules**
+- Party is a separate domain from extras
+- Party fields are NOT registry-driven
+- Party validation is independent of extras
+
+**UI**
+- Render a "Party Details" section above extras
+- Show:
+  - Primary guest (editable)
+  - Companions list
+  - "Add companion" button
+  - Missing guests indicator
+
+**Validation**
+- Primary: first_name + last_name required
+- Companions: first_name + last_name required
+- Max companions = booking.adults - 1 (default)
+
+**Submission**
+- One POST
+- Payload includes both domains:
+```json
+{
+  "party": {
+    "primary": { "first_name": "", "last_name": "", "email": "", "phone": "" },
+    "companions": []
+  },
+  "extras": {
+    "field_key": "value"
+  }
+}
+```
+
+**Compatibility**
+- If backend still expects flat extras:
+  - Also include extras at root (temporary)
+
 ### 5. Validation & Submission
 
 **CRITICAL - Required ⊆ Enabled Constraint**: 
@@ -215,7 +259,8 @@ try {
 - [ ] Success/error states follow established UX patterns
 
 ## Non-Goals
-- Do NOT edit party names or booking details
+- Do NOT change party logic or guest roles
+- ✅ Party names may be edited via precheckin
 - Do NOT change party_complete logic  
 - Do NOT touch backend endpoints
 - Do NOT assume field types beyond text/textarea initially

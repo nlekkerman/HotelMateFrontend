@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, Alert, Spinner, Badge } from 'react-bootstrap';
 import { publicAPI } from '@/services/api';
 import { toast } from 'react-toastify';
+import PartyDetailsSection from '@/components/guest/PartyDetailsSection';
 
 /**
  * GuestPrecheckinPage - Fetch-first, config-driven precheckin form
@@ -17,6 +18,31 @@ const GuestPrecheckinPage = () => {
   // Helper to safely unwrap API responses
   const unwrap = (res) => res?.data?.data ?? res?.data;
   
+  // TODO: Remove once backend unified serializer is deployed
+  const SEND_EXTRAS_FLAT = true;
+  
+  // Normalize party data from mixed backend response shapes
+  const normalizePartyData = (responseData) => {
+    // Prefer structured party data
+    if (responseData.party) {
+      return {
+        primary: responseData.party.primary || {},
+        companions: responseData.party.companions || []
+      };
+    }
+    
+    // Fallback to legacy fields
+    const primary = responseData.primary_guest || {};
+    const companions = responseData.guests || responseData.companions || [];
+    
+    return { primary, companions };
+  };
+  
+  // Compute missing guest count
+  const computeMissingCount = (adults, partyCount) => {
+    return Math.max(0, adults - partyCount);
+  };
+  
   // State management
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -30,9 +56,20 @@ const GuestPrecheckinPage = () => {
   const [booking, setBooking] = useState(null);
   const [party, setParty] = useState(null);
   
-  // Form state
+  // Form state (extras)
   const [values, setValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
+  
+  // Party state (separate domain from extras)
+  const [partyPrimary, setPartyPrimary] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    is_staying: true
+  });
+  const [partyCompanions, setPartyCompanions] = useState([]);
+  const [missingCount, setMissingCount] = useState(0);
   
   // Hotel theming
   const [preset, setPreset] = useState(1);
@@ -78,6 +115,18 @@ const GuestPrecheckinPage = () => {
         setRequired(precheckin_config.required || {});
         setBooking(bookingData);
         setParty(partyData);
+        
+        // Normalize and set party data
+        const normalizedParty = normalizePartyData(data);
+        setPartyPrimary(normalizedParty.primary);
+        setPartyCompanions(normalizedParty.companions);
+        
+        // Compute missing guest count
+        if (bookingData) {
+          const adults = bookingData.adults || 1;
+          const partyCount = 1 + (normalizedParty.companions ? normalizedParty.companions.length : 0);
+          setMissingCount(computeMissingCount(adults, partyCount));
+        }
         
         // Set theme from hotel data
         if (hotelData) {
@@ -137,28 +186,67 @@ const GuestPrecheckinPage = () => {
     }
   };
 
-  // Validate required fields
+  // Unified validation for both party and extras domains
   const validateForm = () => {
-    const errors = {};
-    const activeFields = getActiveFields();
+    const errors = { party: { primary: {}, companions: [] }, extras: {} };
     
+    // Party validation
+    if (!partyPrimary.first_name?.trim()) {
+      errors.party.primary.first_name = "First name is required";
+    }
+    if (!partyPrimary.last_name?.trim()) {
+      errors.party.primary.last_name = "Last name is required";
+    }
+    
+    // Companions validation
+    partyCompanions.forEach((companion, index) => {
+      const companionErrors = {};
+      if (!companion.first_name?.trim()) {
+        companionErrors.first_name = "First name is required";
+      }
+      if (!companion.last_name?.trim()) {
+        companionErrors.last_name = "Last name is required";
+      }
+      if (Object.keys(companionErrors).length > 0) {
+        errors.party.companions[index] = companionErrors;
+      }
+    });
+    
+    // Extras validation (use existing registry-based logic)
+    const activeFields = getActiveFields();
     activeFields.forEach(([fieldKey, meta]) => {
-      if (required[fieldKey] === true && !values[fieldKey]?.trim()) {
-        errors[fieldKey] = `${meta.label} is required`;
+      if (required[fieldKey] && !values[fieldKey]?.trim()) {
+        errors.extras[fieldKey] = `${meta.label} is required`;
       }
     });
     
     return errors;
   };
 
-  // Build payload from active fields only
+  // Build unified payload with party + extras
   const buildPayload = () => {
-    const payload = {};
     const activeFields = getActiveFields();
     
+    // Build extras object from active fields only
+    const extras = {};
     activeFields.forEach(([fieldKey]) => {
-      payload[fieldKey] = values[fieldKey] || '';
+      extras[fieldKey] = values[fieldKey] || '';
     });
+    
+    const payload = {
+      party: {
+        primary: partyPrimary,
+        companions: partyCompanions
+      },
+      extras: extras
+    };
+    
+    // Compatibility: also send extras flattened at root (temporary)
+    if (SEND_EXTRAS_FLAT) {
+      Object.keys(extras).forEach(key => {
+        payload[key] = extras[key];
+      });
+    }
     
     return payload;
   };
@@ -167,9 +255,13 @@ const GuestPrecheckinPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate required fields
+    // Validate both domains
     const errors = validateForm();
-    if (Object.keys(errors).length > 0) {
+    const hasErrors = Object.keys(errors.party.primary).length > 0 ||
+                      errors.party.companions.some(c => Object.keys(c).length > 0) ||
+                      Object.keys(errors.extras).length > 0;
+    
+    if (hasErrors) {
       setFieldErrors(errors);
       return;
     }
@@ -191,9 +283,11 @@ const GuestPrecheckinPage = () => {
     } catch (err) {
       console.error('Failed to submit precheckin:', err);
       
-      // Map backend 400 field errors to inline errors
+      // Handle field errors from backend
       if (err.response?.status === 400 && err.response?.data?.field_errors) {
-        setFieldErrors(err.response.data.field_errors);
+        // Map backend errors to our structure if needed
+        const mappedErrors = err.response.data.field_errors;
+        setFieldErrors(mappedErrors);
       }
       
       const errorMessage = err.response?.data?.detail || 'Failed to submit pre-check-in. Please try again.';
@@ -317,62 +411,114 @@ const GuestPrecheckinPage = () => {
   }
 
   const themeColor = getThemeColor();
+  const maxCompanions = booking ? Math.max(0, (booking.adults || 1) - 1) : 0;
 
   // Main form render
   return (
     <div className={`hotel-public-page page-style-${preset}`} style={{ minHeight: '100vh' }}>
       <Container className="py-5">
         <Row className="justify-content-center">
-          <Col md={8} lg={6}>
-            <Card className="shadow-sm">
-              <Card.Header style={{ borderLeft: `4px solid ${themeColor}` }}>
-                <h5 className="mb-1">Pre-Check-In Details</h5>
-                <small className="text-muted">Please complete the required information</small>
-              </Card.Header>
-              
-              <Form onSubmit={handleSubmit}>
+          <Col md={10} lg={8}>
+            {/* Booking Summary Header */}
+            {booking && (
+              <Card className="shadow-sm mb-4">
                 <Card.Body>
-                  {/* Render dynamic fields from registry */}
-                  {activeFields.map(([fieldKey, meta]) => (
-                    <Form.Group key={fieldKey} className="mb-3">
-                      <Form.Label>
-                        {meta.label}
-                        {required[fieldKey] === true && (
-                          <span className="text-danger ms-1">*</span>
+                  <Row className="align-items-center">
+                    <Col>
+                      <h6 className="mb-1">Booking #{booking.id || booking.booking_id}</h6>
+                      <div className="text-muted small">
+                        {booking.check_in_date && booking.check_out_date && (
+                          <span>{booking.check_in_date} - {booking.check_out_date}</span>
                         )}
-                      </Form.Label>
-                      
-                      {meta.description && (
-                        <div className="text-muted small mb-2">{meta.description}</div>
+                        {booking.adults && (
+                          <span className="ms-3">{booking.adults} adult(s)</span>
+                        )}
+                        {booking.children > 0 && (
+                          <span>, {booking.children} child(ren)</span>
+                        )}
+                      </div>
+                    </Col>
+                    <Col xs="auto">
+                      {booking.room_type && (
+                        <Badge bg="primary">{booking.room_type}</Badge>
                       )}
-                      
-                      {renderField(fieldKey, meta)}
-                      
-                      {fieldErrors[fieldKey] && (
-                        <Form.Control.Feedback type="invalid" className="d-block">
-                          {fieldErrors[fieldKey]}
-                        </Form.Control.Feedback>
-                      )}
-                    </Form.Group>
-                  ))}
+                    </Col>
+                  </Row>
                 </Card.Body>
-                
-                <Card.Footer className="d-flex justify-content-between">
-                  <Button variant="outline-secondary" disabled={submitting}>
-                    Cancel
-                  </Button>
-                  <Button 
-                    variant="primary" 
-                    type="submit"
-                    disabled={submitting}
-                    style={{ backgroundColor: themeColor, borderColor: themeColor }}
-                  >
-                    {submitting && <Spinner animation="border" size="sm" className="me-2" />}
-                    Submit
-                  </Button>
-                </Card.Footer>
-              </Form>
-            </Card>
+              </Card>
+            )}
+
+            <Form onSubmit={handleSubmit}>
+              {/* Party Details Section */}
+              <Card className="shadow-sm mb-4">
+                <Card.Header style={{ borderLeft: `4px solid ${themeColor}` }}>
+                  <h5 className="mb-1">Party Details</h5>
+                  <small className="text-muted">Guest information for your stay</small>
+                </Card.Header>
+                <Card.Body>
+                  <PartyDetailsSection
+                    primary={partyPrimary}
+                    companions={partyCompanions}
+                    onPrimaryChange={setPartyPrimary}
+                    onCompanionsChange={setPartyCompanions}
+                    maxCompanions={maxCompanions}
+                    missingCount={missingCount}
+                    errors={fieldErrors.party || {}}
+                    hotel={booking}
+                  />
+                </Card.Body>
+              </Card>
+
+              {/* Extra Details Section - Only show if there are active fields */}
+              {activeFields.length > 0 && (
+                <Card className="shadow-sm mb-4">
+                  <Card.Header style={{ borderLeft: `4px solid ${themeColor}` }}>
+                    <h5 className="mb-1">Additional Information</h5>
+                    <small className="text-muted">Please complete the required information</small>
+                  </Card.Header>
+                  <Card.Body>
+                    {/* Render dynamic fields from registry */}
+                    {activeFields.map(([fieldKey, meta]) => (
+                      <Form.Group key={fieldKey} className="mb-3">
+                        <Form.Label>
+                          {meta.label}
+                          {required[fieldKey] === true && (
+                            <span className="text-danger ms-1">*</span>
+                          )}
+                        </Form.Label>
+                        
+                        {meta.description && (
+                          <div className="text-muted small mb-2">{meta.description}</div>
+                        )}
+                        
+                        {renderField(fieldKey, meta)}
+                        
+                        {fieldErrors.extras && fieldErrors.extras[fieldKey] && (
+                          <Form.Control.Feedback type="invalid" className="d-block">
+                            {fieldErrors.extras[fieldKey]}
+                          </Form.Control.Feedback>
+                        )}
+                      </Form.Group>
+                    ))}
+                  </Card.Body>
+                </Card>
+              )}
+
+              {/* Single Submit Button */}
+              <div className="text-center">
+                <Button 
+                  variant="primary" 
+                  type="submit"
+                  size="lg"
+                  disabled={submitting}
+                  style={{ backgroundColor: themeColor, borderColor: themeColor }}
+                  className="px-5"
+                >
+                  {submitting && <Spinner animation="border" size="sm" className="me-2" />}
+                  Complete Pre-Check-in
+                </Button>
+              </div>
+            </Form>
           </Col>
         </Row>
       </Container>
