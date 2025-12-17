@@ -6,8 +6,8 @@ import BookingDetailsModal from './BookingDetailsModal';
  * Booking Table Component
  * Displays bookings in a responsive table with actions
  */
-const BookingTable = ({ bookings, onConfirm, onCancel, loading }) => {
-  const [selectedBooking, setSelectedBooking] = useState(null);
+const BookingTable = ({ bookings, onConfirm, onCancel, loading, hotelSlug }) => {
+  const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const formatCurrency = (amount, currency = 'EUR') => {
     return new Intl.NumberFormat('en-IE', {
@@ -51,13 +51,13 @@ const BookingTable = ({ bookings, onConfirm, onCancel, loading }) => {
   };
 
   const handleBookingClick = (booking) => {
-    setSelectedBooking(booking);
+    setSelectedBookingId(booking.booking_id);
     setShowDetailsModal(true);
   };
 
   const handleCloseModal = () => {
     setShowDetailsModal(false);
-    setSelectedBooking(null);
+    setSelectedBookingId(null);
   };
 
   const handleConfirmFromModal = (bookingId) => {
@@ -209,10 +209,9 @@ const BookingTable = ({ bookings, onConfirm, onCancel, loading }) => {
       {/* Booking Details Modal */}
       <BookingDetailsModal
         show={showDetailsModal}
-        booking={selectedBooking}
+        bookingId={selectedBookingId}
+        hotelSlug={hotelSlug}
         onClose={handleCloseModal}
-        onConfirm={handleConfirmFromModal}
-        onCancel={handleCancelFromModal}
       />
     </div>
   );

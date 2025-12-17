@@ -1,255 +1,426 @@
-import React from 'react';
-import { useTheme } from '@/context/ThemeContext';
-import '../modals/StaffModals.css';
+import React, { useState, useEffect } from 'react';
+import { Modal, Button, Spinner, Alert, Card, Badge, Form, Row, Col } from 'react-bootstrap';
+import { 
+  useRoomBookingDetail, 
+  useAvailableRooms, 
+  useSafeAssignRoom, 
+  useUnassignRoom, 
+  useCheckInBooking 
+} from '@/hooks/useStaffRoomBookingDetail';
+import { format } from 'date-fns';
+import { toast } from 'react-toastify';
 
 /**
- * Simplified Booking Details Modal Component
- * Shows booking information in a clean two-column layout
+ * Canonical Booking Details Modal Component
+ * Features room assignment, check-in, and flags-driven actions
  */
-const BookingDetailsModal = ({ 
-  show, 
-  booking, 
-  onClose,
-  onConfirm,
-  onCancel 
-}) => {
-  const { mainColor, accentColor } = useTheme();
-
-  if (!show || !booking) return null;
-
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onClose();
+const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
+  const [selectedRoomId, setSelectedRoomId] = useState('');
+  const [assignmentNotes, setAssignmentNotes] = useState('');
+  const [showRoomAssignment, setShowRoomAssignment] = useState(false);
+  
+  // Fetch booking detail
+  const { 
+    data: booking, 
+    isLoading: isLoadingBooking, 
+    error: bookingError 
+  } = useRoomBookingDetail(hotelSlug, bookingId);
+  
+  // Fetch available rooms (only when needed)
+  const { 
+    data: availableRooms, 
+    isLoading: isLoadingRooms 
+  } = useAvailableRooms(hotelSlug, bookingId);
+  
+  // Mutations
+  const safeAssignMutation = useSafeAssignRoom(hotelSlug);
+  const unassignMutation = useUnassignRoom(hotelSlug);
+  const checkInMutation = useCheckInBooking(hotelSlug);
+  
+  
+  const handleAssignRoom = async () => {
+    if (!selectedRoomId) {
+      toast.error('Please select a room');
+      return;
+    }
+    
+    try {
+      await safeAssignMutation.mutateAsync({
+        bookingId,
+        roomId: selectedRoomId,
+        assignmentNotes,
+      });
+      setSelectedRoomId('');
+      setAssignmentNotes('');
+      setShowRoomAssignment(false);
+    } catch (error) {
+      // Error handled by mutation
     }
   };
-
-  const formatCurrency = (amount, currency = 'EUR') => {
-    return new Intl.NumberFormat('en-IE', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount);
+  
+  const handleUnassignRoom = async () => {
+    try {
+      await unassignMutation.mutateAsync({ bookingId });
+    } catch (error) {
+      // Error handled by mutation
+    }
   };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-IE', {
-      weekday: 'long',
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    });
+  
+  const handleCheckIn = async () => {
+    try {
+      await checkInMutation.mutateAsync({ bookingId });
+    } catch (error) {
+      // Error handled by mutation
+    }
   };
-
-  const formatDateTime = (dateString) => {
-    return new Date(dateString).toLocaleString('en-IE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const calculateNights = (checkIn, checkOut) => {
-    const start = new Date(checkIn);
-    const end = new Date(checkOut);
-    const diffTime = Math.abs(end - start);
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
-
-  const getStatusBadge = (status) => {
+  
+  const renderStatusBadge = (status) => {
     const statusConfig = {
-      'PENDING_PAYMENT': { class: 'bg-warning text-dark', icon: 'clock', label: 'Pending Payment' },
-      'CONFIRMED': { class: 'bg-success', icon: 'check-circle', label: 'Confirmed' },
-      'CANCELLED': { class: 'bg-danger', icon: 'x-circle', label: 'Cancelled' },
-      'COMPLETED': { class: 'bg-info', icon: 'calendar-check', label: 'Completed' },
-      'NO_SHOW': { class: 'bg-secondary', icon: 'person-x', label: 'No Show' }
+      'PENDING_PAYMENT': { variant: 'warning', text: 'Pending Payment' },
+      'CONFIRMED': { variant: 'success', text: 'Confirmed' },
+      'CANCELLED': { variant: 'danger', text: 'Cancelled' },
+      'COMPLETED': { variant: 'info', text: 'Completed' },
+      'NO_SHOW': { variant: 'secondary', text: 'No Show' },
     };
     
-    const config = statusConfig[status] || { class: 'bg-secondary', icon: 'question', label: status };
+    const config = statusConfig[status] || { variant: 'secondary', text: status };
+    return <Badge bg={config.variant}>{config.text}</Badge>;
+  };
+  
+  const renderBookingParty = (party) => {
+    // Handle case where party might not be an array or might be null/undefined
+    if (!party) return null;
+    
+    // If party is not an array, try to convert it or create a single guest entry
+    let partyArray = [];
+    if (Array.isArray(party)) {
+      partyArray = party;
+    } else if (typeof party === 'object') {
+      // If party is an object, treat it as a single guest
+      partyArray = [party];
+    } else {
+      return null;
+    }
+    
+    if (partyArray.length === 0) return null;
+    
+    const primaryGuest = partyArray.find(p => p.role === 'PRIMARY') || partyArray[0];
+    const companions = partyArray.filter(p => p.role === 'COMPANION');
     
     return (
-      <span className={`badge ${config.class} px-2 py-1`} style={{ fontSize: '0.75rem' }}>
-        <i className={`bi bi-${config.icon} me-1`}></i>
-        {config.label}
-      </span>
-    );
-  };
-
-  const canConfirm = booking.status === 'PENDING_PAYMENT';
-  const canCancel = booking.status === 'PENDING_PAYMENT'; // Only pending bookings can be cancelled
-
-  const modalStyles = {
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    backdropFilter: 'none'
-  };
-
-  const headerStyles = {
-    background: mainColor ? `linear-gradient(135deg, ${mainColor} 0%, ${accentColor || mainColor} 100%)` : '#3498db',
-    color: 'white',
-    border: 'none'
-  };
-
-  return (
-    <div 
-      className="modal show d-block staff-modal" 
-      tabIndex="-1" 
-      style={{...modalStyles, transition: 'none'}}
-      onClick={handleBackdropClick}
-    >
-      <div className="modal-dialog modal-lg modal-dialog-centered">
-        <div className="modal-content shadow-lg" style={{ minHeight: '500px', maxHeight: '90vh', width: '100%' }}>
-          <div className="modal-header py-2" style={headerStyles}>
-            <div className="d-flex align-items-center">
-              <i className="bi bi-calendar-check me-2" style={{ fontSize: '1rem' }}></i>
-              <div>
-                <h6 className="modal-title mb-0 fs-6">Booking Details</h6>
-                <small className="opacity-75 small">ID: {booking.booking_id}</small>
-              </div>
-            </div>
-            <button 
-              type="button" 
-              className="btn-close btn-close-white" 
-              onClick={onClose}
-              aria-label="Close"
-            ></button>
+      <Card className="mt-3">
+        <Card.Header>
+          <h6 className="mb-0">Booking Party ({partyArray.length} guests)</h6>
+        </Card.Header>
+        <Card.Body>
+          <div className="mb-2">
+            <strong>Primary Guest:</strong><br />
+            {primaryGuest.first_name} {primaryGuest.last_name}
+            {primaryGuest.email && <><br /><small>{primaryGuest.email}</small></>}
+            {primaryGuest.phone && <><br /><small>{primaryGuest.phone}</small></>}
           </div>
           
-          <div className="modal-body p-2">
-            
-            {/* Simple Document Layout */}
-            <div className="bg-white p-2" style={{ minHeight: '400px' }}>
-              
-              {/* Status and Basic Info */}
-              <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
-                <div>
-                  <h5 className="mb-1 fs-6">{booking.guest_name || booking.name || 'Guest Name'}</h5>
-                  <div className="text-muted small">Booking ID: {booking.booking_id || booking.id}</div>
+          {companions.length > 0 && (
+            <div>
+              <strong>Companions:</strong>
+              {companions.map((companion, index) => (
+                <div key={index} className="ms-2">
+                  • {companion.first_name} {companion.last_name}
                 </div>
-                <div className="text-end">
-                  {getStatusBadge(booking.status)}
-                  <div className="fw-bold text-success small mt-1">
-                    {booking.total_amount ? 
-                      formatCurrency(booking.total_amount, booking.currency || 'EUR') : 
-                      'Amount N/A'
-                    }
-                  </div>
-                </div>
-              </div>
-
-              {/* Two Column Information */}
-              <div className="row">
-                <div className="col-6">
-                  
-                  <h6 className="text-primary mb-2 small">Guest Information</h6>
-                  <div className="mb-1 small">
-                    <strong>Email:</strong> {booking.guest_email || booking.email || 'Not provided'}
-                  </div>
-                  {booking.guest_phone && (
-                    <div className="mb-1 small">
-                      <strong>Phone:</strong> {booking.guest_phone}
-                    </div>
-                  )}
-                  <div className="mb-2 small">
-                    <strong>Guests:</strong> {booking.adults} adult{booking.adults !== 1 ? 's' : ''}{booking.children > 0 && `, ${booking.children} child${booking.children !== 1 ? 'ren' : ''}`}
-                  </div>
-
-                  <h6 className="text-info mb-2 small">Booking Details</h6>
-                  <div className="mb-1 small">
-                    <strong>Room Type:</strong> {booking.room_type_name || booking.room_type || 'Not specified'}
-                  </div>
-                  <div className="mb-1 small">
-                    <strong>Check-in:</strong> {booking.check_in ? formatDate(booking.check_in) : 'Not set'}
-                  </div>
-                  <div className="mb-1 small">
-                    <strong>Check-out:</strong> {booking.check_out ? formatDate(booking.check_out) : 'Not set'}
-                  </div>
-                  <div className="mb-1 small">
-                    <strong>Nights:</strong> {booking.check_in && booking.check_out ? calculateNights(booking.check_in, booking.check_out) : 'N/A'}
-                  </div>
-                  <div className="mb-1 small">
-                    <strong>Created:</strong> {booking.created_at ? formatDateTime(booking.created_at) : 'Not available'}
-                  </div>
-                  {booking.confirmation_number && (
-                    <div className="mb-1 small">
-                      <strong>Confirmation:</strong> <code className="small">{booking.confirmation_number}</code>
-                    </div>
-                  )}
-
-                </div>
-                
-                <div className="col-6">
-                  
-                  {booking.status === 'CANCELLED' ? (
-                    <>
-                      <h6 className="text-danger mb-2 small">Cancellation Information</h6>
-                      <div className="mb-1 small">
-                        <strong>Cancelled Date:</strong> {booking.cancelled_at ? formatDateTime(booking.cancelled_at) : booking.canceled_at ? formatDateTime(booking.canceled_at) : booking.updated_at ? formatDateTime(booking.updated_at) : 'Not specified'}
-                      </div>
-                      <div className="mb-1 small">
-                        <strong>Cancelled By:</strong> {booking.cancelled_by_name || booking.cancelled_by || booking.staff_name || booking.staff_member || booking.updated_by || 'Unknown Staff Member'}
-                      </div>
-                      <div className="mb-1 small">
-                        <strong>Reason:</strong>
-                      </div>
-                      {(booking.cancellation_reason || booking.cancel_reason || booking.reason || booking.cancellation_notes || booking.notes || booking.cancel_notes) ? (
-                        <div className="bg-light p-2 rounded border small">
-                          {booking.cancellation_reason || booking.cancel_reason || booking.reason || booking.cancellation_notes || booking.notes || booking.cancel_notes}
-                        </div>
-                      ) : (
-                        <div className="text-muted fst-italic small">No reason provided</div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <h6 className="text-secondary mb-2 small">Additional Information</h6>
-                      {booking.paid_at && (
-                        <div className="mb-1 small">
-                          <strong>Payment Received:</strong> <span className="text-success">{formatDateTime(booking.paid_at)}</span>
-                        </div>
-                      )}
-                      <div className="mb-1 small">
-                        <strong>Status:</strong> Active booking
-                      </div>
-                      {booking.confirmation_number && (
-                        <div className="mb-1 small">
-                          <strong>Confirmation Number:</strong>
-                          <div className="bg-light p-1 rounded mt-1">
-                            <code className="small">{booking.confirmation_number}</code>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {booking.status === 'PENDING_PAYMENT' && (
-            <div className="modal-footer border-0 py-2">
-              <button 
-                type="button" 
-                className="btn btn-success me-2"
-                onClick={() => onConfirm && onConfirm(booking.booking_id)}
-              >
-                <i className="bi bi-check-circle me-1"></i>
-                Confirm Booking
-              </button>
-              
-              <button 
-                type="button" 
-                className="btn btn-danger"
-                onClick={() => onCancel && onCancel(booking.booking_id)}
-              >
-                <i className="bi bi-x-circle me-1"></i>
-                Cancel Booking
-              </button>
+              ))}
             </div>
           )}
-        </div>
-      </div>
-    </div>
+        </Card.Body>
+      </Card>
+    );
+  };
+  
+  const renderRoomAssignmentSection = () => {
+    const flags = booking?.flags || {};
+    
+    if (booking?.assigned_room) {
+      // Room is assigned
+      return (
+        <Card className="mt-3">
+          <Card.Header>
+            <h6 className="mb-0">Room Assignment</h6>
+          </Card.Header>
+          <Card.Body>
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <strong>Room {booking.assigned_room.room_number}</strong>
+                <br />
+                <small className="text-muted">
+                  Assigned on {format(new Date(booking.room_assigned_at), 'MMM dd, yyyy HH:mm')}
+                </small>
+              </div>
+              {flags.can_unassign_room && (
+                <Button
+                  variant="outline-danger"
+                  size="sm"
+                  onClick={handleUnassignRoom}
+                  disabled={unassignMutation.isPending}
+                >
+                  {unassignMutation.isPending ? 'Unassigning...' : 'Unassign'}
+                </Button>
+              )}
+            </div>
+          </Card.Body>
+        </Card>
+      );
+    } else {
+      // No room assigned
+      if (!flags.can_assign_room) return null;
+      
+      return (
+        <Card className="mt-3">
+          <Card.Header>
+            <h6 className="mb-0">Room Assignment</h6>
+          </Card.Header>
+          <Card.Body>
+            {!showRoomAssignment ? (
+              <Button
+                variant="primary"
+                onClick={() => setShowRoomAssignment(true)}
+              >
+                Assign Room
+              </Button>
+            ) : (
+              <div>
+                <Form.Group className="mb-3">
+                  <Form.Label>Select Room</Form.Label>
+                  <Form.Select
+                    value={selectedRoomId}
+                    onChange={(e) => setSelectedRoomId(e.target.value)}
+                    disabled={isLoadingRooms}
+                  >
+                    <option value="">
+                      {isLoadingRooms ? 'Loading rooms...' : 'Choose a room...'}
+                    </option>
+                    {availableRooms?.map(room => (
+                      <option key={room.id} value={room.id}>
+                        Room {room.room_number} - {room.room_type_name}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+                
+                <Form.Group className="mb-3">
+                  <Form.Label>Assignment Notes (Optional)</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={2}
+                    value={assignmentNotes}
+                    onChange={(e) => setAssignmentNotes(e.target.value)}
+                    placeholder="Add any notes about this room assignment..."
+                  />
+                </Form.Group>
+                
+                <div className="d-flex gap-2">
+                  <Button
+                    variant="success"
+                    onClick={handleAssignRoom}
+                    disabled={!selectedRoomId || safeAssignMutation.isPending}
+                  >
+                    {safeAssignMutation.isPending ? 'Assigning...' : 'Assign Room'}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowRoomAssignment(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card.Body>
+        </Card>
+      );
+    }
+  };
+  
+  const renderCheckInSection = () => {
+    const flags = booking?.flags || {};
+    
+    if (!flags.can_check_in || booking?.checked_in_at) return null;
+    
+    return (
+      <Card className="mt-3">
+        <Card.Header>
+          <h6 className="mb-0">Check-In</h6>
+        </Card.Header>
+        <Card.Body>
+          <Button
+            variant="info"
+            onClick={handleCheckIn}
+            disabled={checkInMutation.isPending}
+          >
+            {checkInMutation.isPending ? 'Checking In...' : 'Check In Guest'}
+          </Button>
+        </Card.Body>
+      </Card>
+    );
+  };
+  
+  if (isLoadingBooking) {
+    return (
+      <Modal show={show} onHide={onClose} size="lg" centered>
+        <Modal.Body className="text-center py-5">
+          <Spinner animation="border" role="status" />
+          <div className="mt-2">Loading booking details...</div>
+        </Modal.Body>
+      </Modal>
+    );
+  }
+  
+  if (bookingError) {
+    return (
+      <Modal show={show} onHide={onClose} size="lg" centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Error</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Alert variant="danger">
+            Failed to load booking details: {bookingError.message}
+          </Alert>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    );
+  }
+  
+  if (!booking) {
+    return (
+      <Modal show={show} onHide={onClose} size="lg" centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Booking Not Found</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Alert variant="warning">
+            Booking details could not be found.
+          </Alert>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    );
+  }
+  
+  return (
+    <Modal show={show} onHide={onClose} size="lg">
+      <Modal.Header closeButton>
+        <Modal.Title>
+          Booking Details - {booking.booking_id}
+        </Modal.Title>
+      </Modal.Header>
+      
+      <Modal.Body>
+        {/* Booking Status and IDs */}
+        <Card>
+          <Card.Body>
+            <Row>
+              <Col md={8}>
+                <h5>
+                  {booking.primary_first_name} {booking.primary_last_name}
+                  <span className="ms-2">{renderStatusBadge(booking.status)}</span>
+                </h5>
+                <div className="text-muted">
+                  Booking ID: {booking.booking_id}<br />
+                  Confirmation: {booking.confirmation_number}
+                </div>
+              </Col>
+              <Col md={4} className="text-end">
+                <div>
+                  <strong>{booking.room_type_name}</strong><br />
+                  <small className="text-muted">
+                    {format(new Date(booking.check_in), 'MMM dd')} - {format(new Date(booking.check_out), 'MMM dd, yyyy')}
+                    <br />
+                    {booking.nights} nights, {booking.adults} adults
+                    {booking.children > 0 && `, ${booking.children} children`}
+                  </small>
+                </div>
+              </Col>
+            </Row>
+          </Card.Body>
+        </Card>
+        
+        {/* Guest Information */}
+        <Card className="mt-3">
+          <Card.Header>
+            <h6 className="mb-0">Guest Information</h6>
+          </Card.Header>
+          <Card.Body>
+            <Row>
+              <Col md={6}>
+                <div>
+                  <strong>Primary Guest:</strong><br />
+                  {booking.primary_first_name} {booking.primary_last_name}
+                  {booking.primary_email && <><br />Email: {booking.primary_email}</>}
+                  {booking.primary_phone && <><br />Phone: {booking.primary_phone}</>}
+                </div>
+              </Col>
+              {booking.booker_type !== 'SELF' && (
+                <Col md={6}>
+                  <div>
+                    <strong>Booker:</strong><br />
+                    {booking.booker_first_name} {booking.booker_last_name}
+                    {booking.booker_email && <><br />Email: {booking.booker_email}</>}
+                    {booking.booker_company && <><br />Company: {booking.booker_company}</>}
+                  </div>
+                </Col>
+              )}
+            </Row>
+          </Card.Body>
+        </Card>
+        
+        {/* Booking Party */}
+        {renderBookingParty(booking.party)}
+        
+        {/* Room Assignment Section */}
+        {renderRoomAssignmentSection()}
+        
+        {/* Check-In Section */}
+        {renderCheckInSection()}
+        
+        {/* Pricing */}
+        <Card className="mt-3">
+          <Card.Header>
+            <h6 className="mb-0">Pricing</h6>
+          </Card.Header>
+          <Card.Body>
+            <div className="d-flex justify-content-between">
+              <span>Total Amount:</span>
+              <strong>{booking.total_amount} {booking.currency}</strong>
+            </div>
+          </Card.Body>
+        </Card>
+        
+        {/* Special Requests */}
+        {booking.special_requests && (
+          <Card className="mt-3">
+            <Card.Header>
+              <h6 className="mb-0">Special Requests</h6>
+            </Card.Header>
+            <Card.Body>
+              <div className="text-muted">{booking.special_requests}</div>
+            </Card.Body>
+          </Card>
+        )}
+      </Modal.Body>
+      
+      <Modal.Footer>
+        <Button variant="secondary" onClick={onClose}>
+          Close
+        </Button>
+      </Modal.Footer>
+    </Modal>
   );
 };
 

@@ -95,7 +95,6 @@ import DinnerBookingForm from "@/components/bookings/DinnerBookingForm";
 import DinnerBookingList from "@/components/bookings/DinnerBookingList";
 import Bookings from "@/components/bookings/Bookings";
 import RestaurantManagementDashboard from "@/pages/bookings/RestaurantManagementDashboard";
-import StaffBookingsPage from "@/pages/bookings/StaffBookingsPage";
 import BookingManagementPage from "@/pages/staff/BookingManagementPage";
 import Restaurant from "@/components/restaurants/Restaurant";
 import HotelInfo from "@/pages/hotel_info/HotelInfo";
@@ -556,7 +555,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 }
               />
               <Route
-                path="/staff/hotel/:hotelSlug/bookings"
+                path="/staff/hotel/:hotelSlug/room-bookings"
                 element={
                   <ProtectedRoute>
                     <BookingManagementPage />
