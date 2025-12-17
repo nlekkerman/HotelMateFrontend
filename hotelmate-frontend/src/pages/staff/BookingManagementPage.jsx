@@ -98,6 +98,14 @@ const BookingManagementPage = () => {
       });
     }
 
+    // Always add Booking Management button
+    actions.push({
+      label: 'Booking Management',
+      path: `/staff/hotel/${hotelSlug}/booking-management`,
+      icon: 'gear',
+      variant: 'info'
+    });
+
     return actions;
   };
 

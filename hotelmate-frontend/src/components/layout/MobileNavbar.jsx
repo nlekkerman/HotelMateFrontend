@@ -374,7 +374,7 @@ const MobileNavbar = () => {
                             const showNewBadge = hasNewBadgeForItem(item);
 
                             // Special handling for Room Bookings with sub-items
-                            if (item.slug === 'room_bookings') {
+                            if (item.slug === 'room-bookings') {
                               return (
                                 <li key={item.slug} className="mb-2">
                                   {/* Main Room Bookings Header */}
@@ -400,9 +400,9 @@ const MobileNavbar = () => {
                                     <li className="mb-1">
                                       <Link
                                         className={`nav-link ${
-                                          location.pathname.includes('/bookings') && location.search.includes('filter=pending') ? "active" : ""
+                                          location.pathname.includes('/room-bookings') && location.search.includes('filter=pending') ? "active" : ""
                                         } text-white py-1 px-2 small`}
-                                        to={`/staff/hotel/${hotelIdentifier}/bookings?filter=pending`}
+                                        to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=pending`}
                                         onClick={toggleNavbar}
                                       >
                                         <i className="bi bi-clock me-2" />
@@ -412,9 +412,9 @@ const MobileNavbar = () => {
                                     <li className="mb-1">
                                       <Link
                                         className={`nav-link ${
-                                          location.pathname.includes('/bookings') && location.search.includes('filter=confirmed') ? "active" : ""
+                                          location.pathname.includes('/room-bookings') && location.search.includes('filter=confirmed') ? "active" : ""
                                         } text-white py-1 px-2 small`}
-                                        to={`/staff/hotel/${hotelIdentifier}/bookings?filter=confirmed`}
+                                        to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=confirmed`}
                                         onClick={toggleNavbar}
                                       >
                                         <i className="bi bi-check-circle me-2" />
@@ -424,9 +424,9 @@ const MobileNavbar = () => {
                                     <li className="mb-1">
                                       <Link
                                         className={`nav-link ${
-                                          location.pathname.includes('/bookings') && !location.search.includes('filter=') ? "active" : ""
+                                          location.pathname.includes('/room-bookings') && !location.search.includes('filter=') ? "active" : ""
                                         } text-white py-1 px-2 small`}
-                                        to={`/staff/hotel/${hotelIdentifier}/bookings`}
+                                        to={`/staff/hotel/${hotelIdentifier}/room-bookings`}
                                         onClick={toggleNavbar}
                                       >
                                         <i className="bi bi-calendar-event me-2" />
@@ -436,9 +436,9 @@ const MobileNavbar = () => {
                                     <li className="mb-1">
                                       <Link
                                         className={`nav-link ${
-                                          location.pathname.includes('/bookings') && location.search.includes('filter=history') ? "active" : ""
+                                          location.pathname.includes('/room-bookings') && location.search.includes('filter=history') ? "active" : ""
                                         } text-white py-1 px-2 small`}
-                                        to={`/staff/hotel/${hotelIdentifier}/bookings?filter=history`}
+                                        to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=history`}
                                         onClick={toggleNavbar}
                                       >
                                         <i className="bi bi-archive me-2" />

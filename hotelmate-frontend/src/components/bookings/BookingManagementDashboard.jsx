@@ -1,15 +1,51 @@
 import React from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
+import PrecheckinRequirementsConfig from './PrecheckinRequirementsConfig';
 
 /**
- * BookingManagementDashboard - Plain dashboard component for managing bookings
- * This will be filled out later with actual functionality
+ * BookingManagementDashboard - Dashboard component for managing bookings
+ * Includes pre-checkin requirements configuration
  */
-const BookingManagementDashboard = () => {
+const BookingManagementDashboard = ({ hotelSlug }) => {
+  // Get hotel slug from props or localStorage as fallback
+  const getHotelSlug = () => {
+    if (hotelSlug) return hotelSlug;
+    
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) return null;
+    
+    try {
+      const userData = JSON.parse(storedUser);
+      return userData.hotel_slug || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const currentHotelSlug = getHotelSlug();
+
   return (
-    <div className="booking-management-dashboard">
-      <h2>Booking Management Dashboard</h2>
-      <p>This dashboard will be implemented later with booking management features.</p>
-    </div>
+    <Container fluid className="py-4">
+      <Row className="mb-4">
+        <Col>
+          <h2>Booking Management Dashboard</h2>
+          <p className="text-muted">Manage your hotel's booking settings and requirements.</p>
+        </Col>
+      </Row>
+      
+      <Row className=' justify-content-center p-1'>
+        <Col lg={8}>
+          {currentHotelSlug ? (
+            <PrecheckinRequirementsConfig hotelSlug={currentHotelSlug} />
+          ) : (
+            <div className="alert alert-warning">
+              <i className="bi bi-exclamation-triangle me-2"></i>
+              Hotel information not found. Please ensure you are properly logged in.
+            </div>
+          )}
+        </Col>
+      </Row>
+    </Container>
   );
 };
 

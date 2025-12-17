@@ -23,6 +23,11 @@ const PATH_TO_NAV_MAPPING = [
     slug: "bookings",
     description: "Restaurant and event bookings"
   },
+  {
+    match: (pathname) => pathname.includes("/room-bookings") || pathname.includes("/booking-management"),
+    slug: "room-bookings",
+    description: "Hotel room bookings and management"
+  },
   { 
     match: (pathname) => pathname.startsWith("/maintenance"), 
     slug: "maintenance",

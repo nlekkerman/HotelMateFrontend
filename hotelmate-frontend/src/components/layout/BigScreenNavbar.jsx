@@ -55,7 +55,8 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
     if (path.includes('/chat')) return 'chat';
     if (path.includes('/games')) return 'games';
     if (path.includes('/restaurants')) return 'restaurant';
-    if (path.includes('/bookings')) return 'bookings';
+    if (path.includes('/bookings') && !path.includes('/room-bookings')) return 'bookings';
+    if (path.includes('/room-bookings') || path.includes('/booking-management')) return 'room-bookings';
     return 'general';
   };
   
@@ -842,7 +843,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                           const hasItemNotification = orderCount > 0 || showNewBadge;
                           
                           // Special handling for Room Bookings with sub-dropdown
-                          if (item.slug === 'room_bookings') {
+                          if (item.slug === 'room-bookings') {
                             return (
                               <div key={item.slug} className="category-dropdown-item-with-submenu">
                                 <div
@@ -865,7 +866,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                                 <div className="sub-dropdown">
                                   <Link
                                     className="sub-dropdown-item"
-                                    to={`/staff/hotel/${hotelIdentifier}/bookings?filter=pending`}
+                                    to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=pending`}
                                     onClick={() => setOpenCategoryId(null)}
                                   >
                                     <i className="bi bi-clock me-2" />
@@ -874,7 +875,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                                   </Link>
                                   <Link
                                     className="sub-dropdown-item"
-                                    to={`/staff/hotel/${hotelIdentifier}/bookings?filter=confirmed`}
+                                    to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=confirmed`}
                                     onClick={() => setOpenCategoryId(null)}
                                   >
                                     <i className="bi bi-check-circle me-2" />
@@ -882,7 +883,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                                   </Link>
                                   <Link
                                     className="sub-dropdown-item"
-                                    to={`/staff/hotel/${hotelIdentifier}/bookings`}
+                                    to={`/staff/hotel/${hotelIdentifier}/room-bookings`}
                                     onClick={() => setOpenCategoryId(null)}
                                   >
                                     <i className="bi bi-calendar-event me-2" />
@@ -890,11 +891,19 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                                   </Link>
                                   <Link
                                     className="sub-dropdown-item"
-                                    to={`/staff/hotel/${hotelIdentifier}/bookings?filter=history`}
+                                    to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=history`}
                                     onClick={() => setOpenCategoryId(null)}
                                   >
                                     <i className="bi bi-archive me-2" />
                                     <span>Booking History</span>
+                                  </Link>
+                                  <Link
+                                    className="sub-dropdown-item"
+                                    to={`/staff/hotel/${hotelIdentifier}/booking-management`}
+                                    onClick={() => setOpenCategoryId(null)}
+                                  >
+                                    <i className="bi bi-gear me-2" />
+                                    <span>Booking Management</span>
                                   </Link>
                                 </div>
                               </div>
