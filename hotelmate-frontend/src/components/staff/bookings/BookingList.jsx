@@ -19,8 +19,10 @@ const BookingList = ({ hotelSlug, urlParams }) => {
     error,
     confirmBooking,
     cancelBooking,
+    sendPrecheckinLink,
     isConfirming,
     isCancelling,
+    isSendingPrecheckin,
     hasBookings,
     isEmpty,
     currentFilter,
@@ -50,6 +52,20 @@ const BookingList = ({ hotelSlug, urlParams }) => {
       });
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to cancel booking');
+    }
+  };
+
+  const handleSendPrecheckin = async (bookingId) => {
+    try {
+      const result = await sendPrecheckinLink(bookingId);
+      const sentTo = result.sent_to || 'guest';
+      setSuccessModal({
+        show: true,
+        message: `Pre-check-in link sent to ${sentTo}`,
+        preset: 'precheckin_sent'
+      });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to send pre-check-in link. Please try again.');
     }
   };
 
@@ -120,7 +136,8 @@ const BookingList = ({ hotelSlug, urlParams }) => {
           bookings={bookings}
           onConfirm={handleConfirm}
           onCancel={handleCancel}
-          loading={isConfirming || isCancelling}
+          onSendPrecheckin={handleSendPrecheckin}
+          loading={isConfirming || isCancelling || isSendingPrecheckin}
           hotelSlug={hotelSlug}
         />
       )}

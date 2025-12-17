@@ -6,7 +6,7 @@ import BookingDetailsModal from './BookingDetailsModal';
  * Booking Table Component
  * Displays bookings in a responsive table with actions
  */
-const BookingTable = ({ bookings, onConfirm, onCancel, loading, hotelSlug }) => {
+const BookingTable = ({ bookings, onConfirm, onCancel, onSendPrecheckin, loading, hotelSlug }) => {
   const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const formatCurrency = (amount, currency = 'EUR') => {
@@ -103,19 +103,9 @@ const BookingTable = ({ bookings, onConfirm, onCancel, loading, hotelSlug }) => 
             {bookings.map((booking) => (
               <tr 
                 key={booking.id} 
-                className={`${loading ? 'table-row-loading' : ''} ${
-                  ['CANCELLED', 'CONFIRMED', 'COMPLETED', 'NO_SHOW'].includes(booking.status) 
-                    ? 'booking-row-cancelled' 
-                    : 'booking-row-clickable'
-                }`}
-                onClick={['CANCELLED', 'CONFIRMED', 'COMPLETED', 'NO_SHOW'].includes(booking.status) 
-                  ? undefined 
-                  : () => handleBookingClick(booking)}
-                style={{ 
-                  cursor: ['CANCELLED', 'CONFIRMED', 'COMPLETED', 'NO_SHOW'].includes(booking.status) 
-                    ? 'default' 
-                    : 'pointer' 
-                }}
+                className={`${loading ? 'table-row-loading' : ''} booking-row-clickable`}
+                onClick={() => handleBookingClick(booking)}
+                style={{ cursor: 'pointer' }}
               >
                 <td>
                   <div className="booking-id-cell">
@@ -135,8 +125,19 @@ const BookingTable = ({ bookings, onConfirm, onCancel, loading, hotelSlug }) => 
                 
                 <td>
                   <div className="guest-info-cell">
-                    <div className="guest-name fw-semibold">{booking.guest_name}</div>
-                    <small className="guest-email d-block text-muted">{booking.guest_email}</small>
+                    <div className="guest-name fw-semibold">
+                      {booking.guest_name === 'Guest' ? (
+                        <span className="text-muted">Guest Information Pending</span>
+                      ) : (
+                        booking.guest_name
+                      )}
+                    </div>
+                    {booking.guest_email && (
+                      <small className="guest-email d-block text-muted">
+                        <i className="bi bi-envelope me-1"></i>
+                        {booking.guest_email}
+                      </small>
+                    )}
                     {booking.guest_phone && (
                       <small className="guest-phone d-block text-muted">
                         <i className="bi bi-telephone me-1"></i>
@@ -186,26 +187,40 @@ const BookingTable = ({ bookings, onConfirm, onCancel, loading, hotelSlug }) => 
                 </td>
                 
                 <td>
-                  {/* Party completion status - list payload doesn't include party fields */}
-                  {booking.party_complete !== undefined ? (
-                    // If list includes party_complete field (rare)
+                  {/* Party completion status using new backend fields */}
+                  {booking.party_status_display ? (
+                    // Use the human-readable display from backend
+                    <span className={`badge ${booking.party_complete ? 'bg-success' : 'bg-warning text-dark'}`}>
+                      {booking.party_status_display}
+                    </span>
+                  ) : booking.party_complete !== undefined ? (
+                    // Fallback to boolean status
                     booking.party_complete ? (
-                      <span className="badge bg-success">Complete</span>
+                      <span className="badge bg-success">
+                        <i className="bi bi-check-circle me-1"></i>Complete
+                      </span>
                     ) : (
                       <span className="badge bg-warning text-dark">
+                        <i className="bi bi-exclamation-triangle me-1"></i>
                         Missing {booking.party_missing_count || 0}
                       </span>
                     )
                   ) : (
-                    // Default: neutral badge since truth lives in detail modal
-                    <span className="badge bg-secondary">Details</span>
+                    // Default: neutral badge for details
+                    <span className="badge bg-secondary">
+                      <i className="bi bi-info-circle me-1"></i>Details
+                    </span>
                   )}
                 </td>
                 
                 <td>
                   <div className="amount-cell">
                     <strong className="total-amount">
-                      {formatCurrency(booking.total_amount, booking.currency)}
+                      {booking.total_amount !== null && booking.total_amount !== undefined ? (
+                        formatCurrency(booking.total_amount, booking.currency)
+                      ) : (
+                        <span className="text-muted">Pending calculation</span>
+                      )}
                     </strong>
                     {booking.paid_at && (
                       <div className="paid-indicator">
@@ -225,6 +240,7 @@ const BookingTable = ({ bookings, onConfirm, onCancel, loading, hotelSlug }) => 
                     booking={booking}
                     onConfirm={onConfirm}
                     onCancel={onCancel}
+                    onSendPrecheckin={onSendPrecheckin}
                     loading={loading}
                   />
                 </td>

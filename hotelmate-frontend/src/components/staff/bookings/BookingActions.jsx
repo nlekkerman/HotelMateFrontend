@@ -4,13 +4,15 @@ import StaffInputModal from '@/components/staff/modals/StaffInputModal';
 
 /**
  * Booking Actions Component
- * Provides action buttons for booking operations (confirm, cancel)
+ * Provides action buttons for booking operations (confirm, cancel, send pre-check-in)
  */
-const BookingActions = ({ booking, onConfirm, onCancel, loading }) => {
+const BookingActions = ({ booking, onConfirm, onCancel, onSendPrecheckin, loading }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showPrecheckinModal, setShowPrecheckinModal] = useState(false);
   const canConfirm = booking.status === 'PENDING_PAYMENT';
   const canCancel = booking.status === 'PENDING_PAYMENT'; // Only pending bookings can be cancelled
+  const canSendPrecheckin = ['PENDING_PAYMENT', 'CONFIRMED'].includes(booking.status) && (booking.guest_email || booking.primary_email || booking.booker_email);
 
   const handleConfirm = () => {
     setShowConfirmModal(true);
@@ -28,6 +30,15 @@ const BookingActions = ({ booking, onConfirm, onCancel, loading }) => {
   const handleCancelConfirm = (reason) => {
     onCancel(booking.booking_id, reason || 'Cancelled by staff');
     setShowCancelModal(false);
+  };
+
+  const handleSendPrecheckin = () => {
+    setShowPrecheckinModal(true);
+  };
+
+  const handleSendPrecheckinConfirm = () => {
+    onSendPrecheckin(booking.booking_id);
+    setShowPrecheckinModal(false);
   };
 
   return (
@@ -53,15 +64,40 @@ const BookingActions = ({ booking, onConfirm, onCancel, loading }) => {
             <i className="bi bi-x-circle me-1"></i>
             Cancel
           </button>
+
+          {canSendPrecheckin && (
+            <button 
+              onClick={handleSendPrecheckin}
+              className="btn btn-outline-primary btn-sm"
+              title="Send Pre-Check-In Link"
+              disabled={loading}
+            >
+              <i className="bi bi-envelope me-1"></i>
+              Pre-Check-In
+            </button>
+          )}
         </>
       ) : (
         // Show status badges for non-actionable bookings
         <>
           {booking.status === 'CONFIRMED' && (
-            <span className="badge bg-success">
-              <i className="bi bi-check-circle me-1"></i>
-              Confirmed
-            </span>
+            <>
+              <span className="badge bg-success me-2">
+                <i className="bi bi-check-circle me-1"></i>
+                Confirmed
+              </span>
+              {canSendPrecheckin && (
+                <button 
+                  onClick={handleSendPrecheckin}
+                  className="btn btn-outline-primary btn-sm"
+                  title="Send Pre-Check-In Link"
+                  disabled={loading}
+                >
+                  <i className="bi bi-envelope me-1"></i>
+                  Pre-Check-In
+                </button>
+              )}
+            </>
           )}
           
           {booking.status === 'CANCELLED' && (
@@ -108,6 +144,16 @@ const BookingActions = ({ booking, onConfirm, onCancel, loading }) => {
         preset="cancel_booking"
         onConfirm={handleCancelConfirm}
         onCancel={() => setShowCancelModal(false)}
+      />
+
+      {/* Staff Confirmation Modal for Pre-Check-In Link */}
+      <StaffConfirmationModal
+        show={showPrecheckinModal}
+        title="Send Pre-Check-In Link"
+        message={`Send pre-check-in link for booking ${booking.booking_id}?\n\nEmail will be sent to: ${booking.guest_email || booking.primary_email || booking.booker_email}`}
+        preset="send_precheckin"
+        onConfirm={handleSendPrecheckinConfirm}
+        onCancel={() => setShowPrecheckinModal(false)}
       />
     </div>
   );

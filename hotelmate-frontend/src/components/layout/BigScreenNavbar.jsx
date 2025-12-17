@@ -761,6 +761,14 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                             <i className="bi bi-archive me-2" />
                             <span>Booking History</span>
                           </Link>
+                          <Link
+                            className="category-dropdown-item"
+                            to={`/staff/hotel/${hotelIdentifier}/booking-management`}
+                            onClick={() => setOpenCategoryId(null)}
+                          >
+                            <i className="bi bi-gear me-2" />
+                            <span>Management Dashboard</span>
+                          </Link>
                         </div>
                       )}
                     </div>

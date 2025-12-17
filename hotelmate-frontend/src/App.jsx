@@ -96,6 +96,7 @@ import DinnerBookingList from "@/components/bookings/DinnerBookingList";
 import Bookings from "@/components/bookings/Bookings";
 import RestaurantManagementDashboard from "@/pages/bookings/RestaurantManagementDashboard";
 import BookingManagementPage from "@/pages/staff/BookingManagementPage";
+import BookingManagementDashboard from "@/components/bookings/BookingManagementDashboard";
 import Restaurant from "@/components/restaurants/Restaurant";
 import HotelInfo from "@/pages/hotel_info/HotelInfo";
 import GoodToKnow from "@/components/hotel_info/GoodToKnow";
@@ -559,6 +560,14 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 element={
                   <ProtectedRoute>
                     <BookingManagementPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/staff/hotel/:hotelSlug/booking-management"
+                element={
+                  <ProtectedRoute>
+                    <BookingManagementDashboard />
                   </ProtectedRoute>
                 }
               />

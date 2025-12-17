@@ -76,23 +76,30 @@ export const useBookingManagement = (hotelSlug) => {
       const mappedResults = bookings.map(booking => {
         // Debug: Log each booking's data transformation
         const originalAmount = booking.total_amount;
-        const parsedAmount = parseFloat(booking.total_amount);
+        const parsedAmount = parseFloat(booking.total_amount) || 0;
         console.log(`Booking ${booking.booking_id}:`);
         console.log(`  - Amount: original="${originalAmount}", parsed=${parsedAmount}`);
         console.log(`  - Adults: ${booking.adults}, Children: ${booking.children}`);
-        console.log(`  - Guest name: ${booking.primary_guest_name}`);
+        console.log(`  - Primary guest name: ${booking.primary_guest_name}`);
+        console.log(`  - Primary email: ${booking.primary_email}`);
+        console.log(`  - Booker email: ${booking.booker_email}`);
+        console.log(`  - Party status: complete=${booking.party_complete}, missing=${booking.party_missing_count}`);
         
         return {
           ...booking,
           id: booking.booking_id, // Map booking_id to id for table key
-          guest_name: booking.primary_guest_name || booking.guest_name || 'N/A',
-          guest_email: booking.primary_email || booking.guest_email || 'N/A',
-          guest_phone: booking.primary_phone || booking.guest_phone || '',
+          guest_name: booking.primary_guest_name || booking.guest_name || booking.booker_name || 'Guest',
+          guest_email: booking.primary_email || booking.booker_email || booking.guest_email || '',
+          guest_phone: booking.primary_phone || booking.guest_phone || booking.booker_phone || '',
           room_type_name: booking.room_type_name || 'Standard Room',
           adults: parseInt(booking.adults) || (booking.adults === 0 ? 0 : 1),
           children: parseInt(booking.children) || 0,
-          total_amount: parsedAmount || 0,
-          currency: booking.currency || 'EUR'
+          total_amount: parsedAmount,
+          currency: booking.currency || 'EUR',
+          // Add party status fields for easy access
+          party_complete: booking.party_complete,
+          party_missing_count: booking.party_missing_count,
+          party_status_display: booking.party_status_display
         };
       });
       
@@ -154,6 +161,20 @@ export const useBookingManagement = (hotelSlug) => {
       });
     }
   });
+
+  // Send pre-check-in link mutation
+  const sendPrecheckinLinkMutation = useMutation({
+    mutationFn: async (bookingId) => {
+      const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/send-precheckin-link/`);
+      const response = await api.post(url);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['staff-room-bookings', hotelSlug]
+      });
+    }
+  });
   
   // URL filter management
   const setFilter = (filterType) => {
@@ -192,8 +213,10 @@ export const useBookingManagement = (hotelSlug) => {
     // Mutations
     confirmBooking: confirmBookingMutation.mutateAsync,
     cancelBooking: cancelBookingMutation.mutateAsync,
+    sendPrecheckinLink: sendPrecheckinLinkMutation.mutateAsync,
     isConfirming: confirmBookingMutation.isPending,
     isCancelling: cancelBookingMutation.isPending,
+    isSendingPrecheckin: sendPrecheckinLinkMutation.isPending,
     
     // Helpers
     hasBookings: (data?.results || []).length > 0,

@@ -445,6 +445,18 @@ const MobileNavbar = () => {
                                         Booking History
                                       </Link>
                                     </li>
+                                    <li className="mb-1">
+                                      <Link
+                                        className={`nav-link ${
+                                          location.pathname.includes('/booking-management') ? "active" : ""
+                                        } text-white py-1 px-2 small`}
+                                        to={`/staff/hotel/${hotelIdentifier}/booking-management`}
+                                        onClick={toggleNavbar}
+                                      >
+                                        <i className="bi bi-gear me-2" />
+                                        Management Dashboard
+                                      </Link>
+                                    </li>
                                   </ul>
                                 </li>
                               );
