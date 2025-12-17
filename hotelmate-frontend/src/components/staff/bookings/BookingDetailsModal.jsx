@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Spinner, Alert, Card, Badge, Form, Row, Col } from 'react-bootstrap';
+import { Modal, Button, Spinner, Alert, Card, Badge, Form, Row, Col, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { 
   useRoomBookingDetail, 
   useAvailableRooms, 
   useSafeAssignRoom, 
   useUnassignRoom, 
-  useCheckInBooking 
+  useCheckInBooking,
+  useSendPrecheckinLink 
 } from '@/hooks/useStaffRoomBookingDetail';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
@@ -36,6 +37,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
   const safeAssignMutation = useSafeAssignRoom(hotelSlug);
   const unassignMutation = useUnassignRoom(hotelSlug);
   const checkInMutation = useCheckInBooking(hotelSlug);
+  const sendPrecheckinLinkMutation = useSendPrecheckinLink(hotelSlug);
   
   
   const handleAssignRoom = async () => {
@@ -54,7 +56,13 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
       setAssignmentNotes('');
       setShowRoomAssignment(false);
     } catch (error) {
-      // Error handled by mutation
+      // Check for PARTY_INCOMPLETE specific error
+      if (error.response?.data?.code === 'PARTY_INCOMPLETE') {
+        toast.error('Cannot assign room. Missing guest information. Send pre-check-in link first.');
+        // Keep modal open for user to fix the issue
+        return;
+      }
+      // Other errors handled by mutation
     }
   };
   
@@ -74,6 +82,14 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
     }
   };
   
+  const handleSendPrecheckinLink = async () => {
+    try {
+      await sendPrecheckinLinkMutation.mutateAsync({ bookingId });
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
+  
   const renderStatusBadge = (status) => {
     const statusConfig = {
       'PENDING_PAYMENT': { variant: 'warning', text: 'Pending Payment' },
@@ -87,48 +103,148 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
     return <Badge bg={config.variant}>{config.text}</Badge>;
   };
   
-  const renderBookingParty = (party) => {
-    // Handle case where party might not be an array or might be null/undefined
-    if (!party) return null;
+  const renderPartyStatusBanner = () => {
+    const partyComplete = booking?.party_complete ?? false;
+    const partyMissingCount = booking?.party_missing_count ?? 0;
     
-    // If party is not an array, try to convert it or create a single guest entry
-    let partyArray = [];
-    if (Array.isArray(party)) {
-      partyArray = party;
-    } else if (typeof party === 'object') {
-      // If party is an object, treat it as a single guest
-      partyArray = [party];
-    } else {
-      return null;
+    if (partyComplete) {
+      return null; // No banner needed when party is complete
     }
     
-    if (partyArray.length === 0) return null;
+    return (
+      <Alert variant="warning" className="mt-3 party-status-banner">
+        <div className="d-flex justify-content-between align-items-center">
+          <div>
+            <i className="bi bi-exclamation-triangle me-2"></i>
+            Missing {partyMissingCount} guest name(s). Request guest details.
+          </div>
+          <Button 
+            variant="outline-warning" 
+            size="sm"
+            onClick={handleSendPrecheckinLink}
+            disabled={sendPrecheckinLinkMutation.isPending}
+          >
+            {sendPrecheckinLinkMutation.isPending ? (
+              <>
+                <Spinner animation="border" size="sm" className="me-1" />
+                Sending...
+              </>
+            ) : (
+              'Request guest details'
+            )}
+          </Button>
+        </div>
+      </Alert>
+    );
+  };
+  
+  const renderPrimaryGuest = () => {
+    const party = booking?.party;
+    let primaryGuest = null;
     
-    const primaryGuest = partyArray.find(p => p.role === 'PRIMARY') || partyArray[0];
-    const companions = partyArray.filter(p => p.role === 'COMPANION');
+    // Use party.primary if available, fallback to primary_* fields
+    if (party?.primary) {
+      primaryGuest = party.primary;
+    } else if (booking?.primary_first_name || booking?.primary_last_name) {
+      primaryGuest = {
+        first_name: booking.primary_first_name,
+        last_name: booking.primary_last_name,
+        full_name: `${booking.primary_first_name || ''} ${booking.primary_last_name || ''}`.trim(),
+        email: booking.primary_email,
+        phone: booking.primary_phone
+      };
+    }
+    
+    if (!primaryGuest) {
+      return (
+        <Card className="mt-3">
+          <Card.Header>
+            <h6 className="mb-0">Primary Guest</h6>
+          </Card.Header>
+          <Card.Body>
+            <div className="text-muted">Not provided yet</div>
+          </Card.Body>
+        </Card>
+      );
+    }
     
     return (
       <Card className="mt-3">
         <Card.Header>
-          <h6 className="mb-0">Booking Party ({partyArray.length} guests)</h6>
+          <h6 className="mb-0">Primary Guest</h6>
         </Card.Header>
         <Card.Body>
-          <div className="mb-2">
-            <strong>Primary Guest:</strong><br />
-            {primaryGuest.first_name} {primaryGuest.last_name}
-            {primaryGuest.email && <><br /><small>{primaryGuest.email}</small></>}
-            {primaryGuest.phone && <><br /><small>{primaryGuest.phone}</small></>}
+          <div>
+            <strong>{primaryGuest.full_name || `${primaryGuest.first_name || ''} ${primaryGuest.last_name || ''}`.trim()}</strong>
+            {primaryGuest.email && (
+              <div className="text-muted">Email: {primaryGuest.email}</div>
+            )}
+            {primaryGuest.phone && (
+              <div className="text-muted">Phone: {primaryGuest.phone}</div>
+            )}
           </div>
-          
-          {companions.length > 0 && (
+        </Card.Body>
+      </Card>
+    );
+  };
+  
+  const renderBooker = () => {
+    const hasBooker = booking?.booker_first_name || booking?.booker_last_name || booking?.booker_email;
+    
+    if (!hasBooker || booking?.booker_type === 'SELF') {
+      return null; // Don't show booker section if it's self-booking or no booker data
+    }
+    
+    return (
+      <Card className="mt-3">
+        <Card.Header>
+          <h6 className="mb-0">Booker</h6>
+        </Card.Header>
+        <Card.Body>
+          <div>
+            <strong>{booking.booker_first_name} {booking.booker_last_name}</strong>
+            {booking.booker_email && (
+              <div className="text-muted">Email: {booking.booker_email}</div>
+            )}
+            {booking.booker_company && (
+              <div className="text-muted">Company: {booking.booker_company}</div>
+            )}
+          </div>
+        </Card.Body>
+      </Card>
+    );
+  };
+  
+  const renderCompanions = () => {
+    const companions = booking?.party?.companions || [];
+    const totalPartySize = booking?.party?.total_party_size;
+    
+    if (companions.length === 0 && !totalPartySize) {
+      return null;
+    }
+    
+    return (
+      <Card className="mt-3">
+        <Card.Header>
+          <h6 className="mb-0">
+            Booking Party
+            {totalPartySize && (
+              <span className="text-muted ms-2">({totalPartySize} guests total)</span>
+            )}
+          </h6>
+        </Card.Header>
+        <Card.Body>
+          {companions.length > 0 ? (
             <div>
               <strong>Companions:</strong>
               {companions.map((companion, index) => (
-                <div key={index} className="ms-2">
-                  • {companion.first_name} {companion.last_name}
+                <div key={index} className="ms-2 mt-1">
+                  • {companion.full_name || `${companion.first_name || ''} ${companion.last_name || ''}`.trim()}
                 </div>
               ))}
             </div>
+          ) : (
+            <div className="text-muted">No companions added yet</div>
           )}
         </Card.Body>
       </Card>
@@ -179,12 +295,39 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
           </Card.Header>
           <Card.Body>
             {!showRoomAssignment ? (
-              <Button
-                variant="primary"
-                onClick={() => setShowRoomAssignment(true)}
-              >
-                Assign Room
-              </Button>
+              (() => {
+                const partyComplete = booking?.party_complete ?? true; // Default to true if not present
+                const partyMissingCount = booking?.party_missing_count ?? 0;
+                const isDisabled = !partyComplete;
+                
+                const button = (
+                  <Button
+                    variant="primary"
+                    onClick={() => setShowRoomAssignment(true)}
+                    disabled={isDisabled}
+                    className={isDisabled ? 'party-gated-button' : ''}
+                  >
+                    Assign Room
+                  </Button>
+                );
+                
+                if (isDisabled) {
+                  return (
+                    <OverlayTrigger
+                      placement="top"
+                      overlay={
+                        <Tooltip>
+                          Missing {partyMissingCount} guest name(s). Send pre-check-in link first.
+                        </Tooltip>
+                      }
+                    >
+                      <span className="d-inline-block">{button}</span>
+                    </OverlayTrigger>
+                  );
+                }
+                
+                return button;
+              })()
             ) : (
               <div>
                 <Form.Group className="mb-3">
@@ -217,13 +360,40 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
                 </Form.Group>
                 
                 <div className="d-flex gap-2">
-                  <Button
-                    variant="success"
-                    onClick={handleAssignRoom}
-                    disabled={!selectedRoomId || safeAssignMutation.isPending}
-                  >
-                    {safeAssignMutation.isPending ? 'Assigning...' : 'Assign Room'}
-                  </Button>
+                  {(() => {
+                    const partyComplete = booking?.party_complete ?? true; // Default to true if not present
+                    const partyMissingCount = booking?.party_missing_count ?? 0;
+                    const isPartyIncomplete = !partyComplete;
+                    const isDisabled = !selectedRoomId || safeAssignMutation.isPending || isPartyIncomplete;
+                    
+                    const button = (
+                      <Button
+                        variant="success"
+                        onClick={handleAssignRoom}
+                        disabled={isDisabled}
+                        className={isPartyIncomplete ? 'party-gated-button' : ''}
+                      >
+                        {safeAssignMutation.isPending ? 'Assigning...' : 'Confirm & Assign'}
+                      </Button>
+                    );
+                    
+                    if (isPartyIncomplete) {
+                      return (
+                        <OverlayTrigger
+                          placement="top"
+                          overlay={
+                            <Tooltip>
+                              Missing {partyMissingCount} guest name(s). Send pre-check-in link first.
+                            </Tooltip>
+                          }
+                        >
+                          <span className="d-inline-block">{button}</span>
+                        </OverlayTrigger>
+                      );
+                    }
+                    
+                    return button;
+                  })()}
                   <Button
                     variant="secondary"
                     onClick={() => setShowRoomAssignment(false)}
@@ -351,37 +521,17 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
           </Card.Body>
         </Card>
         
-        {/* Guest Information */}
-        <Card className="mt-3">
-          <Card.Header>
-            <h6 className="mb-0">Guest Information</h6>
-          </Card.Header>
-          <Card.Body>
-            <Row>
-              <Col md={6}>
-                <div>
-                  <strong>Primary Guest:</strong><br />
-                  {booking.primary_first_name} {booking.primary_last_name}
-                  {booking.primary_email && <><br />Email: {booking.primary_email}</>}
-                  {booking.primary_phone && <><br />Phone: {booking.primary_phone}</>}
-                </div>
-              </Col>
-              {booking.booker_type !== 'SELF' && (
-                <Col md={6}>
-                  <div>
-                    <strong>Booker:</strong><br />
-                    {booking.booker_first_name} {booking.booker_last_name}
-                    {booking.booker_email && <><br />Email: {booking.booker_email}</>}
-                    {booking.booker_company && <><br />Company: {booking.booker_company}</>}
-                  </div>
-                </Col>
-              )}
-            </Row>
-          </Card.Body>
-        </Card>
+        {/* Party Status Banner */}
+        {renderPartyStatusBanner()}
         
-        {/* Booking Party */}
-        {renderBookingParty(booking.party)}
+        {/* Primary Guest */}
+        {renderPrimaryGuest()}
+        
+        {/* Booker */}
+        {renderBooker()}
+        
+        {/* Companions */}
+        {renderCompanions()}
         
         {/* Room Assignment Section */}
         {renderRoomAssignmentSection()}

@@ -4,7 +4,9 @@ import { toast } from 'react-toastify';
 
 const queryKeys = {
   staffRoomBooking: (hotelSlug, bookingId) => ['staff-room-booking', hotelSlug, bookingId],
-  staffRoomBookingAvailableRooms: (hotelSlug, bookingId) => ['staff-room-booking-available-rooms', hotelSlug, bookingId],
+  staffAvailableRooms: (hotelSlug, bookingId) => ['staff-available-rooms', hotelSlug, bookingId],
+  staffRoomBookings: (hotelSlug, filtersHash) => ['staff-room-bookings', hotelSlug, filtersHash],
+  staffRoomBookingsSafe: (hotelSlug, filtersHash) => ['staff-room-bookings-safe', hotelSlug, filtersHash],
 };
 
 export const useRoomBookingDetail = (hotelSlug, bookingId) => {
@@ -40,7 +42,7 @@ export const useRoomBookingDetail = (hotelSlug, bookingId) => {
 
 export const useAvailableRooms = (hotelSlug, bookingId) => {
   return useQuery({
-    queryKey: queryKeys.staffRoomBookingAvailableRooms(hotelSlug, bookingId),
+    queryKey: queryKeys.staffAvailableRooms(hotelSlug, bookingId),
     queryFn: async () => {
       const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/available-rooms/`);
       const response = await api.get(url);
@@ -71,7 +73,7 @@ export const useSafeAssignRoom = (hotelSlug) => {
         queryKey: queryKeys.staffRoomBooking(hotelSlug, variables.bookingId)
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.staffRoomBookingAvailableRooms(hotelSlug, variables.bookingId)
+        queryKey: queryKeys.staffAvailableRooms(hotelSlug, variables.bookingId)
       });
       toast.success('Room assigned successfully');
     },
@@ -98,12 +100,36 @@ export const useUnassignRoom = (hotelSlug) => {
         queryKey: queryKeys.staffRoomBooking(hotelSlug, variables.bookingId)
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.staffRoomBookingAvailableRooms(hotelSlug, variables.bookingId)
+        queryKey: queryKeys.staffAvailableRooms(hotelSlug, variables.bookingId)
       });
       toast.success('Room unassigned successfully');
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || 'Failed to unassign room');
+    },
+  });
+};
+
+export const useSendPrecheckinLink = (hotelSlug) => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ bookingId }) => {
+      const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/send-precheckin-link/`);
+      const response = await api.post(url, {});
+      return response.data;
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate detail query to refresh party status
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.staffRoomBooking(hotelSlug, variables.bookingId)
+      });
+      // Show success toast with sent_to field from response
+      const sentTo = data.sent_to || 'guest';
+      toast.success(`Pre-check-in link sent to ${sentTo}`);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to send pre-check-in link. Please try again.');
     },
   });
 };

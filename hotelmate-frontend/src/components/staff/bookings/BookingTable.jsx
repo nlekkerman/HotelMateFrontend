@@ -93,6 +93,7 @@ const BookingTable = ({ bookings, onConfirm, onCancel, loading, hotelSlug }) => 
               <th>Room Type</th>
               <th>Stay Period</th>
               <th>Guests</th>
+              <th>Party</th>
               <th>Amount</th>
               <th>Status</th>
               <th>Actions</th>
@@ -164,14 +165,41 @@ const BookingTable = ({ bookings, onConfirm, onCancel, loading, hotelSlug }) => 
                 <td>
                   <div className="guest-count">
                     <i className="bi bi-people me-1"></i>
-                    {booking.adults} adult{booking.adults !== 1 ? 's' : ''}
-                    {booking.children > 0 && (
-                      <div className="children-count">
-                        <i className="bi bi-person me-1"></i>
-                        {booking.children} child{booking.children !== 1 ? 'ren' : ''}
-                      </div>
+                    {/* Use party.total_party_size if available, else fallback to adults+children */}
+                    {booking.party?.total_party_size ? (
+                      <span>{booking.party.total_party_size} guest{booking.party.total_party_size !== 1 ? 's' : ''}</span>
+                    ) : booking.party && !booking.party.total_party_size ? (
+                      <span>—</span> // Party exists but total_party_size missing - don't guess
+                    ) : (
+                      // Fallback to adults+children calculation
+                      <>
+                        {booking.adults} adult{booking.adults !== 1 ? 's' : ''}
+                        {booking.children > 0 && (
+                          <div className="children-count">
+                            <i className="bi bi-person me-1"></i>
+                            {booking.children} child{booking.children !== 1 ? 'ren' : ''}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
+                </td>
+                
+                <td>
+                  {/* Party completion status - list payload doesn't include party fields */}
+                  {booking.party_complete !== undefined ? (
+                    // If list includes party_complete field (rare)
+                    booking.party_complete ? (
+                      <span className="badge bg-success">Complete</span>
+                    ) : (
+                      <span className="badge bg-warning text-dark">
+                        Missing {booking.party_missing_count || 0}
+                      </span>
+                    )
+                  ) : (
+                    // Default: neutral badge since truth lives in detail modal
+                    <span className="badge bg-secondary">Details</span>
+                  )}
                 </td>
                 
                 <td>

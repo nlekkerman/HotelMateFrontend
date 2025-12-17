@@ -354,3 +354,51 @@
     padding: 0.75rem;
   }
 }
+
+/* Party Status Styles */
+.party-status-banner {
+  border-left: 4px solid #ffc107;
+  background-color: #fff3cd;
+  margin-bottom: 1rem;
+}
+
+.party-status-banner .alert {
+  margin-bottom: 0;
+}
+
+/* Party Badges */
+.badge.bg-success {
+  background-color: #198754 !important;
+}
+
+.badge.bg-warning {
+  background-color: #ffc107 !important;
+  color: #000 !important;
+}
+
+.badge.bg-secondary {
+  background-color: #6c757d !important;
+}
+
+/* Party-Gated Buttons */
+.party-gated-button {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.party-gated-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Tooltip for disabled buttons */
+.tooltip {
+  font-size: 12px;
+}
+
+.tooltip-inner {
+  max-width: 250px;
+  padding: 0.5rem 0.75rem;
+  background-color: #212529;
+  border-radius: 4px;
+}
