@@ -9,11 +9,25 @@ import RoomCard from "@/components/rooms/RoomCard";
 const fetchRooms = async ({ queryKey }) => {
   const [_key, page, search] = queryKey;
   const userData = JSON.parse(localStorage.getItem("user"));
-  const hotelId = userData?.hotel_id;
+  const hotelSlug = userData?.hotel_slug;
 
-  const response = await api.get("/rooms/rooms/", {
-    params: { page, search, hotel_id: hotelId },
+  if (!hotelSlug) {
+    throw new Error('Hotel slug not found in user data');
+  }
+
+  console.log('🌐 Fetching rooms with params:', { page, search, hotel_slug: hotelSlug });
+  
+  const response = await api.get(`/staff/hotel/${hotelSlug}/rooms/`, {
+    params: { page, search },
   });
+  
+  console.log('📊 API Response:', {
+    count: response.data.count,
+    results_length: response.data.results?.length,
+    next: response.data.next,
+    previous: response.data.previous
+  });
+  
   return response.data;
 };
 
@@ -39,7 +53,16 @@ function RoomList() {
 
   // Keep local reactive state
   useEffect(() => {
-    if (rooms.length) setLocalRooms(rooms);
+    if (rooms.length) {
+      console.log('🏨 Rooms received from API:', rooms.length, 'rooms');
+      console.log('🔍 Room details:', rooms.map(r => ({ 
+        id: r.id, 
+        number: r.room_number, 
+        status: r.room_status,
+        occupied: r.is_occupied 
+      })));
+      setLocalRooms(rooms);
+    }
   }, [rooms]);
 
   const handleCheckboxChange = (roomId) => {

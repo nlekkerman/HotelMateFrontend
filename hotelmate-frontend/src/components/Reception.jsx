@@ -12,6 +12,7 @@ const CLOUDINARY_BASE = "https://res.cloudinary.com/dg0ssec7u/";
 const Reception = () => {
   const [hotelName, setHotelName] = useState("HotelMate");
   const [hotelLogo, setHotelLogo] = useState(null);
+  const [hotelSlug, setHotelSlug] = useState(null);
   const navigate = useNavigate();
 
 const { mainColor } = useTheme();
@@ -25,6 +26,9 @@ const { mainColor } = useTheme();
 
         if (hotel.name) {
           setHotelName(hotel.name);
+        }
+        if (hotel.slug) {
+          setHotelSlug(hotel.slug);
         }
         if (hotel.logo) {
           // if it's already a full URL, use it; otherwise prefix the Cloudinary base

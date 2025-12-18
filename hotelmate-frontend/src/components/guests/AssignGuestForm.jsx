@@ -26,7 +26,9 @@ function AssignGuestForm() {
   useEffect(() => {
     async function fetchRoom() {
       try {
-        const res = await api.get(`/rooms/rooms/${roomNumber}/`);
+        const userData = JSON.parse(localStorage.getItem("user"));
+        const hotelSlug = userData?.hotel_slug;
+        const res = await api.get(`/staff/hotel/${hotelSlug}/rooms/${roomNumber}/`);
         const roomData = res.data;
 
         setRoom(roomData);

@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 function Search({
   placeholder = "Search...",
   delay = 300,
-  apiEndpoint = "/rooms/rooms/",
+  apiEndpoint,
   hotelId,
 }) {
   const [query, setQuery] = useState("");

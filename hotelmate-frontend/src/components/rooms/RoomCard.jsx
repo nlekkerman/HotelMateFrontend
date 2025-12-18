@@ -36,6 +36,24 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
     return diffDays === 1 ? '1 day' : `${diffDays} days`;
   };
 
+  const getStatusColor = (status) => {
+    const colors = {
+      'AVAILABLE': 'success',
+      'OCCUPIED': 'primary',
+      'CHECKOUT_DIRTY': 'warning',
+      'CLEANING_IN_PROGRESS': 'info',
+      'CLEANED_UNINSPECTED': 'secondary',
+      'MAINTENANCE_REQUIRED': 'danger',
+      'OUT_OF_ORDER': 'danger',
+      'READY_FOR_GUEST': 'success'
+    };
+    return colors[status] || 'secondary';
+  };
+
+  const formatStatus = (status) => {
+    return status?.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) || 'Unknown';
+  };
+
   return (
     <div className="col">
       <div 
@@ -85,14 +103,87 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
         )}
 
         <div className="card-body d-flex flex-column">
-          <h5 className="card-title mb-3 text-center text-white fw-bold py-2 main-bg">
-            Room {room.room_number}
-          </h5>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h5 className="card-title mb-0 text-center text-white fw-bold py-2 px-3 main-bg rounded">
+              Room {room.room_number}
+            </h5>
+            <span className={`badge bg-${getStatusColor(room.room_status)} fs-6`}>
+              {formatStatus(room.room_status)}
+            </span>
+          </div>
+
+          {/* Room Type Information */}
+          {room.room_type && (
+            <div className="mb-2">
+              <small className="text-muted">
+                <strong>{room.room_type.name}</strong> ({room.room_type.code})
+                {room.room_type.max_occupancy && (
+                  <span className="ms-2">
+                    <i className="bi bi-people-fill me-1" />
+                    Max {room.room_type.max_occupancy} guests
+                  </span>
+                )}
+              </small>
+            </div>
+          )}
+
           <p className="card-text mb-3">
             <strong>Guest PIN:</strong> {room.guest_id_pin || "Not assigned"}
             <br />
             <strong>Occupied:</strong> {room.is_occupied ? "Yes" : "No"}
+            {room.maintenance_required && (
+              <>
+                <br />
+                <span className="text-danger">
+                  <i className="bi bi-exclamation-triangle-fill me-1" />
+                  <strong>Maintenance Required</strong>
+                  {room.maintenance_priority && ` (${room.maintenance_priority})`}
+                </span>
+              </>
+            )}
+            {room.is_out_of_order && (
+              <>
+                <br />
+                <span className="text-danger">
+                  <i className="bi bi-x-circle-fill me-1" />
+                  <strong>Out of Order</strong>
+                </span>
+              </>
+            )}
           </p>
+
+          {/* Housekeeping Info */}
+          {(room.last_cleaned_at || room.last_inspected_at) && (
+            <div className="mb-3">
+              <small className="text-muted">
+                {room.last_cleaned_at && (
+                  <>
+                    <i className="bi bi-brush me-1" />
+                    Cleaned: {new Date(room.last_cleaned_at).toLocaleDateString()}
+                    {room.cleaned_by_staff && ` by ${room.cleaned_by_staff}`}
+                    <br />
+                  </>
+                )}
+                {room.last_inspected_at && (
+                  <>
+                    <i className="bi bi-check2-circle me-1" />
+                    Inspected: {new Date(room.last_inspected_at).toLocaleDateString()}
+                    {room.inspected_by_staff && ` by ${room.inspected_by_staff}`}
+                  </>
+                )}
+              </small>
+            </div>
+          )}
+
+          {/* Turnover Notes */}
+          {room.turnover_notes && (
+            <div className="mb-3">
+              <small className="text-info">
+                <i className="bi bi-sticky-fill me-1" />
+                <strong>Notes:</strong> {room.turnover_notes}
+              </small>
+            </div>
+          )}
 
           <div className="mb-3 text-center" onClick={(e) => e.stopPropagation()}>
             <select
@@ -134,21 +225,89 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
             </label>
           </div>
 
-          <div className="button-wraper w-100 d-flex justify-content-center mt-2">
-            {!room.is_occupied && (
-              <button
-                className="btn main-text second-text custom-button me-2"
+          {/* Status-based Action Buttons */}
+          <div className="mt-auto">
+            {room.room_status === 'CHECKOUT_DIRTY' && (
+              <button 
+                className="btn btn-sm btn-warning w-100 mb-2"
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate(`/rooms/${room.room_number}/add-guest`);
+                  // TODO: Implement mark as cleaning action
+                  console.log('Mark as cleaning:', room.id);
                 }}
               >
-                Assign Guest
+                <i className="bi bi-brush me-1" />
+                Mark as Cleaning
               </button>
             )}
+            
+            {room.room_status === 'CLEANED_UNINSPECTED' && (
+              <button 
+                className="btn btn-sm btn-info w-100 mb-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // TODO: Implement inspect room action
+                  console.log('Inspect room:', room.id);
+                }}
+              >
+                <i className="bi bi-check2-circle me-1" />
+                Inspect Room
+              </button>
+            )}
+            
+            {room.maintenance_required && (
+              <button 
+                className="btn btn-sm btn-danger w-100 mb-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // TODO: Implement view maintenance action
+                  console.log('View maintenance:', room.id);
+                }}
+              >
+                <i className="bi bi-tools me-1" />
+                View Maintenance
+              </button>
+            )}
+
+            <div className="button-wraper w-100 d-flex justify-content-center">
+              {!room.is_occupied && room.room_status === 'AVAILABLE' && (
+                <button
+                  className="btn main-text second-text custom-button me-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/rooms/${room.room_number}/add-guest`);
+                  }}
+                >
+                  <i className="bi bi-person-plus me-1" />
+                  Assign Guest
+                </button>
+              )}
+            </div>
           </div>
 
-          {room.is_occupied && (
+          {/* Guest Summary */}
+          {room.primary_guest && (
+            <div className="mb-2">
+              <div className="d-flex align-items-center">
+                <i className="bi bi-person-fill text-primary me-2" />
+                <strong>{room.primary_guest.first_name} {room.primary_guest.last_name}</strong>
+              </div>
+              {room.companions && room.companions.length > 0 && (
+                <small className="text-muted">
+                  <i className="bi bi-people me-1" />
+                  +{room.companions.length} companion{room.companions.length > 1 ? 's' : ''}
+                </small>
+              )}
+              {room.walkins && room.walkins.length > 0 && (
+                <small className="text-info">
+                  <i className="bi bi-door-open me-1" />
+                  +{room.walkins.length} walk-in{room.walkins.length > 1 ? 's' : ''}
+                </small>
+              )}
+            </div>
+          )}
+
+          {room.is_occupied && !room.primary_guest && room.guests_in_room && (
             room.guests_in_room.map((guest) => (
                     <span 
                       key={guest.id} 
