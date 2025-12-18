@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { Container, Row, Col, Card, Form, Button, Alert, Spinner, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Form, Card, Spinner } from 'react-bootstrap';
 import { publicAPI } from '@/services/api';
 import { toast } from 'react-toastify';
-import PartyDetailsSection from '@/components/guest/PartyDetailsSection';
+
+import PrecheckinHeader from '@/components/guest/PrecheckinHeader';
+import BookingContactCard from '@/components/guest/BookingContactCard';
+import PrimaryGuestCard from '@/components/guest/PrimaryGuestCard';
+import CompanionsSection from '@/components/guest/CompanionsSection';
+import ExtrasSection from '@/components/guest/ExtrasSection';
+import SubmitBar from '@/components/guest/SubmitBar';
 
 /**
- * GuestPrecheckinPage - Fetch-first, config-driven precheckin form
- * Never hardcode field keys - render from precheckin_field_registry only
- * Enforce Required ⊆ Enabled constraint in UI + payload
+ * GuestPrecheckinPage - Refactored with component structure
+ * Uses deterministic booker_type logic, no heuristics
+ * Fixed companion slots, party + extras validation
  */
 const GuestPrecheckinPage = () => {
   const { hotelSlug } = useParams();
@@ -21,32 +27,87 @@ const GuestPrecheckinPage = () => {
   // TODO: Remove once backend unified serializer is deployed
   const SEND_EXTRAS_FLAT = true;
   
-  // Normalize party data from backend RoomBookingDetailSerializer structure
-  const normalizePartyData = (responseData) => {
-    // Primary guest data is directly in the booking details
-    const primary = {
-      first_name: responseData.booker_first_name || '',
-      last_name: responseData.booker_last_name || '',
-      email: responseData.booker_email || responseData.primary_email || '',
-      phone: responseData.booker_phone || responseData.primary_phone || '',
+  // Pad companion slots to exactly the expected count
+  const padCompanionSlots = (companions, expectedCount) => {
+    // Ensure companions is an array
+    const companionsArray = Array.isArray(companions) ? companions : [];
+    const slots = [...companionsArray];
+    
+    
+    // Fill up to expectedCount with empty companions
+    while (slots.length < expectedCount) {
+      slots.push({
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        is_staying: true
+      });
+    }
+    
+    // Trim down to expectedCount if too many
+    return slots.slice(0, expectedCount);
+  };
+  
+  // Normalize pre-check-in data using booker_type (deterministic approach)
+  const normalizePrecheckinData = (data) => {
+    const booking = data.booking;
+    const party = data.party || {};
+    
+    // Get primary guest from party structure (always exists per backend contract)
+    const primary = party.primary || {
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
       is_staying: true
     };
     
-    // Extract companions from party structure
-    const companions = responseData.party?.companions || [];
+    // Calculate expectedGuests from party structure since adults/children 
+    // are not included in RoomBookingDetailSerializer
+    const primaryGuest = party.primary ? 1 : 0;
+    const companionCount = Array.isArray(party.companions) ? party.companions.length : 0;
+    const expectedGuests = primaryGuest + companionCount;
     
-    return { primary, companions };
-  };
-  
-  // Compute missing guest count - prefer backend calculation
-  const computeMissingCount = (responseData, adults, partyCount) => {
-    // Use backend party_missing_count if available (more authoritative)
-    if (typeof responseData.party_missing_count === 'number') {
-      return responseData.party_missing_count;
+
+    
+    // Pad companions to exactly expectedGuests - 1 (fixed slots)
+    const companionSlots = padCompanionSlots(
+      party.companions || [],
+      Math.max(0, expectedGuests - 1)
+    );
+    
+    // Determine booking contact based on booker_type (no heuristics)
+    let bookingContact;
+    if (booking.booker_type === 'SELF') {
+      // For SELF bookings, booker fields remain empty and primary guest = booker
+      bookingContact = {
+        name: `${primary.first_name} ${primary.last_name}`,
+        email: primary.email,
+        phone: primary.phone,
+        isPrimary: true,
+        badge: 'Booking contact & staying guest'
+      };
+    } else {
+      // For THIRD_PARTY bookings, show booker fields normally
+      bookingContact = {
+        name: `${booking.booker_first_name || ''} ${booking.booker_last_name || ''}`.trim(),
+        email: booking.booker_email || '',
+        phone: booking.booker_phone || '',
+        isPrimary: false,
+        badge: 'Booking contact'
+      };
     }
     
-    // Fallback to frontend calculation
-    return Math.max(0, adults - partyCount);
+    return {
+      booking,
+      bookingContact,
+      primary,
+      companionSlots,
+      expectedGuests,
+      precheckin_field_registry: data.precheckin_field_registry || {},
+      precheckin_config: data.precheckin_config || { enabled: {}, required: {} }
+    };
   };
   
   // State management
@@ -55,18 +116,10 @@ const GuestPrecheckinPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   
-  // Configuration from backend
-  const [registry, setRegistry] = useState({});
-  const [enabled, setEnabled] = useState({});
-  const [required, setRequired] = useState({});
-  const [booking, setBooking] = useState(null);
-  const [party, setParty] = useState(null);
+  // Normalized data from backend
+  const [normalizedData, setNormalizedData] = useState(null);
   
-  // Form state (extras)
-  const [values, setValues] = useState({});
-  const [fieldErrors, setFieldErrors] = useState({});
-  
-  // Party state (separate domain from extras)
+  // Form state for party and extras
   const [partyPrimary, setPartyPrimary] = useState({
     first_name: '',
     last_name: '',
@@ -74,12 +127,16 @@ const GuestPrecheckinPage = () => {
     phone: '',
     is_staying: true
   });
-  const [partyCompanions, setPartyCompanions] = useState([]);
-  const [missingCount, setMissingCount] = useState(0);
+  const [companionSlots, setCompanionSlots] = useState([]);
+  const [extrasValues, setExtrasValues] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({
+    party: { primary: {}, companions: [] },
+    extras: {}
+  });
   
   // Hotel theming
   const [preset, setPreset] = useState(1);
-  
+
   // Theme color resolution
   const getThemeColor = () => {
     const cssVar = getComputedStyle(document.documentElement)
@@ -107,72 +164,33 @@ const GuestPrecheckinPage = () => {
         
         const data = unwrap(response);
         console.log('Precheckin API response data:', data);
+        console.log('🏗️ Field registry (old format):', data.precheckin_field_registry);
+        console.log('🏗️ Precheckin fields (new format):', data.precheckin_fields);
+        console.log('📋 Config enabled:', data.precheckin_config?.enabled);
+        console.log('📋 Config required:', data.precheckin_config?.required);
         
-        // Extract configuration
-        const {
-          precheckin_config = {},
-          precheckin_field_registry = {},
-          booking: bookingData = null,
-          party: partyData = null,
-          hotel: hotelData = null
-        } = data;
-        
-        console.log('Extracted booking data:', bookingData);
-        console.log('Extracted party data:', partyData);
-        
-        setRegistry(precheckin_field_registry);
-        setEnabled(precheckin_config.enabled || {});
-        setRequired(precheckin_config.required || {});
-        
-        // Handle booking data from RoomBookingDetailSerializer
-        const normalizedBooking = bookingData || {
-          id: data.id,
-          booking_id: data.booking_id,
-          adults: data.adults || 1,
-          children: data.children || 0,
-          check_in: data.check_in,
-          check_out: data.check_out,
-          room_type: data.room_type_name,
-          hotel_preset: data.hotel_preset || 1,
-          // Include guest data fields for normalization fallback
-          booker_first_name: data.booker_first_name || '',
-          booker_last_name: data.booker_last_name || '',
-          booker_email: data.booker_email || '',
-          booker_phone: data.booker_phone || '',
-          primary_email: data.primary_email || '',
-          primary_phone: data.primary_phone || '',
-          guest_first_name: data.guest_first_name || '',
-          guest_last_name: data.guest_last_name || '',
-          guest_email: data.guest_email || '',
-          guest_phone: data.guest_phone || ''
-        };
-        
-        setBooking(normalizedBooking);
-        setParty(partyData || data.party);
-        
-        // Set theme from booking data
-        if (normalizedBooking.hotel_preset) {
-          setPreset(normalizedBooking.hotel_preset);
-        } else if (hotelData) {
-          const hotelPreset = hotelData.preset || hotelData.public_settings?.preset || hotelData.global_style_variant || 1;
-          setPreset(hotelPreset);
+        // Detailed field configurations
+        if (data.precheckin_field_registry) {
+          console.log('🔍 ETA field config:', data.precheckin_field_registry.eta);
+          console.log('🔍 Nationality field config:', data.precheckin_field_registry.nationality);
+          console.log('🔍 Consent checkbox config:', data.precheckin_field_registry.consent_checkbox);
+          console.log('🔍 Special requests config:', data.precheckin_field_registry.special_requests);
+          
+          // Show nationality choices
+          if (data.precheckin_field_registry.nationality?.choices) {
+            console.log('🌍 Available nationality choices:', data.precheckin_field_registry.nationality.choices);
+          }
         }
         
-        // Normalize and set party data - pass normalized booking for fallbacks
-        const dataWithBooking = { ...data, booking: normalizedBooking };
-        const normalizedParty = normalizePartyData(dataWithBooking);
-        console.log('Normalized party data:', normalizedParty);
-        console.log('Setting primary:', normalizedParty.primary);
-        console.log('Setting companions:', normalizedParty.companions);
-        setPartyPrimary(normalizedParty.primary);
-        setPartyCompanions(normalizedParty.companions);
+        // Use new normalize function - trusts booker_type, no heuristics
+        const normalized = normalizePrecheckinData(data);
         
-        // Compute missing guest count using backend data
-        const adults = normalizedBooking.adults || 1;
-        const partyCount = 1 + (normalizedParty.companions ? normalizedParty.companions.length : 0);
-        setMissingCount(computeMissingCount(data, adults, partyCount));
+        setNormalizedData(normalized);
+        setPartyPrimary(normalized.primary);
+        setCompanionSlots(normalized.companionSlots);
         
         // Set theme from hotel data
+        const hotelData = data.hotel;
         if (hotelData) {
           const hotelPreset = hotelData.preset || hotelData.public_settings?.preset || hotelData.global_style_variant || 1;
           setPreset(hotelPreset);
@@ -195,46 +213,26 @@ const GuestPrecheckinPage = () => {
     }
   }, [hotelSlug, token]);
 
-  // Calculate active fields and sort them for stable render order
-  const getActiveFields = () => {
-    const activeFields = Object.entries(registry).filter(([k]) => enabled[k] === true);
-    
-    // Stable render order: sort by order if available, else by label
-    activeFields.sort((a, b) => {
-      const [keyA, metaA] = a;
-      const [keyB, metaB] = b;
-      
-      // If registry meta has order, sort by it
-      if (metaA.order && metaB.order) {
-        return metaA.order - metaB.order;
-      }
-      
-      // Else sort by label
-      return (metaA.label || keyA).localeCompare(metaB.label || keyB);
-    });
-    
-    return activeFields;
-  };
-
-  // Handle field value changes
-  const handleFieldChange = (fieldKey, value) => {
-    setValues(prev => ({ ...prev, [fieldKey]: value }));
+  // Handle extras field changes
+  const handleExtrasChange = (fieldKey, value) => {
+    setExtrasValues(prev => ({ ...prev, [fieldKey]: value }));
     
     // Clear field error when user starts typing
-    if (fieldErrors[fieldKey]) {
-      setFieldErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[fieldKey];
-        return newErrors;
-      });
+    if (fieldErrors.extras[fieldKey]) {
+      setFieldErrors(prev => ({
+        ...prev,
+        extras: { ...prev.extras, [fieldKey]: undefined }
+      }));
     }
   };
 
-  // Unified validation for both party and extras domains
+  // Validation for party and extras
   const validateForm = () => {
+    if (!normalizedData) return { hasErrors: true };
+
     const errors = { party: { primary: {}, companions: [] }, extras: {} };
     
-    // Party validation
+    // Party validation: primary first + last required
     if (!partyPrimary.first_name?.trim()) {
       errors.party.primary.first_name = "First name is required";
     }
@@ -242,8 +240,8 @@ const GuestPrecheckinPage = () => {
       errors.party.primary.last_name = "Last name is required";
     }
     
-    // Companions validation
-    partyCompanions.forEach((companion, index) => {
+    // Companions validation: every slot first + last required (fixed slots)
+    companionSlots.forEach((companion, index) => {
       const companionErrors = {};
       if (!companion.first_name?.trim()) {
         companionErrors.first_name = "First name is required";
@@ -256,31 +254,42 @@ const GuestPrecheckinPage = () => {
       }
     });
     
-    // Extras validation (use existing registry-based logic)
-    const activeFields = getActiveFields();
-    activeFields.forEach(([fieldKey, meta]) => {
-      if (required[fieldKey] && !values[fieldKey]?.trim()) {
+    // Extras validation: only enabled fields, enforce required ⊆ enabled
+    const { precheckin_field_registry: registry, precheckin_config: config } = normalizedData;
+    const enabledFields = Object.entries(registry).filter(([k]) => config.enabled[k] === true);
+    
+    enabledFields.forEach(([fieldKey, meta]) => {
+      if (config.required[fieldKey] && !extrasValues[fieldKey]?.toString().trim()) {
         errors.extras[fieldKey] = `${meta.label} is required`;
       }
     });
     
-    return errors;
+    const hasErrors = 
+      Object.keys(errors.party.primary).length > 0 ||
+      errors.party.companions.some(c => Object.keys(c).length > 0) ||
+      Object.keys(errors.extras).length > 0;
+    
+    return { errors, hasErrors };
   };
 
   // Build unified payload with party + extras
   const buildPayload = () => {
-    const activeFields = getActiveFields();
+    if (!normalizedData) return {};
+
+    const { precheckin_field_registry: registry, precheckin_config: config } = normalizedData;
     
-    // Build extras object from active fields only
+    // Build extras object from enabled fields only
     const extras = {};
-    activeFields.forEach(([fieldKey]) => {
-      extras[fieldKey] = values[fieldKey] || '';
-    });
+    Object.entries(registry)
+      .filter(([k]) => config.enabled[k] === true)
+      .forEach(([fieldKey]) => {
+        extras[fieldKey] = extrasValues[fieldKey] || '';
+      });
     
     const payload = {
       party: {
         primary: partyPrimary,
-        companions: partyCompanions
+        companions: companionSlots
       },
       extras: extras
     };
@@ -299,11 +308,7 @@ const GuestPrecheckinPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate both domains
-    const errors = validateForm();
-    const hasErrors = Object.keys(errors.party.primary).length > 0 ||
-                      errors.party.companions.some(c => Object.keys(c).length > 0) ||
-                      Object.keys(errors.extras).length > 0;
+    const { errors, hasErrors } = validateForm();
     
     if (hasErrors) {
       setFieldErrors(errors);
@@ -312,9 +317,10 @@ const GuestPrecheckinPage = () => {
     
     try {
       setSubmitting(true);
-      setFieldErrors({});
+      setFieldErrors({ party: { primary: {}, companions: [] }, extras: {} });
       
       const payload = buildPayload();
+      console.log('Submitting payload:', payload);
       
       await publicAPI.post(
         `/hotel/${hotelSlug}/precheckin/?token=${encodeURIComponent(token)}`,
@@ -329,7 +335,6 @@ const GuestPrecheckinPage = () => {
       
       // Handle field errors from backend
       if (err.response?.status === 400 && err.response?.data?.field_errors) {
-        // Map backend errors to our structure if needed
         const mappedErrors = err.response.data.field_errors;
         setFieldErrors(mappedErrors);
       }
@@ -341,98 +346,17 @@ const GuestPrecheckinPage = () => {
     }
   };
 
-  // Render field based on type
-  const renderField = (fieldKey, meta) => {
-    const isRequired = required[fieldKey] === true;
-    const hasError = !!fieldErrors[fieldKey];
+  // Get missing count for display
+  const getMissingCount = () => {
+    if (!normalizedData) return 0;
     
-    switch (meta.type) {
-      case 'checkbox':
-        return (
-          <Form.Check
-            type="checkbox"
-            checked={values[fieldKey] === 'true' || values[fieldKey] === true || values[fieldKey] === '1'}
-            onChange={(e) => handleFieldChange(fieldKey, e.target.checked)}
-            isInvalid={hasError}
-            label={
-              <>
-                {meta.label}
-                {isRequired && <span className="text-danger ms-1">*</span>}
-              </>
-            }
-            required={isRequired}
-          />
-        );
-      case 'select':
-        return (
-          <Form.Select
-            value={values[fieldKey] || ''}
-            onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
-            isInvalid={hasError}
-            required={isRequired}
-          >
-            <option value="">Select...</option>
-            {meta.options && meta.options.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </Form.Select>
-        );
-      case 'time':
-        return (
-          <Form.Control
-            type="time"
-            value={values[fieldKey] || ''}
-            onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
-            isInvalid={hasError}
-            required={isRequired}
-          />
-        );
-      case 'email':
-        return ( 
-          <Form.Control
-            type="email"
-            value={values[fieldKey] || ''}
-            onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
-            isInvalid={hasError}
-            required={isRequired}
-          />
-        );
-      case 'tel':
-      case 'phone':
-        return (
-          <Form.Control
-            type="tel"
-            value={values[fieldKey] || ''}
-            onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
-            isInvalid={hasError}
-            required={isRequired}
-          />
-        );
-      case 'textarea':
-        return (
-          <Form.Control
-            as="textarea"
-            rows={3}
-            value={values[fieldKey] || ''}
-            onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
-            isInvalid={hasError}
-            required={isRequired}
-          />
-        );
-      case 'text':
-      default:
-        return (
-          <Form.Control
-            type="text"
-            value={values[fieldKey] || ''}
-            onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
-            isInvalid={hasError}
-            required={isRequired}
-          />
-        );
-    }
+    const filledSlots = companionSlots.filter(c => 
+      c.first_name?.trim() && c.last_name?.trim()
+    ).length;
+    const primaryFilled = partyPrimary.first_name?.trim() && partyPrimary.last_name?.trim() ? 1 : 0;
+    const totalFilled = primaryFilled + filledSlots;
+    
+    return Math.max(0, normalizedData.expectedGuests - totalFilled);
   };
 
   // Loading state
@@ -493,10 +417,23 @@ const GuestPrecheckinPage = () => {
     );
   }
 
-  const activeFields = getActiveFields();
+  // Ensure we have normalized data before rendering
+  if (!normalizedData) {
+    return null;
+  }
 
-  // No additional details required branch
-  if (activeFields.length === 0) {
+  const { 
+    booking, 
+    bookingContact, 
+    expectedGuests, 
+    precheckin_field_registry: registry, 
+    precheckin_config: config 
+  } = normalizedData;
+
+  // Check if no additional details required (no enabled extras)
+  const hasEnabledExtras = Object.values(config.enabled || {}).some(enabled => enabled === true);
+  
+  if (!hasEnabledExtras) {
     return (
       <div className={`hotel-public-page page-style-${preset}`} style={{ minHeight: '100vh' }}>
         <Container className="py-5">
@@ -507,7 +444,6 @@ const GuestPrecheckinPage = () => {
                   <i className="bi bi-check-circle text-success mb-3" style={{ fontSize: '3rem' }}></i>
                   <h4>No additional details required</h4>
                   <p className="text-muted">Your pre-check-in is already complete.</p>
-                  <Button variant="success">Done</Button>
                 </Card.Body>
               </Card>
             </Col>
@@ -518,115 +454,57 @@ const GuestPrecheckinPage = () => {
   }
 
   const themeColor = getThemeColor();
-  const maxCompanions = booking ? Math.max(0, (booking.adults || 1) - 1) : 0;
+  const missingCount = getMissingCount();
+  const { hasErrors } = validateForm();
 
-  // Main form render
+  // Main form render using component structure
   return (
     <div className={`hotel-public-page page-style-${preset}`} style={{ minHeight: '100vh' }}>
       <Container className="py-5">
         <Row className="justify-content-center">
           <Col md={10} lg={8}>
-            {/* Booking Summary Header */}
-            {booking && (
-              <Card className="shadow-sm mb-4">
-                <Card.Body>
-                  <Row className="align-items-center">
-                    <Col>
-                      <h6 className="mb-1">Booking #{booking.booking_id}</h6>
-                      <div className="text-muted small">
-                        {booking.check_in && booking.check_out && (
-                          <span>{booking.check_in} - {booking.check_out}</span>
-                        )}
-                        {booking.adults && (
-                          <span className="ms-3">{booking.adults} adult(s)</span>
-                        )}
-                        {booking.children > 0 && (
-                          <span>, {booking.children} child(ren)</span>
-                        )}
-                      </div>
-                    </Col>
-                    <Col xs="auto">
-                      {booking.room_type && (
-                        <Badge bg="primary">{booking.room_type}</Badge>
-                      )}
-                    </Col>
-                  </Row>
-                </Card.Body>
-              </Card>
-            )}
-
+            
+            <PrecheckinHeader 
+              booking={booking}
+              expectedGuests={expectedGuests}
+              missingCount={missingCount}
+            />
+            
+            <BookingContactCard 
+              bookingContact={bookingContact}
+            />
+            
             <Form onSubmit={handleSubmit}>
-              {/* Party Details Section */}
-              <Card className="shadow-sm mb-4">
-                <Card.Header style={{ borderLeft: `4px solid ${themeColor}` }}>
-                  <h5 className="mb-1">Party Details</h5>
-                  <small className="text-muted">Guest information for your stay</small>
-                </Card.Header>
-                <Card.Body>
-                  <PartyDetailsSection
-                    primary={partyPrimary}
-                    companions={partyCompanions}
-                    onPrimaryChange={setPartyPrimary}
-                    onCompanionsChange={setPartyCompanions}
-                    maxCompanions={maxCompanions}
-                    missingCount={missingCount}
-                    errors={fieldErrors.party || {}}
-                    hotel={booking}
-                  />
-                </Card.Body>
-              </Card>
-
-              {/* Extra Details Section - Only show if there are active fields */}
-              {activeFields.length > 0 && (
-                <Card className="shadow-sm mb-4">
-                  <Card.Header style={{ borderLeft: `4px solid ${themeColor}` }}>
-                    <h5 className="mb-1">Additional Information</h5>
-                    <small className="text-muted">Please complete the required information</small>
-                  </Card.Header>
-                  <Card.Body>
-                    {/* Render dynamic fields from registry */}
-                    {activeFields.map(([fieldKey, meta]) => (
-                      <Form.Group key={fieldKey} className="mb-3">
-                        {meta.type !== 'checkbox' && (
-                          <Form.Label>
-                            {meta.label}
-                            {required[fieldKey] === true && (
-                              <span className="text-danger ms-1">*</span>
-                            )}
-                          </Form.Label>
-                        )}
-                        
-                        {meta.description && (
-                          <div className="text-muted small mb-2">{meta.description}</div>
-                        )}
-                        
-                        {renderField(fieldKey, meta)}
-                        
-                        {fieldErrors.extras && fieldErrors.extras[fieldKey] && (
-                          <Form.Control.Feedback type="invalid" className="d-block">
-                            {fieldErrors.extras[fieldKey]}
-                          </Form.Control.Feedback>
-                        )}
-                      </Form.Group>
-                    ))}
-                  </Card.Body>
-                </Card>
-              )}
-
-              {/* Single Submit Button */}
-              <div className="text-center">
-                <Button 
-                  variant="primary" 
-                  type="submit"
-                  size="lg"
-                  disabled={submitting}
-                  style={{ backgroundColor: themeColor, borderColor: themeColor }}
-                  className="px-5"
-                >
-                  {submitting && <Spinner animation="border" size="sm" className="me-2" />}
-                  Complete Pre-Check-in
-                </Button>
-              </div>
+              <PrimaryGuestCard
+                value={partyPrimary}
+                onChange={setPartyPrimary}
+                errors={fieldErrors.party.primary}
+                themeColor={themeColor}
+              />
+              
+              <CompanionsSection
+                slots={companionSlots}
+                onChange={setCompanionSlots}
+                errors={fieldErrors.party.companions}
+                themeColor={themeColor}
+              />
+              
+              <ExtrasSection
+                registry={registry}
+                enabled={config.enabled || {}}
+                required={config.required || {}}
+                values={extrasValues}
+                onChange={handleExtrasChange}
+                errors={fieldErrors.extras}
+                themeColor={themeColor}
+              />
+              
+              <SubmitBar
+                isValid={!hasErrors}
+                submitting={submitting}
+                onSubmit={handleSubmit}
+                themeColor={themeColor}
+              />
             </Form>
           </Col>
         </Row>
