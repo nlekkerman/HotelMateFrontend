@@ -57,64 +57,63 @@ const BookingActions = ({
   const isThisBookingAccepting = isAccepting && booking.booking_id;
   const isThisBookingDeclining = isDeclining && booking.booking_id;
 
-  // Hide buttons for finalized bookings
-  if (['CONFIRMED', 'DECLINED', 'CANCELLED', 'COMPLETED', 'NO_SHOW'].includes(booking.status)) {
-    return (
-      <div className="booking-actions">
-        {booking.status === 'CONFIRMED' && canSendPrecheckin && (
-          <button 
-            onClick={handleSendPrecheckin}
-            className="btn btn-outline-primary btn-sm"
-            title="Send Pre-Check-In Link"
-            disabled={loading}
-          >
-            <i className="bi bi-envelope me-1"></i>
-            Pre-Check-In
-          </button>
-        )}
-      </div>
-    );
-  }
-
   return (
     <div className="booking-actions">
-      <button 
-        onClick={handleApprove}
-        className="btn btn-success btn-sm me-2"
-        title="Approve booking and capture payment"
-        disabled={isAccepting || isDeclining}
-      >
-        {isAccepting ? (
-          <>
-            <span className="spinner-border spinner-border-sm me-1" role="status"></span>
-            Processing...
-          </>
-        ) : (
-          <>
-            <i className="bi bi-check-circle me-1"></i>
-            Approve & Capture
-          </>
-        )}
-      </button>
+      {/* Approve/Decline buttons - only for PENDING_APPROVAL */}
+      {canApprove && (
+        <button 
+          onClick={handleApprove}
+          className="btn btn-success btn-sm me-2"
+          title="Approve booking and capture payment"
+          disabled={isAccepting || isDeclining}
+        >
+          {isAccepting ? (
+            <>
+              <span className="spinner-border spinner-border-sm me-1" role="status"></span>
+              Processing...
+            </>
+          ) : (
+            <>
+              <i className="bi bi-check-circle me-1"></i>
+              Approve & Capture
+            </>
+          )}
+        </button>
+      )}
       
-      <button 
-        onClick={handleDecline}
-        className="btn btn-outline-warning btn-sm"
-        title="Decline booking and release authorization"
-        disabled={isAccepting || isDeclining}
-      >
-        {isDeclining ? (
-          <>
-            <span className="spinner-border spinner-border-sm me-1" role="status"></span>
-            Processing...
-          </>
-        ) : (
-          <>
-            <i className="bi bi-x-circle me-1"></i>
-            Decline & Release
-          </>
-        )}
-      </button>
+      {canDecline && (
+        <button 
+          onClick={handleDecline}
+          className="btn btn-outline-warning btn-sm me-2"
+          title="Decline booking and release authorization"
+          disabled={isAccepting || isDeclining}
+        >
+          {isDeclining ? (
+            <>
+              <span className="spinner-border spinner-border-sm me-1" role="status"></span>
+              Processing...
+            </>
+          ) : (
+            <>
+              <i className="bi bi-x-circle me-1"></i>
+              Decline & Release
+            </>
+          )}
+        </button>
+      )}
+
+      {/* Pre-check-in button - only for CONFIRMED bookings with email */}
+      {canSendPrecheckin && (
+        <button 
+          onClick={handleSendPrecheckin}
+          className="btn btn-outline-info btn-sm"
+          title="Send Pre-Check-In Link"
+          disabled={loading}
+        >
+          <i className="bi bi-envelope me-1"></i>
+          Pre-Check-In
+        </button>
+      )}
 
 
 

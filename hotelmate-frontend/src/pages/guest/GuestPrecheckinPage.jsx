@@ -23,19 +23,7 @@ const GuestPrecheckinPage = () => {
   
   // Normalize party data from backend RoomBookingDetailSerializer structure
   const normalizePartyData = (responseData) => {
-    // Backend uses BookingPartyGroupedSerializer structure
-    if (responseData.party) {
-      // Extract primary guest from party.primary array
-      const primaryGuests = responseData.party.primary || [];
-      const primary = primaryGuests.length > 0 ? primaryGuests[0] : {};
-      
-      // Extract companions from party.companions array  
-      const companions = responseData.party.companions || [];
-      
-      return { primary, companions };
-    }
-    
-    // Fallback to booking fields if no party structure
+    // Primary guest data is directly in the booking details
     const primary = {
       first_name: responseData.booker_first_name || '',
       last_name: responseData.booker_last_name || '',
@@ -44,7 +32,10 @@ const GuestPrecheckinPage = () => {
       is_staying: true
     };
     
-    return { primary, companions: [] };
+    // Extract companions from party structure
+    const companions = responseData.party?.companions || [];
+    
+    return { primary, companions };
   };
   
   // Compute missing guest count - prefer backend calculation
@@ -115,6 +106,7 @@ const GuestPrecheckinPage = () => {
         );
         
         const data = unwrap(response);
+        console.log('Precheckin API response data:', data);
         
         // Extract configuration
         const {
@@ -124,6 +116,9 @@ const GuestPrecheckinPage = () => {
           party: partyData = null,
           hotel: hotelData = null
         } = data;
+        
+        console.log('Extracted booking data:', bookingData);
+        console.log('Extracted party data:', partyData);
         
         setRegistry(precheckin_field_registry);
         setEnabled(precheckin_config.enabled || {});
@@ -138,7 +133,18 @@ const GuestPrecheckinPage = () => {
           check_in: data.check_in,
           check_out: data.check_out,
           room_type: data.room_type_name,
-          hotel_preset: data.hotel_preset || 1
+          hotel_preset: data.hotel_preset || 1,
+          // Include guest data fields for normalization fallback
+          booker_first_name: data.booker_first_name || '',
+          booker_last_name: data.booker_last_name || '',
+          booker_email: data.booker_email || '',
+          booker_phone: data.booker_phone || '',
+          primary_email: data.primary_email || '',
+          primary_phone: data.primary_phone || '',
+          guest_first_name: data.guest_first_name || '',
+          guest_last_name: data.guest_last_name || '',
+          guest_email: data.guest_email || '',
+          guest_phone: data.guest_phone || ''
         };
         
         setBooking(normalizedBooking);
@@ -152,8 +158,12 @@ const GuestPrecheckinPage = () => {
           setPreset(hotelPreset);
         }
         
-        // Normalize and set party data
-        const normalizedParty = normalizePartyData(data);
+        // Normalize and set party data - pass normalized booking for fallbacks
+        const dataWithBooking = { ...data, booking: normalizedBooking };
+        const normalizedParty = normalizePartyData(dataWithBooking);
+        console.log('Normalized party data:', normalizedParty);
+        console.log('Setting primary:', normalizedParty.primary);
+        console.log('Setting companions:', normalizedParty.companions);
         setPartyPrimary(normalizedParty.primary);
         setPartyCompanions(normalizedParty.companions);
         

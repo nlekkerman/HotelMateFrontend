@@ -72,6 +72,12 @@ const StaffConfirmationModal = ({
         iconColor: '#ffc107',
         confirmVariant: 'warning',
         confirmText: 'Decline & Release'
+      },
+      send_precheckin: {
+        icon: 'envelope',
+        iconColor: '#17a2b8',
+        confirmVariant: 'info',
+        confirmText: 'Send Link'
       }
     };
 
