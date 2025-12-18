@@ -17,7 +17,7 @@ export const useSingleRoomQrPdfPrinter = () => {
       const hotel = data.user?.staff_profile?.hotel;
       if (hotel?.name) hotelName = hotel.name;
     } catch (err) {
-      console.error("Failed to fetch hotel info", err);
+      // Silent fail - use default hotel name
     }
 
     // Add hotel name

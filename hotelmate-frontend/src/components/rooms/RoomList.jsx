@@ -15,18 +15,22 @@ const fetchRooms = async ({ queryKey }) => {
     throw new Error('Hotel slug not found in user data');
   }
 
-  console.log('🌐 Fetching rooms with params:', { page, search, hotel_slug: hotelSlug });
-  
   const response = await api.get(`/staff/hotel/${hotelSlug}/rooms/`, {
     params: { page, search },
   });
   
-  console.log('📊 API Response:', {
-    count: response.data.count,
-    results_length: response.data.results?.length,
-    next: response.data.next,
-    previous: response.data.previous
-  });
+  // Debug: Check what data we're actually receiving
+  if (response.data.results && response.data.results.length > 0) {
+    const firstRoom = response.data.results[0];
+    console.log('🏨 Sample room data:', {
+      room_number: firstRoom.room_number,
+      room_status: firstRoom.room_status,
+      room_status_display: firstRoom.room_status_display,
+      is_active: firstRoom.is_active,
+      is_occupied: firstRoom.is_occupied,
+      all_fields: Object.keys(firstRoom)
+    });
+  }
   
   return response.data;
 };
@@ -54,13 +58,6 @@ function RoomList() {
   // Keep local reactive state
   useEffect(() => {
     if (rooms.length) {
-      console.log('🏨 Rooms received from API:', rooms.length, 'rooms');
-      console.log('🔍 Room details:', rooms.map(r => ({ 
-        id: r.id, 
-        number: r.room_number, 
-        status: r.room_status,
-        occupied: r.is_occupied 
-      })));
       setLocalRooms(rooms);
     }
   }, [rooms]);

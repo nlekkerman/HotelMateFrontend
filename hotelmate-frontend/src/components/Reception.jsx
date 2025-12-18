@@ -57,7 +57,10 @@ const { mainColor } = useTheme();
           Manage rooms and guests from the reception dashboard.
         </p>
         <div className="custom-search-input-container p-4 d-flex justify-content-center">
-          <Search placeholder="Search rooms by number." />
+          <Search 
+            placeholder="Search rooms by number." 
+            apiEndpoint={hotelSlug ? `/staff/hotel/${hotelSlug}/rooms/` : null}
+          />
         </div>
       </div>
     </div>

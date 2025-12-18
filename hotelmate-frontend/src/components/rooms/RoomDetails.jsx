@@ -1,35 +1,57 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import api from "@/services/api";
+import api, { buildStaffURL, getHotelSlug } from "@/services/api";
 
 function RoomDetails() {
   const { hotelIdentifier, roomNumber, id } = useParams();
 
-  console.log("Hotel Identifier:", hotelIdentifier);
   const navigate = useNavigate();
   const [room, setRoom] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showQRCodes, setShowQRCodes] = useState(false);
+
+  const getStatusColor = (status) => {
+    const colors = {
+      'AVAILABLE': 'success',
+      'OCCUPIED': 'primary',
+      'CHECKOUT_DIRTY': 'warning',
+      'CLEANING_IN_PROGRESS': 'info',
+      'CLEANED_UNINSPECTED': 'secondary',
+      'MAINTENANCE_REQUIRED': 'danger',
+      'OUT_OF_ORDER': 'danger',
+      'READY_FOR_GUEST': 'success'
+    };
+    return colors[status] || 'secondary';
+  };
+
+  const formatStatus = (status) => {
+    return status?.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) || 'Unknown';
+  };
 
   useEffect(() => {
     const fetchRoomDetails = async () => {
       try {
-        const response = await api.get(
-          `/rooms/${hotelIdentifier}/rooms/${roomNumber}/`
-        );
+        const hotelSlug = getHotelSlug();
+        
+        if (!hotelSlug) {
+          setError("Hotel information not found");
+          setLoading(false);
+          return;
+        }
+
+        const url = buildStaffURL(hotelSlug, '', `rooms/${roomNumber}/`);
+        const response = await api.get(url);
 
         setRoom(response.data);
       } catch (err) {
         setError("Failed to fetch room details");
-        console.error(err);
       } finally {
         setLoading(false);
       }
     };
 
     fetchRoomDetails();
-  }, [id]);
+  }, [roomNumber]);
 
   if (loading)
     return <p className="text-center mt-4">Loading room details...</p>;
@@ -68,35 +90,86 @@ function RoomDetails() {
               </h4>
             </div>
             <div className="card-body p-4">
-              {/* Room Number */}
+              {/* Room Number & Type */}
               <div className="mb-4">
-                <label className="form-label text-muted fw-semibold mb-2">Room Number</label>
-                <div className="p-3 bg-light rounded-3 border-start border-primary border-4">
-                  <h5 className="mb-0 text-primary fw-bold">#{room.room_number}</h5>
-                </div>
-              </div>
-
-              {/* Guest PIN */}
-              <div className="mb-4">
-                <label className="form-label text-muted fw-semibold mb-2">Guest PIN</label>
-                <div className="p-3 bg-light rounded-3 border-start border-warning border-4">
-                  {room.guest_id_pin ? (
-                    <h5 className="mb-0 text-warning fw-bold">{room.guest_id_pin}</h5>
-                  ) : (
-                    <span className="text-secondary fst-italic">Not assigned</span>
+                <label className="form-label text-muted fw-semibold mb-2">Room Information</label>
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <div className="p-3 bg-light rounded-3 border-start border-primary border-4">
+                      <h6 className="text-muted mb-1">Room Number</h6>
+                      <h5 className="mb-0 text-primary fw-bold">#{room.room_number}</h5>
+                    </div>
+                  </div>
+                  {room.room_type_info && (
+                    <div className="col-md-6">
+                      <div className="p-3 bg-light rounded-3 border-start border-info border-4">
+                        <h6 className="text-muted mb-1">Room Type</h6>
+                        <h6 className="mb-0 text-info fw-bold">{room.room_type_info.name}</h6>
+                        <small className="text-muted">
+                          ID: {room.room_type_info.id}
+                          {room.room_type_info.capacity && ` • Max ${room.room_type_info.capacity} guests`}
+                          {room.room_type_info.base_rate && (
+                            <span className="text-success ms-1">
+                              • Base Rate: ${room.room_type_info.base_rate}
+                            </span>
+                          )}
+                        </small>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* QR Codes Button */}
+              {/* Room Status & Availability */}
               <div className="mb-4">
-                <button 
-                  className="btn btn-outline-primary btn-sm w-100"
-                  onClick={() => setShowQRCodes(true)}
-                >
-                  <i className="bi bi-qr-code me-2"></i>
-                  View QR Codes
-                </button>
+                <label className="form-label text-muted fw-semibold mb-2">Room Status & Availability</label>
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <div className="p-3 bg-light rounded-3 border-start border-info border-4">
+                      <div className="d-flex justify-content-between align-items-center">
+                        <span className="text-muted">Status:</span>
+                        <span className={`badge bg-${getStatusColor(room.room_status)} fs-6`}>
+                          {room.room_status_display || formatStatus(room.room_status)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className="p-3 bg-light rounded-3 border-start border-success border-4">
+                      <div className="d-flex justify-content-between align-items-center">
+                        <span className="text-muted">Bookable:</span>
+                        <span className={`badge ${room.is_bookable ? 'bg-success' : 'bg-secondary'} fs-6`}>
+                          {room.is_bookable ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {(room.maintenance_required || room.is_out_of_order) && (
+                  <div className="mt-3">
+                    {room.maintenance_required && (
+                      <div className="alert alert-warning p-2 mb-2">
+                        <i className="bi bi-exclamation-triangle-fill me-2" />
+                        <strong>Maintenance Required</strong>
+                        {room.maintenance_priority && (
+                          <span className="badge bg-warning text-dark ms-2">
+                            {room.maintenance_priority} Priority
+                          </span>
+                        )}
+                        {room.maintenance_notes && (
+                          <div className="mt-1"><small>{room.maintenance_notes}</small></div>
+                        )}
+                      </div>
+                    )}
+                    {room.is_out_of_order && (
+                      <div className="alert alert-danger p-2">
+                        <i className="bi bi-x-circle-fill me-2" />
+                        <strong>Room Out of Order</strong>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Guests */}
@@ -132,128 +205,6 @@ function RoomDetails() {
         </div>
 
       </div>
-
-      {/* QR Codes Modal */}
-      {showQRCodes && (
-        <div className="modal d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
-          <div className="modal-dialog modal-xl">
-            <div className="modal-content">
-              <div className="modal-header main-bg text-white">
-                <h4 className="modal-title mb-0">
-                  <i className="bi bi-qr-code me-2"></i>
-                  QR Code Services
-                </h4>
-                <button 
-                  type="button" 
-                  className="btn-close btn-close-white" 
-                  onClick={() => setShowQRCodes(false)}
-                ></button>
-              </div>
-              <div className="modal-body p-4">
-                <div className="row g-4">
-                  {room.room_service_qr_code && (
-                    <div className="col-12 col-md-6">
-                      <div className="card border-0 bg-light h-100">
-                        <div className="card-body text-center p-4">
-                          <div className="mb-3">
-                            <i className="bi bi-house-door text-primary" style={{fontSize: '2rem'}}></i>
-                          </div>
-                          <h6 className="card-title fw-semibold mb-3">Room Service</h6>
-                          <div className="qr-container mb-3">
-                            <img
-                              src={room.room_service_qr_code}
-                              alt="Room Service QR Code"
-                              className="img-fluid rounded-3 shadow-sm"
-                              style={{ width: 150, height: 150, objectFit: "contain" }}
-                            />
-                          </div>
-                          <p className="text-muted small mb-0">Scan to order room service</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {room.in_room_breakfast_qr_code && (
-                    <div className="col-12 col-md-6">
-                      <div className="card border-0 bg-light h-100">
-                        <div className="card-body text-center p-4">
-                          <div className="mb-3">
-                            <i className="bi bi-cup-hot text-warning" style={{fontSize: '2rem'}}></i>
-                          </div>
-                          <h6 className="card-title fw-semibold mb-3">In-Room Breakfast</h6>
-                          <div className="qr-container mb-3">
-                            <img
-                              src={room.in_room_breakfast_qr_code}
-                              alt="In-Room Breakfast QR Code"
-                              className="img-fluid rounded-3 shadow-sm"
-                              style={{ width: 150, height: 150, objectFit: "contain" }}
-                            />
-                          </div>
-                          <p className="text-muted small mb-0">Scan to order breakfast</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {room.dinner_booking_qr_code && (
-                    <div className="col-12 col-md-6">
-                      <div className="card border-0 bg-light h-100">
-                        <div className="card-body text-center p-4">
-                          <div className="mb-3">
-                            <i className="bi bi-house text-success" style={{fontSize: '2rem'}}></i>
-                          </div>
-                          <h6 className="card-title fw-semibold mb-3">Restaurant Booking</h6>
-                          <div className="qr-container mb-3">
-                            <img
-                              src={room.dinner_booking_qr_code}
-                              alt="Dinner Booking QR Code"
-                              className="img-fluid rounded-3 shadow-sm"
-                              style={{ width: 150, height: 150, objectFit: "contain" }}
-                            />
-                          </div>
-                          <p className="text-muted small mb-0">Scan to book dinner</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {room.chat_pin_qr_code && (
-                    <div className="col-12 col-md-6">
-                      <div className="card border-0 bg-light h-100">
-                        <div className="card-body text-center p-4">
-                          <div className="mb-3">
-                            <i className="bi bi-chat-dots text-info" style={{fontSize: '2rem'}}></i>
-                          </div>
-                          <h6 className="card-title fw-semibold mb-3">Guest Chat</h6>
-                          <div className="qr-container mb-3">
-                            <img
-                              src={room.chat_pin_qr_code}
-                              alt="Chat QR Code"
-                              className="img-fluid rounded-3 shadow-sm"
-                              style={{ width: 150, height: 150, objectFit: "contain" }}
-                            />
-                          </div>
-                          <p className="text-muted small mb-0">Scan to start chatting</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* No QR Codes Message */}
-                {!room.room_service_qr_code && !room.in_room_breakfast_qr_code && 
-                 !room.dinner_booking_qr_code && !room.chat_pin_qr_code && (
-                  <div className="text-center py-5">
-                    <i className="bi bi-qr-code text-muted" style={{fontSize: '4rem'}}></i>
-                    <h5 className="text-muted mt-3">No QR codes available</h5>
-                    <p className="text-muted">QR codes will appear here when they are generated for this room.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Actions */}
       <div className="row">

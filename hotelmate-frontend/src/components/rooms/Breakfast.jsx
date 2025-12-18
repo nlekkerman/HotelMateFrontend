@@ -30,11 +30,9 @@ const Breakfast = ({ isAdmin = false }) => {
   const roomServiceState = useRoomServiceState();
   // Fetch breakfast items
   useEffect(() => {
-    console.log(`Fetching breakfast items for room ${roomNumber}...`);
     api
       .get(`room_services/${hotelIdentifier}/room/${roomNumber}/breakfast/`)
       .then((res) => {
-        console.log("Breakfast items fetched:", res.data);
         const formatted = res.data.map((item) => ({ ...item, quantity: 1 }));
         setItems(formatted);
       })
@@ -110,7 +108,6 @@ const Breakfast = ({ isAdmin = false }) => {
       } else {
         newSelected[itemId] = { quantity: 1, notes: "" };
       }
-      console.log("Toggled item selection:", newSelected);
       return newSelected;
     });
   };
@@ -173,8 +170,6 @@ const Breakfast = ({ isAdmin = false }) => {
         room_number: parseInt(roomNumber)
       };
       
-      console.log("Order submitted successfully:", response.data);
-      
       toast.success(`Breakfast order #${response.data.id} submitted successfully! You'll receive updates as it's prepared.`, {
         autoClose: 4000,
         position: 'top-center'
@@ -200,7 +195,6 @@ const Breakfast = ({ isAdmin = false }) => {
         { params: { room_number: roomNumber } }
       );
       setOrders(response.data.results);
-      console.log("Fetched orders:", response.data);
       setShowOrders(true);
     } catch (error) {
       alert("Failed to load orders");

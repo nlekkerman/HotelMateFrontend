@@ -1,31 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import RoomQr from "./RoomQr";
-import { useSingleRoomQrPdfPrinter } from "@/components/rooms/hooks/useSingleRoomQrPdfPrinter";
 
 const RoomCard = ({ room, selectedRooms, onSelect }) => {
   const navigate = useNavigate();
-  const [qrType, setQrType] = useState("");
   const [isHovering, setIsHovering] = useState(false);
-  const { generateSingleRoomQrPdf } = useSingleRoomQrPdfPrinter();
-
-  const handleQrChange = (e) => setQrType(e.target.value);
-
-  const qrEntries = Object.entries(room).filter(
-    ([key, value]) => key.endsWith("_qr_code") && value
-  );
-
-  const formatQrName = (key) =>
-    key
-      .replace(/_qr_code$/, "")
-      .replace(/_pin$/, "")
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-
-  const qrMap = qrEntries.reduce((acc, [key, value]) => {
-    acc[formatQrName(key)] = value;
-    return acc;
-  }, {});
 
   const calculateStayDuration = (checkInDate) => {
     if (!checkInDate) return 'Unknown';
@@ -51,7 +29,8 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
   };
 
   const formatStatus = (status) => {
-    return status?.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) || 'Unknown';
+    if (!status) return null;
+    return status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   };
 
   return (
@@ -108,49 +87,70 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
               Room {room.room_number}
             </h5>
             <span className={`badge bg-${getStatusColor(room.room_status)} fs-6`}>
-              {formatStatus(room.room_status)}
+              {room.room_status_display || formatStatus(room.room_status) || (room.is_occupied ? 'Occupied' : 'Available')}
             </span>
           </div>
 
           {/* Room Type Information */}
-          {room.room_type && (
+          {room.room_type_info && (
             <div className="mb-2">
               <small className="text-muted">
-                <strong>{room.room_type.name}</strong> ({room.room_type.code})
-                {room.room_type.max_occupancy && (
+                <strong>{room.room_type_info.name}</strong>
+                {room.room_type_info.capacity && (
                   <span className="ms-2">
                     <i className="bi bi-people-fill me-1" />
-                    Max {room.room_type.max_occupancy} guests
+                    Max {room.room_type_info.capacity} guests
+                  </span>
+                )}
+                {room.room_type_info.base_rate && (
+                  <span className="ms-2 text-success">
+                    <i className="bi bi-currency-dollar me-1" />
+                    ${room.room_type_info.base_rate}
                   </span>
                 )}
               </small>
             </div>
           )}
 
-          <p className="card-text mb-3">
-            <strong>Guest PIN:</strong> {room.guest_id_pin || "Not assigned"}
-            <br />
-            <strong>Occupied:</strong> {room.is_occupied ? "Yes" : "No"}
+          <div className="card-text mb-3">
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <small className="text-muted">
+                <i className="bi bi-person-circle me-1" />
+                <strong>Occupancy:</strong>
+              </small>
+              <span className={`badge ${room.is_occupied ? 'bg-danger' : 'bg-success'}`}>
+                {room.is_occupied ? 'Occupied' : 'Available'}
+              </span>
+            </div>
+            
             {room.maintenance_required && (
-              <>
-                <br />
-                <span className="text-danger">
-                  <i className="bi bi-exclamation-triangle-fill me-1" />
-                  <strong>Maintenance Required</strong>
-                  {room.maintenance_priority && ` (${room.maintenance_priority})`}
-                </span>
-              </>
+              <div className="alert alert-warning p-2 mb-2" role="alert">
+                <i className="bi bi-exclamation-triangle-fill me-1" />
+                <small><strong>Maintenance Required</strong></small>
+                {room.maintenance_priority && (
+                  <span className="badge bg-warning text-dark ms-1">
+                    {room.maintenance_priority}
+                  </span>
+                )}
+              </div>
             )}
+            
             {room.is_out_of_order && (
-              <>
-                <br />
-                <span className="text-danger">
-                  <i className="bi bi-x-circle-fill me-1" />
-                  <strong>Out of Order</strong>
-                </span>
-              </>
+              <div className="alert alert-danger p-2 mb-2" role="alert">
+                <i className="bi bi-x-circle-fill me-1" />
+                <small><strong>Out of Order</strong></small>
+              </div>
             )}
-          </p>
+            
+            {room.is_bookable !== undefined && (
+              <div className="d-flex justify-content-between align-items-center">
+                <small className="text-muted">Bookable:</small>
+                <span className={`badge ${room.is_bookable ? 'bg-success' : 'bg-secondary'}`}>
+                  {room.is_bookable ? 'Yes' : 'No'}
+                </span>
+              </div>
+            )}
+          </div>
 
           {/* Housekeeping Info */}
           {(room.last_cleaned_at || room.last_inspected_at) && (
@@ -185,32 +185,7 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
             </div>
           )}
 
-          <div className="mb-3 text-center" onClick={(e) => e.stopPropagation()}>
-            <select
-              className="form-select form-select-sm mb-2"
-              value={qrType}
-              onChange={handleQrChange}
-            >
-              <option value="">Select QR type</option>
-              {qrEntries.map(([key]) => (
-                <option key={key} value={formatQrName(key)}>
-                  {formatQrName(key)}
-                </option>
-              ))}
-            </select>
-            {qrType && <RoomQr type={qrType} url={qrMap[qrType]} />}
-          </div>
 
-          <button
-            className="btn btn-sm main-bg-outline mt-2"
-            onClick={(e) => {
-              e.stopPropagation();
-              generateSingleRoomQrPdf(room);
-            }}
-          >
-            <i className="bi bi-download me-1" />
-            Download QR PDF
-          </button>
 
           <div className="form-check m-2 text-black bg-light p-1 rounded" onClick={(e) => e.stopPropagation()}>
             <input
@@ -233,7 +208,6 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
                 onClick={(e) => {
                   e.stopPropagation();
                   // TODO: Implement mark as cleaning action
-                  console.log('Mark as cleaning:', room.id);
                 }}
               >
                 <i className="bi bi-brush me-1" />
@@ -247,7 +221,6 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
                 onClick={(e) => {
                   e.stopPropagation();
                   // TODO: Implement inspect room action
-                  console.log('Inspect room:', room.id);
                 }}
               >
                 <i className="bi bi-check2-circle me-1" />
@@ -261,7 +234,6 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
                 onClick={(e) => {
                   e.stopPropagation();
                   // TODO: Implement view maintenance action
-                  console.log('View maintenance:', room.id);
                 }}
               >
                 <i className="bi bi-tools me-1" />

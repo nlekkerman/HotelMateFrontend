@@ -32,15 +32,7 @@ export default function RoomService({ isAdmin }) {
   const roomServiceState = useRoomServiceState();
   const roomServiceDispatch = useRoomServiceDispatch();
 
-  // 🔍 DEBUG: Log store state changes
-  useEffect(() => {
-    console.log('🏨 [RoomService] Store state updated:', {
-      ordersCount: Object.keys(roomServiceState.ordersById || {}).length,
-      orders: roomServiceState.ordersById,
-      roomNumber,
-      hotelIdentifier
-    });
-  }, [roomServiceState, roomNumber, hotelIdentifier]);
+
 
   // Enhanced real-time tracking of current active order
   useEffect(() => {
