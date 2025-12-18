@@ -80,13 +80,14 @@ function Search({
 
                 <div className="d-flex justify-content-center">
                   <button
-                    className="btn custom-button m-5 main-bg text-white"
+                    className="btn custom-button main-bg text-white"
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/rooms/${room.room_number}/add-guest`);
+                      navigate(`/rooms/${room.hotel_slug}/rooms/${room.room_number}`);
                     }}
                   >
-                    Assign Guest
+                    <i className="bi bi-eye me-1" />
+                    View Details
                   </button>
                 </div>
               </div>

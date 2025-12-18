@@ -243,20 +243,7 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
               </button>
             )}
 
-            <div className="button-wraper w-100 d-flex justify-content-center">
-              {!room.is_occupied && room.room_status === 'AVAILABLE' && (
-                <button
-                  className="btn main-text second-text custom-button me-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/rooms/${room.room_number}/add-guest`);
-                  }}
-                >
-                  <i className="bi bi-person-plus me-1" />
-                  Assign Guest
-                </button>
-              )}
-            </div>
+
           </div>
 
           {/* Guest Summary */}

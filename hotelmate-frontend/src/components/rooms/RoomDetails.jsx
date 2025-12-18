@@ -220,16 +220,6 @@ function RoomDetails() {
                   Back to Rooms List
                 </button>
                 
-                {!room.is_occupied && (
-                  <button
-                    className="btn main-bg text-white btn-lg px-4"
-                    onClick={() => navigate(`/rooms/${room.room_number}/add-guest`)}
-                  >
-                    <i className="bi bi-person-plus me-2"></i>
-                    Assign Guest
-                  </button>
-                )}
-                
                 {room.is_occupied && (
                   <button
                     className="btn btn-warning btn-lg px-4"
