@@ -1,7 +1,63 @@
 import React from 'react';
 import { Card, Form, Row, Col } from 'react-bootstrap';
 
-const CompanionsSection = ({ slots, onChange, errors, themeColor }) => {
+const CompanionsSection = ({ slots, onChange, errors, themeColor, guestFields = {}, onGuestFieldChange }) => {
+  // Get enabled guest-scoped fields
+  const enabledGuestFields = Object.entries(guestFields.registry || {})
+    .filter(([fieldKey, meta]) => 
+      guestFields.enabled?.[fieldKey] === true && 
+      meta.scope === 'guest'
+    )
+    .sort(([, a], [, b]) => (a.order || 0) - (b.order || 0));
+
+  const renderGuestField = (fieldKey, meta, companionIndex) => {
+    const fieldValue = slots[companionIndex]?.precheckin_data?.[fieldKey] || '';
+    const isRequired = guestFields.required?.[fieldKey] === true;
+    
+    switch (meta.type) {
+      case 'select':
+        return (
+          <Form.Select
+            value={fieldValue}
+            onChange={(e) => onGuestFieldChange?.(companionIndex, fieldKey, e.target.value)}
+            isInvalid={!!errors?.[companionIndex]?.[fieldKey]}
+            required={isRequired}
+          >
+            <option value="">-- Select --</option>
+            {meta.choices?.map((choice, index) => {
+              const choiceValue = typeof choice === 'object' ? choice.value : choice;
+              const choiceLabel = typeof choice === 'object' ? choice.label : choice;
+              
+              return (
+                <option key={`${choiceValue}-${index}`} value={choiceValue}>
+                  {choiceLabel}
+                </option>
+              );
+            })}
+          </Form.Select>
+        );
+      case 'date':
+        return (
+          <Form.Control
+            type="date"
+            value={fieldValue}
+            onChange={(e) => onGuestFieldChange?.(companionIndex, fieldKey, e.target.value)}
+            isInvalid={!!errors?.[companionIndex]?.[fieldKey]}
+            required={isRequired}
+          />
+        );
+      default: // text
+        return (
+          <Form.Control
+            type="text"
+            value={fieldValue}
+            onChange={(e) => onGuestFieldChange?.(companionIndex, fieldKey, e.target.value)}
+            isInvalid={!!errors?.[companionIndex]?.[fieldKey]}
+            required={isRequired}
+          />
+        );
+    }
+  };
   // Don't render if no slots are expected
   if (!slots) {
     return null;
@@ -118,6 +174,35 @@ const CompanionsSection = ({ slots, onChange, errors, themeColor }) => {
                 </Form.Group>
               </Col>
             </Row>
+            
+            {/* Guest-scoped precheckin fields for this companion */}
+            {enabledGuestFields.length > 0 && (
+              <>
+                <hr className="my-3" />
+                <h6 className="mb-3 text-muted small">Personal Information</h6>
+                {enabledGuestFields.map(([fieldKey, meta]) => (
+                  <Row key={fieldKey}>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="small">
+                          {meta.label}
+                          {guestFields.required?.[fieldKey] && <span className="text-danger"> *</span>}
+                        </Form.Label>
+                        {meta.description && (
+                          <div className="form-text mb-2 small">{meta.description}</div>
+                        )}
+                        {renderGuestField(fieldKey, meta, index)}
+                        {errors?.[index]?.[fieldKey] && (
+                          <Form.Control.Feedback type="invalid" className="d-block">
+                            {errors[index][fieldKey]}
+                          </Form.Control.Feedback>
+                        )}
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                ))}
+              </>
+            )}
           </div>
         ))}
       </Card.Body>

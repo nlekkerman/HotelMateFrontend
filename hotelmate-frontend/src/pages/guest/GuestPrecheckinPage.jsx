@@ -226,6 +226,32 @@ const GuestPrecheckinPage = () => {
     }
   };
 
+  // Handle guest-scoped field changes for primary guest
+  const handlePrimaryGuestFieldChange = (fieldKey, value) => {
+    setPartyPrimary(prev => ({
+      ...prev,
+      precheckin_data: {
+        ...prev.precheckin_data,
+        [fieldKey]: value
+      }
+    }));
+  };
+
+  // Handle guest-scoped field changes for companions
+  const handleCompanionGuestFieldChange = (companionIndex, fieldKey, value) => {
+    setCompanionSlots(prev => {
+      const newSlots = [...prev];
+      newSlots[companionIndex] = {
+        ...newSlots[companionIndex],
+        precheckin_data: {
+          ...newSlots[companionIndex].precheckin_data,
+          [fieldKey]: value
+        }
+      };
+      return newSlots;
+    });
+  };
+
   // Validation for party and extras
   const validateForm = () => {
     if (!normalizedData) return { hasErrors: true };
@@ -480,6 +506,12 @@ const GuestPrecheckinPage = () => {
                 onChange={setPartyPrimary}
                 errors={fieldErrors.party.primary}
                 themeColor={themeColor}
+                guestFields={{
+                  registry: registry,
+                  enabled: config.enabled || {},
+                  required: config.required || {}
+                }}
+                onGuestFieldChange={handlePrimaryGuestFieldChange}
               />
               
               <CompanionsSection
@@ -487,6 +519,12 @@ const GuestPrecheckinPage = () => {
                 onChange={setCompanionSlots}
                 errors={fieldErrors.party.companions}
                 themeColor={themeColor}
+                guestFields={{
+                  registry: registry,
+                  enabled: config.enabled || {},
+                  required: config.required || {}
+                }}
+                onGuestFieldChange={handleCompanionGuestFieldChange}
               />
               
               <ExtrasSection

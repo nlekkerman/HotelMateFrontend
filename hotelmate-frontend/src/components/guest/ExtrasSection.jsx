@@ -65,9 +65,9 @@ const ExtrasSection = ({ registry, enabled, required, values, onChange, errors, 
     }
   };
 
-  // Get only enabled fields, sorted by order
+  // Get only enabled booking-scoped fields, sorted by order
   const enabledFields = Object.entries(registry)
-    .filter(([fieldKey]) => enabled[fieldKey] === true)
+    .filter(([fieldKey, meta]) => enabled[fieldKey] === true && meta.scope === 'booking')
     .sort(([, a], [, b]) => (a.order || 0) - (b.order || 0));
   
   if (enabledFields.length === 0) {
