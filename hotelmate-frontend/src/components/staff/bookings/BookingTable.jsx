@@ -8,14 +8,12 @@ import BookingDetailsModal from './BookingDetailsModal';
  */
 const BookingTable = ({ 
   bookings, 
-  onConfirm, 
-  onCancel, 
   onSendPrecheckin, 
   onApprove, 
   onDecline, 
   loading, 
-  isAccepting, 
-  isDeclining, 
+  isBookingAccepting, 
+  isBookingDeclining, 
   hotelSlug 
 }) => {
   const [selectedBookingId, setSelectedBookingId] = useState(null);
@@ -37,8 +35,8 @@ const BookingTable = ({
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      'PENDING_PAYMENT': { class: 'bg-warning text-dark', icon: 'clock', label: 'Pending Payment' },
-      'PENDING_APPROVAL': { class: 'bg-primary text-white', icon: 'hourglass-split', label: 'Pending Approval' },
+      'PENDING_PAYMENT': { class: 'bg-primary text-white', icon: 'hourglass-split', label: 'Awaiting Approval' },
+      'PENDING_APPROVAL': { class: 'bg-primary text-white', icon: 'hourglass-split', label: 'Awaiting Approval' },
       'CONFIRMED': { class: 'bg-success', icon: 'check-circle', label: 'Confirmed' },
       'CANCELLED': { class: 'bg-danger', icon: 'x-circle', label: 'Cancelled' },
       'DECLINED': { class: 'bg-warning text-dark', icon: 'x-circle', label: 'Declined' },
@@ -73,15 +71,7 @@ const BookingTable = ({
     setSelectedBookingId(null);
   };
 
-  const handleConfirmFromModal = (bookingId) => {
-    onConfirm(bookingId);
-    handleCloseModal();
-  };
 
-  const handleCancelFromModal = (bookingId) => {
-    onCancel(bookingId, 'Cancelled by staff');
-    handleCloseModal();
-  };
 
   if (bookings.length === 0) {
     return (
@@ -115,7 +105,7 @@ const BookingTable = ({
           <tbody>
             {bookings.map((booking) => (
               <tr 
-                key={booking.id} 
+                key={booking.booking_id} 
                 className={`${loading ? 'table-row-loading' : ''} booking-row-clickable`}
                 onClick={() => handleBookingClick(booking)}
                 style={{ cursor: 'pointer' }}
@@ -248,14 +238,12 @@ const BookingTable = ({
                 <td onClick={(e) => e.stopPropagation()}>
                   <BookingActions
                     booking={booking}
-                    onConfirm={onConfirm}
-                    onCancel={onCancel}
                     onSendPrecheckin={onSendPrecheckin}
                     onApprove={onApprove}
                     onDecline={onDecline}
                     loading={loading}
-                    isAccepting={isAccepting}
-                    isDeclining={isDeclining}
+                    isAccepting={isBookingAccepting(booking.booking_id)}
+                    isDeclining={isBookingDeclining(booking.booking_id)}
                   />
                 </td>
               </tr>

@@ -17,47 +17,19 @@ const BookingList = ({ hotelSlug, urlParams }) => {
     statistics,
     isLoading,
     error,
-    confirmBooking,
-    cancelBooking,
     sendPrecheckinLink,
     acceptBooking,
     declineBooking,
-    isConfirming,
-    isCancelling,
     isSendingPrecheckin,
-    isAccepting,
-    isDeclining,
+    isBookingAccepting,
+    isBookingDeclining,
     hasBookings,
     isEmpty,
     currentFilter,
     setFilter
   } = useBookingManagement(hotelSlug);
 
-  const handleConfirm = async (bookingId) => {
-    try {
-      await confirmBooking(bookingId);
-      setSuccessModal({
-        show: true,
-        message: 'Booking confirmed successfully',
-        preset: 'booking_confirmed'
-      });
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to confirm booking');
-    }
-  };
 
-  const handleCancel = async (bookingId, reason = 'Cancelled by staff') => {
-    try {
-      await cancelBooking({ bookingId, reason });
-      setSuccessModal({
-        show: true,
-        message: 'Booking cancelled successfully',
-        preset: 'booking_cancelled'
-      });
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to cancel booking');
-    }
-  };
 
   const handleSendPrecheckin = async (bookingId) => {
     try {
@@ -115,8 +87,14 @@ const BookingList = ({ hotelSlug, urlParams }) => {
           </div>
           <div className="col-md-2">
             <div className="stat-card stat-warning">
-              <div className="stat-number">{statistics.pending}</div>
+              <div className="stat-number">{statistics.pendingPayment}</div>
               <div className="stat-label">Pending Payment</div>
+            </div>
+          </div>
+          <div className="col-md-2">
+            <div className="stat-card stat-info">
+              <div className="stat-number">{statistics.pendingApproval}</div>
+              <div className="stat-label">Pending Approval</div>
             </div>
           </div>
           <div className="col-md-2">
@@ -156,14 +134,12 @@ const BookingList = ({ hotelSlug, urlParams }) => {
       {!isLoading && (
         <BookingTable
           bookings={bookings}
-          onConfirm={handleConfirm}
-          onCancel={handleCancel}
           onSendPrecheckin={handleSendPrecheckin}
           onApprove={handleApprove}
           onDecline={handleDecline}
-          loading={isConfirming || isCancelling || isSendingPrecheckin}
-          isAccepting={isAccepting}
-          isDeclining={isDeclining}
+          loading={isSendingPrecheckin}
+          isBookingAccepting={isBookingAccepting}
+          isBookingDeclining={isBookingDeclining}
           hotelSlug={hotelSlug}
         />
       )}

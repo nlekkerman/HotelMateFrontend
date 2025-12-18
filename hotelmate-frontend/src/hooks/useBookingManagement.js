@@ -3,7 +3,7 @@ import { useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api, { buildStaffURL, staffBookingService } from '@/services/api';
-import { eventBus } from '@/realtime/eventBus';
+import { useRoomBookingState } from '@/realtime/stores/roomBookingStore';
 
 const queryKeys = {
   staffRoomBookings: (hotelSlug, filtersHash) => ['staff-room-bookings', hotelSlug, filtersHash],
@@ -11,41 +11,30 @@ const queryKeys = {
 
 /**
  * Custom hook for managing hotel booking operations with TanStack Query
- * Handles fetching, filtering, confirming, and cancelling bookings
+ * Handles fetching, filtering, confirming, and cancelling bookings  
  */
 export const useBookingManagement = (hotelSlug) => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+  const roomBookingState = useRoomBookingState();
   
-  // Listen to real-time booking events and invalidate cache
+  // Invalidate cache when room booking store updates (Pusher events)
   useEffect(() => {
-    if (!hotelSlug) return;
+    if (!hotelSlug || !roomBookingState) return;
     
-    const handleRoomBookingEvent = () => {
-      // Invalidate booking queries to refresh data from server
+    // Track previous booking list to detect changes
+    const currentBookingIds = Object.keys(roomBookingState.byBookingId);
+    
+    // Simple change detection - if booking count or IDs change, invalidate cache
+    const invalidateCache = () => {
       queryClient.invalidateQueries({
         queryKey: ['staff-room-bookings', hotelSlug]
       });
     };
     
-    // Subscribe to all room booking events
-    eventBus.on('ROOM_BOOKING_CREATED', handleRoomBookingEvent);
-    eventBus.on('ROOM_BOOKING_UPDATED', handleRoomBookingEvent);
-    eventBus.on('ROOM_BOOKING_PARTY_UPDATED', handleRoomBookingEvent);
-    eventBus.on('ROOM_BOOKING_CANCELLED', handleRoomBookingEvent);
-    eventBus.on('ROOM_BOOKING_CHECKED_IN', handleRoomBookingEvent);
-    eventBus.on('ROOM_BOOKING_CHECKED_OUT', handleRoomBookingEvent);
-    
-    return () => {
-      // Cleanup event listeners
-      eventBus.off('ROOM_BOOKING_CREATED', handleRoomBookingEvent);
-      eventBus.off('ROOM_BOOKING_UPDATED', handleRoomBookingEvent);
-      eventBus.off('ROOM_BOOKING_PARTY_UPDATED', handleRoomBookingEvent);
-      eventBus.off('ROOM_BOOKING_CANCELLED', handleRoomBookingEvent);
-      eventBus.off('ROOM_BOOKING_CHECKED_IN', handleRoomBookingEvent);
-      eventBus.off('ROOM_BOOKING_CHECKED_OUT', handleRoomBookingEvent);
-    };
-  }, [hotelSlug, queryClient]);
+    // Trigger cache invalidation when store state changes
+    invalidateCache();
+  }, [hotelSlug, queryClient, roomBookingState.byBookingId]);
   
   // Create filters hash from URL params for stable query key
   const filtersHash = useMemo(() => {
@@ -67,7 +56,7 @@ export const useBookingManagement = (hotelSlug) => {
       const filterValue = searchParams.get('filter');
       switch (filterValue) {
         case 'pending':
-          params.append('status', 'PENDING_PAYMENT');
+          params.append('status', 'PENDING_PAYMENT,PENDING_APPROVAL');
           break;
         case 'confirmed':
           params.append('status', 'CONFIRMED');
@@ -139,6 +128,19 @@ export const useBookingManagement = (hotelSlug) => {
       };
     },
     enabled: !!hotelSlug,
+    // Poll for bookings in transition states (payment authorization → approval)
+    refetchInterval: (data) => {
+      const bookings = data?.results ?? [];
+      const hasTransitionBookings = bookings.some(
+        b => b.status === 'PENDING_PAYMENT' || b.status === 'PENDING_APPROVAL'
+      );
+      // Poll every 3 seconds only while we have bookings waiting for status change
+      return hasTransitionBookings ? 3000 : false;
+    },
+    // Refetch when window gains focus (helps with tab switching)
+    refetchOnWindowFocus: true,
+    // Keep data fresh
+    staleTime: 30000 // 30 seconds
   });
   
   // Calculate statistics from data
@@ -147,6 +149,8 @@ export const useBookingManagement = (hotelSlug) => {
       return {
         total: 0,
         pending: 0,
+        pendingPayment: 0,
+        pendingApproval: 0,
         confirmed: 0,
         cancelled: 0,
         completed: 0,
@@ -156,40 +160,18 @@ export const useBookingManagement = (hotelSlug) => {
     const bookings = data.results;
     return {
       total: bookings.length,
-      pending: bookings.filter(b => b.status === 'PENDING_PAYMENT').length,
+      pending: bookings.filter(b => b.status === 'PENDING_PAYMENT' || b.status === 'PENDING_APPROVAL').length,
+      pendingPayment: bookings.filter(b => b.status === 'PENDING_PAYMENT').length,
+      pendingApproval: bookings.filter(b => b.status === 'PENDING_APPROVAL').length,
       confirmed: bookings.filter(b => b.status === 'CONFIRMED').length,
       cancelled: bookings.filter(b => b.status === 'CANCELLED').length,
       completed: bookings.filter(b => b.status === 'COMPLETED').length,
     };
   }, [data]);
 
-  // Confirm booking mutation
-  const confirmBookingMutation = useMutation({
-    mutationFn: async (bookingId) => {
-      const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/confirm/`);
-      const response = await api.post(url);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['staff-room-bookings', hotelSlug]
-      });
-    }
-  });
 
-  // Cancel booking mutation
-  const cancelBookingMutation = useMutation({
-    mutationFn: async ({ bookingId, reason = 'Cancelled by staff' }) => {
-      const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/cancel/`);
-      const response = await api.post(url, { reason });
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['staff-room-bookings', hotelSlug]
-      });
-    }
-  });
+
+
 
   // Send pre-check-in link mutation
   const sendPrecheckinLinkMutation = useMutation({
@@ -207,6 +189,7 @@ export const useBookingManagement = (hotelSlug) => {
 
   // Accept booking mutation (approve and capture payment)
   const acceptBookingMutation = useMutation({
+    mutationKey: ['acceptBooking'],
     mutationFn: async (bookingId) => {
       return await staffBookingService.acceptRoomBooking(hotelSlug, bookingId);
     },
@@ -224,6 +207,7 @@ export const useBookingManagement = (hotelSlug) => {
 
   // Decline booking mutation (decline and release authorization)
   const declineBookingMutation = useMutation({
+    mutationKey: ['declineBooking'],
     mutationFn: async (bookingId) => {
       return await staffBookingService.declineRoomBooking(hotelSlug, bookingId);
     },
@@ -274,16 +258,14 @@ export const useBookingManagement = (hotelSlug) => {
     setPage,
     
     // Mutations
-    confirmBooking: confirmBookingMutation.mutateAsync,
-    cancelBooking: cancelBookingMutation.mutateAsync,
     sendPrecheckinLink: sendPrecheckinLinkMutation.mutateAsync,
-    acceptBooking: acceptBookingMutation.mutateAsync,
-    declineBooking: declineBookingMutation.mutateAsync,
-    isConfirming: confirmBookingMutation.isPending,
-    isCancelling: cancelBookingMutation.isPending,
+    acceptBooking: acceptBookingMutation.mutate,
+    declineBooking: declineBookingMutation.mutate,
     isSendingPrecheckin: sendPrecheckinLinkMutation.isPending,
-    isAccepting: acceptBookingMutation.isPending,
-    isDeclining: declineBookingMutation.isPending,
+    
+    // Helper to check if specific booking is processing
+    isBookingAccepting: (bookingId) => acceptBookingMutation.isPending && acceptBookingMutation.variables === bookingId,
+    isBookingDeclining: (bookingId) => declineBookingMutation.isPending && declineBookingMutation.variables === bookingId,
     
     // Helpers
     hasBookings: (data?.results || []).length > 0,

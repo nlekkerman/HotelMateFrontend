@@ -36,7 +36,7 @@ const BookingManagementPage = () => {
   const getPageDescription = () => {
     switch (urlFilter) {
       case 'pending':
-        return 'Bookings awaiting payment confirmation';
+        return 'Bookings awaiting payment or staff approval';
       case 'confirmed':
         return 'Confirmed reservations ready for check-in';
       case 'cancelled':
