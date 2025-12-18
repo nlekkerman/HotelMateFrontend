@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import api, { buildStaffURL } from '@/services/api';
+import { toast } from 'react-toastify';
+import api, { buildStaffURL, staffBookingService } from '@/services/api';
+import { eventBus } from '@/realtime/eventBus';
 
 const queryKeys = {
   staffRoomBookings: (hotelSlug, filtersHash) => ['staff-room-bookings', hotelSlug, filtersHash],
@@ -14,6 +16,36 @@ const queryKeys = {
 export const useBookingManagement = (hotelSlug) => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Listen to real-time booking events and invalidate cache
+  useEffect(() => {
+    if (!hotelSlug) return;
+    
+    const handleRoomBookingEvent = () => {
+      // Invalidate booking queries to refresh data from server
+      queryClient.invalidateQueries({
+        queryKey: ['staff-room-bookings', hotelSlug]
+      });
+    };
+    
+    // Subscribe to all room booking events
+    eventBus.on('ROOM_BOOKING_CREATED', handleRoomBookingEvent);
+    eventBus.on('ROOM_BOOKING_UPDATED', handleRoomBookingEvent);
+    eventBus.on('ROOM_BOOKING_PARTY_UPDATED', handleRoomBookingEvent);
+    eventBus.on('ROOM_BOOKING_CANCELLED', handleRoomBookingEvent);
+    eventBus.on('ROOM_BOOKING_CHECKED_IN', handleRoomBookingEvent);
+    eventBus.on('ROOM_BOOKING_CHECKED_OUT', handleRoomBookingEvent);
+    
+    return () => {
+      // Cleanup event listeners
+      eventBus.off('ROOM_BOOKING_CREATED', handleRoomBookingEvent);
+      eventBus.off('ROOM_BOOKING_UPDATED', handleRoomBookingEvent);
+      eventBus.off('ROOM_BOOKING_PARTY_UPDATED', handleRoomBookingEvent);
+      eventBus.off('ROOM_BOOKING_CANCELLED', handleRoomBookingEvent);
+      eventBus.off('ROOM_BOOKING_CHECKED_IN', handleRoomBookingEvent);
+      eventBus.off('ROOM_BOOKING_CHECKED_OUT', handleRoomBookingEvent);
+    };
+  }, [hotelSlug, queryClient]);
   
   // Create filters hash from URL params for stable query key
   const filtersHash = useMemo(() => {
@@ -172,6 +204,40 @@ export const useBookingManagement = (hotelSlug) => {
       });
     }
   });
+
+  // Accept booking mutation (approve and capture payment)
+  const acceptBookingMutation = useMutation({
+    mutationFn: async (bookingId) => {
+      return await staffBookingService.acceptRoomBooking(hotelSlug, bookingId);
+    },
+    onSuccess: (updatedBooking) => {
+      // Invalidate all booking queries to refresh the UI
+      queryClient.invalidateQueries({
+        queryKey: ['staff-room-bookings', hotelSlug]
+      });
+      toast.success('Booking approved, payment captured.');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to approve booking');
+    }
+  });
+
+  // Decline booking mutation (decline and release authorization)
+  const declineBookingMutation = useMutation({
+    mutationFn: async (bookingId) => {
+      return await staffBookingService.declineRoomBooking(hotelSlug, bookingId);
+    },
+    onSuccess: (updatedBooking) => {
+      // Invalidate all booking queries to refresh the UI
+      queryClient.invalidateQueries({
+        queryKey: ['staff-room-bookings', hotelSlug]
+      });
+      toast.success('Booking declined, authorization released.');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to decline booking');
+    }
+  });
   
   // URL filter management
   const setFilter = (filterType) => {
@@ -211,9 +277,13 @@ export const useBookingManagement = (hotelSlug) => {
     confirmBooking: confirmBookingMutation.mutateAsync,
     cancelBooking: cancelBookingMutation.mutateAsync,
     sendPrecheckinLink: sendPrecheckinLinkMutation.mutateAsync,
+    acceptBooking: acceptBookingMutation.mutateAsync,
+    declineBooking: declineBookingMutation.mutateAsync,
     isConfirming: confirmBookingMutation.isPending,
     isCancelling: cancelBookingMutation.isPending,
     isSendingPrecheckin: sendPrecheckinLinkMutation.isPending,
+    isAccepting: acceptBookingMutation.isPending,
+    isDeclining: declineBookingMutation.isPending,
     
     // Helpers
     hasBookings: (data?.results || []).length > 0,

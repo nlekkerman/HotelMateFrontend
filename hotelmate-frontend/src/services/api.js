@@ -154,4 +154,33 @@ export async function getHotelPublicPage(hotelSlug) {
   return publicAPI.get(`/hotel/${hotelSlug}/page/`);
 }
 
+/**
+ * Staff booking service for approve/decline operations
+ */
+export const staffBookingService = {
+  /**
+   * Accept a pending room booking and capture payment
+   * @param {string} hotelSlug - The hotel slug
+   * @param {string} bookingId - The booking ID
+   * @returns {Promise} - Updated booking data
+   */
+  acceptRoomBooking: async (hotelSlug, bookingId) => {
+    const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/approve/`);
+    const response = await api.post(url);
+    return response.data;
+  },
+  
+  /**
+   * Decline a pending room booking and release authorization
+   * @param {string} hotelSlug - The hotel slug
+   * @param {string} bookingId - The booking ID
+   * @returns {Promise} - Updated booking data
+   */
+  declineRoomBooking: async (hotelSlug, bookingId) => {
+    const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/decline/`);
+    const response = await api.post(url);
+    return response.data;
+  }
+};
+
 export default api;

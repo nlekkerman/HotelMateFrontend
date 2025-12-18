@@ -6,7 +6,18 @@ import BookingDetailsModal from './BookingDetailsModal';
  * Booking Table Component
  * Displays bookings in a responsive table with actions
  */
-const BookingTable = ({ bookings, onConfirm, onCancel, onSendPrecheckin, loading, hotelSlug }) => {
+const BookingTable = ({ 
+  bookings, 
+  onConfirm, 
+  onCancel, 
+  onSendPrecheckin, 
+  onApprove, 
+  onDecline, 
+  loading, 
+  isAccepting, 
+  isDeclining, 
+  hotelSlug 
+}) => {
   const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const formatCurrency = (amount, currency = 'EUR') => {
@@ -27,8 +38,10 @@ const BookingTable = ({ bookings, onConfirm, onCancel, onSendPrecheckin, loading
   const getStatusBadge = (status) => {
     const statusConfig = {
       'PENDING_PAYMENT': { class: 'bg-warning text-dark', icon: 'clock', label: 'Pending Payment' },
+      'PENDING_APPROVAL': { class: 'bg-primary text-white', icon: 'hourglass-split', label: 'Pending Approval' },
       'CONFIRMED': { class: 'bg-success', icon: 'check-circle', label: 'Confirmed' },
       'CANCELLED': { class: 'bg-danger', icon: 'x-circle', label: 'Cancelled' },
+      'DECLINED': { class: 'bg-warning text-dark', icon: 'x-circle', label: 'Declined' },
       'COMPLETED': { class: 'bg-info', icon: 'calendar-check', label: 'Completed' },
       'NO_SHOW': { class: 'bg-secondary', icon: 'person-x', label: 'No Show' }
     };
@@ -238,7 +251,11 @@ const BookingTable = ({ bookings, onConfirm, onCancel, onSendPrecheckin, loading
                     onConfirm={onConfirm}
                     onCancel={onCancel}
                     onSendPrecheckin={onSendPrecheckin}
+                    onApprove={onApprove}
+                    onDecline={onDecline}
                     loading={loading}
+                    isAccepting={isAccepting}
+                    isDeclining={isDeclining}
                   />
                 </td>
               </tr>

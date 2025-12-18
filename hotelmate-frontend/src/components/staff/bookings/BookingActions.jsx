@@ -4,33 +4,27 @@ import StaffInputModal from '@/components/staff/modals/StaffInputModal';
 
 /**
  * Booking Actions Component
- * Provides action buttons for booking operations (confirm, cancel, send pre-check-in)
+ * Provides action buttons for booking operations (confirm, cancel, send pre-check-in, approve, decline)
  */
-const BookingActions = ({ booking, onConfirm, onCancel, onSendPrecheckin, loading }) => {
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showCancelModal, setShowCancelModal] = useState(false);
+const BookingActions = ({ 
+  booking, 
+  onSendPrecheckin, 
+  onApprove, 
+  onDecline, 
+  loading,
+  isAccepting,
+  isDeclining
+}) => {
   const [showPrecheckinModal, setShowPrecheckinModal] = useState(false);
-  const canConfirm = booking.status === 'PENDING_PAYMENT';
-  const canCancel = booking.status === 'PENDING_PAYMENT'; // Only pending bookings can be cancelled
-  const canSendPrecheckin = ['PENDING_PAYMENT', 'CONFIRMED'].includes(booking.status) && (booking.guest_email || booking.primary_email || booking.booker_email);
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [showDeclineModal, setShowDeclineModal] = useState(false);
+  
+  const canApprove = booking.status === 'PENDING_APPROVAL' && booking.party_complete !== false;
+  const canDecline = booking.status === 'PENDING_APPROVAL';
+  const canSendPrecheckin = booking.status === 'CONFIRMED' && 
+    (booking.guest_email || booking.primary_email || booking.booker_email);
 
-  const handleConfirm = () => {
-    setShowConfirmModal(true);
-  };
 
-  const handleConfirmConfirm = () => {
-    onConfirm(booking.booking_id);
-    setShowConfirmModal(false);
-  };
-
-  const handleCancel = () => {
-    setShowCancelModal(true);
-  };
-
-  const handleCancelConfirm = (reason) => {
-    onCancel(booking.booking_id, reason || 'Cancelled by staff');
-    setShowCancelModal(false);
-  };
 
   const handleSendPrecheckin = () => {
     setShowPrecheckinModal(true);
@@ -41,44 +35,67 @@ const BookingActions = ({ booking, onConfirm, onCancel, onSendPrecheckin, loadin
     setShowPrecheckinModal(false);
   };
 
+  const handleApprove = () => {
+    setShowApproveModal(true);
+  };
+
+  const handleApproveConfirm = () => {
+    onApprove(booking.booking_id);
+    setShowApproveModal(false);
+  };
+
+  const handleDecline = () => {
+    setShowDeclineModal(true);
+  };
+
+  const handleDeclineConfirm = () => {
+    onDecline(booking.booking_id);
+    setShowDeclineModal(false);
+  };
+
   return (
     <div className="booking-actions">
-      {booking.status === 'PENDING_PAYMENT' ? (
+      {booking.status === 'PENDING_APPROVAL' ? (
         <>
           <button 
-            onClick={handleConfirm}
-            className="btn btn-success btn-sm me-1"
-            title="Confirm Booking"
-            disabled={loading}
+            onClick={handleApprove}
+            className="btn btn-success btn-sm me-2"
+            title={booking.party_complete === false ? "Complete guest information first" : "Approve booking and capture payment"}
+            disabled={isAccepting || isDeclining || booking.party_complete === false}
           >
-            <i className="bi bi-check-circle me-1"></i>
-            Confirm
+            {isAccepting ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-1" role="status"></span>
+                Processing...
+              </>
+            ) : (
+              <>
+                <i className="bi bi-check-circle me-1"></i>
+                Approve & Capture
+              </>
+            )}
           </button>
           
           <button 
-            onClick={handleCancel}
-            className="btn btn-danger btn-sm me-1"
-            title="Cancel Booking"
-            disabled={loading}
+            onClick={handleDecline}
+            className="btn btn-outline-warning btn-sm"
+            title="Decline booking and release authorization"
+            disabled={isAccepting || isDeclining}
           >
-            <i className="bi bi-x-circle me-1"></i>
-            Cancel
+            {isDeclining ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-1" role="status"></span>
+                Processing...
+              </>
+            ) : (
+              <>
+                <i className="bi bi-x-circle me-1"></i>
+                Decline & Release
+              </>
+            )}
           </button>
-
-          {canSendPrecheckin && (
-            <button 
-              onClick={handleSendPrecheckin}
-              className="btn btn-outline-primary btn-sm"
-              title="Send Pre-Check-In Link"
-              disabled={loading}
-            >
-              <i className="bi bi-envelope me-1"></i>
-              Pre-Check-In
-            </button>
-          )}
         </>
       ) : (
-        // Show status badges for non-actionable bookings
         <>
           {booking.status === 'CONFIRMED' && (
             <>
@@ -107,6 +124,13 @@ const BookingActions = ({ booking, onConfirm, onCancel, onSendPrecheckin, loadin
             </span>
           )}
 
+          {booking.status === 'DECLINED' && (
+            <span className="badge bg-warning">
+              <i className="bi bi-x-circle me-1"></i>
+              Declined
+            </span>
+          )}
+
           {booking.status === 'COMPLETED' && (
             <span className="badge bg-info">
               <i className="bi bi-calendar-check me-1"></i>
@@ -123,30 +147,8 @@ const BookingActions = ({ booking, onConfirm, onCancel, onSendPrecheckin, loadin
         </>
       )}
 
-      {/* Staff Confirmation Modal for Booking Confirmation */}
-      <StaffConfirmationModal
-        show={showConfirmModal}
-        title="Confirm Booking"
-        message={`Are you sure you want to confirm booking ${booking.booking_id}?`}
-        preset="confirm_booking"
-        onConfirm={handleConfirmConfirm}
-        onCancel={() => setShowConfirmModal(false)}
-      />
 
-      {/* Staff Input Modal for Booking Cancellation */}
-      <StaffInputModal
-        show={showCancelModal}
-        title="Cancel Booking"
-        message={`Cancel booking ${booking.booking_id}?\n\nPlease provide a reason (optional):`}
-        placeholder="Enter cancellation reason..."
-        defaultValue="Cancelled by staff"
-        storageKey="booking_cancellation_reason"
-        preset="cancel_booking"
-        onConfirm={handleCancelConfirm}
-        onCancel={() => setShowCancelModal(false)}
-      />
 
-      {/* Staff Confirmation Modal for Pre-Check-In Link */}
       <StaffConfirmationModal
         show={showPrecheckinModal}
         title="Send Pre-Check-In Link"
@@ -154,6 +156,24 @@ const BookingActions = ({ booking, onConfirm, onCancel, onSendPrecheckin, loadin
         preset="send_precheckin"
         onConfirm={handleSendPrecheckinConfirm}
         onCancel={() => setShowPrecheckinModal(false)}
+      />
+
+      <StaffConfirmationModal
+        show={showApproveModal}
+        title="Approve Booking"
+        message="This will charge the guest now."
+        preset="approve_booking"
+        onConfirm={handleApproveConfirm}
+        onCancel={() => setShowApproveModal(false)}
+      />
+
+      <StaffConfirmationModal
+        show={showDeclineModal}
+        title="Decline Booking"
+        message="This will cancel the authorization (guest won't be charged)."
+        preset="decline_booking"
+        onConfirm={handleDeclineConfirm}
+        onCancel={() => setShowDeclineModal(false)}
       />
     </div>
   );

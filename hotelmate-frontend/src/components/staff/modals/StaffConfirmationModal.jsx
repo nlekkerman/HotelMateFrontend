@@ -60,6 +60,18 @@ const StaffConfirmationModal = ({
         iconColor: '#ffc107',
         confirmVariant: 'warning',
         confirmText: 'Reject'
+      },
+      approve_booking: {
+        icon: 'credit-card',
+        iconColor: '#28a745',
+        confirmVariant: 'success',
+        confirmText: 'Approve & Capture'
+      },
+      decline_booking: {
+        icon: 'x-circle',
+        iconColor: '#ffc107',
+        confirmVariant: 'warning',
+        confirmText: 'Decline & Release'
       }
     };
 

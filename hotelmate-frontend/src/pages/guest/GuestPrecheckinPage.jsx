@@ -337,6 +337,69 @@ const GuestPrecheckinPage = () => {
     const hasError = !!fieldErrors[fieldKey];
     
     switch (meta.type) {
+      case 'checkbox':
+        return (
+          <Form.Check
+            type="checkbox"
+            checked={values[fieldKey] === 'true' || values[fieldKey] === true || values[fieldKey] === '1'}
+            onChange={(e) => handleFieldChange(fieldKey, e.target.checked)}
+            isInvalid={hasError}
+            label={
+              <>
+                {meta.label}
+                {isRequired && <span className="text-danger ms-1">*</span>}
+              </>
+            }
+            required={isRequired}
+          />
+        );
+      case 'select':
+        return (
+          <Form.Select
+            value={values[fieldKey] || ''}
+            onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
+            isInvalid={hasError}
+            required={isRequired}
+          >
+            <option value="">Select...</option>
+            {meta.options && meta.options.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Form.Select>
+        );
+      case 'time':
+        return (
+          <Form.Control
+            type="time"
+            value={values[fieldKey] || ''}
+            onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
+            isInvalid={hasError}
+            required={isRequired}
+          />
+        );
+      case 'email':
+        return ( 
+          <Form.Control
+            type="email"
+            value={values[fieldKey] || ''}
+            onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
+            isInvalid={hasError}
+            required={isRequired}
+          />
+        );
+      case 'tel':
+      case 'phone':
+        return (
+          <Form.Control
+            type="tel"
+            value={values[fieldKey] || ''}
+            onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
+            isInvalid={hasError}
+            required={isRequired}
+          />
+        );
       case 'textarea':
         return (
           <Form.Control
@@ -514,12 +577,14 @@ const GuestPrecheckinPage = () => {
                     {/* Render dynamic fields from registry */}
                     {activeFields.map(([fieldKey, meta]) => (
                       <Form.Group key={fieldKey} className="mb-3">
-                        <Form.Label>
-                          {meta.label}
-                          {required[fieldKey] === true && (
-                            <span className="text-danger ms-1">*</span>
-                          )}
-                        </Form.Label>
+                        {meta.type !== 'checkbox' && (
+                          <Form.Label>
+                            {meta.label}
+                            {required[fieldKey] === true && (
+                              <span className="text-danger ms-1">*</span>
+                            )}
+                          </Form.Label>
+                        )}
                         
                         {meta.description && (
                           <div className="text-muted small mb-2">{meta.description}</div>

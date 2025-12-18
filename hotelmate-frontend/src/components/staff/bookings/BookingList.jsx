@@ -20,9 +20,13 @@ const BookingList = ({ hotelSlug, urlParams }) => {
     confirmBooking,
     cancelBooking,
     sendPrecheckinLink,
+    acceptBooking,
+    declineBooking,
     isConfirming,
     isCancelling,
     isSendingPrecheckin,
+    isAccepting,
+    isDeclining,
     hasBookings,
     isEmpty,
     currentFilter,
@@ -66,6 +70,24 @@ const BookingList = ({ hotelSlug, urlParams }) => {
       });
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to send pre-check-in link. Please try again.');
+    }
+  };
+
+  const handleApprove = async (bookingId) => {
+    try {
+      await acceptBooking(bookingId);
+      // Success toast is handled in the mutation
+    } catch (error) {
+      // Error toast is handled in the mutation
+    }
+  };
+
+  const handleDecline = async (bookingId) => {
+    try {
+      await declineBooking(bookingId);
+      // Success toast is handled in the mutation
+    } catch (error) {
+      // Error toast is handled in the mutation
     }
   };
 
@@ -137,7 +159,11 @@ const BookingList = ({ hotelSlug, urlParams }) => {
           onConfirm={handleConfirm}
           onCancel={handleCancel}
           onSendPrecheckin={handleSendPrecheckin}
+          onApprove={handleApprove}
+          onDecline={handleDecline}
           loading={isConfirming || isCancelling || isSendingPrecheckin}
+          isAccepting={isAccepting}
+          isDeclining={isDeclining}
           hotelSlug={hotelSlug}
         />
       )}
