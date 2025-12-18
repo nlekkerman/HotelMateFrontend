@@ -24,10 +24,40 @@ const BookingPaymentSuccess = () => {
   const [paymentStatus, setPaymentStatus] = useState(null);
   const [isPolling, setIsPolling] = useState(false);
   const [pollAttempts, setPollAttempts] = useState(0);
+  const [extendedPolling, setExtendedPolling] = useState(false);
   
   // Guard to prevent multiple verification calls
   const didVerifyRef = useRef(false);
   const pollIntervalRef = useRef(null);
+
+  // Debug logging (development only)
+  const debugBookingStatus = (booking, context = 'unknown') => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[PAYMENT_SUCCESS_DEBUG] ${context}:`, {
+        bookingId: booking?.booking_id || bookingId,
+        rawStatus: booking?.status,
+        paid_at: booking?.paid_at,
+        payment_provider: booking?.payment_provider,
+        payment_reference: booking?.payment_reference,
+        normalizedStatus: normalizeStatus(booking?.status),
+        isPaymentVerified: isPaymentVerified(booking)
+      });
+    }
+  };
+
+  // Normalize status to handle case variations
+  const normalizeStatus = (status) => {
+    if (!status) return 'UNKNOWN';
+    return status.toString().toUpperCase();
+  };
+
+  // Check if payment is verified
+  const isPaymentVerified = (booking) => {
+    if (!booking) return false;
+    
+    // Payment verified if paid_at exists OR (payment_provider AND payment_reference)
+    return !!(booking.paid_at || (booking.payment_provider && booking.payment_reference));
+  };
 
   // Helper to calculate guest count with reliable fallbacks
   const getGuestCount = (booking) => {
@@ -63,9 +93,15 @@ const BookingPaymentSuccess = () => {
 
   // Fetch booking details (for polling)
   const fetchBookingDetails = React.useCallback(async () => {
-    if (!finalHotelSlug || !bookingId) return null;
+    if (!finalHotelSlug || !bookingId) {
+      console.warn('[PAYMENT_SUCCESS] Missing hotel slug or booking ID:', { finalHotelSlug, bookingId });
+      return null;
+    }
     
-    const response = await publicAPI.get(`/hotel/${finalHotelSlug}/room-bookings/${bookingId}/`);
+    const canonicalUrl = `/hotel/${finalHotelSlug}/room-bookings/${bookingId}/`;
+    console.log(`[PAYMENT_SUCCESS] Polling: GET ${canonicalUrl} (via publicAPI: ${publicAPI.defaults.baseURL})`);
+    const response = await publicAPI.get(canonicalUrl);
+    debugBookingStatus(response.data, 'POLL_RESPONSE');
     return response.data;
   }, [finalHotelSlug, bookingId]);
 
@@ -92,8 +128,34 @@ const BookingPaymentSuccess = () => {
         setPollAttempts(prev => {
           const newAttempts = prev + 1;
           
-          // Stop polling if confirmed or if we've tried too many times
-          if (bookingData?.status === 'CONFIRMED' || newAttempts >= 20) { // Max 60 seconds (3s * 20)
+          // Extended polling logic with different timeouts
+          const normalizedStatus = normalizeStatus(bookingData?.status);
+          const paymentVerified = isPaymentVerified(bookingData);
+          
+          // Stop immediately on final states
+          const isFinalState = normalizedStatus === 'CONFIRMED' || normalizedStatus === 'DECLINED';
+          
+          // For PENDING_APPROVAL: poll for up to 5 minutes (100 attempts)
+          // For PENDING_PAYMENT: poll for up to 1 minute (20 attempts)
+          const maxAttempts = normalizedStatus === 'PENDING_APPROVAL' ? 100 : 20;
+          
+          const shouldStopPolling = (
+            isFinalState ||
+            paymentVerified || // Backward compatibility
+            newAttempts >= maxAttempts
+          );
+          
+          // Track if we're in extended polling mode
+          if (normalizedStatus === 'PENDING_APPROVAL' && newAttempts > 20) {
+            setExtendedPolling(true);
+          }
+          
+          if (shouldStopPolling) {
+            console.log('[PAYMENT_SUCCESS] Stopping polling:', { 
+              normalizedStatus, 
+              paymentVerified, 
+              attempts: newAttempts 
+            });
             stopPolling();
           }
           
@@ -149,12 +211,38 @@ const BookingPaymentSuccess = () => {
         setPaymentStatus(verifyResponse.data?.payment_status || "verified");
         setBooking(bookingResponse.data);
         
+        // Debug initial booking state
+        debugBookingStatus(bookingResponse.data, 'INITIAL_LOAD');
+        
         const hotelPreset = bookingResponse.data.hotel_preset || bookingResponse.data.hotel?.preset || bookingResponse.data.hotel?.global_style_variant || 1;
         setPreset(hotelPreset);
         
         // Check booking status and start polling if needed
-        if (bookingResponse.data?.status === 'PENDING_PAYMENT') {
+        const normalizedStatus = normalizeStatus(bookingResponse.data?.status);
+        const paymentVerified = isPaymentVerified(bookingResponse.data);
+        
+        if (normalizedStatus === 'PENDING_PAYMENT' && !paymentVerified) {
+          console.log('[PAYMENT_SUCCESS] Starting polling for pending payment');
           startPolling();
+        } else {
+          console.log('[PAYMENT_SUCCESS] No polling needed - booking processed:', {
+            normalizedStatus,
+            paymentVerified,
+            state: normalizedStatus === 'PENDING_APPROVAL' ? 'authorization_success' : 
+                   normalizedStatus === 'CONFIRMED' ? 'booking_confirmed' :
+                   normalizedStatus === 'DECLINED' ? 'booking_declined' : 'other'
+          });
+        }
+        
+        // Backend business logic note for developers
+        if (process.env.NODE_ENV === 'development' && normalizedStatus === 'CONFIRMED' && paymentVerified) {
+          console.warn(`
+[PAYMENT_SUCCESS] BACKEND BUSINESS LOGIC QUESTION:
+Booking ${bookingResponse.data.booking_id} is CONFIRMED after payment.
+Should it be PENDING_HOTEL_CONFIRMATION instead?
+Current: Payment → CONFIRMED
+Proposed: Payment → PENDING_HOTEL_CONFIRMATION → Staff confirms → CONFIRMED
+          `);
         }
         
         // Store booking in localStorage for My Bookings feature
@@ -232,10 +320,24 @@ const BookingPaymentSuccess = () => {
     return null;
   }
 
-  // Determine UI state based on booking status
-  const isConfirmed = booking.status === 'CONFIRMED' && booking.paid_at;
-  const isPending = booking.status === 'PENDING_PAYMENT';
-  const showPollingTimeout = isPending && pollAttempts >= 20;
+  // Debug current booking state
+  debugBookingStatus(booking, 'RENDER_STATE');
+  
+  // Determine UI state based on normalized status and payment verification
+  const normalizedStatus = normalizeStatus(booking?.status);
+  const paymentVerified = isPaymentVerified(booking);
+  
+  // Map booking status to UI states with safer confirmation logic
+  const isConfirmed = normalizedStatus === 'CONFIRMED' || Boolean(booking?.paid_at); // Legacy fallback
+  const isPendingApproval = normalizedStatus === 'PENDING_APPROVAL';
+  const isDeclined = normalizedStatus === 'DECLINED';
+  const isPendingPayment = normalizedStatus === 'PENDING_PAYMENT' && !paymentVerified;
+  const isUnknownState = !isConfirmed && !isPendingApproval && !isDeclined && !isPendingPayment;
+  
+  // Extended polling timeout for PENDING_APPROVAL (5 minutes = 100 attempts at 3s intervals)
+  const maxExtendedAttempts = 100;
+  const showPollingTimeout = isPendingPayment && pollAttempts >= 20;
+  const showExtendedTimeout = isPendingApproval && pollAttempts >= maxExtendedAttempts;
 
   return (
     <div
@@ -250,21 +352,57 @@ const BookingPaymentSuccess = () => {
             <div className="text-success mb-3">
               <i className="bi bi-check-circle-fill" style={{ fontSize: '4rem' }}></i>
             </div>
-            <h2>Payment Successful!</h2>
-            <p className="text-muted">Your booking has been confirmed</p>
+            <h2>Booking confirmed ✅</h2>
+            <p className="text-muted">Your booking is confirmed and payment has been captured.</p>
+            <p className="text-muted small">You'll receive a pre-check-in email shortly.</p>
           </>
-        ) : isPending ? (
+        ) : isPendingApproval ? (
+          <>
+            <div className="text-success mb-3">
+              <i className="bi bi-check-circle" style={{ fontSize: '4rem' }}></i>
+            </div>
+            <h2>Payment authorized ✅</h2>
+            <p className="text-muted">
+              Your card has been authorized. The hotel will review and confirm your booking.
+            </p>
+            <p className="text-muted small">
+              This can take up to 24 hours (sometimes longer during busy periods). You'll receive an email when it's confirmed.
+            </p>
+          </>
+        ) : isDeclined ? (
+          <>
+            <div className="text-danger mb-3">
+              <i className="bi bi-x-circle" style={{ fontSize: '4rem' }}></i>
+            </div>
+            <h2>Booking not accepted ❌</h2>
+            <p className="text-muted">The hotel couldn't confirm this booking.</p>
+            <p className="text-muted small">No charge was captured. Any temporary authorization hold will be released by your bank.</p>
+            <p className="text-muted small">You can make a new booking or contact the hotel.</p>
+          </>
+        ) : isPendingPayment ? (
           <>
             <div className="text-warning mb-3">
               <i className="bi bi-hourglass-split" style={{ fontSize: '4rem' }}></i>
             </div>
-            <h2>Payment Processing...</h2>
+            <h2>Payment status not confirmed yet</h2>
             <p className="text-muted">
-              {isPolling ? 'We\'re confirming your payment with the bank' : 'Please wait while we verify your payment'}
+              We couldn't confirm a successful payment for this booking.
             </p>
-            {isPolling && (
+            <p className="text-muted small">
+              If you were charged, you'll receive an email receipt. Otherwise, please try again.
+            </p>
+            {isPolling && showPollingTimeout && (
               <Spinner animation="border" size="sm" className="mt-2" />
             )}
+          </>
+        ) : isUnknownState ? (
+          <>
+            <div className="text-info mb-3">
+              <i className="bi bi-info-circle" style={{ fontSize: '4rem' }}></i>
+            </div>
+            <h2>Processing Update...</h2>
+            <p className="text-muted">We're updating your booking status. Please contact the hotel if you need immediate assistance.</p>
+            <p className="small text-muted">Reference: {booking?.confirmation_number || booking?.booking_id}</p>
           </>
         ) : (
           <>
@@ -284,10 +422,22 @@ const BookingPaymentSuccess = () => {
               <i className="bi bi-check-circle me-2"></i>
               <strong>Booking Confirmed!</strong> A confirmation email has been sent to your email address.
             </Alert>
-          ) : isPending && showPollingTimeout ? (
+          ) : isPendingApproval ? (
+            <Alert variant="info">
+              <i className="bi bi-info-circle me-2"></i>
+              <strong>Payment authorized</strong> The hotel will confirm your booking. You'll receive an email when it's approved.<br />
+              <small className="text-muted">No charge will be captured unless the booking is accepted.</small><br />
+              <small className="text-muted mt-1"><strong>You don't need to stay on this page — we'll email you once the hotel confirms.</strong></small>
+            </Alert>
+          ) : isDeclined ? (
+            <Alert variant="danger">
+              <i className="bi bi-x-circle me-2"></i>
+              <strong>Booking not accepted</strong> The hotel couldn't confirm this booking. No charge was captured. Any temporary authorization hold will be released by your bank.
+            </Alert>
+          ) : isPendingPayment && showPollingTimeout ? (
             <Alert variant="warning">
               <i className="bi bi-exclamation-triangle me-2"></i>
-              <strong>Still Processing</strong> We're still confirming your payment. Please refresh this page or contact the hotel if this continues.
+              <strong>Payment status not confirmed yet</strong> If you were charged, you'll receive an email receipt. Please contact the hotel if this continues.
               <Button 
                 variant="outline-warning" 
                 size="sm" 
@@ -298,10 +448,15 @@ const BookingPaymentSuccess = () => {
                 Refresh
               </Button>
             </Alert>
-          ) : isPending ? (
+          ) : isPendingPayment ? (
             <Alert variant="info">
               <i className="bi bi-info-circle me-2"></i>
-              <strong>Payment Processing...</strong> We're confirming your payment. This usually takes a few seconds.
+              <strong>Checking payment status...</strong> This usually takes just a few seconds.
+            </Alert>
+          ) : isUnknownState ? (
+            <Alert variant="warning">
+              <i className="bi bi-question-circle me-2"></i>
+              <strong>Status Update</strong> Please contact the hotel for assistance with booking reference: {booking?.confirmation_number || booking?.booking_id}
             </Alert>
           ) : (
             <Alert variant="info">
