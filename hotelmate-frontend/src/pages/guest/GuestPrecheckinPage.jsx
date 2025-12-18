@@ -298,34 +298,57 @@ const GuestPrecheckinPage = () => {
     return { errors, hasErrors };
   };
 
-  // Build unified payload with party + extras
+  // Build payload matching backend expected format
   const buildPayload = () => {
     if (!normalizedData) return {};
 
     const { precheckin_field_registry: registry, precheckin_config: config } = normalizedData;
     
-    // Build extras object from enabled fields only
-    const extras = {};
-    Object.entries(registry)
-      .filter(([k]) => config.enabled[k] === true)
-      .forEach(([fieldKey]) => {
-        extras[fieldKey] = extrasValues[fieldKey] || '';
-      });
-    
+    // Start with the basic structure
     const payload = {
+      // Send all party data including primary
       party: {
-        primary: partyPrimary,
-        companions: companionSlots
-      },
-      extras: extras
+        primary: {
+          first_name: partyPrimary.first_name,
+          last_name: partyPrimary.last_name,
+          email: partyPrimary.email,
+          phone: partyPrimary.phone,
+          is_staying: partyPrimary.is_staying !== false
+        },
+        companions: companionSlots.map(companion => ({
+          first_name: companion.first_name,
+          last_name: companion.last_name,
+          email: companion.email,
+          phone: companion.phone,
+          is_staying: companion.is_staying !== false
+        }))
+      }
     };
     
-    // Compatibility: also send extras flattened at root (temporary)
-    if (SEND_EXTRAS_FLAT) {
-      Object.keys(extras).forEach(key => {
-        payload[key] = extras[key];
+    // Add all enabled fields (both booking and guest scoped) to top level
+    Object.entries(registry)
+      .filter(([k]) => config.enabled[k] === true)
+      .forEach(([fieldKey, meta]) => {
+        if (meta.scope === 'booking') {
+          // Booking-scoped fields from extras
+          payload[fieldKey] = extrasValues[fieldKey] || '';
+        } else if (meta.scope === 'guest') {
+          // Guest-scoped fields - add for primary
+          if (partyPrimary.precheckin_data?.[fieldKey]) {
+            payload[`primary_${fieldKey}`] = partyPrimary.precheckin_data[fieldKey];
+          }
+          // Guest-scoped fields - add for companions
+          companionSlots.forEach((companion, index) => {
+            if (companion.precheckin_data?.[fieldKey]) {
+              payload[`companion_${index}_${fieldKey}`] = companion.precheckin_data[fieldKey];
+            }
+          });
+        }
       });
-    }
+    
+    console.log('🔍 Built payload:', JSON.stringify(payload, null, 2));
+    console.log('🔍 Primary precheckin_data:', partyPrimary.precheckin_data);
+    console.log('🔍 Companions precheckin_data:', companionSlots.map(c => c.precheckin_data));
     
     return payload;
   };
@@ -346,10 +369,10 @@ const GuestPrecheckinPage = () => {
       setFieldErrors({ party: { primary: {}, companions: [] }, extras: {} });
       
       const payload = buildPayload();
-      console.log('Submitting payload:', payload);
+      console.log('🚀 Submitting payload:', JSON.stringify(payload, null, 2));
       
       await publicAPI.post(
-        `/hotel/${hotelSlug}/precheckin/?token=${encodeURIComponent(token)}`,
+        `/hotel/${hotelSlug}/precheckin/submit/?token=${token}`,
         payload
       );
       
