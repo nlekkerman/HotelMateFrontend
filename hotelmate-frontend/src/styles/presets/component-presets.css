@@ -282,8 +282,8 @@
 }
 
 [data-preset="3"] .room-card .room-card-book-button:hover {
-  background: #000000;
-  color: white;
+  background: #000000 !important;
+  color: white !important;
 }
 
 /* Preset 4: Vibrant & Playful Room Cards */

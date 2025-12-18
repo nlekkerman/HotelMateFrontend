@@ -22,9 +22,104 @@ const BookingPaymentSuccess = () => {
   const [error, setError] = useState(null);
   const [preset, setPreset] = useState(1);
   const [paymentStatus, setPaymentStatus] = useState(null);
+  const [isPolling, setIsPolling] = useState(false);
+  const [pollAttempts, setPollAttempts] = useState(0);
   
   // Guard to prevent multiple verification calls
   const didVerifyRef = useRef(false);
+  const pollIntervalRef = useRef(null);
+
+  // Helper to calculate guest count with reliable fallbacks
+  const getGuestCount = (booking) => {
+    if (!booking) return 0;
+    
+    // Try guests.total first
+    if (booking.guests?.total) {
+      return booking.guests.total;
+    }
+    
+    // Try adults + children
+    if (booking.adults !== undefined || booking.children !== undefined) {
+      return (booking.adults || 0) + (booking.children || 0);
+    }
+    
+    // Try party array (companions-only assumption: 1 + party.length)
+    if (booking.party && Array.isArray(booking.party)) {
+      return 1 + booking.party.length;
+    }
+    
+    // Fallback to party.total_count if available
+    if (booking.party?.total_count) {
+      return booking.party.total_count;
+    }
+    
+    // Never default to 0 if we have any indication of guests
+    if (booking.primary_first_name) {
+      return 1; // At least primary guest
+    }
+    
+    return 0;
+  };
+
+  // Fetch booking details (for polling)
+  const fetchBookingDetails = React.useCallback(async () => {
+    if (!finalHotelSlug || !bookingId) return null;
+    
+    const response = await publicAPI.get(`/hotel/${finalHotelSlug}/room-bookings/${bookingId}/`);
+    return response.data;
+  }, [finalHotelSlug, bookingId]);
+
+  // Stop polling
+  const stopPolling = React.useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    setIsPolling(false);
+  }, []);
+
+  // Start polling for payment confirmation
+  const startPolling = React.useCallback(() => {
+    if (pollIntervalRef.current) return; // Already polling
+    
+    setIsPolling(true);
+    setPollAttempts(0);
+    
+    pollIntervalRef.current = setInterval(async () => {
+      try {
+        const bookingData = await fetchBookingDetails();
+        setBooking(bookingData);
+        setPollAttempts(prev => {
+          const newAttempts = prev + 1;
+          
+          // Stop polling if confirmed or if we've tried too many times
+          if (bookingData?.status === 'CONFIRMED' || newAttempts >= 20) { // Max 60 seconds (3s * 20)
+            stopPolling();
+          }
+          
+          return newAttempts;
+        });
+      } catch (err) {
+        console.error('Polling error:', err);
+        setPollAttempts(prev => {
+          const newAttempts = prev + 1;
+          
+          if (newAttempts >= 20) {
+            stopPolling();
+          }
+          
+          return newAttempts;
+        });
+      }
+    }, 3000); // Poll every 3 seconds
+  }, [fetchBookingDetails, stopPolling]);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      stopPolling();
+    };
+  }, [stopPolling]);
 
   useEffect(() => {
     if (didVerifyRef.current) return;
@@ -56,6 +151,11 @@ const BookingPaymentSuccess = () => {
         
         const hotelPreset = bookingResponse.data.hotel_preset || bookingResponse.data.hotel?.preset || bookingResponse.data.hotel?.global_style_variant || 1;
         setPreset(hotelPreset);
+        
+        // Check booking status and start polling if needed
+        if (bookingResponse.data?.status === 'PENDING_PAYMENT') {
+          startPolling();
+        }
         
         // Store booking in localStorage for My Bookings feature
         const existingBookings = JSON.parse(localStorage.getItem('myBookings') || '[]');
@@ -132,6 +232,11 @@ const BookingPaymentSuccess = () => {
     return null;
   }
 
+  // Determine UI state based on booking status
+  const isConfirmed = booking.status === 'CONFIRMED' && booking.paid_at;
+  const isPending = booking.status === 'PENDING_PAYMENT';
+  const showPollingTimeout = isPending && pollAttempts >= 20;
+
   return (
     <div
       className={`hotel-public-page booking-page page-style-${preset}`}
@@ -140,19 +245,70 @@ const BookingPaymentSuccess = () => {
     >
     <Container className="py-5 booking-layout booking-layout--payment-success">
       <div className="text-center mb-4">
-        <div className="text-success mb-3">
-          <i className="bi bi-check-circle-fill" style={{ fontSize: '4rem' }}></i>
-        </div>
-        <h2>Payment Successful!</h2>
-        <p className="text-muted">Your booking has been confirmed</p>
+        {isConfirmed ? (
+          <>
+            <div className="text-success mb-3">
+              <i className="bi bi-check-circle-fill" style={{ fontSize: '4rem' }}></i>
+            </div>
+            <h2>Payment Successful!</h2>
+            <p className="text-muted">Your booking has been confirmed</p>
+          </>
+        ) : isPending ? (
+          <>
+            <div className="text-warning mb-3">
+              <i className="bi bi-hourglass-split" style={{ fontSize: '4rem' }}></i>
+            </div>
+            <h2>Payment Processing...</h2>
+            <p className="text-muted">
+              {isPolling ? 'We\'re confirming your payment with the bank' : 'Please wait while we verify your payment'}
+            </p>
+            {isPolling && (
+              <Spinner animation="border" size="sm" className="mt-2" />
+            )}
+          </>
+        ) : (
+          <>
+            <div className="text-info mb-3">
+              <i className="bi bi-clock" style={{ fontSize: '4rem' }}></i>
+            </div>
+            <h2>Payment Received</h2>
+            <p className="text-muted">Processing your booking</p>
+          </>
+        )}
       </div>
 
       <Card className="mb-4">
         <Card.Body className="p-4">
-          <Alert variant="success">
-            <i className="bi bi-check-circle me-2"></i>
-            <strong>Booking Confirmed!</strong> A confirmation email has been sent to your email address.
-          </Alert>
+          {isConfirmed ? (
+            <Alert variant="success">
+              <i className="bi bi-check-circle me-2"></i>
+              <strong>Booking Confirmed!</strong> A confirmation email has been sent to your email address.
+            </Alert>
+          ) : isPending && showPollingTimeout ? (
+            <Alert variant="warning">
+              <i className="bi bi-exclamation-triangle me-2"></i>
+              <strong>Still Processing</strong> We're still confirming your payment. Please refresh this page or contact the hotel if this continues.
+              <Button 
+                variant="outline-warning" 
+                size="sm" 
+                className="ms-3"
+                onClick={() => window.location.reload()}
+              >
+                <i className="bi bi-arrow-clockwise me-1"></i>
+                Refresh
+              </Button>
+            </Alert>
+          ) : isPending ? (
+            <Alert variant="info">
+              <i className="bi bi-info-circle me-2"></i>
+              <strong>Payment Processing...</strong> We're confirming your payment. This usually takes a few seconds.
+            </Alert>
+          ) : (
+            <Alert variant="info">
+              <i className="bi bi-info-circle me-2"></i>
+              <strong>Payment Received</strong> Your booking is being processed.
+            </Alert>
+          )}
 
           {booking.booking_id && (
             <div className="mb-4">
@@ -199,17 +355,20 @@ const BookingPaymentSuccess = () => {
             </div>
           )}
 
-          {(booking.party?.total_count || booking.guests) && (
-            <div className="mb-4">
-              <h5>Guests</h5>
-              <p className="mb-0">
-                {(() => {
-                  const guestCount = booking.party?.total_count || 0;
-                  return `${guestCount} Guest${guestCount !== 1 ? 's' : ''}`;
-                })()}
-              </p>
-            </div>
-          )}
+          {(() => {
+            const guestCount = getGuestCount(booking);
+            if (guestCount > 0) {
+              return (
+                <div className="mb-4">
+                  <h5>Guests</h5>
+                  <p className="mb-0">
+                    {`${guestCount} Guest${guestCount !== 1 ? 's' : ''}`}
+                  </p>
+                </div>
+              );
+            }
+            return null;
+          })()}
 
           {booking.pricing && (
             <div className="mb-4">

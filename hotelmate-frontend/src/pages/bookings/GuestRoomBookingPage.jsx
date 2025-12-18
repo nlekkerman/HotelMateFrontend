@@ -64,9 +64,71 @@ const GuestRoomBookingPage = () => {
   const [addNamesLater, setAddNamesLater] = useState(false);
   const [bookingData, setBookingData] = useState(null);
 
-  // Derive party calculations
+  // Derive party calculations and validation
   const partySize = (guests.adults || 0) + (guests.children || 0);
   const companionsCount = Math.max(0, partySize - 1);
+
+  // Validation helper
+  const validateBookingForm = () => {
+    const errors = [];
+    
+    // Guest limits validation
+    if (guests.adults > 6) {
+      errors.push('Maximum 6 adults allowed');
+    }
+    if (guests.children > 4) {
+      errors.push('Maximum 4 children allowed');
+    }
+    if (partySize > 8) {
+      errors.push('Maximum 8 total guests allowed');
+    }
+    
+    // Primary guest validation (always required)
+    if (!primaryGuest.firstName?.trim()) {
+      errors.push('Primary guest first name is required');
+    }
+    if (!primaryGuest.lastName?.trim()) {
+      errors.push('Primary guest last name is required');
+    }
+    if (bookerType === 'SELF' && !primaryGuest.email?.trim()) {
+      errors.push('Email is required for self-bookings');
+    }
+    if (!primaryGuest.phone?.trim()) {
+      errors.push('Primary phone is required');
+    }
+    
+    // Booker validation (THIRD_PARTY only)
+    if (bookerType === 'THIRD_PARTY') {
+      if (!booker.firstName?.trim()) {
+        errors.push('Booker first name is required for third-party bookings');
+      }
+      if (!booker.lastName?.trim()) {
+        errors.push('Booker last name is required for third-party bookings');
+      }
+      if (!booker.email?.trim()) {
+        errors.push('Booker email is required for third-party bookings');
+      }
+      if (!booker.phone?.trim()) {
+        errors.push('Booker phone is required for third-party bookings');
+      }
+    }
+    
+    // Companion validation (avoid half-filled rows)
+    if (!addNamesLater) {
+      companions.forEach((comp, index) => {
+        const hasFirst = comp.first_name?.trim();
+        const hasLast = comp.last_name?.trim();
+        if (hasFirst && !hasLast) {
+          errors.push(`Guest ${index + 2}: Last name required if first name is provided`);
+        }
+        if (!hasFirst && hasLast) {
+          errors.push(`Guest ${index + 2}: First name required if last name is provided`);
+        }
+      });
+    }
+    
+    return errors;
+  };
 
   // Build companions array when needed (Step 3 only)
   useEffect(() => {
@@ -187,64 +249,95 @@ const GuestRoomBookingPage = () => {
     }
   };
 
+  // Helper function to build canonical booking payload
+  const buildBookingPayload = () => {
+    // Always required fields
+    const payload = {
+      room_type_code: selectedRoom,
+      check_in: dates.checkIn,
+      check_out: dates.checkOut,
+      adults: guests.adults,
+      children: guests.children,
+      booker_type: bookerType,
+      
+      // Primary guest (person staying) - always flat fields
+      primary_first_name: primaryGuest.firstName,
+      primary_last_name: primaryGuest.lastName,
+      primary_email: primaryGuest.email,
+      primary_phone: (primaryGuest.phone || '').trim(),
+    };
+
+    // Optional fields
+    if (quote?.quote_id) {
+      payload.quote_id = quote.quote_id;
+    }
+    if (specialRequests?.trim()) {
+      payload.special_requests = specialRequests.trim();
+    }
+    if (promoCode?.trim()) {
+      payload.promo_code = promoCode.trim();
+    }
+
+    // Booker fields (third party only)
+    if (bookerType === 'THIRD_PARTY') {
+      payload.booker_first_name = booker.firstName;
+      payload.booker_last_name = booker.lastName;
+      payload.booker_email = booker.email;
+      payload.booker_phone = (booker.phone || '').trim();
+    }
+    // For SELF bookings, explicitly omit booker_* fields (cleaner than empty values)
+
+    // Party field: companions-only (never include PRIMARY)
+    if (!addNamesLater) {
+      const validCompanions = companions
+        .filter(c => c.first_name?.trim() && c.last_name?.trim())
+        .map(c => ({
+          first_name: c.first_name.trim(),
+          last_name: c.last_name.trim(),
+          // Note: role is not required - backend forces COMPANION
+          // Note: email, phone, is_minor are optional
+        }));
+      
+      if (validCompanions.length > 0) {
+        payload.party = validCompanions;
+      }
+    }
+
+    // Explicitly remove legacy keys if they exist
+    delete payload.guest;
+    delete payload.companions;
+    delete payload.primary_guest;
+    delete payload.booker;
+
+    return payload;
+  };
+
   // Step 3: Create Booking
   const createBooking = async (e) => {
     e.preventDefault();
+    
+    // Validate form before submission
+    const validationErrors = validateBookingForm();
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join('; '));
+      return;
+    }
     
     try {
       setLoading(true);
       setError(null);
       
-      const payload = {
-        quote_id: quote.quote_id,
-        room_type_code: selectedRoom,
-        check_in: dates.checkIn,
-        check_out: dates.checkOut,
-        adults: guests.adults,
-        children: guests.children,
-        booker_type: bookerType,
+      const payload = buildBookingPayload();
 
-        primary_first_name: primaryGuest.firstName,
-        primary_last_name: primaryGuest.lastName,
-        primary_email:
-          bookerType === "SELF"
-            ? primaryGuest.email
-            : primaryGuest.email || "",
-        primary_phone: primaryGuest.phone || "",
-
-        booker_first_name:
-          bookerType === "SELF"
-            ? primaryGuest.firstName
-            : booker.firstName,
-
-        booker_last_name:
-          bookerType === "SELF"
-            ? primaryGuest.lastName
-            : booker.lastName,
-
-        booker_email:
-          bookerType === "SELF"
-            ? primaryGuest.email
-            : booker.email,
-
-        booker_phone:
-          bookerType === "SELF"
-            ? primaryGuest.phone || ""
-            : booker.phone || "",
-
-        special_requests: specialRequests,
-        promo_code: promoCode?.trim() || undefined,
-      };
-
-      // Add companions
-      payload.companions = addNamesLater
-        ? []
-        : companions
-            .filter(c => c.first_name?.trim() || c.last_name?.trim())
-            .map(c => ({
-              first_name: c.first_name.trim(),
-              last_name: c.last_name.trim(),
-            }));
+      // Debug logging
+      console.log('[BOOKING] 🚀 Final canonical payload:', payload);
+      console.log('[BOOKING] 📋 Payload validation:', {
+        has_booker_fields: bookerType === 'THIRD_PARTY' && payload.booker_first_name,
+        no_booker_fields_for_self: bookerType === 'SELF' && !payload.booker_first_name,
+        party_count: payload.party ? payload.party.length : 0,
+        party_companions_only: payload.party ? !payload.party.some(p => p.role === 'PRIMARY') : true,
+        no_legacy_keys: !payload.guest && !payload.companions && !payload.primary_guest && !payload.booker
+      });
 
       const response = await publicAPI.post(`/hotel/${hotelSlug}/bookings/`, payload);
       
@@ -398,10 +491,19 @@ const GuestRoomBookingPage = () => {
               <Row>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Adults</Form.Label>
+                    <Form.Label>Adults (max 6)</Form.Label>
                     <Form.Select
                       value={guests.adults}
-                      onChange={(e) => setGuests({ ...guests, adults: parseInt(e.target.value) })}
+                      onChange={(e) => {
+                        const adults = parseInt(e.target.value);
+                        const children = guests.children;
+                        // Enforce max 8 total guests
+                        if (adults + children > 8) {
+                          setGuests({ adults, children: 8 - adults });
+                        } else {
+                          setGuests({ ...guests, adults });
+                        }
+                      }}
                     >
                       {[1, 2, 3, 4, 5, 6].map(n => (
                         <option key={n} value={n}>{n}</option>
@@ -411,18 +513,45 @@ const GuestRoomBookingPage = () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Children</Form.Label>
+                    <Form.Label>Children (max 4)</Form.Label>
                     <Form.Select
                       value={guests.children}
-                      onChange={(e) => setGuests({ ...guests, children: parseInt(e.target.value) })}
+                      onChange={(e) => {
+                        const children = parseInt(e.target.value);
+                        const adults = guests.adults;
+                        // Enforce max 8 total guests and max 4 children
+                        if (children > 4) {
+                          setGuests({ ...guests, children: 4 });
+                        } else if (adults + children > 8) {
+                          setGuests({ adults: 8 - children, children });
+                        } else {
+                          setGuests({ ...guests, children });
+                        }
+                      }}
                     >
                       {[0, 1, 2, 3, 4].map(n => (
-                        <option key={n} value={n}>{n}</option>
+                        <option 
+                          key={n} 
+                          value={n}
+                          disabled={guests.adults + n > 8}
+                        >
+                          {n}
+                        </option>
                       ))}
                     </Form.Select>
                   </Form.Group>
                 </Col>
               </Row>
+              
+              {/* Guest limits warning */}
+              {partySize > 8 && (
+                <Alert variant="warning" className="mb-3">
+                  <small>
+                    <i className="bi bi-exclamation-triangle me-1"></i>
+                    Maximum 8 total guests allowed (max 6 adults, max 4 children)
+                  </small>
+                </Alert>
+              )}
 
               <Button type="submit" variant="primary" size="lg" disabled={loading}>
                 {loading ? <Spinner animation="border" size="sm" /> : 'Check Availability'}
@@ -658,12 +787,12 @@ const GuestRoomBookingPage = () => {
                         </Form.Group>
 
                         <Form.Group className="mb-3">
-                          <Form.Label>Phone</Form.Label>
+                          <Form.Label>Phone *</Form.Label>
                           <Form.Control
                             type="tel"
                             value={booker.phone}
                             onChange={(e) => setBooker({ ...booker, phone: e.target.value })}
-                            placeholder="Optional"
+                            required
                           />
                         </Form.Group>
                       </div>
@@ -713,12 +842,12 @@ const GuestRoomBookingPage = () => {
                       </Form.Group>
 
                       <Form.Group className="mb-3">
-                        <Form.Label>Phone (Optional)</Form.Label>
+                        <Form.Label>Phone *</Form.Label>
                         <Form.Control
                           type="tel"
                           value={primaryGuest.phone}
                           onChange={(e) => setPrimaryGuest({ ...primaryGuest, phone: e.target.value })}
-                          placeholder="Optional"
+                          required
                         />
                       </Form.Group>
                     </div>

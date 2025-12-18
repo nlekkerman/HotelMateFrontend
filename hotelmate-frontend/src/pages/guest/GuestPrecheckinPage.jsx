@@ -21,25 +21,40 @@ const GuestPrecheckinPage = () => {
   // TODO: Remove once backend unified serializer is deployed
   const SEND_EXTRAS_FLAT = true;
   
-  // Normalize party data from mixed backend response shapes
+  // Normalize party data from backend RoomBookingDetailSerializer structure
   const normalizePartyData = (responseData) => {
-    // Prefer structured party data
+    // Backend uses BookingPartyGroupedSerializer structure
     if (responseData.party) {
-      return {
-        primary: responseData.party.primary || {},
-        companions: responseData.party.companions || []
-      };
+      // Extract primary guest from party.primary array
+      const primaryGuests = responseData.party.primary || [];
+      const primary = primaryGuests.length > 0 ? primaryGuests[0] : {};
+      
+      // Extract companions from party.companions array  
+      const companions = responseData.party.companions || [];
+      
+      return { primary, companions };
     }
     
-    // Fallback to legacy fields
-    const primary = responseData.primary_guest || {};
-    const companions = responseData.guests || responseData.companions || [];
+    // Fallback to booking fields if no party structure
+    const primary = {
+      first_name: responseData.booker_first_name || '',
+      last_name: responseData.booker_last_name || '',
+      email: responseData.booker_email || responseData.primary_email || '',
+      phone: responseData.booker_phone || responseData.primary_phone || '',
+      is_staying: true
+    };
     
-    return { primary, companions };
+    return { primary, companions: [] };
   };
   
-  // Compute missing guest count
-  const computeMissingCount = (adults, partyCount) => {
+  // Compute missing guest count - prefer backend calculation
+  const computeMissingCount = (responseData, adults, partyCount) => {
+    // Use backend party_missing_count if available (more authoritative)
+    if (typeof responseData.party_missing_count === 'number') {
+      return responseData.party_missing_count;
+    }
+    
+    // Fallback to frontend calculation
     return Math.max(0, adults - partyCount);
   };
   
@@ -113,20 +128,39 @@ const GuestPrecheckinPage = () => {
         setRegistry(precheckin_field_registry);
         setEnabled(precheckin_config.enabled || {});
         setRequired(precheckin_config.required || {});
-        setBooking(bookingData);
-        setParty(partyData);
+        
+        // Handle booking data from RoomBookingDetailSerializer
+        const normalizedBooking = bookingData || {
+          id: data.id,
+          booking_id: data.booking_id,
+          adults: data.adults || 1,
+          children: data.children || 0,
+          check_in: data.check_in,
+          check_out: data.check_out,
+          room_type: data.room_type_name,
+          hotel_preset: data.hotel_preset || 1
+        };
+        
+        setBooking(normalizedBooking);
+        setParty(partyData || data.party);
+        
+        // Set theme from booking data
+        if (normalizedBooking.hotel_preset) {
+          setPreset(normalizedBooking.hotel_preset);
+        } else if (hotelData) {
+          const hotelPreset = hotelData.preset || hotelData.public_settings?.preset || hotelData.global_style_variant || 1;
+          setPreset(hotelPreset);
+        }
         
         // Normalize and set party data
         const normalizedParty = normalizePartyData(data);
         setPartyPrimary(normalizedParty.primary);
         setPartyCompanions(normalizedParty.companions);
         
-        // Compute missing guest count
-        if (bookingData) {
-          const adults = bookingData.adults || 1;
-          const partyCount = 1 + (normalizedParty.companions ? normalizedParty.companions.length : 0);
-          setMissingCount(computeMissingCount(adults, partyCount));
-        }
+        // Compute missing guest count using backend data
+        const adults = normalizedBooking.adults || 1;
+        const partyCount = 1 + (normalizedParty.companions ? normalizedParty.companions.length : 0);
+        setMissingCount(computeMissingCount(data, adults, partyCount));
         
         // Set theme from hotel data
         if (hotelData) {
@@ -425,10 +459,10 @@ const GuestPrecheckinPage = () => {
                 <Card.Body>
                   <Row className="align-items-center">
                     <Col>
-                      <h6 className="mb-1">Booking #{booking.id || booking.booking_id}</h6>
+                      <h6 className="mb-1">Booking #{booking.booking_id}</h6>
                       <div className="text-muted small">
-                        {booking.check_in_date && booking.check_out_date && (
-                          <span>{booking.check_in_date} - {booking.check_out_date}</span>
+                        {booking.check_in && booking.check_out && (
+                          <span>{booking.check_in} - {booking.check_out}</span>
                         )}
                         {booking.adults && (
                           <span className="ms-3">{booking.adults} adult(s)</span>

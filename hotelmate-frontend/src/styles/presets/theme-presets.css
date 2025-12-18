@@ -174,7 +174,7 @@
 }
 
 .page-style-3 a {
-  color: var(--page-link);
+  color: gray;
   transition: color var(--transition-fast);
   text-decoration: none;
   border-bottom: 1px solid transparent;

@@ -2156,15 +2156,11 @@
 .page-style-3 .card,
 .page-style-3 .modal-content {
   background: rgba(255, 255, 255, 0.95);
-  color: #000000;
+  color: #c577b3 !important;
   border: 1px solid rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(5px);
 }
 
-.page-style-3 .card *,
-.page-style-3 .modal-content * {
-  color: #000000 !important;
-}
 
 .page-style-3 .card .card-title,
 .page-style-3 .card h1,
