@@ -15,7 +15,7 @@ function Search({
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!query) {
+    if (!query || !apiEndpoint) {
       setResults([]);
       setError(null);
       return;
@@ -71,11 +71,11 @@ function Search({
                   Room {room.room_number}
                 </h5>
                 <p className="card-text mb-3">
-                  <span className="fw-semibold">Guest PIN:</span>{" "}
-                  {room.guest_id_pin || "Not assigned"}
+                  <span className="fw-semibold">Status:</span>{" "}
+                  {room.room_status || (room.is_occupied ? "Occupied" : "Available")}
                   <br />
-                  <span className="fw-semibold">Occupied:</span>{" "}
-                  {room.is_occupied ? "Yes" : "No"}
+                  <span className="fw-semibold">Bookable:</span>{" "}
+                  {room.is_bookable ? "Yes" : "No"}
                 </p>
 
                 <div className="d-flex justify-content-center">

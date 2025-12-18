@@ -36,7 +36,7 @@ function AssignGuestForm() {
 
         setFormData((prev) => ({
           ...prev,
-          id_pin: roomData.guest_id_pin || "",
+          id_pin: "",
           hotel_name: roomData.hotel_name || roomData.hotel_slug,
           room_number: roomData.room_number,
         }));

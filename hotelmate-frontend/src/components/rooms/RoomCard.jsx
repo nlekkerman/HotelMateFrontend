@@ -15,9 +15,11 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
   };
 
   const getStatusColor = (status) => {
+    if (!status) return 'secondary';
+    const statusUpper = status.toString().toUpperCase();
     const colors = {
       'AVAILABLE': 'success',
-      'OCCUPIED': 'primary',
+      'OCCUPIED': 'primary', 
       'CHECKOUT_DIRTY': 'warning',
       'CLEANING_IN_PROGRESS': 'info',
       'CLEANED_UNINSPECTED': 'secondary',
@@ -25,7 +27,7 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
       'OUT_OF_ORDER': 'danger',
       'READY_FOR_GUEST': 'success'
     };
-    return colors[status] || 'secondary';
+    return colors[statusUpper] || 'success';
   };
 
   const formatStatus = (status) => {
@@ -87,7 +89,7 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
               Room {room.room_number}
             </h5>
             <span className={`badge bg-${getStatusColor(room.room_status)} fs-6`}>
-              {room.room_status_display || formatStatus(room.room_status) || (room.is_occupied ? 'Occupied' : 'Available')}
+              {room.room_status_display || room.room_status || (room.is_occupied ? 'Occupied' : 'Available')}
             </span>
           </div>
 

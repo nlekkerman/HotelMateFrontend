@@ -38,7 +38,7 @@ const { mainColor } = useTheme();
           setHotelLogo(url);
         }
       } catch (err) {
-        console.error("❌ Reception fetch failed:", err);
+        // Silent fail - use default values
       }
     }
 

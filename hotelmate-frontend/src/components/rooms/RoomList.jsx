@@ -19,19 +19,6 @@ const fetchRooms = async ({ queryKey }) => {
     params: { page, search },
   });
   
-  // Debug: Check what data we're actually receiving
-  if (response.data.results && response.data.results.length > 0) {
-    const firstRoom = response.data.results[0];
-    console.log('🏨 Sample room data:', {
-      room_number: firstRoom.room_number,
-      room_status: firstRoom.room_status,
-      room_status_display: firstRoom.room_status_display,
-      is_active: firstRoom.is_active,
-      is_occupied: firstRoom.is_occupied,
-      all_fields: Object.keys(firstRoom)
-    });
-  }
-  
   return response.data;
 };
 
