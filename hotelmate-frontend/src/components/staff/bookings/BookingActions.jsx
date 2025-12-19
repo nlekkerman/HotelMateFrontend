@@ -11,6 +11,7 @@ const BookingActions = ({
   onSendPrecheckin, 
   onApprove, 
   onDecline, 
+  onViewPrecheckin,
   loading,
   isAccepting,
   isDeclining
@@ -23,6 +24,7 @@ const BookingActions = ({
   const canDecline = booking.status === 'PENDING_APPROVAL';
   const canSendPrecheckin = booking.status === 'CONFIRMED' && 
     (booking.guest_email || booking.primary_email || booking.booker_email);
+  const isPrecheckinComplete = booking?.precheckin_submitted_at != null;
 
 
 
@@ -102,17 +104,33 @@ const BookingActions = ({
         </button>
       )}
 
-      {/* Pre-check-in button - only for CONFIRMED bookings with email */}
+      {/* Pre-check-in button - conditional based on completion status */}
       {canSendPrecheckin && (
-        <button 
-          onClick={handleSendPrecheckin}
-          className="btn btn-outline-info btn-sm"
-          title="Send Pre-Check-In Link"
-          disabled={loading}
-        >
-          <i className="bi bi-envelope me-1"></i>
-          Pre-Check-In
-        </button>
+        isPrecheckinComplete ? (
+          <button 
+            onClick={() => {
+              if (onViewPrecheckin) {
+                onViewPrecheckin(booking.booking_id);
+              }
+            }}
+            className="btn btn-outline-info btn-sm"
+            title="View Pre-Check-In Details"
+            disabled={loading}
+          >
+            <i className="bi bi-eye me-1"></i>
+            View Pre-Check-In
+          </button>
+        ) : (
+          <button 
+            onClick={handleSendPrecheckin}
+            className="btn btn-outline-info btn-sm"
+            title="Send Pre-Check-In Link"
+            disabled={loading}
+          >
+            <i className="bi bi-envelope me-1"></i>
+            Send Pre-Check-In
+          </button>
+        )
       )}
 
 

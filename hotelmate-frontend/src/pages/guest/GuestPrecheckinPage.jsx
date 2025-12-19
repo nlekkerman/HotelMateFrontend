@@ -31,8 +31,17 @@ const GuestPrecheckinPage = () => {
   const padCompanionSlots = (companions, expectedCount) => {
     // Ensure companions is an array
     const companionsArray = Array.isArray(companions) ? companions : [];
-    const slots = [...companionsArray];
-    
+    const slots = [...companionsArray].map(companion => ({
+      ...companion,
+      // Merge existing precheckin_payload data for each companion
+      ...(companion.precheckin_payload || {}),
+      // Ensure basic fields exist
+      first_name: companion.first_name || '',
+      last_name: companion.last_name || '',
+      email: companion.email || '',
+      phone: companion.phone || '',
+      is_staying: companion.is_staying !== undefined ? companion.is_staying : true
+    }));
     
     // Fill up to expectedCount with empty companions
     while (slots.length < expectedCount) {
@@ -54,14 +63,24 @@ const GuestPrecheckinPage = () => {
     const booking = data.booking;
     const party = data.party || {};
     
-    // Get primary guest from party structure (always exists per backend contract)
-    const primary = party.primary || {
+    // Get primary guest from party structure and merge with existing precheckin data
+    const primaryBase = party.primary || {
       first_name: '',
       last_name: '',
       email: '',
       phone: '',
       is_staying: true
     };
+    
+    // Merge existing precheckin payload data (guest-scoped fields like nationality)
+    const primary = {
+      ...primaryBase,
+      ...(primaryBase.precheckin_payload || {}) // Flatten precheckin_payload into primary object for form
+    };
+    
+    console.log('🔄 Primary guest merge - Base:', primaryBase);
+    console.log('🔄 Primary guest merge - Payload:', primaryBase.precheckin_payload);
+    console.log('🔄 Primary guest merge - Final:', primary);
     
     // Calculate expectedGuests from party structure since adults/children 
     // are not included in RoomBookingDetailSerializer
@@ -188,6 +207,12 @@ const GuestPrecheckinPage = () => {
         setNormalizedData(normalized);
         setPartyPrimary(normalized.primary);
         setCompanionSlots(normalized.companionSlots);
+        
+        // Initialize extras with existing data from booking.extras
+        if (data.booking?.extras) {
+          console.log('🎯 Initializing extras with existing data:', data.booking.extras);
+          setExtrasValues(data.booking.extras);
+        }
         
         // Set theme from hotel data
         const hotelData = data.hotel;
@@ -317,13 +342,15 @@ const GuestPrecheckinPage = () => {
 
     const { precheckin_field_registry: registry, precheckin_config: config } = normalizedData;
     
-    // Helper to get guest-scoped fields
-    const getGuestScopedFields = (guestData) => {
+    // Helper to get guest-scoped fields for precheckin_payload
+    const getGuestScopedPayload = (guestData) => {
       const guestFields = {};
       Object.entries(registry)
         .filter(([fieldKey, meta]) => config.enabled[fieldKey] === true && meta.scope === 'guest')
         .forEach(([fieldKey]) => {
-          guestFields[fieldKey] = guestData[fieldKey] || '';
+          if (guestData[fieldKey] !== undefined && guestData[fieldKey] !== '') {
+            guestFields[fieldKey] = guestData[fieldKey];
+          }
         });
       return guestFields;
     };
@@ -337,7 +364,7 @@ const GuestPrecheckinPage = () => {
           email: partyPrimary.email,
           phone: partyPrimary.phone,
           is_staying: partyPrimary.is_staying !== false,
-          ...getGuestScopedFields(partyPrimary)
+          precheckin_payload: getGuestScopedPayload(partyPrimary)
         },
         companions: companionSlots.map(companion => ({
           first_name: companion.first_name,
@@ -345,19 +372,18 @@ const GuestPrecheckinPage = () => {
           email: companion.email,
           phone: companion.phone,
           is_staying: companion.is_staying !== false,
-          ...getGuestScopedFields(companion)
+          precheckin_payload: getGuestScopedPayload(companion)
         }))
       },
       extras: {}
     };
     
-    // Add booking-scoped fields to extras and top level
+    // Add booking-scoped fields to extras only - canonical contract
     Object.entries(registry)
       .filter(([fieldKey, meta]) => config.enabled[fieldKey] === true && (meta.scope || 'booking') === 'booking')
       .forEach(([fieldKey]) => {
         const value = extrasValues[fieldKey] || '';
         payload.extras[fieldKey] = value;
-        payload[fieldKey] = value; // For compatibility
       });
     
     console.log('🔍 Built payload:', JSON.stringify(payload, null, 2));

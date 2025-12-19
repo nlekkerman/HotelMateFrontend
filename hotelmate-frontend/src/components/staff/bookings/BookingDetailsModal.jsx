@@ -103,9 +103,96 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
     return <Badge bg={config.variant}>{config.text}</Badge>;
   };
   
+  const renderPrecheckinSummary = () => {
+    const isComplete = booking?.precheckin_submitted_at != null;
+    
+    // Debug logging to verify canonical contract compliance
+    console.log('🔍 [CANONICAL CONTRACT] Booking detail response:', {
+      booking_id: booking?.booking_id,
+      adults: booking?.adults,
+      children: booking?.children,
+      party_complete: booking?.party_complete,
+      party_missing_count: booking?.party_missing_count,
+      party_total_count: booking?.party?.total_count,
+      precheckin_submitted_at: booking?.precheckin_submitted_at,
+      has_precheckin_payload: !!booking?.precheckin_payload,
+      has_party_primary: !!booking?.party?.primary,
+      has_party_primary_precheckin: !!booking?.party?.primary?.precheckin_payload
+    });
+    
+    if (!isComplete) {
+      return (
+        <Alert variant="warning">
+          <Alert.Heading>⏳ Pre-check-in Pending</Alert.Heading>
+          <p>Guest has not completed pre-check-in yet.</p>
+        </Alert>
+      );
+    }
+    
+    return (
+      <Alert variant="success">
+        <Alert.Heading>✅ Pre-check-in Completed</Alert.Heading>
+        <p><strong>Submitted:</strong> {format(new Date(booking.precheckin_submitted_at), 'MMM dd, yyyy HH:mm')}</p>
+        
+        {/* Booking-level data */}
+        <h6>Booking Information:</h6>
+        {booking.precheckin_payload && Object.keys(booking.precheckin_payload).length > 0 ? (
+          <ul>
+            {Object.entries(booking.precheckin_payload).map(([key, value]) => (
+              <li key={key}>
+                <strong>{key.replace(/_/g, ' ')}:</strong> {
+                  typeof value === 'boolean' ? (value ? '✅ Yes' : '❌ No') : (value || '—')
+                }
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No booking-level pre-check-in data.</p>
+        )}
+        
+        {/* Guest-level data */}
+        <h6>Guest Information:</h6>
+        <Row>
+          <Col md={6}>
+            <strong>Primary Guest:</strong> {booking.party?.primary?.first_name} {booking.party?.primary?.last_name}
+            {booking.party?.primary?.precheckin_payload && Object.keys(booking.party.primary.precheckin_payload).length > 0 ? (
+              <ul>
+                {Object.entries(booking.party.primary.precheckin_payload).map(([key, value]) => (
+                  <li key={key}><strong>{key.replace(/_/g, ' ')}:</strong> {value || '—'}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted">No pre-check-in data for primary guest.</p>
+            )}
+          </Col>
+          <Col md={6}>
+            {booking.party?.companions && booking.party.companions.length > 0 ? (
+              booking.party.companions.map((companion, index) => (
+                <div key={companion.id || index} className="mb-2">
+                  <strong>Companion {index + 1}:</strong> {companion.first_name} {companion.last_name}
+                  {companion.precheckin_payload && Object.keys(companion.precheckin_payload).length > 0 ? (
+                    <ul>
+                      {Object.entries(companion.precheckin_payload).map(([key, value]) => (
+                        <li key={key}><strong>{key.replace(/_/g, ' ')}:</strong> {value || '—'}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-muted small">No pre-check-in data.</p>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-muted">No companions.</p>
+            )}
+          </Col>
+        </Row>
+      </Alert>
+    );
+  };
+
   const renderPartyStatusBanner = () => {
     const partyComplete = booking?.party_complete ?? false;
-    const partyMissingCount = booking?.party_missing_count ?? 0;
+    const partyMissingCount = booking?.party_missing_count; // NO fallback - use actual backend value
     
     if (partyComplete) {
       return null; // No banner needed when party is complete
@@ -116,7 +203,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
         <div className="d-flex justify-content-between align-items-center">
           <div>
             <i className="bi bi-exclamation-triangle me-2"></i>
-            Missing {partyMissingCount} guest name(s). Request guest details.
+            Missing {partyMissingCount == null ? '—' : partyMissingCount} guest name(s). Request guest details.
           </div>
           <Button 
             variant="outline-warning" 
@@ -297,7 +384,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
             {!showRoomAssignment ? (
               (() => {
                 const partyComplete = booking?.party_complete ?? true; // Default to true if not present
-                const partyMissingCount = booking?.party_missing_count ?? 0;
+                const partyMissingCount = booking?.party_missing_count; // NO fallback
                 const isDisabled = !partyComplete;
                 
                 const button = (
@@ -317,7 +404,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
                       placement="top"
                       overlay={
                         <Tooltip>
-                          Missing {partyMissingCount} guest name(s). Send pre-check-in link first.
+                          Missing {partyMissingCount == null ? '—' : partyMissingCount} guest name(s). Send pre-check-in link first.
                         </Tooltip>
                       }
                     >
@@ -362,7 +449,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
                 <div className="d-flex gap-2">
                   {(() => {
                     const partyComplete = booking?.party_complete ?? true; // Default to true if not present
-                    const partyMissingCount = booking?.party_missing_count ?? 0;
+                    const partyMissingCount = booking?.party_missing_count; // NO fallback
                     const isPartyIncomplete = !partyComplete;
                     const isDisabled = !selectedRoomId || safeAssignMutation.isPending || isPartyIncomplete;
                     
@@ -383,7 +470,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
                           placement="top"
                           overlay={
                             <Tooltip>
-                              Missing {partyMissingCount} guest name(s). Send pre-check-in link first.
+                              Missing {partyMissingCount == null ? '—' : partyMissingCount} guest name(s). Send pre-check-in link first.
                             </Tooltip>
                           }
                         >
@@ -512,7 +599,12 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
                   <small className="text-muted">
                     {format(new Date(booking.check_in), 'MMM dd')} - {format(new Date(booking.check_out), 'MMM dd, yyyy')}
                     <br />
-                    {booking.nights} nights, {booking.party?.total_count || 0} guest{(booking.party?.total_count || 0) !== 1 ? 's' : ''}
+                    {booking.nights} nights
+                    <br />
+                    Expected: {booking.adults != null && booking.children != null ? (booking.adults + booking.children) : '—'} guests | Recorded: {booking.party?.total_count != null ? booking.party.total_count : '—'}
+                    {booking.party_missing_count != null && booking.party_missing_count > 0 && (
+                      <span className="text-warning"> | Missing: {booking.party_missing_count}</span>
+                    )}
                   </small>
                 </div>
               </Col>
@@ -522,6 +614,19 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
         
         {/* Party Status Banner */}
         {renderPartyStatusBanner()}
+        
+        {/* Pre-Check-In Summary Section */}
+        <Card className="mb-3" data-precheckin-summary>
+          <Card.Header>
+            <h5 className="mb-0">
+              <i className="bi bi-clipboard-check me-2"></i>
+              Pre-Check-In Status
+            </h5>
+          </Card.Header>
+          <Card.Body>
+            {renderPrecheckinSummary()}
+          </Card.Body>
+        </Card>
         
         {/* Primary Guest */}
         {renderPrimaryGuest()}

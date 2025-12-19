@@ -18,6 +18,18 @@ const BookingTable = ({
 }) => {
   const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  
+  const handleViewPrecheckin = (bookingId) => {
+    setSelectedBookingId(bookingId);
+    setShowDetailsModal(true);
+    // Scroll to precheckin section after modal opens
+    setTimeout(() => {
+      const precheckinSection = document.querySelector('[data-precheckin-summary]');
+      if (precheckinSection) {
+        precheckinSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 300); // Wait for modal to fully render
+  };
   const formatCurrency = (amount, currency = 'EUR') => {
     return new Intl.NumberFormat('en-IE', {
       style: 'currency',
@@ -187,30 +199,53 @@ const BookingTable = ({
                 </td>
                 
                 <td>
-                  {/* Party completion status using new backend fields */}
-                  {booking.party_status_display ? (
-                    // Use the human-readable display from backend
-                    <span className={`badge ${booking.party_complete ? 'bg-success' : 'bg-warning text-dark'}`}>
-                      {booking.party_status_display}
-                    </span>
-                  ) : booking.party_complete !== undefined ? (
-                    // Fallback to boolean status
-                    booking.party_complete ? (
-                      <span className="badge bg-success">
-                        <i className="bi bi-check-circle me-1"></i>Complete
-                      </span>
-                    ) : (
-                      <span className="badge bg-warning text-dark">
-                        <i className="bi bi-exclamation-triangle me-1"></i>
-                        Missing {booking.party_missing_count || 0}
-                      </span>
-                    )
-                  ) : (
-                    // Default: neutral badge for details
-                    <span className="badge bg-secondary">
-                      <i className="bi bi-info-circle me-1"></i>Details
-                    </span>
-                  )}
+                  <div className="d-flex flex-wrap gap-1">
+                    {/* Precheckin completion badge using timestamp only */}
+                    {(() => {
+                      const isPrecheckinComplete = booking?.precheckin_submitted_at != null;
+                      return (
+                        <span className={`badge ${isPrecheckinComplete ? 'bg-info' : 'bg-secondary'}`}>
+                          {isPrecheckinComplete ? (
+                            <>
+                              <i className="bi bi-check-circle me-1"></i>Pre-Check-In Complete
+                            </>
+                          ) : (
+                            <>
+                              <i className="bi bi-clock me-1"></i>Pre-Check-In Pending
+                            </>
+                          )}
+                        </span>
+                      );
+                    })()}
+                    
+                    {/* Party completion badge - canonical backend contract */}
+                    {(() => {
+                      const partyComplete = booking?.party_complete;
+                      const partyMissingCount = booking?.party_missing_count;
+                      
+                      if (partyComplete === true) {
+                        return (
+                          <span className="badge bg-success">
+                            <i className="bi bi-check-circle me-1"></i>Party Complete
+                          </span>
+                        );
+                      } else if (partyComplete === false && partyMissingCount != null) {
+                        return (
+                          <span className="badge bg-warning text-dark">
+                            <i className="bi bi-exclamation-triangle me-1"></i>
+                            Missing {partyMissingCount} guests
+                          </span>
+                        );
+                      } else {
+                        // Backend didn't provide party status - show neutral
+                        return (
+                          <span className="badge bg-secondary">
+                            <i className="bi bi-info-circle me-1"></i>Party Details
+                          </span>
+                        );
+                      }
+                    })()}
+                  </div>
                 </td>
                 
                 <td>
@@ -241,6 +276,7 @@ const BookingTable = ({
                     onSendPrecheckin={onSendPrecheckin}
                     onApprove={onApprove}
                     onDecline={onDecline}
+                    onViewPrecheckin={handleViewPrecheckin}
                     loading={loading}
                     isAccepting={isBookingAccepting(booking.booking_id)}
                     isDeclining={isBookingDeclining(booking.booking_id)}
