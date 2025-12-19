@@ -230,10 +230,7 @@ const GuestPrecheckinPage = () => {
   const handlePrimaryGuestFieldChange = (fieldKey, value) => {
     setPartyPrimary(prev => ({
       ...prev,
-      precheckin_data: {
-        ...prev.precheckin_data,
-        [fieldKey]: value
-      }
+      [fieldKey]: value
     }));
   };
 
@@ -243,10 +240,7 @@ const GuestPrecheckinPage = () => {
       const newSlots = [...prev];
       newSlots[companionIndex] = {
         ...newSlots[companionIndex],
-        precheckin_data: {
-          ...newSlots[companionIndex].precheckin_data,
-          [fieldKey]: value
-        }
+        [fieldKey]: value
       };
       return newSlots;
     });
@@ -257,6 +251,7 @@ const GuestPrecheckinPage = () => {
     if (!normalizedData) return { hasErrors: true };
 
     const errors = { party: { primary: {}, companions: [] }, extras: {} };
+    const { precheckin_field_registry: registry, precheckin_config: config } = normalizedData;
     
     // Party validation: primary first + last required
     if (!partyPrimary.first_name?.trim()) {
@@ -265,6 +260,15 @@ const GuestPrecheckinPage = () => {
     if (!partyPrimary.last_name?.trim()) {
       errors.party.primary.last_name = "Last name is required";
     }
+    
+    // Primary guest-scoped field validation
+    Object.entries(registry)
+      .filter(([fieldKey, meta]) => config.enabled[fieldKey] === true && meta.scope === 'guest' && config.required[fieldKey] === true)
+      .forEach(([fieldKey, meta]) => {
+        if (!partyPrimary[fieldKey]?.toString().trim()) {
+          errors.party.primary[fieldKey] = `${meta.label} is required`;
+        }
+      });
     
     // Companions validation: every slot first + last required (fixed slots)
     companionSlots.forEach((companion, index) => {
@@ -275,24 +279,33 @@ const GuestPrecheckinPage = () => {
       if (!companion.last_name?.trim()) {
         companionErrors.last_name = "Last name is required";
       }
+      
+      // Companion guest-scoped field validation
+      Object.entries(registry)
+        .filter(([fieldKey, meta]) => config.enabled[fieldKey] === true && meta.scope === 'guest' && config.required[fieldKey] === true)
+        .forEach(([fieldKey, meta]) => {
+          if (!companion[fieldKey]?.toString().trim()) {
+            companionErrors[fieldKey] = `${meta.label} is required`;
+          }
+        });
+      
       if (Object.keys(companionErrors).length > 0) {
         errors.party.companions[index] = companionErrors;
       }
     });
     
-    // Extras validation: only enabled fields, enforce required ⊆ enabled
-    const { precheckin_field_registry: registry, precheckin_config: config } = normalizedData;
-    const enabledFields = Object.entries(registry).filter(([k]) => config.enabled[k] === true);
-    
-    enabledFields.forEach(([fieldKey, meta]) => {
-      if (config.required[fieldKey] && !extrasValues[fieldKey]?.toString().trim()) {
-        errors.extras[fieldKey] = `${meta.label} is required`;
-      }
-    });
+    // Extras validation: only booking-scoped enabled fields, enforce required ⊆ enabled
+    Object.entries(registry)
+      .filter(([fieldKey, meta]) => config.enabled[fieldKey] === true && (meta.scope || 'booking') === 'booking')
+      .forEach(([fieldKey, meta]) => {
+        if (config.required[fieldKey] && !extrasValues[fieldKey]?.toString().trim()) {
+          errors.extras[fieldKey] = `${meta.label} is required`;
+        }
+      });
     
     const hasErrors = 
       Object.keys(errors.party.primary).length > 0 ||
-      errors.party.companions.some(c => Object.keys(c).length > 0) ||
+      errors.party.companions.some(c => Object.keys(c || {}).length > 0) ||
       Object.keys(errors.extras).length > 0;
     
     return { errors, hasErrors };
@@ -304,51 +317,50 @@ const GuestPrecheckinPage = () => {
 
     const { precheckin_field_registry: registry, precheckin_config: config } = normalizedData;
     
+    // Helper to get guest-scoped fields
+    const getGuestScopedFields = (guestData) => {
+      const guestFields = {};
+      Object.entries(registry)
+        .filter(([fieldKey, meta]) => config.enabled[fieldKey] === true && meta.scope === 'guest')
+        .forEach(([fieldKey]) => {
+          guestFields[fieldKey] = guestData[fieldKey] || '';
+        });
+      return guestFields;
+    };
+    
     // Start with the basic structure
     const payload = {
-      // Send all party data including primary
       party: {
         primary: {
           first_name: partyPrimary.first_name,
           last_name: partyPrimary.last_name,
           email: partyPrimary.email,
           phone: partyPrimary.phone,
-          is_staying: partyPrimary.is_staying !== false
+          is_staying: partyPrimary.is_staying !== false,
+          ...getGuestScopedFields(partyPrimary)
         },
         companions: companionSlots.map(companion => ({
           first_name: companion.first_name,
           last_name: companion.last_name,
           email: companion.email,
           phone: companion.phone,
-          is_staying: companion.is_staying !== false
+          is_staying: companion.is_staying !== false,
+          ...getGuestScopedFields(companion)
         }))
-      }
+      },
+      extras: {}
     };
     
-    // Add all enabled fields (both booking and guest scoped) to top level
+    // Add booking-scoped fields to extras and top level
     Object.entries(registry)
-      .filter(([k]) => config.enabled[k] === true)
-      .forEach(([fieldKey, meta]) => {
-        if (meta.scope === 'booking') {
-          // Booking-scoped fields from extras
-          payload[fieldKey] = extrasValues[fieldKey] || '';
-        } else if (meta.scope === 'guest') {
-          // Guest-scoped fields - add for primary
-          if (partyPrimary.precheckin_data?.[fieldKey]) {
-            payload[`primary_${fieldKey}`] = partyPrimary.precheckin_data[fieldKey];
-          }
-          // Guest-scoped fields - add for companions
-          companionSlots.forEach((companion, index) => {
-            if (companion.precheckin_data?.[fieldKey]) {
-              payload[`companion_${index}_${fieldKey}`] = companion.precheckin_data[fieldKey];
-            }
-          });
-        }
+      .filter(([fieldKey, meta]) => config.enabled[fieldKey] === true && (meta.scope || 'booking') === 'booking')
+      .forEach(([fieldKey]) => {
+        const value = extrasValues[fieldKey] || '';
+        payload.extras[fieldKey] = value;
+        payload[fieldKey] = value; // For compatibility
       });
     
     console.log('🔍 Built payload:', JSON.stringify(payload, null, 2));
-    console.log('🔍 Primary precheckin_data:', partyPrimary.precheckin_data);
-    console.log('🔍 Companions precheckin_data:', companionSlots.map(c => c.precheckin_data));
     
     return payload;
   };

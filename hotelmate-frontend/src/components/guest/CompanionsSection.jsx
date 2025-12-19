@@ -2,6 +2,15 @@ import React from 'react';
 import { Card, Form, Row, Col } from 'react-bootstrap';
 
 const CompanionsSection = ({ slots, onChange, errors, themeColor, guestFields = {}, onGuestFieldChange }) => {
+  // Helper function for select options supporting both choices and options formats
+  const getSelectOptions = (meta) => {
+    if (Array.isArray(meta.choices)) return meta.choices.map(x => ({ value: x, label: x }));
+    if (Array.isArray(meta.options)) {
+      return meta.options.map(x => typeof x === 'string' ? ({ value: x, label: x }) : x);
+    }
+    return [];
+  };
+
   // Get enabled guest-scoped fields
   const enabledGuestFields = Object.entries(guestFields.registry || {})
     .filter(([fieldKey, meta]) => 
@@ -11,7 +20,7 @@ const CompanionsSection = ({ slots, onChange, errors, themeColor, guestFields = 
     .sort(([, a], [, b]) => (a.order || 0) - (b.order || 0));
 
   const renderGuestField = (fieldKey, meta, companionIndex) => {
-    const fieldValue = slots[companionIndex]?.precheckin_data?.[fieldKey] || '';
+    const fieldValue = slots[companionIndex]?.[fieldKey] || '';
     const isRequired = guestFields.required?.[fieldKey] === true;
     
     switch (meta.type) {
@@ -24,17 +33,33 @@ const CompanionsSection = ({ slots, onChange, errors, themeColor, guestFields = 
             required={isRequired}
           >
             <option value="">-- Select --</option>
-            {meta.choices?.map((choice, index) => {
-              const choiceValue = typeof choice === 'object' ? choice.value : choice;
-              const choiceLabel = typeof choice === 'object' ? choice.label : choice;
-              
-              return (
-                <option key={`${choiceValue}-${index}`} value={choiceValue}>
-                  {choiceLabel}
-                </option>
-              );
-            })}
+            {getSelectOptions(meta).map((option, index) => (
+              <option key={`${option.value}-${index}`} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </Form.Select>
+        );
+      case 'textarea':
+        return (
+          <Form.Control
+            as="textarea"
+            rows={3}
+            value={fieldValue}
+            onChange={(e) => onGuestFieldChange?.(companionIndex, fieldKey, e.target.value)}
+            isInvalid={!!errors?.[companionIndex]?.[fieldKey]}
+            required={isRequired}
+          />
+        );
+      case 'checkbox':
+        return (
+          <Form.Check
+            type="checkbox"
+            checked={!!fieldValue}
+            onChange={(e) => onGuestFieldChange?.(companionIndex, fieldKey, e.target.checked)}
+            isInvalid={!!errors?.[companionIndex]?.[fieldKey]}
+            required={isRequired}
+          />
         );
       case 'date':
         return (

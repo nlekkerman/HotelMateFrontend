@@ -2,47 +2,65 @@ import React from 'react';
 import { Card, Form, Row, Col } from 'react-bootstrap';
 
 const PrimaryGuestCard = ({ value, onChange, errors, themeColor, guestFields = {}, onGuestFieldChange }) => {
-  // Get enabled guest-scoped fields
-  const enabledGuestFields = Object.entries(guestFields.registry || {})
-    .filter(([fieldKey, meta]) => 
-      guestFields.enabled?.[fieldKey] === true && 
-      meta.scope === 'guest'
-    )
-    .sort(([, a], [, b]) => (a.order || 0) - (b.order || 0));
+  // Helper function for select options supporting both choices and options formats
+  const getSelectOptions = (meta) => {
+    if (Array.isArray(meta.choices)) return meta.choices.map(x => ({ value: x, label: x }));
+    if (Array.isArray(meta.options)) {
+      return meta.options.map(x => typeof x === 'string' ? ({ value: x, label: x }) : x);
+    }
+    return [];
+  };
 
+  // Get guest-scoped fields that are enabled
+  const enabledGuestFields = guestFields?.registry ? 
+    Object.entries(guestFields.registry)
+      .filter(([fieldKey, meta]) => 
+        guestFields.enabled[fieldKey] === true && meta.scope === 'guest'
+      )
+      .sort(([, a], [, b]) => (a.order || 0) - (b.order || 0))
+    : [];
+
+  // Render guest-scoped field
   const renderGuestField = (fieldKey, meta) => {
-    const fieldValue = value.precheckin_data?.[fieldKey] || '';
-    const isRequired = guestFields.required?.[fieldKey] === true;
-    
+    const fieldValue = value[fieldKey] || '';
+    const isRequired = guestFields?.required[fieldKey] === true;
+    const fieldError = errors[fieldKey];
+
     switch (meta.type) {
       case 'select':
         return (
           <Form.Select
             value={fieldValue}
-            onChange={(e) => onGuestFieldChange?.(fieldKey, e.target.value)}
-            isInvalid={!!errors?.[fieldKey]}
+            onChange={(e) => onGuestFieldChange && onGuestFieldChange(fieldKey, e.target.value)}
+            isInvalid={!!fieldError}
             required={isRequired}
           >
             <option value="">-- Select --</option>
-            {meta.choices?.map((choice, index) => {
-              const choiceValue = typeof choice === 'object' ? choice.value : choice;
-              const choiceLabel = typeof choice === 'object' ? choice.label : choice;
-              
-              return (
-                <option key={`${choiceValue}-${index}`} value={choiceValue}>
-                  {choiceLabel}
-                </option>
-              );
-            })}
+            {getSelectOptions(meta).map((option, index) => (
+              <option key={`${option.value}-${index}`} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </Form.Select>
         );
-      case 'date':
+      case 'textarea':
         return (
           <Form.Control
-            type="date"
+            as="textarea"
+            rows={3}
             value={fieldValue}
-            onChange={(e) => onGuestFieldChange?.(fieldKey, e.target.value)}
-            isInvalid={!!errors?.[fieldKey]}
+            onChange={(e) => onGuestFieldChange && onGuestFieldChange(fieldKey, e.target.value)}
+            isInvalid={!!fieldError}
+            required={isRequired}
+          />
+        );
+      case 'checkbox':
+        return (
+          <Form.Check
+            type="checkbox"
+            checked={!!fieldValue}
+            onChange={(e) => onGuestFieldChange && onGuestFieldChange(fieldKey, e.target.checked)}
+            isInvalid={!!fieldError}
             required={isRequired}
           />
         );
@@ -51,8 +69,8 @@ const PrimaryGuestCard = ({ value, onChange, errors, themeColor, guestFields = {
           <Form.Control
             type="text"
             value={fieldValue}
-            onChange={(e) => onGuestFieldChange?.(fieldKey, e.target.value)}
-            isInvalid={!!errors?.[fieldKey]}
+            onChange={(e) => onGuestFieldChange && onGuestFieldChange(fieldKey, e.target.value)}
+            isInvalid={!!fieldError}
             required={isRequired}
           />
         );

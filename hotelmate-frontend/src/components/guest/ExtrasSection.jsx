@@ -2,6 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Card, Form, Row, Col } from 'react-bootstrap';
 
 const ExtrasSection = ({ registry, enabled, required, values, onChange, errors, themeColor }) => {
+  // Helper function for select options supporting both choices and options formats
+  const getSelectOptions = (meta) => {
+    if (Array.isArray(meta.choices)) return meta.choices.map(x => ({ value: x, label: x }));
+    if (Array.isArray(meta.options)) {
+      return meta.options.map(x => typeof x === 'string' ? ({ value: x, label: x }) : x);
+    }
+    return [];
+  };
   // CSS for info-colored picker icons
   const pickerStyles = `
     .date-picker-info::-webkit-calendar-picker-indicator,
@@ -66,11 +74,11 @@ const ExtrasSection = ({ registry, enabled, required, values, onChange, errors, 
   };
 
   // Get only enabled booking-scoped fields, sorted by order
-  const enabledFields = Object.entries(registry)
-    .filter(([fieldKey, meta]) => enabled[fieldKey] === true && meta.scope === 'booking')
+  const bookingFields = Object.entries(registry)
+    .filter(([fieldKey, meta]) => enabled[fieldKey] === true && (meta.scope || 'booking') === 'booking')
     .sort(([, a], [, b]) => (a.order || 0) - (b.order || 0));
   
-  if (enabledFields.length === 0) {
+  if (bookingFields.length === 0) {
     return null;
   }
   
@@ -131,17 +139,11 @@ const ExtrasSection = ({ registry, enabled, required, values, onChange, errors, 
             required={isRequired}
           >
             <option value="">-- Select --</option>
-            {meta.choices?.map((choice, index) => {
-              // Handle both object format {value, label} and simple string array
-              const choiceValue = typeof choice === 'object' ? choice.value : choice;
-              const choiceLabel = typeof choice === 'object' ? choice.label : choice;
-              
-              return (
-                <option key={`${choiceValue}-${index}`} value={choiceValue}>
-                  {choiceLabel}
-                </option>
-              );
-            })}
+            {getSelectOptions(meta).map((option, index) => (
+              <option key={`${option.value}-${index}`} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </Form.Select>
         );
       case 'checkbox':
@@ -174,7 +176,7 @@ const ExtrasSection = ({ registry, enabled, required, values, onChange, errors, 
         <small className="text-muted">Please complete the required fields</small>
       </Card.Header>
       <Card.Body>
-        {enabledFields.map(([fieldKey, meta]) => (
+        {bookingFields.map(([fieldKey, meta]) => (
           <Form.Group key={fieldKey} className="mb-3">
             <Form.Label>
               {meta.label}
