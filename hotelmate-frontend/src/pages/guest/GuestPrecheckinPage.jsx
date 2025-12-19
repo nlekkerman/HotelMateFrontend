@@ -369,10 +369,12 @@ const GuestPrecheckinPage = () => {
       setFieldErrors({ party: { primary: {}, companions: [] }, extras: {} });
       
       const payload = buildPayload();
+      // Add token to payload instead of query parameter
+      payload.token = token;
       console.log('🚀 Submitting payload:', JSON.stringify(payload, null, 2));
       
       await publicAPI.post(
-        `/hotel/${hotelSlug}/precheckin/submit/?token=${token}`,
+        `/hotel/${hotelSlug}/precheckin/submit/`,
         payload
       );
       
