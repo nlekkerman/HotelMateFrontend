@@ -82,19 +82,30 @@ const GuestPrecheckinPage = () => {
     console.log('🔄 Primary guest merge - Payload:', primaryBase.precheckin_payload);
     console.log('🔄 Primary guest merge - Final:', primary);
     
-    // Calculate expectedGuests from party structure since adults/children 
-    // are not included in RoomBookingDetailSerializer
-    const primaryGuest = party.primary ? 1 : 0;
-    const companionCount = Array.isArray(party.companions) ? party.companions.length : 0;
-    const expectedGuests = primaryGuest + companionCount;
+    // CANONICAL: Use booking.expected_guests directly from public precheckin API
+    const expectedGuests = booking.expected_guests || 0;
+    console.log('🎯 Guest precheckin - Expected guests from backend:', expectedGuests);
+    console.log('📊 Party data - Total recorded:', data.party?.total_count, 'Missing:', data.party_missing_count);
+    
+    // Validate we have expected_guests data
+    if (expectedGuests === 0) {
+      console.warn('⚠️ No expected_guests data. Backend precheckin API must include booking.expected_guests.');
+    }
     
 
     
-    // Pad companions to exactly expectedGuests - 1 (fixed slots)
+    // Companion slots = expectedGuests - 1 (primary takes one slot)
+    const maxCompanions = Math.max(0, expectedGuests - 1);
     const companionSlots = padCompanionSlots(
       party.companions || [],
-      Math.max(0, expectedGuests - 1)
+      maxCompanions
     );
+    
+    console.log('👥 Companion slots calculation:');
+    console.log('  • Expected guests:', expectedGuests);
+    console.log('  • Max companions (expected - 1):', maxCompanions);
+    console.log('  • Current companions from backend:', party.companions?.length || 0);
+    console.log('  • Missing companions needed:', Math.max(0, maxCompanions - (party.companions?.length || 0)));
     
     // Determine booking contact based on booker_type (no heuristics)
     let bookingContact;
@@ -118,12 +129,23 @@ const GuestPrecheckinPage = () => {
       };
     }
     
+    // Final comparison logging  
+    const recordedGuests = party?.total_count || 0;
+    const partyMissingCount = data.party_missing_count || 0;
+    console.log('📊 EXPECTED vs RECORDED COMPARISON:');
+    console.log('  • Expected: booking.expected_guests =', expectedGuests);
+    console.log('  • Recorded: party.total_count =', recordedGuests);
+    console.log('  • Missing: party_missing_count =', partyMissingCount);
+    console.log('  • Max companion slots available:', maxCompanions);
+    console.log('  • Actual companion slots created:', companionSlots.length);
+
     return {
       booking,
       bookingContact,
       primary,
       companionSlots,
       expectedGuests,
+      maxCompanions, // Include for debugging
       precheckin_field_registry: data.precheckin_field_registry || {},
       precheckin_config: data.precheckin_config || { enabled: {}, required: {} }
     };
@@ -366,24 +388,31 @@ const GuestPrecheckinPage = () => {
           is_staying: partyPrimary.is_staying !== false,
           precheckin_payload: getGuestScopedPayload(partyPrimary)
         },
-        companions: companionSlots.map(companion => ({
-          first_name: companion.first_name,
-          last_name: companion.last_name,
-          email: companion.email,
-          phone: companion.phone,
-          is_staying: companion.is_staying !== false,
-          precheckin_payload: getGuestScopedPayload(companion)
-        }))
+        companions: companionSlots
+          .filter(companion => companion.first_name?.trim() && companion.last_name?.trim())
+          .map(companion => ({
+            first_name: companion.first_name,
+            last_name: companion.last_name,
+            email: companion.email,
+            phone: companion.phone,
+            is_staying: companion.is_staying !== false,
+            precheckin_payload: getGuestScopedPayload(companion)
+          }))
       },
       extras: {}
     };
     
-    // Add booking-scoped fields to extras only - canonical contract
+    // Add booking-scoped fields to extras, except consent_checkbox which is top-level
     Object.entries(registry)
       .filter(([fieldKey, meta]) => config.enabled[fieldKey] === true && (meta.scope || 'booking') === 'booking')
       .forEach(([fieldKey]) => {
         const value = extrasValues[fieldKey] || '';
-        payload.extras[fieldKey] = value;
+        if (fieldKey === 'consent_checkbox') {
+          // consent_checkbox goes to top-level payload, not extras
+          payload[fieldKey] = value === true || value === 'true';
+        } else {
+          payload.extras[fieldKey] = value;
+        }
       });
     
     console.log('🔍 Built payload:', JSON.stringify(payload, null, 2));
@@ -420,10 +449,13 @@ const GuestPrecheckinPage = () => {
       toast.success('Pre-check-in completed successfully!');
       
     } catch (err) {
-      console.error('Failed to submit precheckin:', err);
+      console.error('❌ Precheckin submission failed:', err);
+      console.error('❌ Error response:', err.response?.data);
+      console.error('❌ Error status:', err.response?.status);
       
       // Handle field errors from backend
       if (err.response?.status === 400 && err.response?.data?.field_errors) {
+        console.log('🔍 Backend field errors:', err.response.data.field_errors);
         const mappedErrors = err.response.data.field_errors;
         setFieldErrors(mappedErrors);
       }
