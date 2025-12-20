@@ -364,20 +364,18 @@ const GuestPrecheckinPage = () => {
 
     const { precheckin_field_registry: registry, precheckin_config: config } = normalizedData;
     
-    // Helper to get guest-scoped fields for precheckin_payload
-    const getGuestScopedPayload = (guestData) => {
-      const guestFields = {};
+    // Helper to add guest-scoped fields directly to guest object (not nested in precheckin_payload)
+    const addGuestScopedFields = (guestObject, guestData) => {
       Object.entries(registry)
         .filter(([fieldKey, meta]) => config.enabled[fieldKey] === true && meta.scope === 'guest')
         .forEach(([fieldKey]) => {
           if (guestData[fieldKey] !== undefined && guestData[fieldKey] !== '') {
-            guestFields[fieldKey] = guestData[fieldKey];
+            guestObject[fieldKey] = guestData[fieldKey]; // Direct assignment, not nested
           }
         });
-      return guestFields;
     };
     
-    // Start with the basic structure
+    // Start with the basic party structure
     const payload = {
       party: {
         primary: {
@@ -385,37 +383,44 @@ const GuestPrecheckinPage = () => {
           last_name: partyPrimary.last_name,
           email: partyPrimary.email,
           phone: partyPrimary.phone,
-          is_staying: partyPrimary.is_staying !== false,
-          precheckin_payload: getGuestScopedPayload(partyPrimary)
+          is_staying: partyPrimary.is_staying !== false
         },
         companions: companionSlots
           .filter(companion => companion.first_name?.trim() && companion.last_name?.trim())
-          .map(companion => ({
-            first_name: companion.first_name,
-            last_name: companion.last_name,
-            email: companion.email,
-            phone: companion.phone,
-            is_staying: companion.is_staying !== false,
-            precheckin_payload: getGuestScopedPayload(companion)
-          }))
-      },
-      extras: {}
+          .map(companion => {
+            const companionObj = {
+              first_name: companion.first_name,
+              last_name: companion.last_name,
+              email: companion.email,
+              phone: companion.phone,
+              is_staying: companion.is_staying !== false
+            };
+            // Add guest-scoped fields directly to companion object
+            addGuestScopedFields(companionObj, companion);
+            return companionObj;
+          })
+      }
     };
     
-    // Add booking-scoped fields to extras, except consent_checkbox which is top-level
+    // Add guest-scoped fields directly to primary guest object
+    addGuestScopedFields(payload.party.primary, partyPrimary);
+    
+    // Add booking-scoped fields directly to root level (not in extras object)
     Object.entries(registry)
       .filter(([fieldKey, meta]) => config.enabled[fieldKey] === true && (meta.scope || 'booking') === 'booking')
       .forEach(([fieldKey]) => {
         const value = extrasValues[fieldKey] || '';
-        if (fieldKey === 'consent_checkbox') {
-          // consent_checkbox goes to top-level payload, not extras
-          payload[fieldKey] = value === true || value === 'true';
-        } else {
-          payload.extras[fieldKey] = value;
+        if (value !== undefined && value !== '') {
+          // All booking-scoped fields go to root level
+          if (fieldKey === 'consent_checkbox') {
+            payload[fieldKey] = value === true || value === 'true';
+          } else {
+            payload[fieldKey] = value; // Direct to root, not nested in extras
+          }
         }
       });
     
-    console.log('🔍 Built payload:', JSON.stringify(payload, null, 2));
+    console.log('🔍 Built payload (backend format):', JSON.stringify(payload, null, 2));
     
     return payload;
   };
