@@ -42,11 +42,23 @@ export const useAvailableRooms = (hotelSlug, bookingId) => {
   return useQuery({
     queryKey: queryKeys.staffAvailableRooms(hotelSlug, bookingId),
     queryFn: async () => {
+      console.log('🏨 [ROOMS API] Fetching available rooms:', {
+        hotelSlug,
+        bookingId,
+        endpoint: buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/available-rooms/`)
+      });
+      
       const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/available-rooms/`);
       const response = await api.get(url);
+      
+      console.log('🏨 [ROOMS API] Response:', response.data);
+      
       return response.data;
     },
     enabled: !!bookingId && !!hotelSlug,
+    onError: (error) => {
+      console.error('🏨 [ROOMS API] Error:', error);
+    }
   });
 };
 
@@ -136,8 +148,9 @@ export const useCheckInBooking = (hotelSlug) => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ bookingId }) => {
-      const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/check-in/`);
+    mutationFn: async ({ bookingId, roomNumber }) => {
+      // Use room-scoped check-in endpoint, not booking-scoped
+      const url = buildStaffURL(hotelSlug, '', `/rooms/${roomNumber}/checkin/`);
       const response = await api.post(url, {});
       return response.data;
     },
@@ -148,10 +161,12 @@ export const useCheckInBooking = (hotelSlug) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.staffRoomBooking(hotelSlug, variables.bookingId)
       });
-      toast.success('Guest checked in successfully');
+      toast.success('Check-in accepted. Waiting for realtime update.');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Check-in failed');
+      // Handle 400 errors from backend with specific message
+      const message = error.response?.data?.message || error.response?.data?.error || 'Check-in failed';
+      toast.error(message);
     },
   });
 };

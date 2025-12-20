@@ -30,8 +30,21 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
   // Fetch available rooms (only when needed)
   const { 
     data: availableRooms, 
-    isLoading: isLoadingRooms 
+    isLoading: isLoadingRooms,
+    error: roomsError
   } = useAvailableRooms(hotelSlug, bookingId);
+  
+  // Debug available rooms
+  console.log('🏨 Available rooms debug:', {
+    availableRooms,
+    isLoadingRooms,
+    roomsError,
+    hotelSlug,
+    bookingId,
+    isArray: Array.isArray(availableRooms),
+    availableRoomsKeys: availableRooms ? Object.keys(availableRooms) : null,
+    availableRoomsStructure: availableRooms
+  });
   
   // Mutations
   const safeAssignMutation = useSafeAssignRoom(hotelSlug);
@@ -75,8 +88,19 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
   };
   
   const handleCheckIn = async () => {
+    // Check if booking has assigned room
+    const assignedRoom = booking?.assigned_room;
+    if (!assignedRoom) {
+      toast.error('Assign a room first');
+      setShowRoomAssignment(true);
+      return;
+    }
+    
     try {
-      await checkInMutation.mutateAsync({ bookingId });
+      await checkInMutation.mutateAsync({ 
+        bookingId,
+        roomNumber: assignedRoom.room_number 
+      });
     } catch (error) {
       // Error handled by mutation
     }
@@ -423,8 +447,8 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
         </Card>
       );
     } else {
-      // No room assigned
-      if (!flags.can_assign_room) return null;
+      // No room assigned - always show if showRoomAssignment is true (triggered from check-in)
+      if (!flags.can_assign_room && !showRoomAssignment) return null;
       
       return (
         <Card className="mt-3">
@@ -478,7 +502,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
                     <option value="">
                       {isLoadingRooms ? 'Loading rooms...' : 'Choose a room...'}
                     </option>
-                    {availableRooms?.map(room => (
+                    {Array.isArray(availableRooms) && availableRooms.map(room => (
                       <option key={room.id} value={room.id}>
                         Room {room.room_number} - {room.room_type_name}
                       </option>
@@ -549,6 +573,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
   
   const renderCheckInSection = () => {
     const flags = booking?.flags || {};
+    const assignedRoom = booking?.assigned_room;
     
     if (!flags.can_check_in || booking?.checked_in_at) return null;
     
@@ -558,13 +583,28 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
           <h6 className="mb-0">Check-In</h6>
         </Card.Header>
         <Card.Body>
-          <Button
-            variant="info"
-            onClick={handleCheckIn}
-            disabled={checkInMutation.isPending}
-          >
-            {checkInMutation.isPending ? 'Checking In...' : 'Check In Guest'}
-          </Button>
+          {!assignedRoom ? (
+            <div>
+              <p className="text-muted mb-3">Room assignment required before check-in.</p>
+              <Button
+                variant="warning"
+                onClick={() => {
+                  console.log('Assign Room First clicked, setting showRoomAssignment to true');
+                  setShowRoomAssignment(true);
+                }}
+              >
+                Assign Room First
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="info"
+              onClick={handleCheckIn}
+              disabled={checkInMutation.isPending}
+            >
+              {checkInMutation.isPending ? 'Checking In...' : `Check In to Room ${assignedRoom.room_number}`}
+            </Button>
+          )}
         </Card.Body>
       </Card>
     );

@@ -49,7 +49,6 @@ const RoomCard = ({ room }) => {
     if (!status) return 'secondary';
     const statusUpper = status.toString().toUpperCase();
     const colors = {
-      'AVAILABLE': 'success',
       'OCCUPIED': 'primary', 
       'CHECKOUT_DIRTY': 'warning',
       'CLEANING_IN_PROGRESS': 'info',
@@ -120,7 +119,7 @@ const RoomCard = ({ room }) => {
               Room {room.room_number}
             </h5>
             <span className={`badge bg-${getStatusColor(room.room_status)} fs-6`}>
-              {room.room_status_display || room.room_status || (room.is_occupied ? 'Occupied' : 'Available')}
+              {room.room_status_display || room.room_status || (room.is_occupied ? 'Occupied' : 'Ready')}
             </span>
           </div>
 
@@ -152,7 +151,7 @@ const RoomCard = ({ room }) => {
                 <strong>Occupancy:</strong>
               </small>
               <span className={`badge ${room.is_occupied ? 'bg-danger' : 'bg-success'}`}>
-                {room.is_occupied ? 'Occupied' : 'Available'}
+                {room.is_occupied ? 'Occupied' : 'Ready'}
               </span>
             </div>
             
@@ -266,7 +265,7 @@ const RoomCard = ({ room }) => {
                   </button>
                 )}
                 
-                {['READY_FOR_GUEST', 'AVAILABLE'].includes(room.room_status) && (
+                {['READY_FOR_GUEST'].includes(room.room_status) && (
                   <button 
                     className="btn btn-sm btn-warning w-100 mb-2"
                     onClick={(e) => {

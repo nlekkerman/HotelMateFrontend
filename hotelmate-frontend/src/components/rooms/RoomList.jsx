@@ -101,7 +101,6 @@ function RoomList() {
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="">All Statuses</option>
-            <option value="AVAILABLE">Available</option>
             <option value="OCCUPIED">Occupied</option>
             <option value="CHECKOUT_DIRTY">Checkout Dirty</option>
             <option value="CLEANING_IN_PROGRESS">Cleaning</option>
