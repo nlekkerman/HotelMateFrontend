@@ -373,6 +373,19 @@ const GuestPrecheckinPage = () => {
             guestObject[fieldKey] = guestData[fieldKey]; // Direct assignment, not nested
           }
         });
+      
+      // Ensure all possible guest-scoped fields are handled
+      const guestScopedFields = [
+        'nationality', 'country_of_residence', 'date_of_birth', 
+        'id_document_type', 'id_document_number', 'address_line_1', 
+        'city', 'postcode', 'postal_code'
+      ];
+      
+      guestScopedFields.forEach(fieldKey => {
+        if (guestData[fieldKey] !== undefined && guestData[fieldKey] !== '') {
+          guestObject[fieldKey] = guestData[fieldKey];
+        }
+      });
     };
     
     // Start with the basic party structure

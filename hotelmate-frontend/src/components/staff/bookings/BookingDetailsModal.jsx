@@ -176,32 +176,62 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
         <Row>
           <Col md={6}>
             <strong>Primary Guest:</strong> {booking.party?.primary?.first_name} {booking.party?.primary?.last_name}
-            {booking.party?.primary?.precheckin_payload && Object.keys(booking.party.primary.precheckin_payload).length > 0 ? (
-              <ul>
-                {Object.entries(booking.party.primary.precheckin_payload).map(([key, value]) => (
-                  <li key={key}><strong>{key.replace(/_/g, ' ')}:</strong> {value || '—'}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-muted">No pre-check-in data for primary guest.</p>
-            )}
+            {(() => {
+              const primary = booking.party?.primary;
+              const guestFields = ['nationality', 'country_of_residence', 'date_of_birth', 'id_document_type', 'id_document_number', 'address_line_1', 'city', 'postcode', 'postal_code'];
+              const hasGuestData = guestFields.some(field => primary?.[field]);
+              const hasPayloadData = primary?.precheckin_payload && Object.keys(primary.precheckin_payload).length > 0;
+              
+              if (hasGuestData || hasPayloadData) {
+                return (
+                  <ul>
+                    {/* Direct guest fields */}
+                    {guestFields.map(field => {
+                      if (primary?.[field]) {
+                        return <li key={field}><strong>{field.replace(/_/g, ' ')}:</strong> {primary[field]}</li>;
+                      }
+                      return null;
+                    })}
+                    {/* Legacy precheckin_payload fields */}
+                    {hasPayloadData && Object.entries(primary.precheckin_payload).map(([key, value]) => (
+                      <li key={key}><strong>{key.replace(/_/g, ' ')}:</strong> {value || '—'}</li>
+                    ))}
+                  </ul>
+                );
+              }
+              return <p className="text-muted">No pre-check-in data for primary guest.</p>;
+            })()}
           </Col>
           <Col md={6}>
             {booking.party?.companions && booking.party.companions.length > 0 ? (
-              booking.party.companions.map((companion, index) => (
-                <div key={companion.id || index} className="mb-2">
-                  <strong>Companion {index + 1}:</strong> {companion.first_name} {companion.last_name}
-                  {companion.precheckin_payload && Object.keys(companion.precheckin_payload).length > 0 ? (
-                    <ul>
-                      {Object.entries(companion.precheckin_payload).map(([key, value]) => (
-                        <li key={key}><strong>{key.replace(/_/g, ' ')}:</strong> {value || '—'}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-muted small">No pre-check-in data.</p>
-                  )}
-                </div>
-              ))
+              booking.party.companions.map((companion, index) => {
+                const guestFields = ['nationality', 'country_of_residence', 'date_of_birth', 'id_document_type', 'id_document_number', 'address_line_1', 'city', 'postcode', 'postal_code'];
+                const hasGuestData = guestFields.some(field => companion?.[field]);
+                const hasPayloadData = companion.precheckin_payload && Object.keys(companion.precheckin_payload).length > 0;
+                
+                return (
+                  <div key={companion.id || index} className="mb-2">
+                    <strong>Companion {index + 1}:</strong> {companion.first_name} {companion.last_name}
+                    {hasGuestData || hasPayloadData ? (
+                      <ul>
+                        {/* Direct guest fields */}
+                        {guestFields.map(field => {
+                          if (companion?.[field]) {
+                            return <li key={field}><strong>{field.replace(/_/g, ' ')}:</strong> {companion[field]}</li>;
+                          }
+                          return null;
+                        })}
+                        {/* Legacy precheckin_payload fields */}
+                        {hasPayloadData && Object.entries(companion.precheckin_payload).map(([key, value]) => (
+                          <li key={key}><strong>{key.replace(/_/g, ' ')}:</strong> {value || '—'}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-muted small">No pre-check-in data.</p>
+                    )}
+                  </div>
+                );
+              })
             ) : (
               <p className="text-muted">No companions.</p>
             )}
