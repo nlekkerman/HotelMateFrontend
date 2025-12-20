@@ -9,6 +9,7 @@ import { AttendanceProvider } from './stores/attendanceStore.jsx';
 import { RoomServiceProvider } from './stores/roomServiceStore.jsx';
 import { ServiceBookingProvider } from './stores/serviceBookingStore.jsx';
 import { RoomBookingProvider } from './stores/roomBookingStore.jsx';
+import { RoomsProvider } from './stores/roomsStore.jsx';
 
 /**
  * RealtimeProvider - Manages centralized realtime subscriptions
@@ -72,7 +73,7 @@ function RealtimeManager({ children }) {
 
 /**
  * Complete RealtimeProvider with all domain stores
- * ✅ Provides unified realtime architecture with all 5 domain stores
+ * ✅ Provides unified realtime architecture with all 6 domain stores
  */
 export function RealtimeProvider({ children }) {
   return (
@@ -83,9 +84,11 @@ export function RealtimeProvider({ children }) {
             <RoomServiceProvider>
               <ServiceBookingProvider>
                 <RoomBookingProvider>
-                  <RealtimeManager>
-                    {children}
-                  </RealtimeManager>
+                  <RoomsProvider>
+                    <RealtimeManager>
+                      {children}
+                    </RealtimeManager>
+                  </RoomsProvider>
                 </RoomBookingProvider>
               </ServiceBookingProvider>
             </RoomServiceProvider>

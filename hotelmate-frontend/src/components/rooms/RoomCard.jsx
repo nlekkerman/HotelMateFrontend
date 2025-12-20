@@ -1,9 +1,24 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "@/services/api";
+import { toast } from "react-toastify";
+import {
+  startCleaning,
+  markCleaned,
+  inspectRoom,
+  markMaintenance,
+  completeMaintenance
+} from "@/services/roomOperations";
+import { handleRoomOperationError } from "@/utils/errorHandling";
 
-const RoomCard = ({ room, selectedRooms, onSelect }) => {
+const RoomCard = ({ room }) => {
   const navigate = useNavigate();
   const [isHovering, setIsHovering] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  
+  const userData = JSON.parse(localStorage.getItem("user"));
+  const userRole = userData?.role || userData?.user_type;
+  const canPerformQuickActions = ['housekeeping', 'admin', 'manager'].includes(userRole?.toLowerCase()) || userData?.is_superuser;
 
   const calculateStayDuration = (checkInDate) => {
     if (!checkInDate) return 'Unknown';
@@ -12,6 +27,22 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
     const diffTime = Math.abs(now - checkIn);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays === 1 ? '1 day' : `${diffDays} days`;
+  };
+
+  const handleTurnoverAction = async (actionFn, actionName) => {
+    if (isUpdating) return;
+    
+    setIsUpdating(true);
+    try {
+      await actionFn(userData.hotel_slug, room.room_number);
+      toast.success(`${actionName} initiated for room ${room.room_number}`);
+      // NO local state mutation - wait for realtime event
+    } catch (error) {
+      const errorMessage = handleRoomOperationError(error, actionName.toLowerCase().replace(' ', '_'), room.room_number);
+      toast.error(errorMessage);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -189,61 +220,108 @@ const RoomCard = ({ room, selectedRooms, onSelect }) => {
 
 
 
-          <div className="form-check m-2 text-black bg-light p-1 rounded" onClick={(e) => e.stopPropagation()}>
-            <input
-              id={`select-room-${room.id}`}
-              className="form-check-input"
-              type="checkbox"
-              checked={selectedRooms.includes(room.id)}
-              onChange={() => onSelect(room.id)}
-            />
-            <label htmlFor={`select-room-${room.id}`} className="form-check-label small">
-              Select room for checkout.
-            </label>
-          </div>
-
           {/* Status-based Action Buttons */}
           <div className="mt-auto">
-            {room.room_status === 'CHECKOUT_DIRTY' && (
-              <button 
-                className="btn btn-sm btn-warning w-100 mb-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // TODO: Implement mark as cleaning action
-                }}
-              >
-                <i className="bi bi-brush me-1" />
-                Mark as Cleaning
-              </button>
+            {canPerformQuickActions ? (
+              <>
+                {room.room_status === 'CHECKOUT_DIRTY' && (
+                  <button 
+                    className="btn btn-sm btn-warning w-100 mb-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTurnoverAction(startCleaning, 'Start Cleaning');
+                    }}
+                    disabled={isUpdating}
+                  >
+                    <i className="bi bi-brush me-1" />
+                    {isUpdating ? 'Starting...' : 'Start Cleaning'}
+                  </button>
+                )}
+                
+                {room.room_status === 'CLEANING_IN_PROGRESS' && (
+                  <button 
+                    className="btn btn-sm btn-info w-100 mb-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTurnoverAction(markCleaned, 'Mark Cleaned');
+                    }}
+                    disabled={isUpdating}
+                  >
+                    <i className="bi bi-check-square me-1" />
+                    {isUpdating ? 'Marking...' : 'Mark Cleaned'}
+                  </button>
+                )}
+                
+                {room.room_status === 'CLEANED_UNINSPECTED' && (
+                  <button 
+                    className="btn btn-sm btn-success w-100 mb-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTurnoverAction(inspectRoom, 'Inspect Room');
+                    }}
+                    disabled={isUpdating}
+                  >
+                    <i className="bi bi-eye-fill me-1" />
+                    {isUpdating ? 'Inspecting...' : 'Inspect Room'}
+                  </button>
+                )}
+                
+                {['READY_FOR_GUEST', 'AVAILABLE'].includes(room.room_status) && (
+                  <button 
+                    className="btn btn-sm btn-warning w-100 mb-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTurnoverAction(markMaintenance, 'Mark Maintenance');
+                    }}
+                    disabled={isUpdating}
+                  >
+                    <i className="bi bi-tools me-1" />
+                    {isUpdating ? 'Marking...' : 'Mark Maintenance'}
+                  </button>
+                )}
+                
+                {room.maintenance_required && room.room_status === 'MAINTENANCE_REQUIRED' && (
+                  <button 
+                    className="btn btn-sm btn-success w-100 mb-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTurnoverAction(completeMaintenance, 'Complete Maintenance');
+                    }}
+                    disabled={isUpdating}
+                  >
+                    <i className="bi bi-check-circle me-1" />
+                    {isUpdating ? 'Completing...' : 'Complete Maintenance'}
+                  </button>
+                )}
+                
+                {room.maintenance_required && room.room_status !== 'MAINTENANCE_REQUIRED' && (
+                  <button 
+                    className="btn btn-sm btn-outline-danger w-100 mb-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/rooms/${room.hotel_slug}/rooms/${room.room_number}`);
+                    }}
+                  >
+                    <i className="bi bi-tools me-1" />
+                    View Maintenance
+                  </button>
+                )}
+              </>
+            ) : (
+              // Regular front desk only sees "Open details" for maintenance
+              room.maintenance_required && (
+                <button 
+                  className="btn btn-sm btn-outline-danger w-100 mb-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/rooms/${room.hotel_slug}/rooms/${room.room_number}`);
+                  }}
+                >
+                  <i className="bi bi-eye me-1" />
+                  Open Details
+                </button>
+              )
             )}
-            
-            {room.room_status === 'CLEANED_UNINSPECTED' && (
-              <button 
-                className="btn btn-sm btn-info w-100 mb-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // TODO: Implement inspect room action
-                }}
-              >
-                <i className="bi bi-check2-circle me-1" />
-                Inspect Room
-              </button>
-            )}
-            
-            {room.maintenance_required && (
-              <button 
-                className="btn btn-sm btn-danger w-100 mb-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // TODO: Implement view maintenance action
-                }}
-              >
-                <i className="bi bi-tools me-1" />
-                View Maintenance
-              </button>
-            )}
-
-
           </div>
 
           {/* Guest Summary */}

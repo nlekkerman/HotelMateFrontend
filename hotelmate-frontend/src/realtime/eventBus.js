@@ -6,6 +6,7 @@ import { guestChatActions } from './stores/guestChatStore.jsx';
 import { roomServiceActions } from './stores/roomServiceStore.jsx';
 import { serviceBookingActions } from './stores/serviceBookingStore.jsx';
 import { roomBookingActions } from './stores/roomBookingStore.jsx';
+import { roomsActions } from './stores/roomsStore.jsx';
 
 /**
  * Normalize FCM payload to domain event format
@@ -283,6 +284,9 @@ function routeToDomainStores(event) {
         break;
       case "booking":
         serviceBookingActions.handleEvent(event);
+        break;
+      case "rooms":
+        roomsActions.handleEvent(event);
         break;
       default:
         if (!import.meta.env.PROD) {

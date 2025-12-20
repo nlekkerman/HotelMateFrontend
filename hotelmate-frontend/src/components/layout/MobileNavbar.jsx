@@ -340,6 +340,24 @@ const MobileNavbar = () => {
                   );
                 })}
 
+                {/* Quick Access: Room Bookings */}
+                {canAccess('room-bookings') && (
+                  <li className="nav-item">
+                    <Link
+                      className={`nav-link ${
+                        location.pathname.includes('/room-bookings') ? "active" : ""
+                      } text-white d-flex justify-content-between align-items-center`}
+                      to={`/staff/hotel/${hotelIdentifier}/room-bookings`}
+                      onClick={toggleNavbar}
+                    >
+                      <div>
+                        <i className="bi bi-calendar-check me-2" />
+                        Room Bookings
+                      </div>
+                    </Link>
+                  </li>
+                )}
+
                 {/* Category accordion */}
                 {categories.map((category) => {
                   const isExpanded = expandedCategoryId === category.id;

@@ -64,6 +64,11 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
     const roomBookingChannel = pusher.subscribe(roomBookingChannelName);
     channels.push(roomBookingChannel);
 
+    // Rooms (operational room status - hotel-wide)
+    const roomsChannelName = `${hotelSlug}.rooms`;
+    const roomsChannel = pusher.subscribe(roomsChannelName);
+    channels.push(roomsChannel);
+
     // Personal staff notifications (if staffId provided)
     if (staffId) {
       const personalChannelName = `${hotelSlug}.staff-${staffId}-notifications`;

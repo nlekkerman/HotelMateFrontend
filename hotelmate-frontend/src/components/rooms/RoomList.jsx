@@ -2,9 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import api from "@/services/api";
-import { useQrPdfPrinter } from "@/components/rooms/hooks/useQrPdfPrinter";
-import CheckoutRoomsPanel from "@/components/rooms/CheckoutRoomsPanel";
 import RoomCard from "@/components/rooms/RoomCard";
+import { useRoomsState, useRoomsDispatch, roomsActions } from "@/realtime/stores/roomsStore.jsx";
 
 const fetchRooms = async ({ queryKey }) => {
   const [_key, page, search] = queryKey;
@@ -25,58 +24,43 @@ const fetchRooms = async ({ queryKey }) => {
 function RoomList() {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRooms, setSelectedRooms] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("");
   const [localRooms, setLocalRooms] = useState([]);
+
+  // Realtime store integration
+  const roomsState = useRoomsState();
+  const roomsDispatch = useRoomsDispatch();
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ["rooms", page, searchQuery],
     queryFn: fetchRooms,
     keepPreviousData: true,
+    onSuccess: (data) => {
+      // Dispatch bulk replace to roomsStore on successful API fetch
+      if (data?.results) {
+        roomsDispatch({ type: "ROOM_BULK_REPLACE", payload: data.results });
+      }
+    },
   });
 
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { generateQrPdf } = useQrPdfPrinter();
   const userData = JSON.parse(localStorage.getItem("user"));
 
-  const rooms = data?.results || [];
+  const apiRooms = data?.results || [];
   const totalPages = Math.ceil((data?.count || 0) / 10);
 
-  // Keep local reactive state
+  // Prefer rooms from store when available, fallback to API
+  const rooms = roomsState.list.length > 0 
+    ? roomsState.list.map(n => roomsState.byRoomNumber[n]).filter(Boolean)
+    : apiRooms;
+
+  // Keep local reactive state for UI interactions
   useEffect(() => {
     if (rooms.length) {
       setLocalRooms(rooms);
     }
   }, [rooms]);
-
-  const handleCheckboxChange = (roomId) => {
-    setSelectedRooms((prev) =>
-      prev.includes(roomId) ? prev.filter((id) => id !== roomId) : [...prev, roomId]
-    );
-  };
-
-  const handleCheckout = async () => {
-    if (selectedRooms.length === 0) return;
-
-    try {
-      await api.post(`rooms/${userData.hotel_slug}/checkout/`, {
-        room_ids: selectedRooms,
-      });
-
-      // Update localRooms for checked-out rooms
-      setLocalRooms((prev) =>
-        prev.map((room) =>
-          selectedRooms.includes(room.id) ? { ...room, is_occupied: false } : room
-        )
-      );
-
-      setSelectedRooms([]);
-      qc.invalidateQueries(["rooms", page, searchQuery]);
-    } catch (err) {
-      console.error("Checkout failed", err);
-      alert("Failed to checkout selected rooms.");
-    }
-  };
 
   useEffect(() => setPage(1), [searchQuery]);
 
@@ -94,46 +78,61 @@ function RoomList() {
 
   return (
     <div className="container d-flex flex-column my-4 p-0 vw-100">
-      {userData?.is_superuser && (
-        <>
-          <button className="custom-button mb-3" onClick={() => generateQrPdf(localRooms)}>
-            Print QR PDFs
-          </button>
-          <CheckoutRoomsPanel
-            hotelSlug={userData.hotel_slug}
-            token={userData.token}
-            onRoomsCheckout={(checkedOutRoomIds) => {
-              // Update localRooms when rooms are checked out via panel
-              setLocalRooms((prev) =>
-                prev.map((room) =>
-                  checkedOutRoomIds.includes(room.id)
-                    ? { ...room, is_occupied: false }
-                    : room
-                )
-              );
-            }}
-          />
-        </>
-      )}
+      {/* Operations Header */}
+      <div className="row mb-4 align-items-center">
+        <div className="col-md-4">
+          <div className="input-group">
+            <span className="input-group-text">
+              <i className="bi bi-search" />
+            </span>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Search rooms..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="col-md-4">
+          <select 
+            className="form-select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">All Statuses</option>
+            <option value="AVAILABLE">Available</option>
+            <option value="OCCUPIED">Occupied</option>
+            <option value="CHECKOUT_DIRTY">Checkout Dirty</option>
+            <option value="CLEANING_IN_PROGRESS">Cleaning</option>
+            <option value="CLEANED_UNINSPECTED">Cleaned</option>
+            <option value="READY_FOR_GUEST">Ready</option>
+            <option value="MAINTENANCE_REQUIRED">Maintenance</option>
+            <option value="OUT_OF_ORDER">Out of Order</option>
+          </select>
+        </div>
+        <div className="col-md-4 text-end">
+          {roomsState.lastUpdatedAt && (
+            <span className="badge bg-success">
+              <i className="bi bi-broadcast-pin me-1" />
+              Live
+            </span>
+          )}
+        </div>
+      </div>
 
       <h2 className="mb-4 text-center">
         Rooms (Page {page} of {totalPages}){" "}
         {isFetching && <small className="text-muted">(Updating...)</small>}
       </h2>
 
-      {selectedRooms.length > 0 && (
-        <button className="btn btn-danger ms-auto mb-2" onClick={handleCheckout}>
-          Checkout selected ({selectedRooms.length})
-        </button>
-      )}
-
       <div className="row row-cols-1 row-cols-md-2 row-cols-lg-5 justify-content-center g-2">
-        {localRooms.map((room) => (
+        {localRooms
+          .filter(room => !statusFilter || room.room_status === statusFilter)
+          .map((room) => (
           <RoomCard
             key={room.id}
             room={{ ...room }} // spread to force re-render
-            selectedRooms={selectedRooms}
-            onSelect={handleCheckboxChange}
           />
         ))}
       </div>
