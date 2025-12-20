@@ -17,7 +17,7 @@ import api, { buildStaffURL, getHotelSlug } from './api.js';
  */
 export const updateHousekeepingRoomStatus = async (hotelSlug, roomId, { status, note }) => {
   const url = buildStaffURL(hotelSlug, 'housekeeping', `/rooms/${roomId}/status/`);
-  const payload = { status };
+  const payload = { to_status: status };  // Backend expects 'to_status', not 'status'
   if (note && note.trim()) {
     payload.note = note.trim();
   }
