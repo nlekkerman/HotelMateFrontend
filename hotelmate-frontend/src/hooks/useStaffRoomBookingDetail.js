@@ -149,8 +149,8 @@ export const useCheckInBooking = (hotelSlug) => {
   
   return useMutation({
     mutationFn: async ({ bookingId, roomNumber }) => {
-      // Use room-scoped check-in endpoint, not booking-scoped
-      const url = buildStaffURL(hotelSlug, '', `/rooms/${roomNumber}/checkin/`);
+      // Use booking-centric check-in endpoint
+      const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/check-in/`);
       const response = await api.post(url, {});
       return response.data;
     },
@@ -161,7 +161,7 @@ export const useCheckInBooking = (hotelSlug) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.staffRoomBooking(hotelSlug, variables.bookingId)
       });
-      toast.success('Check-in accepted. Waiting for realtime update.');
+      toast.success('Guest checked in successfully!');
     },
     onError: (error) => {
       // Handle 400 errors from backend with specific message

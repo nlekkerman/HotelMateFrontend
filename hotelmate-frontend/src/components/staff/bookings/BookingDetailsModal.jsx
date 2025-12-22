@@ -10,6 +10,7 @@ import {
 } from '@/hooks/useStaffRoomBookingDetail';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
+import BookingStatusBadges from './BookingStatusBadges';
 
 /**
  * Canonical Booking Details Modal Component
@@ -89,7 +90,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
   
   const handleCheckIn = async () => {
     // Check if booking has assigned room
-    const assignedRoom = booking?.assigned_room;
+    const assignedRoom = booking?.assigned_room || booking?.room;
     if (!assignedRoom) {
       toast.error('Assign a room first');
       setShowRoomAssignment(true);
@@ -112,19 +113,6 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
     } catch (error) {
       // Error handled by mutation
     }
-  };
-  
-  const renderStatusBadge = (status) => {
-    const statusConfig = {
-      'PENDING_PAYMENT': { variant: 'warning', text: 'Pending Payment' },
-      'CONFIRMED': { variant: 'success', text: 'Confirmed' },
-      'CANCELLED': { variant: 'danger', text: 'Cancelled' },
-      'COMPLETED': { variant: 'info', text: 'Completed' },
-      'NO_SHOW': { variant: 'secondary', text: 'No Show' },
-    };
-    
-    const config = statusConfig[status] || { variant: 'secondary', text: status };
-    return <Badge bg={config.variant}>{config.text}</Badge>;
   };
   
   const renderPrecheckinSummary = () => {
@@ -416,8 +404,19 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
   const renderRoomAssignmentSection = () => {
     const flags = booking?.flags || {};
     
-    if (booking?.assigned_room) {
+    // Debug: Check what room assignment fields are available
+    console.log('🏨 Room assignment debug:', {
+      booking,
+      assigned_room: booking?.assigned_room,
+      room: booking?.room,
+      room_number: booking?.room_number,
+      room_assigned_at: booking?.room_assigned_at,
+      allBookingKeys: booking ? Object.keys(booking) : null
+    });
+    
+    if (booking?.assigned_room || booking?.room) {
       // Room is assigned
+      const assignedRoom = booking?.assigned_room || booking?.room;
       return (
         <Card className="mt-3">
           <Card.Header>
@@ -426,22 +425,33 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
           <Card.Body>
             <div className="d-flex justify-content-between align-items-center">
               <div>
-                <strong>Room {booking.assigned_room.room_number}</strong>
+                <strong>Room {assignedRoom?.room_number}</strong>
                 <br />
-                <small className="text-muted">
-                  Assigned on {format(new Date(booking.room_assigned_at), 'MMM dd, yyyy HH:mm')}
-                </small>
+                {booking?.room_assigned_at && (
+                  <small className="text-muted">
+                    Assigned on {format(new Date(booking.room_assigned_at), 'MMM dd, yyyy HH:mm')}
+                  </small>
+                )}
               </div>
-              {flags.can_unassign_room && (
+              <div className="d-flex gap-2">
+                {flags.can_unassign_room && (
+                  <Button
+                    variant="outline-danger"
+                    size="sm"
+                    onClick={handleUnassignRoom}
+                    disabled={unassignMutation.isPending}
+                  >
+                    {unassignMutation.isPending ? 'Unassigning...' : 'Unassign'}
+                  </Button>
+                )}
                 <Button
-                  variant="outline-danger"
+                  variant="outline-primary"
                   size="sm"
-                  onClick={handleUnassignRoom}
-                  disabled={unassignMutation.isPending}
+                  onClick={() => setShowRoomAssignment(true)}
                 >
-                  {unassignMutation.isPending ? 'Unassigning...' : 'Unassign'}
+                  Change Room
                 </Button>
-              )}
+              </div>
             </div>
           </Card.Body>
         </Card>
@@ -502,11 +512,24 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
                     <option value="">
                       {isLoadingRooms ? 'Loading rooms...' : 'Choose a room...'}
                     </option>
-                    {Array.isArray(availableRooms) && availableRooms.map(room => (
-                      <option key={room.id} value={room.id}>
-                        Room {room.room_number} - {room.room_type_name}
-                      </option>
-                    ))}
+                    {(() => {
+                      // Handle API response structure: { available_rooms: [...] }
+                      let roomsArray = [];
+                      
+                      if (Array.isArray(availableRooms)) {
+                        // Direct array format
+                        roomsArray = availableRooms;
+                      } else if (availableRooms?.available_rooms && Array.isArray(availableRooms.available_rooms)) {
+                        // API format: { available_rooms: [...] }
+                        roomsArray = availableRooms.available_rooms;
+                      }
+                      
+                      return roomsArray.map(room => (
+                        <option key={room.id} value={room.id}>
+                          Room {room.room_number} - {room.room_type}
+                        </option>
+                      ));
+                    })()}
                   </Form.Select>
                 </Form.Group>
                 
@@ -573,9 +596,9 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
   
   const renderCheckInSection = () => {
     const flags = booking?.flags || {};
-    const assignedRoom = booking?.assigned_room;
+    const assignedRoom = booking?.assigned_room || booking?.room;
     
-    if (!flags.can_check_in || booking?.checked_in_at) return null;
+    if (booking?.checked_in_at) return null;
     
     return (
       <Card className="mt-3">
@@ -597,13 +620,17 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
               </Button>
             </div>
           ) : (
-            <Button
-              variant="info"
-              onClick={handleCheckIn}
-              disabled={checkInMutation.isPending}
-            >
-              {checkInMutation.isPending ? 'Checking In...' : `Check In to Room ${assignedRoom.room_number}`}
-            </Button>
+            <div>
+              <p className="text-success mb-3">✅ Ready to check in to Room {assignedRoom.room_number}</p>
+              <Button
+                variant="success"
+                onClick={handleCheckIn}
+                disabled={checkInMutation.isPending}
+                size="lg"
+              >
+                {checkInMutation.isPending ? 'Checking In...' : 'Check In Guest'}
+              </Button>
+            </div>
           )}
         </Card.Body>
       </Card>
@@ -677,8 +704,10 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
               <Col md={8}>
                 <h5>
                   {booking.primary_first_name} {booking.primary_last_name}
-                  <span className="ms-2">{renderStatusBadge(booking.status)}</span>
                 </h5>
+                <div className="mb-2">
+                  <BookingStatusBadges booking={booking} />
+                </div>
                 <div className="text-muted">
                   Booking ID: {booking.booking_id}<br />
                   Confirmation: {booking.confirmation_number}

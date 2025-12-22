@@ -113,7 +113,7 @@ const BookingActions = ({
                 onViewPrecheckin(booking.booking_id);
               }
             }}
-            className="btn btn-outline-info btn-sm"
+            className="btn btn-success btn-sm"
             title="View Pre-Check-In Details"
             disabled={loading}
           >
@@ -123,7 +123,7 @@ const BookingActions = ({
         ) : (
           <button 
             onClick={handleSendPrecheckin}
-            className="btn btn-outline-info btn-sm"
+            className="btn btn-danger btn-sm"
             title="Send Pre-Check-In Link"
             disabled={loading}
           >

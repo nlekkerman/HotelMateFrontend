@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import BookingActions from './BookingActions';
 import BookingDetailsModal from './BookingDetailsModal';
+import BookingStatusBadges from './BookingStatusBadges';
 
 /**
  * Booking Table Component
@@ -43,27 +44,6 @@ const BookingTable = ({
       month: '2-digit',
       year: 'numeric'
     });
-  };
-
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      'PENDING_PAYMENT': { class: 'bg-primary text-white', icon: 'hourglass-split', label: 'Awaiting Approval' },
-      'PENDING_APPROVAL': { class: 'bg-primary text-white', icon: 'hourglass-split', label: 'Awaiting Approval' },
-      'CONFIRMED': { class: 'bg-success', icon: 'check-circle', label: 'Confirmed' },
-      'CANCELLED': { class: 'bg-danger', icon: 'x-circle', label: 'Cancelled' },
-      'DECLINED': { class: 'bg-warning text-dark', icon: 'x-circle', label: 'Declined' },
-      'COMPLETED': { class: 'bg-info', icon: 'calendar-check', label: 'Completed' },
-      'NO_SHOW': { class: 'bg-secondary', icon: 'person-x', label: 'No Show' }
-    };
-    
-    const config = statusConfig[status] || { class: 'bg-secondary', icon: 'question', label: status };
-    
-    return (
-      <span className={`badge ${config.class}`}>
-        <i className={`bi bi-${config.icon} me-1`}></i>
-        {config.label}
-      </span>
-    );
   };
 
   const calculateNights = (checkIn, checkOut) => {
@@ -217,34 +197,6 @@ const BookingTable = ({
                         </span>
                       );
                     })()}
-                    
-                    {/* Party completion badge - canonical backend contract */}
-                    {(() => {
-                      const partyComplete = booking?.party_complete;
-                      const partyMissingCount = booking?.party_missing_count;
-                      
-                      if (partyComplete === true) {
-                        return (
-                          <span className="badge bg-success">
-                            <i className="bi bi-check-circle me-1"></i>Party Complete
-                          </span>
-                        );
-                      } else if (partyComplete === false && partyMissingCount != null) {
-                        return (
-                          <span className="badge bg-warning text-dark">
-                            <i className="bi bi-exclamation-triangle me-1"></i>
-                            Missing {partyMissingCount} guests
-                          </span>
-                        );
-                      } else {
-                        // Backend didn't provide party status - show neutral
-                        return (
-                          <span className="badge bg-secondary">
-                            <i className="bi bi-info-circle me-1"></i>Party Details
-                          </span>
-                        );
-                      }
-                    })()}
                   </div>
                 </td>
                 
@@ -267,7 +219,7 @@ const BookingTable = ({
                 </td>
                 
                 <td>
-                  {getStatusBadge(booking.status)}
+                  <BookingStatusBadges booking={booking} />
                 </td>
                 
                 <td onClick={(e) => e.stopPropagation()}>

@@ -224,6 +224,27 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
         return;
     }
     
+    // 4️⃣ RAW ROOM STATUS EVENTS NORMALIZATION
+    if (channel?.includes('.rooms') && eventName === 'room-status-changed') {
+      console.log('🏠 [EventBus] Normalizing room-status-changed event:', { channel, eventName, payload });
+      const normalized = {
+        category: "rooms",
+        type: "room_status_changed",
+        payload: payload,
+        meta: { 
+          channel, 
+          eventName, 
+          event_id: payload?.event_id || payload?.id || `room-status-${Date.now()}`,
+          scope: { room_number: payload?.room_number }
+        },
+        source,
+        timestamp: new Date().toISOString()
+      };
+      console.log('🏠 [EventBus] Normalized room-status-changed:', normalized);
+      routeToDomainStores(normalized);
+      return;
+    }
+
     // Backend should send normalized events - log unhandled events
     console.warn('⚠️ Received non-normalized event - backend should send normalized format:', {
       source,

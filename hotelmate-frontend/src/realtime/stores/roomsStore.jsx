@@ -231,6 +231,25 @@ export const roomsActions = {
         });
         break;
 
+      case "room_status_changed":
+        // Extract new_status from payload and update room
+        const { new_status } = payload;
+        if (new_status) {
+          if (!import.meta.env.PROD) {
+            console.log(`[roomsStore] Room ${roomNumber} status changed to:`, new_status);
+          }
+          dispatchRef({
+            type: ACTIONS.ROOM_UPSERT,
+            payload: { 
+              roomSnapshot: { room_status: new_status }, 
+              roomNumber 
+            },
+          });
+        } else {
+          console.warn('[roomsStore] room_status_changed event missing new_status:', payload);
+        }
+        break;
+
       default:
         if (!import.meta.env.PROD) {
           console.log("[roomsStore] Ignoring eventType:", eventType, event);
