@@ -33,7 +33,7 @@ const BookingStatusBadges = ({ booking }) => {
 
   if (isCheckedOut) {
     primaryBadge = (
-      <Badge bg="dark" className="me-1">
+      <Badge bg="dark" className="me-1 text-white">
         {roomNumber ? `Checked-out · Room ${roomNumber}` : 'Checked-out'}
       </Badge>
     );

@@ -3,9 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import api, { buildStaffURL, getHotelSlug } from "@/services/api";
 import { useRoomsState } from "@/realtime/stores/roomsStore.jsx";
 import { toast } from "react-toastify";
-import { 
+import {
   updateHousekeepingRoomStatus,
-  checkinRoom,
   checkoutRoom,
   startCleaning,
   markCleaned,
@@ -25,7 +24,6 @@ function RoomDetails() {
   
   // Operation loading states - each button gets its own spinner
   const [actionStates, setActionStates] = useState({
-    checkin: false,
     checkout: false,
     startCleaning: false,
     markCleaned: false,
@@ -40,6 +38,10 @@ function RoomDetails() {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [statusNote, setStatusNote] = useState('');
 
+  // Inspection modal
+  const [showInspectionModal, setShowInspectionModal] = useState(false);
+  const [inspectionNotes, setInspectionNotes] = useState('');
+
   // Active tab for notes/history section
   const [activeTab, setActiveTab] = useState('notes');
   
@@ -49,6 +51,9 @@ function RoomDetails() {
   // Realtime store integration
   const roomsState = useRoomsState();
   const realtimeRoom = roomsState.byRoomNumber[roomNumber];
+  
+  // Use realtime data if available, fallback to static room data
+  const currentRoom = realtimeRoom || room;
 
   const getStatusColor = (status) => {
     const colors = {
@@ -85,18 +90,7 @@ function RoomDetails() {
   };
 
   // Specific action handlers
-  const handleCheckin = () => {
-    if (!import.meta.env.PROD) {
-      console.log(`[RoomDetails] Checkin attempt - Room ${roomNumber}:`, {
-        roomId: room?.id,
-        roomStatus: room?.room_status,
-        isOccupied: room?.is_occupied
-      });
-    }
-    handleAction('checkin', checkinRoom, `Room ${roomNumber} check-in initiated`, { roomId: room?.id });
-  };
-  
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (!import.meta.env.PROD) {
       console.log(`[RoomDetails] Checkout attempt - Room ${roomNumber}:`, {
         roomId: room?.id,
@@ -104,12 +98,60 @@ function RoomDetails() {
         isOccupied: room?.is_occupied
       });
     }
-    handleAction('checkout', checkoutRoom, `Room ${roomNumber} check-out initiated`, { roomId: room?.id });
+    
+    if (actionStates.checkout || !room?.id) return;
+    
+    setActionStates(prev => ({ ...prev, checkout: true }));
+    try {
+      await updateHousekeepingRoomStatus(getHotelSlug(), room.id, {
+        status: 'CHECKOUT_DIRTY',
+        note: 'Guest checked out'
+      });
+      toast.success(`Room ${roomNumber} check-out completed. Waiting for realtime update.`);
+    } catch (error) {
+      const errorMessage = handleRoomOperationError(error, 'checkout', roomNumber);
+      toast.error(errorMessage);
+    } finally {
+      setActionStates(prev => ({ ...prev, checkout: false }));
+    }
   };
   
-  const handleStartCleaning = () => handleAction('startCleaning', startCleaning, `Cleaning started for Room ${roomNumber}`);
-  const handleMarkCleaned = () => handleAction('markCleaned', markCleaned, `Room ${roomNumber} marked as cleaned`);
-  const handleInspect = () => handleAction('inspect', inspectRoom, `Room ${roomNumber} inspection completed`);
+  const handleStartCleaning = async () => {
+    if (actionStates.startCleaning || !room?.id) return;
+    
+    setActionStates(prev => ({ ...prev, startCleaning: true }));
+    try {
+      await updateHousekeepingRoomStatus(getHotelSlug(), room.id, {
+        status: 'CLEANING_IN_PROGRESS',
+        note: 'Cleaning started'
+      });
+      toast.success(`Cleaning started for Room ${roomNumber}. Waiting for realtime update.`);
+    } catch (error) {
+      const errorMessage = handleRoomOperationError(error, 'start cleaning', roomNumber);
+      toast.error(errorMessage);
+    } finally {
+      setActionStates(prev => ({ ...prev, startCleaning: false }));
+    }
+  };
+  
+  const handleMarkCleaned = async () => {
+    if (actionStates.markCleaned || !room?.id) return;
+    
+    setActionStates(prev => ({ ...prev, markCleaned: true }));
+    try {
+      await updateHousekeepingRoomStatus(getHotelSlug(), room.id, {
+        status: 'CLEANED_UNINSPECTED',
+        note: 'Room cleaned and ready for inspection'
+      });
+      toast.success(`Room ${roomNumber} marked as cleaned. Waiting for realtime update.`);
+    } catch (error) {
+      const errorMessage = handleRoomOperationError(error, 'mark cleaned', roomNumber);
+      toast.error(errorMessage);
+    } finally {
+      setActionStates(prev => ({ ...prev, markCleaned: false }));
+    }
+  };
+  const handleInspect = () => setShowInspectionModal(true);
   const handleMarkMaintenance = () => handleAction('markMaintenance', markMaintenance, `Room ${roomNumber} marked for maintenance`);
   const handleCompleteMaintenance = () => handleAction('completeMaintenance', completeMaintenance, `Maintenance completed for Room ${roomNumber}`);
 
@@ -137,6 +179,65 @@ function RoomDetails() {
     }
   };
 
+  // Inspection result handlers
+  const handleInspectionPass = async () => {
+    if (actionStates.inspect || !room?.id) return;
+    
+    setActionStates(prev => ({ ...prev, inspect: true }));
+    setShowInspectionModal(false);
+    
+    try {
+      await updateHousekeepingRoomStatus(getHotelSlug(), room.id, {
+        status: 'READY_FOR_GUEST',
+        note: inspectionNotes || 'Inspection passed'
+      });
+      toast.success(`Room ${roomNumber} inspection passed - Ready for guest!`);
+      setInspectionNotes('');
+    } catch (error) {
+      handleRoomOperationError(error, 'inspect room');
+    } finally {
+      setActionStates(prev => ({ ...prev, inspect: false }));
+    }
+  };
+
+  const handleInspectionFail = async (failAction) => {
+    if (actionStates.inspect || !room?.id) return;
+    
+    setActionStates(prev => ({ ...prev, inspect: true }));
+    setShowInspectionModal(false);
+    
+    try {
+      let newStatus, message;
+      
+      switch(failAction) {
+        case 'reclean':
+          newStatus = 'CLEANING_IN_PROGRESS';
+          message = `Room ${roomNumber} failed inspection - Sent back for cleaning`;
+          break;
+        case 'maintenance':
+          newStatus = 'MAINTENANCE_REQUIRED';
+          message = `Room ${roomNumber} failed inspection - Maintenance required`;
+          break;
+        case 'dirty':
+        default:
+          newStatus = 'CHECKOUT_DIRTY';
+          message = `Room ${roomNumber} failed inspection - Marked as dirty`;
+          break;
+      }
+      
+      await updateHousekeepingRoomStatus(getHotelSlug(), room.id, {
+        status: newStatus,
+        note: inspectionNotes || 'Inspection failed'
+      });
+      toast.warning(message);
+      setInspectionNotes('');
+    } catch (error) {
+      handleRoomOperationError(error, 'inspect room');
+    } finally {
+      setActionStates(prev => ({ ...prev, inspect: false }));
+    }
+  };
+
   // Contextual action logic based on room_status
   const getPrimaryActions = () => {
     if (!canManageRooms) return [];
@@ -144,16 +245,9 @@ function RoomDetails() {
     const status = room?.room_status;
     const actions = [];
 
-    if (status === 'READY_FOR_GUEST' && !room?.is_occupied) {
-      actions.push({
-        key: 'checkin',
-        label: 'Check In',
-        icon: 'bi-box-arrow-in-right',
-        variant: 'success',
-        loading: actionStates.checkin,
-        handler: handleCheckin
-      });
-    } else if (room?.is_occupied) {
+    // Check-in is handled from booking management, not room management
+    // Only show checkout if room is actually occupied AND status indicates occupancy
+    if (room?.is_occupied && currentRoom?.room_status === 'OCCUPIED') {
       actions.push({
         key: 'checkout',
         label: 'Check Out',
@@ -258,7 +352,7 @@ function RoomDetails() {
 
   if (loading) return <p className="text-center mt-4">Loading room details...</p>;
   if (error) return <p className="text-center text-danger mt-4">{error}</p>;
-  if (!room) return null;
+  if (!room && !currentRoom) return null;
 
   const primaryActions = getPrimaryActions();
   const secondaryActions = getSecondaryActions();
@@ -275,17 +369,17 @@ function RoomDetails() {
           <div className="col-md-4 text-center">
             <div className="d-inline-flex align-items-center gap-3">
               {/* Main Status Pill */}
-              <span className={`badge badge-lg fs-5 px-3 py-2 bg-${getStatusColor(room.room_status)}`}>
-                {formatStatus(room.room_status)}
+              <span className={`badge badge-lg fs-5 px-3 py-2 bg-${getStatusColor(currentRoom.room_status)}`}>
+                {formatStatus(currentRoom.room_status)}
               </span>
               
               {/* Micro-badges */}
               <div className="d-flex gap-2 flex-wrap">
-                {room.is_occupied && <span className="badge bg-danger">Occupied</span>}
-                {room.maintenance_required && <span className="badge bg-warning text-dark">Maintenance</span>}
-                {room.is_out_of_order && <span className="badge bg-danger">Out of Order</span>}
-                <span className={`badge ${room.is_bookable ? 'bg-success' : 'bg-secondary'}`}>
-                  {room.is_bookable ? 'Bookable' : 'Not Bookable'}
+                {(currentRoom.is_occupied && currentRoom.room_status === 'OCCUPIED') && <span className="badge bg-danger">Occupied</span>}
+                {currentRoom.maintenance_required && <span className="badge bg-warning text-dark">Maintenance</span>}
+                {currentRoom.is_out_of_order && <span className="badge bg-danger">Out of Order</span>}
+                <span className={`badge ${currentRoom.is_bookable ? 'bg-success' : 'bg-secondary'}`}>
+                  {currentRoom.is_bookable ? 'Bookable' : 'Not Bookable'}
                 </span>
               </div>
             </div>
@@ -360,6 +454,9 @@ function RoomDetails() {
 
       {/* Advanced Status Override Modal */}
       {renderStatusModal()}
+      
+      {/* Inspection Modal */}
+      {renderInspectionModal()}
     </div>
   );
 
@@ -511,15 +608,15 @@ function RoomDetails() {
             </h5>
           </div>
           <div className="card-body">
-            {room.is_occupied ? (
+            {(currentRoom.is_occupied && currentRoom.room_status === 'OCCUPIED') ? (
               <div>
                 <h6 className="text-success">
                   <i className="bi bi-person-fill me-2"></i>
                   Currently In-House
                 </h6>
-                {room.guests_in_room && room.guests_in_room.length > 0 ? (
+                {currentRoom.guests_in_room && currentRoom.guests_in_room.length > 0 ? (
                   <div className="mt-2">
-                    {room.guests_in_room.map((guest) => (
+                    {currentRoom.guests_in_room.map((guest) => (
                       <div key={guest.id} className="d-flex align-items-center p-2 bg-light rounded mb-2">
                         <div className="me-3">
                           <div className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style={{width: '35px', height: '35px'}}>
@@ -533,7 +630,7 @@ function RoomDetails() {
                       </div>
                     ))}
                     <small className="text-muted">
-                      Check-in: {room.check_in_time ? new Date(room.check_in_time).toLocaleString() : 'Unknown'}
+                      Check-in: {currentRoom.check_in_time ? new Date(currentRoom.check_in_time).toLocaleString() : 'Unknown'}
                     </small>
                   </div>
                 ) : (
@@ -542,23 +639,39 @@ function RoomDetails() {
               </div>
             ) : (
               <div>
-                <h6 className="text-secondary">
-                  <i className="bi bi-house me-2"></i>
-                  Room Ready
-                </h6>
-                <p className="text-muted mb-0">No current guests. Ready for next booking.</p>
-                {/* Could add next booking info here if available in room data */}
+                {currentRoom.room_status === 'READY_FOR_GUEST' ? (
+                  <>
+                    <h6 className="text-success">
+                      <i className="bi bi-check-circle me-2"></i>
+                      Room Ready
+                    </h6>
+                    <p className="text-muted mb-0">No current guests. Ready for next booking.</p>
+                    {/* Could add next booking info here if available in room data */}
+                  </>
+                ) : (
+                  <>
+                    <h6 className="text-warning">
+                      <i className="bi bi-clock-history me-2"></i>
+                      Room Preparing
+                    </h6>
+                    <p className="text-muted mb-0">
+                      Room is being prepared for next guest. 
+                      <br />
+                      <small>Status: {currentRoom.room_status?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</small>
+                    </p>
+                  </>
+                )}
               </div>
             )}
             
             {/* Room Type Info */}
-            {room.room_type_info && (
+            {currentRoom.room_type_info && (
               <div className="mt-3 pt-3 border-top">
                 <small className="text-muted fw-semibold">Room Details</small>
                 <div className="mt-1">
-                  <div><strong>Type:</strong> {room.room_type_info.name}</div>
-                  {room.room_type_info.capacity && <div><strong>Capacity:</strong> {room.room_type_info.capacity} guests</div>}
-                  {room.room_type_info.base_rate && <div><strong>Base Rate:</strong> ${room.room_type_info.base_rate}</div>}
+                  <div><strong>Type:</strong> {currentRoom.room_type_info.name}</div>
+                  {currentRoom.room_type_info.capacity && <div><strong>Capacity:</strong> {currentRoom.room_type_info.capacity} guests</div>}
+                  {currentRoom.room_type_info.base_rate && <div><strong>Base Rate:</strong> ${currentRoom.room_type_info.base_rate}</div>}
                 </div>
               </div>
             )}
@@ -791,6 +904,115 @@ function RoomDetails() {
                 onClick={() => setShowStatusModal(false)}
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Inspection Modal
+  function renderInspectionModal() {
+    if (!showInspectionModal) return null;
+
+    return (
+      <div className="modal show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
+        <div className="modal-dialog modal-dialog-centered">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title">
+                <i className="bi bi-search me-2"></i>
+                Room {room?.room_number} Inspection
+              </h5>
+              <button 
+                type="button" 
+                className="btn-close" 
+                onClick={() => {
+                  setShowInspectionModal(false);
+                  setInspectionNotes('');
+                }}
+              ></button>
+            </div>
+            <div className="modal-body">
+              <div className="mb-4">
+                <h6 className="mb-3">Did the room pass inspection?</h6>
+                
+                <div className="mb-3">
+                  <label className="form-label">Inspection Notes (optional):</label>
+                  <textarea
+                    className="form-control"
+                    rows="3"
+                    placeholder="Add notes about the inspection..."
+                    value={inspectionNotes}
+                    onChange={(e) => setInspectionNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer d-flex flex-column gap-3">
+              {/* Pass Button */}
+              <button
+                className="btn btn-success w-100 py-2"
+                onClick={handleInspectionPass}
+                disabled={actionStates.inspect}
+              >
+                {actionStates.inspect ? (
+                  <span>
+                    <span className="spinner-border spinner-border-sm me-2"></span>
+                    Processing...
+                  </span>
+                ) : (
+                  <span>
+                    <i className="bi bi-check-circle me-2"></i>
+                    ✅ PASSED - Set Ready for Guest
+                  </span>
+                )}
+              </button>
+              
+              <div className="text-center">
+                <small className="text-muted">If inspection failed, choose action:</small>
+              </div>
+              
+              {/* Fail Actions */}
+              <div className="d-grid gap-2">
+                <button
+                  className="btn btn-warning"
+                  onClick={() => handleInspectionFail('reclean')}
+                  disabled={actionStates.inspect}
+                >
+                  <i className="bi bi-arrow-clockwise me-2"></i>
+                  ❌ FAILED - Send Back for Cleaning
+                </button>
+                
+                <button
+                  className="btn btn-danger"
+                  onClick={() => handleInspectionFail('maintenance')}
+                  disabled={actionStates.inspect}
+                >
+                  <i className="bi bi-tools me-2"></i>
+                  🔧 FAILED - Maintenance Required
+                </button>
+                
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => handleInspectionFail('dirty')}
+                  disabled={actionStates.inspect}
+                >
+                  <i className="bi bi-x-circle me-2"></i>
+                  🧹 FAILED - Mark as Dirty
+                </button>
+              </div>
+              
+              <button
+                className="btn btn-outline-secondary mt-2"
+                onClick={() => {
+                  setShowInspectionModal(false);
+                  setInspectionNotes('');
+                }}
+                disabled={actionStates.inspect}
+              >
+                Cancel
               </button>
             </div>
           </div>
