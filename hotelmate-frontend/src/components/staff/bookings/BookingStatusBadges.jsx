@@ -5,92 +5,78 @@ import { Badge } from 'react-bootstrap';
  * BookingStatusBadges - 3-Badge System for Staff Booking Status
  * Shows: Payment/Admin | Assignment | In-House status
  */
-const BookingStatusBadges = ({ booking, size = 'sm' }) => {
-  // Badge 1: Payment/Admin Status (from booking.status)
-  const getPaymentStatusBadge = () => {
-    if (!booking?.status) return null;
-    
-    const label = booking.status
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (l) => l.toUpperCase());
-    
-    return (
-      <Badge bg="secondary" className="me-1">
-        {label}
+const BookingStatusBadges = ({ booking }) => {
+  if (!booking) return null;
+
+  const status = booking.status;
+
+  const checkedInAt = booking.checked_in_at;
+  const checkedOutAt = booking.checked_out_at;
+
+  const roomNumber =
+    booking.assigned_room_number ??
+    booking.room_number ??
+    booking.assigned_room?.room_number ??
+    booking.room?.room_number ??
+    null;
+
+  const isInHouse =
+    checkedInAt !== undefined && checkedOutAt !== undefined
+      ? (checkedInAt !== null && checkedOutAt === null)
+      : false;
+
+  const isCheckedOut =
+    checkedOutAt !== undefined ? checkedOutAt !== null : false;
+
+  // 1) Primary badge (single)
+  let primaryBadge = null;
+
+  if (isCheckedOut) {
+    primaryBadge = (
+      <Badge bg="dark" className="me-1">
+        {roomNumber ? `Checked-out · Room ${roomNumber}` : 'Checked-out'}
       </Badge>
     );
-  };
-
-  // Badge 2: Assignment Status
-  const getAssignmentStatusBadge = () => {
-    // Check for assigned room in multiple possible fields
-    const assignedRoom = booking?.assigned_room;
-    const assignedRoomId = booking?.assigned_room_id;
-    const assignedRoomNumber = booking?.assigned_room_number;
-    
-    // Determine if room is assigned
-    const isAssigned = assignedRoom || assignedRoomId || assignedRoomNumber;
-    
-    if (isAssigned) {
-      // Try to get room number for display
-      let roomNumber = null;
-      if (assignedRoom?.room_number) {
-        roomNumber = assignedRoom.room_number;
-      } else if (assignedRoomNumber) {
-        roomNumber = assignedRoomNumber;
-      }
-      
-      const label = roomNumber ? `Assigned Room ${roomNumber}` : 'Assigned';
-      
-      return (
+  } else if (isInHouse) {
+    primaryBadge = (
+      <Badge bg="success" className="me-1">
+        {roomNumber ? `In-house · Room ${roomNumber}` : 'In-house'}
+      </Badge>
+    );
+  } else {
+    // Not in-house
+    if (roomNumber) {
+      primaryBadge = (
         <Badge bg="info" className="me-1">
-          {label}
+          Assigned · Room {roomNumber}
         </Badge>
       );
     } else {
-      return (
+      primaryBadge = (
         <Badge bg="warning" text="dark" className="me-1">
           Unassigned
         </Badge>
       );
     }
-  };
+  }
 
-  // Badge 3: In-House Status (timestamps only)
-  const getInHouseStatusBadge = () => {
-    const checkedInAt = booking?.checked_in_at;
-    const checkedOutAt = booking?.checked_out_at;
-    
-    if (checkedInAt && !checkedOutAt) {
-      return (
-        <Badge bg="success" className="me-1">
-          In-house
-        </Badge>
-      );
-    } else if (checkedOutAt) {
-      return (
-        <Badge bg="dark" className="me-1">
-          Checked-out
-        </Badge>
-      );
-    } else {
-      return (
-        <Badge bg="light" text="dark" className="me-1">
-          Not arrived
-        </Badge>
-      );
-    }
-  };
+  // 2) Optional secondary badge only when it matters
+  const showAdminBadge =
+    !isInHouse && !isCheckedOut && status && status !== 'CONFIRMED';
 
-  if (!booking) return null;
+  const adminBadge = showAdminBadge ? (
+    <Badge bg="secondary" className="me-1">
+      {status.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+    </Badge>
+  ) : null;
 
   return (
     <div className="d-flex flex-wrap gap-1">
-      {getPaymentStatusBadge()}
-      {getAssignmentStatusBadge()}
-      {getInHouseStatusBadge()}
+      {primaryBadge}
+      {adminBadge}
     </div>
   );
 };
+
 
 export default BookingStatusBadges;
