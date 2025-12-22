@@ -83,7 +83,7 @@ function Search({
                     className="btn custom-button main-bg text-white"
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/rooms/${room.hotel_slug}/rooms/${room.room_number}`);
+                      navigate(`/room-management/${room.hotel_slug}/room/${room.room_number}`);
                     }}
                   >
                     <i className="bi bi-eye me-1" />

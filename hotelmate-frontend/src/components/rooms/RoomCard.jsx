@@ -70,7 +70,7 @@ const RoomCard = ({ room }) => {
       <div 
         className="card h-100 shadow-sm position-relative"
         style={{ cursor: "pointer" }}
-        onClick={() => navigate(`/rooms/${room.hotel_slug}/rooms/${room.room_number}`)}
+        onClick={() => navigate(`/room-management/${room.hotel_slug}/room/${room.room_number}`)}
       >
         {/* Hover Overlay for Occupied Rooms */}
         {room.is_occupied && isHovering && (

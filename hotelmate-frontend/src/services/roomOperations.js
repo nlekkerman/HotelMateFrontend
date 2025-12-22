@@ -135,6 +135,27 @@ export const checkoutRoom = async (hotelSlug, roomNumber, opts = {}) => {
 // ============= CONVENIENCE FUNCTIONS =============
 
 /**
+ * List rooms for turnover dashboard
+ * @param {string} hotelSlug - The hotel slug
+ * @param {Object} params - Query parameters (page, search, etc.)
+ * @returns {Promise} - API response with rooms list
+ */
+export const listTurnoverRooms = async (hotelSlug, params = {}) => {
+  const url = buildStaffURL(hotelSlug, '', 'turnover/rooms/');
+  return api.get(url, { params });
+};
+
+/**
+ * Get turnover dashboard statistics
+ * @param {string} hotelSlug - The hotel slug
+ * @returns {Promise} - API response with turnover stats
+ */
+export const getTurnoverStats = async (hotelSlug) => {
+  const url = buildStaffURL(hotelSlug, '', 'turnover/stats/');
+  return api.get(url);
+};
+
+/**
  * Get current hotel slug from context or localStorage
  * @returns {string|null}
  */

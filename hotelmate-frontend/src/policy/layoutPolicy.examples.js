@@ -43,7 +43,7 @@ export const LAYOUT_MODE_EXAMPLES = [
   // STAFF routes
   ["/reception", "staff"],
   ["/rooms", "staff"],
-  ["/rooms/101", "staff"],
+  ["/room-management/hotel-killarney/room/101", "staff"],
   ["/bookings", "staff"],
   ["/bookings/123", "staff"],
   ["/maintenance", "staff"],

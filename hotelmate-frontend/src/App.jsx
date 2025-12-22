@@ -532,7 +532,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 }
               />
               <Route
-                path="/rooms/:hotelIdentifier/rooms/:roomNumber"
+                path="/room-management/:hotelIdentifier/room/:roomNumber"
                 element={
                   <ProtectedRoute>
                     <RoomDetails />

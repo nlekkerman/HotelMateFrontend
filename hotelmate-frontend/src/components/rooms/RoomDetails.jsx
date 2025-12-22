@@ -229,7 +229,7 @@ function RoomDetails() {
           return;
         }
 
-        const url = buildStaffURL(hotelSlug, '', `rooms/${roomNumber}/`);
+        const url = buildStaffURL(hotelSlug, '', `room-management/${roomNumber}/`);
         const response = await api.get(url);
 
         // Merge API room data with realtime snapshot when available

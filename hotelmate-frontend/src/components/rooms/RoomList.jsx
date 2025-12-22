@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import api from "@/services/api";
+import api, { buildStaffURL } from "@/services/api";
 import RoomCard from "@/components/rooms/RoomCard";
 import { useRoomsState, useRoomsDispatch, roomsActions } from "@/realtime/stores/roomsStore.jsx";
 
 const fetchRooms = async ({ queryKey }) => {
-  const [_key, page, search] = queryKey;
+  const [_key, search] = queryKey;
   const userData = JSON.parse(localStorage.getItem("user"));
   const hotelSlug = userData?.hotel_slug;
 
@@ -14,8 +14,10 @@ const fetchRooms = async ({ queryKey }) => {
     throw new Error('Hotel slug not found in user data');
   }
 
-  const response = await api.get(`/staff/hotel/${hotelSlug}/rooms/`, {
-    params: { page, search },
+  // Use the correct turnover rooms endpoint - gets all rooms categorized by status
+  const url = buildStaffURL(hotelSlug, '', 'turnover/rooms/');
+  const response = await api.get(url, {
+    params: { search }, // Remove page param since API returns all data
   });
   
   return response.data;
@@ -32,13 +34,15 @@ function RoomList() {
   const roomsDispatch = useRoomsDispatch();
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: ["rooms", page, searchQuery],
+    queryKey: ["rooms", searchQuery], // Remove page since we get all data
     queryFn: fetchRooms,
     keepPreviousData: true,
     onSuccess: (data) => {
       // Dispatch bulk replace to roomsStore on successful API fetch
-      if (data?.results) {
-        roomsDispatch({ type: "ROOM_BULK_REPLACE", payload: data.results });
+      // Flatten categorical response to get all rooms
+      const allRooms = Object.values(data || {}).flatMap(category => category.rooms || []);
+      if (allRooms.length > 0) {
+        roomsDispatch({ type: "ROOM_BULK_REPLACE", payload: allRooms });
       }
     },
   });
@@ -47,12 +51,18 @@ function RoomList() {
   const qc = useQueryClient();
   const userData = JSON.parse(localStorage.getItem("user"));
 
-  const apiRooms = data?.results || [];
-  const totalPages = Math.ceil((data?.count || 0) / 10);
+  // Handle categorical response format - flatten all rooms
+  const allRooms = React.useMemo(() => {
+    if (!data) return [];
+    return Object.values(data).flatMap(category => category.rooms || []);
+  }, [data]);
+
+  const apiRooms = allRooms;
+  const totalPages = Math.ceil(allRooms.length / 10); // Remove pagination since we have all data
 
   // Prefer rooms from store when available, fallback to API
   const rooms = roomsState.list.length > 0 
-    ? roomsState.list.map(n => roomsState.byRoomNumber[n]).filter(Boolean)
+    ? roomsState.list.map(n => roomsState.byRoomNumber[String(n)]).filter(Boolean) // Convert to string for consistent lookup
     : apiRooms;
 
   // Keep local reactive state for UI interactions
@@ -62,7 +72,30 @@ function RoomList() {
     }
   }, [rooms]);
 
+  // Reset to page 1 when search changes
   useEffect(() => setPage(1), [searchQuery]);
+
+  // Apply filtering and pagination client-side
+  const filteredRooms = React.useMemo(() => {
+    return localRooms.filter(room => {
+      // Search filter
+      const matchesSearch = !searchQuery || 
+        room.room_number.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.room_type_info?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.room_status_display?.toLowerCase().includes(searchQuery.toLowerCase());
+        
+      // Status filter
+      const matchesStatus = !statusFilter || room.room_status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [localRooms, searchQuery, statusFilter]);
+
+  // Calculate pagination for filtered results
+  const itemsPerPage = 10;
+  const totalFilteredPages = Math.ceil(filteredRooms.length / itemsPerPage);
+  const startIndex = (page - 1) * itemsPerPage;
+  const paginatedRooms = filteredRooms.slice(startIndex, startIndex + itemsPerPage);
 
   if (isLoading)
     return (
@@ -121,14 +154,12 @@ function RoomList() {
       </div>
 
       <h2 className="mb-4 text-center">
-        Rooms (Page {page} of {totalPages}){" "}
+        Rooms ({filteredRooms.length} found, Page {page} of {totalFilteredPages || 1}){" "}
         {isFetching && <small className="text-muted">(Updating...)</small>}
       </h2>
 
       <div className="row row-cols-1 row-cols-md-2 row-cols-lg-5 justify-content-center g-2">
-        {localRooms
-          .filter(room => !statusFilter || room.room_status === statusFilter)
-          .map((room) => (
+        {paginatedRooms.map((room) => (
           <RoomCard
             key={room.id}
             room={{ ...room }} // spread to force re-render
@@ -146,11 +177,11 @@ function RoomList() {
               </button>
             </li>
           )}
-          <li className={`page-item ${!data?.previous ? "disabled" : ""}`}>
+          <li className={`page-item ${page <= 1 ? "disabled" : ""}`}>
             <button
               className="page-link"
               onClick={() => setPage(page - 1)}
-              disabled={!data?.previous}
+              disabled={page <= 1}
             >
               ⏮️
             </button>
@@ -165,25 +196,25 @@ function RoomList() {
           <li className="page-item active" aria-current="page">
             <span className="page-link">{page}</span>
           </li>
-          {page < totalPages && (
+          {page < totalFilteredPages && (
             <li className="page-item">
               <button className="page-link" onClick={() => setPage(page + 1)}>
                 {page + 1}
               </button>
             </li>
           )}
-          <li className={`page-item ${!data?.next ? "disabled" : ""}`}>
+          <li className={`page-item ${page >= totalFilteredPages ? "disabled" : ""}`}>
             <button
               className="page-link"
               onClick={() => setPage(page + 1)}
-              disabled={!data?.next}
+              disabled={page >= totalFilteredPages}
             >
               ⏭️
             </button>
           </li>
-          {page < totalPages - 1 && (
+          {page < totalFilteredPages - 1 && (
             <li className="page-item">
-              <button className="page-link" onClick={() => setPage(totalPages)}>
+              <button className="page-link" onClick={() => setPage(totalFilteredPages)}>
                 End
               </button>
             </li>
