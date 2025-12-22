@@ -68,13 +68,13 @@ function RoomDetails() {
   };
 
   // Generic action handler that manages loading state and shows toast
-  const handleAction = async (actionName, actionFunction, successMessage) => {
+  const handleAction = async (actionName, actionFunction, successMessage, actionOptions = {}) => {
     if (actionStates[actionName]) return;
     
     setActionStates(prev => ({ ...prev, [actionName]: true }));
     try {
       const hotelSlug = getHotelSlug();
-      await actionFunction(hotelSlug, roomNumber);
+      await actionFunction(hotelSlug, roomNumber, actionOptions);
       toast.success(`${successMessage}. Waiting for realtime update.`);
     } catch (error) {
       const errorMessage = handleRoomOperationError(error, actionName, roomNumber);
@@ -85,8 +85,28 @@ function RoomDetails() {
   };
 
   // Specific action handlers
-  const handleCheckin = () => handleAction('checkin', checkinRoom, `Room ${roomNumber} check-in initiated`);
-  const handleCheckout = () => handleAction('checkout', checkoutRoom, `Room ${roomNumber} check-out initiated`);
+  const handleCheckin = () => {
+    if (!import.meta.env.PROD) {
+      console.log(`[RoomDetails] Checkin attempt - Room ${roomNumber}:`, {
+        roomId: room?.id,
+        roomStatus: room?.room_status,
+        isOccupied: room?.is_occupied
+      });
+    }
+    handleAction('checkin', checkinRoom, `Room ${roomNumber} check-in initiated`, { roomId: room?.id });
+  };
+  
+  const handleCheckout = () => {
+    if (!import.meta.env.PROD) {
+      console.log(`[RoomDetails] Checkout attempt - Room ${roomNumber}:`, {
+        roomId: room?.id,
+        roomStatus: room?.room_status,
+        isOccupied: room?.is_occupied
+      });
+    }
+    handleAction('checkout', checkoutRoom, `Room ${roomNumber} check-out initiated`, { roomId: room?.id });
+  };
+  
   const handleStartCleaning = () => handleAction('startCleaning', startCleaning, `Cleaning started for Room ${roomNumber}`);
   const handleMarkCleaned = () => handleAction('markCleaned', markCleaned, `Room ${roomNumber} marked as cleaned`);
   const handleInspect = () => handleAction('inspect', inspectRoom, `Room ${roomNumber} inspection completed`);

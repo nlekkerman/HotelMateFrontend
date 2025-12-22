@@ -44,7 +44,7 @@ export const getHousekeepingStatusHistory = async (hotelSlug, roomId) => {
  * @returns {Promise} - API response
  */
 export const startCleaning = async (hotelSlug, roomNumber) => {
-  const url = buildStaffURL(hotelSlug, '', `/rooms/${roomNumber}/start-cleaning/`);
+  const url = buildStaffURL(hotelSlug, 'rooms', `/${roomNumber}/start-cleaning/`);
   return api.post(url);
 };
 
@@ -55,7 +55,7 @@ export const startCleaning = async (hotelSlug, roomNumber) => {
  * @returns {Promise} - API response
  */
 export const markCleaned = async (hotelSlug, roomNumber) => {
-  const url = buildStaffURL(hotelSlug, '', `/rooms/${roomNumber}/mark-cleaned/`);
+  const url = buildStaffURL(hotelSlug, 'rooms', `/${roomNumber}/mark-cleaned/`);
   return api.post(url);
 };
 
@@ -66,7 +66,7 @@ export const markCleaned = async (hotelSlug, roomNumber) => {
  * @returns {Promise} - API response
  */
 export const inspectRoom = async (hotelSlug, roomNumber) => {
-  const url = buildStaffURL(hotelSlug, '', `/rooms/${roomNumber}/inspect/`);
+  const url = buildStaffURL(hotelSlug, 'rooms', `/${roomNumber}/inspect/`);
   return api.post(url);
 };
 
@@ -77,7 +77,7 @@ export const inspectRoom = async (hotelSlug, roomNumber) => {
  * @returns {Promise} - API response
  */
 export const markMaintenance = async (hotelSlug, roomNumber) => {
-  const url = buildStaffURL(hotelSlug, '', `/rooms/${roomNumber}/mark-maintenance/`);
+  const url = buildStaffURL(hotelSlug, 'rooms', `/${roomNumber}/mark-maintenance/`);
   return api.post(url);
 };
 
@@ -88,32 +88,48 @@ export const markMaintenance = async (hotelSlug, roomNumber) => {
  * @returns {Promise} - API response
  */
 export const completeMaintenance = async (hotelSlug, roomNumber) => {
-  const url = buildStaffURL(hotelSlug, '', `/rooms/${roomNumber}/complete-maintenance/`);
+  const url = buildStaffURL(hotelSlug, 'rooms', `/${roomNumber}/complete-maintenance/`);
   return api.post(url);
 };
 
 // ============= GUEST OPERATIONS (room_number) =============
 
 /**
- * Check in guest to room
+ * Check in guest to room (BULK endpoint)
  * @param {string} hotelSlug - The hotel slug
- * @param {string} roomNumber - The room number
+ * @param {string} roomNumber - The room number (for error messages)
+ * @param {Object} opts - Options object
+ * @param {number} opts.roomId - The room ID (required)
  * @returns {Promise} - API response
  */
-export const checkinRoom = async (hotelSlug, roomNumber) => {
-  const url = buildStaffURL(hotelSlug, '', `/rooms/${roomNumber}/checkin/`);
-  return api.post(url);
+export const checkinRoom = async (hotelSlug, roomNumber, opts = {}) => {
+  const roomId = opts.roomId || opts.room?.id;
+  
+  if (!roomId) {
+    throw new Error(`Room ID is required for checkin. Room ${roomNumber} missing room.id in options.`);
+  }
+  
+  const url = buildStaffURL(hotelSlug, 'rooms', '/checkin/');
+  return api.post(url, { room_ids: [roomId] });
 };
 
 /**
- * Check out guest from room
+ * Check out guest from room (BULK endpoint)
  * @param {string} hotelSlug - The hotel slug
- * @param {string} roomNumber - The room number
+ * @param {string} roomNumber - The room number (for error messages)
+ * @param {Object} opts - Options object
+ * @param {number} opts.roomId - The room ID (required)
  * @returns {Promise} - API response
  */
-export const checkoutRoom = async (hotelSlug, roomNumber) => {
-  const url = buildStaffURL(hotelSlug, '', `/rooms/${roomNumber}/checkout/`);
-  return api.post(url);
+export const checkoutRoom = async (hotelSlug, roomNumber, opts = {}) => {
+  const roomId = opts.roomId || opts.room?.id;
+  
+  if (!roomId) {
+    throw new Error(`Room ID is required for checkout. Room ${roomNumber} missing room.id in options.`);
+  }
+  
+  const url = buildStaffURL(hotelSlug, 'rooms', '/checkout/');
+  return api.post(url, { room_ids: [roomId] });
 };
 
 // ============= CONVENIENCE FUNCTIONS =============
