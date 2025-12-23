@@ -47,7 +47,7 @@ const BookingStatusBadges = ({ booking }) => {
     // Not in-house
     if (roomNumber) {
       primaryBadge = (
-        <Badge bg="info" className="me-1">
+        <Badge bg="danger" className="me-1">
           Assigned · Room {roomNumber}
         </Badge>
       );

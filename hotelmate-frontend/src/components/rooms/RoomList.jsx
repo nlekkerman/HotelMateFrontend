@@ -5,8 +5,7 @@ import api, { buildStaffURL } from "@/services/api";
 import RoomCard from "@/components/rooms/RoomCard";
 import { useRoomsState, useRoomsDispatch, roomsActions } from "@/realtime/stores/roomsStore.jsx";
 
-const fetchRooms = async ({ queryKey }) => {
-  const [_key, search] = queryKey;
+const fetchRooms = async () => {
   const userData = JSON.parse(localStorage.getItem("user"));
   const hotelSlug = userData?.hotel_slug;
 
@@ -16,9 +15,7 @@ const fetchRooms = async ({ queryKey }) => {
 
   // Use the correct turnover rooms endpoint - gets all rooms categorized by status
   const url = buildStaffURL(hotelSlug, '', 'turnover/rooms/');
-  const response = await api.get(url, {
-    params: { search }, // Remove page param since API returns all data
-  });
+  const response = await api.get(url); // No params - fetch all data, search locally
   
   return response.data;
 };
@@ -34,7 +31,7 @@ function RoomList() {
   const roomsDispatch = useRoomsDispatch();
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: ["rooms", searchQuery], // Remove page since we get all data
+    queryKey: ["rooms"], // No search param - fetch once, search locally
     queryFn: fetchRooms,
     keepPreviousData: true,
     onSuccess: (data) => {
@@ -91,11 +88,18 @@ function RoomList() {
     });
   }, [localRooms, searchQuery, statusFilter]);
 
+  // Sort rooms by room number (default hotel staff mental model)
+  const sortedRooms = React.useMemo(() => {
+    const copy = [...filteredRooms];
+    copy.sort((a, b) => (Number(a.room_number) || 0) - (Number(b.room_number) || 0));
+    return copy;
+  }, [filteredRooms]);
+
   // Calculate pagination for filtered results
   const itemsPerPage = 10;
-  const totalFilteredPages = Math.ceil(filteredRooms.length / itemsPerPage);
+  const totalFilteredPages = Math.ceil(sortedRooms.length / itemsPerPage);
   const startIndex = (page - 1) * itemsPerPage;
-  const paginatedRooms = filteredRooms.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedRooms = sortedRooms.slice(startIndex, startIndex + itemsPerPage);
 
   if (isLoading)
     return (
@@ -154,7 +158,7 @@ function RoomList() {
       </div>
 
       <h2 className="mb-4 text-center">
-        Rooms ({filteredRooms.length} found, Page {page} of {totalFilteredPages || 1}){" "}
+        Rooms ({sortedRooms.length} found, Page {page} of {totalFilteredPages || 1}){" "}
         {isFetching && <small className="text-muted">(Updating...)</small>}
       </h2>
 
