@@ -15,8 +15,8 @@ export const useRoomBookingDetail = (hotelSlug, bookingId) => {
     queryFn: async () => {
       if (!bookingId) return null;
       const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/`);
-      // Add query parameter to get detailed survey response
-      const response = await api.get(`${url}?include_survey_response=true`);
+      // Survey data is automatically included when it exists
+      const response = await api.get(url);
       
       // Log the response to see the actual structure
       console.log('Booking detail response:', response.data);

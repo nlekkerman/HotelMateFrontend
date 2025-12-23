@@ -300,6 +300,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
           {/* Survey Response Information */}
           <h6>Survey Information</h6>
           {surveyPayload && Object.keys(surveyPayload).length > 0 ? (
+            // Expected structure: survey_response.payload contains all fields
             <ul>
               {Object.entries(surveyPayload).map(([key, value]) => {
                 // Skip if value is null/empty
@@ -339,7 +340,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
               })}
             </ul>
           ) : (
-            <p>Survey completed successfully.</p>
+            <p>Survey completed - detailed response data will appear here once backend provides survey_response.payload</p>
           )}
         </Alert>
       );
