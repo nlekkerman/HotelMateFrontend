@@ -1,6 +1,7 @@
 import React from 'react';
 import { Container, Row, Col } from 'react-bootstrap';
 import PrecheckinRequirementsConfig from './PrecheckinRequirementsConfig';
+import SurveyRequirementsConfig from './SurveyRequirementsConfig';
 
 /**
  * BookingManagementDashboard - Dashboard component for managing bookings
@@ -36,7 +37,12 @@ const BookingManagementDashboard = ({ hotelSlug }) => {
       <Row className=' justify-content-center p-1'>
         <Col lg={8}>
           {currentHotelSlug ? (
-            <PrecheckinRequirementsConfig hotelSlug={currentHotelSlug} />
+            <>
+              <PrecheckinRequirementsConfig hotelSlug={currentHotelSlug} />
+              <div className="mt-4">
+                <SurveyRequirementsConfig hotelSlug={currentHotelSlug} />
+              </div>
+            </>
           ) : (
             <div className="alert alert-warning">
               <i className="bi bi-exclamation-triangle me-2"></i>

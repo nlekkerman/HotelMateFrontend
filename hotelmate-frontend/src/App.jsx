@@ -53,6 +53,7 @@ import SectionEditorPage from "@/pages/sections/SectionEditorPage";
 import SectionBasedPublicPage from "@/pages/sections/SectionBasedPublicPage";
 import GuestRoomBookingPage from "@/pages/bookings/GuestRoomBookingPage";
 import GuestPrecheckinPage from "@/pages/guest/GuestPrecheckinPage";
+import GuestSurveyPage from "@/pages/guest/GuestSurveyPage";
 import BookingConfirmation from "@/pages/bookings/BookingConfirmation";
 import BookingPaymentSuccess from "@/pages/bookings/BookingPaymentSuccess";
 import BookingPaymentCancel from "@/pages/bookings/BookingPaymentCancel";
@@ -887,6 +888,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               {/* Hotel Portal Routes - Must be at end to avoid catching other routes */}
               <Route path="/:hotelSlug/book" element={<GuestRoomBookingPage />} />
               <Route path="/guest/hotel/:hotelSlug/precheckin" element={<GuestPrecheckinPage />} />
+              <Route path="/guest/hotel/:hotelSlug/survey" element={<GuestSurveyPage />} />
               <Route
                 path="/booking/:hotelSlug"
                 element={<GuestRoomBookingPage />}

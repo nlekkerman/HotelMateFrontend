@@ -4,11 +4,12 @@ import StaffInputModal from '@/components/staff/modals/StaffInputModal';
 
 /**
  * Booking Actions Component
- * Provides action buttons for booking operations (confirm, cancel, send pre-check-in, approve, decline)
+ * Provides action buttons for booking operations (confirm, cancel, send pre-check-in, send survey, approve, decline)
  */
 const BookingActions = ({ 
   booking, 
   onSendPrecheckin, 
+  onSendSurvey,
   onApprove, 
   onDecline, 
   onViewPrecheckin,
@@ -17,6 +18,7 @@ const BookingActions = ({
   isDeclining
 }) => {
   const [showPrecheckinModal, setShowPrecheckinModal] = useState(false);
+  const [showSurveyModal, setShowSurveyModal] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showDeclineModal, setShowDeclineModal] = useState(false);
   
@@ -25,6 +27,13 @@ const BookingActions = ({
   const canSendPrecheckin = booking.status === 'CONFIRMED' && 
     (booking.guest_email || booking.primary_email || booking.booker_email);
   const isPrecheckinComplete = booking?.precheckin_submitted_at != null;
+  
+  // Survey button logic - Frontend Guards (Hard Rules)
+  const canSendSurvey = booking.status === 'COMPLETED' && 
+    !booking.survey_completed &&
+    (booking.guest_email || booking.primary_email || booking.booker_email);
+  const isSurveyCompleted = booking?.survey_completed;
+  const hasSurveySent = booking?.survey_sent_at != null;
 
 
 
@@ -35,6 +44,17 @@ const BookingActions = ({
   const handleSendPrecheckinConfirm = () => {
     onSendPrecheckin(booking.booking_id);
     setShowPrecheckinModal(false);
+  };
+
+  const handleSendSurvey = () => {
+    setShowSurveyModal(true);
+  };
+
+  const handleSendSurveyConfirm = () => {
+    if (onSendSurvey) {
+      onSendSurvey(booking.booking_id);
+    }
+    setShowSurveyModal(false);
   };
 
   const handleApprove = () => {
@@ -133,6 +153,31 @@ const BookingActions = ({
         )
       )}
 
+      {/* Survey button - only for COMPLETED bookings */}
+      {canSendSurvey && (
+        hasSurveySent && !isSurveyCompleted ? (
+          <button 
+            onClick={handleSendSurvey}
+            className="btn btn-outline-info btn-sm me-2"
+            title="Resend Survey Link"
+            disabled={loading}
+          >
+            <i className="bi bi-envelope me-1"></i>
+            Resend Survey
+          </button>
+        ) : (
+          <button 
+            onClick={handleSendSurvey}
+            className="btn btn-info btn-sm me-2"
+            title="Send Survey Link"
+            disabled={loading}
+          >
+            <i className="bi bi-envelope-paper me-1"></i>
+            Send Survey
+          </button>
+        )
+      )}
+
 
 
       <StaffConfirmationModal
@@ -142,6 +187,15 @@ const BookingActions = ({
         preset="send_precheckin"
         onConfirm={handleSendPrecheckinConfirm}
         onCancel={() => setShowPrecheckinModal(false)}
+      />
+
+      <StaffConfirmationModal
+        show={showSurveyModal}
+        title={hasSurveySent && !isSurveyCompleted ? "Resend Survey Link" : "Send Survey Link"}
+        message={`${hasSurveySent && !isSurveyCompleted ? 'Resend' : 'Send'} survey link for booking ${booking.booking_id}?\n\nEmail will be sent to: ${booking.guest_email || booking.primary_email || booking.booker_email}`}
+        preset="send_survey"
+        onConfirm={handleSendSurveyConfirm}
+        onCancel={() => setShowSurveyModal(false)}
       />
 
       <StaffConfirmationModal

@@ -103,10 +103,8 @@ function RoomDetails() {
     
     setActionStates(prev => ({ ...prev, checkout: true }));
     try {
-      await updateHousekeepingRoomStatus(getHotelSlug(), room.id, {
-        status: 'CHECKOUT_DIRTY',
-        note: 'Guest checked out'
-      });
+      // ✅ Full checkout: clears guest assignments + updates booking + room status consistently
+      await checkoutRoom(getHotelSlug(), room.room_number, { roomId: room.id });
       toast.success(`Room ${roomNumber} check-out completed. Waiting for realtime update.`);
     } catch (error) {
       const errorMessage = handleRoomOperationError(error, 'checkout', roomNumber);
