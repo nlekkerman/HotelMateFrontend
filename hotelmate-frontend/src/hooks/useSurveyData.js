@@ -50,42 +50,55 @@ export const useSurveyData = (hotelSlug, token) => {
         setSurveyState('loading');
         
         const response = await publicAPI.get(
-          `/hotel/${hotelSlug}/survey/validate-token/?token=${encodeURIComponent(token)}`
+          `/hotel/${hotelSlug}/survey/?token=${encodeURIComponent(token)}`
         );
         
         const data = unwrap(response);
         
         // Handle different survey states
-        if (data.survey_state) {
-          setSurveyState(data.survey_state);
-          
-          if (data.survey_state === 'invalid') {
-            setError('Invalid or malformed survey link. Please contact the hotel for assistance.');
-            return;
-          }
-          
-          if (data.survey_state === 'expired') {
-            setError('This survey link has expired. Please contact the hotel if you still wish to provide feedback.');
-            return;
-          }
-          
-          if (data.survey_state === 'completed') {
-            // Token already used - show success state but don't allow resubmission
-            setSurveyState('completed');
-            return;
-          }
+        let determinedState = 'ready'; // Default to ready
+        
+        // Check if survey is already submitted
+        if (data.survey_already_submitted === true) {
+          setSurveyState('completed');
+          return;
+        }
+        
+        // If we have data and survey not submitted, we're ready
+        if (data.survey_config && data.survey_field_registry) {
+          determinedState = 'ready';
+        }
+        
+        // Handle survey_state from backend if provided, otherwise use determined state
+        const finalState = data.survey_state || determinedState;
+        setSurveyState(finalState);
+        
+        if (finalState === 'invalid') {
+          setError('Invalid or malformed survey link. Please contact the hotel for assistance.');
+          return;
+        }
+        
+        if (finalState === 'expired') {
+          setError('This survey link has expired. Please contact the hotel if you still wish to provide feedback.');
+          return;
+        }
+        
+        if (finalState === 'completed') {
+          // Token already used - show success state but don't allow resubmission
+          setSurveyState('completed');
+          return;
         }
         
         // Process data for ready state
-        if (data.survey_state === 'ready') {
+        if (finalState === 'ready') {
           // Survey configuration (snapshot at send time)
           setSurveyConfig({
             enabled: data.survey_config?.enabled || {},
             required: data.survey_config?.required || {}
           });
           
-          // Field registry for dynamic rendering
-          setFieldRegistry(data.field_registry || {});
+          // Field registry for dynamic rendering - Handle both possible key names
+          setFieldRegistry(data.field_registry || data.survey_field_registry || {});
           
           // Booking context
           setBooking(data.booking || {});
@@ -94,9 +107,9 @@ export const useSurveyData = (hotelSlug, token) => {
           setPreset(data.preset || 'default');
           
           console.log('Survey data loaded successfully:', {
-            survey_state: data.survey_state,
+            survey_state: finalState,
             config: data.survey_config,
-            registry: data.field_registry,
+            registry: data.field_registry || data.survey_field_registry,
             booking: data.booking
           });
         }
