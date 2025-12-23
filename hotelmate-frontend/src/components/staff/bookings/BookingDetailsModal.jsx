@@ -277,6 +277,14 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
       const submittedAt = surveyResponse?.submitted_at;
       const overallRating = surveyResponse?.overall_rating || booking?.survey_rating;
 
+      // Debug logging to see what survey data we have
+      console.log('🔍 Survey Response Debug:', {
+        surveyResponse,
+        surveyPayload, 
+        overallRating,
+        bookingSurveyRating: booking?.survey_rating
+      });
+
       return (
         <Alert variant="success">
           <Alert.Heading>✅ Survey completed</Alert.Heading>
@@ -290,28 +298,46 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
           )}
           
           {/* Survey Response Information */}
+          <h6>Survey Information</h6>
           {surveyPayload && Object.keys(surveyPayload).length > 0 ? (
-            <>
-              <h6>Survey Information</h6>
-              <ul>
-                {Object.entries(surveyPayload).map(([key, value]) => {
-                  // Skip if value is null/empty
-                  if (value == null || value === '') return null;
-                  
-                  return (
-                    <li key={key}>
-                      <strong>{key.replace(/_/g, ' ')}:</strong> {
-                        (key.includes('_rating') || key === 'overall_rating') && value ? `${value}/5` :
-                        key === 'contact_permission' ? (value ? '✅ Yes' : '❌ No') :
-                        key === 'recommend_hotel' ? (value ? '✅ Yes' : '❌ No') :
-                        typeof value === 'boolean' ? (value ? '✅ Yes' : '❌ No') : 
-                        value
-                      }
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
+            <ul>
+              {Object.entries(surveyPayload).map(([key, value]) => {
+                // Skip if value is null/empty
+                if (value == null || value === '') return null;
+                
+                return (
+                  <li key={key}>
+                    <strong>{key.replace(/_/g, ' ')}:</strong> {
+                      (key.includes('_rating') || key === 'overall_rating') && value ? `${value}/5` :
+                      key === 'contact_permission' ? (value ? '✅ Yes' : '❌ No') :
+                      key === 'recommend_hotel' ? (value ? '✅ Yes' : '❌ No') :
+                      typeof value === 'boolean' ? (value ? '✅ Yes' : '❌ No') : 
+                      value
+                    }
+                  </li>
+                );
+              })}
+            </ul>
+          ) : surveyResponse && Object.keys(surveyResponse).length > 0 ? (
+            // Fallback: if no payload, try to display response fields directly
+            <ul>
+              {Object.entries(surveyResponse).map(([key, value]) => {
+                // Skip internal fields and already displayed fields
+                if (['submitted_at', 'overall_rating'].includes(key) || value == null || value === '') return null;
+                
+                return (
+                  <li key={key}>
+                    <strong>{key.replace(/_/g, ' ')}:</strong> {
+                      (key.includes('_rating') || key === 'overall_rating') && value ? `${value}/5` :
+                      key === 'contact_permission' ? (value ? '✅ Yes' : '❌ No') :
+                      key === 'recommend_hotel' ? (value ? '✅ Yes' : '❌ No') :
+                      typeof value === 'boolean' ? (value ? '✅ Yes' : '❌ No') : 
+                      value
+                    }
+                  </li>
+                );
+              })}
+            </ul>
           ) : (
             <p>Survey completed successfully.</p>
           )}
