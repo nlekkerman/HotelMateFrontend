@@ -183,4 +183,96 @@ export const staffBookingService = {
   }
 };
 
+/**
+ * Cancellation policy service for policy management
+ */
+export const cancellationPolicyService = {
+  /**
+   * Get list of active cancellation policies for a hotel
+   * @param {string} hotelSlug - The hotel slug
+   * @returns {Promise} - List of active cancellation policies
+   */
+  getCancellationPolicies: async (hotelSlug) => {
+    const url = buildStaffURL(hotelSlug, 'cancellation-policies');
+    console.log('[API] Fetching cancellation policies from:', url);
+    const response = await api.get(url);
+    console.log('[API] Cancellation policies response:', response.data);
+    return response.data;
+  },
+
+  /**
+   * Get list of rate plans for a hotel
+   * @param {string} hotelSlug - The hotel slug
+   * @returns {Promise} - List of rate plans with cancellation policy info
+   */
+  getRatePlans: async (hotelSlug) => {
+    const url = buildStaffURL(hotelSlug, 'rate-plans');
+    console.log('[API] Fetching rate plans from:', url);
+    const response = await api.get(url);
+    console.log('[API] Rate plans response:', response.data);
+    return response.data;
+  },
+
+  /**
+   * Update a rate plan's cancellation policy
+   * @param {string} hotelSlug - The hotel slug
+   * @param {number} ratePlanId - The rate plan ID
+   * @param {object} payload - Update payload with cancellation_policy_id
+   * @returns {Promise} - Updated rate plan data
+   */
+  patchRatePlan: async (hotelSlug, ratePlanId, payload) => {
+    const url = buildStaffURL(hotelSlug, 'rate-plans', `/${ratePlanId}/`);
+    const response = await api.patch(url, payload);
+    return response.data;
+  },
+
+  /**
+   * Get hotel settings including default cancellation policy
+   * @param {string} hotelSlug - The hotel slug
+   * @returns {Promise} - Hotel settings data
+   */
+  getHotelSettings: async (hotelSlug) => {
+    const url = buildStaffURL(hotelSlug, 'settings');
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  /**
+   * Update hotel settings including default cancellation policy
+   * @param {string} hotelSlug - The hotel slug
+   * @param {object} payload - Settings update payload
+   * @returns {Promise} - Updated hotel settings
+   */
+  patchHotelSettings: async (hotelSlug, payload) => {
+    const url = buildStaffURL(hotelSlug, 'settings');
+    const response = await api.patch(url, payload);
+    return response.data;
+  },
+
+  /**
+   * Create a new cancellation policy for a hotel
+   * @param {string} hotelSlug - The hotel slug
+   * @param {object} payload - Policy data (name, template_type, etc.)
+   * @returns {Promise} - Created cancellation policy
+   */
+  createCancellationPolicy: async (hotelSlug, payload) => {
+    const url = buildStaffURL(hotelSlug, 'cancellation-policies');
+    const response = await api.post(url, payload);
+    return response.data;
+  },
+
+  /**
+   * Update a cancellation policy for a hotel
+   * @param {string} hotelSlug - The hotel slug
+   * @param {number} policyId - The policy ID
+   * @param {object} payload - Policy update payload
+   * @returns {Promise} - Updated cancellation policy
+   */
+  patchCancellationPolicy: async (hotelSlug, policyId, payload) => {
+    const url = buildStaffURL(hotelSlug, 'cancellation-policies', `/${policyId}/`);
+    const response = await api.patch(url, payload);
+    return response.data;
+  }
+};
+
 export default api;

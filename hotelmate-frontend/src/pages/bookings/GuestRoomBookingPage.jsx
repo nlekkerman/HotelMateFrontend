@@ -63,6 +63,9 @@ const GuestRoomBookingPage = () => {
   const [companions, setCompanions] = useState([]);
   const [addNamesLater, setAddNamesLater] = useState(false);
   const [bookingData, setBookingData] = useState(null);
+  
+  // Cancellation Policy Agreement
+  const [policyAgreed, setPolicyAgreed] = useState(false);
 
   // Derive party calculations and validation
   const partySize = (guests.adults || 0) + (guests.children || 0);
@@ -270,6 +273,9 @@ const GuestRoomBookingPage = () => {
     // Optional fields
     if (quote?.quote_id) {
       payload.quote_id = quote.quote_id;
+    }
+    if (quote?.cancellation_policy_id) {
+      payload.cancellation_policy_id = quote.cancellation_policy_id;
     }
     if (specialRequests?.trim()) {
       payload.special_requests = specialRequests.trim();
@@ -1044,13 +1050,72 @@ const GuestRoomBookingPage = () => {
                   }
                 </Alert>
 
+                {/* Cancellation Policy */}
+                <div className="mb-4 p-4 border rounded">
+                  <h5 className="mb-3">
+                    <i className="bi bi-shield-exclamation me-2"></i>
+                    Cancellation Policy
+                  </h5>
+                  
+                  <div className="mb-3">
+                    {quote?.cancellation_policy_text ? (
+                      <div className="text-muted small">
+                        {quote.cancellation_policy_text}
+                      </div>
+                    ) : (
+                      <div className="text-muted small">
+                        <div className={`mb-2 ${quote?.is_refundable !== false ? 'text-success' : 'text-warning'}`}>
+                          <strong>
+                            {quote?.is_refundable !== false ? '✓ Refundable Booking' : '⚠ Non-Refundable Booking'}
+                          </strong>
+                        </div>
+                        {quote?.is_refundable !== false ? (
+                          <p className="mb-2">
+                            This booking can be cancelled free of charge up to 48 hours before your check-in date. 
+                            Cancellations made within 48 hours of check-in will be charged the first night's rate.
+                          </p>
+                        ) : (
+                          <p className="mb-2">
+                            This booking is non-refundable. No refund will be provided for cancellations, 
+                            no-shows, or early departures. Please ensure your travel dates are confirmed before booking.
+                          </p>
+                        )}
+                        <p className="mb-0">
+                          By proceeding with this booking, you acknowledge that you have read and agree to these terms.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <Form.Check
+                    type="checkbox"
+                    id="policy-agreement"
+                    checked={policyAgreed}
+                    onChange={(e) => setPolicyAgreed(e.target.checked)}
+                    label={
+                      <span className="small">
+                        I have read and agree to the <strong>cancellation policy</strong> and <strong>terms of service</strong> for this booking.
+                      </span>
+                    }
+                    className="mb-0"
+                    required
+                  />
+                </div>
+
                 <Form onSubmit={processPayment}>
+                  {!policyAgreed && (
+                    <Alert variant="warning" className="mb-3">
+                      <i className="bi bi-exclamation-triangle me-2"></i>
+                      Please read and agree to the cancellation policy above to proceed with payment.
+                    </Alert>
+                  )}
+                  
                   <Button 
                     type="submit" 
                     variant="primary" 
                     size="lg" 
                     className="w-100"
-                    disabled={loading}
+                    disabled={loading || !policyAgreed}
                   >
                     {loading ? (
                       <>
