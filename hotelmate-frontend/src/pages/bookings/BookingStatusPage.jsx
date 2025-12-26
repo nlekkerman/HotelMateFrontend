@@ -132,7 +132,7 @@ const BookingStatusPage = () => {
 
       // Call the existing hotel-specific booking endpoint with token
       const response = await publicAPI.get(
-        `/hotels/${hotelSlug}/booking/status/${bookingId}/`,
+        `/hotel/${hotelSlug}/room-bookings/${bookingId}/`,
         { params: { token } }
       );
 
@@ -140,7 +140,7 @@ const BookingStatusPage = () => {
 
       // The API returns booking data directly, not nested under 'booking'
       // Set booking data from response (the entire response is the booking)
-      setBooking(data.booking);
+      setBooking(data);
       setHotel(data.hotel);
       setCancellationPolicy(data.cancellation_policy);
       setCanCancel(data.can_cancel || false);
