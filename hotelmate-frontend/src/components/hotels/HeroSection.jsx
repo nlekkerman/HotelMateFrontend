@@ -19,10 +19,8 @@ const HeroSection = ({ hotel, settings }) => {
 
   useEffect(() => {
     setMounted(true);
-    
-    // Check if user has any bookings in localStorage
-    const bookings = JSON.parse(localStorage.getItem('myBookings') || '[]');
-    setHasBookings(bookings.length > 0);
+    // Note: Booking management moved to token-based system
+    setHasBookings(false);
   }, []);
 
   if (!hotel) return null;

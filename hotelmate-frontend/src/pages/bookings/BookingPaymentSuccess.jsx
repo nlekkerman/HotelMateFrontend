@@ -245,26 +245,8 @@ Proposed: Payment → PENDING_HOTEL_CONFIRMATION → Staff confirms → CONFIRME
           `);
         }
         
-        // Store booking in localStorage for My Bookings feature
-        const existingBookings = JSON.parse(localStorage.getItem('myBookings') || '[]');
-        const bookingExists = existingBookings.some(b => b.booking_id === bookingResponse.data.booking_id);
-        
-        if (!bookingExists) {
-          existingBookings.push({
-            booking_id: bookingResponse.data.booking_id,
-            confirmation_number: bookingResponse.data.confirmation_number,
-            hotel_slug: bookingResponse.data.hotel?.slug,
-            hotel_name: bookingResponse.data.hotel?.name,
-            check_in: bookingResponse.data.dates?.check_in,
-            check_out: bookingResponse.data.dates?.check_out,
-            room_type: bookingResponse.data.room?.type,
-            total: bookingResponse.data.pricing?.total,
-            status: bookingResponse.data.status || 'PAYMENT_COMPLETE',
-            payment_completed: true,
-            created_at: new Date().toISOString()
-          });
-          localStorage.setItem('myBookings', JSON.stringify(existingBookings));
-        }
+        // Note: Booking management is now handled via token-based system
+        // Users receive email links with tokens to view/manage their bookings
       } catch (err) {
         console.error('Failed to verify payment:', err);
         setPaymentStatus("error");

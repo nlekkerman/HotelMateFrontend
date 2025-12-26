@@ -1072,49 +1072,61 @@ const GuestRoomBookingPage = () => {
                 </Alert>
 
                 {/* Cancellation Policy */}
-                <div className="mb-4 p-4 border rounded-3 bg-light">
+                <div className="mb-4 p-4 border rounded-3">
                   <div className="d-flex align-items-center mb-3">
                     <div className="rounded-circle bg-primary d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>
                       <i className="bi bi-shield-check text-white"></i>
                     </div>
                     <div>
                       <h5 className="mb-1 fw-bold text-dark">Cancellation Policy</h5>
-                      <small className="text-muted">Know your booking terms</small>
+                      <small className="text-white">Know your booking terms</small>
                     </div>
                   </div>
                   
                   <div className="mb-3">
                     {/* Display cancellation policy from quote */}
                     {quote?.cancellation_policy ? (
-                      <div className="bg-white p-4 rounded-3 border">
+                      <div className=" p-4 rounded-3 border">
                         <div className="d-flex align-items-start mb-3">
-                          <i className="bi bi-clock-history text-primary me-2 mt-1"></i>
+                          <i className="bi bi-clock-history  me-2 mt-1"></i>
                           <div>
-                            <h6 className="fw-bold text-dark mb-2">{quote.cancellation_policy.name}</h6>
-                            <p className="mb-3 text-dark">{quote.cancellation_policy.description}</p>
+                            <h6 className="fw-bold  mb-2">{quote.cancellation_policy.name}</h6>
+                            <p className="mb-3 ">{quote.cancellation_policy.description}</p>
                           </div>
                         </div>
                         
-                        <div className="row g-3">
-                          <div className="col-md-6">
-                            <div className="d-flex align-items-center p-3 bg-success bg-opacity-10 rounded-3">
-                              <i className="bi bi-check-circle-fill text-success me-2"></i>
-                              <div>
-                                <small className="fw-bold text-success d-block">Free Cancellation</small>
-                                <small className="text-muted">Up to 48 hours before check-in</small>
+                        {/* Dynamic policy details based on API data */}
+                        {quote.cancellation_policy.is_refundable !== false && quote.cancellation_policy.hours_before_checkin && (
+                          <div className="row g-3">
+                            <div className="col-md-6">
+                              <div className="d-flex align-items-center p-3 bg-success bg-opacity-10 rounded-3">
+                                <i className="bi bi-check-circle-fill text-success me-2"></i>
+                                <div>
+                                  <small className="fw-bold text-success d-block">Free Cancellation</small>
+                                  <small className="text-muted">
+                                    Up to {quote.cancellation_policy.hours_before_checkin} hours before check-in
+                                  </small>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="col-md-6">
-                            <div className="d-flex align-items-center p-3 bg-warning bg-opacity-10 rounded-3">
-                              <i className="bi bi-exclamation-circle-fill text-warning me-2"></i>
-                              <div>
-                                <small className="fw-bold text-warning d-block">Partial Charge</small>
-                                <small className="text-muted">First night charged after deadline</small>
+                            {quote.cancellation_policy.penalty_amount && quote.cancellation_policy.penalty_type && (
+                              <div className="col-md-6">
+                                <div className="d-flex align-items-center p-3 bg-warning bg-opacity-10 rounded-3">
+                                  <i className="bi bi-exclamation-circle-fill text-warning me-2"></i>
+                                  <div>
+                                    <small className="fw-bold text-warning d-block">
+                                      {quote.cancellation_policy.penalty_type === 'PERCENTAGE' ? 
+                                        `${quote.cancellation_policy.penalty_amount}% Charge` : 
+                                        `€${quote.cancellation_policy.penalty_amount} Fee`
+                                      }
+                                    </small>
+                                    <small className="text-muted">After cancellation deadline</small>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </div>
-                        </div>
+                        )}
                         
                         <hr className="my-3" />
                         
