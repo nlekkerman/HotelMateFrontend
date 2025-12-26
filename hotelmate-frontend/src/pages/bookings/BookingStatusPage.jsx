@@ -1,7 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Container, Card, Spinner, Alert, Button, Modal, Form } from 'react-bootstrap';
-import { publicAPI } from '@/services/api';
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Container,
+  Card,
+  Spinner,
+  Alert,
+  Button,
+  Modal,
+  Form,
+} from "react-bootstrap";
+import { publicAPI } from "@/services/api";
 
 /**
  * BookingStatusPage - Token-based booking management page
@@ -11,8 +19,8 @@ const BookingStatusPage = () => {
   const { hotelSlug, bookingId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
-  
+  const token = searchParams.get("token");
+
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(null);
   const [hotel, setHotel] = useState(null);
@@ -24,7 +32,7 @@ const BookingStatusPage = () => {
 
   // Cancellation modal state
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelReason, setCancelReason] = useState('');
+  const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState(null);
 
@@ -34,72 +42,86 @@ const BookingStatusPage = () => {
   // Helper to calculate guest count
   const getGuestCount = (booking) => {
     if (!booking) return 0;
-    
+
     // Try direct fields first
     if (booking.adults !== undefined || booking.children !== undefined) {
       return (booking.adults || 0) + (booking.children || 0);
     }
-    
+
     // Try guests object
     if (booking.guests?.total) {
       return booking.guests.total;
     }
-    
+
     // Fallback
     return booking.total_guests || 0;
   };
 
   // Get status display information
   const getStatusDisplay = (status) => {
-    const normalized = status?.toString().toLowerCase() || '';
-    
+    const normalized = status?.toString().toLowerCase() || "";
+
     switch (normalized) {
-      case 'confirmed':
-        return { color: 'success', icon: 'check-circle-fill', text: 'Confirmed' };
-      case 'pending_approval':
-      case 'pending approval':
-      case 'pending':
-        return { color: 'warning', icon: 'clock-history', text: 'Pending Approval' };
-      case 'cancelled':
-      case 'canceled':
-        return { color: 'danger', icon: 'x-circle', text: 'Cancelled' };
-      case 'completed':
-        return { color: 'success', icon: 'check-circle', text: 'Completed' };
-      case 'declined':
-        return { color: 'danger', icon: 'x-circle-fill', text: 'Declined' };
-      case 'checked_in':
-      case 'checked in':
-        return { color: 'info', icon: 'door-open', text: 'Checked In' };
-      case 'checked_out':  
-      case 'checked out':
-        return { color: 'secondary', icon: 'door-closed', text: 'Checked Out' };
+      case "confirmed":
+        return {
+          color: "success",
+          icon: "check-circle-fill",
+          text: "Confirmed",
+        };
+      case "pending_approval":
+      case "pending approval":
+      case "pending":
+        return {
+          color: "warning",
+          icon: "clock-history",
+          text: "Pending Approval",
+        };
+      case "cancelled":
+      case "canceled":
+        return { color: "danger", icon: "x-circle", text: "Cancelled" };
+      case "completed":
+        return { color: "success", icon: "check-circle", text: "Completed" };
+      case "declined":
+        return { color: "danger", icon: "x-circle-fill", text: "Declined" };
+      case "checked_in":
+      case "checked in":
+        return { color: "info", icon: "door-open", text: "Checked In" };
+      case "checked_out":
+      case "checked out":
+        return { color: "secondary", icon: "door-closed", text: "Checked Out" };
       default:
-        return { color: 'secondary', icon: 'question-circle', text: status || 'Unknown' };
+        return {
+          color: "secondary",
+          icon: "question-circle",
+          text: status || "Unknown",
+        };
     }
   };
 
   // Fetch booking details using token-based API
   const fetchBookingStatus = async () => {
     // Validate required parameters
-  if (!hotelSlug) {
-    return (
-      <Container className="py-5 text-center">
-        <Alert variant="danger">
-          <h4>Invalid Link</h4>
-          <p>Hotel information is missing from the booking link.</p>
-        </Alert>
-      </Container>
-    );
-  }
-  
-  if (!bookingId) {
-      setError('No booking reference provided');
+    if (!hotelSlug) {
+      return (
+        <Container className="py-5 text-center">
+          <Alert variant="danger">
+            <h4>Invalid Link</h4>
+            <p>Hotel information is missing from the booking link.</p>
+          </Alert>
+        </Container>
+      );
+    }
+
+    if (!bookingId) {
+      setError("No booking reference provided");
       setLoading(false);
       return;
     }
 
     if (!token) {
-      setError('Access token required. Please use the link from your booking confirmation email.');
+      setError(
+        "Access token required. Please use the link from your booking confirmation email."
+      );
       setLoading(false);
       return;
     }
@@ -109,35 +131,41 @@ const BookingStatusPage = () => {
       setError(null);
 
       // Call the existing hotel-specific booking endpoint with token
-      const response = await publicAPI.get(`/hotel/${hotelSlug}/room-bookings/${bookingId}/`, {
-        params: { token }
-      });
-      
+      const response = await publicAPI.get(
+        `/hotels/${hotelSlug}/booking/status/${bookingId}/`,
+        { params: { token } }
+      );
+
       const data = unwrap(response);
-      
-      // Set booking data from response
+
+      // The API returns booking data directly, not nested under 'booking'
+      // Set booking data from response (the entire response is the booking)
       setBooking(data.booking);
       setHotel(data.hotel);
       setCancellationPolicy(data.cancellation_policy);
       setCanCancel(data.can_cancel || false);
       setCancellationPreview(data.cancellation_preview);
-      
+
       // Set hotel preset if available
       if (data.hotel?.preset) {
         setPreset(data.hotel.preset);
       }
-      
     } catch (err) {
-      console.error('Failed to fetch booking status:', err);
-      
+      console.error("Failed to fetch booking status:", err);
+
       if (err.response?.status === 404) {
-        setError('Booking not found. Please check your booking reference and try again.');
+        setError(
+          "Booking not found. Please check your booking reference and try again."
+        );
       } else if (err.response?.status === 403 || err.response?.status === 401) {
-        setError('Invalid or expired access token. Please use the latest link from your booking email.');
+        setError(
+          "Invalid or expired access token. Please use the latest link from your booking email."
+        );
       } else {
-        const errorMessage = err.response?.data?.detail 
-          || err.response?.data?.error 
-          || 'Unable to retrieve booking information. Please try again later.';
+        const errorMessage =
+          err.response?.data?.detail ||
+          err.response?.data?.error ||
+          "Unable to retrieve booking information. Please try again later.";
         setError(errorMessage);
       }
     } finally {
@@ -154,28 +182,37 @@ const BookingStatusPage = () => {
       setCancelError(null);
 
       // Call the hotel-specific booking cancellation API
-      const response = await publicAPI.post(`/hotel/${hotelSlug}/room-bookings/${bookingId}/`, {
-        action: 'cancel',
-        token: token,
-        reason: cancelReason.trim() || 'Cancelled by guest'
-      });
+      const response = await publicAPI.post(
+  `/hotels/${hotelSlug}/booking/status/${bookingId}/`,
+  {
+    token,
+    reason: cancelReason.trim() || "Cancelled by guest",
+  }
+);
+
 
       const data = unwrap(response);
-      
+
       // Update booking data with cancelled status
-      setBooking({ ...booking, status: 'CANCELLED', cancelled_at: new Date().toISOString() });
+      setBooking({
+        ...booking,
+        status: "CANCELLED",
+        cancelled_at: new Date().toISOString(),
+      });
       setCanCancel(false);
       setShowCancelModal(false);
-      
+
       // Show success message (you could add a toast here)
-      alert('Booking cancelled successfully. You should receive a confirmation email shortly.');
-      
+      alert(
+        "Booking cancelled successfully. You should receive a confirmation email shortly."
+      );
     } catch (err) {
-      console.error('Failed to cancel booking:', err);
-      
-      const errorMessage = err.response?.data?.detail 
-        || err.response?.data?.error 
-        || 'Failed to cancel booking. Please try again or contact the hotel directly.';
+      console.error("Failed to cancel booking:", err);
+
+      const errorMessage =
+        err.response?.data?.detail ||
+        err.response?.data?.error ||
+        "Failed to cancel booking. Please try again or contact the hotel directly.";
       setCancelError(errorMessage);
     } finally {
       setCancelling(false);
@@ -202,15 +239,23 @@ const BookingStatusPage = () => {
       <div className={`booking-status-page page-style-${preset}`}>
         <Container className="py-5">
           <div className="text-center mb-4">
-            <div className="rounded-circle bg-danger d-inline-flex align-items-center justify-content-center mb-3" style={{ width: '80px', height: '80px' }}>
-              <i className="bi bi-exclamation-triangle text-white" style={{ fontSize: '2.5rem' }}></i>
+            <div
+              className="rounded-circle bg-danger d-inline-flex align-items-center justify-content-center mb-3"
+              style={{ width: "80px", height: "80px" }}
+            >
+              <i
+                className="bi bi-exclamation-triangle text-white"
+                style={{ fontSize: "2.5rem" }}
+              ></i>
             </div>
-            <h1 className="display-6 fw-bold text-danger mb-2">Booking Not Found</h1>
+            <h1 className="display-6 fw-bold text-danger mb-2">
+              Booking Not Found
+            </h1>
             <p className="lead text-muted">{error}</p>
           </div>
-          
+
           <div className="text-center">
-            <Button variant="primary" onClick={() => navigate('/')}>
+            <Button variant="primary" onClick={() => navigate("/")}>
               <i className="bi bi-house me-2"></i>
               Go to Homepage
             </Button>
@@ -236,12 +281,22 @@ const BookingStatusPage = () => {
   const statusInfo = getStatusDisplay(booking.status);
 
   return (
-    <div className={`booking-status-page page-style-${preset}`} data-preset={preset} style={{ minHeight: '100vh' }}>
+    <div
+      className={`booking-status-page page-style-${preset}`}
+      data-preset={preset}
+      style={{ minHeight: "100vh" }}
+    >
       <Container className="py-5">
         {/* Status Header */}
         <div className="text-center mb-5">
-          <div className={`rounded-circle bg-${statusInfo.color} d-inline-flex align-items-center justify-content-center mb-3`} style={{ width: '80px', height: '80px' }}>
-            <i className={`bi bi-${statusInfo.icon} text-white`} style={{ fontSize: '2.5rem' }}></i>
+          <div
+            className={`rounded-circle bg-${statusInfo.color} d-inline-flex align-items-center justify-content-center mb-3`}
+            style={{ width: "80px", height: "80px" }}
+          >
+            <i
+              className={`bi bi-${statusInfo.icon} text-white`}
+              style={{ fontSize: "2.5rem" }}
+            ></i>
           </div>
           <h1 className="display-6 fw-bold mb-2">Booking Status</h1>
           <div className={`badge bg-${statusInfo.color} fs-5 px-4 py-2`}>
@@ -262,13 +317,16 @@ const BookingStatusPage = () => {
                 <div className="fs-2 fw-bold text-primary mb-0">
                   {booking.confirmation_number || booking.id || bookingId}
                 </div>
-                <small className="text-muted">Save this reference for future communication</small>
-                
+                <small className="text-muted">
+                  Save this reference for future communication
+                </small>
+
                 {/* Created date */}
                 {booking.created_at && (
                   <div className="mt-2">
                     <small className="text-muted">
-                      Booked: {new Date(booking.created_at).toLocaleDateString()}
+                      Booked:{" "}
+                      {new Date(booking.created_at).toLocaleDateString()}
                     </small>
                   </div>
                 )}
@@ -282,7 +340,10 @@ const BookingStatusPage = () => {
               <Card className="h-100 border-0 shadow-sm">
                 <Card.Body className="p-4">
                   <div className="d-flex align-items-center mb-3">
-                    <div className="rounded-circle bg-success d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px' }}>
+                    <div
+                      className="rounded-circle bg-success d-flex align-items-center justify-content-center me-3"
+                      style={{ width: "40px", height: "40px" }}
+                    >
                       <i className="bi bi-building text-white"></i>
                     </div>
                     <h5 className="mb-0 text-success">Hotel Details</h5>
@@ -310,19 +371,22 @@ const BookingStatusPage = () => {
             <Card className="h-100 border-0 shadow-sm">
               <Card.Body className="p-4">
                 <div className="d-flex align-items-center mb-3">
-                  <div className="rounded-circle bg-info d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px' }}>
+                  <div
+                    className="rounded-circle bg-info d-flex align-items-center justify-content-center me-3"
+                    style={{ width: "40px", height: "40px" }}
+                  >
                     <i className="bi bi-door-open text-white"></i>
                   </div>
                   <h5 className="mb-0 text-info">Stay Details</h5>
                 </div>
-                
+
                 {booking.room_type_name && (
                   <div className="mb-3">
                     <div className="fw-bold mb-1">Room Type</div>
                     <div className="text-muted">{booking.room_type_name}</div>
                   </div>
                 )}
-                
+
                 <div className="row g-2 mb-2">
                   <div className="col-6">
                     <div className="small fw-bold text-muted">Check-in</div>
@@ -336,24 +400,32 @@ const BookingStatusPage = () => {
                 <div className="row g-2">
                   <div className="col-6">
                     <div className="small fw-bold text-muted">Nights</div>
-                    <div>{booking.nights || '-'}</div>
+                    <div>{booking.nights || "-"}</div>
                   </div>
                   <div className="col-6">
                     <div className="small fw-bold text-muted">Guests</div>
-                    <div>{(() => {
-                      const guestCount = getGuestCount(booking);
-                      return guestCount > 0 ? `${guestCount} Guest${guestCount !== 1 ? 's' : ''}` : '-';
-                    })()}</div>
+                    <div>
+                      {(() => {
+                        const guestCount = getGuestCount(booking);
+                        return guestCount > 0
+                          ? `${guestCount} Guest${guestCount !== 1 ? "s" : ""}`
+                          : "-";
+                      })()}
+                    </div>
                   </div>
                 </div>
-                
+
                 {/* Guest Information */}
                 {booking.primary_guest_name && (
                   <div className="mt-3">
-                    <div className="small fw-bold text-muted">Primary Guest</div>
+                    <div className="small fw-bold text-muted">
+                      Primary Guest
+                    </div>
                     <div>{booking.primary_guest_name}</div>
                     {booking.primary_email && (
-                      <div className="small text-muted">{booking.primary_email}</div>
+                      <div className="small text-muted">
+                        {booking.primary_email}
+                      </div>
                     )}
                   </div>
                 )}
@@ -367,16 +439,20 @@ const BookingStatusPage = () => {
           <Card className="border-0 shadow-sm bg-success bg-opacity-5 mb-4">
             <Card.Body className="p-4">
               <div className="d-flex align-items-center mb-3">
-                <div className="rounded-circle bg-success d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px' }}>
+                <div
+                  className="rounded-circle bg-success d-flex align-items-center justify-content-center me-3"
+                  style={{ width: "40px", height: "40px" }}
+                >
                   <i className="bi bi-credit-card text-white"></i>
                 </div>
                 <h5 className="mb-0 text-success">Payment Summary</h5>
               </div>
-              
+
               <div className="d-flex justify-content-between align-items-center">
                 <span className="fs-5">Total Amount</span>
                 <span className="fs-3 fw-bold text-success">
-                  {booking.currency || '€'}{parseFloat(booking.total_amount).toFixed(2)}
+                  {booking.currency || "€"}
+                  {parseFloat(booking.total_amount).toFixed(2)}
                 </span>
               </div>
             </Card.Body>
@@ -388,15 +464,20 @@ const BookingStatusPage = () => {
           <Card className="border-0 shadow-sm mb-4">
             <Card.Body className="p-4">
               <div className="d-flex align-items-center mb-3">
-                <div className="rounded-circle bg-warning d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px' }}>
+                <div
+                  className="rounded-circle bg-warning d-flex align-items-center justify-content-center me-3"
+                  style={{ width: "40px", height: "40px" }}
+                >
                   <i className="bi bi-shield-exclamation text-white"></i>
                 </div>
                 <h5 className="mb-0 text-warning">Cancellation Policy</h5>
               </div>
-              
+
               <div className="mb-3">
                 <h6 className="fw-bold">{cancellationPolicy.name}</h6>
-                <p className="text-muted mb-0">{cancellationPolicy.description}</p>
+                <p className="text-muted mb-0">
+                  {cancellationPolicy.description}
+                </p>
               </div>
 
               {/* Cancellation Preview */}
@@ -404,31 +485,40 @@ const BookingStatusPage = () => {
                 <div className="bg-light p-3 rounded mb-3">
                   <div className="small fw-bold mb-2">If you cancel now:</div>
                   <div className="row">
-                    {cancellationPreview.fee_amount && parseFloat(cancellationPreview.fee_amount) > 0 && (
-                      <div className="col-sm-6">
-                        <div className="text-danger">
-                          <i className="bi bi-dash-circle me-1"></i>
-                          Cancellation Fee: {booking.currency || '€'}{parseFloat(cancellationPreview.fee_amount).toFixed(2)}
+                    {cancellationPreview.fee_amount &&
+                      parseFloat(cancellationPreview.fee_amount) > 0 && (
+                        <div className="col-sm-6">
+                          <div className="text-danger">
+                            <i className="bi bi-dash-circle me-1"></i>
+                            Cancellation Fee: {booking.currency || "€"}
+                            {parseFloat(cancellationPreview.fee_amount).toFixed(
+                              2
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                     <div className="col-sm-6">
                       <div className="text-success">
                         <i className="bi bi-arrow-return-left me-1"></i>
-                        Refund: {booking.currency || '€'}{parseFloat(cancellationPreview.refund_amount || 0).toFixed(2)}
+                        Refund: {booking.currency || "€"}
+                        {parseFloat(
+                          cancellationPreview.refund_amount || 0
+                        ).toFixed(2)}
                       </div>
                     </div>
                   </div>
                   {cancellationPreview.description && (
-                    <div className="small text-muted mt-2">{cancellationPreview.description}</div>
+                    <div className="small text-muted mt-2">
+                      {cancellationPreview.description}
+                    </div>
                   )}
                 </div>
               )}
 
               {/* Cancellation Button */}
-              {canCancel && booking.status !== 'CANCELLED' && (
-                <Button 
-                  variant="outline-danger" 
+              {canCancel && booking.status !== "CANCELLED" && (
+                <Button
+                  variant="outline-danger"
                   onClick={() => setShowCancelModal(true)}
                   className="me-2"
                 >
@@ -436,11 +526,12 @@ const BookingStatusPage = () => {
                   Cancel Booking
                 </Button>
               )}
-              
-              {!canCancel && booking.status !== 'CANCELLED' && (
+
+              {!canCancel && booking.status !== "CANCELLED" && (
                 <Alert variant="info" className="mb-0">
                   <i className="bi bi-info-circle me-2"></i>
-                  This booking cannot be cancelled online. Please contact the hotel directly.
+                  This booking cannot be cancelled online. Please contact the
+                  hotel directly.
                 </Alert>
               )}
             </Card.Body>
@@ -453,8 +544,8 @@ const BookingStatusPage = () => {
             <div className="row g-3">
               {hotel?.slug && (
                 <div className="col-md-6">
-                  <Button 
-                    variant="primary" 
+                  <Button
+                    variant="primary"
                     size="lg"
                     className="w-100"
                     onClick={() => navigate(`/hotel/${hotel.slug}`)}
@@ -465,11 +556,11 @@ const BookingStatusPage = () => {
                 </div>
               )}
               <div className="col-md-6">
-                <Button 
+                <Button
                   variant="outline-secondary"
                   size="lg"
                   className="w-100"
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate("/")}
                 >
                   <i className="bi bi-search me-2"></i>
                   Browse Hotels
@@ -487,7 +578,8 @@ const BookingStatusPage = () => {
               <h6 className="mb-0 text-primary">Need Help?</h6>
             </div>
             <p className="text-muted mb-0">
-              Contact the hotel directly if you have any questions about your booking.
+              Contact the hotel directly if you have any questions about your
+              booking.
             </p>
             {hotel?.phone && (
               <p className="text-muted mt-2 mb-0">
@@ -500,7 +592,11 @@ const BookingStatusPage = () => {
       </Container>
 
       {/* Cancellation Modal */}
-      <Modal show={showCancelModal} onHide={() => setShowCancelModal(false)} centered>
+      <Modal
+        show={showCancelModal}
+        onHide={() => setShowCancelModal(false)}
+        centered
+      >
         <Modal.Header closeButton>
           <Modal.Title>
             <i className="bi bi-exclamation-triangle text-warning me-2"></i>
@@ -514,11 +610,15 @@ const BookingStatusPage = () => {
               {cancelError}
             </Alert>
           )}
-          
+
           <div className="mb-3">
-            <p className="fw-bold">Are you sure you want to cancel this booking?</p>
+            <p className="fw-bold">
+              Are you sure you want to cancel this booking?
+            </p>
             <div className="bg-light p-3 rounded">
-              <div className="small fw-bold mb-2">Booking: {booking?.confirmation_number || booking?.id}</div>
+              <div className="small fw-bold mb-2">
+                Booking: {booking?.confirmation_number || booking?.id}
+              </div>
               <div className="small text-muted">
                 {hotel?.name} • {booking?.check_in} to {booking?.check_out}
               </div>
@@ -532,18 +632,23 @@ const BookingStatusPage = () => {
                 <i className="bi bi-info-circle text-warning me-2"></i>
                 Cancellation Details
               </div>
-              {cancellationPreview.fee_amount && parseFloat(cancellationPreview.fee_amount) > 0 ? (
+              {cancellationPreview.fee_amount &&
+              parseFloat(cancellationPreview.fee_amount) > 0 ? (
                 <div className="row">
                   <div className="col-6">
                     <div className="small text-muted">Cancellation Fee</div>
                     <div className="text-danger fw-bold">
-                      {booking?.currency || '€'}{parseFloat(cancellationPreview.fee_amount).toFixed(2)}
+                      {booking?.currency || "€"}
+                      {parseFloat(cancellationPreview.fee_amount).toFixed(2)}
                     </div>
                   </div>
                   <div className="col-6">
                     <div className="small text-muted">Refund Amount</div>
                     <div className="text-success fw-bold">
-                      {booking?.currency || '€'}{parseFloat(cancellationPreview.refund_amount || 0).toFixed(2)}
+                      {booking?.currency || "€"}
+                      {parseFloat(
+                        cancellationPreview.refund_amount || 0
+                      ).toFixed(2)}
                     </div>
                   </div>
                 </div>
@@ -554,7 +659,9 @@ const BookingStatusPage = () => {
                 </div>
               )}
               {cancellationPreview.description && (
-                <div className="small text-muted mt-2">{cancellationPreview.description}</div>
+                <div className="small text-muted mt-2">
+                  {cancellationPreview.description}
+                </div>
               )}
             </div>
           )}
@@ -572,19 +679,20 @@ const BookingStatusPage = () => {
 
           <div className="text-muted small">
             <i className="bi bi-info-circle me-2"></i>
-            You'll receive a cancellation confirmation email once this is processed.
+            You'll receive a cancellation confirmation email once this is
+            processed.
           </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button 
-            variant="outline-secondary" 
+          <Button
+            variant="outline-secondary"
             onClick={() => setShowCancelModal(false)}
             disabled={cancelling}
           >
             Keep Booking
           </Button>
-          <Button 
-            variant="danger" 
+          <Button
+            variant="danger"
             onClick={handleCancellation}
             disabled={cancelling}
           >
