@@ -183,12 +183,13 @@ const BookingStatusPage = () => {
 
       // Call the hotel-specific booking cancellation API
       const response = await publicAPI.post(
-  `/hotels/${hotelSlug}/booking/status/${bookingId}/`,
-  {
-    token,
-    reason: cancelReason.trim() || "Cancelled by guest",
-  }
-);
+        `/hotel/${hotelSlug}/room-bookings/${bookingId}/`,
+        {
+          action: 'cancel',
+          token,
+          reason: cancelReason.trim() || "Cancelled by guest",
+        }
+      );
 
 
       const data = unwrap(response);
