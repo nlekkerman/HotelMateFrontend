@@ -35,6 +35,7 @@ const BookingStatusPage = () => {
   const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState(null);
+  const [cancellationSuccess, setCancellationSuccess] = useState(null);
 
   // Helper to safely unwrap API responses
   const unwrap = (res) => res?.data?.data ?? res?.data;
@@ -138,8 +139,9 @@ const BookingStatusPage = () => {
 
       const data = unwrap(response);
 
-      // The API returns booking data directly, not nested under 'booking'
-      // Set booking data from response (the entire response is the booking)
+      const data = unwrap(response);
+
+      // The API returns booking data directly with can_cancel and cancellation_preview
       setBooking(data);
       setHotel(data.hotel);
       setCancellationPolicy(data.cancellation_policy);
@@ -185,35 +187,52 @@ const BookingStatusPage = () => {
       const response = await publicAPI.post(
         `/hotel/${hotelSlug}/room-bookings/${bookingId}/`,
         {
-          action: 'cancel',
           token,
           reason: cancelReason.trim() || "Cancelled by guest",
         }
       );
 
-
       const data = unwrap(response);
+
+      // Store cancellation success details
+      setCancellationSuccess(data.cancellation || {
+        cancelled_at: new Date().toISOString(),
+        cancellation_fee: data.cancellation_fee || "0.00",
+        refund_amount: data.refund_amount,
+        description: data.message || "Booking cancelled successfully",
+        refund_reference: data.refund_reference
+      });
 
       // Update booking data with cancelled status
       setBooking({
         ...booking,
         status: "CANCELLED",
-        cancelled_at: new Date().toISOString(),
+        cancelled_at: data.cancellation?.cancelled_at || new Date().toISOString(),
       });
       setCanCancel(false);
       setShowCancelModal(false);
 
-      // Show success message (you could add a toast here)
-      alert(
-        "Booking cancelled successfully. You should receive a confirmation email shortly."
-      );
     } catch (err) {
       console.error("Failed to cancel booking:", err);
 
-      const errorMessage =
-        err.response?.data?.detail ||
-        err.response?.data?.error ||
-        "Failed to cancel booking. Please try again or contact the hotel directly.";
+      // Enhanced error handling based on status codes
+      let errorMessage;
+      switch (err.response?.status) {
+        case 400:
+          errorMessage = err.response?.data?.error || "This booking cannot be cancelled";
+          break;
+        case 401:
+          errorMessage = "Invalid access link. Please check your email for the correct link.";
+          break;
+        case 403:
+          errorMessage = "This cancellation link has expired or been used.";
+          break;
+        case 502:
+          errorMessage = "Payment processing failed. Please contact the hotel directly.";
+          break;
+        default:
+          errorMessage = err.response?.data?.error || err.response?.data?.detail || "Unable to cancel booking. Please contact the hotel.";
+      }
       setCancelError(errorMessage);
     } finally {
       setCancelling(false);
@@ -304,6 +323,41 @@ const BookingStatusPage = () => {
             {statusInfo.text}
           </div>
         </div>
+
+        {/* Cancellation Success Alert */}
+        {cancellationSuccess && (
+          <Alert variant="success" className="mb-4">
+            <div className="d-flex align-items-center">
+              <div className="rounded-circle bg-success d-flex align-items-center justify-content-center me-3" style={{width: '50px', height: '50px'}}>
+                <i className="bi bi-check-circle-fill text-white fs-4"></i>
+              </div>
+              <div className="flex-grow-1">
+                <h5 className="alert-heading mb-2">Booking Successfully Cancelled</h5>
+                <p className="mb-2">{cancellationSuccess.description}</p>
+                <div className="row g-2">
+                  {cancellationSuccess.cancellation_fee && parseFloat(cancellationSuccess.cancellation_fee) > 0 && (
+                    <div className="col-md-6">
+                      <small className="text-muted d-block">Cancellation Fee</small>
+                      <strong>{booking.pricing?.currency || 'EUR'} {parseFloat(cancellationSuccess.cancellation_fee).toFixed(2)}</strong>
+                    </div>
+                  )}
+                  {cancellationSuccess.refund_amount && (
+                    <div className="col-md-6">
+                      <small className="text-muted d-block">Refund Amount</small>
+                      <strong className="text-success">{booking.pricing?.currency || 'EUR'} {parseFloat(cancellationSuccess.refund_amount).toFixed(2)}</strong>
+                    </div>
+                  )}
+                  {cancellationSuccess.refund_reference && (
+                    <div className="col-12">
+                      <small className="text-muted d-block">Refund Reference</small>
+                      <code>{cancellationSuccess.refund_reference}</code>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Alert>
+        )}
 
         {/* Booking Details Grid */}
         <div className="row g-4 mb-4">
@@ -481,36 +535,61 @@ const BookingStatusPage = () => {
                 </p>
               </div>
 
-              {/* Cancellation Preview */}
+              {/* Enhanced Cancellation Preview */}
               {cancellationPreview && canCancel && (
-                <div className="bg-light p-3 rounded mb-3">
-                  <div className="small fw-bold mb-2">If you cancel now:</div>
-                  <div className="row">
-                    {cancellationPreview.fee_amount &&
-                      parseFloat(cancellationPreview.fee_amount) > 0 && (
-                        <div className="col-sm-6">
-                          <div className="text-danger">
-                            <i className="bi bi-dash-circle me-1"></i>
-                            Cancellation Fee: {booking.currency || "€"}
-                            {parseFloat(cancellationPreview.fee_amount).toFixed(
-                              2
-                            )}
+                <div className="bg-light p-4 rounded-3 border mb-4">
+                  <div className="d-flex align-items-center mb-3">
+                    <div className="rounded-circle bg-warning d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>
+                      <i className="bi bi-exclamation-triangle text-white"></i>
+                    </div>
+                    <div>
+                      <h5 className="mb-1 fw-bold">Cancellation Summary</h5>
+                      <small className="text-muted">Review charges before cancelling</small>
+                    </div>
+                  </div>
+                  
+                  <div className="row g-3 mb-3">
+                    {cancellationPreview.fee_amount && parseFloat(cancellationPreview.fee_amount) > 0 ? (
+                      <div className="col-md-6">
+                        <div className="d-flex align-items-center p-3 bg-danger bg-opacity-10 rounded-3">
+                          <i className="bi bi-dash-circle-fill text-danger me-2"></i>
+                          <div>
+                            <small className="fw-bold text-danger d-block">Cancellation Fee</small>
+                            <span className="h6 text-danger mb-0">
+                              {booking.pricing?.currency || 'EUR'} {parseFloat(cancellationPreview.fee_amount).toFixed(2)}
+                            </span>
                           </div>
                         </div>
-                      )}
-                    <div className="col-sm-6">
-                      <div className="text-success">
-                        <i className="bi bi-arrow-return-left me-1"></i>
-                        Refund: {booking.currency || "€"}
-                        {parseFloat(
-                          cancellationPreview.refund_amount || 0
-                        ).toFixed(2)}
+                      </div>
+                    ) : (
+                      <div className="col-md-6">
+                        <div className="d-flex align-items-center p-3 bg-success bg-opacity-10 rounded-3">
+                          <i className="bi bi-check-circle-fill text-success me-2"></i>
+                          <div>
+                            <small className="fw-bold text-success d-block">No Cancellation Fee</small>
+                            <small className="text-muted">Free cancellation available</small>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="col-md-6">
+                      <div className="d-flex align-items-center p-3 bg-info bg-opacity-10 rounded-3">
+                        <i className="bi bi-arrow-return-left text-info me-2"></i>
+                        <div>
+                          <small className="fw-bold text-info d-block">Refund Amount</small>
+                          <span className="h6 text-info mb-0">
+                            {booking.pricing?.currency || 'EUR'} {parseFloat(cancellationPreview.refund_amount || 0).toFixed(2)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
+                  
                   {cancellationPreview.description && (
-                    <div className="small text-muted mt-2">
-                      {cancellationPreview.description}
+                    <div className="d-flex align-items-center">
+                      <i className="bi bi-info-circle text-primary me-2"></i>
+                      <small className="text-muted">{cancellationPreview.description}</small>
                     </div>
                   )}
                 </div>
