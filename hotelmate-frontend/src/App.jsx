@@ -900,7 +900,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 element={<BookingConfirmation />}
               />
               <Route
-                path="/booking/status/:bookingId"
+                path="/booking/status/:hotelSlug/:bookingId"
                 element={<BookingStatusPage />}
               />
               <Route
