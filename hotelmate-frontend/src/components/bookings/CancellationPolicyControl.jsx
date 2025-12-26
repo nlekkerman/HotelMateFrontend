@@ -116,7 +116,7 @@ const CancellationPolicyControl = ({ hotelSlug }) => {
       
       const data = await cancellationPolicyService.getHotelSettings(hotelSlug);
       setHotelSettings(data);
-      setDefaultPolicyId(data.default_cancellation_policy_id || null);
+      setDefaultPolicyId(data.default_cancellation_policy || null);
       
     } catch (error) {
       console.error('Failed to load hotel settings:', error);
@@ -138,7 +138,7 @@ const CancellationPolicyControl = ({ hotelSlug }) => {
       setSavingSettings(true);
       
       const payload = {
-        default_cancellation_policy_id: defaultPolicyId
+        default_cancellation_policy: defaultPolicyId
       };
       
       console.log('[CancellationPolicyControl] Saving hotel default policy:', payload);
@@ -147,7 +147,7 @@ const CancellationPolicyControl = ({ hotelSlug }) => {
       
       setHotelSettings(prev => ({
         ...prev,
-        default_cancellation_policy_id: defaultPolicyId
+        default_cancellation_policy: defaultPolicyId
       }));
       
       toast.success('Hotel default cancellation policy updated successfully');
@@ -157,7 +157,7 @@ const CancellationPolicyControl = ({ hotelSlug }) => {
       toast.error('Failed to update hotel default policy. Please try again.');
       
       // Revert on error
-      setDefaultPolicyId(hotelSettings.default_cancellation_policy_id || null);
+      setDefaultPolicyId(hotelSettings.default_cancellation_policy || null);
       
     } finally {
       setSavingSettings(false);
@@ -165,16 +165,40 @@ const CancellationPolicyControl = ({ hotelSlug }) => {
   };
 
   // Handle policy creation from modal
-  const handlePolicyCreated = (newPolicy) => {
+  const handlePolicyCreated = async (newPolicy) => {
     console.log('[CancellationPolicyControl] New policy created:', newPolicy);
     
     // Add policy to the list
     setPolicies(prev => [...prev, newPolicy]);
     
-    // Automatically select the new policy as default
+    // Automatically select the new policy as default and save it
     setDefaultPolicyId(newPolicy.id);
     
-    toast.success(`Policy "${newPolicy.name}" created and selected as default!`);
+    // Auto-save the new policy as hotel default
+    try {
+      setSavingSettings(true);
+      
+      const payload = {
+        default_cancellation_policy: newPolicy.id
+      };
+      
+      console.log('[CancellationPolicyControl] Auto-saving new policy as default:', payload);
+      
+      await cancellationPolicyService.patchHotelSettings(hotelSlug, payload);
+      
+      setHotelSettings(prev => ({
+        ...prev,
+        default_cancellation_policy: newPolicy.id
+      }));
+      
+      toast.success(`Policy "${newPolicy.name}" created and set as hotel default!`);
+      
+    } catch (error) {
+      console.error('Failed to auto-save new policy as default:', error);
+      toast.warning(`Policy "${newPolicy.name}" created but could not be set as default. Please click "Save Default Policy" manually.`);
+    } finally {
+      setSavingSettings(false);
+    }
   };
 
   // Handle rate plan policy change
@@ -255,7 +279,7 @@ const CancellationPolicyControl = ({ hotelSlug }) => {
   const arePoliciesBlocked = policiesLoading || policiesError;
 
   // Check if hotel settings have unsaved changes
-  const hasUnsavedChanges = defaultPolicyId !== (hotelSettings.default_cancellation_policy_id || null);
+  const hasUnsavedChanges = defaultPolicyId !== (hotelSettings.default_cancellation_policy || null);
 
   return (
     <>
@@ -285,7 +309,7 @@ const CancellationPolicyControl = ({ hotelSlug }) => {
               <option value="none">None (DEFAULT mode)</option>
               {policies.map(policy => (
                 <option key={policy.id} value={policy.id}>
-                  {policy.name} - {policy.template_type}
+                  {policy.name} ({policy.code}) - {policy.template_type}
                 </option>
               ))}
             </Form.Select>
@@ -329,14 +353,19 @@ const CancellationPolicyControl = ({ hotelSlug }) => {
         
         <Card.Footer className="d-flex justify-content-between align-items-center">
           <small className="text-muted">
-            {hasUnsavedChanges ? 
+            {savingSettings ? (
+              <span className="text-info">
+                <i className="bi bi-clock me-1"></i>
+                Saving...
+              </span>
+            ) : hasUnsavedChanges ? 
               <span className="text-warning">
                 <i className="bi bi-exclamation-triangle me-1"></i>
-                Unsaved changes
+                Policy selected - click Save to apply
               </span> : 
               <span className="text-success">
                 <i className="bi bi-check-circle me-1"></i>
-                Saved
+                Hotel default policy saved
               </span>
             }
           </small>

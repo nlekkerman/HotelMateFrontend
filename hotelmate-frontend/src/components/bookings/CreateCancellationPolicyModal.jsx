@@ -91,7 +91,7 @@ const CreateCancellationPolicyModal = ({
       const payload = {
         name: formData.name.trim(),
         template_type: formData.template_type,
-        hours_before_checkin: parseInt(formData.hours_before_checkin),
+        free_until_hours: parseInt(formData.hours_before_checkin),
         penalty_type: formData.penalty_type,
         description: formData.description.trim() || null
       };
@@ -101,7 +101,7 @@ const CreateCancellationPolicyModal = ({
         if (formData.penalty_type === 'percentage') {
           payload.penalty_percentage = parseFloat(formData.penalty_amount);
         } else if (formData.penalty_type === 'fixed_fee') {
-          payload.penalty_fixed_amount = parseFloat(formData.penalty_amount);
+          payload.penalty_amount = parseFloat(formData.penalty_amount);
         }
       }
 

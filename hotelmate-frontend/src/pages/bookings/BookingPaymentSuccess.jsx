@@ -346,49 +346,55 @@ Proposed: Payment → PENDING_HOTEL_CONFIRMATION → Staff confirms → CONFIRME
       style={{ minHeight: '100vh' }}
     >
     <Container className="py-5 booking-layout booking-layout--payment-success">
-      <div className="text-center mb-4">
+      <div className="text-center mb-5">
         {isConfirmed ? (
           <>
-            <div className="text-success mb-3">
-              <i className="bi bi-check-circle-fill" style={{ fontSize: '4rem' }}></i>
+            <div className="rounded-circle bg-success d-inline-flex align-items-center justify-content-center mb-3" style={{ width: '80px', height: '80px' }}>
+              <i className="bi bi-check-circle-fill text-white" style={{ fontSize: '2.5rem' }}></i>
             </div>
-            <h2>Booking confirmed ✅</h2>
-            <p className="text-muted">Your booking is confirmed and payment has been captured.</p>
-            <p className="text-muted small">You'll receive a pre-check-in email shortly.</p>
+            <h1 className="display-6 fw-bold text-success mb-2">Booking Confirmed!</h1>
+            <p className="lead text-muted">Your booking is confirmed and payment has been captured.</p>
+            <p className="text-muted">You'll receive a pre-check-in email shortly.</p>
           </>
         ) : isPendingApproval ? (
           <>
-            <div className="text-success mb-3">
-              <i className="bi bi-check-circle" style={{ fontSize: '4rem' }}></i>
+            <div className="rounded-circle bg-primary d-inline-flex align-items-center justify-content-center mb-3" style={{ width: '80px', height: '80px' }}>
+              <i className="bi bi-check-circle text-white" style={{ fontSize: '2.5rem' }}></i>
             </div>
-            <h2>Payment authorized ✅</h2>
-            <p className="text-muted">
+            <h1 className="display-6 fw-bold text-primary mb-2">Payment Authorized ✅</h1>
+            <p className="lead text-muted mb-3">
               Your card has been authorized. The hotel will review and confirm your booking.
             </p>
-            <p className="text-muted small">
-              This can take up to 24 hours (sometimes longer during busy periods). You'll receive an email when it's confirmed.
-            </p>
+            <div className="bg-light p-4 rounded-3 mx-auto" style={{ maxWidth: '500px' }}>
+              <div className="d-flex align-items-center mb-2">
+                <i className="bi bi-clock-history text-primary me-2"></i>
+                <small className="fw-bold">Review Time: Up to 24 hours</small>
+              </div>
+              <div className="d-flex align-items-center">
+                <i className="bi bi-envelope text-primary me-2"></i>
+                <small>You'll receive an email when confirmed</small>
+              </div>
+            </div>
           </>
         ) : isDeclined ? (
           <>
-            <div className="text-danger mb-3">
-              <i className="bi bi-x-circle" style={{ fontSize: '4rem' }}></i>
+            <div className="rounded-circle bg-danger d-inline-flex align-items-center justify-content-center mb-3" style={{ width: '80px', height: '80px' }}>
+              <i className="bi bi-x-circle text-white" style={{ fontSize: '2.5rem' }}></i>
             </div>
-            <h2>Booking not accepted ❌</h2>
-            <p className="text-muted">The hotel couldn't confirm this booking.</p>
-            <p className="text-muted small">No charge was captured. Any temporary authorization hold will be released by your bank.</p>
-            <p className="text-muted small">You can make a new booking or contact the hotel.</p>
+            <h1 className="display-6 fw-bold text-danger mb-2">Booking Not Accepted</h1>
+            <p className="lead text-muted">The hotel couldn't confirm this booking.</p>
+            <p className="text-muted">No charge was captured. Any temporary authorization hold will be released by your bank.</p>
           </>
         ) : isPendingPayment ? (
           <>
-            <div className="text-warning mb-3">
-              <i className="bi bi-hourglass-split" style={{ fontSize: '4rem' }}></i>
+            <div className="rounded-circle bg-warning d-inline-flex align-items-center justify-content-center mb-3" style={{ width: '80px', height: '80px' }}>
+              <i className="bi bi-hourglass-split text-white" style={{ fontSize: '2.5rem' }}></i>
             </div>
-            <h2>Payment status not confirmed yet</h2>
-            <p className="text-muted">
+            <h1 className="display-6 fw-bold text-warning mb-2">Payment Pending</h1>
+            <p className="lead text-muted">
               We couldn't confirm a successful payment for this booking.
             </p>
-            <p className="text-muted small">
+            <p className="text-muted">
               If you were charged, you'll receive an email receipt. Otherwise, please try again.
             </p>
             {isPolling && showPollingTimeout && (
@@ -397,189 +403,295 @@ Proposed: Payment → PENDING_HOTEL_CONFIRMATION → Staff confirms → CONFIRME
           </>
         ) : isUnknownState ? (
           <>
-            <div className="text-info mb-3">
-              <i className="bi bi-info-circle" style={{ fontSize: '4rem' }}></i>
+            <div className="rounded-circle bg-info d-inline-flex align-items-center justify-content-center mb-3" style={{ width: '80px', height: '80px' }}>
+              <i className="bi bi-info-circle text-white" style={{ fontSize: '2.5rem' }}></i>
             </div>
-            <h2>Processing Update...</h2>
+            <h1 className="display-6 fw-bold text-info mb-2">Processing Update...</h1>
             <p className="text-muted">We're updating your booking status. Please contact the hotel if you need immediate assistance.</p>
             <p className="small text-muted">Reference: {booking?.confirmation_number || booking?.booking_id}</p>
           </>
         ) : (
           <>
-            <div className="text-info mb-3">
-              <i className="bi bi-clock" style={{ fontSize: '4rem' }}></i>
+            <div className="rounded-circle bg-info d-inline-flex align-items-center justify-content-center mb-3" style={{ width: '80px', height: '80px' }}>
+              <i className="bi bi-clock text-white" style={{ fontSize: '2.5rem' }}></i>
             </div>
-            <h2>Payment Received</h2>
-            <p className="text-muted">Processing your booking</p>
+            <h1 className="display-6 fw-bold text-info mb-2">Payment Received</h1>
+            <p className="lead text-muted">Processing your booking</p>
           </>
         )}
       </div>
 
-      <Card className="mb-4">
-        <Card.Body className="p-4">
+{/* Status Alert */}
+      <div className="row mb-4">
+        <div className="col-12">
           {isConfirmed ? (
-            <Alert variant="success">
-              <i className="bi bi-check-circle me-2"></i>
-              <strong>Booking Confirmed!</strong> A confirmation email has been sent to your email address.
+            <Alert variant="success" className="border-0 bg-success bg-opacity-10 p-4">
+              <div className="d-flex align-items-center">
+                <div className="rounded-circle bg-success d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px', minWidth: '40px' }}>
+                  <i className="bi bi-check-circle text-white"></i>
+                </div>
+                <div>
+                  <div className="fw-bold text-success mb-1">Booking Confirmed!</div>
+                  <small className="text-success">A confirmation email has been sent to your email address.</small>
+                </div>
+              </div>
             </Alert>
           ) : isPendingApproval ? (
-            <Alert variant="info">
-              <i className="bi bi-info-circle me-2"></i>
-              <strong>Payment authorized</strong> The hotel will confirm your booking. You'll receive an email when it's approved.<br />
-              <small className="text-muted">No charge will be captured unless the booking is accepted.</small><br />
-              <small className="text-muted mt-1"><strong>You don't need to stay on this page — we'll email you once the hotel confirms.</strong></small>
+            <Alert variant="primary" className="border-0 bg-primary bg-opacity-10 p-4">
+              <div className="d-flex align-items-start">
+                <div className="rounded-circle bg-primary d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px', minWidth: '40px' }}>
+                  <i className="bi bi-info-circle text-white"></i>
+                </div>
+                <div>
+                  <div className="fw-bold text-primary mb-2">Payment Authorized - Awaiting Hotel Confirmation</div>
+                  <div className="mb-2">
+                    <small className="text-primary d-block mb-1">✓ No charge will be captured unless the booking is accepted</small>
+                    <small className="text-primary d-block">✓ You don't need to stay on this page — we'll email you once confirmed</small>
+                  </div>
+                </div>
+              </div>
             </Alert>
           ) : isDeclined ? (
-            <Alert variant="danger">
-              <i className="bi bi-x-circle me-2"></i>
-              <strong>Booking not accepted</strong> The hotel couldn't confirm this booking. No charge was captured. Any temporary authorization hold will be released by your bank.
+            <Alert variant="danger" className="border-0 bg-danger bg-opacity-10 p-4">
+              <div className="d-flex align-items-center">
+                <div className="rounded-circle bg-danger d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px', minWidth: '40px' }}>
+                  <i className="bi bi-x-circle text-white"></i>
+                </div>
+                <div>
+                  <div className="fw-bold text-danger mb-1">Booking Not Accepted</div>
+                  <small className="text-danger">The hotel couldn't confirm this booking. No charge was captured.</small>
+                </div>
+              </div>
             </Alert>
           ) : isPendingPayment && showPollingTimeout ? (
-            <Alert variant="warning">
-              <i className="bi bi-exclamation-triangle me-2"></i>
-              <strong>Payment status not confirmed yet</strong> If you were charged, you'll receive an email receipt. Please contact the hotel if this continues.
-              <Button 
-                variant="outline-warning" 
-                size="sm" 
-                className="ms-3"
-                onClick={() => window.location.reload()}
-              >
-                <i className="bi bi-arrow-clockwise me-1"></i>
-                Refresh
-              </Button>
-            </Alert>
-          ) : isPendingPayment ? (
-            <Alert variant="info">
-              <i className="bi bi-info-circle me-2"></i>
-              <strong>Checking payment status...</strong> This usually takes just a few seconds.
-            </Alert>
-          ) : isUnknownState ? (
-            <Alert variant="warning">
-              <i className="bi bi-question-circle me-2"></i>
-              <strong>Status Update</strong> Please contact the hotel for assistance with booking reference: {booking?.confirmation_number || booking?.booking_id}
+            <Alert variant="warning" className="border-0 bg-warning bg-opacity-10 p-4">
+              <div className="d-flex align-items-center justify-content-between">
+                <div className="d-flex align-items-center">
+                  <div className="rounded-circle bg-warning d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px', minWidth: '40px' }}>
+                    <i className="bi bi-exclamation-triangle text-white"></i>
+                  </div>
+                  <div>
+                    <div className="fw-bold text-warning mb-1">Payment Status Not Confirmed</div>
+                    <small className="text-warning">If you were charged, you'll receive an email receipt.</small>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline-warning" 
+                  size="sm"
+                  onClick={() => window.location.reload()}
+                >
+                  <i className="bi bi-arrow-clockwise me-1"></i>
+                  Refresh
+                </Button>
+              </div>
             </Alert>
           ) : (
-            <Alert variant="info">
-              <i className="bi bi-info-circle me-2"></i>
-              <strong>Payment Received</strong> Your booking is being processed.
+            <Alert variant="info" className="border-0 bg-info bg-opacity-10 p-4">
+              <div className="d-flex align-items-center">
+                <div className="rounded-circle bg-info d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px', minWidth: '40px' }}>
+                  <i className="bi bi-info-circle text-white"></i>
+                </div>
+                <div>
+                  <div className="fw-bold text-info mb-1">Payment Received</div>
+                  <small className="text-info">Your booking is being processed.</small>
+                </div>
+              </div>
             </Alert>
           )}
+        </div>
+      </div>
 
-          {booking.booking_id && (
-            <div className="mb-4">
-              <h5>Booking Reference</h5>
-              <p className="mb-0 fs-4 text-primary">
-                <strong>{booking.confirmation_number || booking.booking_id}</strong>
-              </p>
-            </div>
-          )}
+      {/* Booking Details Grid */}
+      <div className="row g-4 mb-4">
+        {/* Booking Reference */}
+        {booking.booking_id && (
+          <div className="col-12">
+            <Card className="border-0 shadow-sm bg-primary bg-opacity-5">
+              <Card.Body className="p-4 text-center">
+                <div className="d-flex align-items-center justify-content-center mb-2">
+                  <i className="bi bi-receipt text-primary me-2 fs-5"></i>
+                  <h5 className="mb-0 text-primary">Booking Reference</h5>
+                </div>
+                <div className="fs-2 fw-bold text-primary mb-0">
+                  {booking.confirmation_number || booking.booking_id}
+                </div>
+                <small className="text-muted">Save this reference for future communication</small>
+              </Card.Body>
+            </Card>
+          </div>
+        )}
 
-          {booking.hotel && (
-            <div className="mb-4">
-              <h5>Hotel Details</h5>
-              <p className="mb-1"><strong>{booking.hotel.name}</strong></p>
-              {booking.hotel.address && <p className="mb-0 text-muted">{booking.hotel.address}</p>}
-              {booking.hotel.phone && (
-                <p className="mb-0">
-                  <i className="bi bi-telephone me-2"></i>
-                  {booking.hotel.phone}
-                </p>
-              )}
-            </div>
-          )}
-
-          {booking.room && (
-            <div className="mb-4">
-              <h5>Room Details</h5>
-              <p className="mb-0"><strong>{booking.room.type}</strong></p>
-            </div>
-          )}
-
-          {booking.dates && (
-            <div className="mb-4">
-              <h5>Stay Details</h5>
-              <p className="mb-1">
-                <strong>Check-in:</strong> {booking.dates.check_in}
-              </p>
-              <p className="mb-1">
-                <strong>Check-out:</strong> {booking.dates.check_out}
-              </p>
-              <p className="mb-0">
-                <strong>Nights:</strong> {booking.dates.nights}
-              </p>
-            </div>
-          )}
-
-          {(() => {
-            const guestCount = getGuestCount(booking);
-            if (guestCount > 0) {
-              return (
-                <div className="mb-4">
-                  <h5>Guests</h5>
-                  <p className="mb-0">
-                    {`${guestCount} Guest${guestCount !== 1 ? 's' : ''}`}
+        {/* Hotel Details */}
+        {booking.hotel && (
+          <div className="col-md-6">
+            <Card className="h-100 border-0 shadow-sm">
+              <Card.Body className="p-4">
+                <div className="d-flex align-items-center mb-3">
+                  <div className="rounded-circle bg-success d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px' }}>
+                    <i className="bi bi-building text-white"></i>
+                  </div>
+                  <h5 className="mb-0 text-success">Hotel Details</h5>
+                </div>
+                <h6 className="fw-bold mb-2">{booking.hotel.name}</h6>
+                {booking.hotel.address && (
+                  <p className="text-muted mb-2 small">
+                    <i className="bi bi-geo-alt me-1"></i>
+                    {booking.hotel.address}
                   </p>
-                </div>
-              );
-            }
-            return null;
-          })()}
+                )}
+                {booking.hotel.phone && (
+                  <p className="mb-0">
+                    <i className="bi bi-telephone me-2 text-success"></i>
+                    <span className="fw-medium">{booking.hotel.phone}</span>
+                  </p>
+                )}
+              </Card.Body>
+            </Card>
+          </div>
+        )}
 
-          {booking.pricing && (
-            <div className="mb-4">
-              <h5>Payment Summary</h5>
-              <div className="d-flex justify-content-between mb-2">
-                <span>Subtotal:</span>
-                <span>€{parseFloat(booking.pricing.subtotal).toFixed(2)}</span>
+        {/* Room & Stay Details */}
+        <div className="col-md-6">
+          <Card className="h-100 border-0 shadow-sm">
+            <Card.Body className="p-4">
+              <div className="d-flex align-items-center mb-3">
+                <div className="rounded-circle bg-info d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px' }}>
+                  <i className="bi bi-door-open text-white"></i>
+                </div>
+                <h5 className="mb-0 text-info">Stay Details</h5>
               </div>
-              {booking.pricing.discount && parseFloat(booking.pricing.discount) > 0 && (
-                <div className="d-flex justify-content-between mb-2 text-success">
-                  <span>Discount:</span>
-                  <span>-€{parseFloat(booking.pricing.discount).toFixed(2)}</span>
+              
+              {booking.room && (
+                <div className="mb-3">
+                  <div className="fw-bold mb-1">Room Type</div>
+                  <div className="text-muted">{booking.room.type}</div>
                 </div>
               )}
-              <div className="d-flex justify-content-between mb-2">
-                <span>Taxes:</span>
-                <span>€{parseFloat(booking.pricing.taxes).toFixed(2)}</span>
+              
+              {booking.dates && (
+                <>
+                  <div className="row g-2 mb-2">
+                    <div className="col-6">
+                      <div className="small fw-bold text-muted">Check-in</div>
+                      <div>{booking.dates.check_in}</div>
+                    </div>
+                    <div className="col-6">
+                      <div className="small fw-bold text-muted">Check-out</div>
+                      <div>{booking.dates.check_out}</div>
+                    </div>
+                  </div>
+                  <div className="row g-2">
+                    <div className="col-6">
+                      <div className="small fw-bold text-muted">Nights</div>
+                      <div>{booking.dates.nights}</div>
+                    </div>
+                    <div className="col-6">
+                      <div className="small fw-bold text-muted">Guests</div>
+                      <div>{(() => {
+                        const guestCount = getGuestCount(booking);
+                        return guestCount > 0 ? `${guestCount} Guest${guestCount !== 1 ? 's' : ''}` : '-';
+                      })()}</div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </Card.Body>
+          </Card>
+        </div>
+      </div>
+
+      {/* Payment Summary */}
+      {booking.pricing && (
+        <Card className="border-0 shadow-sm  bg-opacity-5 mb-4">
+          <Card.Body className="p-4">
+            <div className="d-flex align-items-center mb-3">
+              <div className="rounded-circle  d-flex align-items-center justify-content-center me-3" style={{ width: '40px', height: '40px' }}>
+                <i className="bi bi-credit-card text-white"></i>
               </div>
-              <hr />
-              <div className="d-flex justify-content-between">
-                <strong>Total Paid:</strong>
-                <strong className="text-success fs-5">€{parseFloat(booking.pricing.total).toFixed(2)}</strong>
+              <h5 className="mb-0 ">Payment Summary</h5>
+            </div>
+            
+            <div className="row">
+              <div className="col-md-8">
+                <div className="d-flex justify-content-between py-2 border-bottom">
+                  <span>Subtotal</span>
+                  <span>€{parseFloat(booking.pricing.subtotal).toFixed(2)}</span>
+                </div>
+                {booking.pricing.discount && parseFloat(booking.pricing.discount) > 0 && (
+                  <div className="d-flex justify-content-between py-2 border-bottom text-success">
+                    <span>Discount</span>
+                    <span>-€{parseFloat(booking.pricing.discount).toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="d-flex justify-content-between py-2 border-bottom">
+                  <span>Taxes & Fees</span>
+                  <span>€{parseFloat(booking.pricing.taxes).toFixed(2)}</span>
+                </div>
+              </div>
+              <div className="col-md-4 d-flex align-items-center justify-content-end">
+                <div className="text-end">
+                  <div className="small text-muted">Total Paid</div>
+                  <div className="fs-3 fw-bold text-success">€{parseFloat(booking.pricing.total).toFixed(2)}</div>
+                </div>
               </div>
             </div>
-          )}
+          </Card.Body>
+        </Card>
+      )}
 
-          <div className="d-grid gap-2 mt-4">
-            <Button 
-              variant="primary" 
-              size="lg"
-              onClick={() => navigate(`/hotel/${booking.hotel?.slug || ''}`)}
-            >
-              <i className="bi bi-house-door me-2"></i>
-              Back to Hotel
-            </Button>
-            <Button 
-              variant="success"
-              onClick={() => navigate('/my-bookings')}
-            >
-              <i className="bi bi-calendar-check me-2"></i>
-              View My Bookings
-            </Button>
-            <Button 
-              variant="outline-secondary"
-              onClick={() => navigate('/')}
-            >
-              Browse More Hotels
-            </Button>
+      {/* Action Buttons */}
+      <Card className="border-0 shadow-sm mb-4">
+        <Card.Body className="p-4">
+          <div className="row g-3">
+            <div className="col-md-4">
+              <Button 
+                variant="primary" 
+                size="lg"
+                className="w-100"
+                onClick={() => navigate(`/hotel/${booking.hotel?.slug || ''}`)}
+              >
+                <i className="bi bi-house-door me-2"></i>
+                Back to Hotel
+              </Button>
+            </div>
+            <div className="col-md-4">
+              <Button 
+                variant="success"
+                size="lg"
+                className="w-100"
+                onClick={() => navigate('/my-bookings')}
+              >
+                <i className="bi bi-calendar-check me-2"></i>
+                My Bookings
+              </Button>
+            </div>
+            <div className="col-md-4">
+              <Button 
+                variant="outline-secondary"
+                size="lg"
+                className="w-100"
+                onClick={() => navigate('/')}
+              >
+                <i className="bi bi-search me-2"></i>
+                Browse Hotels
+              </Button>
+            </div>
           </div>
         </Card.Body>
       </Card>
 
-      <Alert variant="info">
-        <i className="bi bi-info-circle me-2"></i>
-        <strong>Need help?</strong> Contact the hotel directly if you have any questions about your booking.
-      </Alert>
+      {/* Help Section */}
+      <Card className="border-0 bg-light">
+        <Card.Body className="p-4 text-center">
+          <div className="d-flex align-items-center justify-content-center mb-2">
+            <i className="bi bi-headset text-primary me-2 fs-5"></i>
+            <h6 className="mb-0 text-primary">Need Help?</h6>
+          </div>
+          <p className="text-muted mb-0">
+            Contact the hotel directly if you have any questions about your booking.
+          </p>
+        </Card.Body>
+      </Card>
     </Container>
     </div>
   );

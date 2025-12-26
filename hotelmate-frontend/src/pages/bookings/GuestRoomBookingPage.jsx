@@ -153,6 +153,12 @@ const GuestRoomBookingPage = () => {
 
   // Fetch hotel data
   useEffect(() => {
+    console.log('[UseEffect] Hotel data useEffect triggered with hotelSlug:', hotelSlug);
+    if (!hotelSlug) {
+      console.log('[UseEffect] No hotel slug, skipping fetch');
+      return;
+    }
+    console.log('[UseEffect] Calling fetchHotelData');
     fetchHotelData();
   }, [hotelSlug]);
 
@@ -239,7 +245,22 @@ const GuestRoomBookingPage = () => {
         ...(promoCode.trim() && { promo_code: promoCode.trim() })
       });
       
-      setQuote(unwrap(response));
+      const quoteData = unwrap(response);
+      console.log('[GuestRoomBookingPage] Full Quote response:', quoteData);
+      console.log('[GuestRoomBookingPage] Cancellation policy data:', {
+        cancellation_policy_id: quoteData?.cancellation_policy_id,
+        cancellation_policy_text: quoteData?.cancellation_policy_text,
+        cancellation_policy_name: quoteData?.cancellation_policy_name,
+        cancellation_policy_code: quoteData?.cancellation_policy_code,
+        template_type: quoteData?.template_type,
+        is_refundable: quoteData?.is_refundable,
+        hours_before_checkin: quoteData?.hours_before_checkin,
+        penalty_type: quoteData?.penalty_type,
+        penalty_amount: quoteData?.penalty_amount
+      });
+      console.log('[GuestRoomBookingPage] Backend should send policy info for hotel default policy!');
+      
+      setQuote(quoteData);
       setSelectedRoom(roomCode);
       setStep(3);
     } catch (err) {
@@ -1005,7 +1026,7 @@ const GuestRoomBookingPage = () => {
                 <h4 className="mb-4">Complete Payment</h4>
                 
                 {/* Booking Summary */}
-                <div className="mb-4 p-4 bg-light rounded">
+                <div className="mb-4 p-4 rounded">
                   <h5 className="mb-3">Booking Summary</h5>
                   <Row>
                     <Col md={6}>
@@ -1051,40 +1072,88 @@ const GuestRoomBookingPage = () => {
                 </Alert>
 
                 {/* Cancellation Policy */}
-                <div className="mb-4 p-4 border rounded">
-                  <h5 className="mb-3">
-                    <i className="bi bi-shield-exclamation me-2"></i>
-                    Cancellation Policy
-                  </h5>
+                <div className="mb-4 p-4 border rounded-3 bg-light">
+                  <div className="d-flex align-items-center mb-3">
+                    <div className="rounded-circle bg-primary d-flex align-items-center justify-content-center me-3" style={{width: '40px', height: '40px'}}>
+                      <i className="bi bi-shield-check text-white"></i>
+                    </div>
+                    <div>
+                      <h5 className="mb-1 fw-bold text-dark">Cancellation Policy</h5>
+                      <small className="text-muted">Know your booking terms</small>
+                    </div>
+                  </div>
                   
                   <div className="mb-3">
-                    {quote?.cancellation_policy_text ? (
-                      <div className="text-muted small">
-                        {quote.cancellation_policy_text}
+                    {/* Display cancellation policy from quote */}
+                    {quote?.cancellation_policy ? (
+                      <div className="bg-white p-4 rounded-3 border">
+                        <div className="d-flex align-items-start mb-3">
+                          <i className="bi bi-clock-history text-primary me-2 mt-1"></i>
+                          <div>
+                            <h6 className="fw-bold text-dark mb-2">{quote.cancellation_policy.name}</h6>
+                            <p className="mb-3 text-dark">{quote.cancellation_policy.description}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="row g-3">
+                          <div className="col-md-6">
+                            <div className="d-flex align-items-center p-3 bg-success bg-opacity-10 rounded-3">
+                              <i className="bi bi-check-circle-fill text-success me-2"></i>
+                              <div>
+                                <small className="fw-bold text-success d-block">Free Cancellation</small>
+                                <small className="text-muted">Up to 48 hours before check-in</small>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="col-md-6">
+                            <div className="d-flex align-items-center p-3 bg-warning bg-opacity-10 rounded-3">
+                              <i className="bi bi-exclamation-circle-fill text-warning me-2"></i>
+                              <div>
+                                <small className="fw-bold text-warning d-block">Partial Charge</small>
+                                <small className="text-muted">First night charged after deadline</small>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <hr className="my-3" />
+                        
+                        <div className="d-flex align-items-center">
+                          <i className="bi bi-info-circle text-primary me-2"></i>
+                          <small className="text-muted">
+                            <strong>Important:</strong> Cancellation must be made through your booking confirmation email or by contacting the hotel directly.
+                          </small>
+                        </div>
+                      </div>
+                    ) : quote?.cancellation_policy_text ? (
+                      <div className="bg-white p-4 rounded-3 border">
+                        <div className="d-flex align-items-start">
+                          <i className="bi bi-shield-exclamation text-primary me-2 mt-1"></i>
+                          <div>
+                            <h6 className="fw-bold text-dark mb-2">Cancellation Terms</h6>
+                            <p className="mb-0 text-dark">{quote.cancellation_policy_text}</p>
+                          </div>
+                        </div>
                       </div>
                     ) : (
-                      <div className="text-muted small">
-                        <div className={`mb-2 ${quote?.is_refundable !== false ? 'text-success' : 'text-warning'}`}>
-                          <strong>
-                            {quote?.is_refundable !== false ? '✓ Refundable Booking' : '⚠ Non-Refundable Booking'}
-                          </strong>
+                      <div className="bg-white p-4 rounded-3 border border-warning">
+                        <div className="d-flex align-items-start">
+                          <i className="bi bi-exclamation-triangle text-warning me-2 mt-1"></i>
+                          <div>
+                            <h6 className="fw-bold text-warning mb-2">Policy Information Unavailable</h6>
+                            <p className="mb-2 text-muted">
+                              We're unable to display the cancellation policy at this time.
+                            </p>
+                            <p className="mb-0 text-muted">
+                              Please contact the hotel directly for detailed cancellation terms and conditions.
+                            </p>
+                          </div>
                         </div>
-                        {quote?.is_refundable !== false ? (
-                          <p className="mb-2">
-                            This booking can be cancelled free of charge up to 48 hours before your check-in date. 
-                            Cancellations made within 48 hours of check-in will be charged the first night's rate.
-                          </p>
-                        ) : (
-                          <p className="mb-2">
-                            This booking is non-refundable. No refund will be provided for cancellations, 
-                            no-shows, or early departures. Please ensure your travel dates are confirmed before booking.
-                          </p>
-                        )}
-                        <p className="mb-0">
-                          By proceeding with this booking, you acknowledge that you have read and agree to these terms.
-                        </p>
                       </div>
                     )}
+                    <p className="mb-0">
+                      By proceeding with this booking, you acknowledge that you have read and agree to these terms.
+                    </p>
                   </div>
                   
                   <Form.Check

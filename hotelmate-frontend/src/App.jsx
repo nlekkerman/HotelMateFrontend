@@ -57,6 +57,7 @@ import GuestSurveyPage from "@/pages/guest/GuestSurveyPage";
 import BookingConfirmation from "@/pages/bookings/BookingConfirmation";
 import BookingPaymentSuccess from "@/pages/bookings/BookingPaymentSuccess";
 import BookingPaymentCancel from "@/pages/bookings/BookingPaymentCancel";
+import BookingStatusPage from "@/pages/bookings/BookingStatusPage";
 import MyBookingsPage from "@/pages/bookings/MyBookingsPage";
 import Reception from "@/components/Reception";
 import Login from "@/components/auth/Login";
@@ -901,6 +902,10 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route
                 path="/booking/confirmation/:bookingId"
                 element={<BookingConfirmation />}
+              />
+              <Route
+                path="/booking/status/:bookingId"
+                element={<BookingStatusPage />}
               />
               <Route
                 path="/booking/:hotelSlug/payment/success"
