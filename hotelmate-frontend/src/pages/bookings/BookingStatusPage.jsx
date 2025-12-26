@@ -143,7 +143,15 @@ const BookingStatusPage = () => {
       setBooking(data);
       setHotel(data.hotel);
       setCancellationPolicy(data.cancellation_policy);
-      setCanCancel(data.can_cancel || false);
+      
+      // Determine if cancellation should be allowed
+      // Use API can_cancel if provided, otherwise check status-based logic
+      const cancellableStatuses = ['PENDING_APPROVAL', 'CONFIRMED', 'PENDING_PAYMENT', 'PAYMENT_COMPLETE'];
+      const shouldAllowCancel = data.can_cancel !== undefined 
+        ? data.can_cancel 
+        : cancellableStatuses.includes(data.status?.toUpperCase()) && !data.cancelled_at;
+      
+      setCanCancel(shouldAllowCancel);
       setCancellationPreview(data.cancellation_preview);
 
       // Set hotel preset if available
@@ -181,9 +189,9 @@ const BookingStatusPage = () => {
       setCancelling(true);
       setCancelError(null);
 
-      // Call the hotel-specific booking cancellation API
+      // Call the correct public booking cancellation API
       const response = await publicAPI.post(
-        `/hotel/${hotelSlug}/room-bookings/${bookingId}/`,
+        `/hotels/${hotelSlug}/booking/status/${bookingId}/`,
         {
           token,
           reason: cancelReason.trim() || "Cancelled by guest",
@@ -513,7 +521,7 @@ const BookingStatusPage = () => {
         )}
 
         {/* Cancellation Policy & Actions */}
-        {cancellationPolicy && (
+        {(cancellationPolicy || canCancel) && (
           <Card className="border-0 shadow-sm mb-4">
             <Card.Body className="p-4">
               <div className="d-flex align-items-center mb-3">
@@ -526,12 +534,14 @@ const BookingStatusPage = () => {
                 <h5 className="mb-0 text-warning">Cancellation Policy</h5>
               </div>
 
-              <div className="mb-3">
-                <h6 className="fw-bold">{cancellationPolicy.name}</h6>
-                <p className="text-muted mb-0">
-                  {cancellationPolicy.description}
-                </p>
-              </div>
+              {cancellationPolicy && (
+                <div className="mb-3">
+                  <h6 className="fw-bold">{cancellationPolicy.name}</h6>
+                  <p className="text-muted mb-0">
+                    {cancellationPolicy.description}
+                  </p>
+                </div>
+              )}
 
               {/* Enhanced Cancellation Preview */}
               {cancellationPreview && canCancel && (
@@ -594,7 +604,7 @@ const BookingStatusPage = () => {
               )}
 
               {/* Cancellation Button */}
-              {canCancel && booking.status !== "CANCELLED" && (
+              {canCancel && (
                 <Button
                   variant="outline-danger"
                   onClick={() => setShowCancelModal(true)}
