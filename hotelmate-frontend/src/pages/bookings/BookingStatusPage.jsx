@@ -139,8 +139,6 @@ const BookingStatusPage = () => {
 
       const data = unwrap(response);
 
-      const data = unwrap(response);
-
       // The API returns booking data directly with can_cancel and cancellation_preview
       setBooking(data);
       setHotel(data.hotel);
