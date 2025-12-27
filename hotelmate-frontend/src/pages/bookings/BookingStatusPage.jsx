@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Container,
@@ -10,6 +10,7 @@ import {
   Form,
 } from "react-bootstrap";
 import { publicAPI } from "@/services/api";
+import Pusher from 'pusher-js';
 
 /**
  * BookingStatusPage - Token-based booking management page
@@ -36,7 +37,168 @@ const BookingStatusPage = () => {
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState(null);
   const [cancellationSuccess, setCancellationSuccess] = useState(null);
+  
+  // Real-time updates state
+  const [realtimeBooking, setRealtimeBooking] = useState(null);
+  const pusherRef = useRef(null);
+  const channelRef = useRef(null);
 
+  // Initialize Pusher and subscribe to guest booking events
+  useEffect(() => {
+    if (!bookingId || !token || !booking) return;
+    
+    // Initialize Pusher with guest token authentication
+    const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
+      cluster: import.meta.env.VITE_PUSHER_CLUSTER,
+      auth: {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      },
+      authEndpoint: `/api/staff/hotel/${hotelSlug}/notifications/pusher/auth/`,
+    });
+    
+    pusherRef.current = pusher;
+    
+    // Subscribe to private guest booking channel
+    const channelName = `private-guest-booking.${bookingId}`;
+    const channel = pusher.subscribe(channelName);
+    channelRef.current = channel;
+    
+    // Handle check-in event
+    channel.bind('booking_checked_in', function(data) {
+      console.log('🏨 Guest booking checked in:', data);
+      setRealtimeBooking(prevBooking => ({
+        ...prevBooking,
+        // Update booking status and check-in time
+        status: data.status,
+        checked_in_at: data.checked_in_at,
+        confirmation_number: data.confirmation_number,
+        
+        // Update dates if provided
+        ...(data.dates && {
+          check_in: data.dates.check_in,
+          check_out: data.dates.check_out,
+          nights: data.dates.nights,
+        }),
+        
+        // Update guest information
+        ...(data.guest && {
+          guest_name: data.guest.name,
+          primary_guest_name: data.guest.name,
+          primary_email: data.guest.email,
+          primary_phone: data.guest.phone,
+        }),
+        
+        // Update guest counts
+        ...(data.guests && {
+          adults: data.guests.adults,
+          children: data.guests.children,
+          party_size: data.guests.total,
+          total_guests: data.guests.total,
+        }),
+        
+        // Update room information
+        ...(data.room && {
+          room_number: data.room.number,
+          room_type: data.room.type,
+          room_floor: data.room.floor,
+          room_type_name: data.room.type,
+        }),
+        
+        // Update hotel information including WiFi
+        ...(data.hotel && {
+          hotel: {
+            ...prevBooking.hotel,
+            name: data.hotel.name,
+            phone: data.hotel.phone,
+            email: data.hotel.email,
+            wifi_name: data.hotel.wifi_name,
+            wifi_password: data.hotel.wifi_password,
+          }
+        }),
+        
+        // Handle special requests
+        special_requests: data.special_requests || prevBooking.special_requests,
+      }));
+      
+      // Show success toast
+      if (window.location.pathname.includes('booking-status')) {
+        import('react-toastify').then(({ toast }) => {
+          toast.success(`🎉 Welcome to ${data.hotel?.name || 'the hotel'}! You're checked in to Room ${data.room?.number}`);
+        }).catch(() => {
+          console.log('✅ Checked in to room', data.room?.number);
+        });
+      }
+    });
+    
+    // Handle check-out event
+    channel.bind('booking_checked_out', function(data) {
+      console.log('🚪 Guest booking checked out:', data);
+      setRealtimeBooking(prevBooking => ({
+        ...prevBooking,
+        ...data,
+        status: 'CHECKED_OUT',
+        checked_out_at: data.checked_out_at || new Date().toISOString(),
+      }));
+      
+      // Show info toast
+      if (window.location.pathname.includes('booking-status')) {
+        import('react-toastify').then(({ toast }) => {
+          toast.info('👋 You have been checked out. Safe travels!');
+        }).catch(() => {
+          console.log('✅ Checked out successfully');
+        });
+      }
+    });
+    
+    // Handle room assignment
+    channel.bind('booking_room_assigned', function(data) {
+      console.log('🏠 Room assigned to guest booking:', data);
+      setRealtimeBooking(prevBooking => ({
+        ...prevBooking,
+        ...data,
+        room_number: data.room_number,
+        room_assigned_at: data.room_assigned_at || new Date().toISOString(),
+      }));
+      
+      // Show info toast
+      if (window.location.pathname.includes('booking-status')) {
+        import('react-toastify').then(({ toast }) => {
+          toast.info(`🏠 Room ${data.room_number} has been assigned to your booking`);
+        }).catch(() => {
+          console.log('✅ Room assigned:', data.room_number);
+        });
+      }
+    });
+    
+    channel.bind('pusher:subscription_succeeded', () => {
+      console.log('✅ Successfully subscribed to guest booking channel:', channelName);
+    });
+    
+    channel.bind('pusher:subscription_error', (error) => {
+      console.error('❌ Failed to subscribe to guest booking channel:', error);
+    });
+    
+    // Cleanup on unmount
+    return () => {
+      if (channelRef.current) {
+        channelRef.current.unbind_all();
+        pusherRef.current?.unsubscribe(channelName);
+      }
+      if (pusherRef.current) {
+        pusherRef.current.disconnect();
+      }
+    };
+  }, [bookingId, token, booking, hotelSlug]);
+  
+  // Update booking state when real-time data changes
+  useEffect(() => {
+    if (realtimeBooking) {
+      setBooking(prevBooking => ({ ...prevBooking, ...realtimeBooking }));
+    }
+  }, [realtimeBooking]);
+  
   // Helper to safely unwrap API responses
   const unwrap = (res) => res?.data?.data ?? res?.data;
 
@@ -85,9 +247,11 @@ const BookingStatusPage = () => {
       case "declined":
         return { color: "danger", icon: "x-circle-fill", text: "Declined" };
       case "checked_in":
+      case "CHECKED_IN":
       case "checked in":
-        return { color: "info", icon: "door-open", text: "Checked In" };
+        return { color: "success", icon: "door-open", text: "Checked In" };
       case "checked_out":
+      case "CHECKED_OUT":
       case "checked out":
         return { color: "secondary", icon: "door-closed", text: "Checked Out" };
       default:
@@ -494,6 +658,328 @@ const BookingStatusPage = () => {
             </Card>
           </div>
         </div>
+        
+        {/* Enhanced Check-in Details Section - Only visible when checked in */}
+        {(booking.status === 'CHECKED_IN' || booking.status === 'checked_in') && (
+          <Card className="border-0 shadow-sm bg-success bg-opacity-10 mb-4">
+            <Card.Body className="p-4">
+              <div className="d-flex align-items-center mb-4">
+                <div
+                  className="rounded-circle bg-success d-flex align-items-center justify-content-center me-3"
+                  style={{ width: "60px", height: "60px" }}
+                >
+                  <i className="bi bi-door-open text-white fs-4"></i>
+                </div>
+                <div>
+                  <h4 className="mb-1 fw-bold text-success">Welcome! You're Checked In</h4>
+                  <p className="mb-0 text-muted">Your stay has officially begun at {booking.hotel?.name}</p>
+                </div>
+              </div>
+              
+              {/* Room Information Grid */}
+              <div className="row g-3 mb-4">
+                {booking.room_number && (
+                  <div className="col-md-6 col-lg-3">
+                    <div className="d-flex align-items-center p-3 bg-white rounded-3 border">
+                      <i className="bi bi-house-door text-primary me-3 fs-3"></i>
+                      <div>
+                        <div className="fw-bold text-primary fs-4">Room {booking.room_number}</div>
+                        <small className="text-muted">Your room</small>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {booking.room_type && (
+                  <div className="col-md-6 col-lg-3">
+                    <div className="d-flex align-items-center p-3 bg-white rounded-3 border">
+                      <i className="bi bi-stars text-warning me-3 fs-3"></i>
+                      <div>
+                        <div className="fw-bold text-dark">{booking.room_type}</div>
+                        <small className="text-muted">Room type</small>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {booking.room_floor && (
+                  <div className="col-md-6 col-lg-3">
+                    <div className="d-flex align-items-center p-3 bg-white rounded-3 border">
+                      <i className="bi bi-building text-info me-3 fs-3"></i>
+                      <div>
+                        <div className="fw-bold text-dark">Floor {booking.room_floor}</div>
+                        <small className="text-muted">Location</small>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {booking.nights && (
+                  <div className="col-md-6 col-lg-3">
+                    <div className="d-flex align-items-center p-3 bg-white rounded-3 border">
+                      <i className="bi bi-calendar-check text-danger me-3 fs-3"></i>
+                      <div>
+                        <div className="fw-bold text-dark">
+                          {new Date(booking.check_out).toLocaleDateString()}
+                        </div>
+                        <small className="text-muted">Check-out date</small>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* WiFi Credentials */}
+              {booking.hotel?.wifi_name && (
+                <div className="p-4 bg-primary bg-opacity-10 rounded-3 border-start border-primary border-4 mb-4">
+                  <div className="d-flex align-items-center mb-3">
+                    <i className="bi bi-wifi text-primary me-2 fs-4"></i>
+                    <h6 className="mb-0 fw-bold text-primary">WiFi Access</h6>
+                  </div>
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <div className="d-flex align-items-center">
+                        <strong className="me-2">Network:</strong>
+                        <code className="bg-white px-2 py-1 rounded border">{booking.hotel.wifi_name}</code>
+                        <Button 
+                          variant="link" 
+                          size="sm" 
+                          className="ms-2 p-0"
+                          onClick={() => navigator.clipboard.writeText(booking.hotel.wifi_name)}
+                          title="Copy network name"
+                        >
+                          <i className="bi bi-clipboard"></i>
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="d-flex align-items-center">
+                        <strong className="me-2">Password:</strong>
+                        <code className="bg-white px-2 py-1 rounded border">{booking.hotel.wifi_password}</code>
+                        <Button 
+                          variant="link" 
+                          size="sm" 
+                          className="ms-2 p-0"
+                          onClick={() => navigator.clipboard.writeText(booking.hotel.wifi_password)}
+                          title="Copy password"
+                        >
+                          <i className="bi bi-clipboard"></i>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Stay Information */}
+              <div className="row g-3 mb-4">
+                {booking.party_size && (
+                  <div className="col-md-4">
+                    <div className="text-center p-3 bg-light rounded-3">
+                      <i className="bi bi-people text-info fs-3 mb-2"></i>
+                      <div className="fw-bold">{booking.party_size} Guest{booking.party_size > 1 ? 's' : ''}</div>
+                      <small className="text-muted">Party size</small>
+                    </div>
+                  </div>
+                )}
+                
+                {booking.nights && (
+                  <div className="col-md-4">
+                    <div className="text-center p-3 bg-light rounded-3">
+                      <i className="bi bi-moon-stars text-primary fs-3 mb-2"></i>
+                      <div className="fw-bold">{booking.nights} Night{booking.nights > 1 ? 's' : ''}</div>
+                      <small className="text-muted">Total stay</small>
+                    </div>
+                  </div>
+                )}
+                
+                {booking.checked_in_at && (
+                  <div className="col-md-4">
+                    <div className="text-center p-3 bg-light rounded-3">
+                      <i className="bi bi-clock text-success fs-3 mb-2"></i>
+                      <div className="fw-bold">
+                        {new Date(booking.checked_in_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </div>
+                      <small className="text-muted">Check-in time</small>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Special Requests */}
+              {booking.special_requests && (
+                <div className="p-3 bg-warning bg-opacity-10 rounded-3 border-start border-warning border-4 mb-4">
+                  <div className="d-flex align-items-start">
+                    <i className="bi bi-star text-warning me-2 mt-1"></i>
+                    <div>
+                      <h6 className="mb-1 fw-bold text-warning">Special Requests</h6>
+                      <p className="mb-0 text-muted">{booking.special_requests}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Hotel Contact Information */}
+              {booking.hotel && (
+                <div className="p-3 bg-info bg-opacity-10 rounded-3">
+                  <h6 className="fw-bold text-info mb-3">
+                    <i className="bi bi-building me-2"></i>
+                    Hotel Information
+                  </h6>
+                  <div className="row g-2">
+                    {booking.hotel.phone && (
+                      <div className="col-md-6">
+                        <div className="d-flex align-items-center">
+                          <i className="bi bi-telephone text-info me-2"></i>
+                          <a href={`tel:${booking.hotel.phone}`} className="text-decoration-none">
+                            {booking.hotel.phone}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                    {booking.hotel.address && (
+                      <div className="col-md-6">
+                        <div className="d-flex align-items-center">
+                          <i className="bi bi-geo-alt text-info me-2"></i>
+                          <span className="text-muted">{booking.hotel.address}, {booking.hotel.city}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+        )}
+        
+        {/* In House Services - Only visible when checked in */}
+        {(booking.status === 'CHECKED_IN' || booking.status === 'checked_in') && (
+          <Card className="border-0 shadow-sm bg-info bg-opacity-5 mb-4">
+            <Card.Body className="p-4">
+              <div className="d-flex align-items-center mb-4">
+                <div
+                  className="rounded-circle bg-info d-flex align-items-center justify-content-center me-3"
+                  style={{ width: "50px", height: "50px" }}
+                >
+                  <i className="bi bi-concierge text-white fs-5"></i>
+                </div>
+                <div>
+                  <h5 className="mb-1 fw-bold text-info">In House Services</h5>
+                  <small className="text-muted">Available during your stay</small>
+                </div>
+              </div>
+              
+              <div className="row g-3">
+                {/* Chat with Hotel Staff */}
+                <div className="col-md-4">
+                  <Card className="h-100 border-0 shadow-sm service-card" style={{ cursor: 'pointer' }}>
+                    <Card.Body className="p-4 text-center">
+                      <div className="service-icon mb-3">
+                        <div
+                          className="rounded-circle bg-primary d-flex align-items-center justify-content-center mx-auto"
+                          style={{ width: "60px", height: "60px" }}
+                        >
+                          <i className="bi bi-chat-dots text-white fs-4"></i>
+                        </div>
+                      </div>
+                      <h6 className="fw-bold mb-2">Chat with Staff</h6>
+                      <p className="text-muted small mb-3">
+                        Quick support and assistance from our hotel team
+                      </p>
+                      <Button 
+                        variant="outline-primary" 
+                        size="sm"
+                        onClick={() => {
+                          // Navigate to guest chat or open chat modal
+                          console.log('Opening chat with hotel staff...');
+                          // TODO: Implement guest chat functionality
+                        }}
+                      >
+                        <i className="bi bi-chat-dots me-2"></i>
+                        Start Chat
+                      </Button>
+                    </Card.Body>
+                  </Card>
+                </div>
+                
+                {/* Room Services */}
+                <div className="col-md-4">
+                  <Card className="h-100 border-0 shadow-sm service-card" style={{ cursor: 'pointer' }}>
+                    <Card.Body className="p-4 text-center">
+                      <div className="service-icon mb-3">
+                        <div
+                          className="rounded-circle bg-success d-flex align-items-center justify-content-center mx-auto"
+                          style={{ width: "60px", height: "60px" }}
+                        >
+                          <i className="bi bi-truck text-white fs-4"></i>
+                        </div>
+                      </div>
+                      <h6 className="fw-bold mb-2">Room Services</h6>
+                      <p className="text-muted small mb-3">
+                        Order food, drinks, and amenities to your room
+                      </p>
+                      <Button 
+                        variant="outline-success" 
+                        size="sm"
+                        onClick={() => {
+                          // Navigate to room service menu
+                          window.open(`/${hotelSlug}/room-service?room=${booking.room_number}`, '_blank');
+                        }}
+                      >
+                        <i className="bi bi-truck me-2"></i>
+                        Order Now
+                      </Button>
+                    </Card.Body>
+                  </Card>
+                </div>
+                
+                {/* Breakfast in Room */}
+                <div className="col-md-4">
+                  <Card className="h-100 border-0 shadow-sm service-card" style={{ cursor: 'pointer' }}>
+                    <Card.Body className="p-4 text-center">
+                      <div className="service-icon mb-3">
+                        <div
+                          className="rounded-circle bg-warning d-flex align-items-center justify-content-center mx-auto"
+                          style={{ width: "60px", height: "60px" }}
+                        >
+                          <i className="bi bi-cup-hot text-white fs-4"></i>
+                        </div>
+                      </div>
+                      <h6 className="fw-bold mb-2">Breakfast in Room</h6>
+                      <p className="text-muted small mb-3">
+                        Start your day with breakfast delivered to your room
+                      </p>
+                      <Button 
+                        variant="outline-warning" 
+                        size="sm"
+                        onClick={() => {
+                          // Navigate to breakfast menu or room service with breakfast filter
+                          window.open(`/${hotelSlug}/room-service?category=breakfast&room=${booking.room_number}`, '_blank');
+                        }}
+                      >
+                        <i className="bi bi-egg-fried me-2"></i>
+                        Order Breakfast
+                      </Button>
+                    </Card.Body>
+                  </Card>
+                </div>
+              </div>
+              
+              {/* Service Hours Notice */}
+              <div className="mt-4 p-3 bg-light rounded-3">
+                <div className="d-flex align-items-start">
+                  <i className="bi bi-clock text-muted me-2 mt-1"></i>
+                  <div>
+                    <small className="text-muted">
+                      <strong>Service Hours:</strong> Room service available 24/7 • Breakfast service: 6:00 AM - 11:00 AM • 
+                      Chat support available during reception hours or for urgent matters
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        )}
 
         {/* Payment Summary */}
         {booking.total_amount && (

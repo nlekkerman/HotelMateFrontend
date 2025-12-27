@@ -1,6 +1,18 @@
 // src/realtime/stores/roomBookingStore.jsx
 import React, { createContext, useContext, useReducer } from 'react';
 
+// Global event deduplication to prevent duplicate processing
+const globalProcessedEventIds = new Set();
+const MAX_EVENT_IDS = 1000;
+
+function maybeCleanupEventIds() {
+  if (globalProcessedEventIds.size > MAX_EVENT_IDS) {
+    const idsArray = Array.from(globalProcessedEventIds);
+    globalProcessedEventIds.clear();
+    idsArray.slice(-500).forEach(id => globalProcessedEventIds.add(id));
+  }
+}
+
 // State contexts
 const RoomBookingStateContext = createContext(null);
 const RoomBookingDispatchContext = createContext(null);
@@ -117,6 +129,7 @@ export const useRoomBookingDispatch = () => {
 // Actions object for handling events from eventBus
 export const roomBookingActions = {
   _processedEventIds: new Set(), // Event ID-based deduplication
+  _lastToastTime: 0, // Rate limiting for toasts
 
   // Main event handler called from eventBus
   handleEvent(event) {
@@ -164,6 +177,37 @@ export const roomBookingActions = {
           type: ACTIONS.ROOM_BOOKING_CREATED,
           payload: { booking: payload, bookingId },
         });
+        this.maybeShowToast('success', `New booking created for ${payload.guest_name}`, event);
+        break;
+
+      case "booking_payment_required":
+        dispatchRef({
+          type: ACTIONS.ROOM_BOOKING_UPDATED,
+          payload: { 
+            booking: { 
+              ...payload, 
+              status: 'PAYMENT_REQUIRED',
+              payment_required_at: payload.payment_required_at || new Date().toISOString()
+            }, 
+            bookingId 
+          },
+        });
+        this.maybeShowToast('info', `Booking ${bookingId} awaiting payment`, event);
+        break;
+
+      case "booking_confirmed":
+        dispatchRef({
+          type: ACTIONS.ROOM_BOOKING_UPDATED,
+          payload: { 
+            booking: { 
+              ...payload, 
+              status: 'CONFIRMED',
+              confirmed_at: payload.confirmed_at || new Date().toISOString()
+            }, 
+            bookingId 
+          },
+        });
+        this.maybeShowToast('success', `Booking ${bookingId} confirmed`, event);
         break;
 
       case "booking_updated":
@@ -185,6 +229,7 @@ export const roomBookingActions = {
           type: ACTIONS.ROOM_BOOKING_CANCELLED,
           payload: { booking: payload, bookingId },
         });
+        this.maybeShowToast('info', `Booking ${bookingId} cancelled`, event);
         break;
 
       case "booking_checked_in":
@@ -214,6 +259,32 @@ export const roomBookingActions = {
         }
         break;
     }
+  },
+
+  // Show toast notifications only for realtime events on staff screens
+  maybeShowToast(type, message, event) {
+    // Only show toasts for realtime events from pusher (not initial data loads)
+    if (event.source !== 'pusher') return;
+    
+    // Only on staff booking management screens
+    const currentPath = window.location.pathname;
+    const isStaffBookingScreen = currentPath.includes('/staff/') && 
+                                (currentPath.includes('/booking') || currentPath.includes('/reservation'));
+    
+    if (!isStaffBookingScreen) return;
+    
+    // Rate limiting - don't spam toasts
+    const now = Date.now();
+    if (now - this._lastToastTime < 2000) return; // 2 second cooldown
+    
+    this._lastToastTime = now;
+    
+    // Dynamic import to avoid bundling toast in all scenarios
+    import('react-toastify').then(({ toast }) => {
+      toast[type]?.(message) || toast(message);
+    }).catch(() => {
+      console.log('[roomBookingStore] Toast notification:', type, message);
+    });
   },
 };
 

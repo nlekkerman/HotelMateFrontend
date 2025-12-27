@@ -8,6 +8,36 @@ import { serviceBookingActions } from './stores/serviceBookingStore.jsx';
 import { roomBookingActions } from './stores/roomBookingStore.jsx';
 import { roomsActions } from './stores/roomsStore.jsx';
 
+// Global event deduplication using meta.event_id
+const globalProcessedEventIds = new Set();
+const MAX_EVENT_IDS = 1000; // LRU-style limit
+
+// Dev-only debug logging
+const DEBUG_REALTIME = import.meta.env.DEV;
+
+function maybeCleanupEventIds() {
+  if (globalProcessedEventIds.size > MAX_EVENT_IDS) {
+    // Convert to array, keep last 500, convert back to Set
+    const idsArray = Array.from(globalProcessedEventIds);
+    globalProcessedEventIds.clear();
+    idsArray.slice(-500).forEach(id => globalProcessedEventIds.add(id));
+  }
+}
+
+function logBookingEvent(event) {
+  if (!DEBUG_REALTIME || event.category !== 'room_booking') return;
+  
+  console.group('🏨 [BOOKING DEBUG]');
+  console.log('Event Type:', event.type);
+  console.log('Event ID:', event.meta?.event_id);
+  console.log('Booking ID:', event.payload?.booking_id);
+  console.log('Status:', event.payload?.status);
+  console.log('Guest Name:', event.payload?.guest_name);
+  console.log('Channel:', event.source);
+  console.log('Timestamp:', event.meta?.ts);
+  console.groupEnd();
+}
+
 /**
  * Normalize FCM payload to domain event format
  * @param {Object} fcmPayload - Raw FCM payload from Firebase SDK
@@ -301,6 +331,18 @@ function routeToDomainStores(event) {
         console.log('✅ [EventBus] Room service event sent to store');
         break;
       case "room_booking":
+        // Dev-only booking debug logging
+        if (import.meta.env.DEV && event.category === 'room_booking') {
+          console.group('🏨 [BOOKING DEBUG]');
+          console.log('Event Type:', event.type);
+          console.log('Event ID:', event.meta?.event_id);
+          console.log('Booking ID:', event.payload?.booking_id);
+          console.log('Status:', event.payload?.status);
+          console.log('Guest Name:', event.payload?.guest_name);
+          console.log('Source:', event.source);
+          console.log('Timestamp:', event.meta?.ts);
+          console.groupEnd();
+        }
         roomBookingActions.handleEvent(event);
         break;
       case "booking":
