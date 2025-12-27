@@ -22,8 +22,8 @@ const BookingActions = ({
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showDeclineModal, setShowDeclineModal] = useState(false);
   
-  const canApprove = booking.status === 'PENDING_APPROVAL';
-  const canDecline = booking.status === 'PENDING_APPROVAL';
+  const canApprove = booking.status === 'PENDING_APPROVAL' || booking.status === 'PENDING_PAYMENT';
+  const canDecline = booking.status === 'PENDING_APPROVAL' || booking.status === 'PENDING_PAYMENT';
   const canSendPrecheckin = booking.status === 'CONFIRMED' && 
     (booking.guest_email || booking.primary_email || booking.booker_email);
   const isPrecheckinComplete = booking?.precheckin_submitted_at != null;
