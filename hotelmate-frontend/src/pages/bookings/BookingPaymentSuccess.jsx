@@ -334,9 +334,20 @@ Proposed: Payment → PENDING_HOTEL_CONFIRMATION → Staff confirms → CONFIRME
             <div className="rounded-circle bg-success d-inline-flex align-items-center justify-content-center mb-3" style={{ width: '80px', height: '80px' }}>
               <i className="bi bi-check-circle-fill text-white" style={{ fontSize: '2.5rem' }}></i>
             </div>
-            <h1 className="display-6 fw-bold text-success mb-2">Booking Confirmed!</h1>
-            <p className="lead text-muted">Your booking is confirmed and payment has been captured.</p>
-            <p className="text-muted">You'll receive a pre-check-in email shortly.</p>
+            {/* Show room number if checked in */}
+            {booking?.checked_in_at && booking?.assigned_room_number ? (
+              <>
+                <h1 className="display-4 fw-bold text-success mb-2">Room {booking.assigned_room_number}</h1>
+                <div className="badge bg-success fs-5 px-4 py-2 mb-3">Welcome! You're Checked In</div>
+                <p className="lead text-muted">Enjoy your stay at {booking.hotel?.name}!</p>
+              </>
+            ) : (
+              <>
+                <h1 className="display-6 fw-bold text-success mb-2">Booking Confirmed!</h1>
+                <p className="lead text-muted">Your booking is confirmed and payment has been captured.</p>
+                <p className="text-muted">You'll receive a pre-check-in email shortly.</p>
+              </>
+            )}
           </>
         ) : isPendingApproval ? (
           <>
@@ -413,8 +424,17 @@ Proposed: Payment → PENDING_HOTEL_CONFIRMATION → Staff confirms → CONFIRME
                   <i className="bi bi-check-circle text-white"></i>
                 </div>
                 <div>
-                  <div className="fw-bold text-success mb-1">Booking Confirmed!</div>
-                  <small className="text-success">A confirmation email has been sent to your email address.</small>
+                  {booking?.checked_in_at && booking?.assigned_room_number ? (
+                    <>
+                      <div className="fw-bold text-success mb-1">Welcome to Room {booking.assigned_room_number}!</div>
+                      <small className="text-success">You're checked in and ready to enjoy your stay.</small>
+                    </>
+                  ) : (
+                    <>
+                      <div className="fw-bold text-success mb-1">Booking Confirmed!</div>
+                      <small className="text-success">A confirmation email has been sent to your email address.</small>
+                    </>
+                  )}
                 </div>
               </div>
             </Alert>
