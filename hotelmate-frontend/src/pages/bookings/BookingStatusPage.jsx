@@ -52,122 +52,87 @@ const BookingStatusPage = () => {
       cluster: import.meta.env.VITE_PUSHER_CLUSTER,
       auth: {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `GuestToken ${token}`,
         },
       },
-      authEndpoint: `/api/staff/hotel/${hotelSlug}/notifications/pusher/auth/`,
+      authEndpoint: `/api/notifications/pusher/auth/?hotel_slug=${hotelSlug}`,
     });
     
     pusherRef.current = pusher;
     
     // Subscribe to private guest booking channel
-    const channelName = `private-guest-booking.${bookingId}`;
+    const channelName = `private-guest-booking-${bookingId}`;
     const channel = pusher.subscribe(channelName);
     channelRef.current = channel;
     
     // Handle check-in event
-    channel.bind('booking_checked_in', function(data) {
+    channel.bind('guest-booking-checked-in', function(data) {
       console.log('🏨 Guest booking checked in:', data);
-      setRealtimeBooking(prevBooking => ({
-        ...prevBooking,
-        // Update booking status and check-in time
-        status: data.status,
-        checked_in_at: data.checked_in_at,
-        confirmation_number: data.confirmation_number,
-        
-        // Update dates if provided
-        ...(data.dates && {
-          check_in: data.dates.check_in,
-          check_out: data.dates.check_out,
-          nights: data.dates.nights,
-        }),
-        
-        // Update guest information
-        ...(data.guest && {
-          guest_name: data.guest.name,
-          primary_guest_name: data.guest.name,
-          primary_email: data.guest.email,
-          primary_phone: data.guest.phone,
-        }),
-        
-        // Update guest counts
-        ...(data.guests && {
-          adults: data.guests.adults,
-          children: data.guests.children,
-          party_size: data.guests.total,
-          total_guests: data.guests.total,
-        }),
-        
-        // Update room information
-        ...(data.room && {
-          room_number: data.room.number,
-          room_type: data.room.type,
-          room_floor: data.room.floor,
-          room_type_name: data.room.type,
-        }),
-        
-        // Update hotel information including WiFi
-        ...(data.hotel && {
-          hotel: {
-            ...prevBooking.hotel,
-            name: data.hotel.name,
-            phone: data.hotel.phone,
-            email: data.hotel.email,
-            wifi_name: data.hotel.wifi_name,
-            wifi_password: data.hotel.wifi_password,
-          }
-        }),
-        
-        // Handle special requests
-        special_requests: data.special_requests || prevBooking.special_requests,
-      }));
+      // Use complete canonical booking data from event
+      const updatedBooking = data.booking;
+      setRealtimeBooking(updatedBooking);
       
       // Show success toast
       if (window.location.pathname.includes('booking-status')) {
         import('react-toastify').then(({ toast }) => {
-          toast.success(`🎉 Welcome to ${data.hotel?.name || 'the hotel'}! You're checked in to Room ${data.room?.number}`);
+          toast.success(`🎉 Welcome to ${updatedBooking.hotel?.name || 'the hotel'}! You're checked in to Room ${updatedBooking.assigned_room_number}`);
         }).catch(() => {
-          console.log('✅ Checked in to room', data.room?.number);
+          console.log('✅ Checked in to room', updatedBooking.assigned_room_number);
         });
       }
     });
     
-    // Handle check-out event
-    channel.bind('booking_checked_out', function(data) {
-      console.log('🚪 Guest booking checked out:', data);
-      setRealtimeBooking(prevBooking => ({
-        ...prevBooking,
-        ...data,
-        status: 'CHECKED_OUT',
-        checked_out_at: data.checked_out_at || new Date().toISOString(),
-      }));
+    // Handle booking confirmation event
+    channel.bind('guest-booking-confirmed', function(data) {
+      console.log('🎉 Guest booking confirmed:', data);
+      const updatedBooking = data.booking;
+      setRealtimeBooking(updatedBooking);
       
-      // Show info toast
+      // Show success toast
       if (window.location.pathname.includes('booking-status')) {
         import('react-toastify').then(({ toast }) => {
-          toast.info('👋 You have been checked out. Safe travels!');
+          toast.success('🎉 Your booking has been confirmed!');
         }).catch(() => {
-          console.log('✅ Checked out successfully');
+          console.log('✅ Booking confirmed');
         });
       }
     });
     
-    // Handle room assignment
-    channel.bind('booking_room_assigned', function(data) {
-      console.log('🏠 Room assigned to guest booking:', data);
-      setRealtimeBooking(prevBooking => ({
-        ...prevBooking,
-        ...data,
-        room_number: data.room_number,
-        room_assigned_at: data.room_assigned_at || new Date().toISOString(),
-      }));
+    // Handle booking cancellation event
+    channel.bind('guest-booking-cancelled', function(data) {
+      console.log('❌ Guest booking cancelled:', data);
+      const updatedBooking = data.booking;
+      setRealtimeBooking(updatedBooking);
       
       // Show info toast
       if (window.location.pathname.includes('booking-status')) {
         import('react-toastify').then(({ toast }) => {
-          toast.info(`🏠 Room ${data.room_number} has been assigned to your booking`);
+          toast.error('❌ Your booking has been cancelled');
         }).catch(() => {
-          console.log('✅ Room assigned:', data.room_number);
+          console.log('❌ Booking cancelled');
+        });
+      }
+    });
+    
+    // Handle general booking updates (room changes, special requests, etc.)
+    channel.bind('guest-booking-updated', function(data) {
+      console.log('📝 Guest booking updated:', data);
+      const updatedBooking = data.booking;
+      setRealtimeBooking(updatedBooking);
+      
+      // Show info toast for non-status updates
+      if (window.location.pathname.includes('booking-status')) {
+        import('react-toastify').then(({ toast }) => {
+          // Show different messages based on what changed
+          if (updatedBooking.assigned_room_number && !booking?.assigned_room_number) {
+            toast.info(`🏠 Room ${updatedBooking.assigned_room_number} has been assigned to your booking`);
+          } else if (updatedBooking.status === 'CHECKED_OUT') {
+            toast.info('👋 You have been checked out. Safe travels!');
+          } else {
+            toast.info('📝 Your booking has been updated');
+          }
+        }).catch(() => {
+          console.log('📝 Booking updated');
         });
       }
     });
@@ -204,20 +169,15 @@ const BookingStatusPage = () => {
 
   // Helper to calculate guest count
   const getGuestCount = (booking) => {
-    if (!booking) return 0;
-
-    // Try direct fields first
-    if (booking.adults !== undefined || booking.children !== undefined) {
-      return (booking.adults || 0) + (booking.children || 0);
-    }
-
-    // Try guests object
-    if (booking.guests?.total) {
+    if (!booking?.guests) return 0;
+    
+    // Use canonical guests structure
+    if (booking.guests.total) {
       return booking.guests.total;
     }
-
-    // Fallback
-    return booking.total_guests || 0;
+    
+    // Calculate from adults and children
+    return (booking.guests.adults || 0) + (booking.guests.children || 0);
   };
 
   // Get status display information
@@ -231,13 +191,20 @@ const BookingStatusPage = () => {
           icon: "check-circle-fill",
           text: "Confirmed",
         };
+      case "pending_payment":
+      case "pending payment":
+        return {
+          color: "warning",
+          icon: "credit-card",
+          text: "Payment Required",
+        };
       case "pending_approval":
       case "pending approval":
       case "pending":
         return {
           color: "warning",
           icon: "clock-history",
-          text: "Pending Approval",
+          text: "Awaiting Approval",
         };
       case "cancelled":
       case "canceled":
@@ -310,7 +277,7 @@ const BookingStatusPage = () => {
       
       // Determine if cancellation should be allowed
       // Use API can_cancel if provided, otherwise check status-based logic
-      const cancellableStatuses = ['PENDING_APPROVAL', 'CONFIRMED', 'PENDING_PAYMENT', 'PAYMENT_COMPLETE'];
+      const cancellableStatuses = ['PENDING_PAYMENT', 'PENDING_APPROVAL', 'CONFIRMED'];
       const shouldAllowCancel = data.can_cancel !== undefined 
         ? data.can_cancel 
         : cancellableStatuses.includes(data.status?.toUpperCase()) && !data.cancelled_at;
@@ -469,7 +436,177 @@ const BookingStatusPage = () => {
   }
 
   const statusInfo = getStatusDisplay(booking.status);
+  const isCheckedIn = (booking?.status === 'CHECKED_IN' || booking?.checked_in_at) && booking?.assigned_room_number;
 
+  // Render checked-in guest layout
+  if (isCheckedIn) {
+    return (
+      <div
+        className={`booking-status-page page-style-${preset}`}
+        data-preset={preset}
+        style={{ minHeight: "100vh" }}
+      >
+        <Container className="py-4">
+          {/* Modern Checked-In Header */}
+          <div className="text-center mb-4">
+            <div className="position-relative d-inline-block">
+              <div
+                className="rounded-circle bg-success d-inline-flex align-items-center justify-content-center mb-3"
+                style={{ width: "100px", height: "100px" }}
+              >
+                <i
+                  className="bi bi-door-open-fill text-white"
+                  style={{ fontSize: "3rem" }}
+                ></i>
+              </div>
+              <div className="position-absolute top-0 end-0 bg-white rounded-circle p-2 shadow-sm">
+                <i className="bi bi-check-circle-fill text-success fs-5"></i>
+              </div>
+            </div>
+            <h1 className="display-4 fw-bold mb-2 text-success">Room {booking.assigned_room_number}</h1>
+            <div className="badge bg-success fs-5 px-4 py-2 mb-3">Welcome! You're Checked In</div>
+            <p className="text-muted lead">Enjoy your stay at {booking.hotel?.name}</p>
+          </div>
+
+          {/* Quick Info Cards */}
+          <div className="row g-3 mb-4">
+            <div className="col-md-4">
+              <div className="card border-0 shadow-sm h-100">
+                <div className="card-body text-center p-3">
+                  <i className="bi bi-house-door text-primary fs-2 mb-2"></i>
+                  <h6 className="card-title">{booking.room?.type}</h6>
+                  <p className="card-text text-muted mb-0">Your Room</p>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-4">
+              <div className="card border-0 shadow-sm h-100">
+                <div className="card-body text-center p-3">
+                  <i className="bi bi-calendar-check text-info fs-2 mb-2"></i>
+                  <h6 className="card-title">{booking.dates?.nights} Night{(booking.dates?.nights > 1) ? 's' : ''}</h6>
+                  <p className="card-text text-muted mb-0">Until {new Date(booking.dates?.check_out).toLocaleDateString('en-GB')}</p>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-4">
+              <div className="card border-0 shadow-sm h-100">
+                <div className="card-body text-center p-3">
+                  <i className="bi bi-people text-warning fs-2 mb-2"></i>
+                  <h6 className="card-title">{booking.guests?.total} Guest{(booking.guests?.total > 1) ? 's' : ''}</h6>
+                  <p className="card-text text-muted mb-0">
+                    {booking.guests?.adults} Adult{(booking.guests?.adults > 1) ? 's' : ''}{booking.guests?.children > 0 && `, ${booking.guests.children} Child${(booking.guests?.children > 1) ? 'ren' : ''}`}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Guest Information Card */}
+          <div className="card border-0 shadow-sm mb-4">
+            <div className="card-body p-4">
+              <h5 className="card-title text-primary mb-3">
+                <i className="bi bi-person-circle me-2"></i>
+                Guest Information
+              </h5>
+              <div className="row">
+                <div className="col-md-8">
+                  <h6 className="fw-bold">{booking.guest?.name}</h6>
+                  <div className="text-muted mb-2">
+                    <i className="bi bi-envelope me-2"></i>
+                    {booking.guest?.email}
+                  </div>
+                  {booking.guest?.phone && (
+                    <div className="text-muted mb-2">
+                      <i className="bi bi-telephone me-2"></i>
+                      {booking.guest?.phone}
+                    </div>
+                  )}
+                  <div className="small text-muted">
+                    <i className="bi bi-star-fill me-2"></i>
+                    Primary Guest
+                  </div>
+                </div>
+                <div className="col-md-4 text-end">
+                  <div className="small text-muted mb-1">Party Size</div>
+                  <div className="fs-4 fw-bold text-primary">{booking.guests?.total}</div>
+                  <div className="small text-muted">
+                    {booking.guests?.adults} Adults • {booking.guests?.children} Children
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Hotel Services Quick Access */}
+          <div className="row g-3 mb-4">
+            <div className="col-md-6">
+              <div className="card border-0 shadow-sm bg-primary bg-opacity-10">
+                <div className="card-body p-4">
+                  <h5 className="card-title text-primary mb-3">
+                    <i className="bi bi-room-service me-2"></i>
+                    Room Service
+                  </h5>
+                  <p className="card-text text-muted">Order food and drinks directly to your room</p>
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => window.open(`/${hotelSlug}/room-service?room=${booking.assigned_room_number}`, '_blank')}
+                  >
+                    Order Now
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-6">
+              <div className="card border-0 shadow-sm bg-warning bg-opacity-10">
+                <div className="card-body p-4">
+                  <h5 className="card-title text-warning mb-3">
+                    <i className="bi bi-cup-hot me-2"></i>
+                    Breakfast Service
+                  </h5>
+                  <p className="card-text text-muted">Start your day with our breakfast selection</p>
+                  <button 
+                    className="btn btn-warning"
+                    onClick={() => window.open(`/${hotelSlug}/room-service?category=breakfast&room=${booking.assigned_room_number}`, '_blank')}
+                  >
+                    Order Breakfast
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Booking Reference Card */}
+          <div className="card border-0 shadow-sm mb-4">
+            <div className="card-body p-4 text-center">
+              <h6 className="text-muted mb-2">Booking Reference</h6>
+              <h4 className="text-primary fw-bold">{booking.confirmation_number}</h4>
+              <small className="text-muted">Show this to hotel staff if needed</small>
+            </div>
+          </div>
+
+          {/* Hotel Contact */}
+          <div className="card border-0 shadow-sm">
+            <div className="card-body p-4 text-center">
+              <h5 className="card-title mb-3">Need Assistance?</h5>
+              <p className="text-muted mb-3">Contact {booking.hotel?.name} for any help during your stay</p>
+              <div className="d-flex justify-content-center gap-3">
+                <a href={`tel:${booking.hotel?.phone}`} className="btn btn-outline-primary">
+                  <i className="bi bi-telephone me-2"></i>
+                  Call Hotel
+                </a>
+                <a href={`mailto:${booking.hotel?.email}`} className="btn btn-outline-secondary">
+                  <i className="bi bi-envelope me-2"></i>
+                  Email
+                </a>
+              </div>
+            </div>
+          </div>
+        </Container>
+      </div>
+    );
+  }
+
+  // Original booking status layout for non-checked-in guests
   return (
     <div
       className={`booking-status-page page-style-${preset}`}
@@ -540,7 +677,7 @@ const BookingStatusPage = () => {
                   <h5 className="mb-0 text-primary">Booking Reference</h5>
                 </div>
                 <div className="fs-2 fw-bold text-primary mb-0">
-                  {booking.confirmation_number || booking.id || bookingId}
+                  {booking.confirmation_number}
                 </div>
                 <small className="text-muted">
                   Save this reference for future communication
@@ -595,37 +732,35 @@ const BookingStatusPage = () => {
           <div className="col-md-6">
             <Card className="h-100 border-0 shadow-sm">
               <Card.Body className="p-4">
-                <div className="d-flex align-items-center mb-3">
-                  <div
-                    className="rounded-circle bg-info d-flex align-items-center justify-content-center me-3"
-                    style={{ width: "40px", height: "40px" }}
-                  >
-                    <i className="bi bi-door-open text-white"></i>
+                {/* Room Assignment (when checked in) */}
+                {(booking?.status === 'CHECKED_IN' || booking?.checked_in_at) && booking?.assigned_room_number && (
+                  <div className="mb-3">
+                    <div className="fw-bold mb-1">Room Number</div>
+                    <div className="text-primary fw-bold fs-5">Room {booking.assigned_room_number}</div>
                   </div>
-                  <h5 className="mb-0 text-info">Stay Details</h5>
-                </div>
+                )}
 
-                {booking.room_type_name && (
+                {booking.room?.type && (
                   <div className="mb-3">
                     <div className="fw-bold mb-1">Room Type</div>
-                    <div className="text-muted">{booking.room_type_name}</div>
+                    <div className="text-muted">{booking.room.type}</div>
                   </div>
                 )}
 
                 <div className="row g-2 mb-2">
                   <div className="col-6">
                     <div className="small fw-bold text-muted">Check-in</div>
-                    <div>{booking.check_in}</div>
+                    <div>{booking.dates?.check_in}</div>
                   </div>
                   <div className="col-6">
                     <div className="small fw-bold text-muted">Check-out</div>
-                    <div>{booking.check_out}</div>
+                    <div>{booking.dates?.check_out}</div>
                   </div>
                 </div>
                 <div className="row g-2">
                   <div className="col-6">
                     <div className="small fw-bold text-muted">Nights</div>
-                    <div>{booking.nights || "-"}</div>
+                    <div>{booking.dates?.nights || "-"}</div>
                   </div>
                   <div className="col-6">
                     <div className="small fw-bold text-muted">Guests</div>
@@ -641,15 +776,15 @@ const BookingStatusPage = () => {
                 </div>
 
                 {/* Guest Information */}
-                {booking.primary_guest_name && (
+                {booking.guest?.name && (
                   <div className="mt-3">
                     <div className="small fw-bold text-muted">
                       Primary Guest
                     </div>
-                    <div>{booking.primary_guest_name}</div>
-                    {booking.primary_email && (
+                    <div>{booking.guest.name}</div>
+                    {booking.guest.email && (
                       <div className="small text-muted">
-                        {booking.primary_email}
+                        {booking.guest.email}
                       </div>
                     )}
                   </div>
@@ -678,24 +813,24 @@ const BookingStatusPage = () => {
               
               {/* Room Information Grid */}
               <div className="row g-3 mb-4">
-                {booking.room_number && (
+                {booking.assigned_room_number && (
                   <div className="col-md-6 col-lg-3">
                     <div className="d-flex align-items-center p-3 bg-white rounded-3 border">
                       <i className="bi bi-house-door text-primary me-3 fs-3"></i>
                       <div>
-                        <div className="fw-bold text-primary fs-4">Room {booking.room_number}</div>
+                        <div className="fw-bold text-primary fs-4">Room {booking.assigned_room_number}</div>
                         <small className="text-muted">Your room</small>
                       </div>
                     </div>
                   </div>
                 )}
                 
-                {booking.room_type && (
+                {booking.room?.type && (
                   <div className="col-md-6 col-lg-3">
                     <div className="d-flex align-items-center p-3 bg-white rounded-3 border">
                       <i className="bi bi-stars text-warning me-3 fs-3"></i>
                       <div>
-                        <div className="fw-bold text-dark">{booking.room_type}</div>
+                        <div className="fw-bold text-dark">{booking.room.type}</div>
                         <small className="text-muted">Room type</small>
                       </div>
                     </div>
@@ -714,13 +849,13 @@ const BookingStatusPage = () => {
                   </div>
                 )}
                 
-                {booking.nights && (
+                {booking.dates?.nights && (
                   <div className="col-md-6 col-lg-3">
                     <div className="d-flex align-items-center p-3 bg-white rounded-3 border">
                       <i className="bi bi-calendar-check text-danger me-3 fs-3"></i>
                       <div>
                         <div className="fw-bold text-dark">
-                          {new Date(booking.check_out).toLocaleDateString()}
+                          {new Date(booking.dates.check_out).toLocaleDateString()}
                         </div>
                         <small className="text-muted">Check-out date</small>
                       </div>
@@ -783,11 +918,11 @@ const BookingStatusPage = () => {
                   </div>
                 )}
                 
-                {booking.nights && (
+                {booking.dates?.nights && (
                   <div className="col-md-4">
                     <div className="text-center p-3 bg-light rounded-3">
                       <i className="bi bi-moon-stars text-primary fs-3 mb-2"></i>
-                      <div className="fw-bold">{booking.nights} Night{booking.nights > 1 ? 's' : ''}</div>
+                      <div className="fw-bold">{booking.dates.nights} Night{booking.dates.nights > 1 ? 's' : ''}</div>
                       <small className="text-muted">Total stay</small>
                     </div>
                   </div>
@@ -923,7 +1058,7 @@ const BookingStatusPage = () => {
                         size="sm"
                         onClick={() => {
                           // Navigate to room service menu
-                          window.open(`/${hotelSlug}/room-service?room=${booking.room_number}`, '_blank');
+                          window.open(`/${hotelSlug}/room-service?room=${booking.assigned_room_number}`, '_blank');
                         }}
                       >
                         <i className="bi bi-truck me-2"></i>
@@ -954,7 +1089,7 @@ const BookingStatusPage = () => {
                         size="sm"
                         onClick={() => {
                           // Navigate to breakfast menu or room service with breakfast filter
-                          window.open(`/${hotelSlug}/room-service?category=breakfast&room=${booking.room_number}`, '_blank');
+                          window.open(`/${hotelSlug}/room-service?category=breakfast&room=${booking.assigned_room_number}`, '_blank');
                         }}
                       >
                         <i className="bi bi-egg-fried me-2"></i>
