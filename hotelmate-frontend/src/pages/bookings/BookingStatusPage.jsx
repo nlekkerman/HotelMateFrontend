@@ -418,15 +418,18 @@ const BookingStatusPage = () => {
 
   const statusInfo = getStatusDisplay(booking.status);
   
-  // Check if guest is checked in - either by status or by having checked_in_at timestamp
-  const isCheckedIn = booking?.checked_in_at && booking?.assigned_room_number;
-  const hasRoomAssigned = booking?.assigned_room_number && !isCheckedIn;
+  // Check booking state
+  const isCheckedOut = booking?.checked_out_at;
+  const isCheckedIn = booking?.checked_in_at && booking?.assigned_room_number && !isCheckedOut;
+  const hasRoomAssigned = booking?.assigned_room_number && !isCheckedIn && !isCheckedOut;
   
   // Debug current booking state
   console.log('🔍 Current booking state:', {
     status: booking?.status,
     checked_in_at: booking?.checked_in_at,
+    checked_out_at: booking?.checked_out_at,
     assigned_room_number: booking?.assigned_room_number,
+    isCheckedOut: isCheckedOut,
     isCheckedIn: isCheckedIn,
     hasRoomAssigned: hasRoomAssigned,
     statusInfo: statusInfo
@@ -458,17 +461,20 @@ const BookingStatusPage = () => {
             )}
           </div>
           <h1 className="display-4 fw-bold mb-2">
-            {isCheckedIn ? `Room ${booking.assigned_room_number}` : 
+            {isCheckedOut ? 'Stay Completed' :
+             isCheckedIn ? `Room ${booking.assigned_room_number}` : 
              hasRoomAssigned ? `Room ${booking.assigned_room_number} Ready` : 
              statusInfo.text}
           </h1>
-          <div className={`badge bg-${isCheckedIn ? 'success' : statusInfo.color} fs-5 px-4 py-2 mb-3`}>
-            {isCheckedIn ? 'Welcome! You\'re Checked In' : 
+          <div className={`badge bg-${isCheckedOut ? 'secondary' : isCheckedIn ? 'success' : statusInfo.color} fs-5 px-4 py-2 mb-3`}>
+            {isCheckedOut ? 'Thank You for Your Stay!' :
+             isCheckedIn ? 'Welcome! You\'re Checked In' : 
              hasRoomAssigned ? 'Room Ready - Check In Available' : 
              `Booking ${statusInfo.text}`}
           </div>
           <p className="text-muted lead">
-            {isCheckedIn ? `Enjoy your stay at ${booking.hotel?.name}` : 
+            {isCheckedOut ? `Hope you enjoyed your stay at ${booking.hotel?.name}` :
+             isCheckedIn ? `Enjoy your stay at ${booking.hotel?.name}` : 
              hasRoomAssigned ? `Your room is ready at ${booking.hotel?.name}` :
              `Your booking with ${booking.hotel?.name}`}
           </p>
@@ -511,17 +517,29 @@ const BookingStatusPage = () => {
 
         {/* Quick Info Cards */}
         <div className="row g-3 mb-4">
-          {/* Show room number prominently when checked in */}
+          {/* Show room number prominently when checked in, or checkout message when checked out */}
           {isCheckedIn && (
             <div className="col-12 mb-3">
               <div className="card border-0 shadow-sm bg-success text-white">
                 <div className="card-body text-center p-4">
                   <div className="d-flex align-items-center justify-content-center">
                     <i className="bi bi-door-open-fill fs-1 me-3"></i>
+                    
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {isCheckedOut && (
+            <div className="col-12 mb-3">
+              <div className="card border-0 shadow-sm bg-secondary text-white">
+                <div className="card-body text-center p-4">
+                  <div className="d-flex align-items-center justify-content-center">
+                    <i className="bi bi-door-closed-fill fs-1 me-3"></i>
                     <div>
                       <div className="mb-3">
-                        <div className="fw-bold mb-1">Your Room</div>
-                        <div className="display-6 fw-bold">Room {booking.assigned_room_number}</div>
+                        <div className="fw-bold mb-1">Stay Completed</div>
+                        <div className="fs-4">Room {booking.assigned_room_number} - Thank You!</div>
                       </div>
                     </div>
                   </div>
