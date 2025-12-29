@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api, { buildStaffURL } from '@/services/api';
 import { toast } from 'react-toastify';
+import { moveRoom } from '@/services/roomOperations.js';
 
 const queryKeys = {
   staffRoomBooking: (hotelSlug, bookingId) => ['staff-room-booking', hotelSlug, bookingId],
@@ -67,15 +68,39 @@ export const useSafeAssignRoom = (hotelSlug) => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ bookingId, roomId, assignmentNotes }) => {
-      const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/safe-assign-room/`);
-      const response = await api.post(url, {
-        room_id: roomId,
-        assignment_notes: assignmentNotes || '',
-      });
-      return response.data;
+    mutationFn: async ({ bookingId, roomId, assignmentNotes, booking, reason }) => {
+      const isInHouse = !!booking?.checked_in_at && !booking?.checked_out_at;
+      
+      if (isInHouse) {
+        // Move room for in-house guests
+        return moveRoom({
+          hotelSlug,
+          bookingId,
+          toRoomId: roomId,
+          reason,
+          notes: assignmentNotes
+        });
+      } else {
+        // Reassign room for pre-checkin guests
+        const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/safe-assign-room/`);
+        const response = await api.post(url, {
+          room_id: roomId,
+          assignment_notes: assignmentNotes || '',
+        });
+        return response.data;
+      }
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (response, variables) => {
+      const isInHouse = !!variables.booking?.checked_in_at && !variables.booking?.checked_out_at;
+      const roomNumber = response.assigned_room?.room_number || variables.roomId;
+      
+      // Context-aware success messages
+      if (isInHouse) {
+        toast.success(`Guest moved to room ${roomNumber}`);
+      } else {
+        toast.success(`Room reassigned to ${roomNumber}`);
+      }
+      
       // Invalidate both list and detail queries
       queryClient.invalidateQueries({
         queryKey: ['staff-room-bookings', hotelSlug]
@@ -86,10 +111,17 @@ export const useSafeAssignRoom = (hotelSlug) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.staffAvailableRooms(hotelSlug, variables.bookingId)
       });
-      toast.success('Room assigned successfully');
     },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'Failed to assign room');
+    onError: (error, variables) => {
+      const isInHouse = !!variables.booking?.checked_in_at && !variables.booking?.checked_out_at;
+      const backendMessage = error.response?.data?.message || error.response?.data?.error?.message;
+      
+      if (backendMessage) {
+        toast.error(backendMessage);
+      } else {
+        // Fallback messages
+        toast.error(isInHouse ? 'Room move failed' : 'Room reassignment failed');
+      }
     },
   });
 };

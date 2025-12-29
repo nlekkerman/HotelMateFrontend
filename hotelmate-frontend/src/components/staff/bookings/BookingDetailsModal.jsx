@@ -20,6 +20,8 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
   const [selectedRoomId, setSelectedRoomId] = useState('');
   const [assignmentNotes, setAssignmentNotes] = useState('');
   const [showRoomAssignment, setShowRoomAssignment] = useState(false);
+  const [reason, setReason] = useState('');
+  const [reasonError, setReasonError] = useState('');
   
   // Fetch booking detail
   const { 
@@ -60,14 +62,28 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
       return;
     }
     
+    // Determine operation mode
+    const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
+    
+    // Validate reason for move operations
+    if (isInHouse && !reason.trim()) {
+      setReasonError('Reason is required for room moves');
+      return;
+    }
+    setReasonError('');
+    
     try {
       await safeAssignMutation.mutateAsync({
         bookingId,
         roomId: selectedRoomId,
         assignmentNotes,
+        booking,
+        reason: reason.trim(),
       });
       setSelectedRoomId('');
       setAssignmentNotes('');
+      setReason('');
+      setReasonError('');
       setShowRoomAssignment(false);
     } catch (error) {
       // Check for PARTY_INCOMPLETE specific error
@@ -542,42 +558,203 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
     if (booking?.assigned_room || booking?.room) {
       // Room is assigned
       const assignedRoom = booking?.assigned_room || booking?.room;
+      console.log('🔧 Rendering assigned room section:', {
+        showRoomAssignment,
+        assignedRoomNumber: assignedRoom?.room_number,
+        booking: booking?.booking_id
+      });
+      
       return (
         <Card className="mt-3">
           <Card.Header>
             <h6 className="mb-0">Room Assignment</h6>
           </Card.Header>
           <Card.Body>
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <strong>Room {assignedRoom?.room_number}</strong>
-                <br />
-                {booking?.room_assigned_at && (
-                  <small className="text-muted">
-                    Assigned on {format(new Date(booking.room_assigned_at), 'MMM dd, yyyy HH:mm')}
-                  </small>
-                )}
-              </div>
-              <div className="d-flex gap-2">
-                {flags.can_unassign_room && (
+            {!showRoomAssignment ? (
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>Room {assignedRoom?.room_number}</strong>
+                  <br />
+                  {booking?.room_assigned_at && (
+                    <small className="text-muted">
+                      Assigned on {format(new Date(booking.room_assigned_at), 'MMM dd, yyyy HH:mm')}
+                    </small>
+                  )}
+                </div>
+                <div className="d-flex gap-2">
+                  {flags.can_unassign_room && (
+                    <Button
+                      variant="outline-danger"
+                      size="sm"
+                      onClick={handleUnassignRoom}
+                      disabled={unassignMutation.isPending}
+                    >
+                      {unassignMutation.isPending ? 'Unassigning...' : 'Unassign'}
+                    </Button>
+                  )}
                   <Button
-                    variant="outline-danger"
+                    variant="outline-primary"
                     size="sm"
-                    onClick={handleUnassignRoom}
-                    disabled={unassignMutation.isPending}
+                    onClick={() => {
+                      console.log('🔧 Change Room button clicked!');
+                      console.log('🔧 Current showRoomAssignment:', showRoomAssignment);
+                      console.log('🔧 Booking status:', {
+                        checked_in_at: booking?.checked_in_at,
+                        checked_out_at: booking?.checked_out_at,
+                        isInHouse: !!booking.checked_in_at && !booking.checked_out_at
+                      });
+                      
+                      setReason('');
+                      setReasonError('');
+                      setShowRoomAssignment(true);
+                      
+                      console.log('🔧 Set showRoomAssignment to true');
+                    }}
+                    disabled={!!booking?.checked_out_at}
                   >
-                    {unassignMutation.isPending ? 'Unassigning...' : 'Unassign'}
+                    {(() => {
+                      if (booking?.checked_out_at) return 'Cannot Change (Checked Out)';
+                      const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
+                      return isInHouse ? 'Move Room' : 'Reassign Room';
+                    })()}
                   </Button>
-                )}
-                <Button
-                  variant="outline-primary"
-                  size="sm"
-                  onClick={() => setShowRoomAssignment(true)}
-                >
-                  Change Room
-                </Button>
+                </div>
               </div>
-            </div>
+            ) : (
+              /* Room assignment form - shown when showRoomAssignment is true */
+              <div>
+                <Form.Group className="mb-3">
+                  <Form.Label>Select Room</Form.Label>
+                  <Form.Select
+                    value={selectedRoomId}
+                    onChange={(e) => setSelectedRoomId(e.target.value)}
+                    disabled={isLoadingRooms}
+                  >
+                    <option value="">
+                      {isLoadingRooms ? 'Loading rooms...' : 'Choose a room...'}
+                    </option>
+                    {(() => {
+                      // Handle API response structure: { available_rooms: [...] }
+                      let roomsArray = [];
+                      
+                      if (Array.isArray(availableRooms)) {
+                        // Direct array format
+                        roomsArray = availableRooms;
+                      } else if (availableRooms?.available_rooms && Array.isArray(availableRooms.available_rooms)) {
+                        // API format: { available_rooms: [...] }
+                        roomsArray = availableRooms.available_rooms;
+                      }
+                      
+                      return roomsArray.map(room => (
+                        <option key={room.id} value={room.id}>
+                          Room {room.room_number} - {room.room_type}
+                        </option>
+                      ));
+                    })()}
+                  </Form.Select>
+                </Form.Group>
+                
+                {/* Reason field - only show for in-house guests (Move Room mode) */}
+                {(() => {
+                  const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
+                  if (!isInHouse) return null;
+                  
+                  return (
+                    <Form.Group className="mb-3">
+                      <Form.Label>Reason for Move <span className="text-danger">*</span></Form.Label>
+                      <Form.Control
+                        as="textarea"
+                        rows={2}
+                        value={reason}
+                        onChange={(e) => {
+                          setReason(e.target.value);
+                          if (e.target.value.trim()) setReasonError('');
+                        }}
+                        placeholder="Why is this guest being moved? (e.g., guest complaint, maintenance issue, upgrade)"
+                        isInvalid={!!reasonError}
+                      />
+                      {reasonError && (
+                        <Form.Control.Feedback type="invalid">
+                          {reasonError}
+                        </Form.Control.Feedback>
+                      )}
+                    </Form.Group>
+                  );
+                })()}
+                
+                <Form.Group className="mb-3">
+                  <Form.Label>
+                    {(() => {
+                      const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
+                      return isInHouse ? 'Additional Notes (Optional)' : 'Assignment Notes (Optional)';
+                    })()}
+                  </Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={2}
+                    value={assignmentNotes}
+                    onChange={(e) => setAssignmentNotes(e.target.value)}
+                    placeholder={(() => {
+                      const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
+                      return isInHouse 
+                        ? "Any additional notes, compensation offered, etc..." 
+                        : "Add any notes about this room assignment...";
+                    })()}
+                  />
+                </Form.Group>
+                
+                <div className="d-flex gap-2">
+                  {(() => {
+                    const partyComplete = booking?.party_complete ?? true; // Default to true if not present
+                    const partyMissingCount = booking?.party_missing_count; // NO fallback
+                    const isPartyIncomplete = !partyComplete;
+                    const isDisabled = !selectedRoomId || safeAssignMutation.isPending || isPartyIncomplete;
+                    
+                    const button = (
+                      <Button
+                        variant="success"
+                        onClick={handleAssignRoom}
+                        disabled={isDisabled}
+                        className={isPartyIncomplete ? 'party-gated-button' : ''}
+                      >
+                        {(() => {
+                          if (safeAssignMutation.isPending) {
+                            const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
+                            return isInHouse ? 'Moving...' : 'Assigning...';
+                          }
+                          
+                          const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
+                          return isInHouse ? 'Confirm & Move' : 'Confirm & Reassign';
+                        })()}
+                      </Button>
+                    );
+                    
+                    if (isPartyIncomplete) {
+                      return (
+                        <OverlayTrigger
+                          placement="top"
+                          overlay={
+                            <Tooltip>
+                              Missing {partyMissingCount == null ? '—' : partyMissingCount} guest name(s). Send pre-check-in link first.
+                            </Tooltip>
+                          }
+                        >
+                          <span className="d-inline-block">{button}</span>
+                        </OverlayTrigger>
+                      );
+                    }
+                    
+                    return button;
+                  })()}
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowRoomAssignment(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card.Body>
         </Card>
       );
@@ -600,11 +777,19 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
                 const button = (
                   <Button
                     variant="primary"
-                    onClick={() => setShowRoomAssignment(true)}
-                    disabled={isDisabled}
+                    onClick={() => {
+                      setReason('');
+                      setReasonError('');
+                      setShowRoomAssignment(true);
+                    }}
+                    disabled={isDisabled || !!booking?.checked_out_at}
                     className={isDisabled ? 'party-gated-button' : ''}
                   >
-                    Assign Room
+                    {(() => {
+                      if (booking?.checked_out_at) return 'Cannot Assign (Checked Out)';
+                      const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
+                      return isInHouse ? 'Move Room' : 'Assign Room';
+                    })()}
                   </Button>
                 );
                 
@@ -658,14 +843,52 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
                   </Form.Select>
                 </Form.Group>
                 
+                {/* Reason field - only show for in-house guests (Move Room mode) */}
+                {(() => {
+                  const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
+                  if (!isInHouse) return null;
+                  
+                  return (
+                    <Form.Group className="mb-3">
+                      <Form.Label>Reason for Move <span className="text-danger">*</span></Form.Label>
+                      <Form.Control
+                        as="textarea"
+                        rows={2}
+                        value={reason}
+                        onChange={(e) => {
+                          setReason(e.target.value);
+                          if (e.target.value.trim()) setReasonError('');
+                        }}
+                        placeholder="Why is this guest being moved? (e.g., guest complaint, maintenance issue, upgrade)"
+                        isInvalid={!!reasonError}
+                      />
+                      {reasonError && (
+                        <Form.Control.Feedback type="invalid">
+                          {reasonError}
+                        </Form.Control.Feedback>
+                      )}
+                    </Form.Group>
+                  );
+                })()}
+                
                 <Form.Group className="mb-3">
-                  <Form.Label>Assignment Notes (Optional)</Form.Label>
+                  <Form.Label>
+                    {(() => {
+                      const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
+                      return isInHouse ? 'Additional Notes (Optional)' : 'Assignment Notes (Optional)';
+                    })()}
+                  </Form.Label>
                   <Form.Control
                     as="textarea"
                     rows={2}
                     value={assignmentNotes}
                     onChange={(e) => setAssignmentNotes(e.target.value)}
-                    placeholder="Add any notes about this room assignment..."
+                    placeholder={(() => {
+                      const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
+                      return isInHouse 
+                        ? "Any additional notes, compensation offered, etc..." 
+                        : "Add any notes about this room assignment...";
+                    })()}
                   />
                 </Form.Group>
                 
@@ -683,7 +906,15 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
                         disabled={isDisabled}
                         className={isPartyIncomplete ? 'party-gated-button' : ''}
                       >
-                        {safeAssignMutation.isPending ? 'Assigning...' : 'Confirm & Assign'}
+                        {(() => {
+                          if (safeAssignMutation.isPending) {
+                            const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
+                            return isInHouse ? 'Moving...' : 'Assigning...';
+                          }
+                          
+                          const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
+                          return isInHouse ? 'Confirm & Move' : 'Confirm & Assign';
+                        })()}
                       </Button>
                     );
                     

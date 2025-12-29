@@ -28,6 +28,12 @@ const BookingActions = ({
     (booking.guest_email || booking.primary_email || booking.booker_email);
   const isPrecheckinComplete = booking?.precheckin_submitted_at != null;
   
+  // Room operations logic
+  const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
+  const isCheckedOut = !!booking.checked_out_at;
+  const hasAssignedRoom = booking.assigned_room || booking.room;
+  const canShowRoomOperation = hasAssignedRoom && !isCheckedOut;
+  
   // Survey button logic - Frontend Guards (Hard Rules)
   const canSendSurvey = booking.status === 'COMPLETED' && 
     !booking.survey_completed &&
@@ -151,6 +157,21 @@ const BookingActions = ({
             Send Pre-Check-In
           </button>
         )
+      )}
+
+      {/* Room Operation button - conditional based on guest status */}
+      {canShowRoomOperation && (
+        <button 
+          className="btn btn-outline-primary btn-sm"
+          title={isInHouse ? "Move guest to different room" : "Reassign room before check-in"}
+          disabled={loading}
+        >
+          <i className={`bi ${isInHouse ? 'bi-house-door' : 'bi-arrow-repeat'} me-1`}></i>
+          {isInHouse ? 'Move Room' : 'Reassign Room'}
+          {booking.room_moved_at && (
+            <span className="badge bg-info ms-1" style={{ fontSize: '0.65rem' }}>Moved</span>
+          )}
+        </button>
       )}
 
       {/* Survey button - only for COMPLETED bookings */}

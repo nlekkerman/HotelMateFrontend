@@ -185,3 +185,25 @@ export const roomOperationsService = {
   // Utilities
   getCurrentHotelSlug
 };
+
+// ============= ROOM ASSIGNMENT OPERATIONS =============
+
+/**
+ * Move room for in-house guests (checked-in guests only)
+ * @param {Object} params - Move room parameters
+ * @param {string} params.hotelSlug - The hotel slug
+ * @param {string} params.bookingId - The booking ID
+ * @param {number} params.toRoomId - The target room ID
+ * @param {string} params.reason - Reason for move (required)
+ * @param {string} params.notes - Additional notes (optional)
+ * @returns {Promise} - API response
+ */
+export const moveRoom = async ({ hotelSlug, bookingId, toRoomId, reason, notes }) => {
+  const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/move-room/`);
+  const response = await api.post(url, {
+    to_room_id: toRoomId,
+    reason,
+    notes
+  });
+  return response.data;
+};
