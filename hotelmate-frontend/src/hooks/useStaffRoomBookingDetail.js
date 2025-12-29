@@ -166,7 +166,12 @@ export const useCheckInBooking = (hotelSlug) => {
     },
     onError: (error) => {
       // Handle 400 errors from backend with specific message
-      const message = error.response?.data?.message || error.response?.data?.error || 'Check-in failed';
+      const data = error.response?.data || {};
+      const message = 
+        data.detail || 
+        data.message || 
+        (typeof data.error === 'string' ? data.error : null) || 
+        'Check-in failed';
       toast.error(message);
     },
   });

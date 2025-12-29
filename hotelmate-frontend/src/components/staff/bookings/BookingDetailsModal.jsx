@@ -750,7 +750,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
               <Button
                 variant="success"
                 onClick={handleCheckIn}
-                disabled={checkInMutation.isPending}
+                disabled={checkInMutation.isPending || (booking?.flags?.can_check_in === false)}
                 size="lg"
               >
                 {checkInMutation.isPending ? 'Checking In...' : 'Check In Guest'}
