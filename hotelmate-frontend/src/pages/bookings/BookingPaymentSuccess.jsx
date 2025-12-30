@@ -2,6 +2,9 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate, useParams, Link } from 'react-router-dom';
 import { Container, Card, Spinner, Alert, Button } from 'react-bootstrap';
 import { publicAPI } from '@/services/api';
+import { useExpiredBookingHandler } from '@/hooks/useExpiredBookingHandler';
+import { clearHold } from '@/utils/bookingHoldStorage';
+import BookingExpiredModal from '@/components/modals/BookingExpiredModal';
 
 /**
  * BookingPaymentSuccess - Handle successful Stripe payment redirect
@@ -29,6 +32,9 @@ const BookingPaymentSuccess = () => {
   // Guard to prevent multiple verification calls
   const didVerifyRef = useRef(false);
   const pollIntervalRef = useRef(null);
+  
+  // Expiration handling
+  const expiredHandler = useExpiredBookingHandler(finalHotelSlug);
 
   // Debug logging (development only)
   const debugBookingStatus = (booking, context = 'unknown') => {
@@ -208,8 +214,20 @@ const BookingPaymentSuccess = () => {
         // Fetch booking details
         const bookingResponse = await publicAPI.get(`/hotel/${finalHotelSlug}/room-bookings/${bookingId}/`);
         
+        // Check for expired bookings before proceeding
+        if (expiredHandler.handleExpired(bookingResponse.data)) {
+          return;
+        }
+        
         setPaymentStatus(verifyResponse.data?.payment_status || "verified");
         setBooking(bookingResponse.data);
+        
+        // Clear booking hold storage if booking is confirmed
+        const normalizedStatus = normalizeStatus(bookingResponse.data?.status);
+        if (normalizedStatus === 'CONFIRMED' || bookingResponse.data?.paid_at) {
+          clearHold(finalHotelSlug);
+          console.log('[PAYMENT_SUCCESS] Cleared booking hold storage for confirmed booking');
+        }
         
         // Debug initial booking state
         debugBookingStatus(bookingResponse.data, 'INITIAL_LOAD');
@@ -218,7 +236,6 @@ const BookingPaymentSuccess = () => {
         setPreset(hotelPreset);
         
         // Check booking status and start polling if needed
-        const normalizedStatus = normalizeStatus(bookingResponse.data?.status);
         const paymentVerified = isPaymentVerified(bookingResponse.data);
         
         if (normalizedStatus === 'PENDING_PAYMENT' && !paymentVerified) {
@@ -249,6 +266,12 @@ Proposed: Payment → PENDING_HOTEL_CONFIRMATION → Staff confirms → CONFIRME
         // Users receive email links with tokens to view/manage their bookings
       } catch (err) {
         console.error('Failed to verify payment:', err);
+        
+        // Handle expired bookings
+        if (expiredHandler.handleExpired(err)) {
+          return;
+        }
+        
         setPaymentStatus("error");
         setError('Unable to verify payment status');
       } finally {
@@ -706,6 +729,13 @@ Proposed: Payment → PENDING_HOTEL_CONFIRMATION → Staff confirms → CONFIRME
         </Card.Body>
       </Card>
     </Container>
+    
+    {/* Booking Expired Modal */}
+    <BookingExpiredModal 
+      open={expiredHandler.isModalOpen}
+      onRestart={expiredHandler.restart}
+      message="Your booking reservation has expired or was cancelled. Please start a new booking to check availability."
+    />
     </div>
   );
 };

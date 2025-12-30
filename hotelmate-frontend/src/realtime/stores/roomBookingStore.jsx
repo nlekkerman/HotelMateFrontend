@@ -13,6 +13,22 @@ function maybeCleanupEventIds() {
   }
 }
 
+// Filter out non-operational booking statuses for staff views
+const NON_OPERATIONAL_STATUSES = ['DRAFT', 'PENDING_PAYMENT', 'CANCELLED_DRAFT'];
+
+const shouldIgnoreBookingEvent = (booking, payload) => {
+  // Check status in booking object or payload
+  const status = booking?.status || payload?.status;
+  
+  // Always ignore non-operational statuses for staff views
+  if (status && NON_OPERATIONAL_STATUSES.includes(status.toUpperCase())) {
+    console.debug('[roomBookingStore] Ignoring non-operational booking status:', status);
+    return true;
+  }
+  
+  return false;
+};
+
 // State contexts
 const RoomBookingStateContext = createContext(null);
 const RoomBookingDispatchContext = createContext(null);
@@ -61,6 +77,24 @@ function roomBookingReducer(state, action) {
       
       if (!bookingId) {
         console.warn('[roomBookingStore] Missing booking ID in action:', action);
+        return state;
+      }
+
+      // Check if we should ignore this booking based on its status
+      if (shouldIgnoreBookingEvent(booking, action.payload)) {
+        // Remove from store if it exists
+        if (state.byBookingId[bookingId]) {
+          const newByBookingId = { ...state.byBookingId };
+          delete newByBookingId[bookingId];
+          
+          const newList = state.list.filter(id => id !== bookingId);
+          
+          return {
+            ...state,
+            byBookingId: newByBookingId,
+            list: newList,
+          };
+        }
         return state;
       }
 

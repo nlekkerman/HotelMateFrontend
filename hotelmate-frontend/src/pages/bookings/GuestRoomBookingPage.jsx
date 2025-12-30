@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { publicAPI } from '@/services/api';
+import { getHold, setHold, clearHold } from '@/utils/bookingHoldStorage';
+import { useCountdownTimer } from '@/hooks/useCountdownTimer';
+import { useExpiredBookingHandler } from '@/hooks/useExpiredBookingHandler';
+import BookingExpiredModal from '@/components/modals/BookingExpiredModal';
 
 /**
  * GuestRoomBookingPage - Guest room reservation flow (HTTP-first, no realtime)
@@ -63,6 +67,25 @@ const GuestRoomBookingPage = () => {
   const [companions, setCompanions] = useState([]);
   const [addNamesLater, setAddNamesLater] = useState(false);
   const [bookingData, setBookingData] = useState(null);
+  
+  // Booking hold and expiration state
+  const [bookingHold, setBookingHold] = useState(null);
+  const [isExpired, setIsExpired] = useState(false);
+  
+  // Expiration handling
+  const expiredHandler = useExpiredBookingHandler(hotelSlug);
+  
+  // Countdown timer for booking hold (only when we have a hold)
+  const { mmss, isExpired: timerExpired } = useCountdownTimer(
+    bookingHold?.expiresAt,
+    () => {
+      // Only trigger expiration if we actually have a booking hold
+      if (bookingHold) {
+        setIsExpired(true);
+        expiredHandler.openModal();
+      }
+    }
+  );
   
   // Cancellation Policy Agreement
   const [policyAgreed, setPolicyAgreed] = useState(false);
@@ -161,6 +184,70 @@ const GuestRoomBookingPage = () => {
     console.log('[UseEffect] Calling fetchHotelData');
     fetchHotelData();
   }, [hotelSlug]);
+
+  // Rehydrate booking hold on page load
+  useEffect(() => {
+    if (!hotelSlug) return;
+    
+    const existingHold = getHold(hotelSlug);
+    if (existingHold) {
+      console.log('[BOOKING_HOLD] Rehydrating existing hold:', existingHold);
+      
+      // Check if hold is expired
+      const now = new Date();
+      const expiresAt = new Date(existingHold.expiresAt);
+      
+      if (now > expiresAt) {
+        console.log('[BOOKING_HOLD] Hold expired, clearing storage');
+        clearHold(hotelSlug);
+        return;
+      }
+      
+      // Hold is still valid, fetch booking status
+      fetchBookingStatus(existingHold.bookingId);
+      setBookingHold(existingHold);
+    }
+  }, [hotelSlug]);
+
+  const fetchBookingStatus = async (bookingId) => {
+    try {
+      const response = await publicAPI.get(`/hotel/${hotelSlug}/room-bookings/${bookingId}/`);
+      const bookingData = unwrap(response);
+      
+      // Cross-hotel validation
+      if (bookingData.hotel?.slug !== hotelSlug) {
+        console.log('[BOOKING_HOLD] Cross-hotel booking detected, clearing storage');
+        expiredHandler.handleExpired(new Error('Cross-hotel booking'));
+        return;
+      }
+      
+      // Check booking status
+      if (expiredHandler.isExpiredBooking(bookingData)) {
+        console.log('[BOOKING_HOLD] Booking expired or cancelled');
+        expiredHandler.handleExpired(bookingData);
+        return;
+      }
+      
+      // If booking is confirmed, clear hold and navigate to success
+      if (bookingData.status === 'CONFIRMED') {
+        clearHold(hotelSlug);
+        navigate(`/booking/${hotelSlug}/payment/success?booking_id=${bookingId}`);
+        return;
+      }
+      
+      // If still valid, continue to payment step
+      if (bookingData.status === 'PENDING_PAYMENT') {
+        setBookingData(bookingData);
+        setStep(4);
+      }
+    } catch (error) {
+      if (expiredHandler.isExpiredError(error)) {
+        expiredHandler.handleExpired(error);
+      } else {
+        console.error('[BOOKING_HOLD] Error fetching booking status:', error);
+      }
+    }
+  };
 
   const fetchHotelData = async () => {
     try {
@@ -368,8 +455,21 @@ const GuestRoomBookingPage = () => {
 
       const response = await publicAPI.post(`/hotel/${hotelSlug}/bookings/`, payload);
       
-      // Store booking data and move to payment step
-      setBookingData(unwrap(response));
+      // Store booking data and persist hold
+      const bookingResponse = unwrap(response);
+      setBookingData(bookingResponse);
+      
+      // Persist booking hold if expires_at is provided
+      if (bookingResponse.expires_at && bookingResponse.booking_id) {
+        const holdData = {
+          bookingId: bookingResponse.booking_id,
+          expiresAt: bookingResponse.expires_at
+        };
+        setHold(hotelSlug, holdData);
+        setBookingHold(holdData);
+        console.log('[BOOKING_HOLD] Persisted booking hold:', holdData);
+      }
+      
       setStep(4);
     } catch (err) {
       const errorMessage = err.response?.data?.detail 
@@ -384,6 +484,12 @@ const GuestRoomBookingPage = () => {
   // Step 4: Process Payment
   const processPayment = async (e) => {
     e.preventDefault();
+    
+    // Check if expired before processing
+    if (bookingHold && (isExpired || timerExpired)) {
+      expiredHandler.openModal();
+      return;
+    }
     
     try {
       setLoading(true);
@@ -400,7 +506,8 @@ const GuestRoomBookingPage = () => {
       const data = unwrap(response);
       
       if (data.status === "paid") {
-        // Already paid — go straight to success
+        // Already paid — clear hold and go straight to success
+        clearHold(hotelSlug);
         navigate(`/booking/payment/success?booking_id=${bookingData.booking_id}`);
         return;
       }
@@ -413,6 +520,11 @@ const GuestRoomBookingPage = () => {
         setError("Payment session could not be created");
       }
     } catch (err) {
+      // Handle expired booking responses
+      if (expiredHandler.handleExpired(err)) {
+        return;
+      }
+      
       const errorMessage = err.response?.data?.detail 
         || err.response?.data?.error 
         || 'Failed to process payment';
@@ -1052,6 +1164,37 @@ const GuestRoomBookingPage = () => {
                   </div>
                 </div>
 
+                {/* Countdown Timer Display */}
+                {bookingHold && !isExpired && !timerExpired && (
+                  <Alert variant="info" className="mb-4">
+                    <div className="d-flex align-items-center justify-content-between">
+                      <div className="d-flex align-items-center">
+                        <i className="bi bi-clock me-2"></i>
+                        <span><strong>Reserved for:</strong></span>
+                      </div>
+                      <div className="d-flex align-items-center">
+                        <span className="fw-bold text-primary me-2" style={{ fontSize: '1.2rem' }}>
+                          {mmss}
+                        </span>
+                        <small className="text-muted">remaining</small>
+                      </div>
+                    </div>
+                    <small className="text-muted d-block mt-2">
+                      Your room reservation will expire if payment is not completed within this time.
+                    </small>
+                  </Alert>
+                )}
+
+                {/* Expired State Display */}
+                {bookingHold && (isExpired || timerExpired) && (
+                  <Alert variant="danger" className="mb-4">
+                    <div className="d-flex align-items-center">
+                      <i className="bi bi-exclamation-triangle me-2"></i>
+                      <span><strong>Your reservation has expired.</strong> Please start a new booking to check availability.</span>
+                    </div>
+                  </Alert>
+                )}
+
                 <Alert variant="info" className="mb-4">
                   <i className="bi bi-shield-check me-2"></i>
                   Your payment is secured by Stripe. You'll be redirected to a secure checkout page.
@@ -1196,12 +1339,17 @@ const GuestRoomBookingPage = () => {
                     variant="primary" 
                     size="lg" 
                     className="w-100"
-                    disabled={loading || !policyAgreed}
+                    disabled={loading || !policyAgreed || (bookingHold && (isExpired || timerExpired))}
                   >
                     {loading ? (
                       <>
                         <Spinner animation="border" size="sm" className="me-2" />
                         Redirecting to Stripe...
+                      </>
+                    ) : (bookingHold && (isExpired || timerExpired)) ? (
+                      <>
+                        <i className="bi bi-x-circle me-2"></i>
+                        Reservation Expired
                       </>
                     ) : (
                       <>
@@ -1217,6 +1365,13 @@ const GuestRoomBookingPage = () => {
           </Row>
         </div>
       )}
+
+      {/* Booking Expired Modal */}
+      <BookingExpiredModal 
+        open={expiredHandler.isModalOpen}
+        onRestart={expiredHandler.restart}
+        message="Your room reservation has expired. The selected room is no longer reserved for you."
+      />
 
 
       </Container>

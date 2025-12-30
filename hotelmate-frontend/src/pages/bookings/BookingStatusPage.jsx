@@ -42,6 +42,19 @@ const BookingStatusPage = () => {
   const [realtimeBooking, setRealtimeBooking] = useState(null);
   const pusherRef = useRef(null);
   const channelRef = useRef(null);
+  
+  // Check-in window state
+  const [checkinWindow, setCheckinWindow] = useState({
+    status: 'not-yet', // 'not-yet', 'open', 'closed'
+    period: null, // 'early', 'standard', 'late'
+    opensAt: null,
+    standardAt: null,
+    closesAt: null,
+    timeUntilOpen: null,
+    timeUntilClose: null,
+    hotelTime: null,
+    hotelTimezone: null
+  });
 
   // Initialize Pusher and subscribe to guest booking events
   useEffect(() => {
@@ -63,7 +76,7 @@ const BookingStatusPage = () => {
     pusherRef.current = pusher;
     
     // Subscribe to private guest booking channel
-    const channelName = `private-guest-booking-${bookingId}`;
+    const channelName = `private-guest-booking.${bookingId}`;
     const channel = pusher.subscribe(channelName);
     channelRef.current = channel;
     
@@ -170,6 +183,75 @@ const BookingStatusPage = () => {
       });
     }
   }, [realtimeBooking]);
+  
+  // Check-in window calculator
+  useEffect(() => {
+    if (!booking || !booking.check_in) return;
+    
+    const updateCheckinWindow = () => {
+      // Get hotel timezone (default to UTC if not provided)
+      const hotelTimezone = booking.hotel?.timezone || 'UTC';
+      
+      // Get current time in hotel timezone
+      const now = new Date();
+      const hotelTime = new Date(now.toLocaleString("en-US", {timeZone: hotelTimezone}));
+      
+      // Parse check-in date
+      const checkInDate = new Date(booking.check_in);
+      
+      // Calculate window times in hotel timezone
+      const opensAt = new Date(checkInDate);
+      opensAt.setHours(12, 0, 0, 0); // 12:00 PM
+      
+      const standardAt = new Date(checkInDate);
+      standardAt.setHours(15, 0, 0, 0); // 3:00 PM
+      
+      const closesAt = new Date(checkInDate);
+      closesAt.setDate(closesAt.getDate() + 1);
+      closesAt.setHours(2, 0, 0, 0); // 2:00 AM next day
+      
+      // Determine status
+      let status, period = null;
+      let timeUntilOpen = null, timeUntilClose = null;
+      
+      if (hotelTime < opensAt) {
+        status = 'not-yet';
+        timeUntilOpen = Math.max(0, opensAt.getTime() - hotelTime.getTime());
+      } else if (hotelTime >= opensAt && hotelTime < closesAt) {
+        status = 'open';
+        timeUntilClose = Math.max(0, closesAt.getTime() - hotelTime.getTime());
+        
+        // Determine period
+        if (hotelTime < standardAt) {
+          period = 'early';
+        } else if (hotelTime < new Date(checkInDate.getFullYear(), checkInDate.getMonth(), checkInDate.getDate(), 23, 59, 59)) {
+          period = 'standard';
+        } else {
+          period = 'late';
+        }
+      } else {
+        status = 'closed';
+      }
+      
+      setCheckinWindow({
+        status,
+        period,
+        opensAt,
+        standardAt,
+        closesAt,
+        timeUntilOpen,
+        timeUntilClose,
+        hotelTime,
+        hotelTimezone
+      });
+    };
+    
+    // Update immediately and then every minute
+    updateCheckinWindow();
+    const interval = setInterval(updateCheckinWindow, 60000);
+    
+    return () => clearInterval(interval);
+  }, [booking]);
   
   // Helper to safely unwrap API responses
   const unwrap = (res) => res?.data?.data ?? res?.data;
@@ -469,7 +551,12 @@ const BookingStatusPage = () => {
           <div className={`badge bg-${isCheckedOut ? 'secondary' : isCheckedIn ? 'success' : statusInfo.color} fs-5 px-4 py-2 mb-3`}>
             {isCheckedOut ? 'Thank You for Your Stay!' :
              isCheckedIn ? 'Welcome! You\'re Checked In' : 
-             hasRoomAssigned ? 'Room Ready - Check In Available' : 
+             hasRoomAssigned ? 
+               (checkinWindow.status === 'open' ? 'Room Ready - Check In Available' :
+                checkinWindow.status === 'not-yet' && checkinWindow.timeUntilOpen ? 
+                  `Check-in opens in ${Math.floor(checkinWindow.timeUntilOpen / (1000 * 60 * 60))}h ${Math.floor((checkinWindow.timeUntilOpen % (1000 * 60 * 60)) / (1000 * 60))}m` :
+                checkinWindow.status === 'closed' ? 'Check-in Window Closed' :
+                'Room Ready - Check In Available') : 
              `Booking ${statusInfo.text}`}
           </div>
           <p className="text-muted lead">
@@ -580,6 +667,163 @@ const BookingStatusPage = () => {
             </div>
           </div>
         </div>
+
+        {/* Check-in Window Card */}
+        {hasRoomAssigned && !isCheckedIn && !isCheckedOut && (
+          <div className="card border-0 shadow-sm mb-4">
+            <div className="card-body p-4">
+              <h5 className="card-title text-primary mb-3">
+                <i className="bi bi-clock me-2"></i>
+                Check-in Window
+              </h5>
+              
+              <div className="row align-items-center">
+                <div className="col-md-8">
+                  {/* Status Badge */}
+                  <div className="mb-3">
+                    {checkinWindow.status === 'open' && (
+                      <span className="badge bg-success fs-6 px-3 py-2">
+                        <i className="bi bi-check-circle me-2"></i>
+                        OPEN
+                      </span>
+                    )}
+                    {checkinWindow.status === 'not-yet' && (
+                      <span className="badge bg-warning fs-6 px-3 py-2">
+                        <i className="bi bi-clock me-2"></i>
+                        {checkinWindow.timeUntilOpen ? 
+                          `OPENS AT ${checkinWindow.opensAt?.toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit', 
+                            hour12: false,
+                            timeZone: checkinWindow.hotelTimezone 
+                          })}` : 
+                          'NOT YET'
+                        }
+                      </span>
+                    )}
+                    {checkinWindow.status === 'closed' && (
+                      <span className="badge bg-danger fs-6 px-3 py-2">
+                        <i className="bi bi-x-circle me-2"></i>
+                        CLOSED
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* Hotel Time */}
+                  <div className="mb-3">
+                    <small className="text-muted">Hotel time: </small>
+                    <strong>
+                      {checkinWindow.hotelTime?.toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false,
+                        timeZone: checkinWindow.hotelTimezone
+                      })} ({checkinWindow.hotelTimezone})
+                    </strong>
+                  </div>
+                  
+                  {/* Window Information */}
+                  <div className="mb-3">
+                    <div className="small text-muted mb-1">Check-in window:</div>
+                    <div className="fw-bold">
+                      Today {checkinWindow.opensAt?.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit', 
+                        hour12: false,
+                        timeZone: checkinWindow.hotelTimezone 
+                      })} → tomorrow {checkinWindow.closesAt?.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit', 
+                        hour12: false,
+                        timeZone: checkinWindow.hotelTimezone 
+                      })}
+                    </div>
+                  </div>
+                  
+                  {/* Period Information */}
+                  <div className="small text-muted">
+                    <strong>Early</strong> (12:00-15:00), <strong>Standard</strong> (15:00+), <strong>Late</strong> (00:00-02:00)
+                  </div>
+                  
+                  {/* Status Text */}
+                  <div className="mt-3">
+                    {checkinWindow.status === 'open' && checkinWindow.period === 'early' && (
+                      <div className="text-success">
+                        <i className="bi bi-check-circle me-2"></i>
+                        Early check-in is available.
+                      </div>
+                    )}
+                    {checkinWindow.status === 'open' && checkinWindow.period === 'standard' && (
+                      <div className="text-success">
+                        <i className="bi bi-check-circle me-2"></i>
+                        Standard check-in is open.
+                      </div>
+                    )}
+                    {checkinWindow.status === 'open' && checkinWindow.period === 'late' && (
+                      <div className="text-warning">
+                        <i className="bi bi-exclamation-triangle me-2"></i>
+                        Late arrival window. Check-in closes at {checkinWindow.closesAt?.toLocaleTimeString('en-US', { 
+                          hour: '2-digit', 
+                          minute: '2-digit', 
+                          hour12: false,
+                          timeZone: checkinWindow.hotelTimezone 
+                        })}.
+                      </div>
+                    )}
+                    {checkinWindow.status === 'not-yet' && (
+                      <div className="text-muted">
+                        <i className="bi bi-clock me-2"></i>
+                        Check-in opens at {checkinWindow.opensAt?.toLocaleTimeString('en-US', { 
+                          hour: '2-digit', 
+                          minute: '2-digit', 
+                          hour12: false,
+                          timeZone: checkinWindow.hotelTimezone 
+                        })} (hotel time).
+                        {checkinWindow.timeUntilOpen && (
+                          <div className="mt-1">
+                            <strong>Opens in {Math.floor(checkinWindow.timeUntilOpen / (1000 * 60 * 60))}h {Math.floor((checkinWindow.timeUntilOpen % (1000 * 60 * 60)) / (1000 * 60))}m</strong>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {checkinWindow.status === 'closed' && (
+                      <div className="text-danger">
+                        <i className="bi bi-x-circle me-2"></i>
+                        Check-in closed (after 02:00). Contact reception.
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="col-md-4 text-end">
+                  {/* Check-in Button */}
+                  {checkinWindow.status === 'open' ? (
+                    <button className="btn btn-primary btn-lg">
+                      <i className="bi bi-door-open me-2"></i>
+                      Start Check-in
+                    </button>
+                  ) : checkinWindow.status === 'not-yet' ? (
+                    <button className="btn btn-outline-secondary btn-lg" disabled>
+                      <i className="bi bi-clock me-2"></i>
+                      Not Available
+                    </button>
+                  ) : (
+                    <button className="btn btn-outline-danger btn-lg" disabled>
+                      <i className="bi bi-x-circle me-2"></i>
+                      Check-in Closed
+                    </button>
+                  )}
+                  
+                  <div className="mt-2">
+                    <small className="text-muted">
+                      Times shown in {checkinWindow.hotelTimezone}
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Guest Information Card */}
         <div className="card border-0 shadow-sm mb-4">
