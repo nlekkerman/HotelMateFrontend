@@ -49,56 +49,11 @@ const BookingManagementPage = () => {
   };
 
   
-  // Quick action buttons based on current filter
+  // Quick action buttons - keep only Booking Management
   const getQuickActions = () => {
     const actions = [];
 
-    if (urlFilter !== 'pending') {
-      actions.push({
-        label: 'Pending Bookings',
-        path: `/staff/hotel/${hotelSlug}/room-bookings/?filter=pending`,
-        icon: 'clock',
-        variant: 'warning'
-      });
-    }
-
-    if (urlFilter !== 'confirmed') {
-      actions.push({
-        label: 'Confirmed Bookings',
-        path: `/staff/hotel/${hotelSlug}/room-bookings/?filter=confirmed`,
-        icon: 'check-circle',
-        variant: 'success'
-      });
-    }
-
-    if (urlFilter !== 'cancelled') {
-      actions.push({
-        label: 'Cancelled Bookings',
-        path: `/staff/hotel/${hotelSlug}/room-bookings/?filter=cancelled`,
-        icon: 'x-circle',
-        variant: 'danger'
-      });
-    }
-
-    if (urlFilter !== '' && urlFilter !== null) {
-      actions.push({
-        label: 'All Bookings',
-        path: `/staff/hotel/${hotelSlug}/room-bookings/`,
-        icon: 'calendar-event',
-        variant: 'primary'
-      });
-    }
-
-    if (urlFilter !== 'history') {
-      actions.push({
-        label: 'Booking History',
-        path: `/staff/hotel/${hotelSlug}/room-bookings/?filter=history`,
-        icon: 'archive',
-        variant: 'secondary'
-      });
-    }
-
-    // Always add Booking Management button
+    // Only add Booking Management button
     actions.push({
       label: 'Booking Management',
       path: `/staff/hotel/${hotelSlug}/booking-management`,

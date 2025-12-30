@@ -1100,9 +1100,8 @@ body.terminal-mode,
 }
 
 .custom-button {
-  background-color: var(--button-color) !important;
+  background-color: var(--main-color) !important;
   color: var(--button-text-color) !important;
-  border: none;
   border-radius: 5px;
 }
 

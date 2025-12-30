@@ -26,6 +26,7 @@ const BookingList = ({ hotelSlug, urlParams }) => {
     hasBookings,
     isEmpty,
     currentFilter,
+    currentBucket,
     setFilter
   } = useBookingManagement(hotelSlug);
 
@@ -76,45 +77,62 @@ const BookingList = ({ hotelSlug, urlParams }) => {
 
   return (
     <div className="booking-list">
-      {/* Stats Summary */}
-      <div className="booking-stats mb-4 ">
-        <div className="row g-3 justify-content-center">
-          <div className="col-md-2">
-            <div className="stat-card">
-              <div className="stat-number">{statistics.total}</div>
-              <div className="stat-label">Total Bookings</div>
-            </div>
-          </div>
-          <div className="col-md-2">
-            <div className="stat-card stat-warning">
-              <div className="stat-number">{statistics.pendingPayment}</div>
-              <div className="stat-label">Pending Payment</div>
-            </div>
-          </div>
-          <div className="col-md-2">
-            <div className="stat-card stat-info">
-              <div className="stat-number">{statistics.pendingApproval}</div>
-              <div className="stat-label">Pending Approval</div>
-            </div>
-          </div>
-          <div className="col-md-2">
-            <div className="stat-card stat-success">
-              <div className="stat-number">{statistics.confirmed}</div>
-              <div className="stat-label">Confirmed</div>
-            </div>
-          </div>
-          <div className="col-md-2">
-            <div className="stat-card stat-info">
-              <div className="stat-number">{statistics.completed}</div>
-              <div className="stat-label">Completed</div>
-            </div>
-          </div>
-          <div className="col-md-2">
-            <div className="stat-card stat-danger">
-              <div className="stat-number">{statistics.cancelled}</div>
-              <div className="stat-label">Cancelled</div>
-            </div>
-          </div>
+      {/* Unified Filter Bar - NEW IMPLEMENTATION */}
+      <div className="unified-booking-filters mb-4">
+        {/* Left Side: Operational Buckets (Daily Operations) */}
+        <div className="operational-group">
+          <button
+            className={`btn btn-outline-primary btn-sm ${(!currentFilter || currentFilter === 'all') && !currentBucket ? 'active' : ''}`}
+            onClick={() => setFilter('filter', 'all')}
+          >
+            All ({statistics.total || 0})
+          </button>
+          <button
+            className={`btn btn-outline-primary btn-sm ${currentBucket === 'arrivals' ? 'active' : ''}`}
+            onClick={() => setFilter('bucket', currentBucket === 'arrivals' ? null : 'arrivals')}
+          >
+            Arrivals ({statistics.arrivals || 0})
+          </button>
+          <button
+            className={`btn btn-outline-primary btn-sm ${currentBucket === 'in_house' ? 'active' : ''}`}
+            onClick={() => setFilter('bucket', currentBucket === 'in_house' ? null : 'in_house')}
+          >
+            In-House ({statistics.in_house || 0})
+          </button>
+          <button
+            className={`btn btn-outline-primary btn-sm ${currentBucket === 'departures' ? 'active' : ''}`}
+            onClick={() => setFilter('bucket', currentBucket === 'departures' ? null : 'departures')}
+          >
+            Departures ({statistics.departures || 0})
+          </button>
+        </div>
+
+        {/* Right Side: Administrative Status (Business Operations) */}
+        <div className="administrative-group">
+          <button
+            className={`btn btn-outline-secondary btn-sm ${currentBucket === 'pending' ? 'active' : ''}`}
+            onClick={() => setFilter('bucket', currentBucket === 'pending' ? null : 'pending')}
+          >
+            Pending ({(statistics.pendingPayment || 0) + (statistics.pendingApproval || 0)})
+          </button>
+          <button
+            className={`btn btn-outline-secondary btn-sm ${currentFilter === 'confirmed' ? 'active' : ''}`}
+            onClick={() => setFilter('filter', currentFilter === 'confirmed' ? 'all' : 'confirmed')}
+          >
+            Completed ({statistics.confirmed || 0})
+          </button>
+          <button
+            className={`btn btn-outline-secondary btn-sm ${currentBucket === 'checked_out' ? 'active' : ''}`}
+            onClick={() => setFilter('bucket', currentBucket === 'checked_out' ? null : 'checked_out')}
+          >
+            History ({statistics.checked_out || 0})
+          </button>
+          <button
+            className={`btn btn-outline-secondary btn-sm ${currentBucket === 'cancelled' ? 'active' : ''}`}
+            onClick={() => setFilter('bucket', currentBucket === 'cancelled' ? null : 'cancelled')}
+          >
+            Cancelled ({statistics.cancelled || 0})
+          </button>
         </div>
       </div>
 

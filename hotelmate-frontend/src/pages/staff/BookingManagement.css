@@ -50,11 +50,19 @@
   text-align: center;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   border-left: 4px solid #6c757d;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-left-color 0.2s ease;
+  cursor: pointer;
 }
 
 .stat-card:hover {
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.stat-card.active {
+  border-left-color: #0d6efd;
+  box-shadow: 0 4px 16px rgba(13, 110, 253, 0.2);
+  background: #f8f9ff;
 }
 
 .stat-card.stat-warning {
@@ -85,6 +93,109 @@
   color: #6c757d;
   font-weight: 500;
   margin-top: 0.5rem;
+}
+
+/* Unified Booking Filters */
+.unified-booking-filters {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin-bottom: 2rem;
+}
+
+.operational-group {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.operational-group::before {
+  content: "Daily Operations:";
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #6c757d;
+  margin-right: 0.5rem;
+  white-space: nowrap;
+}
+
+.administrative-group {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.administrative-group::before {
+  content: "Business Status:";
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #6c757d;
+  margin-right: 0.5rem;
+  white-space: nowrap;
+}
+
+.unified-booking-filters .btn {
+  min-width: 100px;
+  font-weight: 500;
+  border-radius: 20px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.unified-booking-filters .btn:hover {
+  transform: translateY(-1px);
+}
+
+.unified-booking-filters .btn.active {
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* Responsive behavior */
+@media (max-width: 768px) {
+  .unified-booking-filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.5rem;
+  }
+  
+  .operational-group,
+  .administrative-group {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .operational-group::before,
+  .administrative-group::before {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Operational Buckets */
+.operational-buckets {
+  text-align: center;
+}
+
+.operational-buckets .btn {
+  min-width: 120px;
+  font-weight: 500;
+  border-radius: 20px;
+  transition: all 0.2s ease;
+}
+
+.operational-buckets .btn:hover {
+  transform: translateY(-1px);
+}
+
+.operational-buckets .btn.active {
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
 /* Filter Controls */

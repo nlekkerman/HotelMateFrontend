@@ -42,6 +42,9 @@ export const useBookingManagement = (hotelSlug) => {
     if (searchParams.has('filter')) {
       params.filter = searchParams.get('filter');
     }
+    if (searchParams.has('bucket')) {
+      params.bucket = searchParams.get('bucket');
+    }
     if (searchParams.has('page')) {
       params.page = searchParams.get('page');
     }
@@ -52,7 +55,10 @@ export const useBookingManagement = (hotelSlug) => {
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
     
-    if (searchParams.has('filter')) {
+    // Bucket parameter takes priority over status filters
+    if (searchParams.has('bucket')) {
+      params.append('bucket', searchParams.get('bucket'));
+    } else if (searchParams.has('filter')) {
       const filterValue = searchParams.get('filter');
       switch (filterValue) {
         case 'pending':
@@ -61,11 +67,14 @@ export const useBookingManagement = (hotelSlug) => {
         case 'confirmed':
           params.append('status', 'CONFIRMED');
           break;
+        case 'completed':
+          params.append('status', 'COMPLETED');
+          break;
         case 'cancelled':
           params.append('status', 'CANCELLED');
           break;
         case 'history':
-          params.append('status', 'COMPLETED,CANCELLED');
+          params.append('status', 'COMPLETED,CANCELLED,CHECKED_OUT');
           break;
         default:
           break;
@@ -87,12 +96,21 @@ export const useBookingManagement = (hotelSlug) => {
       
       // Debug: Log the raw response to see what we're getting
       console.log('Raw booking list response:', response.data);
-      if (response.data && response.data.length > 0) {
-        console.log('First booking raw data:', response.data[0]);
+      
+      // Handle both array format and paginated format with counts
+      let bookings, counts = null;
+      if (Array.isArray(response.data)) {
+        bookings = response.data;
+      } else if (response.data.results) {
+        bookings = response.data.results;
+        counts = response.data.counts; // Bucket counts from backend
+      } else {
+        bookings = [];
       }
       
-      // Backend returns direct array, map fields for frontend compatibility
-      const bookings = Array.isArray(response.data) ? response.data : [];
+      if (bookings.length > 0) {
+        console.log('First booking raw data:', bookings[0]);
+      }
       
       const mappedResults = bookings.map(booking => {
         // Debug: Log each booking's data transformation
@@ -124,7 +142,8 @@ export const useBookingManagement = (hotelSlug) => {
       console.log('Mapped results:', mappedResults);
       
       return {
-        results: mappedResults
+        results: mappedResults,
+        counts: counts // Bucket counts from backend (when available)
       };
     },
     enabled: !!hotelSlug,
@@ -143,7 +162,7 @@ export const useBookingManagement = (hotelSlug) => {
     staleTime: 30000 // 30 seconds
   });
   
-  // Calculate statistics from data
+  // Calculate statistics from data - use backend counts when available
   const statistics = useMemo(() => {
     if (!data?.results) {
       return {
@@ -154,10 +173,35 @@ export const useBookingManagement = (hotelSlug) => {
         confirmed: 0,
         cancelled: 0,
         completed: 0,
+        // Bucket counts
+        arrivals: 0,
+        in_house: 0,
+        departures: 0,
+        checked_out: 0,
       };
     }
     
     const bookings = data.results;
+    
+    // Use backend bucket counts when available (no bucket filter = dashboard view)
+    if (data.counts && !searchParams.has('bucket')) {
+      return {
+        total: bookings.length,
+        pending: bookings.filter(b => b.status === 'PENDING_PAYMENT' || b.status === 'PENDING_APPROVAL').length,
+        pendingPayment: bookings.filter(b => b.status === 'PENDING_PAYMENT').length,
+        pendingApproval: bookings.filter(b => b.status === 'PENDING_APPROVAL').length,
+        confirmed: bookings.filter(b => b.status === 'CONFIRMED').length,
+        cancelled: bookings.filter(b => b.status === 'CANCELLED').length,
+        completed: bookings.filter(b => b.status === 'COMPLETED' || b.checked_out_at != null).length,
+        // Backend bucket counts
+        arrivals: data.counts.arrivals || 0,
+        in_house: data.counts.in_house || 0,
+        departures: data.counts.departures || 0,
+        checked_out: data.counts.checked_out || 0,
+      };
+    }
+    
+    // Fallback to frontend calculations
     return {
       total: bookings.length,
       pending: bookings.filter(b => b.status === 'PENDING_PAYMENT' || b.status === 'PENDING_APPROVAL').length,
@@ -165,9 +209,20 @@ export const useBookingManagement = (hotelSlug) => {
       pendingApproval: bookings.filter(b => b.status === 'PENDING_APPROVAL').length,
       confirmed: bookings.filter(b => b.status === 'CONFIRMED').length,
       cancelled: bookings.filter(b => b.status === 'CANCELLED').length,
-      completed: bookings.filter(b => b.status === 'COMPLETED').length,
+      completed: bookings.filter(b => b.status === 'COMPLETED' || b.checked_out_at != null).length,
+      // Default bucket counts (will be 0 when filtered)
+      arrivals: bookings.filter(b => {
+        const isToday = new Date(b.check_in).toDateString() === new Date().toDateString();
+        return isToday && !b.checked_in_at && (b.status === 'CONFIRMED' || b.status === 'PENDING_APPROVAL');
+      }).length,
+      in_house: bookings.filter(b => b.checked_in_at && !b.checked_out_at).length,
+      departures: bookings.filter(b => {
+        const isToday = new Date(b.check_out).toDateString() === new Date().toDateString();
+        return isToday && !b.checked_out_at;
+      }).length,
+      checked_out: bookings.filter(b => b.checked_out_at != null).length,
     };
-  }, [data]);
+  }, [data, searchParams]);
 
 
 
@@ -224,13 +279,28 @@ export const useBookingManagement = (hotelSlug) => {
   });
   
   // URL filter management
-  const setFilter = (filterType) => {
+  const setFilter = (filterType, filterValue) => {
     const newParams = new URLSearchParams(searchParams);
-    if (filterType && filterType !== 'all') {
-      newParams.set('filter', filterType);
-    } else {
+    
+    if (filterType === 'bucket') {
+      // Clear existing filters when setting bucket
       newParams.delete('filter');
+      if (filterValue) {
+        newParams.set('bucket', filterValue);
+      } else {
+        newParams.delete('bucket');
+      }
+    } else if (filterType === 'filter' || typeof filterType === 'string') {
+      // Legacy filter support - clear bucket when setting legacy filter
+      newParams.delete('bucket');
+      const legacyFilter = filterValue || filterType;
+      if (legacyFilter && legacyFilter !== 'all') {
+        newParams.set('filter', legacyFilter);
+      } else {
+        newParams.delete('filter');
+      }
     }
+    
     newParams.delete('page'); // Reset page when changing filters
     setSearchParams(newParams);
   };
@@ -253,6 +323,7 @@ export const useBookingManagement = (hotelSlug) => {
     error,
     refetch,
     currentFilter: searchParams.get('filter') || 'all',
+    currentBucket: searchParams.get('bucket') || null,
     currentPage: parseInt(searchParams.get('page') || '1', 10),
     setFilter,
     setPage,
