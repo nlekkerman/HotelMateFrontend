@@ -11,6 +11,9 @@ import {
 } from "react-bootstrap";
 import { publicAPI } from "@/services/api";
 import Pusher from 'pusher-js';
+import RoomService from "@/components/rooms/RoomService";
+import Breakfast from "@/components/rooms/Breakfast";
+import ChatWindow from "@/components/chat/ChatWindow";
 
 /**
  * BookingStatusPage - Token-based booking management page
@@ -42,6 +45,9 @@ const BookingStatusPage = () => {
   const [realtimeBooking, setRealtimeBooking] = useState(null);
   const pusherRef = useRef(null);
   const channelRef = useRef(null);
+  
+  // Service view state
+  const [activeService, setActiveService] = useState(null); // 'room_service', 'breakfast', 'chat'
   
   // Check-in window state
   const [checkinWindow, setCheckinWindow] = useState({
@@ -525,22 +531,22 @@ const BookingStatusPage = () => {
           <Container>
             <div className="d-flex justify-content-center gap-2 py-3">
               <button
-                className="btn btn-outline-primary px-4 py-2"
-                onClick={() => navigate(`/room/${hotelSlug}/${booking.assigned_room_number}/room_service`)}
+                className="custom-button px-4 py-2"
+                onClick={() => setActiveService(activeService === 'room_service' ? null : 'room_service')}
                 style={{ borderRadius: '25px' }}
               >
                 Room Service
               </button>
               <button
-                className="btn btn-outline-warning px-4 py-2"
-                onClick={() => navigate(`/room/${hotelSlug}/${booking.assigned_room_number}/breakfast`)}
+                className="custom-button px-4 py-2"
+                onClick={() => setActiveService(activeService === 'breakfast' ? null : 'breakfast')}
                 style={{ borderRadius: '25px' }}
               >
                 Breakfast
               </button>
               <button
-                className="btn btn-outline-success px-4 py-2"
-                onClick={() => navigate(`/chat/${hotelSlug}`)}
+                className="custom-button px-4 py-2"
+                onClick={() => setActiveService(activeService === 'chat' ? null : 'chat')}
                 style={{ borderRadius: '25px' }}
               >
                 Chat with Us
@@ -548,6 +554,35 @@ const BookingStatusPage = () => {
             </div>
           </Container>
         </div>
+      )}
+      
+      {/* Service Components - Load directly under buttons */}
+      {isCheckedIn && booking?.assigned_room_number && activeService && (
+        <Container className="py-4">
+          {activeService === 'room_service' && (
+            <RoomService isAdmin={false} />
+          )}
+          {activeService === 'breakfast' && (
+            <Breakfast isAdmin={false} />
+          )}
+          {activeService === 'chat' && (
+            <div className="card border-0 shadow-sm">
+              <div className="card-header bg-success text-white">
+                <h5 className="mb-0">
+                  <i className="bi bi-chat-dots me-2"></i>
+                  Chat with Hotel Staff
+                </h5>
+              </div>
+              <div className="card-body p-0" style={{ height: '500px' }}>
+                <ChatWindow 
+                  hotelSlug={hotelSlug}
+                  roomNumber={booking.assigned_room_number}
+                  isGuest={true}
+                />
+              </div>
+            </div>
+          )}
+        </Container>
       )}
       
       <Container className="py-4">
