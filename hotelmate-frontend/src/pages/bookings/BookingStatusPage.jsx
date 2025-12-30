@@ -70,7 +70,7 @@ const BookingStatusPage = () => {
           'Authorization': `GuestToken ${token}`,
         },
       },
-      authEndpoint: `/api/notifications/pusher/auth/?hotel_slug=${hotelSlug}`,
+      authEndpoint: `http://localhost:8000/api/notifications/pusher/auth/?hotel_slug=${hotelSlug}`,
     });
     
     pusherRef.current = pusher;
@@ -518,9 +518,38 @@ const BookingStatusPage = () => {
   });
 
   return (
-    <div
-   
-    >
+    <div>
+      {/* Top Navigation Bar - Hotel Services */}
+      {isCheckedIn && booking?.assigned_room_number && (
+        <div className="bg-white shadow-sm border-bottom sticky-top" style={{ zIndex: 1040 }}>
+          <Container>
+            <div className="d-flex justify-content-center gap-2 py-3">
+              <button
+                className="btn btn-outline-primary px-4 py-2"
+                onClick={() => navigate(`/room/${hotelSlug}/${booking.assigned_room_number}/room_service`)}
+                style={{ borderRadius: '25px' }}
+              >
+                Room Service
+              </button>
+              <button
+                className="btn btn-outline-warning px-4 py-2"
+                onClick={() => navigate(`/room/${hotelSlug}/${booking.assigned_room_number}/breakfast`)}
+                style={{ borderRadius: '25px' }}
+              >
+                Breakfast
+              </button>
+              <button
+                className="btn btn-outline-success px-4 py-2"
+                onClick={() => navigate(`/chat/${hotelSlug}`)}
+                style={{ borderRadius: '25px' }}
+              >
+                Chat with Us
+              </button>
+            </div>
+          </Container>
+        </div>
+      )}
+      
       <Container className="py-4">
 {/* Modern Header - Combined with Quick Info */}
         <div className="mb-4">
@@ -679,8 +708,8 @@ const BookingStatusPage = () => {
           </Alert>
         )}
 
-        {/* Cancellation Section */}
-        {canCancel && (
+        {/* Cancellation Section - Only show if not checked in */}
+        {canCancel && !isCheckedIn && (
           <div className="card border-0 shadow-sm mb-4">
             <div className="card-body p-4">
               <h5 className="card-title text-warning mb-3">

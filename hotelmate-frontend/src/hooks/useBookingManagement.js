@@ -173,7 +173,6 @@ export const useBookingManagement = (hotelSlug) => {
         confirmed: 0,
         cancelled: 0,
         completed: 0,
-        // Bucket counts
         arrivals: 0,
         in_house: 0,
         departures: 0,
@@ -183,17 +182,16 @@ export const useBookingManagement = (hotelSlug) => {
     
     const bookings = data.results;
     
-    // Use backend bucket counts when available (no bucket filter = dashboard view)
-    if (data.counts && !searchParams.has('bucket')) {
+    // ALWAYS use backend bucket counts when available - these are total counts
+    if (data.counts) {
       return {
-        total: bookings.length,
-        pending: bookings.filter(b => b.status === 'PENDING_PAYMENT' || b.status === 'PENDING_APPROVAL').length,
-        pendingPayment: bookings.filter(b => b.status === 'PENDING_PAYMENT').length,
-        pendingApproval: bookings.filter(b => b.status === 'PENDING_APPROVAL').length,
-        confirmed: bookings.filter(b => b.status === 'CONFIRMED').length,
-        cancelled: bookings.filter(b => b.status === 'CANCELLED').length,
-        completed: bookings.filter(b => b.status === 'COMPLETED' || b.checked_out_at != null).length,
-        // Backend bucket counts
+        total: data.counts.total || 0,
+        pending: (data.counts.pending_payment || 0) + (data.counts.pending_approval || 0),
+        pendingPayment: data.counts.pending_payment || 0,
+        pendingApproval: data.counts.pending_approval || 0,
+        confirmed: data.counts.confirmed || 0,
+        cancelled: data.counts.cancelled || 0,
+        completed: data.counts.completed || 0,
         arrivals: data.counts.arrivals || 0,
         in_house: data.counts.in_house || 0,
         departures: data.counts.departures || 0,
@@ -201,7 +199,8 @@ export const useBookingManagement = (hotelSlug) => {
       };
     }
     
-    // Fallback to frontend calculations
+    // Fallback: always calculate from current results (this will work for 'all' view)
+    // The key is that button numbers should only be calculated when viewing ALL bookings
     return {
       total: bookings.length,
       pending: bookings.filter(b => b.status === 'PENDING_PAYMENT' || b.status === 'PENDING_APPROVAL').length,
@@ -210,7 +209,6 @@ export const useBookingManagement = (hotelSlug) => {
       confirmed: bookings.filter(b => b.status === 'CONFIRMED').length,
       cancelled: bookings.filter(b => b.status === 'CANCELLED').length,
       completed: bookings.filter(b => b.status === 'COMPLETED' || b.checked_out_at != null).length,
-      // Default bucket counts (will be 0 when filtered)
       arrivals: bookings.filter(b => {
         const isToday = new Date(b.check_in).toDateString() === new Date().toDateString();
         return isToday && !b.checked_in_at && (b.status === 'CONFIRMED' || b.status === 'PENDING_APPROVAL');
@@ -222,7 +220,7 @@ export const useBookingManagement = (hotelSlug) => {
       }).length,
       checked_out: bookings.filter(b => b.checked_out_at != null).length,
     };
-  }, [data, searchParams]);
+  }, [data]);
 
 
 
