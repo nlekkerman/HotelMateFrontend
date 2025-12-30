@@ -519,52 +519,129 @@ const BookingStatusPage = () => {
 
   return (
     <div
-      className={`booking-status-page page-style-${preset}`}
-      data-preset={preset}
-      style={{ minHeight: "100vh" }}
+   
     >
       <Container className="py-4">
-        {/* Modern Header - Dynamic based on status */}
-        <div className="text-center mb-4">
-          <div className="position-relative d-inline-block">
-            <div
-              className={`rounded-circle bg-${statusInfo.color} d-inline-flex align-items-center justify-content-center mb-3`}
-              style={{ width: "100px", height: "100px" }}
-            >
-              <i
-                className={`bi bi-${statusInfo.icon} text-white`}
-                style={{ fontSize: "3rem" }}
-              ></i>
-            </div>
-            {isCheckedIn && (
-              <div className="position-absolute top-0 end-0 bg-white rounded-circle p-2 shadow-sm">
-                <i className="bi bi-check-circle-fill text-success fs-5"></i>
+{/* Modern Header - Combined with Quick Info */}
+        <div className="mb-4">
+          <div className="row align-items-center">
+            {/* Enhanced Info Panel - Show on top for small screens, right for large screens */}
+            <div className="col-12 col-lg-4 order-1 order-lg-2 mb-3 mb-lg-0">
+              <div className="card border-0 shadow-sm h-100">
+                {/* Booking Reference Banner */}
+                <div className="bg-info bg-opacity-10 px-3 py-2 border-bottom">
+                  <div className="text-center">
+                    <small className="text-dark d-block fw-medium">Booking Reference</small>
+                    <strong className="text-dark fs-6">{booking.confirmation_number}</strong>
+                  </div>
+                </div>
+                
+                <div className="card-body p-4">
+                  {/* Guest Information - Clean card style */}
+                  <div className="mb-4">
+                    <div className="bg-light rounded p-3 text-center">
+                      <div className="small text-secondary fw-medium mb-1">Primary Guest</div>
+                      <div className="fw-bold fs-5 text-dark mb-2">{booking.guest?.name}</div>
+                      <div className="small text-dark mb-1">{booking.guest?.email}</div>
+                      {booking.guest?.phone && (
+                        <div className="small text-dark">{booking.guest?.phone}</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Quick Stats Row */}
+                  <div className="mb-4">
+                    <div className="bg-light rounded p-3 text-center mb-3">
+                      <div className="small text-secondary fw-medium mb-1">Room</div>
+                      <div className="fw-bold fs-5 text-dark mb-1">{booking.assigned_room_number || 'Unassigned'}</div>
+                      <div className="small text-dark">{booking.room?.type}</div>
+                    </div>
+                    <div className="bg-light rounded p-3 text-center">
+                      <div className="small text-secondary fw-medium mb-1">Stay</div>
+                      <div className="fw-bold fs-5 text-dark mb-1">{booking.dates?.nights} Night{(booking.dates?.nights > 1) ? 's' : ''}</div>
+                      <div className="small text-dark mb-1">Until {new Date(booking.dates?.check_out).toLocaleDateString('en-GB')}</div>
+                      <div className="small fw-bold text-dark">{booking.hotel?.name}</div>
+                    </div>
+                  </div>
+                  
+                  {/* Party Size - Kept at bottom */}
+                  <div className="border-top pt-3">
+                    <div className="bg-light rounded p-3 text-center">
+                      <div className="small text-secondary fw-medium mb-1">Party Size</div>
+                      <div className="fw-bold fs-4" style={{color: '#10b981'}}>{booking.guests?.total}</div>
+                      <div className="small text-dark">
+                        {booking.guests?.adults} Adults • {booking.guests?.children} Children
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
+            
+            {/* Main Header Info - Show on bottom for small screens, left for large screens */}
+            <div className="col-12 col-lg-8 order-2 order-lg-1 text-center text-lg-start">
+              <div className="position-relative d-inline-block">
+                <div
+                  className={`rounded-circle bg-${statusInfo.color} d-inline-flex align-items-center justify-content-center mb-3`}
+                  style={{ width: "100px", height: "100px" }}
+                >
+                  <i
+                    className={`bi bi-${statusInfo.icon} text-white`}
+                    style={{ fontSize: "3rem" }}
+                  ></i>
+                </div>
+                {isCheckedIn && (
+                  <div className="position-absolute top-0 end-0 bg-white rounded-circle p-2 shadow-sm">
+                    <i className="bi bi-check-circle-fill text-success fs-5"></i>
+                  </div>
+                )}
+              </div>
+              <h1 className="display-4 fw-bold mb-2">
+                {isCheckedOut ? 'Stay Completed' :
+                 isCheckedIn ? `Room ${booking.assigned_room_number}` : 
+                 hasRoomAssigned ? `Room ${booking.assigned_room_number} Ready` : 
+                 statusInfo.text}
+              </h1>
+              <div className={`badge bg-${isCheckedOut ? 'secondary' : 
+                                           isCheckedIn ? 'success' : 
+                                           hasRoomAssigned ? 
+                                             (checkinWindow.status === 'open' ? 'success' :
+                                              checkinWindow.status === 'not-yet' ? 'warning' :
+                                              checkinWindow.status === 'closed' ? 'danger' : 'info') :
+                                           statusInfo.color} fs-5 px-4 py-2 mb-3`}>
+                {isCheckedOut ? 'Thank You for Your Stay!' :
+                 isCheckedIn ? 'Welcome! You\'re Checked In' : 
+                 hasRoomAssigned ? 
+                   (checkinWindow.status === 'open' && checkinWindow.period === 'early' ? 'Early Check-in Available (from 12:00)' :
+                    checkinWindow.status === 'open' && checkinWindow.period === 'standard' ? 'Check-in Available (standard hours)' :
+                    checkinWindow.status === 'open' && checkinWindow.period === 'late' ? 'Late Check-in Available (until 02:00)' :
+                    checkinWindow.status === 'open' ? 'Check-in Available' :
+                    checkinWindow.status === 'not-yet' && checkinWindow.timeUntilOpen && checkinWindow.opensAt ? 
+                      `Check-in Opens at ${checkinWindow.opensAt.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit', 
+                        hour12: false,
+                        timeZone: checkinWindow.hotelTimezone 
+                      })} (in ${Math.floor(checkinWindow.timeUntilOpen / (1000 * 60 * 60))}h ${Math.floor((checkinWindow.timeUntilOpen % (1000 * 60 * 60)) / (1000 * 60))}m)` :
+                    checkinWindow.status === 'not-yet' && checkinWindow.opensAt ? `Check-in Opens at ${checkinWindow.opensAt.toLocaleTimeString('en-US', { 
+                      hour: '2-digit', 
+                      minute: '2-digit', 
+                      hour12: false,
+                      timeZone: checkinWindow.hotelTimezone 
+                    })}` :
+                    checkinWindow.status === 'not-yet' ? 'Check-in Opens at 12:00' :
+                    checkinWindow.status === 'closed' ? 'Check-in Window Closed (contact hotel)' :
+                    'Room Ready') : 
+                 `Booking ${statusInfo.text}`}
+              </div>
+              <p className="text-muted lead">
+                {isCheckedOut ? `Hope you enjoyed your stay at ${booking.hotel?.name}` :
+                 isCheckedIn ? `Enjoy your stay at ${booking.hotel?.name}` : 
+                 hasRoomAssigned ? `Your room is ready at ${booking.hotel?.name}` :
+                 `Your booking with ${booking.hotel?.name}`}
+              </p>
+            </div>
           </div>
-          <h1 className="display-4 fw-bold mb-2">
-            {isCheckedOut ? 'Stay Completed' :
-             isCheckedIn ? `Room ${booking.assigned_room_number}` : 
-             hasRoomAssigned ? `Room ${booking.assigned_room_number} Ready` : 
-             statusInfo.text}
-          </h1>
-          <div className={`badge bg-${isCheckedOut ? 'secondary' : isCheckedIn ? 'success' : statusInfo.color} fs-5 px-4 py-2 mb-3`}>
-            {isCheckedOut ? 'Thank You for Your Stay!' :
-             isCheckedIn ? 'Welcome! You\'re Checked In' : 
-             hasRoomAssigned ? 
-               (checkinWindow.status === 'open' ? 'Room Ready - Check In Available' :
-                checkinWindow.status === 'not-yet' && checkinWindow.timeUntilOpen ? 
-                  `Check-in opens in ${Math.floor(checkinWindow.timeUntilOpen / (1000 * 60 * 60))}h ${Math.floor((checkinWindow.timeUntilOpen % (1000 * 60 * 60)) / (1000 * 60))}m` :
-                checkinWindow.status === 'closed' ? 'Check-in Window Closed' :
-                'Room Ready - Check In Available') : 
-             `Booking ${statusInfo.text}`}
-          </div>
-          <p className="text-muted lead">
-            {isCheckedOut ? `Hope you enjoyed your stay at ${booking.hotel?.name}` :
-             isCheckedIn ? `Enjoy your stay at ${booking.hotel?.name}` : 
-             hasRoomAssigned ? `Your room is ready at ${booking.hotel?.name}` :
-             `Your booking with ${booking.hotel?.name}`}
-          </p>
         </div>
 
         {/* Cancellation Success Alert */}
@@ -602,273 +679,57 @@ const BookingStatusPage = () => {
           </Alert>
         )}
 
-        {/* Quick Info Cards */}
-        <div className="row g-3 mb-4">
-          {/* Show room number prominently when checked in, or checkout message when checked out */}
-          {isCheckedIn && (
-            <div className="col-12 mb-3">
-              <div className="card border-0 shadow-sm bg-success text-white">
-                <div className="card-body text-center p-4">
-                  <div className="d-flex align-items-center justify-content-center">
-                    <i className="bi bi-door-open-fill fs-1 me-3"></i>
-                    
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          {isCheckedOut && (
-            <div className="col-12 mb-3">
-              <div className="card border-0 shadow-sm bg-secondary text-white">
-                <div className="card-body text-center p-4">
-                  <div className="d-flex align-items-center justify-content-center">
-                    <i className="bi bi-door-closed-fill fs-1 me-3"></i>
-                    <div>
-                      <div className="mb-3">
-                        <div className="fw-bold mb-1">Stay Completed</div>
-                        <div className="fs-4">Room {booking.assigned_room_number} - Thank You!</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <div className="col-md-4">
-            <div className="card border-0 shadow-sm h-100">
-              <div className="card-body text-center p-3">
-                <i className="bi bi-house-door text-primary fs-2 mb-2"></i>
-                <h6 className="card-title">{booking.room?.type}</h6>
-                <p className="card-text text-muted mb-0">
-                  {isCheckedIn ? `Room ${booking.assigned_room_number}` : 'Your Room'}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-4">
-            <div className="card border-0 shadow-sm h-100">
-              <div className="card-body text-center p-3">
-                <i className="bi bi-calendar-check text-info fs-2 mb-2"></i>
-                <h6 className="card-title">{booking.dates?.nights} Night{(booking.dates?.nights > 1) ? 's' : ''}</h6>
-                <p className="card-text text-muted mb-0">Until {new Date(booking.dates?.check_out).toLocaleDateString('en-GB')}</p>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-4">
-            <div className="card border-0 shadow-sm h-100">
-              <div className="card-body text-center p-3">
-                <i className="bi bi-people text-warning fs-2 mb-2"></i>
-                <h6 className="card-title">{booking.guests?.total} Guest{(booking.guests?.total > 1) ? 's' : ''}</h6>
-                <p className="card-text text-muted mb-0">
-                  {booking.guests?.adults} Adult{(booking.guests?.adults > 1) ? 's' : ''}{booking.guests?.children > 0 && `, ${booking.guests.children} Child${(booking.guests?.children > 1) ? 'ren' : ''}`}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Check-in Window Card */}
-        {hasRoomAssigned && !isCheckedIn && !isCheckedOut && (
+        {/* Cancellation Section */}
+        {canCancel && (
           <div className="card border-0 shadow-sm mb-4">
             <div className="card-body p-4">
-              <h5 className="card-title text-primary mb-3">
-                <i className="bi bi-clock me-2"></i>
-                Check-in Window
+              <h5 className="card-title text-warning mb-3">
+                <i className="bi bi-exclamation-triangle me-2"></i>
+                Cancellation Options
               </h5>
               
-              <div className="row align-items-center">
-                <div className="col-md-8">
-                  {/* Status Badge */}
-                  <div className="mb-3">
-                    {checkinWindow.status === 'open' && (
-                      <span className="badge bg-success fs-6 px-3 py-2">
-                        <i className="bi bi-check-circle me-2"></i>
-                        OPEN
-                      </span>
-                    )}
-                    {checkinWindow.status === 'not-yet' && (
-                      <span className="badge bg-warning fs-6 px-3 py-2">
-                        <i className="bi bi-clock me-2"></i>
-                        {checkinWindow.timeUntilOpen ? 
-                          `OPENS AT ${checkinWindow.opensAt?.toLocaleTimeString('en-US', { 
-                            hour: '2-digit', 
-                            minute: '2-digit', 
-                            hour12: false,
-                            timeZone: checkinWindow.hotelTimezone 
-                          })}` : 
-                          'NOT YET'
-                        }
-                      </span>
-                    )}
-                    {checkinWindow.status === 'closed' && (
-                      <span className="badge bg-danger fs-6 px-3 py-2">
-                        <i className="bi bi-x-circle me-2"></i>
-                        CLOSED
-                      </span>
-                    )}
-                  </div>
-                  
-                  {/* Hotel Time */}
-                  <div className="mb-3">
-                    <small className="text-muted">Hotel time: </small>
-                    <strong>
-                      {checkinWindow.hotelTime?.toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false,
-                        timeZone: checkinWindow.hotelTimezone
-                      })} ({checkinWindow.hotelTimezone})
-                    </strong>
-                  </div>
-                  
-                  {/* Window Information */}
-                  <div className="mb-3">
-                    <div className="small text-muted mb-1">Check-in window:</div>
-                    <div className="fw-bold">
-                      Today {checkinWindow.opensAt?.toLocaleTimeString('en-US', { 
-                        hour: '2-digit', 
-                        minute: '2-digit', 
-                        hour12: false,
-                        timeZone: checkinWindow.hotelTimezone 
-                      })} → tomorrow {checkinWindow.closesAt?.toLocaleTimeString('en-US', { 
-                        hour: '2-digit', 
-                        minute: '2-digit', 
-                        hour12: false,
-                        timeZone: checkinWindow.hotelTimezone 
-                      })}
+              {cancellationPreview && (
+                <div className="mb-4">
+                  <div className="row g-3 mb-3">
+                    <div className="col-6">
+                      <div className="bg-light rounded p-3 text-center">
+                        <div className="small text-secondary fw-medium mb-1">Cancellation Fee</div>
+                        <div className="fw-bold fs-5 text-danger">
+                          {booking.pricing?.currency || 'EUR'} {parseFloat(cancellationPreview.fee_amount || 0).toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="col-6">
+                      <div className="bg-light rounded p-3 text-center">
+                        <div className="small text-secondary fw-medium mb-1">Refund Amount</div>
+                        <div className="fw-bold fs-5 text-success">
+                          {booking.pricing?.currency || 'EUR'} {parseFloat(cancellationPreview.refund_amount || 0).toFixed(2)}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  
-                  {/* Period Information */}
-                  <div className="small text-muted">
-                    <strong>Early</strong> (12:00-15:00), <strong>Standard</strong> (15:00+), <strong>Late</strong> (00:00-02:00)
-                  </div>
-                  
-                  {/* Status Text */}
-                  <div className="mt-3">
-                    {checkinWindow.status === 'open' && checkinWindow.period === 'early' && (
-                      <div className="text-success">
-                        <i className="bi bi-check-circle me-2"></i>
-                        Early check-in is available.
-                      </div>
-                    )}
-                    {checkinWindow.status === 'open' && checkinWindow.period === 'standard' && (
-                      <div className="text-success">
-                        <i className="bi bi-check-circle me-2"></i>
-                        Standard check-in is open.
-                      </div>
-                    )}
-                    {checkinWindow.status === 'open' && checkinWindow.period === 'late' && (
-                      <div className="text-warning">
-                        <i className="bi bi-exclamation-triangle me-2"></i>
-                        Late arrival window. Check-in closes at {checkinWindow.closesAt?.toLocaleTimeString('en-US', { 
-                          hour: '2-digit', 
-                          minute: '2-digit', 
-                          hour12: false,
-                          timeZone: checkinWindow.hotelTimezone 
-                        })}.
-                      </div>
-                    )}
-                    {checkinWindow.status === 'not-yet' && (
-                      <div className="text-muted">
-                        <i className="bi bi-clock me-2"></i>
-                        Check-in opens at {checkinWindow.opensAt?.toLocaleTimeString('en-US', { 
-                          hour: '2-digit', 
-                          minute: '2-digit', 
-                          hour12: false,
-                          timeZone: checkinWindow.hotelTimezone 
-                        })} (hotel time).
-                        {checkinWindow.timeUntilOpen && (
-                          <div className="mt-1">
-                            <strong>Opens in {Math.floor(checkinWindow.timeUntilOpen / (1000 * 60 * 60))}h {Math.floor((checkinWindow.timeUntilOpen % (1000 * 60 * 60)) / (1000 * 60))}m</strong>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {checkinWindow.status === 'closed' && (
-                      <div className="text-danger">
-                        <i className="bi bi-x-circle me-2"></i>
-                        Check-in closed (after 02:00). Contact reception.
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="col-md-4 text-end">
-                  {/* Check-in Button */}
-                  {checkinWindow.status === 'open' ? (
-                    <button className="btn btn-primary btn-lg">
-                      <i className="bi bi-door-open me-2"></i>
-                      Start Check-in
-                    </button>
-                  ) : checkinWindow.status === 'not-yet' ? (
-                    <button className="btn btn-outline-secondary btn-lg" disabled>
-                      <i className="bi bi-clock me-2"></i>
-                      Not Available
-                    </button>
-                  ) : (
-                    <button className="btn btn-outline-danger btn-lg" disabled>
-                      <i className="bi bi-x-circle me-2"></i>
-                      Check-in Closed
-                    </button>
+                  {cancellationPreview.description && (
+                    <div className="bg-light rounded p-3 text-center mb-3">
+                      <div className="small text-secondary fw-medium mb-1">Policy</div>
+                      <div className="small text-dark fw-medium">{cancellationPreview.description}</div>
+                    </div>
                   )}
-                  
-                  <div className="mt-2">
-                    <small className="text-muted">
-                      Times shown in {checkinWindow.hotelTimezone}
-                    </small>
-                  </div>
                 </div>
+              )}
+              
+              <div className="text-center">
+                <Button
+                  variant="outline-danger"
+                  onClick={() => setShowCancelModal(true)}
+                  size="lg"
+                >
+                  <i className="bi bi-x-circle me-2"></i>
+                  Cancel Booking
+                </Button>
               </div>
             </div>
           </div>
         )}
-
-        {/* Guest Information Card */}
-        <div className="card border-0 shadow-sm mb-4">
-          <div className="card-body p-4">
-            <h5 className="card-title text-primary mb-3">
-              <i className="bi bi-person-circle me-2"></i>
-              Guest Information
-            </h5>
-            <div className="row">
-              <div className="col-md-8">
-                <h6 className="fw-bold">{booking.guest?.name}</h6>
-                <div className="text-muted mb-2">
-                  <i className="bi bi-envelope me-2"></i>
-                  {booking.guest?.email}
-                </div>
-                {booking.guest?.phone && (
-                  <div className="text-muted mb-2">
-                    <i className="bi bi-telephone me-2"></i>
-                    {booking.guest?.phone}
-                  </div>
-                )}
-                <div className="small text-muted">
-                  <i className="bi bi-star-fill me-2"></i>
-                  Primary Guest
-                </div>
-              </div>
-              <div className="col-md-4 text-end">
-                <div className="small text-muted mb-1">Party Size</div>
-                <div className="fs-4 fw-bold text-primary">{booking.guests?.total}</div>
-                <div className="small text-muted">
-                  {booking.guests?.adults} Adults • {booking.guests?.children} Children
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Booking Reference Card */}
-        <div className="card border-0 shadow-sm mb-4">
-          <div className="card-body p-4 text-center">
-            <h6 className="text-muted mb-2">Booking Reference</h6>
-            <h4 className="text-primary fw-bold">{booking.confirmation_number}</h4>
-            <small className="text-muted">Show this to hotel staff if needed</small>
-          </div>
-        </div>
 
         {/* Hotel Contact */}
         <div className="card border-0 shadow-sm">
