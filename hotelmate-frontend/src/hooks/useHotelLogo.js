@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import api from "@/services/api";
+import { publicAPI } from "@/services/api";
 
 const CLOUDINARY_BASE = "https://res.cloudinary.com/dg0ssec7u/";
 
@@ -16,8 +16,8 @@ export default function useHotelLogo(slug) {
       setError(null);
 
       try {
-        // Call the new public slug endpoint
-        const res = await api.get(`/hotel/public/${slug}/`);
+        // Call the public hotel endpoint using publicAPI
+        const res = await publicAPI.get(`/hotel/${slug}/`);
         const hotel = res.data;
 
         if (hotel?.logo_url) {

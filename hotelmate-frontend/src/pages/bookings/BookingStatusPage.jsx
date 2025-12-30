@@ -68,21 +68,21 @@ const BookingStatusPage = () => {
     
     console.log('🚀 Initializing Pusher for booking:', bookingId);
     
-    // Initialize Pusher with guest token authentication
+    // Initialize Pusher with public channel (no auth required)
     const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
-      cluster: import.meta.env.VITE_PUSHER_CLUSTER,
-      auth: {
-        headers: {
-          'Authorization': `GuestToken ${token}`,
-        },
-      },
-      authEndpoint: `http://localhost:8000/api/notifications/pusher/auth/?hotel_slug=${hotelSlug}`,
+      cluster: import.meta.env.VITE_PUSHER_CLUSTER || 'eu',
+      encrypted: true,
+      forceTLS: true,
+      // Remove auth section for public channels
     });
+    
+    console.log('🔧 Pusher initialized for public channels');
     
     pusherRef.current = pusher;
     
-    // Subscribe to private guest booking channel
-    const channelName = `private-guest-booking.${bookingId}`;
+    // Subscribe to public guest booking channel (no authentication required)
+    const channelName = `guest-booking.${bookingId}`;
+    console.log('📺 Subscribing to public channel:', channelName);
     const channel = pusher.subscribe(channelName);
     channelRef.current = channel;
     
