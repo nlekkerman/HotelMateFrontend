@@ -13,6 +13,7 @@ import { publicAPI } from "@/services/api";
 import Pusher from 'pusher-js';
 import RoomService from "@/components/rooms/RoomService";
 import Breakfast from "@/components/rooms/Breakfast";
+import FrontOfficeChatModal from "@/components/modals/FrontOfficeChatModal";
 
 /**
  * BookingStatusPage - Token-based booking management page
@@ -47,6 +48,9 @@ const BookingStatusPage = () => {
   
   // Service view state
   const [activeService, setActiveService] = useState(null); // 'room_service', 'breakfast'
+  
+  // Chat modal state
+  const [showChatModal, setShowChatModal] = useState(false);
   
   // Check-in window state
   const [checkinWindow, setCheckinWindow] = useState({
@@ -544,14 +548,10 @@ const BookingStatusPage = () => {
                 Breakfast
               </button>
               
-              {/* Token-based chat using new GuestChatPortal */}
+              {/* Token-based chat using modal */}
               <button
                 className="custom-button px-4 py-2"
-                onClick={() => {
-                  // Navigate to guest chat portal with token
-                  const chatUrl = `/guest/chat?hotel_slug=${hotelSlug}&token=${encodeURIComponent(token)}`;
-                  navigate(chatUrl);
-                }}
+                onClick={() => setShowChatModal(true)}
                 style={{ borderRadius: '25px' }}
               >
                 Chat with Us
@@ -894,6 +894,15 @@ const BookingStatusPage = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* Front Office Chat Modal */}
+      <FrontOfficeChatModal
+        show={showChatModal}
+        onHide={() => setShowChatModal(false)}
+        hotelSlug={hotelSlug}
+        token={token}
+        title="Chat with Front Office"
+      />
     </div>
   );
 };
