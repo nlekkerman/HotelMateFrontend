@@ -126,13 +126,17 @@ const GuestChatPortal = () => {
       // User-friendly error messages based on status codes
       let errorMessage;
       if (err.response?.status === 404) {
-        errorMessage = 'This link is invalid or expired. Please contact reception.';
+        // Backend endpoint not implemented yet - provide helpful message
+        errorMessage = 'The new guest chat system is currently being set up. Please contact the front desk for assistance.';
       } else if (err.response?.status === 403) {
         errorMessage = 'Chat becomes available after check-in.';
       } else if (err.response?.status === 409) {
         errorMessage = 'Room not assigned yet. Please contact reception.';
+      } else if (err.response?.status >= 500) {
+        errorMessage = 'Chat service is temporarily unavailable. Please try again later.';
       } else {
-        errorMessage = err.response?.data?.detail || 'Failed to load chat context. Please check your link.';
+        // For any other error, provide a generic helpful message
+        errorMessage = 'Unable to connect to chat at this time. Please contact reception for assistance.';
       }
       
       setError(errorMessage);
@@ -361,17 +365,31 @@ const GuestChatPortal = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="alert alert-danger" style={{ maxWidth: '400px' }}>
+          <div className="alert alert-warning" style={{ maxWidth: '500px' }}>
             <i className="bi bi-exclamation-triangle me-2"></i>
-            <strong>Error:</strong> {error}
+            <strong>Chat Temporarily Unavailable</strong>
+            <hr/>
+            <p className="mb-3">{error}</p>
+            <p className="small text-muted mb-0">
+              For immediate assistance, please contact the front desk directly.
+            </p>
           </div>
-          <button 
-            className="btn btn-outline-primary"
-            onClick={() => window.location.reload()}
-          >
-            <i className="bi bi-arrow-clockwise me-2"></i>
-            Try Again
-          </button>
+          <div className="d-flex gap-2 justify-content-center">
+            <button 
+              className="btn btn-outline-primary"
+              onClick={() => window.location.reload()}
+            >
+              <i className="bi bi-arrow-clockwise me-2"></i>
+              Try Again
+            </button>
+            <button 
+              className="btn btn-primary"
+              onClick={() => window.history.back()}
+            >
+              <i className="bi bi-arrow-left me-2"></i>
+              Go Back
+            </button>
+          </div>
         </div>
       </div>
     );
