@@ -5,7 +5,7 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
-import api from "@/services/api";
+import api, { buildStaffURL } from "@/services/api";
 
 // 1) Create context
 const OrderCountContext = createContext({
@@ -21,9 +21,15 @@ export function OrderCountProvider({ children }) {
 
   const refreshRoomService = useCallback(async (hotelSlug) => {
     if (!hotelSlug) return;
+    // Skip API calls in guest context (when no staff authentication)
+    const isGuestContext = window.location.pathname.includes('/booking/status/');
+    if (isGuestContext) {
+      console.log('Skipping room service count refresh in guest context');
+      return;
+    }
     try {
       // Get all orders and count only pending ones (matching RoomServiceOrdersManagement logic)
-      const res = await api.get(`/room_services/${hotelSlug}/orders/`);
+      const res = await api.get(buildStaffURL(hotelSlug, 'room_services', '/orders/'));
       const ordersData = Array.isArray(res.data.results) ? res.data.results : res.data;
       const pendingCount = ordersData.filter(order => order.status === 'pending').length;
       setRoomServiceCount(pendingCount);
@@ -34,9 +40,15 @@ export function OrderCountProvider({ children }) {
 
   const refreshBreakfast = useCallback(async (hotelSlug) => {
     if (!hotelSlug) return;
+    // Skip API calls in guest context (when no staff authentication)
+    const isGuestContext = window.location.pathname.includes('/booking/status/');
+    if (isGuestContext) {
+      console.log('Skipping breakfast count refresh in guest context');
+      return;
+    }
     try {
       // Get all breakfast orders and count only pending ones (matching RoomServiceOrdersManagement logic)
-      const res = await api.get(`/room_services/${hotelSlug}/breakfast-orders/`);
+      const res = await api.get(buildStaffURL(hotelSlug, 'room_services', '/breakfast-orders/'));
       const ordersData = Array.isArray(res.data.results) ? res.data.results : res.data;
       const pendingCount = ordersData.filter(order => order.status === 'pending').length;
       setBreakfastCount(pendingCount);

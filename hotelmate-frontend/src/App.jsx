@@ -54,6 +54,7 @@ import SectionBasedPublicPage from "@/pages/sections/SectionBasedPublicPage";
 import GuestRoomBookingPage from "@/pages/bookings/GuestRoomBookingPage";
 import GuestPrecheckinPage from "@/pages/guest/GuestPrecheckinPage";
 import GuestSurveyPage from "@/pages/guest/GuestSurveyPage";
+import GuestChatPortal from "@/pages/GuestChatPortal.jsx";
 import BookingConfirmation from "@/pages/bookings/BookingConfirmation";
 import BookingPaymentSuccess from "@/pages/bookings/BookingPaymentSuccess";
 import BookingPaymentCancel from "@/pages/bookings/BookingPaymentCancel";
@@ -890,6 +891,7 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
               <Route path="/:hotelSlug/book" element={<GuestRoomBookingPage />} />
               <Route path="/guest/hotel/:hotelSlug/precheckin" element={<GuestPrecheckinPage />} />
               <Route path="/guest/hotel/:hotelSlug/survey" element={<GuestSurveyPage />} />
+              <Route path="/guest/chat" element={<GuestChatPortal />} />
               <Route
                 path="/booking/:hotelSlug"
                 element={<GuestRoomBookingPage />}

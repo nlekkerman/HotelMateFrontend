@@ -386,6 +386,21 @@ export const guestChatActions = {
         });
         break;
 
+      case 'message_created':
+        // Legacy fallback - determine sender type from payload
+        const actionType = payload.sender_type === 'guest' 
+          ? GUEST_CHAT_ACTIONS.GUEST_MESSAGE_RECEIVED 
+          : GUEST_CHAT_ACTIONS.STAFF_MESSAGE_SENT;
+        
+        dispatch({
+          type: actionType,
+          payload: {
+            message: payload,
+            conversationId
+          }
+        });
+        break;
+
       case 'unread_updated':
         // Update unread count for the conversation
         dispatch({

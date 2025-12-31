@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import api from "@/services/api";
+import api, { buildStaffURL } from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useTheme } from "@/context/ThemeContext";
 import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationContext";
@@ -84,7 +84,7 @@ export default function RoomServiceOrdersManagement() {
 
     try {
       // Only fetch initial data to populate the store - after this, everything is real-time
-      const response = await api.get(`/room_services/${hotelSlug}/orders/`);
+      const response = await api.get(buildStaffURL(hotelSlug, 'room_services', '/orders/'));
       
       let initialOrders = response.data;
       if (Array.isArray(initialOrders.results)) {
@@ -136,7 +136,7 @@ export default function RoomServiceOrdersManagement() {
 
       // Fetch order history (completed orders only)
       const response = await api.get(
-        `/room_services/${hotelSlug}/orders/order-history/?${params}`
+        buildStaffURL(hotelSlug, 'room_services', `/orders/order-history/?${params}`)
       );
 
       const data = response.data;
@@ -210,7 +210,7 @@ export default function RoomServiceOrdersManagement() {
     
     console.log('🌐 [OrdersManagement] Sending API PATCH request - waiting for Pusher event');
     api
-      .patch(`/room_services/${hotelSlug}/orders/${order.id}/`, {
+      .patch(buildStaffURL(hotelSlug, 'room_services', `/orders/${order.id}/`), {
         status: newStatus,
       })
       .then((response) => {

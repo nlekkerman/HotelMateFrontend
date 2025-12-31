@@ -544,6 +544,8 @@ const BookingStatusPage = () => {
               >
                 Breakfast
               </button>
+              {/* Chat temporarily disabled - backend endpoints missing */}
+              {/*
               <button
                 className="custom-button px-4 py-2"
                 onClick={() => setActiveService(activeService === 'chat' ? null : 'chat')}
@@ -551,6 +553,7 @@ const BookingStatusPage = () => {
               >
                 Chat with Us
               </button>
+              */}
             </div>
           </Container>
         </div>

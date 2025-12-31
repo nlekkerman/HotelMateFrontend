@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import api from "@/services/api";
 import { toast } from "react-toastify";
 import DeletionModal from "@/components/modals/DeletionModal";
-import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useRoomServiceState, useRoomServiceDispatch } from "@/realtime/stores/roomServiceStore.jsx";
 import { subscribeBaseHotelChannels } from "@/realtime/channelRegistry";
 import "./RoomService.css";
@@ -314,33 +313,58 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
     };
   }, [roomNumber, roomServiceDispatch]);
 
-  const { refreshAll: refreshCount } = useOrderCount(hotelIdentifier);
-
   const openDeleteModal = (itemId) => setDelModal({ show: true, itemId });
   const closeDeleteModal = () => setDelModal({ show: false, itemId: null });
 
   const trayCharge = 5;
 
   useEffect(() => {
-    if (!roomNumber || !hotelIdentifier) return;
+    if (!roomNumber || !hotelIdentifier) {
+      console.error('🚨 RoomService: Missing roomNumber or hotelIdentifier', {
+        roomNumber,
+        hotelIdentifier
+      });
+      return;
+    }
+    
+    console.log('🔄 RoomService: Fetching menu for', {
+      roomNumber,
+      hotelIdentifier,
+      url: `/guest/hotels/${hotelIdentifier}/room/${roomNumber}/menu/`
+    });
+    
     // Fetch menu
     api
-      .get(`/room_services/${hotelIdentifier}/room/${roomNumber}/menu/`)
+      .get(`/guest/hotels/${hotelIdentifier}/room/${roomNumber}/menu/`)
       .then((res) => {
-        setItems(res.data);
+        console.log('✅ RoomService: Menu fetched successfully', {
+          itemCount: res.data?.length || 0,
+          items: res.data
+        });
+        setItems(res.data || []);
         setLoading(false);
         const initQty = {};
-        res.data.forEach((item) => {
+        (res.data || []).forEach((item) => {
           initQty[item.id] = 1;
         });
         setQuantities(initQty);
       })
-      .catch(() => setLoading(false));
+      .catch((error) => {
+        console.error('❌ RoomService: Failed to fetch menu', {
+          error: error.message,
+          status: error.response?.status,
+          data: error.response?.data,
+          url: `/guest/hotels/${hotelIdentifier}/room/${roomNumber}/menu/`
+        });
+        setLoading(false);
+        // Show user-friendly error
+        toast.error(`Failed to load room service menu: ${error.response?.data?.detail || error.message}`);
+      });
 
     // Fetch previous orders (hotel-scoped)
     api
-      .get(`/room_services/orders/room-history`, {
-        params: { hotel_slug: hotelIdentifier, room_number: roomNumber },
+      .get(`/api/guest/hotels/${hotelIdentifier}/orders/`, {
+        params: { room_number: roomNumber },
       })
 
       .then((res) => {
@@ -441,7 +465,7 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
     try {
       // POST to hotel-scoped orders endpoint
       const orderResp = await api.post(
-        `/room_services/${hotelIdentifier}/orders/`,
+        `/guest/hotels/${hotelIdentifier}/room-services/orders/`,
         payload
       );
 
@@ -474,8 +498,7 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
         autoClose: 4000
       });
 
-      // 3) Refresh the navbar badge count
-      refreshCount();
+      // Order count refresh not needed for guest context
     } catch (err) {
       setSubmitError(err.response?.data || err.message);
     } finally {
@@ -733,9 +756,28 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
           </div>
         </div>
         <div className="room-service-menu-container">
-          {items.map((item) => {
-            const price = Number(item.price) || 0;
-            return (
+          {items.length === 0 ? (
+            <div className="text-center py-5">
+              <div className="mb-4">
+                <i className="bi bi-exclamation-triangle fs-1 text-muted"></i>
+              </div>
+              <h5 className="text-muted mb-3">No Menu Items Available</h5>
+              <p className="text-muted mb-4">
+                The room service menu is currently unavailable. This might be because:
+              </p>
+              <ul className="list-unstyled text-muted mb-4">
+                <li className="mb-2"><i className="bi bi-clock me-2"></i>Menu items haven't been configured yet</li>
+                <li className="mb-2"><i className="bi bi-wifi-off me-2"></i>There was a connection issue</li>
+                <li className="mb-2"><i className="bi bi-tools me-2"></i>The service is temporarily unavailable</li>
+              </ul>
+              <p className="text-muted">
+                Please contact the hotel staff for assistance or try again later.
+              </p>
+            </div>
+          ) : (
+            items.map((item) => {
+              const price = Number(item.price) || 0;
+              return (
                 <div key={item.id} className={`card h-100 border-0 room-service-menu-item ${!item.is_on_stock ? 'out-of-stock' : ''}`}>
                   {item.image && (
                     <div className="position-relative overflow-hidden room-service-item-image">
@@ -819,7 +861,7 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
                   </div>
                 </div>
             );
-          })}
+          }))}
         </div>
       </div>
 
