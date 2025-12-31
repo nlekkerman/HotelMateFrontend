@@ -357,70 +357,91 @@ export function subscribeToGuestChatChannel(channelName) {
   }
 }
 
+// Track active subscriptions to prevent duplicates
+const activeGuestSubscriptions = new Map();
+
 /**
  * Subscribe to guest chat booking channel for token-based authentication
- * @param {string} hotelSlug - Hotel slug
- * @param {string} bookingId - Booking ID for scoped channel
- * @param {string} token - Guest authentication token
+ * @param {Object} params - Subscription parameters
+ * @param {string} params.hotelSlug - Hotel slug
+ * @param {string} params.bookingId - Booking ID for scoped channel
+ * @param {string} params.guestToken - Guest authentication token
+ * @param {string} [params.eventName='realtime_event'] - Event name to bind to
  * @returns {Function} Cleanup function
  */
-export function subscribeToGuestChatBooking(hotelSlug, bookingId, token) {
-  if (!hotelSlug || !bookingId || !token) {
+export function subscribeToGuestChatBooking({ hotelSlug, bookingId, guestToken, eventName = 'realtime_event' }) {
+  if (!hotelSlug || !bookingId || !guestToken) {
     console.warn('⚠️ [GuestChat] Missing parameters for guest chat booking subscription');
-    return () => {};
-  }
-
-  console.log('🔗 [GuestChat] Subscribing to guest chat booking channel:', {
-    hotelSlug,
-    bookingId,
-    hasToken: !!token
-  });
-
-  const pusher = getGuestPusherClient(token);
-  if (!pusher) {
-    console.error('❌ [GuestChat] Failed to get guest Pusher client');
     return () => {};
   }
 
   // Booking-scoped private channel for guest chat
   const channelName = `private-hotel-${hotelSlug}-guest-chat-booking-${bookingId}`;
-  console.log('🔗 [GuestChat] Channel name:', channelName);
+  const subscriptionKey = `${guestToken}:${channelName}`;
 
-  const channel = pusher.subscribe(channelName);
+  // Subscription deduplication guard
+  if (activeGuestSubscriptions.has(subscriptionKey)) {
+    console.log('🔄 [GuestChat] Already subscribed to channel, returning existing cleanup');
+    return activeGuestSubscriptions.get(subscriptionKey);
+  }
 
-  // Bind to all guest chat events and route through event bus
-  const eventTypes = [
-    'guest_message_created',
-    'staff_message_created', 
-    'message_created' // legacy fallback
-  ];
+  console.log('🔗 [GuestChat] SUBSCRIBE:', channelName, {
+    hotelSlug,
+    bookingId,
+    eventName,
+    hasToken: !!guestToken
+  });
 
-  eventTypes.forEach(eventType => {
-    channel.bind(eventType, (data) => {
-      console.log(`💬 [GuestChat] Received ${eventType}:`, data);
+  try {
+    const pusher = getGuestPusherClient(guestToken);
+    if (!pusher) {
+      console.error('❌ [GuestChat] Failed to get guest Pusher client');
+      return () => {};
+    }
+
+    const channel = pusher.subscribe(channelName);
+
+    // Bind ONLY the unified event (recommended approach)
+    channel.bind(eventName, (payload) => {
+      console.log(`💬 [GuestChat] Received unified event:`, payload);
       
-      // Route through event bus with guest_chat category
+      // Route through event bus - payload should contain {category, type, payload, meta}
       handleIncomingRealtimeEvent({
-        category: 'guest_chat',
-        type: eventType,
-        payload: data,
-        source: 'guest_pusher_booking'
+        source: "pusher",
+        channel: channel.name,
+        eventName,
+        payload,
       });
     });
-  });
 
-  // Error handling
-  channel.bind('pusher:subscription_error', (error) => {
-    console.error('❌ [GuestChat] Subscription error:', error);
-  });
+    // Error handling
+    channel.bind('pusher:subscription_error', (error) => {
+      console.error('❌ [GuestChat] Subscription error:', error);
+      activeGuestSubscriptions.delete(subscriptionKey);
+    });
 
-  channel.bind('pusher:subscription_succeeded', () => {
-    console.log('✅ [GuestChat] Successfully subscribed to booking channel');
-  });
+    channel.bind('pusher:subscription_succeeded', () => {
+      console.log('✅ [GuestChat] Successfully subscribed to booking channel');
+    });
 
-  // Return cleanup function
-  return () => {
-    console.log('🔌 [GuestChat] Unsubscribing from guest chat booking channel');
-    pusher.unsubscribe(channelName);
-  };
+    // Create cleanup function
+    const cleanup = () => {
+      console.log('🔌 [GuestChat] UNSUBSCRIBE:', channelName);
+      try {
+        channel.unbind_all();
+        pusher.unsubscribe(channelName);
+      } catch (e) {
+        console.warn('Guest channel cleanup failed:', e);
+      }
+      activeGuestSubscriptions.delete(subscriptionKey);
+    };
+
+    // Store cleanup function to prevent duplicates
+    activeGuestSubscriptions.set(subscriptionKey, cleanup);
+
+    return cleanup;
+  } catch (err) {
+    console.error('❌ [GuestChat] Failed to subscribe guest chat booking:', err);
+    return () => {};
+  }
 }

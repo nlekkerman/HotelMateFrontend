@@ -13,7 +13,6 @@ import { publicAPI } from "@/services/api";
 import Pusher from 'pusher-js';
 import RoomService from "@/components/rooms/RoomService";
 import Breakfast from "@/components/rooms/Breakfast";
-import ChatWindow from "@/components/chat/ChatWindow";
 
 /**
  * BookingStatusPage - Token-based booking management page
@@ -47,7 +46,7 @@ const BookingStatusPage = () => {
   const channelRef = useRef(null);
   
   // Service view state
-  const [activeService, setActiveService] = useState(null); // 'room_service', 'breakfast', 'chat'
+  const [activeService, setActiveService] = useState(null); // 'room_service', 'breakfast'
   
   // Check-in window state
   const [checkinWindow, setCheckinWindow] = useState({
@@ -544,16 +543,19 @@ const BookingStatusPage = () => {
               >
                 Breakfast
               </button>
-              {/* Chat temporarily disabled - backend endpoints missing */}
-              {/*
+              
+              {/* Token-based chat using new GuestChatPortal */}
               <button
                 className="custom-button px-4 py-2"
-                onClick={() => setActiveService(activeService === 'chat' ? null : 'chat')}
+                onClick={() => {
+                  // Navigate to guest chat portal with token
+                  const chatUrl = `/guest/chat?hotel_slug=${hotelSlug}&token=${encodeURIComponent(token)}`;
+                  navigate(chatUrl);
+                }}
                 style={{ borderRadius: '25px' }}
               >
                 Chat with Us
               </button>
-              */}
             </div>
           </Container>
         </div>
@@ -575,23 +577,6 @@ const BookingStatusPage = () => {
               roomNumber={booking.assigned_room_number}
               hotelIdentifier={hotelSlug}
             />
-          )}
-          {activeService === 'chat' && (
-            <div className="card border-0 shadow-sm">
-              <div className="card-header bg-success text-white">
-                <h5 className="mb-0">
-                  <i className="bi bi-chat-dots me-2"></i>
-                  Chat with Hotel Staff
-                </h5>
-              </div>
-              <div className="card-body p-0" style={{ height: '500px' }}>
-                <ChatWindow 
-                  hotelSlug={hotelSlug}
-                  roomNumber={booking.assigned_room_number}
-                  isGuest={true}
-                />
-              </div>
-            </div>
           )}
         </Container>
       )}
