@@ -15,8 +15,10 @@ const TIME_SLOTS = [
   "10:00-10:30",
 ];
 
-const Breakfast = ({ isAdmin = false }) => {
-  const { roomNumber, hotelIdentifier } = useParams();
+const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifier: propHotelIdentifier }) => {
+  const params = useParams();
+  const roomNumber = propRoomNumber || params.roomNumber;
+  const hotelIdentifier = propHotelIdentifier || params.hotelIdentifier;
   const [items, setItems] = useState([]);
   const [selectedItems, setSelectedItems] = useState({}); // { itemId: { quantity: 1, notes: "" } }
   const [timeSlot, setTimeSlot] = useState("");

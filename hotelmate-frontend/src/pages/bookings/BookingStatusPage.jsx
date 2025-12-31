@@ -560,10 +560,18 @@ const BookingStatusPage = () => {
       {isCheckedIn && booking?.assigned_room_number && activeService && (
         <Container className="py-4">
           {activeService === 'room_service' && (
-            <RoomService isAdmin={false} />
+            <RoomService 
+              isAdmin={false} 
+              roomNumber={booking.assigned_room_number}
+              hotelIdentifier={hotelSlug}
+            />
           )}
           {activeService === 'breakfast' && (
-            <Breakfast isAdmin={false} />
+            <Breakfast 
+              isAdmin={false}
+              roomNumber={booking.assigned_room_number}
+              hotelIdentifier={hotelSlug}
+            />
           )}
           {activeService === 'chat' && (
             <div className="card border-0 shadow-sm">

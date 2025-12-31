@@ -9,8 +9,10 @@ import { subscribeBaseHotelChannels } from "@/realtime/channelRegistry";
 import "./RoomService.css";
 
 
-export default function RoomService({ isAdmin }) {
-  const { roomNumber, hotelIdentifier } = useParams();
+export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotelIdentifier: propHotelIdentifier }) {
+  const params = useParams();
+  const roomNumber = propRoomNumber || params.roomNumber;
+  const hotelIdentifier = propHotelIdentifier || params.hotelIdentifier;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [quantities, setQuantities] = useState({});
