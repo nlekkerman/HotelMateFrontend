@@ -13,7 +13,6 @@ import { publicAPI } from "@/services/api";
 import Pusher from 'pusher-js';
 import RoomService from "@/components/rooms/RoomService";
 import Breakfast from "@/components/rooms/Breakfast";
-import FrontOfficeChatModal from "@/components/modals/FrontOfficeChatModal";
 
 /**
  * BookingStatusPage - Token-based booking management page
@@ -49,8 +48,10 @@ const BookingStatusPage = () => {
   // Service view state
   const [activeService, setActiveService] = useState(null); // 'room_service', 'breakfast'
   
-  // Chat modal state
-  const [showChatModal, setShowChatModal] = useState(false);
+  // Guest context + permissions (scoped token)
+  const [guestContext, setGuestContext] = useState(null);
+  const [contextError, setContextError] = useState(null);
+  const [contextLoading, setContextLoading] = useState(false);
   
   // Check-in window state
   const [checkinWindow, setCheckinWindow] = useState({
@@ -422,6 +423,38 @@ const BookingStatusPage = () => {
     }
   };
 
+  // Fetch guest context for token-scoped permissions
+  const fetchGuestContext = async () => {
+    if (!hotelSlug || !token) return;
+
+    try {
+      setContextLoading(true);
+      setContextError(null);
+
+      // Use existing endpoint that returns allowed_actions
+      const res = await publicAPI.get(`/hotel/${hotelSlug}/guest/context/`, {
+        params: { token }
+      });
+
+      const ctx = unwrap(res);
+      setGuestContext(ctx);
+    } catch (err) {
+      console.error("Failed to fetch guest context:", err);
+      setGuestContext(null);
+
+      // Keep status page usable; just disable chat + services
+      setContextError({
+        status: err.response?.status || 0,
+        message:
+          err.response?.data?.detail ||
+          err.response?.data?.error ||
+          "Unable to validate permissions"
+      });
+    } finally {
+      setContextLoading(false);
+    }
+  };
+
   // Handle booking cancellation
   const handleCancellation = async () => {
     if (!token || !booking) return;
@@ -468,6 +501,7 @@ const BookingStatusPage = () => {
 
   useEffect(() => {
     fetchBookingStatus();
+    fetchGuestContext();
   }, []);
 
   if (loading) {
@@ -526,35 +560,66 @@ const BookingStatusPage = () => {
     statusInfo: statusInfo
   });
 
+  // Token-scoped permissions logic
+  const allowed = guestContext?.allowed_actions;
+
+  const hasAllowed = (key) => {
+    if (!allowed) return false;
+    if (Array.isArray(allowed)) return allowed.includes(key);
+    return allowed[key] === true; // supports {can_chat:true} style
+  };
+
+  // Fallback to checked-in status if context API fails or doesn't have explicit permissions
+  const canChat = hasAllowed("chat") || hasAllowed("can_chat") || (isCheckedIn && !contextError?.status);
+  const canRoomService = hasAllowed("room_service") || hasAllowed("can_order_room_service") || (isCheckedIn && !contextError?.status);
+  const canBreakfast = hasAllowed("breakfast") || hasAllowed("can_breakfast") || (isCheckedIn && !contextError?.status);
+
+  const chatDisabledReason =
+    !token ? "Missing token" :
+    contextError?.status === 404 ? "This link is invalid or expired" :
+    contextError?.status === 403 ? "Chat available after check-in" :
+    contextError?.status === 409 ? "Room not assigned yet" :
+    contextError && !isCheckedIn ? "Unable to validate chat access" :
+    !canChat ? "Chat not enabled for this link" :
+    null;
+
+  const chatEnabled = !!canChat && !chatDisabledReason;
+
   return (
     <div>
       {/* Top Navigation Bar - Hotel Services */}
-      {isCheckedIn && booking?.assigned_room_number && (
+      {(isCheckedIn || canRoomService || canBreakfast || canChat) && (
         <div className="bg-white shadow-sm border-bottom sticky-top" style={{ zIndex: 1040 }}>
           <Container>
             <div className="d-flex justify-content-center gap-2 py-3">
               <button
                 className="custom-button px-4 py-2"
                 onClick={() => setActiveService(activeService === 'room_service' ? null : 'room_service')}
-                style={{ borderRadius: '25px' }}
+                disabled={!canRoomService && !contextLoading}
+                title={contextLoading ? "Checking permissions..." : !canRoomService ? "Available after check-in" : ""}
+                style={{ borderRadius: '25px', opacity: (!canRoomService && !contextLoading) ? 0.6 : 1 }}
               >
                 Room Service
               </button>
               <button
                 className="custom-button px-4 py-2"
                 onClick={() => setActiveService(activeService === 'breakfast' ? null : 'breakfast')}
-                style={{ borderRadius: '25px' }}
+                disabled={!canBreakfast && !contextLoading}
+                title={contextLoading ? "Checking permissions..." : !canBreakfast ? "Available after check-in" : ""}
+                style={{ borderRadius: '25px', opacity: (!canBreakfast && !contextLoading) ? 0.6 : 1 }}
               >
                 Breakfast
               </button>
               
-              {/* Token-based chat using modal */}
+              {/* Token-based chat - route to portal */}
               <button
                 className="custom-button px-4 py-2"
-                onClick={() => setShowChatModal(true)}
-                style={{ borderRadius: '25px' }}
+                onClick={() => navigate(`/guest/chat?hotel_slug=${hotelSlug}&token=${token}`)}
+                disabled={!canChat && !contextLoading}
+                title={contextLoading ? "Checking permissions..." : chatDisabledReason || ""}
+                style={{ borderRadius: '25px', opacity: (!canChat && !contextLoading) ? 0.6 : 1 }}
               >
-                Chat with Us
+                {contextLoading ? "Checking..." : "Chat with Us"}
               </button>
             </div>
           </Container>
@@ -562,16 +627,16 @@ const BookingStatusPage = () => {
       )}
       
       {/* Service Components - Load directly under buttons */}
-      {isCheckedIn && booking?.assigned_room_number && activeService && (
+      {booking?.assigned_room_number && activeService && (
         <Container className="py-4">
-          {activeService === 'room_service' && (
+          {activeService === 'room_service' && canRoomService && (
             <RoomService 
               isAdmin={false} 
               roomNumber={booking.assigned_room_number}
               hotelIdentifier={hotelSlug}
             />
           )}
-          {activeService === 'breakfast' && (
+          {activeService === 'breakfast' && canBreakfast && (
             <Breakfast 
               isAdmin={false}
               roomNumber={booking.assigned_room_number}
@@ -895,14 +960,7 @@ const BookingStatusPage = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* Front Office Chat Modal */}
-      <FrontOfficeChatModal
-        show={showChatModal}
-        onHide={() => setShowChatModal(false)}
-        hotelSlug={hotelSlug}
-        token={token}
-        title="Chat with Front Office"
-      />
+
     </div>
   );
 };
