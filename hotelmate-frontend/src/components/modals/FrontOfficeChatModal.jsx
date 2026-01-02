@@ -102,7 +102,7 @@ const FrontOfficeChatModal = ({
       setError(null);
 
       const response = await publicAPI.get(
-        `/chat/${hotelSlug}/guest/chat/context/?token=${encodeURIComponent(token)}`
+        `/api/guest/hotel/${hotelSlug}/chat/context?token=${encodeURIComponent(token)}`
       );
 
       if (response.data?.success) {
@@ -171,7 +171,7 @@ const FrontOfficeChatModal = ({
     const poll = async () => {
       try {
         const response = await publicAPI.get(
-          `/chat/${hotelSlug}/guest/chat/messages/?token=${encodeURIComponent(token)}&conversation_id=${conversationId}`
+          `/api/guest/hotel/${hotelSlug}/chat/messages?token=${encodeURIComponent(token)}&conversation_id=${conversationId}`
         );
 
         if (response.data?.success && response.data.data?.messages) {
@@ -199,7 +199,7 @@ const FrontOfficeChatModal = ({
       setSending(true);
       
       const response = await publicAPI.post(
-        `/chat/${hotelSlug}/guest/chat/messages/?token=${encodeURIComponent(token)}`,
+        `/api/guest/hotel/${hotelSlug}/chat/messages?token=${encodeURIComponent(token)}`,
         {
           message: message.trim(),
           conversation_id: conversationId,

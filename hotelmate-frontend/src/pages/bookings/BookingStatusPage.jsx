@@ -569,8 +569,8 @@ const BookingStatusPage = () => {
     return allowed[key] === true; // supports {can_chat:true} style
   };
 
-  // Fallback to checked-in status if context API fails or doesn't have explicit permissions
-  const canChat = hasAllowed("chat") || hasAllowed("can_chat") || (isCheckedIn && !contextError?.status);
+  // Server is source of truth for permissions - no fallbacks to isCheckedIn
+  const canChat = hasAllowed("chat") || hasAllowed("can_chat");
   const canRoomService = hasAllowed("room_service") || hasAllowed("can_order_room_service") || (isCheckedIn && !contextError?.status);
   const canBreakfast = hasAllowed("breakfast") || hasAllowed("can_breakfast") || (isCheckedIn && !contextError?.status);
 

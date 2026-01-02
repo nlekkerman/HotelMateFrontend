@@ -108,7 +108,7 @@ const GuestChatPortal = () => {
       console.log('🔍 [GuestChat] Fetching context for:', { hotelSlug, hasToken: !!token });
 
       const response = await publicAPI.get(
-        `/chat/${hotelSlug}/guest/chat/context/`,
+        `/api/guest/hotel/${hotelSlug}/chat/context`,
         { params: { token } }
       );
 
@@ -194,7 +194,7 @@ const GuestChatPortal = () => {
 
       try {
         const response = await publicAPI.get(
-          `/chat/${hotelSlug}/guest/chat/messages/`,
+          `/api/guest/hotel/${hotelSlug}/chat/messages`,
           { params: { token } }
         );
         
@@ -274,7 +274,7 @@ const GuestChatPortal = () => {
       console.log('📤 [GuestChat] Sending message:', message);
       
       const response = await publicAPI.post(
-        `/chat/${hotelSlug}/guest/chat/messages/`,
+        `/api/guest/hotel/${hotelSlug}/chat/messages`,
         {
           message: message.trim(),
           reply_to: null // TODO: Add reply functionality if needed
