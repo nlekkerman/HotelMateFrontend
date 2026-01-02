@@ -431,12 +431,21 @@ const BookingStatusPage = () => {
       setContextLoading(true);
       setContextError(null);
 
-      // Use existing endpoint that returns allowed_actions
-      const res = await publicAPI.get(`/hotel/${hotelSlug}/guest/context/`, {
+      // Use canonical chat context endpoint that returns allowed_actions
+      const res = await publicAPI.get(`/api/guest/hotel/${hotelSlug}/chat/context`, {
         params: { token }
       });
 
       const ctx = unwrap(res);
+      console.log('🔍 [BookingStatusPage] Guest context API response:', {
+        url: `/api/guest/hotel/${hotelSlug}/chat/context`,
+        token: token?.substring(0, 10) + '...',
+        fullResponse: res,
+        unwrappedData: ctx,
+        allowedActions: ctx?.allowed_actions,
+        canChat: ctx?.allowed_actions?.can_chat,
+        canRoomService: ctx?.allowed_actions?.can_room_service || ctx?.allowed_actions?.room_service
+      });
       setGuestContext(ctx);
     } catch (err) {
       console.error("Failed to fetch guest context:", err);
@@ -573,6 +582,18 @@ const BookingStatusPage = () => {
   const canChat = hasAllowed("chat") || hasAllowed("can_chat");
   const canRoomService = hasAllowed("room_service") || hasAllowed("can_order_room_service") || (isCheckedIn && !contextError?.status);
   const canBreakfast = hasAllowed("breakfast") || hasAllowed("can_breakfast") || (isCheckedIn && !contextError?.status);
+
+  // Debug chat permissions
+  console.log('🎛️ [BookingStatusPage] Chat permissions debug:', {
+    guestContext,
+    allowed,
+    hasChat: hasAllowed("chat"),
+    hasCanChat: hasAllowed("can_chat"),
+    finalCanChat: canChat,
+    isCheckedIn,
+    contextError,
+    contextLoading
+  });
 
   const chatDisabledReason =
     !token ? "Missing token" :

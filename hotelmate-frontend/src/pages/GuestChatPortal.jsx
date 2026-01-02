@@ -106,6 +106,7 @@ const GuestChatPortal = () => {
       setError(null);
 
       console.log('🔍 [GuestChat] Fetching context for:', { hotelSlug, hasToken: !!token });
+      console.log('🌐 [GuestChat] Making API call to:', `/api/guest/hotel/${hotelSlug}/chat/context`);
 
       const response = await publicAPI.get(
         `/api/guest/hotel/${hotelSlug}/chat/context`,
@@ -113,7 +114,16 @@ const GuestChatPortal = () => {
       );
 
       const contextData = response.data;
-      console.log('✅ [GuestChat] Context fetched:', contextData);
+      console.log('✅ [GuestChat] Context API response:', {
+        url: `/api/guest/hotel/${hotelSlug}/chat/context`,
+        status: response.status,
+        headers: response.headers,
+        fullResponse: response,
+        data: contextData,
+        allowedActions: contextData?.allowed_actions,
+        canChat: contextData?.allowed_actions?.can_chat,
+        disabledReason: contextData?.disabled_reason
+      });
       
       setContext(contextData);
       
@@ -272,6 +282,7 @@ const GuestChatPortal = () => {
       setSending(true);
       
       console.log('📤 [GuestChat] Sending message:', message);
+      console.log('🌐 [GuestChat] Making API call to:', `/api/guest/hotel/${hotelSlug}/chat/messages`);
       
       const response = await publicAPI.post(
         `/api/guest/hotel/${hotelSlug}/chat/messages`,
@@ -284,7 +295,13 @@ const GuestChatPortal = () => {
         }
       );
       
-      console.log('✅ [GuestChat] Message sent successfully:', response.data);
+      console.log('✅ [GuestChat] Message send response:', {
+        url: `/api/guest/hotel/${hotelSlug}/chat/messages`,
+        status: response.status,
+        headers: response.headers,
+        fullResponse: response,
+        data: response.data
+      });
       
       // Clear input - message will appear via realtime event or polling
       setMessage('');

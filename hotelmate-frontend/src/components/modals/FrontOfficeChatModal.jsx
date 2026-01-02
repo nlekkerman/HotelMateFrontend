@@ -101,9 +101,24 @@ const FrontOfficeChatModal = ({
       setLoading(true);
       setError(null);
 
+      console.log('🏨 [FrontOfficeChatModal] Fetching context:', {
+        hotelSlug,
+        token: token?.substring(0, 10) + '...',
+        url: `/api/guest/hotel/${hotelSlug}/chat/context?token=${encodeURIComponent(token)}`
+      });
+
       const response = await publicAPI.get(
         `/api/guest/hotel/${hotelSlug}/chat/context?token=${encodeURIComponent(token)}`
       );
+
+      console.log('📞 [FrontOfficeChatModal] Context API response:', {
+        status: response.status,
+        headers: response.headers,
+        fullResponse: response,
+        data: response.data,
+        success: response.data?.success,
+        contextData: response.data?.data
+      });
 
       if (response.data?.success) {
         setContext(response.data.data);
