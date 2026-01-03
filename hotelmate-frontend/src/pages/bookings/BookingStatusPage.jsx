@@ -9,7 +9,7 @@ import {
   Modal,
   Form,
 } from "react-bootstrap";
-import { guestAPI } from "@/services/api";
+import { guestAPI, publicAPI } from "@/services/api";
 import Pusher from "pusher-js";
 import RoomService from "@/components/rooms/RoomService";
 import Breakfast from "@/components/rooms/Breakfast";
@@ -52,6 +52,7 @@ const BookingStatusPage = () => {
   const [guestContext, setGuestContext] = useState(null);
   const [contextError, setContextError] = useState(null);
   const [contextLoading, setContextLoading] = useState(false);
+  const [guestToken, setGuestToken] = useState(null); // Token for chat/room service from booking response
 
   // Check-in window state
   const [checkinWindow, setCheckinWindow] = useState({
@@ -401,7 +402,7 @@ const BookingStatusPage = () => {
       setError(null);
 
       // Call the existing hotel-specific booking endpoint with token
-      const response = await guestAPI.get(
+      const response = await publicAPI.get(
         `/hotel/${hotelSlug}/room-bookings/${bookingId}/`,
         { params: { token } }
       );
@@ -412,6 +413,14 @@ const BookingStatusPage = () => {
       setBooking(data);
       setHotel(data.hotel);
       setCancellationPolicy(data.cancellation_policy);
+      
+      // Extract guest token for chat/room service operations
+      if (data.guest_token) {
+        setGuestToken(data.guest_token);
+        console.log('🎫 [BookingStatusPage] Guest token received for chat/services');
+      } else {
+        console.log('⚠️ [BookingStatusPage] No guest token provided (may not be checked in yet)');
+      }
 
       // Debug initial booking data structure
       console.log("📥 Initial booking data loaded:", {
@@ -470,22 +479,27 @@ const BookingStatusPage = () => {
 
   // Fetch guest context for token-scoped permissions
   const fetchGuestContext = async () => {
-    if (!hotelSlug || !token) return;
+    if (!hotelSlug || !guestToken) {
+      console.log('🔍 [BookingStatusPage] Skipping guest context - no guest token available');
+      return;
+    }
 
     try {
       setContextLoading(true);
       setContextError(null);
 
-      // Use canonical chat context endpoint that returns allowed_actions
+      console.log('🔍 [BookingStatusPage] Fetching guest context with guest token');
+      
+      // Use canonical chat context endpoint with guest token
       const res = await guestAPI.get(`/hotel/${hotelSlug}/chat/context`, {
-        params: { token },
+        params: { token: guestToken },
       });
 
       const ctx = unwrap(res);
       console.log("🔍 [BookingStatusPage] Guest context API response:", {
         url: `/hotel/${hotelSlug}/chat/context`,
         fullURL: `/api/guest/hotel/${hotelSlug}/chat/context`,
-        token: token?.substring(0, 10) + "...",
+        guestToken: guestToken?.substring(0, 10) + "...",
         fullResponse: res,
         unwrappedData: ctx,
         allowedActions: ctx?.allowed_actions,
@@ -520,7 +534,7 @@ const BookingStatusPage = () => {
     setCancelError(null);
 
     try {
-      const response = await guestAPI.post(
+      const response = await publicAPI.post(
         `/hotel/${hotelSlug}/room-bookings/${bookingId}/cancel/`,
         {
           reason: cancelReason,
@@ -558,8 +572,14 @@ const BookingStatusPage = () => {
 
   useEffect(() => {
     fetchBookingStatus();
-    fetchGuestContext();
   }, []);
+  
+  // Fetch guest context when guest token becomes available
+  useEffect(() => {
+    if (guestToken) {
+      fetchGuestContext();
+    }
+  }, [guestToken]);
 
   if (loading) {
     return (
@@ -661,7 +681,9 @@ const BookingStatusPage = () => {
   });
 
   const chatDisabledReason = !token
-    ? "Missing token"
+    ? "Missing booking token"
+    : !guestToken
+    ? "Chat available after check-in"
     : contextError?.status === 404
     ? "This link is invalid or expired"
     : contextError?.status === 403
@@ -735,12 +757,14 @@ const BookingStatusPage = () => {
               <button
                 className="custom-button px-4 py-2"
                 onClick={() =>
-                  navigate(`/guest/chat?hotel_slug=${hotelSlug}&token=${token}`)
+                  navigate(`/guest/chat?hotel_slug=${hotelSlug}&token=${guestToken || token}`)
                 }
                 disabled={!canChat && !contextLoading}
                 title={
                   contextLoading
                     ? "Checking permissions..."
+                    : !guestToken
+                    ? "Chat available after check-in"
                     : chatDisabledReason || ""
                 }
                 style={{
