@@ -106,16 +106,18 @@ const GuestChatPortal = () => {
       setError(null);
 
       console.log('🔍 [GuestChat] Fetching context for:', { hotelSlug, hasToken: !!token });
-      console.log('🌐 [GuestChat] Making API call to:', `/api/guest/hotel/${hotelSlug}/chat/context`);
+      console.log('🌐 [GuestChat] Making API call to:', `/guest/hotel/${hotelSlug}/chat/context`);
+      console.log('🌐 [GuestChat] Full URL will be:', `/public/guest/hotel/${hotelSlug}/chat/context`);
 
       const response = await publicAPI.get(
-        `/api/guest/hotel/${hotelSlug}/chat/context`,
+        `/guest/hotel/${hotelSlug}/chat/context`,
         { params: { token } }
       );
 
       const contextData = response.data;
       console.log('✅ [GuestChat] Context API response:', {
-        url: `/api/guest/hotel/${hotelSlug}/chat/context`,
+        url: `/guest/hotel/${hotelSlug}/chat/context`,
+        fullURL: `/public/guest/hotel/${hotelSlug}/chat/context`,
         status: response.status,
         headers: response.headers,
         fullResponse: response,
@@ -204,7 +206,7 @@ const GuestChatPortal = () => {
 
       try {
         const response = await publicAPI.get(
-          `/api/guest/hotel/${hotelSlug}/chat/messages`,
+          `/guest/hotel/${hotelSlug}/chat/messages`,
           { params: { token } }
         );
         
@@ -282,10 +284,11 @@ const GuestChatPortal = () => {
       setSending(true);
       
       console.log('📤 [GuestChat] Sending message:', message);
-      console.log('🌐 [GuestChat] Making API call to:', `/api/guest/hotel/${hotelSlug}/chat/messages`);
+      console.log('🌐 [GuestChat] Making API call to:', `/guest/hotel/${hotelSlug}/chat/messages`);
+      console.log('🌐 [GuestChat] Full URL will be:', `/public/guest/hotel/${hotelSlug}/chat/messages`);
       
       const response = await publicAPI.post(
-        `/api/guest/hotel/${hotelSlug}/chat/messages`,
+        `/guest/hotel/${hotelSlug}/chat/messages`,
         {
           message: message.trim(),
           reply_to: null // TODO: Add reply functionality if needed
@@ -296,7 +299,8 @@ const GuestChatPortal = () => {
       );
       
       console.log('✅ [GuestChat] Message send response:', {
-        url: `/api/guest/hotel/${hotelSlug}/chat/messages`,
+        url: `/guest/hotel/${hotelSlug}/chat/messages`,
+        fullURL: `/public/guest/hotel/${hotelSlug}/chat/messages`,
         status: response.status,
         headers: response.headers,
         fullResponse: response,

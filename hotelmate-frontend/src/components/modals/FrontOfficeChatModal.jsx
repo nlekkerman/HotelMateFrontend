@@ -3,7 +3,7 @@ import { Modal, Button } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { subscribeToGuestChatBooking } from '@/realtime/channelRegistry';
 import { useGuestChatStore } from '@/realtime/stores/guestChatStore';
-import { publicAPI } from '@/services/api';
+import { guestAPI } from '@/services/api';
 
 /**
  * Front Office Chat Modal - Opens a conversation window with front office team
@@ -104,14 +104,17 @@ const FrontOfficeChatModal = ({
       console.log('🏨 [FrontOfficeChatModal] Fetching context:', {
         hotelSlug,
         token: token?.substring(0, 10) + '...',
-        url: `/api/guest/hotel/${hotelSlug}/chat/context?token=${encodeURIComponent(token)}`
+        url: `/guest/hotel/${hotelSlug}/chat/context?token=${encodeURIComponent(token)}`,
+        fullURL: `/public/guest/hotel/${hotelSlug}/chat/context?token=${encodeURIComponent(token)}`
       });
 
-      const response = await publicAPI.get(
-        `/api/guest/hotel/${hotelSlug}/chat/context?token=${encodeURIComponent(token)}`
-      );
+      const response = await guestAPI.get(
+  `/hotel/${hotelSlug}/chat/context?token=${encodeURIComponent(token)}`
+);
 
       console.log('📞 [FrontOfficeChatModal] Context API response:', {
+        url: `/guest/hotel/${hotelSlug}/chat/context`,
+        fullURL: `/public/guest/hotel/${hotelSlug}/chat/context`,
         status: response.status,
         headers: response.headers,
         fullResponse: response,
@@ -186,7 +189,7 @@ const FrontOfficeChatModal = ({
     const poll = async () => {
       try {
         const response = await publicAPI.get(
-          `/api/guest/hotel/${hotelSlug}/chat/messages?token=${encodeURIComponent(token)}&conversation_id=${conversationId}`
+          `/guest/hotel/${hotelSlug}/chat/messages?token=${encodeURIComponent(token)}&conversation_id=${conversationId}`
         );
 
         if (response.data?.success && response.data.data?.messages) {
@@ -214,7 +217,7 @@ const FrontOfficeChatModal = ({
       setSending(true);
       
       const response = await publicAPI.post(
-        `/api/guest/hotel/${hotelSlug}/chat/messages?token=${encodeURIComponent(token)}`,
+        `/guest/hotel/${hotelSlug}/chat/messages?token=${encodeURIComponent(token)}`,
         {
           message: message.trim(),
           conversation_id: conversationId,
