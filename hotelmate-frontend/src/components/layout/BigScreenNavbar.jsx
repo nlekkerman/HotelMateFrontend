@@ -7,7 +7,7 @@ import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useTheme } from "@/context/ThemeContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigation } from "@/hooks/useNavigation";
-import { useChat } from "@/context/ChatContext";
+import { useStaffChat } from "@/staff_chat/context/StaffChatContext";
 import { useBookingNotifications } from "@/context/BookingNotificationContext";
 import { useRoomServiceNotifications } from "@/context/RoomServiceNotificationContext";
 import { useAttendanceRealtime } from "@/features/attendance/hooks/useAttendanceRealtime";
@@ -21,7 +21,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
   const { user, logout } = useAuth();
   const hotelIdentifier = user?.hotel_slug;
   const { mainColor } = useTheme();
-  const { totalUnread, markConversationRead } = useChat();
+  const { totalUnread, markConversationRead } = useStaffChat();
   const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
   const { hasNewBooking } = useBookingNotifications();
   const { hasNewRoomService, hasNewBreakfast } = useRoomServiceNotifications();

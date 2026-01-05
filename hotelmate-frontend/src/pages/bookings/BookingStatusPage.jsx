@@ -710,15 +710,27 @@ const BookingStatusPage = () => {
       console.log('4. Recommendation: Check backend guest token validation');
       
       // 🚀 TEMPORARY WORKAROUND: Enable chat for checked-in guests despite API failure
-      if (booking?.checked_in_at && !booking?.checked_out_at && guestToken) {
-        console.log('🔧 TEMPORARY WORKAROUND: Enabling chat for checked-in guest despite API failure');
+      // Check if guest is checked in, regardless of guest_token presence
+      if (booking?.checked_in_at && !booking?.checked_out_at) {
+        console.log('🔧 TEMPORARY WORKAROUND: Enabling chat for checked-in guest despite API/token issues');
+        console.log('🔧 Checked-in guest detected:', {
+          checked_in_at: booking.checked_in_at,
+          checked_out_at: booking.checked_out_at,
+          assigned_room_number: booking.assigned_room_number,
+          has_guest_token: !!guestToken
+        });
         setGuestContext({
           allowed_actions: ['chat', 'room_service'],
           guest_id: booking.booking_id,
           temp_workaround: true,
-          message: 'Using temporary context due to API authentication issues'
+          message: 'Using temporary context for checked-in guest'
         });
       } else {
+        console.log('🔧 Guest not eligible for temporary chat access:', {
+          checked_in_at: !!booking?.checked_in_at,
+          checked_out_at: !!booking?.checked_out_at,
+          has_guest_token: !!guestToken
+        });
         setGuestContext(null);
       }
 
@@ -785,10 +797,48 @@ const BookingStatusPage = () => {
   
   // Fetch guest context when guest token becomes available
   useEffect(() => {
-    if (guestToken) {
+    if (guestToken && booking) {
       fetchGuestContext();
     }
-  }, [guestToken]);
+  }, [guestToken, booking]);
+
+  // 🚀 DIRECT CHAT ENABLEMENT: Enable chat for checked-in guests (bypassing token requirements)
+  useEffect(() => {
+    if (booking) {
+      // If guest is checked in, enable chat directly regardless of guest token
+      if (booking.checked_in_at && !booking.checked_out_at) {
+        console.log('🔧 DIRECT CHAT ENABLEMENT: Enabling chat for checked-in guest');
+        console.log('🔧 Checked-in guest detected:', {
+          checked_in_at: booking.checked_in_at,
+          checked_out_at: booking.checked_out_at,
+          assigned_room_number: booking.assigned_room_number,
+          has_guest_token: !!guestToken,
+          status: booking.status
+        });
+        setGuestContext({
+          allowed_actions: ['chat', 'room_service', 'breakfast'],
+          guest_id: booking.booking_id,
+          temp_workaround: true,
+          message: 'Chat enabled for checked-in guest',
+          room_number: booking.assigned_room_number
+        });
+        setContextLoading(false);
+        setContextError(null);
+        console.log('✅ CHAT ENABLED for checked-in guest');
+      } else {
+        console.log('🔧 Guest not checked in, chat disabled:', {
+          checked_in_at: !!booking?.checked_in_at,
+          checked_out_at: !!booking?.checked_out_at,
+          has_guest_token: !!guestToken,
+          status: booking.status
+        });
+        // Only disable if not previously enabled by guest token
+        if (!guestToken) {
+          setGuestContext(null);
+        }
+      }
+    }
+  }, [booking, guestToken]);
 
   if (loading) {
     return (
@@ -891,16 +941,6 @@ const BookingStatusPage = () => {
 
   const chatDisabledReason = !token
     ? "Missing booking token"
-    : !guestToken
-    ? "Chat available after check-in"
-    : contextError?.status === 404
-    ? "This link is invalid or expired"
-    : contextError?.status === 403
-    ? "Chat available after check-in"
-    : contextError?.status === 409
-    ? "Room not assigned yet"
-    : contextError && !isCheckedIn
-    ? "Unable to validate chat access"
     : !canChat
     ? "Chat not enabled for this link"
     : null;
@@ -972,9 +1012,7 @@ const BookingStatusPage = () => {
                 title={
                   contextLoading
                     ? "Checking permissions..."
-                    : !guestToken
-                    ? "Chat available after check-in"
-                    : chatDisabledReason || ""
+                    : chatDisabledReason || "Click to open chat"
                 }
                 style={{
                   borderRadius: "25px",

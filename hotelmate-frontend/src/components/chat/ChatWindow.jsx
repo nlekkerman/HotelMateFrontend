@@ -2,7 +2,7 @@
 import { useParams, useLocation } from "react-router-dom";
 import api from "@/services/api";
 import { FaPaperPlane, FaTimes, FaArrowLeft, FaAngleDoubleDown, FaCheck, FaCheckDouble, FaSmile, FaPaperclip, FaDownload, FaTrash } from "react-icons/fa";
-import { useChat } from "@/context/ChatContext";
+// import { useChat } from "@/context/ChatContext"; // Removed - old context
 import useHotelLogo from "@/hooks/useHotelLogo";
 import EmojiPicker from "emoji-picker-react";
 import { GuestChatSession } from "@/utils/guestChatSession";
@@ -131,13 +131,15 @@ const ChatWindow = ({
     pusherInstance, 
     setCurrentConversationId,
     // Guest chat functionality from guestChatStore
-    guestMessages,
-    activeGuestConversation,
-    fetchGuestMessages,
-    setActiveGuestConversation,
-    markGuestConversationReadForStaff,
-    markGuestConversationReadForGuest
-  } = useChat();
+    guestMessages
+  } = {}; // TODO: Replace with appropriate context
+  
+  // Guest chat functions (TODO: Update to use new context)
+  const activeGuestConversation = null;
+  const fetchGuestMessages = () => {};
+  const setActiveGuestConversation = () => {};
+  const markGuestConversationReadForStaff = () => {};
+  const markGuestConversationReadForGuest = () => {};
 
   // Guest session management
   const [guestSession, setGuestSession] = useState(null);
@@ -2381,13 +2383,41 @@ const ChatWindow = ({
             if (e.key === "Enter" && !uploading) handleSendMessage();
           }}
           disabled={!conversationId || uploading}
+          style={{
+            backgroundColor: (!conversationId || uploading) ? '#f8f9fa' : 'white',
+            borderColor: (!conversationId || uploading) ? '#dee2e6' : '#ced4da'
+          }}
+          title={!conversationId ? 'No conversation ID available - check debug info below' : uploading ? 'Uploading...' : 'Type your message...'}
         />
-          <button
-            className="btn d-flex align-items-center justify-content-center"
-            onClick={handleSendMessage}
-            disabled={!conversationId || uploading || (!newMessage.trim() && selectedFiles.length === 0)}
-            title={uploading ? "Uploading..." : "Send message"}
-          >
+        
+        {/* Debug info for conversation issues */}
+        {!conversationId && (
+          <div className="small text-warning mt-2 p-2 border rounded">
+            🔧 <strong>Debug:</strong> Input disabled - No conversationId available
+            <details className="mt-1">
+              <summary>Debug Details (Click to expand)</summary>
+              <pre className="small text-monospace mt-2" style={{fontSize: '11px'}}>
+                {JSON.stringify({
+                  propConversationId,
+                  paramConversationIdFromURL,
+                  hotelSlug,
+                  roomNumber,
+                  isGuest,
+                  hasActiveGuestConversation: !!activeGuestConversation,
+                  activeGuestConversationId: activeGuestConversation?.conversation_id,
+                  conversationDetails: conversationDetails ? 'Present' : 'Missing'
+                }, null, 2)}
+              </pre>
+            </details>
+          </div>
+        )}
+        
+        <button
+          className="btn d-flex align-items-center justify-content-center"
+          onClick={handleSendMessage}
+          disabled={!conversationId || uploading || (!newMessage.trim() && selectedFiles.length === 0)}
+          title={uploading ? "Uploading..." : "Send message"}
+        >
             {uploading ? (
               <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
             ) : (

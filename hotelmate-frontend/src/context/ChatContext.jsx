@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import api from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 import { useGuestChatState, useGuestChatDispatch, guestChatActions } from "@/realtime/stores/guestChatStore";
+import { useChatState } from "@/realtime/stores/chatStore.jsx";
 
 const ChatContext = createContext(undefined);
 
@@ -12,6 +13,9 @@ export const ChatProvider = ({ children }) => {
   // Use guestChatStore for guest chat data
   const guestChatState = useGuestChatState();
   const guestChatDispatch = useGuestChatDispatch();
+  
+  // Use chatStore (same store as StaffChatContext) for fallback
+  const chatStore = useChatState();
   
   // Local state for staff-specific functionality
   const [conversations, setConversations] = useState([]);
@@ -44,8 +48,31 @@ export const ChatProvider = ({ children }) => {
       guestChatActions.initFromAPI(convs, guestChatDispatch);
     } catch (err) {
       console.error("Failed to fetch conversations:", err);
+      
+      // 🔄 FALLBACK: Try to use chatStore conversations when API fails
+      console.log("🔄 [ChatContext] Trying chatStore fallback...");
+      if (chatStore?.conversationsById && Object.keys(chatStore.conversationsById).length > 0) {
+        const storeConversations = Object.values(chatStore.conversationsById);
+        console.log("✅ [ChatContext] Using chatStore conversations as fallback:", storeConversations.length);
+        
+        // Convert chatStore format to ChatContext format
+        const fallbackConvs = storeConversations.map((c) => ({
+          ...c,
+          conversation_id: c.id || c.conversation_id,
+          unread_count: c.unread_count || 0,
+          last_message: c.last_message || "",
+          room_number: c.room_number || "Unknown"
+        }));
+        
+        setConversations(fallbackConvs);
+        
+        // Also initialize guestChatStore with fallback conversations
+        guestChatActions.initFromAPI(fallbackConvs, guestChatDispatch);
+      } else {
+        console.log("❌ [ChatContext] No chatStore conversations available for fallback");
+      }
     }
-  }, [user?.hotel_slug, guestChatDispatch]);
+  }, [user?.hotel_slug, guestChatDispatch, chatStore?.conversationsById]);
 
   useEffect(() => {
     fetchConversations();

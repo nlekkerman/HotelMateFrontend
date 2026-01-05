@@ -1,6 +1,6 @@
 import React from "react";
 import { FaTimes } from "react-icons/fa";
-import { useChat } from "@/context/ChatContext"; // ✅ use your context
+import { useStaffChat } from "@/staff_chat/context/StaffChatContext"; // ✅ use new context
 
 const ChatSidebar = ({
   hotelSlug,
@@ -10,7 +10,7 @@ const ChatSidebar = ({
   isMobile,
   toggleSidebar,
 }) => {
-  const { conversations, markConversationRead } = useChat();
+  const { conversations, markConversationRead } = useStaffChat();
 
   // Update total unread count whenever conversations change
   React.useEffect(() => {

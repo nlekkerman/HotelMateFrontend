@@ -23,32 +23,49 @@ const pusherInstances = new Map();
 /**
  * Get or create a Pusher client instance for a specific guest token
  * @param {string} token - Guest authentication token from URL
+ * @param {Object} options - Additional options
+ * @param {string} [options.authEndpoint] - Custom auth endpoint for private channels
  * @returns {Pusher} Pusher client instance
  */
-export function getGuestPusherClient(token) {
+export function getGuestPusherClient(token, options = {}) {
   if (!token) {
     console.warn('[GuestRealtime] No token provided for guest Pusher client');
     return null;
   }
 
-  // Return existing instance if already created for this token
-  if (pusherInstances.has(token)) {
-    return pusherInstances.get(token);
+  // Create cache key including auth endpoint to support different configurations
+  const cacheKey = options.authEndpoint ? `${token}:${options.authEndpoint}` : token;
+
+  // Return existing instance if already created for this token and auth config
+  if (pusherInstances.has(cacheKey)) {
+    return pusherInstances.get(cacheKey);
   }
 
-  console.log('🔌 [GuestRealtime] Creating new Pusher instance for guest token');
+  console.log('🔌 [GuestRealtime] Creating new Pusher instance for guest token', {
+    hasAuthEndpoint: !!options.authEndpoint,
+    authEndpoint: options.authEndpoint
+  });
 
-  // Create new Pusher instance with guest auth endpoint
-  const pusher = new Pusher(PUSHER_KEY, {
+  // Create Pusher configuration
+  const pusherConfig = {
     cluster: PUSHER_CLUSTER,
     encrypted: true,
-    authEndpoint: `${API_BASE_URL}/pusher/guest-auth/?token=${token}`,
-    auth: {
-      headers: {
-        // No Authorization header - token is in query params
-      }
-    }
-  });
+    forceTLS: true,
+  };
+
+  // Add auth configuration for private channels if authEndpoint provided
+  if (options.authEndpoint) {
+    pusherConfig.authEndpoint = options.authEndpoint;
+    pusherConfig.auth = {
+      params: { token } // Send token as query param for guest auth
+    };
+    console.log('[GuestRealtime] Private channel auth configured:', {
+      authEndpoint: options.authEndpoint
+    });
+  }
+
+  // Create new Pusher instance for guest
+  const pusher = new Pusher(PUSHER_KEY, pusherConfig);
 
   // Error handling
   pusher.connection.bind('error', function(err) {
@@ -63,21 +80,36 @@ export function getGuestPusherClient(token) {
     console.log('🔌 [GuestRealtime] Guest Pusher disconnected');
   });
 
-  // Store instance for reuse
-  pusherInstances.set(token, pusher);
+  // Store instance for reuse with the cache key
+  pusherInstances.set(cacheKey, pusher);
 
   return pusher;
 }
 
 /**
+ * Get guest realtime client with support for private channels
+ * Main function to be used by the guest chat hook
+ * @param {string} token - Guest token
+ * @param {Object} options - Configuration options
+ * @param {string} [options.authEndpoint] - Auth endpoint for private channels
+ * @returns {Promise<Pusher>} Configured Pusher client
+ */
+export async function getGuestRealtimeClient(token, options = {}) {
+  return getGuestPusherClient(token, options);
+}
+
+/**
  * Cleanup a guest Pusher instance when no longer needed
  * @param {string} token - Guest token to cleanup
+ * @param {string} [authEndpoint] - Auth endpoint used for cache key
  */
-export function disconnectGuestPusher(token) {
-  if (pusherInstances.has(token)) {
-    const pusher = pusherInstances.get(token);
+export function disconnectGuestPusher(token, authEndpoint) {
+  const cacheKey = authEndpoint ? `${token}:${authEndpoint}` : token;
+  
+  if (pusherInstances.has(cacheKey)) {
+    const pusher = pusherInstances.get(cacheKey);
     pusher.disconnect();
-    pusherInstances.delete(token);
+    pusherInstances.delete(cacheKey);
     console.log('🔌 [GuestRealtime] Guest Pusher instance cleaned up for token');
   }
 }

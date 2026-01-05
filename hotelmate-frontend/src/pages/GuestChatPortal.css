@@ -1,0 +1,63 @@
+/**
+ * Guest Chat Portal Styles
+ * Complementary styles for the portal wrapper around GuestChatWidget
+ */
+
+.guest-chat-portal {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.guest-chat-portal.error-state {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+}
+
+.guest-chat-portal .chat-widget-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 576px) {
+  .guest-chat-portal .chat-widget-container {
+    padding: 0.5rem;
+  }
+  
+  .guest-chat-portal .card {
+    margin: 0 0.5rem;
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .guest-chat-portal {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Dark mode support (if needed) */
+@media (prefers-color-scheme: dark) {
+  .guest-chat-portal.error-state {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  }
+}
+
+/* Focus states for accessibility */
+.guest-chat-portal button:focus,
+.guest-chat-portal input:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .guest-chat-portal * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

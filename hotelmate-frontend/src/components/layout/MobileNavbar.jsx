@@ -5,7 +5,7 @@ import ClockModal from "@/components/staff/ClockModal";
 import api from "@/services/api";
 import logo from "@/assets/hotel-mate.png";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
-import { useChat } from "@/context/ChatContext";
+import { useStaffChat } from "@/staff_chat/context/StaffChatContext";
 import { useTheme } from "@/context/ThemeContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useNavigation } from "@/hooks/useNavigation";
@@ -17,7 +17,7 @@ const MobileNavbar = () => {
   const { user, logout } = useAuth();
   const hotelIdentifier = user?.hotel_slug;
   const { mainColor } = useTheme();
-  const { totalUnread } = useChat();
+  const { totalUnread } = useStaffChat();
   const { hasNewRoomService, hasNewBreakfast } = useRoomServiceNotifications();
   const { roomServiceCount, breakfastCount, totalServiceCount } =
     useOrderCount(hotelIdentifier);

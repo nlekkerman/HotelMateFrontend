@@ -10,7 +10,6 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import { UIProvider } from "@/context/UIContext";
-import { ChatProvider } from "@/context/ChatContext";
 import { StaffChatProvider } from "@/staff_chat/context/StaffChatContext";
 import { BookingNotificationProvider } from "@/context/BookingNotificationContext";
 import { RoomServiceNotificationProvider } from "@/context/RoomServiceNotificationContext";
@@ -962,21 +961,19 @@ export default function App() {
                       <MessengerProvider>
                         <ThemeProvider>
                           <ChartPreferencesProvider>
-                            <ChatProvider>
-                              <StaffChatProvider>
-                                <BookingNotificationProvider>
-                                  <RoomServiceNotificationProvider>
+                            <StaffChatProvider>
+                              <BookingNotificationProvider>
+                                <RoomServiceNotificationProvider>
                                     <NetworkHandler />
                                     <MessengerWidget position="bottom-right" />
                                     <AppLayout
                                       collapsed={collapsed}
                                       setCollapsed={setCollapsed}
                                       isMobile={isMobile}
-                                    />
-                                  </RoomServiceNotificationProvider>
-                                </BookingNotificationProvider>
-                              </StaffChatProvider>
-                            </ChatProvider>
+                                  />
+                                </RoomServiceNotificationProvider>
+                              </BookingNotificationProvider>
+                            </StaffChatProvider>
                           </ChartPreferencesProvider>
                         </ThemeProvider>
                       </MessengerProvider>
