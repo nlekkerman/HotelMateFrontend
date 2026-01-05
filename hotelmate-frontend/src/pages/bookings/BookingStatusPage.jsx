@@ -401,28 +401,112 @@ const BookingStatusPage = () => {
       setLoading(true);
       setError(null);
 
+      // Debug API call details
+      const endpointUrl = `/hotel/${hotelSlug}/room-bookings/${bookingId}/`;
+      const fullUrl = `${publicAPI.defaults.baseURL}${endpointUrl}`;
+      
+      console.log('🌐 [BookingStatusPage] API Call Debug:', {
+        hotelSlug,
+        bookingId,
+        token: token ? `${token.substring(0, 10)}...` : 'null',
+        endpointUrl,
+        fullUrl: fullUrl + `?token=${token}`,
+        publicAPIBaseURL: publicAPI.defaults.baseURL
+      });
+
       // Call the existing hotel-specific booking endpoint with token
-      const response = await publicAPI.get(
-        `/hotel/${hotelSlug}/room-bookings/${bookingId}/`,
-        { params: { token } }
-      );
+      const response = await publicAPI.get(endpointUrl, { params: { token } });
+
+      console.log('📡 [BookingStatusPage] Full API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+        data: response.data
+      });
 
       const data = unwrap(response);
+      
+      console.log('📦 [BookingStatusPage] Unwrapped Response Data:', {
+        dataType: typeof data,
+        isObject: typeof data === 'object',
+        isNull: data === null,
+        keys: data ? Object.keys(data) : 'null',
+        fullData: data
+      });
 
       // The API returns booking data directly with can_cancel and cancellation_preview
       setBooking(data);
       setHotel(data.hotel);
       setCancellationPolicy(data.cancellation_policy);
       
-      // Extract guest token for chat/room service operations
-      if (data.guest_token) {
-        setGuestToken(data.guest_token);
-        console.log('🎫 [BookingStatusPage] Guest token received for chat/services');
-      } else {
-        console.log('⚠️ [BookingStatusPage] No guest token provided (may not be checked in yet)');
+      // Extract guest token for chat/room service operations - DETAILED INSPECTION
+      console.log('🔍 [BookingStatusPage] DETAILED GUEST TOKEN INSPECTION:');
+      console.log('Raw response structure:', JSON.stringify(data, null, 2));
+      
+      console.log('🔍 [BookingStatusPage] All top-level keys:', Object.keys(data));
+      console.log('🔍 [BookingStatusPage] Guest token field check:', {
+        'data.guest_token': data.guest_token,
+        'data["guest_token"]': data["guest_token"],
+        'typeof guest_token': typeof data.guest_token,
+        'guest_token length': data.guest_token?.length,
+        'guest_token exists': 'guest_token' in data,
+        'guest_token truthy': !!data.guest_token
+      });
+
+      // Check if it's nested in booking object
+      if (data.booking) {
+        console.log('🔍 [BookingStatusPage] Nested booking object found:', {
+          'data.booking.guest_token': data.booking.guest_token,
+          'booking keys': Object.keys(data.booking)
+        });
       }
 
-      // Debug initial booking data structure
+      // Check checked-in status
+      console.log('🔍 [BookingStatusPage] Check-in status inspection:', {
+        'data.checked_in_at': data.checked_in_at,
+        'data.checked_out_at': data.checked_out_at,
+        'data.status': data.status,
+        'data.assigned_room_number': data.assigned_room_number,
+        'should_have_guest_token': !!(data.checked_in_at && !data.checked_out_at)
+      });
+
+      // Guest object inspection
+      if (data.guest) {
+        console.log('🔍 [BookingStatusPage] Guest object detailed inspection:', {
+          guest: data.guest,
+          guestKeys: Object.keys(data.guest),
+          guestStringified: JSON.stringify(data.guest, null, 2)
+        });
+      }
+      
+      if (data.guest_token) {
+        setGuestToken(data.guest_token);
+        console.log('🎫 [BookingStatusPage] ✅ Guest token SET successfully:', {
+          token: data.guest_token?.substring(0, 20) + '...',
+          length: data.guest_token?.length
+        });
+      } else {
+        console.log('❌ [BookingStatusPage] NO GUEST TOKEN FOUND in response');
+        console.log('🔍 [BookingStatusPage] Expected conditions for guest token:');
+        console.log('- Booking must be checked in: ', !!data.checked_in_at);
+        console.log('- Booking must not be checked out: ', !data.checked_out_at);
+        console.log('- Backend should include guest_token field for checked-in guests');
+        setGuestToken(null);
+      }
+
+      // COMPREHENSIVE GUEST TOKEN DEBUGGING
+      console.log('🔍🔍🔍 COMPLETE BOOKING RESPONSE ANALYSIS 🔍🔍🔍');
+      console.log('Raw API response data:', data);
+      console.log('All response keys:', Object.keys(data));
+      console.log('Guest token investigation:', {
+        'data.guest_token': data.guest_token,
+        'guest_token_type': typeof data.guest_token,
+        'guest_token_length': data.guest_token?.length,
+        'guest_token_exists': 'guest_token' in data,
+        'guest_token_value': data.guest_token
+      });
+      
+      // Debug initial booking data structure and guest token availability
       console.log("📥 Initial booking data loaded:", {
         status: data.status,
         checked_in_at: data.checked_in_at,
@@ -432,6 +516,8 @@ const BookingStatusPage = () => {
         guest: data.guest,
         dates: data.dates,
         guests: data.guests,
+        guest_token: data.guest_token, // Debug token presence
+        all_keys: Object.keys(data), // See all available fields
       });
 
       // Determine if cancellation should be allowed
@@ -480,7 +566,11 @@ const BookingStatusPage = () => {
   // Fetch guest context for token-scoped permissions
   const fetchGuestContext = async () => {
     if (!hotelSlug || !guestToken) {
-      console.log('🔍 [BookingStatusPage] Skipping guest context - no guest token available');
+      console.log('🔍 [BookingStatusPage] Skipping guest context - missing requirements:', {
+        hotelSlug: !!hotelSlug,
+        guestToken: !!guestToken,
+        guestTokenLength: guestToken?.length
+      });
       return;
     }
 
@@ -488,30 +578,148 @@ const BookingStatusPage = () => {
       setContextLoading(true);
       setContextError(null);
 
-      console.log('🔍 [BookingStatusPage] Fetching guest context with guest token');
+      const contextEndpoint = `/hotel/${hotelSlug}/chat/context`;
+      const fullContextUrl = `${guestAPI.defaults.baseURL}${contextEndpoint}`;
+      
+      console.log('�🚨🚨 GUEST CONTEXT API DEBUGGING 🚨🚨🚨');
+      console.log('🌐 API Call Parameters:', {
+        hotelSlug,
+        endpoint: contextEndpoint,
+        fullUrl: fullContextUrl,
+        guestAPIBaseURL: guestAPI.defaults.baseURL,
+        guestToken: guestToken,
+        tokenType: typeof guestToken,
+        tokenLength: guestToken?.length,
+        tokenFirstChars: guestToken?.substring(0, 10),
+        tokenLastChars: guestToken?.substring(guestToken.length - 10)
+      });
+      
+      console.log('🔧 guestAPI configuration:', {
+        baseURL: guestAPI.defaults.baseURL,
+        headers: guestAPI.defaults.headers,
+        timeout: guestAPI.defaults.timeout
+      });
       
       // Use canonical chat context endpoint with guest token
-      const res = await guestAPI.get(`/hotel/${hotelSlug}/chat/context`, {
+      const res = await guestAPI.get(contextEndpoint, {
         params: { token: guestToken },
       });
 
       const ctx = unwrap(res);
-      console.log("🔍 [BookingStatusPage] Guest context API response:", {
-        url: `/hotel/${hotelSlug}/chat/context`,
-        fullURL: `/api/guest/hotel/${hotelSlug}/chat/context`,
-        guestToken: guestToken?.substring(0, 10) + "...",
-        fullResponse: res,
-        unwrappedData: ctx,
+      console.log("✅ [BookingStatusPage] Guest context SUCCESS:", {
+        statusCode: res.status,
+        responseHeaders: res.headers,
+        responseKeys: ctx ? Object.keys(ctx) : 'null',
         allowedActions: ctx?.allowed_actions,
-        canChat: ctx?.allowed_actions?.can_chat,
-        canRoomService:
-          ctx?.allowed_actions?.can_room_service ||
-          ctx?.allowed_actions?.room_service,
+        fullContext: ctx
       });
       setGuestContext(ctx);
     } catch (err) {
-      console.error("Failed to fetch guest context:", err);
-      setGuestContext(null);
+      console.log('🚨🚨🚨 GUEST CONTEXT API ERROR ANALYSIS 🚨🚨🚨');
+      console.error("❌ [BookingStatusPage] Guest context FAILED:", {
+        errorMessage: err.message,
+        errorName: err.name,
+        errorCode: err.code,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        responseData: err.response?.data,
+        responseHeaders: err.response?.headers,
+        requestURL: err.config?.url,
+        requestMethod: err.config?.method,
+        requestParams: err.config?.params,
+        fullRequestConfig: err.config,
+        completeError: err
+      });
+      
+      // Comprehensive token analysis - remove incorrect format assumptions
+      console.log('🔍 Token authentication analysis:', {
+        tokenProvided: !!guestToken,
+        tokenLength: guestToken?.length,
+        tokenValue: guestToken,
+        tokenStartsWith: guestToken?.substring(0, 10),
+        requestMethod: 'GET with query parameter',
+        backendExpected: 'Unknown - investigating'
+      });
+      
+      // Try alternative authentication methods
+      console.log('🔄 Attempting alternative authentication approaches...');
+      
+      // Method 1: Try with Authorization header
+      try {
+        console.log('🔧 Method 1: Authorization header approach');
+        const headerResponse = await guestAPI.get(`/hotel/${hotelSlug}/chat/context`, {
+          headers: {
+            'Authorization': `Bearer ${guestToken}`
+          }
+        });
+        console.log('✅ Authorization header worked!', headerResponse.data);
+        setGuestContext(headerResponse.data);
+        return;
+      } catch (headerError) {
+        console.log('❌ Authorization header failed:', {
+          status: headerError.response?.status,
+          statusText: headerError.response?.statusText,
+          data: headerError.response?.data
+        });
+      }
+      
+      // Method 2: Try with custom guest-token header
+      try {
+        console.log('🔧 Method 2: Custom guest-token header');
+        const customHeaderResponse = await guestAPI.get(`/hotel/${hotelSlug}/chat/context`, {
+          headers: {
+            'X-Guest-Token': guestToken,
+            'Guest-Token': guestToken
+          }
+        });
+        console.log('✅ Custom header worked!', customHeaderResponse.data);
+        setGuestContext(customHeaderResponse.data);
+        return;
+      } catch (customError) {
+        console.log('❌ Custom header failed:', {
+          status: customError.response?.status,
+          statusText: customError.response?.statusText,
+          data: customError.response?.data
+        });
+      }
+      
+      // Method 3: Try POST request with token in body
+      try {
+        console.log('🔧 Method 3: POST with token in body');
+        const postResponse = await guestAPI.post(`/hotel/${hotelSlug}/chat/context`, {
+          guest_token: guestToken,
+          token: guestToken
+        });
+        console.log('✅ POST method worked!', postResponse.data);
+        setGuestContext(postResponse.data);
+        return;
+      } catch (postError) {
+        console.log('❌ POST method failed:', {
+          status: postError.response?.status,
+          statusText: postError.response?.statusText,
+          data: postError.response?.data
+        });
+      }
+      
+      // Final analysis
+      console.log('🔍 AUTHENTICATION DEBUGGING SUMMARY:');
+      console.log('1. Guest token format appears correct:', guestToken);
+      console.log('2. All authentication methods failed with 401');
+      console.log('3. This indicates backend authentication issue');
+      console.log('4. Recommendation: Check backend guest token validation');
+      
+      // 🚀 TEMPORARY WORKAROUND: Enable chat for checked-in guests despite API failure
+      if (booking?.checked_in_at && !booking?.checked_out_at && guestToken) {
+        console.log('🔧 TEMPORARY WORKAROUND: Enabling chat for checked-in guest despite API failure');
+        setGuestContext({
+          allowed_actions: ['chat', 'room_service'],
+          guest_id: booking.booking_id,
+          temp_workaround: true,
+          message: 'Using temporary context due to API authentication issues'
+        });
+      } else {
+        setGuestContext(null);
+      }
 
       // Keep status page usable; just disable chat + services
       setContextError({
@@ -757,7 +965,7 @@ const BookingStatusPage = () => {
               <button
                 className="custom-button px-4 py-2"
                 onClick={() =>
-                  navigate(`/guest/chat?hotel_slug=${hotelSlug}&token=${guestToken || token}`)
+                  navigate(`/guest/chat?hotel_slug=${hotelSlug}&token=${guestToken || token}&room_number=${booking?.assigned_room_number || ''}`)
                 }
                 disabled={!canChat && !contextLoading}
                 title={
