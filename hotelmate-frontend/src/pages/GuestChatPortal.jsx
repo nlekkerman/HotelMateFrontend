@@ -273,8 +273,7 @@ const GuestChatPortal = () => {
 
       try {
         const response = await publicAPI.get(
-          `/guest/hotel/${hotelSlug}/chat/messages`,
-          { params: { token } }
+          `/chat/${hotelSlug}/guest/chat/messages/?token=${token}`
         );
         
         // Messages should be processed through the store
@@ -351,23 +350,20 @@ const GuestChatPortal = () => {
       setSending(true);
       
       console.log('📤 [GuestChat] Sending message:', message);
-      console.log('🌐 [GuestChat] Making API call to:', `/guest/hotel/${hotelSlug}/chat/messages`);
-      console.log('🌐 [GuestChat] Full URL will be:', `/public/guest/hotel/${hotelSlug}/chat/messages`);
+      console.log('🌐 [GuestChat] Making API call to:', `/chat/${hotelSlug}/guest/chat/messages/?token=${token}`);
+      console.log('🌐 [GuestChat] Full URL will be:', `/public/chat/${hotelSlug}/guest/chat/messages/?token=${token}`);
       
       const response = await publicAPI.post(
-        `/guest/hotel/${hotelSlug}/chat/messages`,
+        `/chat/${hotelSlug}/guest/chat/messages/?token=${token}`,
         {
           message: message.trim(),
           reply_to: null // TODO: Add reply functionality if needed
-        },
-        {
-          params: { token }
         }
       );
       
       console.log('✅ [GuestChat] Message send response:', {
-        url: `/guest/hotel/${hotelSlug}/chat/messages`,
-        fullURL: `/public/guest/hotel/${hotelSlug}/chat/messages`,
+        url: `/chat/${hotelSlug}/guest/chat/messages/?token=${token}`,
+        fullURL: `/public/chat/${hotelSlug}/guest/chat/messages/?token=${token}`,
         status: response.status,
         headers: response.headers,
         fullResponse: response,
