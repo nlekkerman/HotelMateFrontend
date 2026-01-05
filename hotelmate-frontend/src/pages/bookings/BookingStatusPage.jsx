@@ -578,15 +578,16 @@ const BookingStatusPage = () => {
       setContextLoading(true);
       setContextError(null);
 
-      const contextEndpoint = `/hotel/${hotelSlug}/chat/context`;
-      const fullContextUrl = `${guestAPI.defaults.baseURL}${contextEndpoint}`;
+      // ✅ Use correct context endpoint format
+      const contextEndpoint = `/chat/${hotelSlug}/guest/chat/context/`;
+      const fullContextUrl = `${publicAPI.defaults.baseURL}${contextEndpoint}`;
       
       console.log('�🚨🚨 GUEST CONTEXT API DEBUGGING 🚨🚨🚨');
       console.log('🌐 API Call Parameters:', {
         hotelSlug,
         endpoint: contextEndpoint,
         fullUrl: fullContextUrl,
-        guestAPIBaseURL: guestAPI.defaults.baseURL,
+        publicAPIBaseURL: publicAPI.defaults.baseURL,
         guestToken: guestToken,
         tokenType: typeof guestToken,
         tokenLength: guestToken?.length,
@@ -594,14 +595,14 @@ const BookingStatusPage = () => {
         tokenLastChars: guestToken?.substring(guestToken.length - 10)
       });
       
-      console.log('🔧 guestAPI configuration:', {
-        baseURL: guestAPI.defaults.baseURL,
-        headers: guestAPI.defaults.headers,
-        timeout: guestAPI.defaults.timeout
+      console.log('🔧 publicAPI configuration:', {
+        baseURL: publicAPI.defaults.baseURL,
+        headers: publicAPI.defaults.headers,
+        timeout: publicAPI.defaults.timeout
       });
       
-      // Use canonical chat context endpoint with guest token
-      const res = await guestAPI.get(contextEndpoint, {
+      // Use correct chat context endpoint with guest token
+      const res = await publicAPI.get(contextEndpoint, {
         params: { token: guestToken },
       });
 
