@@ -34,7 +34,7 @@ const MessageBubble = ({ message, onRetry }) => {
           {message.message}
         </div>
         <div className="message-timestamp">
-          {new Date(message.created_at).toLocaleTimeString([], { 
+          {new Date(message.timestamp || message.created_at).toLocaleTimeString([], { 
             hour: '2-digit', 
             minute: '2-digit' 
           })}
@@ -72,7 +72,7 @@ const MessageBubble = ({ message, onRetry }) => {
             <span className="sender-name">{message.staff_display_name}</span>
           )}
           <span className="message-timestamp">
-            {new Date(message.created_at).toLocaleTimeString([], { 
+            {new Date(message.timestamp || message.created_at).toLocaleTimeString([], { 
               hour: '2-digit', 
               minute: '2-digit' 
             })}
