@@ -107,9 +107,24 @@ export const sendMessage = async (hotelSlug, token, messageData) => {
  * @returns {string} Auth endpoint URL
  */
 export const getPusherAuthEndpoint = (hotelSlug, token) => {
-  // Try guest-specific auth endpoint first
-  // Note: Backend may need to implement this endpoint
-  return `${import.meta.env.VITE_API_BASE_URL}/api/guest/hotel/${hotelSlug}/chat/pusher/auth?token=${token}`;
+  // Get base URL - same logic as main API service
+  const getApiBaseUrl = () => {
+    if (import.meta.env.VITE_API_URL) {
+      return import.meta.env.VITE_API_URL;
+    }
+    
+    const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const isDev = import.meta.env.DEV;
+    
+    if (isLocal && isDev) {
+      return "http://localhost:8000/api/";
+    }
+    
+    return "https://hotel-porter-d25ad83b12cf.herokuapp.com/api";
+  };
+  
+  const baseUrl = getApiBaseUrl().replace(/\/$/, ''); // Remove trailing slash
+  return `${baseUrl}/guest/hotel/${hotelSlug}/chat/pusher/auth?token=${token}`;
 };
 
 export default {

@@ -72,6 +72,18 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 3
   });
+
+  // Debug: Log context to see why chat is disabled
+  useEffect(() => {
+    if (context) {
+      console.log('🔧 [useGuestChat] Context loaded:', {
+        hasContext: !!context,
+        disabled_reason: context.disabled_reason,
+        isDisabled: !!context?.disabled_reason,
+        contextKeys: Object.keys(context)
+      });
+    }
+  }, [context]);
   
   // STEP 2: Fetch Messages (after context is available)
   const { 
@@ -425,7 +437,7 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     sendError: sendMessageMutation.error,
     
     // Utility
-    isDisabled: context?.disabled_reason !== null,
+    isDisabled: !!context?.disabled_reason,
     disabledReason: context?.disabled_reason
   };
 };

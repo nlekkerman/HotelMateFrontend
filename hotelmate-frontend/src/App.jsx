@@ -14,6 +14,7 @@ import { StaffChatProvider } from "@/staff_chat/context/StaffChatContext";
 import { BookingNotificationProvider } from "@/context/BookingNotificationContext";
 import { RoomServiceNotificationProvider } from "@/context/RoomServiceNotificationContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { ChatProvider } from "@/context/ChatContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { ChartPreferencesProvider } from "@/context/ChartPreferencesContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -958,10 +959,11 @@ export default function App() {
                 <ServiceBookingProvider>
                   <GuestChatProvider>
                     <StaffChatStoreProvider>
-                      <MessengerProvider>
-                        <ThemeProvider>
-                          <ChartPreferencesProvider>
-                            <StaffChatProvider>
+                      <ChatProvider>
+                        <MessengerProvider>
+                          <ThemeProvider>
+                            <ChartPreferencesProvider>
+                              <StaffChatProvider>
                               <BookingNotificationProvider>
                                 <RoomServiceNotificationProvider>
                                     <NetworkHandler />
@@ -973,10 +975,11 @@ export default function App() {
                                   />
                                 </RoomServiceNotificationProvider>
                               </BookingNotificationProvider>
-                            </StaffChatProvider>
-                          </ChartPreferencesProvider>
-                        </ThemeProvider>
-                      </MessengerProvider>
+                              </StaffChatProvider>
+                            </ChartPreferencesProvider>
+                          </ThemeProvider>
+                        </MessengerProvider>
+                      </ChatProvider>
                     </StaffChatStoreProvider>
                   </GuestChatProvider>
                 </ServiceBookingProvider>

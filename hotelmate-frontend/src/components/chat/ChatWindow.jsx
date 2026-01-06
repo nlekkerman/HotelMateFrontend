@@ -1,8 +1,9 @@
 ﻿import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useLocation } from "react-router-dom";
-import api from "@/services/api";
+import api, { buildStaffURL } from "@/services/api";
 import { FaPaperPlane, FaTimes, FaArrowLeft, FaAngleDoubleDown, FaCheck, FaCheckDouble, FaSmile, FaPaperclip, FaDownload, FaTrash } from "react-icons/fa";
-// import { useChat } from "@/context/ChatContext"; // Removed - old context
+// import { useChat } from "@/context/ChatContext";
+import { useChat } from "@/context/ChatContext";
 import useHotelLogo from "@/hooks/useHotelLogo";
 import EmojiPicker from "emoji-picker-react";
 import { GuestChatSession } from "@/utils/guestChatSession";
@@ -132,7 +133,7 @@ const ChatWindow = ({
     setCurrentConversationId,
     // Guest chat functionality from guestChatStore
     guestMessages
-  } = {}; // TODO: Replace with appropriate context
+  } = useChat();
   
   // Guest chat functions (TODO: Update to use new context)
   const activeGuestConversation = null;
@@ -171,7 +172,7 @@ const ChatWindow = ({
       
       const fetchRoomNumber = async () => {
         try {
-          const response = await api.get(`/chat/${hotelSlug}/conversations/${conversationId}/`);
+          const response = await api.get(buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/`));
           if (response.data?.room_number) {
             // Update room number state
             setRoomNumber(response.data.room_number);
@@ -327,7 +328,7 @@ const ChatWindow = ({
       else setLoading(true);
 
       const res = await api.get(
-        `/chat/${hotelSlug}/conversations/${conversationId}/messages/`,
+        buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/messages/`),
         { params: { limit: MESSAGE_LIMIT, before_id: beforeId } }
       );
 
@@ -422,7 +423,7 @@ const ChatWindow = ({
       try {
         console.log('👤 [STAFF ASSIGN] Assigning current staff to conversation:', conversationId);
         const response = await api.post(
-          `/chat/${hotelSlug}/conversations/${conversationId}/assign-staff/`
+          buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/assign-staff/`)
         );
         
         if (response.data?.assigned_staff) {
@@ -434,7 +435,7 @@ const ChatWindow = ({
         
         // ADDITIONAL: Explicitly mark conversation as read to trigger Pusher event
         console.log('📖 [STAFF ASSIGN] Explicitly marking conversation as read...');
-        await api.post(`/chat/conversations/${conversationId}/mark-read/`);
+        await api.post(buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/mark-read/`));
         console.log('✅ [STAFF ASSIGN] Conversation marked as read - Pusher event should fire');
       } catch (error) {
         console.error('❌ [STAFF ASSIGN] Failed to assign staff to conversation:', error);
@@ -988,7 +989,7 @@ const ChatWindow = ({
     const markAsRead = async () => {
       try {
         console.log('📝 [AUTO-READ] Guest auto-marking staff messages as read...');
-        const response = await api.post(`/chat/conversations/${conversationId}/mark-read/`, {
+        const response = await api.post(buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/mark-read/`), {
           session_token: guestSession.getToken()
         });
         console.log('✅ [AUTO-READ] Guest marked conversation as read:', response.data);
@@ -1033,7 +1034,7 @@ const ChatWindow = ({
     const markNewMessagesAsRead = async () => {
       try {
         console.log(`📝 [NEW-MSG-READ] Guest auto-marking ${unreadCount} staff messages as read:`, unreadMessageIds);
-        const response = await api.post(`/chat/conversations/${conversationId}/mark-read/`, {
+        const response = await api.post(buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/mark-read/`), {
           session_token: guestSession.getToken()
         });
         console.log('✅ [NEW-MSG-READ] Response:', response.data);
@@ -1079,7 +1080,7 @@ const ChatWindow = ({
         if (fcmToken) {
           // Save FCM token to backend via session endpoint
           await api.post(
-            `/chat/${hotelSlug}/messages/room/${roomNumber}/save-fcm-token/`,
+            buildStaffURL(hotelSlug, 'chat', `messages/room/${roomNumber}/save-fcm-token/`),
             {
               session_token: guestSession.getToken(),
               fcm_token: fcmToken
@@ -1249,7 +1250,7 @@ const ChatWindow = ({
         }
 
         console.log('📤 Uploading to Cloudinary via backend:', {
-          endpoint: `/api/chat/${hotelSlug}/conversations/${conversationId}/upload-attachment/`,
+          endpoint: `/api${buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/upload-attachment/`)}`,
           fileCount: filesToSend.length,
           totalSize: `${(filesToSend.reduce((sum, f) => sum + f.size, 0) / 1024).toFixed(1)}KB`,
           hasMessage: !!messageToSend.trim(),
@@ -1309,7 +1310,7 @@ const ChatWindow = ({
         };
         
         const apiBase = getApiBaseUrl();
-        const uploadUrl = `${apiBase}/api/chat/${hotelSlug}/conversations/${conversationId}/upload-attachment/`;
+        const uploadUrl = `${apiBase}/api${buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/upload-attachment/`)}`;
         console.log('📤 [UPLOAD] Full upload URL:', uploadUrl);
         console.log('📤 [UPLOAD] URL parts:', {
           apiBase,
@@ -1382,7 +1383,7 @@ const ChatWindow = ({
         });
 
         response = await api.post(
-          `/chat/${hotelSlug}/conversations/${conversationId}/messages/send/`,
+          buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/messages/send/`),
           payload
         );
         
@@ -2305,8 +2306,8 @@ const ChatWindow = ({
                 console.log('📝 [INPUT FOCUS] Staff marking guest messages as read');
                 
                 // FIRST: Call backend immediately (don't wait for state updates)
-                console.log('� [INPUT FOCUS] Calling backend to mark ALL guest messages as read...');
-                const response = await api.post(`/chat/conversations/${conversationId}/mark-read/`);
+                console.log('🔥 [INPUT FOCUS] Calling backend to mark ALL guest messages as read...');
+                const response = await api.post(buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/mark-read/`));
                 console.log('✅ [INPUT FOCUS] Backend response:', response.data);
                 console.log('✅ [INPUT FOCUS] Backend should have fired Pusher event to guest');
                 
@@ -2370,7 +2371,7 @@ const ChatWindow = ({
                 }
                 
                 // Then call backend to mark as read (will trigger Pusher event for staff)
-                const response = await api.post(`/chat/conversations/${conversationId}/mark-read/`, {
+                const response = await api.post(buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/mark-read/`), {
                   session_token: guestSession.getToken()
                 });
                 console.log('✅ [INPUT FOCUS] Guest marked conversation as read:', response.data);

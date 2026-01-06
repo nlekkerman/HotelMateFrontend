@@ -16,8 +16,8 @@ export default function useHotelLogo(slug) {
       setError(null);
 
       try {
-        // Call the public hotel endpoint using publicAPI
-        const res = await publicAPI.get(`/hotel/${slug}/`);
+        // Call the public hotel page endpoint using publicAPI
+        const res = await publicAPI.get(`/hotel/${slug}/page/`);
         const hotel = res.data;
 
         if (hotel?.logo_url) {

@@ -1,6 +1,7 @@
 // src/context/ChatContext.jsx
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import api from "@/services/api";
+import { fetchRoomConversations, fetchRoomConversationsUnreadCount, markRoomConversationRead, fetchRoomConversationMessages } from "@/services/roomConversationsAPI";
 import { useAuth } from "@/context/AuthContext";
 import { useGuestChatState, useGuestChatDispatch, guestChatActions } from "@/realtime/stores/guestChatStore";
 import { useChatState } from "@/realtime/stores/chatStore.jsx";
@@ -21,33 +22,64 @@ export const ChatProvider = ({ children }) => {
   const [conversations, setConversations] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
 
-  // Fetch conversations + unread counts (unchanged HTTP calls)
+  // Fetch conversations + unread counts using room conversations API
   const fetchConversations = useCallback(async () => {
-    if (!user?.hotel_slug) return;
+    if (!user?.hotel_slug) {
+      console.warn('[ChatContext] No hotel slug available, skipping fetch');
+      return;
+    }
 
     try {
-      const res = await api.get(`/chat/${user.hotel_slug}/conversations/`);
-      const countsRes = await api.get(
-        `/chat/hotels/${user.hotel_slug}/conversations/unread-count/`
-      );
+      console.log('[ChatContext] Fetching room conversations for hotel:', user.hotel_slug);
+      
+      // Use the new room conversations API
+      const [conversations, unreadData] = await Promise.all([
+        fetchRoomConversations(user.hotel_slug),
+        fetchRoomConversationsUnreadCount(user.hotel_slug).catch(err => {
+          console.warn('[ChatContext] Failed to fetch unread count, using defaults:', err);
+          return { total_unread: 0, conversations: [] };
+        })
+      ]);
 
-      const countsMap = {};
-      (countsRes.data.rooms || []).forEach((room) => {
-        countsMap[room.conversation_id] = room.unread_count;
+      console.log('[ChatContext] Room conversations fetched:', {
+        count: conversations?.length || 0,
+        unreadTotal: unreadData?.total_unread || 0
       });
 
-      const convs = res.data.map((c) => ({
+      // Map conversations to expected format
+      const convs = (conversations || []).map((c) => ({
         ...c,
-        unread_count: countsMap[c.conversation_id] || 0,
+        // Primary fields (API response format)
+        conversation_id: c.id || c.conversation_id,
+        room_number: c.room?.number || c.room_number || (c.room && c.room.room_number),
+        guest_name: c.room?.guest_name || c.guest_name || (c.room && c.room.guest_name),
+        unread_count: c.unread_count || c.unread_count_for_staff || 0,
         last_message: c.last_message || "",
+        last_message_time: c.updated_at || c.last_message_time,
+        
+        // Legacy/alternative field names for compatibility
+        id: c.id || c.conversation_id,
+        roomNumber: c.room?.number || c.room_number || (c.room && c.room.room_number),
+        guestName: c.room?.guest_name || c.guest_name || (c.room && c.room.guest_name),
+        lastMessage: c.last_message || "",
+        updatedAt: c.updated_at || c.last_message_time,
+        unreadCountForGuest: c.unread_count || c.unread_count_for_staff || 0,
+        
+        // Additional room information if available
+        room: c.room || {
+          number: c.room_number,
+          guest_name: c.guest_name
+        }
       }));
 
       setConversations(convs);
       
       // Also initialize guestChatStore with fetched conversations
       guestChatActions.initFromAPI(convs, guestChatDispatch);
+      
+      console.log('[ChatContext] Room conversations processed and stored:', convs.length);
     } catch (err) {
-      console.error("Failed to fetch conversations:", err);
+      console.error("[ChatContext] Failed to fetch room conversations:", err);
       
       // 🔄 FALLBACK: Try to use chatStore conversations when API fails
       console.log("🔄 [ChatContext] Trying chatStore fallback...");
@@ -142,16 +174,22 @@ export const ChatProvider = ({ children }) => {
     }
     
     try {
-      await api.post(`/chat/conversations/${conversationId}/mark-read/`);
+      console.log('[ChatContext] Marking room conversation as read:', conversationId);
+      
+      // Use the new room conversations API
+      await markRoomConversationRead(user.hotel_slug, conversationId);
+      
       setConversations((prev) =>
         prev.map((c) =>
-          c.conversation_id === conversationId
+          (c.conversation_id || c.id) === conversationId
             ? { ...c, unread_count: 0 }
             : c
         )
       );
+      
+      console.log('[ChatContext] Room conversation marked as read successfully:', conversationId);
     } catch (err) {
-      console.error("Failed to mark conversation as read:", err);
+      console.error("[ChatContext] Failed to mark room conversation as read:", err);
       // Don't show toast for this - it's not critical if it fails
     }
   };
@@ -159,16 +197,28 @@ export const ChatProvider = ({ children }) => {
   const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
 
   // Helper functions for guest chat integration
-  const fetchGuestMessages = useCallback(async (conversationId) => {
+  const fetchGuestMessages = useCallback(async (conversationId, options = {}) => {
     try {
-      const res = await api.get(`/chat/conversations/${conversationId}/messages/`);
-      guestChatActions.initMessagesForConversation(conversationId, res.data, guestChatDispatch);
-      return res.data;
+      console.log('[ChatContext] Fetching room conversation messages:', conversationId);
+      
+      // Use the new room conversations API for messages
+      const response = await fetchRoomConversationMessages(user.hotel_slug, conversationId, options);
+      
+      // Handle both possible response formats
+      const messages = response.messages || response || [];
+      
+      console.log('[ChatContext] Room messages fetched:', {
+        conversationId,
+        messageCount: messages.length
+      });
+      
+      guestChatActions.initMessagesForConversation(conversationId, messages, guestChatDispatch);
+      return messages;
     } catch (err) {
-      console.error("Failed to fetch guest messages:", err);
+      console.error("[ChatContext] Failed to fetch room conversation messages:", err);
       return [];
     }
-  }, [guestChatDispatch]);
+  }, [user?.hotel_slug, guestChatDispatch]);
 
   const setActiveGuestConversation = useCallback((conversationId) => {
     guestChatActions.setActiveConversation(conversationId, guestChatDispatch);
@@ -177,21 +227,32 @@ export const ChatProvider = ({ children }) => {
 
   const markGuestConversationReadForStaff = useCallback(async (conversationId) => {
     try {
-      await api.post(`/chat/conversations/${conversationId}/mark-read/`);
+      console.log('[ChatContext] Marking room conversation as read for staff:', conversationId);
+      
+      // Use the new room conversations API
+      await markRoomConversationRead(user.hotel_slug, conversationId);
+      
       guestChatActions.markConversationReadForStaff(conversationId, guestChatDispatch);
+      console.log('[ChatContext] Room conversation marked as read for staff successfully:', conversationId);
     } catch (err) {
-      console.error("Failed to mark guest conversation as read:", err);
+      console.error("[ChatContext] Failed to mark room conversation as read for staff:", err);
     }
-  }, [guestChatDispatch]);
+  }, [user?.hotel_slug, guestChatDispatch]);
 
   const markGuestConversationReadForGuest = useCallback(async (conversationId) => {
     try {
-      await api.post(`/chat/conversations/${conversationId}/mark-read-guest/`);
+      console.log('[ChatContext] Marking room conversation as read for guest:', conversationId);
+      
+      // Guest read operations might use a different endpoint, but for now using the same API
+      // This might need to be updated based on actual backend implementation
+      await markRoomConversationRead(user.hotel_slug, conversationId);
+      
       guestChatActions.markConversationReadForGuest(conversationId, guestChatDispatch);
+      console.log('[ChatContext] Room conversation marked as read for guest successfully:', conversationId);
     } catch (err) {
-      console.error("Failed to mark guest conversation as read for guest:", err);
+      console.error("[ChatContext] Failed to mark room conversation as read for guest:", err);
     }
-  }, [guestChatDispatch]);
+  }, [user?.hotel_slug, guestChatDispatch]);
 
   // Unified API that exposes both staff and guest chat data
   const contextValue = {

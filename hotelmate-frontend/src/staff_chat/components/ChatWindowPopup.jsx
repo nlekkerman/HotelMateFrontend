@@ -64,41 +64,38 @@ const ChatWindowPopup = ({
   // Debug: Log current user info
   // Current user data loaded
 
+  // Debug: Log conversation prop to check for issues
+  console.log('🔧 [ChatWindowPopup] DEBUG - Props received:', {
+    hasConversation: !!conversation,
+    conversationId: conversation?.id,
+    conversationKeys: conversation ? Object.keys(conversation) : 'no conversation',
+    hotelSlug,
+    hasStaff: !!staff
+  });
+
   // ✅ UNIFIED: Use chatStore for messages (single source of truth)
   const chatState = useChatState();
   const chatDispatch = useChatDispatch();
   const messages =
     chatState.conversationsById[conversation?.id]?.messages || [];
 
-  // 🔥 DEBUG: Log message state changes
-  const prevMessageCount = useRef(messages.length);
-  if (prevMessageCount.current !== messages.length) {
-    console.log("🆕 [ChatWindowPopup] MESSAGE COUNT CHANGED!", {
-      conversationId: conversation?.id,
-      oldCount: prevMessageCount.current,
-      newCount: messages.length,
-      newMessages: messages.slice(prevMessageCount.current).map((m) => ({
-        id: m.id,
-        text: (m.message || m.content || "").substring(0, 30),
-        sender: m.sender,
-      })),
-    });
-    prevMessageCount.current = messages.length;
-  }
+  // Use send message hook
+  const {
+    send: sendMsg,
+    sending,
+    error: sendError,
+    replyTo,
+    setReply,
+    cancelReply,
+  } = useSendMessage(hotelSlug, conversation?.id);
 
-  console.log("🔥 [ChatWindowPopup] Message state:", {
+  console.log('🔧 [ChatWindowPopup] DEBUG - useSendMessage state:', {
+    sending,
+    hasError: !!sendError,
     conversationId: conversation?.id,
-    messagesCount: messages.length,
-    conversationsInStore: Object.keys(chatState.conversationsById),
-    storeHasThisConv: !!chatState.conversationsById[conversation?.id],
-    lastMessage: messages[messages.length - 1]
-      ? {
-          id: messages[messages.length - 1].id,
-          text: (messages[messages.length - 1].message || "").substring(0, 30),
-          sender: messages[messages.length - 1].sender,
-        }
-      : null,
+    isConversationIdValid: conversation?.id !== undefined && conversation?.id !== null
   });
+
   const storeConversation = conversation?.id
     ? chatState.conversationsById[conversation.id]
     : null;
@@ -175,16 +172,6 @@ const ChatWindowPopup = ({
       loadMessages();
     }
   }, [conversation?.id, hotelSlug, chatDispatch]);
-
-  // Use send message hook
-  const {
-    send: sendMsg,
-    sending,
-    error: sendError,
-    replyTo,
-    setReply,
-    cancelReply,
-  } = useSendMessage(hotelSlug, conversation?.id);
 
   // Use reactions hook
   const { toggleReaction, groupReactions } = useReactions(

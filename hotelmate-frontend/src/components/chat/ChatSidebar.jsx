@@ -1,6 +1,5 @@
 import React from "react";
 import { FaTimes } from "react-icons/fa";
-import { useStaffChat } from "@/staff_chat/context/StaffChatContext"; // ✅ use new context
 
 const ChatSidebar = ({
   hotelSlug,
@@ -9,8 +8,10 @@ const ChatSidebar = ({
   onUnreadChange,
   isMobile,
   toggleSidebar,
+  conversations = [], // Accept conversations as prop
+  markConversationRead, // Accept markConversationRead function as prop
 }) => {
-  const { conversations, markConversationRead } = useStaffChat();
+  // conversations and markConversationRead are now passed as props from parent
 
   // Update total unread count whenever conversations change
   React.useEffect(() => {
@@ -44,7 +45,9 @@ const ChatSidebar = ({
           <p>No active conversations</p>
         </div>
       ) : (
-        conversations.map((conv, index) => (
+        conversations
+          .filter(conv => conv && typeof conv === 'object' && !conv.message) // Filter out error objects
+          .map((conv, index) => (
           <div
             key={conv.conversation_id || conv.id || `conv-${index}`}
             className={`shadow chat-room ${selectedRoom === (conv.room_number || conv.roomNumber) ? "selected" : ""}`}

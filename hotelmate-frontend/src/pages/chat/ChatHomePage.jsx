@@ -3,14 +3,14 @@ import { useState, useEffect } from "react";
 import ChatSidebar from "@/components/chat/ChatSidebar";
 import ChatWindow from "@/components/chat/ChatWindow";
 import { useAuth } from "@/context/AuthContext";
-import { useStaffChat } from "@/staff_chat/context/StaffChatContext";
+import { useChat } from "@/context/ChatContext"; // Use ChatContext for room conversations
 import { useTheme } from "@/context/ThemeContext";
 
 const ChatHomePage = ({ selectedRoom, onSelectRoom, onUnreadChange }) => {
   const { hotelSlug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { conversations } = useStaffChat();
+  const { conversations, markConversationRead } = useChat(); // Get both conversations and markConversationRead
   const { mainColor } = useTheme();
   const userId = user?.id;
 
@@ -99,6 +99,8 @@ const ChatHomePage = ({ selectedRoom, onSelectRoom, onUnreadChange }) => {
           onUnreadChange={onUnreadChange}
           isMobile={isMobile}
           toggleSidebar={toggleSidebar}
+          conversations={conversations}
+          markConversationRead={markConversationRead}
         />
       )}
 

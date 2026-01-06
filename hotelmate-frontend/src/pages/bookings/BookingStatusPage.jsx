@@ -239,7 +239,7 @@ const BookingStatusPage = () => {
 
       // Calculate window times in hotel timezone
       const opensAt = new Date(checkInDate);
-      opensAt.setHours(12, 0, 0, 0); // 12:00 PM
+      opensAt.setHours(8, 0, 0, 0); // 8:00 AM (moved from 12:00 PM for testing)
 
       const standardAt = new Date(checkInDate);
       standardAt.setHours(15, 0, 0, 0); // 3:00 PM
