@@ -95,6 +95,7 @@ export const ChatProvider = ({ children }) => {
         }
       }
       
+      console.log('[ChatContext] Staff mode: Fetching room conversations via staff API');
       // Use the new room conversations API for staff users
       const [conversations, unreadData] = await Promise.all([
         fetchRoomConversations(currentHotelSlug),
