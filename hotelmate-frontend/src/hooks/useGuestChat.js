@@ -82,6 +82,7 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     if (context) {
       console.log('🔧 [useGuestChat] Context loaded:', {
         hasContext: !!context,
+        conversationId: context.conversation_id,
         disabled_reason: context.disabled_reason,
         isDisabled: !!context?.disabled_reason,
         contextKeys: Object.keys(context)
@@ -90,8 +91,14 @@ export const useGuestChat = ({ hotelSlug, token }) => {
       // Store context in guest chat store so ChatContext can access it
       console.log('📦 [useGuestChat] Storing context in guest chat store...');
       guestChatActions.setContext(context, guestChatDispatch);
+      
+      // If we have messages and conversation_id, also store messages
+      if (context.conversation_id && messages.length > 0) {
+        console.log('[useGuestChat] Storing existing messages in guest chat store for conversation:', context.conversation_id);
+        guestChatActions.initMessagesForConversation(context.conversation_id, messages, guestChatDispatch);
+      }
     }
-  }, [context, guestChatDispatch]);
+  }, [context, guestChatDispatch, messages]);
   
   // STEP 2: Fetch Messages (after context is available)
   const { 
@@ -120,12 +127,18 @@ export const useGuestChat = ({ hotelSlug, token }) => {
       
       setMessages(sortedMessages);
       
+      // Also store messages in guest chat store if we have context with conversation_id
+      if (context?.conversation_id) {
+        console.log('[useGuestChat] Storing messages in guest chat store for conversation:', context.conversation_id);
+        guestChatActions.initMessagesForConversation(context.conversation_id, sortedMessages, guestChatDispatch);
+      }
+      
       // Track message IDs for deduplication
       sortedMessages.forEach(msg => {
         if (msg.id) processedMessageIds.current.add(msg.id);
       });
     }
-  }, [initialMessages]);
+  }, [initialMessages, context?.conversation_id, guestChatDispatch]);
   
   // STEP 3: Setup Pusher Connection (with private channel auth)
   useEffect(() => {
@@ -263,6 +276,19 @@ export const useGuestChat = ({ hotelSlug, token }) => {
           newMessages = [...prevMessages, { ...incomingMessage, status: 'delivered' }];
         }
         
+        // Also update guest chat store if we have context
+        if (context?.conversation_id) {
+          console.log('[useGuestChat] Real-time message - storing in guest chat store for conversation:', context.conversation_id);
+          const actionType = incomingMessage.sender_type === 'guest' 
+            ? 'GUEST_MESSAGE_RECEIVED' 
+            : 'STAFF_MESSAGE_SENT';
+          guestChatActions.handleEvent({
+            type: actionType,
+            payload: incomingMessage,
+            conversationId: context.conversation_id
+          }, guestChatDispatch);
+        }
+        
         // REQUIREMENT: Sorting contract - always sort by created_at then id
         return newMessages.sort((a, b) => {
           const timeA = new Date(a.created_at).getTime();
@@ -316,11 +342,19 @@ export const useGuestChat = ({ hotelSlug, token }) => {
         const finalMessages = [...mergedMessages, ...optimisticMessages];
         
         // REQUIREMENT: Sort by created_at then id
-        return finalMessages.sort((a, b) => {
+        const sortedMessages = finalMessages.sort((a, b) => {
           const timeA = new Date(a.created_at).getTime();
           const timeB = new Date(b.created_at).getTime();
           return timeA !== timeB ? timeA - timeB : ((a.id || 0) - (b.id || 0));
         });
+        
+        // Also sync with guest chat store if we have context
+        if (context?.conversation_id) {
+          console.log('[useGuestChat] Sync - updating guest chat store for conversation:', context.conversation_id);
+          guestChatActions.initMessagesForConversation(context.conversation_id, sortedMessages, guestChatDispatch);
+        }
+        
+        return sortedMessages;
       });
     } catch (error) {
       console.error('[useGuestChat] Sync error:', error);
@@ -343,6 +377,16 @@ export const useGuestChat = ({ hotelSlug, token }) => {
           return timeA !== timeB ? timeA - timeB : ((a.id || 0) - (b.id || 0));
         });
       });
+      
+      // Also add optimistic message to guest chat store
+      if (context?.conversation_id) {
+        console.log('[useGuestChat] Send message - adding optimistic message to guest chat store for conversation:', context.conversation_id);
+        guestChatActions.handleEvent({
+          type: 'GUEST_MESSAGE_RECEIVED',
+          payload: optimisticMessage,
+          conversationId: context.conversation_id
+        }, guestChatDispatch);
+      }
       
       // Send to server
       const response = await guestChatAPI.sendMessage(hotelSlug, token, {
@@ -395,11 +439,19 @@ export const useGuestChat = ({ hotelSlug, token }) => {
           const dedupedMessages = Array.from(messageMap.values());
           
           // Sort and return
-          return dedupedMessages.sort((a, b) => {
+          const sortedMessages = dedupedMessages.sort((a, b) => {
             const timeA = new Date(a.created_at).getTime();
             const timeB = new Date(b.created_at).getTime();
             return timeA !== timeB ? timeA - timeB : ((a.id || 0) - (b.id || 0));
           });
+          
+          // Also update guest chat store with all messages if we have context
+          if (context?.conversation_id) {
+            console.log('[useGuestChat] Load older - updating guest chat store with all messages for conversation:', context.conversation_id);
+            guestChatActions.initMessagesForConversation(context.conversation_id, sortedMessages, guestChatDispatch);
+          }
+          
+          return sortedMessages;
         });
       }
       
