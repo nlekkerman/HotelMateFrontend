@@ -132,12 +132,13 @@ const ChatWindow = ({
     pusherInstance, 
     setCurrentConversationId,
     // Guest chat functionality from guestChatStore
-    guestMessages
+    guestMessages,
+    fetchGuestMessages: contextFetchGuestMessages
   } = useChat();
   
-  // Guest chat functions (TODO: Update to use new context)
+  // Guest chat functions - use context functions if available
   const activeGuestConversation = null;
-  const fetchGuestMessages = () => {};
+  const fetchGuestMessages = contextFetchGuestMessages || (() => Promise.resolve());
   const setActiveGuestConversation = () => {};
   const markGuestConversationReadForStaff = () => {};
   const markGuestConversationReadForGuest = () => {};
@@ -327,10 +328,22 @@ const ChatWindow = ({
       if (beforeId) setLoadingMore(true);
       else setLoading(true);
 
+      console.log('🔥 [FETCH MESSAGES] Starting fetch with params:', {
+        hotelSlug,
+        conversationId,
+        beforeId,
+        endpoint: buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/messages/`)
+      });
+
       const res = await api.get(
         buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/messages/`),
         { params: { limit: MESSAGE_LIMIT, before_id: beforeId } }
       );
+
+      console.log('🔥 [FETCH MESSAGES] API response received:', {
+        messageCount: res.data.length,
+        messageIds: res.data.map(m => m.id)
+      });
 
       // Clean up deleted messages - remove attachments if is_deleted is true
       const newMessages = res.data.map(msg => {
@@ -373,6 +386,11 @@ const ChatWindow = ({
       } else {
         // Initial load or switching conversation: replace messages with markers
         const messagesWithMarkers = addStaffJoinedMarkers(newMessages);
+        console.log('🔥 [FETCH MESSAGES] Setting messages in state:', {
+          originalCount: newMessages.length,
+          withMarkersCount: messagesWithMarkers.length,
+          messageIds: messagesWithMarkers.map(m => m.id)
+        });
         setMessages(messagesWithMarkers);
         setLoading(false);
         
@@ -467,6 +485,8 @@ const ChatWindow = ({
 
     // Assign staff first (if staff), then fetch messages
     assignStaffToConversation().then(() => {
+      console.log('🔥 [INIT] About to fetch messages for staff API - conversationId:', conversationId);
+      console.log('🔥 [INIT] isGuest:', isGuest, 'userId:', userId);
       fetchMessages();
     });
 
