@@ -49,16 +49,27 @@ export const getMessages = async (hotelSlug, token, options = {}) => {
   });
   
   console.log('[GuestChatAPI] Messages response:', {
-    messageCount: response.data?.length || 0,
+    messageCount: response.data?.messages?.length || response.data?.length || 0,
     before,
     limit,
     dataType: typeof response.data,
-    isArray: Array.isArray(response.data)
+    isArray: Array.isArray(response.data),
+    hasMessagesProperty: !!response.data?.messages
   });
   
-  // Ensure we always return an array
-  const messages = response.data || [];
-  return Array.isArray(messages) ? messages : [];
+  // Handle different response formats
+  // New format: { messages: [...], conversation_id: 74, count: 2, has_more: false }
+  // Old format: [...]
+  let messages;
+  if (response.data?.messages && Array.isArray(response.data.messages)) {
+    messages = response.data.messages;
+  } else if (Array.isArray(response.data)) {
+    messages = response.data;
+  } else {
+    messages = [];
+  }
+  
+  return messages;
 };
 
 /**
