@@ -34,7 +34,8 @@ const createOptimisticMessage = (message, clientMessageId, replyTo = null) => ({
   message,
   sender_type: 'guest',
   status: 'pending',
-  created_at: new Date().toISOString(),
+  timestamp: new Date().toISOString(), // Use 'timestamp' to match API format
+  created_at: new Date().toISOString(), // Also include for compatibility
   reply_to: replyTo,
   // Mark as optimistic for UI identification
   __optimistic: true
@@ -118,10 +119,10 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     if (initialMessages && Array.isArray(initialMessages)) {
       console.log('[useGuestChat] Setting initial messages:', initialMessages.length);
       
-      // Sort messages by created_at, then by id for consistency
+      // Sort messages by timestamp (API format) or created_at (fallback), then by id for consistency
       const sortedMessages = [...initialMessages].sort((a, b) => {
-        const timeA = new Date(a.created_at).getTime();
-        const timeB = new Date(b.created_at).getTime();
+        const timeA = new Date(a.timestamp || a.created_at).getTime();
+        const timeB = new Date(b.timestamp || b.created_at).getTime();
         return timeA !== timeB ? timeA - timeB : (a.id - b.id);
       });
       
@@ -289,10 +290,10 @@ export const useGuestChat = ({ hotelSlug, token }) => {
           }, guestChatDispatch);
         }
         
-        // REQUIREMENT: Sorting contract - always sort by created_at then id
+        // REQUIREMENT: Sorting contract - always sort by timestamp/created_at then id
         return newMessages.sort((a, b) => {
-          const timeA = new Date(a.created_at).getTime();
-          const timeB = new Date(b.created_at).getTime();
+          const timeA = new Date(a.timestamp || a.created_at).getTime();
+          const timeB = new Date(b.timestamp || b.created_at).getTime();
           return timeA !== timeB ? timeA - timeB : ((a.id || 0) - (b.id || 0));
         });
       });
@@ -341,10 +342,10 @@ export const useGuestChat = ({ hotelSlug, token }) => {
         
         const finalMessages = [...mergedMessages, ...optimisticMessages];
         
-        // REQUIREMENT: Sort by created_at then id
+        // REQUIREMENT: Sort by timestamp/created_at then id
         const sortedMessages = finalMessages.sort((a, b) => {
-          const timeA = new Date(a.created_at).getTime();
-          const timeB = new Date(b.created_at).getTime();
+          const timeA = new Date(a.timestamp || a.created_at).getTime();
+          const timeB = new Date(b.timestamp || b.created_at).getTime();
           return timeA !== timeB ? timeA - timeB : ((a.id || 0) - (b.id || 0));
         });
         
@@ -372,8 +373,8 @@ export const useGuestChat = ({ hotelSlug, token }) => {
       setMessages(prev => {
         const updated = [...prev, optimisticMessage];
         return updated.sort((a, b) => {
-          const timeA = new Date(a.created_at).getTime();
-          const timeB = new Date(b.created_at).getTime();
+          const timeA = new Date(a.timestamp || a.created_at).getTime();
+          const timeB = new Date(b.timestamp || b.created_at).getTime();
           return timeA !== timeB ? timeA - timeB : ((a.id || 0) - (b.id || 0));
         });
       });
@@ -440,8 +441,8 @@ export const useGuestChat = ({ hotelSlug, token }) => {
           
           // Sort and return
           const sortedMessages = dedupedMessages.sort((a, b) => {
-            const timeA = new Date(a.created_at).getTime();
-            const timeB = new Date(b.created_at).getTime();
+            const timeA = new Date(a.timestamp || a.created_at).getTime();
+            const timeB = new Date(b.timestamp || b.created_at).getTime();
             return timeA !== timeB ? timeA - timeB : ((a.id || 0) - (b.id || 0));
           });
           
