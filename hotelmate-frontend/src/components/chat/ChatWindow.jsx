@@ -59,13 +59,13 @@ const ChatWindow = ({
   onNewMessage,
   onClose,
 }) => {
-  console.log('🔧 [CHATWINDOW PROPS] Received props:', {
-    propUserId,
-    propConversationId,
-    propHotelSlug,
-    propRoomNumber,
-    hasConversationData: !!propConversationData
-  });
+  // console.log('🔧 [CHATWINDOW PROPS] Received props:', {
+  //   propUserId,
+  //   propConversationId,
+  //   propHotelSlug,
+  //   propRoomNumber,
+  //   hasConversationData: !!propConversationData
+  // });
   
   const {
     hotelSlug: paramHotelSlug,
@@ -73,11 +73,11 @@ const ChatWindow = ({
   } = useParams();
   const location = useLocation();
   
-  console.log('🔧 [CHATWINDOW PARAMS] URL params:', {
-    paramHotelSlug,
-    paramConversationIdFromURL
-  });
-  console.log('🔧 [CHATWINDOW STATE] Location state:', location.state);
+  // console.log('🔧 [CHATWINDOW PARAMS] URL params:', {
+  //   paramHotelSlug,
+  //   paramConversationIdFromURL
+  // });
+  // console.log('🔧 [CHATWINDOW STATE] Location state:', location.state);
   
   const hotelSlug = propHotelSlug || paramHotelSlug;
   const conversationId = propConversationId || paramConversationIdFromURL;
@@ -117,14 +117,7 @@ const ChatWindow = ({
     return initialRoomNumber;
   });
   
-  console.log('🔍 [INIT] ChatWindow initialized:', {
-    isGuest,
-    hasUserId: !!userId,
-    hotelSlug,
-    roomNumber,
-    conversationId,
-    locationStateIsGuest: location.state?.isGuest
-  });
+  console.log('🔍 [INIT] ChatWindow initialized - isGuest:', isGuest, 'conversationId:', conversationId);
   
   // Get chat context data early (needed in useEffects below)
   const { 
@@ -152,20 +145,12 @@ const ChatWindow = ({
   const [currentStaff, setCurrentStaff] = useState(null);
   
   // Guest chat channels now managed by centralized RealtimeProvider
-  // Debug log for guest setup
-  useEffect(() => {
-    if (isGuest) {
-      console.log('🔍 Guest Chat Store Debug:', {
-        isGuest,
-        hotelSlug,
-        roomNumber,
-        conversationId,
-        usingCentralizedStore: true,
-        hasActiveConversation: !!activeGuestConversation,
-        messageCount: guestMessages?.length || 0
-      });
-    }
-  }, [isGuest, hotelSlug, roomNumber, conversationId, activeGuestConversation, guestMessages]);
+  // Debug log for guest setup - DISABLED to prevent re-renders
+  // useEffect(() => {
+  //   if (isGuest) {
+  //     console.log('🔍 Guest Chat Store Debug - isGuest:', isGuest, 'conversationId:', conversationId);
+  //   }
+  // }, [isGuest, conversationId]);
   
   // Use conversation data from props (already fetched in ChatHomePage)
   const [conversationDetails, setConversationDetails] = useState(propConversationData || null);
@@ -499,7 +484,7 @@ const ChatWindow = ({
         setCurrentConversationId(null);
       }
     };
-  }, [conversationId, setCurrentConversationId, isGuest, hotelSlug, roomNumber, userId]);
+  }, [conversationId, isGuest, hotelSlug, roomNumber, userId]);
 
   // Pusher real-time updates - reuse global instance for staff, separate for guests
   useEffect(() => {
@@ -769,7 +754,7 @@ const ChatWindow = ({
     setTimeout(() => {
       scrollToBottom();
     }, 50);
-  }, [userId, conversationId, messageInputRef]); // Add dependencies
+  }, []); // Stable callback with no dependencies
 
   // Handle staff assignment changes (for guests)
   const handleStaffAssigned = useCallback((data) => {
@@ -815,7 +800,6 @@ const ChatWindow = ({
     console.log('👁️ [SEEN STATUS] Messages read by staff event received:', data);
     console.log('👁️ [SEEN STATUS] Event data:', JSON.stringify(data, null, 2));
     console.log('👁️ [SEEN STATUS] Message IDs to mark as read:', data.message_ids);
-    console.log('👁️ [SEEN STATUS] Current messages in state:', messages.map(m => ({id: m.id, status: m.status})));
     
     const { message_ids } = data;
     if (message_ids && Array.isArray(message_ids)) {
@@ -840,7 +824,6 @@ const ChatWindow = ({
           }
           return msg;
         });
-        console.log('👁️ [SEEN STATUS] Messages after update:', updated.filter(m => message_ids.includes(m.id)).map(m => ({id: m.id, status: m.status})));
         return updated;
       });
       
@@ -848,37 +831,22 @@ const ChatWindow = ({
     } else {
       console.warn('⚠️ [SEEN STATUS] No message_ids in event data or not an array:', message_ids);
     }
-  }, [messages]);
+  }, []); // Stable callback
 
   // Handle message deleted event (for guest view) - using utility
   const handleMessageDeleted = useCallback((data) => {
     console.log('🗑️ [GUEST] handleMessageDeleted called with data:', data);
-    console.log('🗑️ [GUEST] Current isGuest value:', isGuest);
-    console.log('🗑️ [GUEST] Current messages count:', messages.length);
     handlePusherDeletion(data, setMessages, setMessageStatuses, isGuest);
-  }, [isGuest, messages.length]);
+  }, [isGuest]); // Only depend on isGuest
 
   // NEW: Handle content-deleted event from dedicated deletion channel
   const handleContentDeleted = useCallback((data) => {
-    console.log('🗑️🔴 [DELETION CHANNEL] ==================== START ====================');
     console.log('🗑️🔴 [DELETION CHANNEL] content-deleted event received!');
     console.log('🗑️🔴 [DELETION CHANNEL] Raw data:', JSON.stringify(data, null, 2));
-    console.log('🗑️🔴 [DELETION CHANNEL] Event context:', {
-      message_id: data.message_id,
-      deleted_by: data.deleted_by,
-      original_sender: data.original_sender,
-      staff_name: data.staff_name,
-      hard_delete: data.hard_delete
-    });
-    console.log('🗑️🔴 [DELETION CHANNEL] Current isGuest:', isGuest);
-    console.log('🗑️🔴 [DELETION CHANNEL] Current messages count:', messages.length);
-    console.log('🗑️🔴 [DELETION CHANNEL] Current message IDs:', messages.map(m => m.id));
     
     // Use the same handler with isGuest flag for contextual messages
     handlePusherDeletion(data, setMessages, setMessageStatuses, isGuest);
-    
-    console.log('🗑️🔴 [DELETION CHANNEL] ==================== END ====================');
-  }, [isGuest, messages.length]);
+  }, [isGuest]); // Only depend on isGuest
 
   // NEW: Handle attachment-deleted event from deletion channel
   const handleAttachmentDeleted = useCallback((data) => {
@@ -909,20 +877,13 @@ const ChatWindow = ({
 
   // Guest chat now uses centralized guestChatStore via RealtimeProvider
   // All Pusher subscriptions are handled by the eventBus system
-  console.log('🔧 [CHATWINDOW] Guest chat now uses centralized store via RealtimeProvider');
+  // console.log('🔧 [CHATWINDOW] Guest chat now uses centralized store via RealtimeProvider');
 
   // Use appropriate messages source based on user type
   const displayMessages = isGuest ? guestMessages : messages;
   
-  // Debug logging for message state
-  console.log('🔥 [MESSAGE DEBUG]', {
-    isGuest,
-    guestMessagesCount: guestMessages?.length || 0,
-    staffMessagesCount: messages?.length || 0,
-    displayMessagesCount: displayMessages?.length || 0,
-    guestMessages: guestMessages,
-    messages: messages
-  });
+  // Debug logging for message state - SIMPLIFIED to prevent re-renders
+  // console.log('🔥 [MESSAGE DEBUG] isGuest:', isGuest, 'messages:', displayMessages?.length || 0);
 
   // Initialize guest conversation when component loads
   useEffect(() => {
