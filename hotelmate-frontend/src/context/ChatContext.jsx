@@ -1,5 +1,6 @@
 // src/context/ChatContext.jsx
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { useParams } from "react-router-dom";
 import api from "@/services/api";
 import { fetchRoomConversations, fetchRoomConversationsUnreadCount, markRoomConversationRead, fetchRoomConversationMessages } from "@/services/roomConversationsAPI";
 import { useAuth } from "@/context/AuthContext";
@@ -10,6 +11,7 @@ const ChatContext = createContext(undefined);
 
 export const ChatProvider = ({ children }) => {
   const { user } = useAuth();
+  const { hotelSlug } = useParams();
   
   // Use guestChatStore for guest chat data
   const guestChatState = useGuestChatState();
@@ -24,18 +26,21 @@ export const ChatProvider = ({ children }) => {
 
   // Fetch conversations + unread counts using room conversations API
   const fetchConversations = useCallback(async () => {
-    if (!user?.hotel_slug) {
+    // Get hotel slug from either authenticated user or URL params
+    const currentHotelSlug = user?.hotel_slug || hotelSlug;
+    
+    if (!currentHotelSlug) {
       console.warn('[ChatContext] No hotel slug available, skipping fetch');
       return;
     }
 
     try {
-      console.log('[ChatContext] Fetching room conversations for hotel:', user.hotel_slug);
+      console.log('[ChatContext] Fetching room conversations for hotel:', currentHotelSlug);
       
       // Use the new room conversations API
       const [conversations, unreadData] = await Promise.all([
-        fetchRoomConversations(user.hotel_slug),
-        fetchRoomConversationsUnreadCount(user.hotel_slug).catch(err => {
+        fetchRoomConversations(currentHotelSlug),
+        fetchRoomConversationsUnreadCount(currentHotelSlug).catch(err => {
           console.warn('[ChatContext] Failed to fetch unread count, using defaults:', err);
           return { total_unread: 0, conversations: [] };
         })
@@ -104,7 +109,7 @@ export const ChatProvider = ({ children }) => {
         console.log("❌ [ChatContext] No chatStore conversations available for fallback");
       }
     }
-  }, [user?.hotel_slug, guestChatDispatch, chatStore?.conversationsById]);
+  }, [user?.hotel_slug, hotelSlug, guestChatDispatch, chatStore?.conversationsById]);
 
   useEffect(() => {
     fetchConversations();
@@ -112,7 +117,9 @@ export const ChatProvider = ({ children }) => {
 
   // Sync conversations from guestChatStore realtime updates
   useEffect(() => {
-    if (!guestChatState || !user?.hotel_slug) return;
+    // Get hotel slug from either authenticated user or URL params
+    const currentHotelSlug = user?.hotel_slug || hotelSlug;
+    if (!guestChatState || !currentHotelSlug) return;
 
     // Sync conversations with store data and show notifications for new messages
     const storeConversations = Object.values(guestChatState.conversationsById || {});
@@ -133,7 +140,7 @@ export const ChatProvider = ({ children }) => {
             if (notification && notification.onclick !== undefined) {
               notification.onclick = () => {
                 window.focus();
-                window.location.href = `/${user.hotel_slug}/chat`;
+                window.location.href = `/${currentHotelSlug}/chat`;
               };
             }
           }).catch(console.error);
@@ -143,7 +150,7 @@ export const ChatProvider = ({ children }) => {
       // Update local conversations with store data
       setConversations(storeConversations);
     }
-  }, [guestChatState, currentConversationId, user?.hotel_slug]);
+  }, [guestChatState, currentConversationId, user?.hotel_slug, hotelSlug]);
 
   // Handle realtime message updates from guestChatStore
   useEffect(() => {
@@ -177,7 +184,8 @@ export const ChatProvider = ({ children }) => {
       console.log('[ChatContext] Marking room conversation as read:', conversationId);
       
       // Use the new room conversations API
-      await markRoomConversationRead(user.hotel_slug, conversationId);
+      const currentHotelSlug = user?.hotel_slug || hotelSlug;
+      await markRoomConversationRead(currentHotelSlug, conversationId);
       
       setConversations((prev) =>
         prev.map((c) =>
@@ -202,7 +210,8 @@ export const ChatProvider = ({ children }) => {
       console.log('[ChatContext] Fetching room conversation messages:', conversationId);
       
       // Use the new room conversations API for messages
-      const response = await fetchRoomConversationMessages(user.hotel_slug, conversationId, options);
+      const currentHotelSlug = user?.hotel_slug || hotelSlug;
+      const response = await fetchRoomConversationMessages(currentHotelSlug, conversationId, options);
       
       // Handle both possible response formats
       const messages = response.messages || response || [];
@@ -218,7 +227,7 @@ export const ChatProvider = ({ children }) => {
       console.error("[ChatContext] Failed to fetch room conversation messages:", err);
       return [];
     }
-  }, [user?.hotel_slug, guestChatDispatch]);
+  }, [user?.hotel_slug, hotelSlug, guestChatDispatch]);
 
   const setActiveGuestConversation = useCallback((conversationId) => {
     guestChatActions.setActiveConversation(conversationId, guestChatDispatch);
@@ -230,14 +239,15 @@ export const ChatProvider = ({ children }) => {
       console.log('[ChatContext] Marking room conversation as read for staff:', conversationId);
       
       // Use the new room conversations API
-      await markRoomConversationRead(user.hotel_slug, conversationId);
+      const currentHotelSlug = user?.hotel_slug || hotelSlug;
+      await markRoomConversationRead(currentHotelSlug, conversationId);
       
       guestChatActions.markConversationReadForStaff(conversationId, guestChatDispatch);
       console.log('[ChatContext] Room conversation marked as read for staff successfully:', conversationId);
     } catch (err) {
       console.error("[ChatContext] Failed to mark room conversation as read for staff:", err);
     }
-  }, [user?.hotel_slug, guestChatDispatch]);
+  }, [user?.hotel_slug, hotelSlug, guestChatDispatch]);
 
   const markGuestConversationReadForGuest = useCallback(async (conversationId) => {
     try {
@@ -245,14 +255,15 @@ export const ChatProvider = ({ children }) => {
       
       // Guest read operations might use a different endpoint, but for now using the same API
       // This might need to be updated based on actual backend implementation
-      await markRoomConversationRead(user.hotel_slug, conversationId);
+      const currentHotelSlug = user?.hotel_slug || hotelSlug;
+      await markRoomConversationRead(currentHotelSlug, conversationId);
       
       guestChatActions.markConversationReadForGuest(conversationId, guestChatDispatch);
       console.log('[ChatContext] Room conversation marked as read for guest successfully:', conversationId);
     } catch (err) {
       console.error("[ChatContext] Failed to mark room conversation as read for guest:", err);
     }
-  }, [user?.hotel_slug, guestChatDispatch]);
+  }, [user?.hotel_slug, hotelSlug, guestChatDispatch]);
 
   // Unified API that exposes both staff and guest chat data
   const contextValue = {

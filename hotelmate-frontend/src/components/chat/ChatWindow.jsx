@@ -909,6 +909,16 @@ const ChatWindow = ({
 
   // Use appropriate messages source based on user type
   const displayMessages = isGuest ? guestMessages : messages;
+  
+  // Debug logging for message state
+  console.log('🔥 [MESSAGE DEBUG]', {
+    isGuest,
+    guestMessagesCount: guestMessages?.length || 0,
+    staffMessagesCount: messages?.length || 0,
+    displayMessagesCount: displayMessages?.length || 0,
+    guestMessages: guestMessages,
+    messages: messages
+  });
 
   // Initialize guest conversation when component loads
   useEffect(() => {
