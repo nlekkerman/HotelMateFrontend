@@ -10,6 +10,7 @@ import { useChatState } from "@/realtime/stores/chatStore.jsx";
 const ChatContext = createContext(undefined);
 
 export const ChatProvider = ({ children }) => {
+  console.log('🔄 [ChatContext] ChatProvider rendering');
   const { user } = useAuth();
   const { hotelSlug } = useParams();
   const [searchParams] = useSearchParams();
@@ -24,6 +25,14 @@ export const ChatProvider = ({ children }) => {
   // Local state for staff-specific functionality
   const [conversations, setConversations] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
+
+  // Debug searchParams
+  useEffect(() => {
+    console.log('🔍 [ChatContext] SearchParams changed:', {
+      hotelSlugParam: searchParams.get('hotel_slug'),
+      allParams: Object.fromEntries(searchParams.entries())
+    });
+  }, [searchParams]);
 
   // Fetch conversations + unread counts using room conversations API
   const fetchConversations = useCallback(async () => {
@@ -46,7 +55,41 @@ export const ChatProvider = ({ children }) => {
     try {
       console.log('[ChatContext] Fetching room conversations for hotel:', currentHotelSlug);
       
-      // Use the new room conversations API
+      // For guest users, we can't access staff endpoints, so we'll use guest chat data instead
+      if (!user?.hotel_slug && guestChatState) {
+        console.log('[ChatContext] Guest mode: Using guest chat data instead of staff API');
+        
+        // If we have guest chat context, create a conversation from it
+        if (guestChatState.context) {
+          const guestConversation = {
+            conversation_id: guestChatState.context.conversation_id,
+            id: guestChatState.context.conversation_id,
+            roomNumber: guestChatState.context.room_number,
+            room_number: guestChatState.context.room_number,
+            guestName: guestChatState.context.guest_name || `Room ${guestChatState.context.room_number}`,
+            guest_name: guestChatState.context.guest_name || `Room ${guestChatState.context.room_number}`,
+            lastMessage: "Chat available",
+            last_message: "Chat available", 
+            updatedAt: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            unreadCountForGuest: 0,
+            unread_count: 0,
+            room: {
+              number: guestChatState.context.room_number,
+              guest_name: guestChatState.context.guest_name || `Room ${guestChatState.context.room_number}`
+            }
+          };
+          
+          console.log('[ChatContext] Created guest conversation:', guestConversation);
+          setConversations([guestConversation]);
+          
+          // Also initialize guestChatStore with the conversation
+          guestChatActions.initFromAPI([guestConversation], guestChatDispatch);
+          return;
+        }
+      }
+      
+      // Use the new room conversations API for staff users
       const [conversations, unreadData] = await Promise.all([
         fetchRoomConversations(currentHotelSlug),
         fetchRoomConversationsUnreadCount(currentHotelSlug).catch(err => {
@@ -118,7 +161,7 @@ export const ChatProvider = ({ children }) => {
         console.log("❌ [ChatContext] No chatStore conversations available for fallback");
       }
     }
-  }, [user?.hotel_slug, hotelSlug, searchParams, guestChatDispatch, chatStore?.conversationsById]);
+  }, [user?.hotel_slug, hotelSlug, searchParams, guestChatState, guestChatDispatch, chatStore?.conversationsById]);
 
   useEffect(() => {
     fetchConversations();
