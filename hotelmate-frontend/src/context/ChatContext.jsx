@@ -88,6 +88,11 @@ export const ChatProvider = ({ children }) => {
           
           // Also initialize guestChatStore with the conversation
           guestChatActions.initFromAPI([guestConversation], guestChatDispatch);
+          
+          // Set this conversation as active in the guest chat store
+          guestChatActions.setActiveConversation(guestChatState.context.conversation_id, guestChatDispatch);
+          
+          console.log('[ChatContext] Guest conversation set as active:', guestChatState.context.conversation_id);
           return;
         } else {
           console.log('[ChatContext] Guest mode: Waiting for guest context to load...');
@@ -173,6 +178,14 @@ export const ChatProvider = ({ children }) => {
   useEffect(() => {
     fetchConversations();
   }, [fetchConversations]);
+
+  // Re-fetch when guest context becomes available
+  useEffect(() => {
+    if (!user?.hotel_slug && guestChatState?.context) {
+      console.log('[ChatContext] Guest context now available, re-fetching conversations');
+      fetchConversations();
+    }
+  }, [guestChatState?.context, user?.hotel_slug, fetchConversations]);
 
   // Sync conversations from guestChatStore realtime updates
   useEffect(() => {

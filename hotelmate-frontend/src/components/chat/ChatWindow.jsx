@@ -133,15 +133,19 @@ const ChatWindow = ({
     setCurrentConversationId,
     // Guest chat functionality from guestChatStore
     guestMessages,
-    fetchGuestMessages: contextFetchGuestMessages
+    fetchGuestMessages: contextFetchGuestMessages,
+    setActiveGuestConversation: contextSetActiveGuestConversation,
+    activeGuestConversation: contextActiveGuestConversation,
+    markGuestConversationReadForStaff: contextMarkGuestConversationReadForStaff,
+    markGuestConversationReadForGuest: contextMarkGuestConversationReadForGuest
   } = useChat();
   
   // Guest chat functions - use context functions if available
-  const activeGuestConversation = null;
+  const activeGuestConversation = contextActiveGuestConversation;
   const fetchGuestMessages = contextFetchGuestMessages || (() => Promise.resolve());
-  const setActiveGuestConversation = () => {};
-  const markGuestConversationReadForStaff = () => {};
-  const markGuestConversationReadForGuest = () => {};
+  const setActiveGuestConversation = contextSetActiveGuestConversation || (() => {});
+  const markGuestConversationReadForStaff = contextMarkGuestConversationReadForStaff || (() => {});
+  const markGuestConversationReadForGuest = contextMarkGuestConversationReadForGuest || (() => {});
 
   // Guest session management
   const [guestSession, setGuestSession] = useState(null);
