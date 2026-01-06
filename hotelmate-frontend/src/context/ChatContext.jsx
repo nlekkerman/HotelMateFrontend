@@ -56,11 +56,14 @@ export const ChatProvider = ({ children }) => {
       console.log('[ChatContext] Fetching room conversations for hotel:', currentHotelSlug);
       
       // For guest users, we can't access staff endpoints, so we'll use guest chat data instead
-      if (!user?.hotel_slug && guestChatState) {
-        console.log('[ChatContext] Guest mode: Using guest chat data instead of staff API');
+      if (!user?.hotel_slug) {
+        console.log('[ChatContext] Guest mode detected - user has no hotel_slug');
         
-        // If we have guest chat context, create a conversation from it
-        if (guestChatState.context) {
+        // Wait for guest chat context to be loaded
+        if (guestChatState?.context) {
+          console.log('[ChatContext] Guest mode: Using guest chat data instead of staff API');
+          
+          // If we have guest chat context, create a conversation from it
           const guestConversation = {
             conversation_id: guestChatState.context.conversation_id,
             id: guestChatState.context.conversation_id,
@@ -86,6 +89,9 @@ export const ChatProvider = ({ children }) => {
           // Also initialize guestChatStore with the conversation
           guestChatActions.initFromAPI([guestConversation], guestChatDispatch);
           return;
+        } else {
+          console.log('[ChatContext] Guest mode: Waiting for guest context to load...');
+          return; // Don't try staff API, just wait for guest context
         }
       }
       
@@ -161,7 +167,7 @@ export const ChatProvider = ({ children }) => {
         console.log("❌ [ChatContext] No chatStore conversations available for fallback");
       }
     }
-  }, [user?.hotel_slug, hotelSlug, searchParams, guestChatState, guestChatDispatch, chatStore?.conversationsById]);
+  }, [user?.hotel_slug, hotelSlug, searchParams, guestChatState?.context, guestChatDispatch, chatStore?.conversationsById]);
 
   useEffect(() => {
     fetchConversations();
