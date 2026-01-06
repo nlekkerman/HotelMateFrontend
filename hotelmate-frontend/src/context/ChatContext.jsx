@@ -181,6 +181,12 @@ export const ChatProvider = ({ children }) => {
 
   // Re-fetch when guest context becomes available
   useEffect(() => {
+    console.log('[ChatContext] Guest context effect triggered:', {
+      hasUser: !!user?.hotel_slug,
+      hasGuestContext: !!guestChatState?.context,
+      guestChatState: guestChatState
+    });
+    
     if (!user?.hotel_slug && guestChatState?.context) {
       console.log('[ChatContext] Guest context now available, re-fetching conversations');
       fetchConversations();

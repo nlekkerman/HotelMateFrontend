@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
 import { getGuestRealtimeClient } from '../realtime/guestRealtimeClient';
 import * as guestChatAPI from '../services/guestChatAPI';
+import { useGuestChatDispatch, guestChatActions } from '../realtime/stores/guestChatStore';
 
 /**
  * Generate client message ID for optimistic updates and deduplication
@@ -49,6 +50,9 @@ const createOptimisticMessage = (message, clientMessageId, replyTo = null) => ({
 export const useGuestChat = ({ hotelSlug, token }) => {
   const queryClient = useQueryClient();
   
+  // Guest chat store integration
+  const guestChatDispatch = useGuestChatDispatch();
+  
   // Local state for real-time operations
   const [messages, setMessages] = useState([]);
   const [connectionState, setConnectionState] = useState('disconnected');
@@ -73,7 +77,7 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     retry: 3
   });
 
-  // Debug: Log context to see why chat is disabled
+  // Store context in guest chat store and debug log
   useEffect(() => {
     if (context) {
       console.log('🔧 [useGuestChat] Context loaded:', {
@@ -82,8 +86,12 @@ export const useGuestChat = ({ hotelSlug, token }) => {
         isDisabled: !!context?.disabled_reason,
         contextKeys: Object.keys(context)
       });
+      
+      // Store context in guest chat store so ChatContext can access it
+      console.log('📦 [useGuestChat] Storing context in guest chat store...');
+      guestChatActions.setContext(context, guestChatDispatch);
     }
-  }, [context]);
+  }, [context, guestChatDispatch]);
   
   // STEP 2: Fetch Messages (after context is available)
   const { 

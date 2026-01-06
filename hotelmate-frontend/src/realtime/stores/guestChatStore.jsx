@@ -36,7 +36,8 @@ const initialState = {
     // ]
   },
   activeConversationId: null,
-  lastEventTimestamps: {} // for deduplication: { [key]: timestamp }
+  lastEventTimestamps: {}, // for deduplication: { [key]: timestamp }
+  context: null // Guest chat context (hotel, booking, conversation info)
 };
 
 // Action types
@@ -44,6 +45,7 @@ export const GUEST_CHAT_ACTIONS = {
   INIT_CONVERSATIONS_FROM_API: 'INIT_CONVERSATIONS_FROM_API',
   INIT_MESSAGES_FOR_CONVERSATION: 'INIT_MESSAGES_FOR_CONVERSATION',
   SET_ACTIVE_CONVERSATION: 'SET_ACTIVE_CONVERSATION',
+  SET_CONTEXT: 'SET_CONTEXT',
   GUEST_MESSAGE_RECEIVED: 'GUEST_MESSAGE_RECEIVED',
   STAFF_MESSAGE_SENT: 'STAFF_MESSAGE_SENT',
   MESSAGE_READ_UPDATE: 'MESSAGE_READ_UPDATE',
@@ -114,6 +116,14 @@ function guestChatReducer(state, action) {
       return {
         ...state,
         activeConversationId: action.payload.conversationId
+      };
+    }
+
+    case GUEST_CHAT_ACTIONS.SET_CONTEXT: {
+      const { context } = action.payload;
+      return {
+        ...state,
+        context
       };
     }
 
@@ -493,6 +503,15 @@ export const guestChatActions = {
       dispatch({
         type: GUEST_CHAT_ACTIONS.MARK_CONVERSATION_READ_FOR_GUEST,
         payload: { conversationId }
+      });
+    }
+  },
+
+  setContext: (context, dispatch) => {
+    if (dispatch) {
+      dispatch({
+        type: GUEST_CHAT_ACTIONS.SET_CONTEXT,
+        payload: { context }
       });
     }
   }
