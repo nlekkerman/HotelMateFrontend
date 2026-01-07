@@ -459,7 +459,7 @@ const GuestPrecheckinPage = () => {
       console.log('🚀 Submitting payload:', JSON.stringify(payload, null, 2));
       
       await publicAPI.post(
-        `/hotel/${hotelSlug}/precheckin/submit/`,
+        `/precheckin/${hotelSlug}/submit/`,
         payload
       );
       
