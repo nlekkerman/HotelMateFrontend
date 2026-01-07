@@ -300,7 +300,7 @@ const GuestPrecheckinPage = () => {
       console.log('Submitting payload:', payload);
       
       await publicAPI.post(
-        `/hotel/${hotelSlug}/precheckin/?token=${encodeURIComponent(token)}`,
+        `/hotel/${hotelSlug}/precheckin/submit/?token=${encodeURIComponent(token)}`,
         payload
       );
       
