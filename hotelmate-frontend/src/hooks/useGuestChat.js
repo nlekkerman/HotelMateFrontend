@@ -15,6 +15,9 @@ import { getGuestRealtimeClient } from '../realtime/guestRealtimeClient';
 import * as guestChatAPI from '../services/guestChatAPI';
 import { useGuestChatDispatch, guestChatActions } from '../realtime/stores/guestChatStore';
 
+// Debug flag for realtime events
+const DEBUG_REALTIME = true;
+
 /**
  * Generate client message ID for optimistic updates and deduplication
  * @returns {string} UUID for client message identification
@@ -186,20 +189,32 @@ export const useGuestChat = ({ hotelSlug, token }) => {
           setConnectionState('failed');
         });
         
+        // Add global event debugging if enabled
+        if (DEBUG_REALTIME) {
+          channel.bind_global((eventName, data) => {
+            console.log('[useGuestChat] 🔄 Global event received:', {
+              eventName,
+              data,
+              channel: context.pusher.channel,
+              isRealtimeEvent: eventName === context.pusher.event
+            });
+          });
+        }
+        
         // REQUIREMENT: Reconnection sync trigger
         channel.bind('pusher:subscription_succeeded', () => {
-          console.log('[useGuestChat] Subscription successful - triggering sync');
+          console.log('[useGuestChat] ✅ Subscription successful - triggering sync');
           setConnectionState('connected');
           // Sync missed messages on reconnection
           syncMessages();
         });
         
         channel.bind('pusher:subscription_error', (err) => {
-          console.error('[useGuestChat] Subscription error:', err);
+          console.error('[useGuestChat] ❌ Subscription error:', err);
           setConnectionState('failed');
         });
         
-        // Listen for real-time message events
+        // Listen for real-time message events (canonical format only)
         channel.bind(context.pusher.event, handleRealtimeMessage);
         
       } catch (error) {
@@ -211,26 +226,47 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     setupPusher();
     
     return () => {
+      console.log('[useGuestChat] 🧹 Cleaning up Pusher connection');
       if (currentChannel) {
+        // Unbind global events first
+        if (DEBUG_REALTIME) {
+          currentChannel.unbind_global();
+        }
+        // Unbind specific event
+        currentChannel.unbind(context.pusher.event, handleRealtimeMessage);
+        // Unbind all remaining events
         currentChannel.unbind_all();
+        
         if (pusherClient) {
           pusherClient.unsubscribe(context.pusher.channel);
         }
       }
     };
-  }, [context, token, hotelSlug]);
+  }, [context?.pusher, token, hotelSlug, handleRealtimeMessage]);
   
   /**
-   * Handle real-time message events with deduplication
-   * @param {Object} payload - Pusher event payload
+   * Handle real-time message events with canonical envelope format ONLY
+   * @param {Object} evt - Canonical event: {category, type, payload, meta}
    */
-  const handleRealtimeMessage = useCallback((payload) => {
-    console.log('[useGuestChat] Real-time event received:', payload);
+  const handleRealtimeMessage = useCallback((evt) => {
+    console.log('[useGuestChat] 📨 Real-time event received:', evt);
     
-    // Extract event ID for deduplication
-    const eventId = payload.meta?.event_id;
+    // REQUIREMENT: Only accept canonical envelope format
+    if (!evt.category || !evt.type || !evt.payload) {
+      console.warn('[useGuestChat] ⚠️  Non-canonical event shape ignored. Expected {category, type, payload, meta}:', evt);
+      return;
+    }
+    
+    // REQUIREMENT: Only process guest_chat category
+    if (evt.category !== 'guest_chat') {
+      console.log('[useGuestChat] 🔄 Non guest_chat event ignored:', evt.category);
+      return;
+    }
+    
+    // REQUIREMENT: Event deduplication using event_id
+    const eventId = evt.meta?.event_id;
     if (eventId && processedEventIds.current.has(eventId)) {
-      console.log('[useGuestChat] Duplicate event ignored:', eventId);
+      console.log('[useGuestChat] 🔄 Duplicate event ignored:', eventId);
       return;
     }
     
@@ -238,71 +274,79 @@ export const useGuestChat = ({ hotelSlug, token }) => {
       processedEventIds.current.add(eventId);
     }
     
-    // Handle message creation events
-    if (payload.message) {
-      const incomingMessage = payload.message;
-      
-      setMessages(prevMessages => {
-        // REQUIREMENT: Deduplication by client_message_id and message.id
-        const existingIndex = prevMessages.findIndex(msg => {
-          // Match by client_message_id first (for optimistic replacement)
-          if (incomingMessage.client_message_id && msg.client_message_id) {
-            return msg.client_message_id === incomingMessage.client_message_id;
-          }
-          // Then match by message ID
-          if (incomingMessage.id && msg.id) {
-            return msg.id === incomingMessage.id;
-          }
-          return false;
-        });
-        
-        // Avoid duplicate by message ID
-        if (incomingMessage.id && processedMessageIds.current.has(incomingMessage.id)) {
-          console.log('[useGuestChat] Duplicate message ID ignored:', incomingMessage.id);
-          return prevMessages;
-        }
-        
-        if (incomingMessage.id) {
-          processedMessageIds.current.add(incomingMessage.id);
-        }
-        
-        let newMessages;
-        if (existingIndex >= 0) {
-          // Replace optimistic message with server message
-          console.log('[useGuestChat] Replacing optimistic message with server message');
-          newMessages = [...prevMessages];
-          newMessages[existingIndex] = { ...incomingMessage, status: 'delivered' };
-        } else {
-          // Add new message
-          newMessages = [...prevMessages, { ...incomingMessage, status: 'delivered' }];
-        }
-        
-        // Also update guest chat store if we have context
-        if (context?.conversation_id) {
-          console.log('[useGuestChat] Real-time message - storing in guest chat store for conversation:', context.conversation_id);
-          const eventType = incomingMessage.sender_type === 'guest' 
-            ? 'guest_message_created' 
-            : 'staff_message_created';
-          guestChatActions.handleEvent({
-            category: 'guest_chat',
-            type: eventType,
-            payload: {
-              ...incomingMessage,
-              conversation_id: context.conversation_id
-            },
-            meta: payload.meta || {}
-          }, guestChatDispatch);
-        }
-        
-        // REQUIREMENT: Sorting contract - always sort by timestamp/created_at then id
-        return newMessages.sort((a, b) => {
-          const timeA = new Date(a.timestamp || a.created_at).getTime();
-          const timeB = new Date(b.timestamp || b.created_at).getTime();
-          return timeA !== timeB ? timeA - timeB : ((a.id || 0) - (b.id || 0));
-        });
-      });
+    // REQUIREMENT: Message extraction from evt.payload (NOT evt.payload.message)
+    const incomingMessage = evt.payload;
+    
+    // REQUIREMENT: Inject conversation_id if missing
+    if (!incomingMessage.conversation_id && context?.conversation_id) {
+      console.log('[useGuestChat] 🔧 Injecting conversation_id from context:', context.conversation_id);
+      incomingMessage.conversation_id = context.conversation_id;
     }
-  }, []);
+    
+    // REQUIREMENT: Message deduplication by message ID
+    if (incomingMessage.id && processedMessageIds.current.has(incomingMessage.id)) {
+      console.log('[useGuestChat] 🔄 Duplicate message ID ignored:', incomingMessage.id);
+      return;
+    }
+    
+    if (incomingMessage.id) {
+      processedMessageIds.current.add(incomingMessage.id);
+    }
+    
+    // REQUIREMENT: Update local React state
+    setMessages(prevMessages => {
+      console.log('[useGuestChat] 🔍 Processing realtime message for local state:', {
+        incomingMessageId: incomingMessage.id,
+        clientMessageId: incomingMessage.client_message_id,
+        currentMessagesCount: prevMessages.length,
+        senderType: incomingMessage.sender_type
+      });
+      
+      // Check for optimistic message replacement
+      const existingIndex = prevMessages.findIndex(msg => {
+        // Match by client_message_id first (for optimistic replacement)
+        if (incomingMessage.client_message_id && msg.client_message_id) {
+          return msg.client_message_id === incomingMessage.client_message_id;
+        }
+        // Then match by message ID
+        if (incomingMessage.id && msg.id) {
+          return msg.id === incomingMessage.id;
+        }
+        return false;
+      });
+      
+      let newMessages;
+      if (existingIndex >= 0) {
+        // Replace optimistic message with server message
+        console.log('[useGuestChat] 🔄 Replacing optimistic message with server message at index:', existingIndex);
+        newMessages = [...prevMessages];
+        newMessages[existingIndex] = { ...incomingMessage, status: 'delivered' };
+      } else {
+        // Add new message
+        console.log('[useGuestChat] ➕ Adding new realtime message:', incomingMessage.id);
+        newMessages = [...prevMessages, { ...incomingMessage, status: 'delivered' }];
+      }
+      
+      // REQUIREMENT: Sort by timestamp/created_at then id
+      const sortedMessages = newMessages.sort((a, b) => {
+        const timeA = new Date(a.timestamp || a.created_at).getTime();
+        const timeB = new Date(b.timestamp || b.created_at).getTime();
+        return timeA !== timeB ? timeA - timeB : ((a.id || 0) - (b.id || 0));
+      });
+      
+      console.log('[useGuestChat] ✅ Messages updated via realtime:', {
+        previousCount: prevMessages.length,
+        newCount: sortedMessages.length,
+        lastMessageId: sortedMessages[sortedMessages.length - 1]?.id
+      });
+      
+      return sortedMessages;
+    });
+    
+    // REQUIREMENT: Route to guestChatStore with canonical event
+    console.log('[useGuestChat] 📦 Routing canonical event to guestChatStore');
+    guestChatActions.handleEvent(evt, guestChatDispatch);
+  }, [context?.conversation_id, guestChatDispatch]);
   
   /**
    * REQUIREMENT: Sync messages on reconnection
