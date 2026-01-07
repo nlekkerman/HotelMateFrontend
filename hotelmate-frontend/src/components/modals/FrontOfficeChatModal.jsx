@@ -178,7 +178,7 @@ const FrontOfficeChatModal = ({
         hotelSlug,
         bookingId: context.booking_id,
         conversationId: context.conversation_id,
-        token,
+        guestToken: token,
         onMessage: (message) => {
           console.log('📨 [FrontOfficeChatModal] Realtime message:', message);
           // Message handling is done by the store

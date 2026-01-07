@@ -117,8 +117,6 @@ const ChatWindow = ({
     return initialRoomNumber;
   });
   
-  console.log('🔍 [INIT] ChatWindow initialized - isGuest:', isGuest, 'conversationId:', conversationId);
-  
   // Get chat context data early (needed in useEffects below)
   const { 
     markConversationRead, 
