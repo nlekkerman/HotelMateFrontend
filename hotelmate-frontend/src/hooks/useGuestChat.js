@@ -143,107 +143,7 @@ export const useGuestChat = ({ hotelSlug, token }) => {
       });
     }
   }, [initialMessages, context?.conversation_id, guestChatDispatch]);
-  
-  // STEP 3: Setup Pusher Connection (with private channel auth)
-  useEffect(() => {
-    if (!context?.pusher || !token) return;
-    
-    const setupPusher = async () => {
-      try {
-        console.log('[useGuestChat] Setting up Pusher connection:', {
-          channel: context.pusher.channel,
-          event: context.pusher.event
-        });
-        
-        // Get guest realtime client with private channel support
-        const client = await getGuestRealtimeClient(token, {
-          authEndpoint: guestChatAPI.getPusherAuthEndpoint(hotelSlug, token)
-        });
-        
-        if (!client) {
-          console.error('[useGuestChat] Failed to get Pusher client');
-          setConnectionState('failed');
-          return;
-        }
-        
-        setPusherClient(client);
-        setConnectionState('connecting');
-        
-        // Subscribe to private channel from context
-        const channel = client.subscribe(context.pusher.channel);
-        setCurrentChannel(channel);
-        
-        // Handle connection state changes
-        client.connection.bind('connected', () => {
-          console.log('[useGuestChat] Pusher connected');
-          setConnectionState('connected');
-        });
-        
-        client.connection.bind('disconnected', () => {
-          console.log('[useGuestChat] Pusher disconnected');
-          setConnectionState('disconnected');
-        });
-        
-        client.connection.bind('error', (err) => {
-          console.error('[useGuestChat] Pusher error:', err);
-          setConnectionState('failed');
-        });
-        
-        // Add global event debugging if enabled
-        if (DEBUG_REALTIME) {
-          channel.bind_global((eventName, data) => {
-            console.log('[useGuestChat] 🔄 Global event received:', {
-              eventName,
-              data,
-              channel: context.pusher.channel,
-              isRealtimeEvent: eventName === context.pusher.event
-            });
-          });
-        }
-        
-        // REQUIREMENT: Reconnection sync trigger
-        channel.bind('pusher:subscription_succeeded', () => {
-          console.log('[useGuestChat] ✅ Subscription successful - triggering sync');
-          setConnectionState('connected');
-          // Sync missed messages on reconnection
-          syncMessages();
-        });
-        
-        channel.bind('pusher:subscription_error', (err) => {
-          console.error('[useGuestChat] ❌ Subscription error:', err);
-          setConnectionState('failed');
-        });
-        
-        // Listen for real-time message events (canonical format only)
-        channel.bind(context.pusher.event, handleRealtimeMessage);
-        
-      } catch (error) {
-        console.error('[useGuestChat] Pusher setup error:', error);
-        setConnectionState('failed');
-      }
-    };
-    
-    setupPusher();
-    
-    return () => {
-      console.log('[useGuestChat] 🧹 Cleaning up Pusher connection');
-      if (currentChannel) {
-        // Unbind global events first
-        if (DEBUG_REALTIME) {
-          currentChannel.unbind_global();
-        }
-        // Unbind specific event
-        currentChannel.unbind(context.pusher.event, handleRealtimeMessage);
-        // Unbind all remaining events
-        currentChannel.unbind_all();
-        
-        if (pusherClient) {
-          pusherClient.unsubscribe(context.pusher.channel);
-        }
-      }
-    };
-  }, [context?.pusher, token, hotelSlug, handleRealtimeMessage]);
-  
+
   /**
    * Handle real-time message events with canonical envelope format ONLY
    * @param {Object} evt - Canonical event: {category, type, payload, meta}
@@ -347,6 +247,106 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     console.log('[useGuestChat] 📦 Routing canonical event to guestChatStore');
     guestChatActions.handleEvent(evt, guestChatDispatch);
   }, [context?.conversation_id, guestChatDispatch]);
+  
+  // STEP 3: Setup Pusher Connection (with private channel auth)
+  useEffect(() => {
+    if (!context?.pusher || !token) return;
+    
+    const setupPusher = async () => {
+      try {
+        console.log('[useGuestChat] Setting up Pusher connection:', {
+          channel: context.pusher.channel,
+          event: context.pusher.event
+        });
+        
+        // Get guest realtime client with private channel support
+        const client = await getGuestRealtimeClient(token, {
+          authEndpoint: guestChatAPI.getPusherAuthEndpoint(hotelSlug, token)
+        });
+        
+        if (!client) {
+          console.error('[useGuestChat] Failed to get Pusher client');
+          setConnectionState('failed');
+          return;
+        }
+        
+        setPusherClient(client);
+        setConnectionState('connecting');
+        
+        // Subscribe to private channel from context
+        const channel = client.subscribe(context.pusher.channel);
+        setCurrentChannel(channel);
+        
+        // Handle connection state changes
+        client.connection.bind('connected', () => {
+          console.log('[useGuestChat] Pusher connected');
+          setConnectionState('connected');
+        });
+        
+        client.connection.bind('disconnected', () => {
+          console.log('[useGuestChat] Pusher disconnected');
+          setConnectionState('disconnected');
+        });
+        
+        client.connection.bind('error', (err) => {
+          console.error('[useGuestChat] Pusher error:', err);
+          setConnectionState('failed');
+        });
+        
+        // Add global event debugging if enabled
+        if (DEBUG_REALTIME) {
+          channel.bind_global((eventName, data) => {
+            console.log('[useGuestChat] 🔄 Global event received:', {
+              eventName,
+              data,
+              channel: context.pusher.channel,
+              isRealtimeEvent: eventName === context.pusher.event
+            });
+          });
+        }
+        
+        // REQUIREMENT: Reconnection sync trigger
+        channel.bind('pusher:subscription_succeeded', () => {
+          console.log('[useGuestChat] ✅ Subscription successful - triggering sync');
+          setConnectionState('connected');
+          // Sync missed messages on reconnection
+          syncMessages();
+        });
+        
+        channel.bind('pusher:subscription_error', (err) => {
+          console.error('[useGuestChat] ❌ Subscription error:', err);
+          setConnectionState('failed');
+        });
+        
+        // Listen for real-time message events (canonical format only)
+        channel.bind(context.pusher.event, handleRealtimeMessage);
+        
+      } catch (error) {
+        console.error('[useGuestChat] Pusher setup error:', error);
+        setConnectionState('failed');
+      }
+    };
+    
+    setupPusher();
+    
+    return () => {
+      console.log('[useGuestChat] 🧹 Cleaning up Pusher connection');
+      if (currentChannel) {
+        // Unbind global events first
+        if (DEBUG_REALTIME) {
+          currentChannel.unbind_global();
+        }
+        // Unbind specific event
+        currentChannel.unbind(context.pusher.event, handleRealtimeMessage);
+        // Unbind all remaining events
+        currentChannel.unbind_all();
+        
+        if (pusherClient) {
+          pusherClient.unsubscribe(context.pusher.channel);
+        }
+      }
+    };
+  }, [context?.pusher, token, hotelSlug, handleRealtimeMessage]);
   
   /**
    * REQUIREMENT: Sync messages on reconnection
