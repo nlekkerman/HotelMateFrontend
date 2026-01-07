@@ -280,13 +280,17 @@ export const useGuestChat = ({ hotelSlug, token }) => {
         // Also update guest chat store if we have context
         if (context?.conversation_id) {
           console.log('[useGuestChat] Real-time message - storing in guest chat store for conversation:', context.conversation_id);
-          const actionType = incomingMessage.sender_type === 'guest' 
-            ? 'GUEST_MESSAGE_RECEIVED' 
-            : 'STAFF_MESSAGE_SENT';
+          const eventType = incomingMessage.sender_type === 'guest' 
+            ? 'guest_message_created' 
+            : 'staff_message_created';
           guestChatActions.handleEvent({
-            type: actionType,
-            payload: incomingMessage,
-            conversationId: context.conversation_id
+            category: 'guest_chat',
+            type: eventType,
+            payload: {
+              ...incomingMessage,
+              conversation_id: context.conversation_id
+            },
+            meta: payload.meta || {}
           }, guestChatDispatch);
         }
         
@@ -383,9 +387,13 @@ export const useGuestChat = ({ hotelSlug, token }) => {
       if (context?.conversation_id) {
         console.log('[useGuestChat] Send message - adding optimistic message to guest chat store for conversation:', context.conversation_id);
         guestChatActions.handleEvent({
-          type: 'GUEST_MESSAGE_RECEIVED',
-          payload: optimisticMessage,
-          conversationId: context.conversation_id
+          category: 'guest_chat',
+          type: 'guest_message_created',
+          payload: {
+            ...optimisticMessage,
+            conversation_id: context.conversation_id
+          },
+          meta: {}
         }, guestChatDispatch);
       }
       
