@@ -253,6 +253,25 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
         routeToDomainStores(normalized);
         return;
     }
+
+    // Guest chat fallback: accept raw Pusher guest-chat events even if backend didn't wrap them
+    if (channel?.includes('guest-chat') && !eventName?.startsWith('pusher:')) {
+      const normalized = {
+        category: 'guest_chat',
+        type: payload?.type || eventName || 'message_created',
+        payload: payload?.payload || payload?.message || payload || {},
+        meta: {
+          channel,
+          eventName,
+          event_id: payload?.meta?.event_id || payload?.event_id || payload?.id,
+        },
+        source,
+        timestamp: payload?.meta?.ts || new Date().toISOString(),
+      };
+      console.log('🆘 [EventBus] FALLBACK normalized guest-chat event:', normalized);
+      routeToDomainStores(normalized);
+      return;
+    }
     
     // 4️⃣ RAW ROOM STATUS EVENTS NORMALIZATION
     if (channel?.includes('.rooms') && eventName === 'room-status-changed') {

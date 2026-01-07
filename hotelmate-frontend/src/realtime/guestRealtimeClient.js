@@ -43,7 +43,10 @@ export function getGuestPusherClient(token, options = {}) {
 
   console.log('🔌 [GuestRealtime] Creating new Pusher instance for guest token', {
     hasAuthEndpoint: !!options.authEndpoint,
-    authEndpoint: options.authEndpoint
+    authEndpoint: options.authEndpoint,
+    tokenPreview: token ? token.substring(0, 10) + '...' : 'No token',
+    pusherKey: PUSHER_KEY ? 'Set' : 'Missing',
+    pusherCluster: PUSHER_CLUSTER ? PUSHER_CLUSTER : 'Missing'
   });
 
   // Create Pusher configuration
@@ -60,8 +63,12 @@ export function getGuestPusherClient(token, options = {}) {
       params: { token } // Send token as query param for guest auth
     };
     console.log('[GuestRealtime] Private channel auth configured:', {
-      authEndpoint: options.authEndpoint
+      authEndpoint: options.authEndpoint,
+      hasToken: !!token,
+      tokenLength: token ? token.length : 0
     });
+  } else {
+    console.warn('⚠️ [GuestRealtime] No auth endpoint provided - private channels will fail');
   }
 
   // Create new Pusher instance for guest
@@ -69,15 +76,25 @@ export function getGuestPusherClient(token, options = {}) {
 
   // Error handling
   pusher.connection.bind('error', function(err) {
-    console.error('❌ [GuestRealtime] Pusher connection error:', err);
+    console.error('❌ [GuestRealtime] Pusher connection error:', {
+      error: err,
+      errorType: err?.type,
+      errorMessage: err?.error?.message,
+      data: err?.data
+    });
   });
 
   pusher.connection.bind('connected', function() {
-    console.log('✅ [GuestRealtime] Guest Pusher connected successfully');
+    console.log('✅ [GuestRealtime] Guest Pusher connected successfully', {
+      socketId: pusher.connection.socket_id,
+      state: pusher.connection.state
+    });
   });
 
   pusher.connection.bind('disconnected', function() {
-    console.log('🔌 [GuestRealtime] Guest Pusher disconnected');
+    console.log('🔌 [GuestRealtime] Guest Pusher disconnected', {
+      previousSocketId: pusher.connection.socket_id
+    });
   });
 
   // Store instance for reuse with the cache key
