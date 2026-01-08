@@ -53,7 +53,9 @@ export const GUEST_CHAT_ACTIONS = {
   CONVERSATION_METADATA_UPDATED: 'CONVERSATION_METADATA_UPDATED',
   MARK_CONVERSATION_READ_FOR_STAFF: 'MARK_CONVERSATION_READ_FOR_STAFF',
   MARK_CONVERSATION_READ_FOR_GUEST: 'MARK_CONVERSATION_READ_FOR_GUEST',
-  UPDATE_EVENT_TIMESTAMPS: 'UPDATE_EVENT_TIMESTAMPS'
+  UPDATE_EVENT_TIMESTAMPS: 'UPDATE_EVENT_TIMESTAMPS',
+  GUEST_CHAT_MESSAGE_DELETED: 'GUEST_CHAT_MESSAGE_DELETED',
+  GUEST_CHAT_MESSAGE_EDITED: 'GUEST_CHAT_MESSAGE_EDITED'
 };
 
 // Helper function to sort messages by timestamp
@@ -298,6 +300,41 @@ function guestChatReducer(state, action) {
       };
     }
 
+    case GUEST_CHAT_ACTIONS.GUEST_CHAT_MESSAGE_DELETED: {
+      const { conversationId, messageId } = action.payload;
+      const msgs = state.messagesByConversationId[conversationId] || [];
+
+      return {
+        ...state,
+        messagesByConversationId: {
+          ...state.messagesByConversationId,
+          [conversationId]: msgs.filter(m => m.id !== messageId)
+        }
+      };
+    }
+
+    case GUEST_CHAT_ACTIONS.GUEST_CHAT_MESSAGE_EDITED: {
+      const { conversationId, message } = action.payload;
+      const msgs = state.messagesByConversationId[conversationId] || [];
+
+      return {
+        ...state,
+        messagesByConversationId: {
+          ...state.messagesByConversationId,
+          [conversationId]: msgs.map(m =>
+            m.id === message.id
+              ? {
+                  ...m,
+                  body: message.body,
+                  attachments: message.attachments ?? m.attachments,
+                  editedAt: message.edited_at ?? new Date().toISOString()
+                }
+              : m
+          )
+        }
+      };
+    }
+
     default:
       return state;
   }
@@ -318,6 +355,15 @@ export const guestChatActions = {
   _processedEventIds: new Set(), // Event ID-based deduplication
 
   handleEvent: (event, dispatchRef = null) => {
+    console.log('🔥 [guestChatActions.handleEvent] Called with event:', {
+      category: event.category,
+      type: event.type,
+      payload: event.payload,
+      meta: event.meta,
+      hasDispatch: !!dispatchRef,
+      hasGlobalDispatch: !!globalGuestChatDispatch
+    });
+    
     // Use provided dispatch or global fallback
     const dispatch = dispatchRef || globalGuestChatDispatch;
     
@@ -349,21 +395,24 @@ export const guestChatActions = {
       return;
     }
 
-    // ✅ Event deduplication using event.meta.event_id (preferred) or timestamp window
-    let deduplicationKey;
-    if (eventId) {
-      deduplicationKey = eventId;
-    } else {
-      deduplicationKey = `guest:${eventType}:${conversationId}:${payload?.message_id || Date.now()}`;
+    // ⚠️ Frontend dev warning: Catch conversation_id regressions
+    if (globalGuestChatStateRef?.current?.context?.booking_id && conversationId !== globalGuestChatStateRef.current.context.booking_id) {
+      console.warn('⚠️ Guest chat event with non-booking conversation_id', event);
     }
 
-    if (guestChatActions._processedEventIds.has(deduplicationKey)) {
-      console.log("[guestChatStore] Duplicate event detected, skipping:", deduplicationKey);
+    // ✅ Event deduplication - require event_id for deterministic behavior
+    if (!eventId) {
+      console.warn('[guestChatStore] Missing event_id, skipping event:', event);
+      return;
+    }
+
+    if (guestChatActions._processedEventIds.has(eventId)) {
+      console.log("[guestChatStore] Duplicate event detected, skipping:", eventId);
       return;
     }
 
     // Store event ID to prevent duplicates
-    guestChatActions._processedEventIds.add(deduplicationKey);
+    guestChatActions._processedEventIds.add(eventId);
 
     // Clean up old event IDs (keep only last 1000)
     if (guestChatActions._processedEventIds.size > 1000) {
@@ -412,13 +461,13 @@ export const guestChatActions = {
         break;
 
       case 'unread_updated':
-        // Update unread count for the conversation
         dispatch({
           type: GUEST_CHAT_ACTIONS.CONVERSATION_METADATA_UPDATED,
           payload: {
             conversationId,
             metadata: {
-              unreadCountForStaff: payload.unread_count || 0,
+              unreadCountForStaff: payload.unread_count_for_staff,
+              unreadCountForGuest: payload.unread_count_for_guest,
               updatedAt: payload.updated_at || new Date().toISOString()
             }
           }
@@ -455,6 +504,28 @@ export const guestChatActions = {
           }
         });
         break;
+
+      case 'message_deleted': {
+        dispatch({
+          type: 'GUEST_CHAT_MESSAGE_DELETED',
+          payload: {
+            messageId: payload.message_id,
+            conversationId
+          }
+        });
+        break;
+      }
+
+      case 'message_edited': {
+        dispatch({
+          type: 'GUEST_CHAT_MESSAGE_EDITED',
+          payload: {
+            message: payload,
+            conversationId
+          }
+        });
+        break;
+      }
 
       default:
         console.log('[guestChatStore] Unknown event type:', eventType, event);

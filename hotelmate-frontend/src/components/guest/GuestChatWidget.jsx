@@ -20,11 +20,64 @@ import './GuestChatWidget.css'; // We'll need to create this
  * @param {Object} props.message - Message object
  * @param {Function} props.onRetry - Retry callback for failed messages
  */
-const MessageBubble = ({ message, onRetry }) => {
-  const isGuest = message.sender_type === 'guest';
+/**
+ * Message Bubble Component
+ * @param {Object} props - Component props
+ * @param {Object} props.message - Message object
+ * @param {Object} props.context - Guest chat context with current guest info
+ * @param {Function} props.onRetry - Retry callback for failed messages
+ */
+const MessageBubble = ({ message, context, onRetry }) => {
+  // Debug: log message properties to understand the structure
+  console.log('[MessageBubble] Message debug:', {
+    id: message.id,
+    sender_type: message.sender_type,
+    sender_role: message.sender_role,
+    staff: message.staff,
+    guest_id: message.guest_id,
+    staff_id: message.staff_id,
+    staff_display_name: message.staff_display_name,
+    message: message.message,
+    allFields: Object.keys(message)
+  });
+
+  // Improved guest identification logic using multiple methods
+  let isGuest = false;
+  
+  // Method 1: Check sender_type/sender_role fields
+  if (message.sender_type === 'guest' || message.sender_role === 'guest') {
+    isGuest = true;
+  }
+  // Method 2: If we have guest context, check if the message guest_id matches current guest
+  else if (context?.guest_id && message.guest_id) {
+    isGuest = message.guest_id === context.guest_id;
+  }
+  // Method 3: If message has guest_id but no staff_id, it's likely from a guest
+  else if (message.guest_id && !message.staff_id && !message.staff) {
+    isGuest = true;
+  }
+  // Method 4: If message has staff_id or staff field, it's from staff
+  else if (message.staff_id || message.staff || message.staff_display_name) {
+    isGuest = false;
+  }
+  // Method 5: Default fallback - if no clear indicators, assume based on sender_type
+  else {
+    isGuest = message.sender_type === 'guest';
+  }
+
   const isSystem = message.sender_type === 'system';
   const isPending = message.status === 'pending';
   const isFailed = message.status === 'failed';
+  const isSending = message.status === 'sending';
+  
+  console.log('[MessageBubble] Classification result:', {
+    isGuest,
+    isSystem,
+    messageId: message.id,
+    appliedClass: isGuest ? 'guest-message' : 'staff-message',
+    contextGuestId: context?.guest_id,
+    messageGuestId: message.guest_id
+  });
   
   // System messages: centered small text
   if (isSystem) {
@@ -79,6 +132,14 @@ const MessageBubble = ({ message, onRetry }) => {
           </span>
         </div>
       </div>
+      
+      {/* Sending indicator - appears below message bubble */}
+      {isSending && (
+        <div className="sending-indicator">
+          <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+          <small className="text-muted">Sending message...</small>
+        </div>
+      )}
     </div>
   );
 };
@@ -191,8 +252,8 @@ const MessageInput = ({ onSend, disabled, disabledReason, isSending }) => {
         </div>
       )}
       
-      <form onSubmit={handleSubmit} className="message-input-form">
-        <div className="input-group">
+      <form onSubmit={handleSubmit} className="message-input-form d-flex vw-100">
+        <div className="input-group ">
           <textarea
             ref={textareaRef}
             className="form-control message-textarea"
@@ -233,21 +294,30 @@ const MessageInput = ({ onSend, disabled, disabledReason, isSending }) => {
  * Messages List Component with Pagination
  * @param {Object} props - Component props
  * @param {Array} props.messages - Messages array
+ * @param {Array} props.sendingMessages - Currently sending messages array
+ * @param {Object} props.context - Guest chat context for message classification
  * @param {Function} props.onLoadOlder - Load older messages callback
  * @param {Function} props.onRetry - Retry failed message callback
  */
-const MessagesList = ({ messages, onLoadOlder, onRetry }) => {
+const MessagesList = ({ messages, sendingMessages = [], context, onLoadOlder, onRetry }) => {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(true);
   
-  // Auto-scroll to bottom for new messages (but not when loading older)
+  // Combine regular messages with sending messages
+  const allMessages = [...messages, ...sendingMessages].sort((a, b) => {
+    const timeA = new Date(a.timestamp || a.created_at).getTime();
+    const timeB = new Date(b.timestamp || b.created_at).getTime();
+    return timeA !== timeB ? timeA - timeB : ((a.id || 0) - (b.id || 0));
+  });
+  
+  // Auto-scroll to bottom for new messages (including sending messages)
   useEffect(() => {
     if (hasScrolledToBottom && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, hasScrolledToBottom]);
+  }, [allMessages, hasScrolledToBottom]);
   
   const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
@@ -303,10 +373,11 @@ const MessagesList = ({ messages, onLoadOlder, onRetry }) => {
       )}
       
       <div className="messages-container">
-        {messages.map((message, index) => (
+        {allMessages.map((message, index) => (
           <MessageBubble
             key={message.id || `temp-${index}`}
             message={message}
+            context={context}
             onRetry={onRetry}
           />
         ))}
@@ -334,6 +405,7 @@ export const GuestChatWidget = ({
   const {
     context,
     messages,
+    sendingMessages,
     loading,
     error,
     connectionState,
@@ -398,7 +470,7 @@ export const GuestChatWidget = ({
       </div>
       
       <div className="chat-body">
-        {messages.length === 0 ? (
+        {messages.length === 0 && sendingMessages.length === 0 ? (
           <div className="empty-chat">
             <div className="empty-chat-icon">
               <i className="bi bi-chat-dots"></i>
@@ -410,6 +482,8 @@ export const GuestChatWidget = ({
         ) : (
           <MessagesList 
             messages={messages}
+            sendingMessages={sendingMessages}
+            context={context}
             onLoadOlder={loadOlder}
             onRetry={retryMessage}
           />

@@ -254,8 +254,9 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
         return;
     }
 
-    // Guest chat fallback: accept raw Pusher guest-chat events even if backend didn't wrap them
-    if (channel?.includes('guest-chat') && !eventName?.startsWith('pusher:')) {
+    // Guest chat: only accept booking-based private channels
+    if (channel?.startsWith('private-hotel-') && channel?.includes('-guest-chat-booking-') && !eventName?.startsWith('pusher:')) {
+      console.log('🏨 [EventBus] Detected booking-based guest chat channel:', channel);
       const normalized = {
         category: 'guest_chat',
         type: payload?.type || eventName || 'message_created',
@@ -335,7 +336,22 @@ function routeToDomainStores(event) {
         }
         break;
       case "guest_chat":
+        console.log('🔍 [GUEST-CHAT-DEBUG] Processing guest_chat event:', {
+          type: event.type,
+          payload: event.payload,
+          eventName: event.meta?.eventName,
+          channel: event.meta?.channel
+        });
+        
+        console.log('🚀 [GUEST-CHAT-DEBUG] About to call guestChatActions.handleEvent with event:', event);
         guestChatActions.handleEvent(event);
+        console.log('✅ [GUEST-CHAT-DEBUG] guestChatActions.handleEvent completed');
+
+        // 🔄 CROSS-DOMAIN UPDATE: Also update staff conversation list when guests send messages
+        // This ensures staff conversation sidebar shows latest guest messages
+        console.log('🔄 [GUEST-TO-STAFF] Also routing guest_chat event to chatActions for staff conversation list update');
+        chatActions.handleEvent(event);
+        console.log('✅ [GUEST-TO-STAFF] Staff conversation list update completed');
         break;
       case "room_service":
         console.log('🍽️ [EventBus] Processing room service event:', {

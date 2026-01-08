@@ -199,33 +199,31 @@ export const useGuestChat = ({ hotelSlug, token }) => {
         incomingMessageId: incomingMessage.id,
         clientMessageId: incomingMessage.client_message_id,
         currentMessagesCount: prevMessages.length,
-        senderType: incomingMessage.sender_type
+        senderType: incomingMessage.sender_type || incomingMessage.sender_role
       });
       
-      // Check for optimistic message replacement
-      const existingIndex = prevMessages.findIndex(msg => {
-        // Match by client_message_id first (for optimistic replacement)
-        if (incomingMessage.client_message_id && msg.client_message_id) {
-          return msg.client_message_id === incomingMessage.client_message_id;
-        }
-        // Then match by message ID
-        if (incomingMessage.id && msg.id) {
-          return msg.id === incomingMessage.id;
-        }
-        return false;
-      });
-      
-      let newMessages;
-      if (existingIndex >= 0) {
-        // Replace optimistic message with server message
-        console.log('[useGuestChat] 🔄 Replacing optimistic message with server message at index:', existingIndex);
-        newMessages = [...prevMessages];
-        newMessages[existingIndex] = { ...incomingMessage, status: 'delivered' };
-      } else {
-        // Add new message
-        console.log('[useGuestChat] ➕ Adding new realtime message:', incomingMessage.id);
-        newMessages = [...prevMessages, { ...incomingMessage, status: 'delivered' }];
+      // For guest messages, remove from sending messages if client_message_id matches
+      if ((incomingMessage.sender_role === 'guest' || incomingMessage.sender_type === 'guest') && 
+          incomingMessage.client_message_id) {
+        setSendingMessages(prevSending => {
+          const filtered = prevSending.filter(msg => msg.client_message_id !== incomingMessage.client_message_id);
+          if (filtered.length !== prevSending.length) {
+            console.log('[useGuestChat] 🔄 Removed sending message after server confirmation:', incomingMessage.client_message_id);
+          }
+          return filtered;
+        });
       }
+      
+      // Check for duplicate by ID
+      const existingById = prevMessages.find(msg => msg.id === incomingMessage.id);
+      if (existingById) {
+        console.log('[useGuestChat] 🔄 Duplicate message ID ignored:', incomingMessage.id);
+        return prevMessages;
+      }
+      
+      // Add new message
+      console.log('[useGuestChat] ➕ Adding new realtime message:', incomingMessage.id);
+      const newMessages = [...prevMessages, { ...incomingMessage, status: 'delivered' }];
       
       // REQUIREMENT: Sort by timestamp/created_at then id
       const sortedMessages = newMessages.sort((a, b) => {
@@ -410,36 +408,27 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     }
   }, [hotelSlug, token]);
   
-  // REQUIREMENT: Optimistic send mutation with client_message_id
+  // Track sending messages with their content and client ID
+  const [sendingMessages, setSendingMessages] = useState([]);
+
+  // Send message mutation without optimistic updates
   const sendMessageMutation = useMutation({
     mutationFn: async ({ message, replyTo }) => {
       const clientMessageId = generateClientMessageId();
       
-      // REQUIREMENT: Insert optimistic message immediately
-      const optimisticMessage = createOptimisticMessage(message, clientMessageId, replyTo);
+      // Add to sending messages list for UI indicator
+      const sendingMessage = {
+        id: `sending-${clientMessageId}`,
+        client_message_id: clientMessageId,
+        message,
+        sender_type: 'guest',
+        status: 'sending',
+        timestamp: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        reply_to: replyTo
+      };
       
-      setMessages(prev => {
-        const updated = [...prev, optimisticMessage];
-        return updated.sort((a, b) => {
-          const timeA = new Date(a.timestamp || a.created_at).getTime();
-          const timeB = new Date(b.timestamp || b.created_at).getTime();
-          return timeA !== timeB ? timeA - timeB : ((a.id || 0) - (b.id || 0));
-        });
-      });
-      
-      // Also add optimistic message to guest chat store
-      if (context?.conversation_id) {
-        console.log('[useGuestChat] Send message - adding optimistic message to guest chat store for conversation:', context.conversation_id);
-        guestChatActions.handleEvent({
-          category: 'guest_chat',
-          type: 'guest_message_created',
-          payload: {
-            ...optimisticMessage,
-            conversation_id: context.conversation_id
-          },
-          meta: {}
-        }, guestChatDispatch);
-      }
+      setSendingMessages(prev => [...prev, sendingMessage]);
       
       // Send to server
       const response = await guestChatAPI.sendMessage(hotelSlug, token, {
@@ -450,11 +439,15 @@ export const useGuestChat = ({ hotelSlug, token }) => {
       
       return { response, clientMessageId };
     },
+    onSuccess: (data, variables) => {
+      // Remove from sending messages when successfully sent
+      setSendingMessages(prev => prev.filter(msg => msg.client_message_id !== data.clientMessageId));
+    },
     onError: (error, variables, context) => {
       console.error('[useGuestChat] Send message error:', error);
       
-      // Mark optimistic message as failed
-      setMessages(prev => prev.map(msg => 
+      // Update sending message to failed state
+      setSendingMessages(prev => prev.map(msg => 
         msg.client_message_id === context?.clientMessageId
           ? { ...msg, status: 'failed' }
           : msg
@@ -516,14 +509,14 @@ export const useGuestChat = ({ hotelSlug, token }) => {
   }, [hotelSlug, token]);
   
   /**
-   * Retry failed message
-   * @param {Object} failedMessage - The failed message to retry
+   * Retry failed sending message
+   * @param {Object} failedMessage - The failed sending message to retry
    */
   const retryMessage = useCallback((failedMessage) => {
     if (failedMessage.status !== 'failed') return;
     
-    // Remove failed message and resend
-    setMessages(prev => prev.filter(msg => msg.id !== failedMessage.id));
+    // Remove from sending messages and retry
+    setSendingMessages(prev => prev.filter(msg => msg.id !== failedMessage.id));
     sendMessageMutation.mutate({
       message: failedMessage.message,
       replyTo: failedMessage.reply_to
@@ -535,6 +528,7 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     // State
     context,
     messages,
+    sendingMessages,
     loading: contextLoading || messagesLoading,
     error: contextError || messagesError,
     connectionState,

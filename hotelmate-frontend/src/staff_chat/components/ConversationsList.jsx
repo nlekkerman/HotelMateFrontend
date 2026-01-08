@@ -7,11 +7,13 @@ import useStartConversation from '../hooks/useStartConversation';
 import { fetchConversations, bulkMarkAsRead } from '../services/staffChatApi';
 import useUnreadCount from '../hooks/useUnreadCount';
 import { useStaffChat } from '../context/StaffChatContext';
+import { subscribeStaffToGuestChatBooking } from '@/realtime/channelRegistry';
 
 /**
  * ConversationsList Component
  * Search bar at top to find staff and start conversations
  * Shows existing conversations with unread counts and "Mark All as Read" button
+ * ALSO subscribes to guest booking channels to receive guest messages
  */
 const ConversationsList = ({ hotelSlug, onOpenChat }) => {
   const [startingChatWithId, setStartingChatWithId] = useState(null);
@@ -61,6 +63,53 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
       fetchStaffConversations();
     }
   }, [hotelSlug, fetchStaffConversations]);
+
+  // Subscribe to active guest booking channels for real-time guest messages
+  useEffect(() => {
+    if (!hotelSlug) return;
+
+    // Fetch active guest conversations and subscribe to their booking channels
+    const subscribeToGuestBookings = async () => {
+      try {
+        // Get active room conversations (guest chat bookings)
+        const { fetchRoomConversations } = await import('@/services/roomConversationsAPI');
+        const roomConversations = await fetchRoomConversations(hotelSlug);
+        
+        console.log('🔗 [CONVERSATIONS LIST] Found room conversations:', roomConversations?.length || 0);
+
+        const cleanupFunctions = [];
+
+        // Subscribe to each active guest booking channel
+        roomConversations?.forEach((conversation) => {
+          if (conversation.booking_id) {
+            console.log('🔗 [CONVERSATIONS LIST] Subscribing to guest booking:', conversation.booking_id);
+            const cleanup = subscribeStaffToGuestChatBooking({
+              hotelSlug,
+              bookingId: conversation.booking_id
+            });
+            cleanupFunctions.push(cleanup);
+          }
+        });
+
+        return cleanupFunctions;
+      } catch (error) {
+        console.error('❌ [CONVERSATIONS LIST] Failed to fetch room conversations:', error);
+        return [];
+      }
+    };
+
+    let cleanupFunctions = [];
+    
+    subscribeToGuestBookings().then((cleanups) => {
+      cleanupFunctions = cleanups;
+    });
+
+    // Cleanup on unmount
+    return () => {
+      console.log('🧹 [CONVERSATIONS LIST] Cleaning up guest booking subscriptions');
+      cleanupFunctions.forEach(cleanup => cleanup?.());
+    };
+  }, [hotelSlug]);
 
   // ✅ UNIFIED: No legacy subscription needed - conversations update automatically via chatStore
 

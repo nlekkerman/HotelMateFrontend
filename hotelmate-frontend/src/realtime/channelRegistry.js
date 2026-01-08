@@ -2,6 +2,7 @@
 import { getPusherClient } from './realtimeClient';
 import { getGuestPusherClient } from './guestRealtimeClient';
 import { handleIncomingRealtimeEvent } from './eventBus';
+import { getPusherAuthEndpoint } from '../services/guestChatAPI.js';
 
 let subscriptionsActive = false;
 let currentChannels = [];
@@ -74,10 +75,9 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
       channels.push(personalNotifications);
     }
 
-    // Note: Staff chat and guest chat channels are conversation-specific and will be 
+    // Note: Staff chat channels are conversation-specific and will be 
     // subscribed to dynamically when users enter specific conversations:
     // - hotel-{slug}.staff-chat.{conversation_id}
-    // - hotel-{slug}.guest-chat.{room_pin}
 
     // Bind global event handlers to all channels
     channels.forEach(channel => {
@@ -199,54 +199,6 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
 }
 
 /**
- * Subscribe to specific guest chat conversation
- * @param {string} hotelSlug - Hotel slug
- * @param {string} roomPin - Guest chat room PIN
- * @returns {Function} Cleanup function for this channel
- */
-export function subscribeToGuestChatConversation(hotelSlug, roomPin) {
-  if (!hotelSlug || !roomPin) {
-    console.warn('⚠️ Missing hotelSlug or roomPin for guest chat subscription');
-    return () => {};
-  }
-
-  const pusher = getPusherClient();
-  const channelName = `${hotelSlug}.guest-chat.${roomPin}`;
-  
-  try {
-    const channel = pusher.subscribe(channelName);
-    
-    channel.bind_global((eventName, payload) => {
-      handleIncomingRealtimeEvent({
-        source: 'pusher',
-        channel: channel.name,
-        eventName,
-        payload
-      });
-    });
-
-    console.log(`✅ Subscribed to guest chat: ${channelName}`);
-    currentChannels.push(channel);
-
-    return () => {
-      try {
-        channel.unbind_all();
-        channel.unsubscribe();
-        const index = currentChannels.indexOf(channel);
-        if (index > -1) {
-          currentChannels.splice(index, 1);
-        }
-      } catch (error) {
-        console.error('❌ Error unsubscribing from guest chat channel:', channelName, error);
-      }
-    };
-  } catch (error) {
-    console.error('❌ Error subscribing to guest chat channel:', channelName, error);
-    return () => {};
-  }
-}
-
-/**
  * Mark conversation as read - calls API and updates store
  * ✅ CRITICAL: Only call when conversation_id exists and user is active
  * @param {string|number} conversationId - Must be valid conversation ID
@@ -310,52 +262,119 @@ export function getSubscriptionStatus() {
   };
 }
 
-/**
- * Subscribe to a specific guest chat channel
- * @param {string} channelName - Full channel name from context (e.g., "hotel-slug.guest-chat.room-123")
- * @returns {Function} Cleanup function to unsubscribe
- */
-export function subscribeToGuestChatChannel(channelName) {
-  console.log('🔗 [ChannelRegistry] Subscribing to guest chat channel:', channelName);
-  
-  try {
-    const guestClient = getGuestPusherClient();
-    const channel = guestClient.subscribe(channelName);
-    
-    // Bind to message events and route to eventBus
-    const messageHandler = (data) => {
-      console.log('💬 [GuestChat] Message received:', data);
-      handleIncomingRealtimeEvent({
-        category: 'guest_chat',
-        type: 'message_created',
-        data,
-        channel: channelName
-      });
-    };
-    
-    // Listen for various message event types
-    channel.bind('message_created', messageHandler);
-    channel.bind('guest_message_created', messageHandler);
-    channel.bind('staff_message_created', messageHandler);
-    
-    console.log('✅ [ChannelRegistry] Guest chat channel subscribed:', channelName);
-    
-    // Return cleanup function
-    return () => {
-      console.log('🔌 [ChannelRegistry] Unsubscribing from guest chat channel:', channelName);
-      channel.unbind('message_created', messageHandler);
-      channel.unbind('guest_message_created', messageHandler);
-      channel.unbind('staff_message_created', messageHandler);
-      guestClient.unsubscribe(channelName);
-    };
-  } catch (error) {
-    console.error('❌ [ChannelRegistry] Failed to subscribe to guest chat channel:', error);
-    return () => {}; // Return no-op cleanup
-  }
-}
+
 
 // Track active subscriptions to prevent duplicates
 const activeGuestSubscriptions = new Map();
+const activeStaffGuestChatSubscriptions = new Map();
+
+/**
+ * Subscribe staff to guest chat booking channel 
+ * @param {Object} params - Subscription parameters
+ * @param {string} params.hotelSlug - Hotel slug
+ * @param {string} params.bookingId - Booking ID for scoped channel
+ * @param {string} [params.eventName='realtime_event'] - Event name to bind to
+ * @returns {Function} Cleanup function
+ */
+export function subscribeStaffToGuestChatBooking({ hotelSlug, bookingId, eventName = 'realtime_event' }) {
+  if (!hotelSlug || !bookingId) {
+    console.warn('⚠️ [StaffGuestChat] Missing parameters for staff guest chat booking subscription');
+    return () => {};
+  }
+
+  // Same channel as guests use - staff join the conversation
+  const channelName = `private-hotel-${hotelSlug}-guest-chat-booking-${bookingId}`;
+  const subscriptionKey = `staff:${channelName}`;
+
+  // Subscription deduplication guard
+  if (activeStaffGuestChatSubscriptions.has(subscriptionKey)) {
+    console.log('🔄 [StaffGuestChat] Already subscribed to channel, returning existing cleanup');
+    return activeStaffGuestChatSubscriptions.get(subscriptionKey);
+  }
+
+  console.log('🔗 [StaffGuestChat] SUBSCRIBE:', channelName, {
+    hotelSlug,
+    bookingId,
+    eventName
+  });
+
+  try {
+    // Use staff pusher client with staff auth endpoint
+    const pusher = getPusherClient();
+    if (!pusher) {
+      console.error('❌ [StaffGuestChat] Failed to get staff Pusher client');
+      return () => {};
+    }
+
+    console.log('✅ [StaffGuestChat] Got Pusher client, connection state:', pusher.connection?.state);
+    
+    const channel = pusher.subscribe(channelName);
+    console.log('📡 [StaffGuestChat] Channel subscription initiated for:', channelName);
+
+    // Bind ONLY the unified event (same as guest)
+    channel.bind(eventName, (payload) => {
+      console.log(`💼 [StaffGuestChat] Received unified event on ${channelName}:`, {
+        eventName,
+        payload,
+        timestamp: new Date().toISOString(),
+        payloadType: typeof payload,
+        payloadKeys: payload && typeof payload === 'object' ? Object.keys(payload) : []
+      });
+      
+      // Route through event bus - same as guest events
+      handleIncomingRealtimeEvent({
+        source: "pusher",
+        channel: channel.name,
+        eventName,
+        payload,
+      });
+    });
+
+    // Error handling
+    channel.bind('pusher:subscription_error', (error) => {
+      console.error('❌ [StaffGuestChat] Subscription error for channel:', channelName, {
+        error,
+        hotelSlug,
+        bookingId,
+        channelName
+      });
+      console.log('🔍 [StaffGuestChat] Debug info:', {
+        pusherConnectionState: pusher.connection?.state,
+        pusherSocketId: pusher.connection?.socket_id
+      });
+      activeStaffGuestChatSubscriptions.delete(subscriptionKey);
+    });
+
+    channel.bind('pusher:subscription_succeeded', () => {
+      console.log('✅ [StaffGuestChat] Successfully subscribed to booking channel:', channelName, {
+        hotelSlug,
+        bookingId,
+        eventName,
+        pusherSocketId: pusher.connection?.socket_id
+      });
+    });
+
+    // Create cleanup function
+    const cleanup = () => {
+      console.log('🔌 [StaffGuestChat] UNSUBSCRIBE:', channelName);
+      try {
+        channel.unbind_all();
+        pusher.unsubscribe(channelName);
+      } catch (e) {
+        console.warn('Staff guest chat channel cleanup failed:', e);
+      }
+      activeStaffGuestChatSubscriptions.delete(subscriptionKey);
+    };
+
+    // Store cleanup function to prevent duplicates
+    activeStaffGuestChatSubscriptions.set(subscriptionKey, cleanup);
+
+    return cleanup;
+  } catch (err) {
+    console.error('❌ [StaffGuestChat] Failed to subscribe staff to guest chat booking:', err);
+    return () => {};
+  }
+}
 
 /**
  * Subscribe to guest chat booking channel for token-based authentication
@@ -391,7 +410,9 @@ export function subscribeToGuestChatBooking({ hotelSlug, bookingId, guestToken, 
   });
 
   try {
-    const pusher = getGuestPusherClient(guestToken);
+    const authEndpoint = getPusherAuthEndpoint(hotelSlug, guestToken);
+    
+    const pusher = getGuestPusherClient(guestToken, { authEndpoint });
     if (!pusher) {
       console.error('❌ [GuestChat] Failed to get guest Pusher client');
       return () => {};

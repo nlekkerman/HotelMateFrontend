@@ -176,9 +176,22 @@ function chatReducer(state, action) {
             messages: updatedMessages,
             unread_count: newUnreadCount,
             lastMessage: {
-              message: message.message || '',
+              message: message.message || message.content || '',
               has_attachments: message.attachments && message.attachments.length > 0,
-              timestamp: message.timestamp
+              timestamp: message.timestamp || message.created_at,
+              created_at: message.timestamp || message.created_at,
+              sender: message.sender || message.sender_id,
+              sender_info: message.sender_info,
+              read_by_count: message.read_by_count || 0
+            },
+            last_message: {
+              message: message.message || message.content || '',
+              has_attachments: message.attachments && message.attachments.length > 0,
+              timestamp: message.timestamp || message.created_at,
+              created_at: message.timestamp || message.created_at,
+              sender: message.sender || message.sender_id,
+              sender_info: message.sender_info,
+              read_by_count: message.read_by_count || 0
             },
             updatedAt: message.timestamp || new Date().toISOString()
           }
@@ -199,13 +212,27 @@ function chatReducer(state, action) {
         msg.id === messageId ? { ...msg, ...updatedFields } : msg
       );
 
+      // Update lastMessage if the updated message is the last one
+      const lastMessage = updatedMessages[updatedMessages.length - 1];
+      const updatedLastMessage = lastMessage ? {
+        message: lastMessage.message || lastMessage.content || '',
+        has_attachments: lastMessage.attachments && lastMessage.attachments.length > 0,
+        timestamp: lastMessage.timestamp || lastMessage.created_at,
+        created_at: lastMessage.timestamp || lastMessage.created_at,
+        sender: lastMessage.sender || lastMessage.sender_id,
+        sender_info: lastMessage.sender_info,
+        read_by_count: lastMessage.read_by_count || 0
+      } : conversation.lastMessage;
+
       return {
         ...state,
         conversationsById: {
           ...state.conversationsById,
           [conversationId]: {
             ...conversation,
-            messages: updatedMessages
+            messages: updatedMessages,
+            lastMessage: updatedLastMessage,
+            last_message: updatedLastMessage
           }
         }
       };
@@ -218,6 +245,18 @@ function chatReducer(state, action) {
       if (!conversation) return state;
 
       const updatedMessages = conversation.messages.filter(msg => msg.id !== messageId);
+      
+      // Update lastMessage after deletion
+      const lastMessage = updatedMessages[updatedMessages.length - 1];
+      const updatedLastMessage = lastMessage ? {
+        message: lastMessage.message || lastMessage.content || '',
+        has_attachments: lastMessage.attachments && lastMessage.attachments.length > 0,
+        timestamp: lastMessage.timestamp || lastMessage.created_at,
+        created_at: lastMessage.timestamp || lastMessage.created_at,
+        sender: lastMessage.sender || lastMessage.sender_id,
+        sender_info: lastMessage.sender_info,
+        read_by_count: lastMessage.read_by_count || 0
+      } : null;
 
       return {
         ...state,
@@ -225,7 +264,9 @@ function chatReducer(state, action) {
           ...state.conversationsById,
           [conversationId]: {
             ...conversation,
-            messages: updatedMessages
+            messages: updatedMessages,
+            lastMessage: updatedLastMessage,
+            last_message: updatedLastMessage
           }
         }
       };
@@ -585,9 +626,9 @@ export const chatActions = {
       return;
     }
 
-    // ✅ Handle both legacy and new event formats
-    if (event.category !== 'staff_chat') {
-      console.log('💬 Chat store ignoring non-staff-chat event:', event.category);
+    // ✅ Handle both staff_chat and guest_chat events (guest_chat updates staff conversation lists)
+    if (event.category !== 'staff_chat' && event.category !== 'guest_chat') {
+      console.log('💬 Chat store ignoring non-chat event:', event.category);
       return;
     }
 
@@ -957,6 +998,54 @@ export const chatActions = {
               }
             }));
           }
+        }
+        
+        break;
+      }
+
+      // 🔄 GUEST CHAT EVENTS: Update staff conversation list when guests send messages
+      case 'guest_message_created': {
+        console.log('🔄 [GUEST-TO-STAFF] Processing guest_message_created for staff conversation list update:', { 
+          conversationId: numericConversationId, 
+          payload 
+        });
+
+        if (numericConversationId && payload.id && payload.message) {
+          // Only update conversation metadata, not actual messages (handled by guestChatStore)
+          const lastMessage = {
+            id: payload.id,
+            message: payload.message || payload.text,
+            sender: payload.sender_id || payload.sender,
+            sender_name: payload.sender_name,
+            sender_role: payload.sender_role || 'guest',
+            timestamp: payload.timestamp || new Date().toISOString(),
+            conversation: numericConversationId,
+            is_read: false  // New guest message is unread by staff
+          };
+
+          console.log('🔄 [GUEST-TO-STAFF] Updating staff conversation metadata:', { 
+            conversationId: numericConversationId, 
+            lastMessage
+          });
+
+          globalChatDispatch({
+            type: CHAT_ACTIONS.UPDATE_CONVERSATION_METADATA,
+            payload: {
+              conversationId: numericConversationId,
+              metadata: {
+                lastMessage: lastMessage,
+                last_message: lastMessage  // Ensure both formats
+              }
+            }
+          });
+
+          console.log('✅ [GUEST-TO-STAFF] Staff conversation list updated with guest message');
+        } else {
+          console.warn('⚠️ [GUEST-TO-STAFF] Missing required fields for guest message:', {
+            hasConversationId: !!numericConversationId,
+            hasMessageId: !!payload.id,
+            hasMessage: !!(payload.message || payload.text)
+          });
         }
         
         break;

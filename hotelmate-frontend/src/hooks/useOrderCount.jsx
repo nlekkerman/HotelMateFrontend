@@ -29,7 +29,8 @@ export function OrderCountProvider({ children }) {
     }
     try {
       // Get all orders and count only pending ones (matching RoomServiceOrdersManagement logic)
-      const res = await api.get(buildStaffURL(hotelSlug, 'room_services', '/orders/'));
+      // Fixed: Use correct endpoint path that matches what RoomServiceOrders uses
+      const res = await api.get(`/room_services/${hotelSlug}/orders/`);
       const ordersData = Array.isArray(res.data.results) ? res.data.results : res.data;
       const pendingCount = ordersData.filter(order => order.status === 'pending').length;
       setRoomServiceCount(pendingCount);
@@ -48,7 +49,8 @@ export function OrderCountProvider({ children }) {
     }
     try {
       // Get all breakfast orders and count only pending ones (matching RoomServiceOrdersManagement logic)
-      const res = await api.get(buildStaffURL(hotelSlug, 'room_services', '/breakfast-orders/'));
+      // Fixed: Use correct endpoint path that matches what BreakfastRoomService uses
+      const res = await api.get(`/room_services/${hotelSlug}/breakfast-orders/`);
       const ordersData = Array.isArray(res.data.results) ? res.data.results : res.data;
       const pendingCount = ordersData.filter(order => order.status === 'pending').length;
       setBreakfastCount(pendingCount);

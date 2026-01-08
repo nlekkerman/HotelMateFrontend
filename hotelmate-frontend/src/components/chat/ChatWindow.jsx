@@ -12,6 +12,8 @@ import { messaging } from "@/firebase";
 import { onMessage } from "firebase/messaging";
 import ConfirmationModal from "@/components/modals/ConfirmationModal";
 import SuccessModal from "@/components/modals/SuccessModal";
+import { useChatState, useChatDispatch } from "@/realtime/stores/chatStore.jsx";
+import { CHAT_ACTIONS } from "@/realtime/stores/chatActions.js";
 
 // Import message action utilities
 import {
@@ -128,7 +130,8 @@ const ChatWindow = ({
     setActiveGuestConversation: contextSetActiveGuestConversation,
     activeGuestConversation: contextActiveGuestConversation,
     markGuestConversationReadForStaff: contextMarkGuestConversationReadForStaff,
-    markGuestConversationReadForGuest: contextMarkGuestConversationReadForGuest
+    markGuestConversationReadForGuest: contextMarkGuestConversationReadForGuest,
+    guestChatState // Add this to get access to all guest conversations
   } = useChat();
   
   // Guest chat functions - use context functions if available
@@ -470,6 +473,15 @@ const ChatWindow = ({
       console.log('📡 Guest Pusher channel will be:', `${hotelSlug}-room-${roomNumber}-chat`);
     }
 
+    // Initialize chatStore conversation for staff viewing guest chat
+    if (!isGuest && chatDispatch && conversationId) {
+      console.log('🔄 [UNIFIED] Initializing chatStore conversation for guest-to-staff:', conversationId);
+      chatDispatch({
+        type: CHAT_ACTIONS.SET_ACTIVE_CONVERSATION,
+        payload: { conversationId: parseInt(conversationId) }
+      });
+    }
+    
     // Assign staff first (if staff), then fetch messages
     assignStaffToConversation().then(() => {
       console.log('🔥 [INIT] About to fetch messages for staff API - conversationId:', conversationId);
@@ -494,9 +506,45 @@ const ChatWindow = ({
       return;
     }
 
-    // For authenticated staff, use the global Pusher instance from ChatContext
+    // For authenticated staff, determine if this is a guest conversation or staff conversation
     if (userId && pusherInstance) {
-      const channelName = `${hotelSlug}-conversation-${conversationId}-chat`;
+      let channelName;
+      let isGuestConversation = false;
+      
+      // Detect if this is a guest conversation (has room number)
+      if (roomNumber) {
+        // This is a GUEST conversation - staff viewing guest room chat
+        // Backend sends to: private-hotel-hotel-killarney-guest-chat-booking-BK-2026-0003
+        // We need to find the booking ID for this room/conversation
+        // For now, try both possible channel formats:
+        
+        // Try the booking-based channel format that backend actually uses
+        // We need to get the booking ID somehow - check if it's in the conversation data
+        const guestConversation = activeGuestConversation || guestChatState?.conversationsById?.[conversationId];
+        const bookingId = guestConversation?.booking_id || guestConversation?.bookingId;
+        
+        console.log('🔍 [DEBUG] Guest conversation data:', {
+          conversationId,
+          guestConversation,
+          bookingId,
+          roomNumber
+        });
+        
+        if (bookingId) {
+          channelName = `private-hotel-${hotelSlug}-guest-chat-booking-${bookingId}`;
+          console.log('👥 [STAFF-VIEW-GUEST] Using booking-based channel:', channelName);
+        } else {
+          // Fallback to room-based channel if no booking ID
+          channelName = `${hotelSlug}-room-${roomNumber}-chat`;
+          console.log('👥 [STAFF-VIEW-GUEST] Using room-based channel (fallback):', channelName);
+        }
+        
+        isGuestConversation = true;
+      } else {
+        // This is a STAFF conversation - staff-to-staff chat
+        channelName = `${hotelSlug}-conversation-${conversationId}-chat`;
+        console.log('👨‍💼 [STAFF-TO-STAFF] Staff-to-staff conversation, using staff channel:', channelName);
+      }
       
       // Get existing channel or subscribe to a new one
       let channel = pusherInstance.channel(channelName);
@@ -536,11 +584,19 @@ const ChatWindow = ({
           }
           
           // Check if there's a temp message with the same content (race condition)
-          const tempMsg = prev.find(m => 
-            m.id?.toString().startsWith('temp-') && 
-            m.message === message.message &&
-            m.sender_type === message.sender_type
-          );
+          const tempMsg = prev.find(m => {
+            const isTemp = m.id?.toString().startsWith('temp-') || m.__optimistic;
+            const sameMessage = m.message === message.message;
+            const sameSender = m.sender_type === message.sender_type;
+            
+            // For guest messages, also check guest_id match to avoid cross-guest conflicts
+            if (message.sender_type === 'guest' && m.sender_type === 'guest') {
+              return isTemp && sameMessage && sameSender && 
+                     (!message.guest_id || !m.guest_id || message.guest_id === m.guest_id);
+            }
+            
+            return isTemp && sameMessage && sameSender;
+          });
           
           if (tempMsg) {
             console.log(`🔄 [PUSHER] Replacing temp message ${tempMsg.id} with real ${message.id}`);
@@ -658,6 +714,38 @@ const ChatWindow = ({
       };
     }
   }, [hotelSlug, conversationId, pusherInstance, userId, isGuest]);
+
+  // UNIFIED: Use chatStore for guest-to-staff messages (new system)
+  const chatState = useChatState();
+  const chatDispatch = useChatDispatch();
+  
+  // Get messages from chatStore for this conversation
+  const conversation = chatState.conversationsById?.[conversationId];
+  const storeMessages = conversation?.messages || [];
+  
+  // Sync store messages with local state for guest-to-staff chat
+  useEffect(() => {
+    if (isGuest || !conversationId) return;
+    
+    if (storeMessages.length > 0) {
+      console.log('🔄 [UNIFIED] Syncing', storeMessages.length, 'messages from chatStore to ChatWindow');
+      
+      setMessages(prevMessages => {
+        // Merge store messages with local messages, avoiding duplicates
+        const localMessageIds = new Set(prevMessages.map(m => m.id));
+        const newMessagesFromStore = storeMessages.filter(m => !localMessageIds.has(m.id));
+        
+        if (newMessagesFromStore.length > 0) {
+          console.log('✅ [UNIFIED] Adding', newMessagesFromStore.length, 'new messages from chatStore');
+          const combined = [...prevMessages, ...newMessagesFromStore];
+          // Sort by timestamp to maintain order
+          return combined.sort((a, b) => new Date(a.created_at || a.timestamp) - new Date(b.created_at || b.timestamp));
+        }
+        
+        return prevMessages;
+      });
+    }
+  }, [storeMessages, conversationId, isGuest]);
 
   // Guest Pusher setup - use useCallback to create stable event handlers
   const handleNewStaffMessage = useCallback((data) => {
@@ -1178,7 +1266,8 @@ const ChatWindow = ({
       timestamp: new Date().toISOString(),
       created_at: new Date().toISOString(),
       status: 'pending',
-      has_attachments: filesToSend.length > 0
+      has_attachments: filesToSend.length > 0,
+      __optimistic: true // Mark as optimistic for proper identification
     };
     
     console.log('📤 Creating temp message:', {
@@ -1686,8 +1775,13 @@ const ChatWindow = ({
           // For STAFF view: all staff messages on right, guest messages on left
           // For GUEST view: all guest messages on right, staff messages on left
           const isMine = userId 
-            ? msg.sender_type === "staff"  // Staff view: all staff messages are "mine"
-            : msg.sender_type === "guest"; // Guest view: all guest messages are "mine"
+            ? (msg.sender_type === "staff" && msg.staff === userId) // Staff view: only THIS staff's messages are "mine"
+            : (msg.sender_type === "guest" && (
+                msg.guest_id === guestSession?.getSessionId() || 
+                msg.id?.toString().startsWith('temp-') || 
+                msg.id?.toString().startsWith('local:') ||
+                msg.__optimistic === true
+              )); // Guest view: only THIS guest's messages are "mine"
           
           // Handle deleted messages - show in same position as original with smart text from backend
           if (msg.is_deleted) {
