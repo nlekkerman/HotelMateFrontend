@@ -1,7 +1,7 @@
 // src/realtime/eventBus.js
 import { addNotificationFromEvent } from './stores/notificationsStore.jsx';
 import { attendanceActions } from './stores/attendanceStore.jsx';
-import { chatActions, dispatchUnreadCountsUpdate } from './stores/chatStore.jsx';
+import { chatActions, dispatchUnreadCountsUpdate, getConversationByBookingId } from './stores/chatStore.jsx';
 import { guestChatActions } from './stores/guestChatStore.jsx';
 import { roomServiceActions } from './stores/roomServiceStore.jsx';
 import { serviceBookingActions } from './stores/serviceBookingStore.jsx';
@@ -345,6 +345,24 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
     if (channel?.endsWith('-notifications') && eventName === 'new-guest-message' && !eventName?.startsWith('pusher:')) {
       console.log('🔔 [EventBus] New guest message - creating real-time chat update:', { channel, eventName, payload });
       
+      // Try to find the numeric conversation ID by booking ID or room number
+      const bookingId = payload?.booking_id || payload?.conversation_id;
+      const roomNumber = payload?.room_number;
+      let numericConversationId = null;
+      
+      // Attempt to get conversation ID from chatStore by booking ID
+      if (bookingId && typeof getConversationByBookingId === 'function') {
+        try {
+          const conversation = getConversationByBookingId(bookingId);
+          if (conversation?.id || conversation?.conversation_id) {
+            numericConversationId = conversation.id || conversation.conversation_id;
+            console.log('🔍 [EventBus] Found numeric conversation ID for booking:', { bookingId, numericConversationId });
+          }
+        } catch (error) {
+          console.warn('⚠️ [EventBus] Error looking up conversation by booking ID:', error);
+        }
+      }
+      
       // Create a guest_chat event to trigger real-time message updates in the UI
       const guestChatEvent = {
         category: 'guest_chat',
@@ -355,7 +373,8 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           sender_id: payload?.guest_id,
           sender_name: payload?.guest_name || 'Guest',
           sender_role: 'guest',
-          conversation_id: payload?.conversation_id,
+          // Use the numeric conversation ID if found, otherwise keep the booking ID
+          conversation_id: numericConversationId || payload?.conversation_id,
           booking_id: payload?.booking_id,
           room_number: payload?.room_number,
           timestamp: new Date().toISOString()
@@ -364,7 +383,7 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           channel,
           eventName,
           event_id: payload?.event_id || `guest-msg-${Date.now()}`,
-          conversation_id: payload?.conversation_id
+          conversation_id: numericConversationId || payload?.conversation_id
         },
         source,
         timestamp: new Date().toISOString()

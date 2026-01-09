@@ -607,6 +607,39 @@ export function dispatchUnreadCountsUpdate(payload) {
   });
 }
 
+// Helper function to find conversation by booking ID for guest message mapping
+export function getConversationByBookingId(bookingId) {
+  if (!globalChatGetState) {
+    console.warn('⚠️ [chatStore] getConversationByBookingId called before chat state initialized');
+    return null;
+  }
+
+  const state = globalChatGetState();
+  if (!state?.conversationsById) {
+    console.warn('⚠️ [chatStore] getConversationByBookingId called but no conversations loaded');
+    return null;
+  }
+
+  // Search through all conversations to find one with matching booking_id
+  const conversations = Object.values(state.conversationsById);
+  const conversation = conversations.find(conv => 
+    conv?.booking_id === bookingId || 
+    conv?.bookingId === bookingId ||
+    // Also try exact ID match as fallback
+    conv?.id === bookingId ||
+    conv?.conversation_id === bookingId
+  );
+
+  console.log('🔍 [chatStore] Looking up conversation by booking ID:', { 
+    bookingId, 
+    found: !!conversation, 
+    conversationId: conversation?.id || conversation?.conversation_id,
+    totalConversations: conversations.length
+  });
+
+  return conversation || null;
+}
+
 // Domain handler for eventBus
 export const chatActions = {
   _processedEventIds: new Set(), // Event ID-based deduplication
