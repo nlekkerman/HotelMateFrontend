@@ -108,7 +108,22 @@ const ChatSidebar = ({
                     color: '#333'
                   }}
                 >
-                  {conv.last_message || conv.lastMessage || <em>No messages yet</em>}
+                  {(() => {
+                    const lastMsg = conv.last_message || conv.lastMessage;
+                    if (!lastMsg) return <em>No messages yet</em>;
+                    
+                    // Handle case where last_message is an object with body property
+                    if (typeof lastMsg === 'object' && lastMsg.body) {
+                      return lastMsg.body;
+                    }
+                    
+                    // Handle case where last_message is a string
+                    if (typeof lastMsg === 'string') {
+                      return lastMsg;
+                    }
+                    
+                    return <em>No messages yet</em>;
+                  })()}
                 </div>
                 <small style={{ fontSize: '0.7rem', fontStyle: 'italic', color: '#6c757d' }}>
                   {((conv.unread_count || conv.unreadCountForGuest) > 0) ? 'Not seen' : 'Seen'}

@@ -225,6 +225,59 @@ export const ChatProvider = ({ children }) => {
     }
   }, [guestChatState?.context?.conversation_id, user?.hotel_slug]); // More specific dependencies
 
+  // Sync conversations from chatStore (staff chat store) for real-time updates
+  useEffect(() => {
+    if (!chatStore?.conversationsById) return;
+
+    console.log('🔄 [ChatContext] Syncing with chatStore real-time updates:', Object.keys(chatStore.conversationsById).length);
+    
+    const storeConversations = Object.values(chatStore.conversationsById);
+    
+    if (storeConversations.length > 0) {
+      // Convert chatStore format to ChatContext format and merge with existing conversations
+      setConversations(prevConversations => {
+        const updatedConversations = [...prevConversations];
+        
+        storeConversations.forEach(storeConv => {
+          const existingIndex = updatedConversations.findIndex(c => 
+            (c.conversation_id || c.id) === (storeConv.conversation_id || storeConv.id)
+          );
+          
+          const normalizedStoreConv = {
+            conversation_id: storeConv.conversation_id || storeConv.id,
+            id: storeConv.conversation_id || storeConv.id,
+            room_number: storeConv.room_number || storeConv.roomNumber,
+            roomNumber: storeConv.room_number || storeConv.roomNumber,
+            guest_name: storeConv.guest_name || storeConv.guestName,
+            guestName: storeConv.guest_name || storeConv.guestName,
+            guest_id: storeConv.guest_id || storeConv.guestId,
+            guestId: storeConv.guest_id || storeConv.guestId,
+            last_message: storeConv.last_message || storeConv.lastMessage,
+            lastMessage: storeConv.last_message || storeConv.lastMessage,
+            last_message_time: storeConv.last_message_time || storeConv.updatedAt,
+            updatedAt: storeConv.last_message_time || storeConv.updatedAt,
+            unread_count: storeConv.unread_count || 0,
+            unreadCount: storeConv.unread_count || 0,
+          };
+          
+          if (existingIndex >= 0) {
+            // Update existing conversation
+            updatedConversations[existingIndex] = {
+              ...updatedConversations[existingIndex],
+              ...normalizedStoreConv
+            };
+          } else {
+            // Add new conversation
+            updatedConversations.push(normalizedStoreConv);
+          }
+        });
+        
+        console.log('✅ [ChatContext] Conversations updated from chatStore:', updatedConversations.length);
+        return updatedConversations;
+      });
+    }
+  }, [chatStore?.conversationsById, chatStore?.lastUpdate]); // Listen to chatStore changes
+
   // Sync conversations from guestChatStore realtime updates
   useEffect(() => {
     // Get hotel slug from either authenticated user, URL params, or query params
