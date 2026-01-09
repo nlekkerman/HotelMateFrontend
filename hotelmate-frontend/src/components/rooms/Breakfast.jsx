@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -20,16 +20,37 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
   const roomNumber = propRoomNumber || params.roomNumber;
   const hotelIdentifier = propHotelIdentifier || params.hotelIdentifier;
   const [items, setItems] = useState([]);
-  const [selectedItems, setSelectedItems] = useState({}); // { itemId: { quantity: 1, notes: "" } }
+  const [orderQtyById, setOrderQtyById] = useState({}); // { itemId: quantity }
+  const [orderNotes, setOrderNotes] = useState("");
   const [timeSlot, setTimeSlot] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [showOrders, setShowOrders] = useState(false);
+  const [showReview, setShowReview] = useState(false);
+  const [showPolicy, setShowPolicy] = useState(false);
+  const [activeTab, setActiveTab] = useState("");
+  const categoryRefs = useRef({});
   
   // Use room service store for real-time updates
   const roomServiceState = useRoomServiceState();
+
+  // Derived values
+  const selectedItemsList = items.filter(item => (orderQtyById[item.id] || 0) > 0);
+  const totalCount = Object.values(orderQtyById).reduce((sum, qty) => sum + (qty || 0), 0);
+
+  // Group items by category
+  const groupedItems = items.reduce((acc, item) => {
+    const category = item.category || "Other";
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(item);
+    return acc;
+  }, {});
+
+  // Define category order for display
+  const categoryOrder = ["Mains", "Hot Buffet", "Cold Buffet", "Breads", "Condiments", "Drinks", "Other"];
+  const availableCategories = categoryOrder.filter(cat => groupedItems[cat]?.length > 0);
   // Fetch breakfast items
   useEffect(() => {
     api
@@ -101,54 +122,73 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
     }
   }, [roomServiceState, roomNumber, hotelIdentifier]);
 
-  // Handle item checkbox toggle
-  const toggleItem = (itemId) => {
-    setSelectedItems((prev) => {
-      const newSelected = { ...prev };
-      if (newSelected[itemId]) {
-        delete newSelected[itemId];
-      } else {
-        newSelected[itemId] = { quantity: 1, notes: "" };
+  // Quantity handlers
+  const incrementQty = (itemId) => {
+    setOrderQtyById(prev => ({
+      ...prev,
+      [itemId]: (prev[itemId] || 0) + 1
+    }));
+  };
+
+  const decrementQty = (itemId) => {
+    setOrderQtyById(prev => {
+      const newQty = Math.max(0, (prev[itemId] || 0) - 1);
+      if (newQty === 0) {
+        const { [itemId]: _, ...rest } = prev;
+        return rest;
       }
-      return newSelected;
+      return { ...prev, [itemId]: newQty };
     });
   };
 
-  // Handle quantity change
-  const handleQuantityChange = (itemId, qty) => {
-    setSelectedItems((prev) => ({
-      ...prev,
-      [itemId]: { ...prev[itemId], quantity: qty },
-    }));
+  // Tab scrolling
+  const scrollToCategory = (category) => {
+    const element = categoryRefs.current[category];
+    if (element) {
+      const headerOffset = 160; // Account for sticky headers
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+      
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
+      });
+    }
   };
 
-  // Handle notes change
-  const handleNotesChange = (itemId, notes) => {
-    setSelectedItems((prev) => ({
-      ...prev,
-      [itemId]: { ...prev[itemId], notes },
-    }));
-  };
+  // Intersection observer for active tab
+  useEffect(() => {
+    const observers = [];
+    
+    availableCategories.forEach(category => {
+      const element = categoryRefs.current[category];
+      if (element) {
+        const observer = new IntersectionObserver(
+          ([entry]) => {
+            if (entry.isIntersecting) {
+              setActiveTab(category);
+            }
+          },
+          { 
+            rootMargin: '-160px 0px -60% 0px',
+            threshold: 0.1
+          }
+        );
+        observer.observe(element);
+        observers.push(observer);
+      }
+    });
 
-  // Group items by category
-  const groupedItems = items.reduce((acc, item) => {
-    const category = item.category || "Other";
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(item);
-    return acc;
-  }, {});
-
-  // Define category order for display
-  const categoryOrder = ["Mains", "Hot Buffet", "Cold Buffet", "Breads", "Condiments", "Drinks", "Other"];
+    return () => observers.forEach(obs => obs.disconnect());
+  }, [availableCategories]);
 
   // Submit order
   const handleSubmit = async () => {
     setLoading(true);
 
-    const itemsPayload = Object.entries(selectedItems).map(([id, data]) => ({
-      item_id: parseInt(id),
-      quantity: data.quantity,
-      notes: data.notes || undefined, // Only include if not empty
+    const itemsPayload = selectedItemsList.map(item => ({
+      item_id: item.id,
+      quantity: orderQtyById[item.id],
     }));
 
     const payload = {
@@ -178,8 +218,10 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
       });
       
       setSubmitted(true);
-      setSelectedItems({});
+      setOrderQtyById({});
+      setOrderNotes("");
       setTimeSlot("");
+      setShowReview(false);
     } catch (error) {
       const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || "Failed to submit order";
       alert(errorMsg);
@@ -205,166 +247,287 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
     }
   };
   return (
-    <div className="max-w-3xl mx-auto p-4">
-      <h2 className="text-2xl font-bold mb-4">
-        Breakfast Menu for Room {roomNumber}
-      </h2>
-         <div>
-      <div className="breakfast-price-for-non-included bg-warning rounded bg-opacity-50 p-2 mb-2">If you do not have included breakfast you will be charged <strong>17.50 Euro</strong> for Aduld and <strong>12.50 Euro</strong> for a child. By sending this order you are agree with stated above </div>
-      
-      {/* Button to toggle and load orders */}
-      <div className="d-flex justify-content-center ">
-      <button
-        onClick={() => {
-          if (!showOrders) fetchOrders();
-          setShowOrders(!showOrders);
-        }}
-        className="mt-6 bg-green-600 custom-button px-6 py-2 rounded mb-4 hover:bg-green-700 disabled:bg-gray-300"
-      >
-        {showOrders ? "Hide Your Breakfast Orders" : "View Your Breakfast Orders"}
-      </button>
-</div>
-      {loadingOrders && <p>Loading orders...</p>}
+    <div className="min-h-screen bg-gray-50 pb-24">
+      {/* Sticky Header */}
+      <div className="sticky top-0 bg-white border-b border-gray-200 z-40 px-4 py-3">
+        <div className="max-w-3xl mx-auto flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">
+              Breakfast · Room {roomNumber}
+            </h1>
+            <p className="text-sm text-gray-600">
+              {timeSlot || "Select delivery time"}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowPolicy(true)}
+            className="text-gray-500 hover:text-gray-700 text-xl"
+            title="Pricing Information"
+          >
+            ℹ️
+          </button>
+        </div>
+      </div>
 
-      {showOrders && !loadingOrders && <ViewOrders orders={orders} />}
-    </div>
+      {/* Sticky Category Tabs */}
+      <div className="sticky top-16 bg-white border-b border-gray-200 z-30">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex overflow-x-auto scrollbar-hide px-4">
+            {availableCategories.map((category) => (
+              <button
+                key={category}
+                onClick={() => scrollToCategory(category)}
+                className={`flex-shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === category
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
-      {/* Display items grouped by category */}
-      {categoryOrder.map((category) => {
-        const categoryItems = groupedItems[category];
-        if (!categoryItems || categoryItems.length === 0) return null;
+      {/* Main Content */}
+      <div className="max-w-3xl mx-auto px-4 py-6">
+        {/* View Orders Section */}
+        <div className="mb-8">
+          <div className="flex justify-center">
+            <button
+              onClick={() => {
+                if (!showOrders) fetchOrders();
+                setShowOrders(!showOrders);
+              }}
+              className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 disabled:bg-gray-300"
+            >
+              {showOrders ? "Hide Your Breakfast Orders" : "View Your Breakfast Orders"}
+            </button>
+          </div>
+          {loadingOrders && <p className="text-center mt-4">Loading orders...</p>}
+          {showOrders && !loadingOrders && <ViewOrders orders={orders} />}
+        </div>
 
-        return (
-          <div key={category} className="mb-6">
-            <h3 className="text-xl font-bold mb-3 pb-2 border-b-2 border-gray-300">
-              {category}
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {categoryItems.map((item) => {
-                const isOutOfStock = item.is_on_stock === false;
-                const isSelected = !!selectedItems[item.id];
+        {/* Category Sections */}
+        {availableCategories.map((category) => {
+          const categoryItems = groupedItems[category];
+          
+          return (
+            <div 
+              key={category} 
+              ref={el => categoryRefs.current[category] = el}
+              id={`cat-${category.toLowerCase().replace(/\s+/g, '-')}`}
+              className="mb-8"
+            >
+              <h3 className="text-xl font-bold mb-4 pb-2 border-b-2 border-gray-300">
+                {category}
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {categoryItems.map((item) => {
+                  const isOutOfStock = item.is_on_stock === false;
+                  const currentQty = orderQtyById[item.id] || 0;
 
-                return (
-                  <div 
-                    key={item.id} 
-                    className={`border rounded-xl p-4 shadow-sm ${isOutOfStock ? 'opacity-50 bg-gray-100' : ''}`}
-                  >
-                    {item.image && (
-                      <div className="relative">
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-full h-40 object-cover rounded-md mb-2"
-                        />
-                        {isOutOfStock && (
-                          <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded text-xs font-bold">
-                            OUT OF STOCK
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <h4 className="text-lg font-semibold">{item.name}</h4>
-                    <p className="text-sm text-gray-600">{item.description}</p>
-
-                    {isOutOfStock ? (
-                      <div className="mt-2 text-red-600 font-semibold text-sm">
-                        <i className="bi bi-x-circle me-1"></i>
-                        Currently unavailable
-                      </div>
-                    ) : (
-                      <>
-                        <div className="mt-3">
-                          <label className="flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              className="mr-2"
-                              checked={isSelected}
-                              onChange={() => toggleItem(item.id)}
-                            />
-                            <span className="font-medium">Add to order</span>
-                          </label>
-
-                          {isSelected && (
-                            <div className="mt-2 space-y-2">
-                              <div className="flex items-center gap-2">
-                                <label className="text-sm font-medium">Quantity:</label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={selectedItems[item.id].quantity}
-                                  onChange={(e) =>
-                                    handleQuantityChange(item.id, parseInt(e.target.value) || 1)
-                                  }
-                                  className="border rounded px-2 py-1 w-16"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium block mb-1">
-                                  Special instructions (optional):
-                                </label>
-                                <input
-                                  type="text"
-                                  placeholder="e.g., No mushrooms please"
-                                  value={selectedItems[item.id].notes}
-                                  onChange={(e) => handleNotesChange(item.id, e.target.value)}
-                                  className="border rounded px-2 py-1 w-full text-sm"
-                                />
-                              </div>
+                  return (
+                    <div 
+                      key={item.id} 
+                      className={`border rounded-xl p-4 shadow-sm bg-white ${isOutOfStock ? 'opacity-50' : ''}`}
+                    >
+                      {item.image && (
+                        <div className="relative">
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-full h-40 object-cover rounded-md mb-2"
+                          />
+                          {isOutOfStock && (
+                            <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded text-xs font-bold">
+                              OUT OF STOCK
                             </div>
                           )}
                         </div>
-                      </>
-                    )}
+                      )}
+                      <h4 className="text-lg font-semibold mb-2">{item.name}</h4>
+                      <p className="text-sm text-gray-600 mb-3">{item.description}</p>
 
-                    {isAdmin && (
-                      <div className="mt-2">
-                        <label>
-                          <input
-                            type="checkbox"
-                            className="mr-2"
-                            checked={item.is_on_stock}
-                            onChange={() => alert("Admin stock toggle logic needed")}
-                          />
-                          In Stock
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                      {isOutOfStock ? (
+                        <div className="text-red-600 font-semibold text-sm">
+                          Currently unavailable
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Quantity:</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => decrementQty(item.id)}
+                              disabled={currentQty === 0}
+                              className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-lg font-bold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              −
+                            </button>
+                            <span className="w-8 text-center font-medium">{currentQty}</span>
+                            <button
+                              onClick={() => incrementQty(item.id)}
+                              className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-lg font-bold hover:bg-blue-700"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {isAdmin && (
+                        <div className="mt-2">
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              className="mr-2"
+                              checked={item.is_on_stock}
+                              onChange={() => alert("Admin stock toggle logic needed")}
+                            />
+                            <span className="text-sm">In Stock</span>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        );
-      })}
-
-      <div className="mt-6 d-flex justify-content-evenly">
-        
-        <select
-          value={timeSlot}
-          onChange={(e) => setTimeSlot(e.target.value)}
-          className="border rounded p-2 w-full max-w-xs"
-        >
-          <option value="">-- Select a Time Slot --</option>
-          {TIME_SLOTS.map((slot) => (
-            <option key={slot} value={slot}>
-              {slot}
-            </option>
-          ))}
-        </select>
-          <button
-        onClick={handleSubmit}
-        disabled={loading || Object.keys(selectedItems).length === 0}
-        className="mt-6 bg-blue-600 custom-button  px-6 py-2 rounded hover:bg-blue-700 disabled:bg-gray-300"
-      >
-        {loading ? "Submitting..." : "Submit Breakfast Order"}
-      </button>
-
+          );
+        })}
       </div>
 
-    
+      {/* Sticky Bottom Order Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50">
+        <div className="max-w-3xl mx-auto flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            {totalCount > 0 ? `${totalCount} item${totalCount !== 1 ? 's' : ''}` : 'No items selected'}
+          </div>
+          <button
+            onClick={() => setShowReview(true)}
+            disabled={totalCount === 0}
+            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            Review Order
+          </button>
+        </div>
+      </div>
+
+      {/* Policy Modal */}
+      {showPolicy && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-auto">
+            <h3 className="text-lg font-bold mb-4">Breakfast Pricing</h3>
+            <p className="text-sm text-gray-700 mb-4">
+              If you do not have included breakfast you will be charged <strong>17.50 Euro</strong> for Adult and <strong>12.50 Euro</strong> for a child. By sending this order you agree with the stated above.
+            </p>
+            <button
+              onClick={() => setShowPolicy(false)}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Review Order Sheet */}
+      {showReview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
+          <div className="bg-white w-full max-h-[80vh] overflow-y-auto rounded-t-2xl">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold">Review Your Order</h3>
+                <button
+                  onClick={() => setShowReview(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Selected Items */}
+              <div className="mb-6">
+                <h4 className="font-medium mb-3">Selected Items ({totalCount})</h4>
+                <div className="space-y-3">
+                  {selectedItemsList.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <div>
+                        <p className="font-medium">{item.name}</p>
+                        {item.description && (
+                          <p className="text-sm text-gray-600">{item.description}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => decrementQty(item.id)}
+                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-lg font-bold hover:bg-gray-50"
+                        >
+                          −
+                        </button>
+                        <span className="w-8 text-center font-medium">{orderQtyById[item.id]}</span>
+                        <button
+                          onClick={() => incrementQty(item.id)}
+                          className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-lg font-bold hover:bg-blue-700"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Time Slot */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Delivery Time
+                </label>
+                <select
+                  value={timeSlot}
+                  onChange={(e) => setTimeSlot(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2"
+                >
+                  <option value="">-- Select a Time Slot --</option>
+                  {TIME_SLOTS.map((slot) => (
+                    <option key={slot} value={slot}>
+                      {slot}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Global Notes */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Special Instructions (Optional)
+                </label>
+                <textarea
+                  value={orderNotes}
+                  onChange={(e) => setOrderNotes(e.target.value)}
+                  placeholder="e.g., No mushrooms please, extra butter..."
+                  className="w-full border border-gray-300 rounded px-3 py-2 h-20 resize-none"
+                />
+              </div>
+
+              {/* Submit Button */}
+              <button
+                onClick={handleSubmit}
+                disabled={loading || totalCount === 0}
+                className="w-full bg-blue-600 text-white py-3 rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+              >
+                {loading ? "Submitting..." : "Submit Breakfast Order"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Message */}
       {submitted && (
-        <div className="mt-4 text-green-600 font-semibold">
-          Order submitted successfully!
+        <div className="fixed bottom-24 left-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-40">
+          <p className="font-medium text-center">Order submitted successfully!</p>
         </div>
       )}
     </div>
