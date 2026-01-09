@@ -276,7 +276,14 @@ export const ChatProvider = ({ children }) => {
         return updatedConversations;
       });
     }
-  }, [chatStore?.conversationsById, chatStore?.lastUpdate]); // Listen to chatStore changes
+  }, [
+    chatStore?.conversationsById,
+    // Create a deep dependency to detect message changes
+    Object.values(chatStore?.conversationsById || {}).map(c => 
+      `${c.id}-${c.lastMessage || c.last_message}-${c.updatedAt}`
+    ).join(',')
+  ]);
+
 
   // Sync conversations from guestChatStore realtime updates
   useEffect(() => {
