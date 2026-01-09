@@ -774,11 +774,12 @@ export const chatActions = {
               normalized_file_url: normalizedAttachments[0]?.file_url
             } : null
           });
-          console.log('🚀 [chatStore] DISPATCHING RECEIVE_MESSAGE:', { 
+          console.log('🚀 [chatStore] DISPATCHING RECEIVE_MESSAGE from realtime_staff_chat_message_created:', { 
             conversationId: numericConversationId, 
             messageId: payload.id, 
-            messageText: text,
-            hasAttachments: normalizedAttachments.length > 0
+            messageText: text?.substring(0, 50),
+            hasAttachments: normalizedAttachments.length > 0,
+            sender: payload.sender_id || payload.sender
           });
           
           globalChatDispatch({
@@ -789,7 +790,7 @@ export const chatActions = {
             },
           });
           
-          console.log('✅ [chatStore] RECEIVE_MESSAGE dispatch completed successfully');
+          console.log('✅ [chatStore] RECEIVE_MESSAGE dispatch completed successfully for realtime message:', payload.id);
         } else if (payload.notification && payload.sender_id) {
           // FCM fallback
           const fcmMessage = {

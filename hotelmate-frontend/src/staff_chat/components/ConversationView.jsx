@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { fetchMessages, sendMessage, uploadFiles, deleteMessage, deleteAttachment } from '../services/staffChatApi';
 import { useChatState, useChatDispatch } from '@/realtime/stores/chatStore.jsx';
+import { subscribeToStaffChatConversation } from '@/realtime/channelRegistry.js';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import MessageActions from './MessageActions';
@@ -99,6 +100,31 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
       setCurrentConversationId(conversation.id);
     }
   }, [conversation?.id, chatState.activeConversationId, chatDispatch, setCurrentConversationId]);
+
+  // Subscribe to active conversation's Pusher channel for real-time updates
+  useEffect(() => {
+    if (!hotelSlug || !conversation?.id) {
+      return;
+    }
+
+    if (!import.meta.env.PROD) {
+      console.log('🔗 [ConversationView] Subscribing to staff chat channel:', {
+        hotelSlug,
+        conversationId: conversation.id,
+        channelName: `${hotelSlug}.staff-chat.${conversation.id}`
+      });
+    }
+
+    // Subscribe to the conversation's Pusher channel
+    const cleanup = subscribeToStaffChatConversation(hotelSlug, conversation.id);
+
+    return () => {
+      if (!import.meta.env.PROD) {
+        console.log('🧹 [ConversationView] Cleaning up staff chat subscription:', conversation.id);
+      }
+      cleanup();
+    };
+  }, [hotelSlug, conversation?.id]);
 
   // Handle realtime events from store (messages automatically update via store state)
   useEffect(() => {

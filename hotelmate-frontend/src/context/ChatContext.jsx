@@ -240,29 +240,53 @@ export const ChatProvider = ({ children }) => {
         updatedAt: c.updatedAt
       })));
       
-      // Force update conversations with latest chatStore data
-      setConversations(storeConversations.map(storeConv => ({
-        conversation_id: storeConv.conversation_id || storeConv.id,
-        id: storeConv.conversation_id || storeConv.id,
-        room_number: storeConv.room_number || storeConv.roomNumber,
-        roomNumber: storeConv.room_number || storeConv.roomNumber,
-        guest_name: storeConv.guest_name || storeConv.guestName,
-        guestName: storeConv.guest_name || storeConv.guestName,
-        guest_id: storeConv.guest_id || storeConv.guestId,
-        guestId: storeConv.guest_id || storeConv.guestId,
-        last_message: storeConv.last_message || storeConv.lastMessage,
-        lastMessage: storeConv.last_message || storeConv.lastMessage,
-        last_message_time: storeConv.last_message_time || storeConv.updatedAt,
-        updatedAt: storeConv.last_message_time || storeConv.updatedAt,
-        unread_count: storeConv.unread_count || 0,
-        unreadCount: storeConv.unread_count || 0,
-        room: {
-          number: storeConv.room_number || storeConv.roomNumber,
-          guest_name: storeConv.guest_name || storeConv.guestName
-        }
-      })));
-      
-      console.log('✅ [ChatContext] Conversations replaced with chatStore data');
+      // Merge store conversations with existing conversations, preserving other data
+      setConversations(prevConversations => {
+        const updatedConversations = [...prevConversations];
+        
+        storeConversations.forEach(storeConv => {
+          const existingIndex = updatedConversations.findIndex(c => 
+            (c.conversation_id || c.id) === (storeConv.conversation_id || storeConv.id)
+          );
+          
+          const normalizedStoreConv = {
+            conversation_id: storeConv.conversation_id || storeConv.id,
+            id: storeConv.conversation_id || storeConv.id,
+            room_number: storeConv.room_number || storeConv.roomNumber,
+            roomNumber: storeConv.room_number || storeConv.roomNumber,
+            guest_name: storeConv.guest_name || storeConv.guestName,
+            guestName: storeConv.guest_name || storeConv.guestName,
+            guest_id: storeConv.guest_id || storeConv.guestId,
+            guestId: storeConv.guest_id || storeConv.guestId,
+            last_message: storeConv.last_message || storeConv.lastMessage,
+            lastMessage: storeConv.last_message || storeConv.lastMessage,
+            last_message_time: storeConv.last_message_time || storeConv.updatedAt,
+            updatedAt: storeConv.last_message_time || storeConv.updatedAt,
+            unread_count: storeConv.unread_count || 0,
+            unreadCount: storeConv.unread_count || 0,
+          };
+          
+          if (existingIndex >= 0) {
+            // Update existing conversation, preserving other fields
+            updatedConversations[existingIndex] = {
+              ...updatedConversations[existingIndex],
+              ...normalizedStoreConv
+            };
+          } else {
+            // Add new conversation with room data
+            updatedConversations.push({
+              ...normalizedStoreConv,
+              room: {
+                number: storeConv.room_number || storeConv.roomNumber,
+                guest_name: storeConv.guest_name || storeConv.guestName
+              }
+            });
+          }
+        });
+        
+        console.log('✅ [ChatContext] Conversations updated from chatStore:', updatedConversations.length);
+        return updatedConversations;
+      });
     }
   }, [JSON.stringify(chatStore?.conversationsById)]);
 

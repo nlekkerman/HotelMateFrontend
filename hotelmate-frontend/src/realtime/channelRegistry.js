@@ -170,14 +170,21 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
     });
     
     channel.bind('pusher:subscription_succeeded', () => {
-      console.log('✅ [channelRegistry] Successfully subscribed to:', channelName);
+      if (!import.meta.env.PROD) {
+        console.log('✅ [channelRegistry] Successfully subscribed to staff chat channel:', channelName);
+      }
     });
     
     channel.bind_global((eventName, payload) => {
-     
-      
-      if (!eventName.startsWith('pusher:')) {
-        console.log('🔥 [channelRegistry] Non-system event received:', { channel: channelName, eventName, payloadType: typeof payload });
+      if (!eventName.startsWith('pusher:') && !import.meta.env.PROD) {
+        console.log('📨 [channelRegistry] Staff chat event received:', { 
+          channel: channelName, 
+          eventName, 
+          isMessageCreated: eventName === 'realtime_staff_chat_message_created',
+          payloadType: typeof payload,
+          messageId: payload?.id,
+          messageText: payload?.message?.substring(0, 50)
+        });
       }
       
       // Route all events to the event bus

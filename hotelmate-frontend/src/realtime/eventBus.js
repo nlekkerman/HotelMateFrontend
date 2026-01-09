@@ -197,7 +197,15 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
 
     // SUPPORT raw Pusher event (e.g. direct message payload) - ALWAYS process staff-chat events
     if (channel?.includes("staff-chat") && eventName?.startsWith("realtime_staff_chat_")) {
-        console.log('🔥 [EventBus] Processing RAW staff-chat event:', { eventName, channel, payload });
+        if (!import.meta.env.PROD) {
+          console.log('📨 [EventBus] Processing staff-chat realtime event:', { 
+            eventName, 
+            channel, 
+            isMessageCreated: eventName === 'realtime_staff_chat_message_created',
+            messageId: payload?.id,
+            conversationId: payload?.conversation_id || payload?.conversation
+          });
+        }
         const normalized = {
           category: "staff_chat",
           type: eventName,
@@ -206,7 +214,12 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           source,
           timestamp: new Date().toISOString()
         };
-        console.log('🚀 [EventBus] Normalized staff-chat event:', normalized);
+        if (!import.meta.env.PROD && eventName === 'realtime_staff_chat_message_created') {
+          console.log('🚀 [EventBus] Routing realtime_staff_chat_message_created to stores:', {
+            conversationId: payload?.conversation_id || payload?.conversation,
+            messageId: payload?.id
+          });
+        }
         if (maybeHandleStaffChatUnreadUpdate(normalized)) {
           return;
         }
