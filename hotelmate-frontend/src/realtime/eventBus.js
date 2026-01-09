@@ -358,21 +358,28 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
     if (channel?.endsWith('-notifications') && eventName === 'new-guest-message' && !eventName?.startsWith('pusher:')) {
       console.log('🔔 [EventBus] New guest message - creating real-time chat update:', { channel, eventName, payload });
       
-      // Create a guest_chat event to trigger real-time message updates in the UI
+      // Create BOTH guest_chat AND staff_chat events to ensure message appears in open staff chat window
+      const basePayload = {
+        id: payload?.message_id || payload?.id || `msg-${Date.now()}`,
+        message: payload?.guest_message || payload?.message || 'New message',
+        sender_id: payload?.guest_id,
+        sender: payload?.guest_id, // For staff_chat compatibility
+        sender_name: payload?.sender_name || 'Guest',
+        sender_role: 'guest',
+        sender_type: 'guest', // For staff_chat compatibility
+        conversation_id: payload?.conversation_id,
+        conversation: payload?.conversation_id, // For staff_chat compatibility
+        booking_id: payload?.booking_id,
+        room_number: payload?.room_number,
+        timestamp: payload?.timestamp || new Date().toISOString(),
+        created_at: payload?.timestamp || new Date().toISOString()
+      };
+
+      // 1. Create guest_chat event for guest-specific handling
       const guestChatEvent = {
         category: 'guest_chat',
         type: 'guest_message_created',
-        payload: {
-          id: payload?.message_id || `msg-${Date.now()}`,
-          message: payload?.guest_message || payload?.message || 'New message',
-          sender_id: payload?.guest_id,
-          sender_name: payload?.sender_name || 'Guest',
-          sender_role: 'guest',
-          conversation_id: payload?.conversation_id, // Now correctly numeric from backend
-          booking_id: payload?.booking_id,
-          room_number: payload?.room_number,
-          timestamp: payload?.timestamp || new Date().toISOString()
-        },
+        payload: basePayload,
         meta: {
           channel,
           eventName,
@@ -385,6 +392,25 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
       
       console.log('🚀 [EventBus] Routing guest message as guest_chat event:', guestChatEvent);
       routeToDomainStores(guestChatEvent);
+
+      // 2. ALSO create staff_chat event to ensure message appears in open staff chat window
+      const staffChatEvent = {
+        category: 'staff_chat',
+        type: 'realtime_staff_chat_message_created',
+        payload: basePayload,
+        meta: {
+          channel,
+          eventName: 'realtime_staff_chat_message_created', // Override to match expected event name
+          event_id: payload?.event_id || `guest-to-staff-${Date.now()}`,
+          conversation_id: payload?.conversation_id
+        },
+        source,
+        timestamp: payload?.timestamp || new Date().toISOString()
+      };
+      
+      console.log('🚀 [EventBus] ALSO routing guest message as staff_chat event for open chat window:', staffChatEvent);
+      routeToDomainStores(staffChatEvent);
+      
       return;
     }
 
