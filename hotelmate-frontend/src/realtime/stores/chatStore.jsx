@@ -704,7 +704,10 @@ export const chatActions = {
         const hasId = payload.id;
         const hasMessage = payload.message || payload.text;
         const hasSender = payload.sender || payload.sender_id;
-        const hasFullMessage = hasId && hasMessage && hasSender;
+        const isGuestMessage = payload.sender_type === 'guest' || payload.sender_role === 'guest';
+        
+        // For guest messages, we can be more flexible with sender validation
+        const hasFullMessage = hasId && hasMessage && (hasSender || isGuestMessage);
 
         console.log('🔥 [chatStore] Message validation details:', { 
           hasId: !!hasId, 
@@ -713,6 +716,7 @@ export const chatActions = {
           messageValue: hasMessage,
           hasSender: !!hasSender, 
           senderValue: hasSender,
+          isGuestMessage,
           hasFullMessage 
         });
 
@@ -736,7 +740,8 @@ export const chatActions = {
           const mappedMessage = {
             id: payload.id,
             message: text,
-            sender: payload.sender_id ?? payload.sender,
+            sender: payload.sender_id ?? payload.sender ?? (isGuestMessage ? 'guest' : null),
+            sender_type: payload.sender_type || payload.sender_role || (isGuestMessage ? 'guest' : 'staff'),
             sender_name: payload.sender_name ?? payload.sender_info?.name,
             sender_avatar: payload.sender_avatar,
             timestamp: payload.timestamp,

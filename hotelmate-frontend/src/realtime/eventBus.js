@@ -362,9 +362,9 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
       const basePayload = {
         id: payload?.message_id || payload?.id || `msg-${Date.now()}`,
         message: payload?.guest_message || payload?.message || 'New message',
-        sender_id: payload?.guest_id,
-        sender: payload?.guest_id, // For staff_chat compatibility
-        sender_name: payload?.sender_name || 'Guest',
+        sender_id: payload?.guest_id || payload?.sender_id || payload?.guestId || `guest-${Date.now()}`, // Multiple fallbacks
+        sender: payload?.guest_id || payload?.sender_id || payload?.guestId || `guest-${Date.now()}`, // For staff_chat compatibility
+        sender_name: payload?.sender_name || payload?.guest_name || 'Guest',
         sender_role: 'guest',
         sender_type: 'guest', // For staff_chat compatibility
         conversation_id: payload?.conversation_id,
@@ -374,6 +374,12 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
         timestamp: payload?.timestamp || new Date().toISOString(),
         created_at: payload?.timestamp || new Date().toISOString()
       };
+
+      console.log('🔍 [EventBus] Debug guest message payload mapping:', {
+        originalPayload: payload,
+        mappedSenderId: basePayload.sender_id,
+        availableFields: Object.keys(payload || {})
+      });
 
       // 1. Create guest_chat event for guest-specific handling
       const guestChatEvent = {
