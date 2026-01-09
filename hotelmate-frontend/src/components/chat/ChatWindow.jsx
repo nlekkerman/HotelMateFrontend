@@ -654,19 +654,59 @@ const ChatWindow = ({
           });
           
           // Also update the messages array with read status
-          setMessages(prevMessages => {
-            const updated = prevMessages.map(msg => 
+          setMessages(prevMessages => 
+            prevMessages.map(msg => 
               message_ids.includes(msg.id)
                 ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_guest: true }
                 : msg
-            );
-            console.log('👁️ [STAFF SEES] Updated messages:', updated.filter(m => message_ids.includes(m.id)).map(m => ({ id: m.id, status: m.status })));
-            return updated;
+            )
+          );
+        }
+      });
+
+      // ALSO listen to staff notifications channel for new guest messages
+      const notificationsChannelName = `${hotelSlug}.staff-${userId}-notifications`;
+      let notificationsChannel = pusherInstance.channel(notificationsChannelName);
+      if (!notificationsChannel) {
+        notificationsChannel = pusherInstance.subscribe(notificationsChannelName);
+      }
+      
+      console.log('🔔 [GUEST-TO-STAFF] Also listening for guest messages on:', notificationsChannelName);
+      
+      // Handle new guest messages coming through notifications channel
+      notificationsChannel.bind("new-guest-message", (data) => {
+        console.log('📨 [GUEST-TO-STAFF] New guest message received on notifications channel:', data);
+        
+        // Only process if it's for the current conversation
+        if (data.conversation_id === conversationId) {
+          console.log('✅ [GUEST-TO-STAFF] Message is for current conversation, adding to chat');
+          
+          const guestMessage = {
+            id: data.id,
+            message: data.guest_message || data.message,
+            sender_type: 'guest',
+            sender_name: data.sender_name || 'Guest',
+            guest_id: data.guest_id,
+            conversation_id: data.conversation_id,
+            created_at: data.timestamp || new Date().toISOString(),
+            status: 'delivered'
+          };
+          
+          setMessages((prev) => {
+            // Check if this message already exists by ID
+            const exists = prev.some((m) => m.id === guestMessage.id);
+            if (exists) {
+              console.log(`⚠️ [GUEST-TO-STAFF] Message ${guestMessage.id} already exists, skipping`);
+              return prev;
+            }
+            
+            console.log(`✅ [GUEST-TO-STAFF] Adding guest message ${guestMessage.id} to chat`);
+            return [...prev, guestMessage];
           });
           
-          console.log('✅ [STAFF SEES] Staff messages marked as read by guest');
+          scrollToBottom();
         } else {
-          console.warn('⚠️ [STAFF SEES] Invalid message_ids:', message_ids);
+          console.log('⏭️ [GUEST-TO-STAFF] Message not for current conversation, ignoring');
         }
       });
 
@@ -688,6 +728,11 @@ const ChatWindow = ({
           channel.unbind("staff-assigned");
           channel.unbind("message-deleted", handleDeletion);
           channel.unbind("message-removed", handleDeletion);
+        }
+        
+        // Also cleanup notifications channel
+        if (notificationsChannel) {
+          notificationsChannel.unbind("new-guest-message");
         }
       };
     }
