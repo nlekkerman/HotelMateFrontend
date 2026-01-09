@@ -341,6 +341,40 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
       return;
     }
 
+    // 5️⃣ GUEST MESSAGE REAL-TIME UPDATE FOR STAFF
+    if (channel?.endsWith('-notifications') && eventName === 'new-guest-message' && !eventName?.startsWith('pusher:')) {
+      console.log('🔔 [EventBus] New guest message - creating real-time chat update:', { channel, eventName, payload });
+      
+      // Create a guest_chat event to trigger real-time message updates in the UI
+      const guestChatEvent = {
+        category: 'guest_chat',
+        type: 'guest_message_created',
+        payload: {
+          id: payload?.message_id || `msg-${Date.now()}`,
+          message: payload?.message || payload?.message_preview || 'New message',
+          sender_id: payload?.guest_id,
+          sender_name: payload?.guest_name || 'Guest',
+          sender_role: 'guest',
+          conversation_id: payload?.conversation_id,
+          booking_id: payload?.booking_id,
+          room_number: payload?.room_number,
+          timestamp: new Date().toISOString()
+        },
+        meta: {
+          channel,
+          eventName,
+          event_id: payload?.event_id || `guest-msg-${Date.now()}`,
+          conversation_id: payload?.conversation_id
+        },
+        source,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('🚀 [EventBus] Routing guest message as guest_chat event:', guestChatEvent);
+      routeToDomainStores(guestChatEvent);
+      return;
+    }
+
     // Backend should send normalized events - log unhandled events
     console.warn('⚠️ Received non-normalized event - backend should send normalized format:', {
       source,
@@ -432,6 +466,11 @@ function routeToDomainStores(event) {
       case "rooms":
         roomsActions.handleEvent(event);
         break;
+      case "staff_notification":
+        console.log('🔔 [EventBus] Processing staff notification:', event.type);
+        // Staff notifications are handled by the notification center only
+        // No specific store needed - just let it flow to maybeAddToNotificationCenter
+        break;
       default:
         if (!import.meta.env.PROD) {
           console.log('🚏 Unknown category:', event.category, event);
@@ -478,6 +517,7 @@ function maybeAddToNotificationCenter(event) {
     'room_service',
     'booking',
     'attendance', // Only for personal attendance notifications
+    'staff_notification', // Guest message notifications for staff
     'system' // FCM and other system notifications
   ];
   
