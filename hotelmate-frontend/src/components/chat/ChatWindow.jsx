@@ -92,6 +92,10 @@ const ChatWindow = ({
   
   // Guest is someone WITHOUT a userId (not authenticated as staff)
   const isGuest = !userId;
+
+  // UNIFIED: Use chatStore for guest-to-staff messages (new system)
+  const chatState = useChatState();
+  const chatDispatch = useChatDispatch();
   
   // Get room number from multiple sources - use state for dynamic updates
   const [roomNumber, setRoomNumber] = useState(() => {
@@ -518,230 +522,21 @@ const ChatWindow = ({
       return;
     }
 
-    // For authenticated staff, use staff conversation channels for ALL conversations (guest and staff)
-    if (userId && pusherInstance) {
-      // ✅ BACKEND SENDS TO: hotel-killarney.staff-chat.100 (for all staff conversations)
-      const channelName = `${hotelSlug}.staff-chat.${conversationId}`;
-      console.log('👨‍💼 [STAFF-CONVERSATION] Using staff chat channel:', channelName, { conversationId, roomNumber });
-      
-      // Get existing channel or subscribe to a new one
-      let channel = pusherInstance.channel(channelName);
-      if (!channel) {
-        channel = pusherInstance.subscribe(channelName);
-      }
+    // For staff conversations, we now use the centralized chatStore + channelRegistry subscription
+    // The ConversationView component or StaffChatContext will handle the Pusher subscription
+    // This component will receive updates via the chatStore sync below
+    console.log('📡 [STAFF-CONVERSATION] Using centralized chatStore for real-time updates:', conversationId);
+    
+    // Set active conversation in chatStore to ensure proper subscription
+    chatDispatch({
+      type: CHAT_ACTIONS.SET_ACTIVE_CONVERSATION,
+      payload: { conversationId: parseInt(conversationId) }
+    });
 
-      // Unbind any existing handlers to avoid duplicates
-      channel.unbind("new-message");
-      channel.unbind("message-delivered");
-      channel.unbind("messages-read-by-staff");
-      channel.unbind("messages-read-by-guest");
-      channel.unbind("staff-assigned");
-      
-      // Listen for new messages
-      channel.bind("new-message", (message) => {
-        console.log(`📨 [PUSHER] New message received:`, { 
-          id: message.id, 
-          sender: message.sender_type, 
-          text: message.message?.substring(0, 30),
-          reply_to: message.reply_to,
-          reply_to_message: message.reply_to_message 
-        });
-        
-        // 🔍 DEBUG: Check if reply data is present
-        if (message.reply_to) {
-          console.log('🔍 [PUSHER REPLY] Message has reply_to:', message.reply_to);
-          console.log('🔍 [PUSHER REPLY] reply_to_message:', message.reply_to_message);
-        }
-        
-        setMessages((prev) => {
-          // Check if this message already exists by ID
-          const exists = prev.some((m) => m.id === message.id);
-          if (exists) {
-            console.log(`⚠️ [PUSHER] Message ${message.id} already exists, skipping`);
-            return prev;
-          }
-          
-          // Check if there's a temp message with the same content (race condition)
-          const tempMsg = prev.find(m => {
-            const isTemp = m.id?.toString().startsWith('temp-') || m.__optimistic;
-            const sameMessage = m.message === message.message;
-            const sameSender = m.sender_type === message.sender_type;
-            
-            // For guest messages, also check guest_id match to avoid cross-guest conflicts
-            if (message.sender_type === 'guest' && m.sender_type === 'guest') {
-              return isTemp && sameMessage && sameSender && 
-                     (!message.guest_id || !m.guest_id || message.guest_id === m.guest_id);
-            }
-            
-            return isTemp && sameMessage && sameSender;
-          });
-          
-          if (tempMsg) {
-            console.log(`🔄 [PUSHER] Replacing temp message ${tempMsg.id} with real ${message.id}`);
-            // Replace temp with real message
-            return prev.map(m => m.id === tempMsg.id ? { ...message, status: 'delivered' } : m);
-          }
-          
-          console.log(`✅ [PUSHER] Adding new message ${message.id} to chat`);
-          return [...prev, message];
-        });
-        scrollToBottom();
-      });
+    // No direct Pusher subscription needed - handled by canonical pipeline
+    return;
+  }, [hotelSlug, conversationId, chatDispatch, isGuest]);
 
-      // Listen for staff assignment changes (for staff handoff notifications)
-      channel.bind("staff-assigned", (data) => {
-        console.log('👤 Staff assignment changed:', data);
-        
-        // Get current staff name from localStorage
-        const storedUser = localStorage.getItem("user");
-        const currentStaffName = storedUser ? JSON.parse(storedUser).first_name + ' ' + JSON.parse(storedUser).last_name : '';
-        
-        // Log if another staff member took over
-        if (data.staff_name && data.staff_name !== currentStaffName) {
-          console.log('📢 Staff handoff:', data.staff_name, 'is now handling this conversation');
-        }
-      });
-
-      // Listen for message delivered event (from backend)
-      channel.bind("message-delivered", (data) => {
-        const { message_id } = data;
-        if (message_id) {
-          setMessageStatuses(prev => {
-            const newMap = new Map(prev);
-            newMap.set(message_id, 'delivered');
-            return newMap;
-          });
-        }
-      });
-
-      // Listen for messages read by staff (affects guest's messages)
-      channel.bind("messages-read-by-staff", (data) => {
-        const { message_ids } = data;
-        if (message_ids && Array.isArray(message_ids)) {
-          setMessageStatuses(prev => {
-            const newMap = new Map(prev);
-            message_ids.forEach(id => {
-              newMap.set(id, 'read');
-            });
-            return newMap;
-          });
-          
-          // Also update the messages array with read status
-          setMessages(prevMessages => 
-            prevMessages.map(msg => 
-              message_ids.includes(msg.id)
-                ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_staff: true }
-                : msg
-            )
-          );
-        }
-      });
-
-      // Listen for messages read by guest (affects staff's messages)
-      channel.bind("messages-read-by-guest", (data) => {
-        console.log('👁️ [STAFF SEES] Messages read by guest event received:', data);
-        const { message_ids } = data;
-        if (message_ids && Array.isArray(message_ids)) {
-          console.log(`👁️ [STAFF SEES] Updating ${message_ids.length} staff messages as read by guest`);
-          
-          setMessageStatuses(prev => {
-            const newMap = new Map(prev);
-            message_ids.forEach(id => {
-              console.log(`👁️ [STAFF SEES] Marking message ${id} as read`);
-              newMap.set(id, 'read');
-            });
-            return newMap;
-          });
-          
-          // Also update the messages array with read status
-          setMessages(prevMessages => 
-            prevMessages.map(msg => 
-              message_ids.includes(msg.id)
-                ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_guest: true }
-                : msg
-            )
-          );
-        }
-      });
-
-      // ALSO listen to staff notifications channel for new guest messages
-      const notificationsChannelName = `${hotelSlug}.staff-${userId}-notifications`;
-      let notificationsChannel = pusherInstance.channel(notificationsChannelName);
-      if (!notificationsChannel) {
-        notificationsChannel = pusherInstance.subscribe(notificationsChannelName);
-      }
-      
-      console.log('🔔 [GUEST-TO-STAFF] Also listening for guest messages on:', notificationsChannelName);
-      
-      // Handle new guest messages coming through notifications channel
-      notificationsChannel.bind("new-guest-message", (data) => {
-        console.log('📨 [GUEST-TO-STAFF] New guest message received on notifications channel:', data);
-        
-        // Only process if it's for the current conversation
-        if (data.conversation_id === conversationId) {
-          console.log('✅ [GUEST-TO-STAFF] Message is for current conversation, adding to chat');
-          
-          const guestMessage = {
-            id: data.id,
-            message: data.guest_message || data.message,
-            sender_type: 'guest',
-            sender_name: data.sender_name || 'Guest',
-            guest_id: data.guest_id,
-            conversation_id: data.conversation_id,
-            created_at: data.timestamp || new Date().toISOString(),
-            status: 'delivered'
-          };
-          
-          setMessages((prev) => {
-            // Check if this message already exists by ID
-            const exists = prev.some((m) => m.id === guestMessage.id);
-            if (exists) {
-              console.log(`⚠️ [GUEST-TO-STAFF] Message ${guestMessage.id} already exists, skipping`);
-              return prev;
-            }
-            
-            console.log(`✅ [GUEST-TO-STAFF] Adding guest message ${guestMessage.id} to chat`);
-            return [...prev, guestMessage];
-          });
-          
-          scrollToBottom();
-        } else {
-          console.log('⏭️ [GUEST-TO-STAFF] Message not for current conversation, ignoring');
-        }
-      });
-
-      // Listen for message deleted event (backend sends both 'message-deleted' and 'message-removed')
-      const handleDeletion = (data) => {
-        handlePusherDeletion(data, setMessages, setMessageStatuses, false); // isGuest = false for staff
-      };
-      
-      channel.bind("message-deleted", handleDeletion);
-      channel.bind("message-removed", handleDeletion); // Backend alias
-
-      return () => {
-        // Only unbind our handlers, don't unsubscribe the channel
-        if (channel) {
-          channel.unbind("new-message");
-          channel.unbind("message-delivered");
-          channel.unbind("messages-read-by-staff");
-          channel.unbind("messages-read-by-guest");
-          channel.unbind("staff-assigned");
-          channel.unbind("message-deleted", handleDeletion);
-          channel.unbind("message-removed", handleDeletion);
-        }
-        
-        // Also cleanup notifications channel
-        if (notificationsChannel) {
-          notificationsChannel.unbind("new-guest-message");
-        }
-      };
-    }
-  }, [hotelSlug, conversationId, pusherInstance, userId, isGuest]);
-
-  // UNIFIED: Use chatStore for guest-to-staff messages (new system)
-  const chatState = useChatState();
-  const chatDispatch = useChatDispatch();
-  
   // Get messages from chatStore for this conversation
   const conversation = chatState.conversationsById?.[conversationId];
   const storeMessages = conversation?.messages || [];
@@ -750,16 +545,30 @@ const ChatWindow = ({
   useEffect(() => {
     if (isGuest || !conversationId) return;
     
+    console.log('🔄 [UNIFIED] ChatStore sync effect triggered:', {
+      conversationId,
+      storeMessagesCount: storeMessages.length,
+      conversationExists: !!conversation,
+      storeMessages: storeMessages.map(m => ({
+        id: m.id,
+        message: m.message?.substring(0, 30),
+        sender: m.sender,
+        timestamp: m.timestamp || m.created_at
+      }))
+    });
+    
     if (storeMessages.length > 0) {
       console.log('🔄 [UNIFIED] Syncing', storeMessages.length, 'messages from chatStore to ChatWindow');
       
       setMessages(prevMessages => {
+        console.log('🔄 [UNIFIED] Current local messages:', prevMessages.length, 'Store messages:', storeMessages.length);
+        
         // Merge store messages with local messages, avoiding duplicates
         const localMessageIds = new Set(prevMessages.map(m => m.id));
         const newMessagesFromStore = storeMessages.filter(m => !localMessageIds.has(m.id));
         
         if (newMessagesFromStore.length > 0) {
-          console.log('✅ [UNIFIED] Adding', newMessagesFromStore.length, 'new messages from chatStore');
+          console.log('✅ [UNIFIED] Adding', newMessagesFromStore.length, 'new messages from chatStore:', newMessagesFromStore.map(m => ({ id: m.id, text: m.message?.substring(0, 30) })));
           const combined = [...prevMessages, ...newMessagesFromStore];
           // Sort by timestamp to maintain order
           const sorted = combined.sort((a, b) => new Date(a.created_at || a.timestamp) - new Date(b.created_at || b.timestamp));
@@ -768,10 +577,14 @@ const ChatWindow = ({
           setTimeout(() => scrollToBottom(), 100);
           
           return sorted;
+        } else {
+          console.log('ℹ️ [UNIFIED] No new messages from chatStore to add');
         }
         
         return prevMessages;
       });
+    } else {
+      console.log('ℹ️ [UNIFIED] No messages in chatStore for conversation', conversationId);
     }
   }, [
     conversationId, 
