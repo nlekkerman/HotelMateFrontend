@@ -762,13 +762,24 @@ const ChatWindow = ({
           console.log('✅ [UNIFIED] Adding', newMessagesFromStore.length, 'new messages from chatStore');
           const combined = [...prevMessages, ...newMessagesFromStore];
           // Sort by timestamp to maintain order
-          return combined.sort((a, b) => new Date(a.created_at || a.timestamp) - new Date(b.created_at || b.timestamp));
+          const sorted = combined.sort((a, b) => new Date(a.created_at || a.timestamp) - new Date(b.created_at || b.timestamp));
+          
+          // Scroll to bottom when new messages are added
+          setTimeout(() => scrollToBottom(), 100);
+          
+          return sorted;
         }
         
         return prevMessages;
       });
     }
-  }, [storeMessages, conversationId, isGuest]);
+  }, [
+    conversationId, 
+    isGuest,
+    storeMessages?.length, // Use length to detect changes
+    // Create deep dependency on message IDs and content to detect real changes
+    storeMessages?.map(m => `${m.id}-${m.message}-${m.created_at || m.timestamp}`).join(',')
+  ]);
 
   // Guest Pusher setup - use useCallback to create stable event handlers
   const handleNewStaffMessage = useCallback((data) => {
