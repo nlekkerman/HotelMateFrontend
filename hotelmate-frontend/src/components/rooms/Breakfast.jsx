@@ -159,7 +159,7 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
 
     try {
       const response = await api.post(
-        `/api/guest/hotels/${hotelIdentifier}/breakfast-orders/`,
+        `/guest/hotels/${hotelIdentifier}/breakfast-orders/`,
         payload
       );
       
@@ -193,7 +193,7 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
     setLoadingOrders(true);
     try {
       const response = await api.get(
-        `/api/guest/hotels/${hotelIdentifier}/breakfast-orders/`,
+        `/guest/hotels/${hotelIdentifier}/breakfast-orders/`,
         { params: { room_number: roomNumber } }
       );
       setOrders(response.data.results);
