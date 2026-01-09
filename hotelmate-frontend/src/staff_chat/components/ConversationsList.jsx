@@ -7,7 +7,8 @@ import useStartConversation from '../hooks/useStartConversation';
 import { fetchConversations, bulkMarkAsRead } from '../services/staffChatApi';
 import useUnreadCount from '../hooks/useUnreadCount';
 import { useStaffChat } from '../context/StaffChatContext';
-import { subscribeStaffToGuestChatBooking } from '@/realtime/channelRegistry';
+import { subscribeToStaffChatConversation } from '@/realtime/channelRegistry';
+import { staffChatConversationChannel } from '@/lib/pusher/channels';
 
 /**
  * ConversationsList Component
@@ -79,14 +80,12 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
 
         const cleanupFunctions = [];
 
-        // Subscribe to each active guest booking channel
+        // Subscribe to each conversation using staff chat channels (works for both guest and staff conversations)
         roomConversations?.forEach((conversation) => {
-          if (conversation.booking_id) {
-            console.log('🔗 [CONVERSATIONS LIST] Subscribing to guest booking:', conversation.booking_id);
-            const cleanup = subscribeStaffToGuestChatBooking({
-              hotelSlug,
-              bookingId: conversation.booking_id
-            });
+          if (conversation.conversation_id || conversation.id) {
+            const conversationId = conversation.conversation_id || conversation.id;
+            console.log('🔗 [CONVERSATIONS LIST] Subscribing to staff conversation:', conversationId);
+            const cleanup = subscribeToStaffChatConversation(hotelSlug, conversationId);
             cleanupFunctions.push(cleanup);
           }
         });

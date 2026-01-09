@@ -7,6 +7,7 @@ import { roomServiceActions } from './stores/roomServiceStore.jsx';
 import { serviceBookingActions } from './stores/serviceBookingStore.jsx';
 import { roomBookingActions } from './stores/roomBookingStore.jsx';
 import { roomsActions } from './stores/roomsStore.jsx';
+import { showGuestMessageNotification } from '../utils/guestNotifications.jsx';
 
 // Global event deduplication using meta.event_id
 const globalProcessedEventIds = new Set();
@@ -252,6 +253,51 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
         }
         routeToDomainStores(normalized);
         return;
+    }
+
+    // Hotel-level guest messages channel (notify all staff when any guest sends message)
+    if (channel?.endsWith('-guest-messages') && eventName === 'new-guest-message' && !eventName?.startsWith('pusher:')) {
+      console.log('📢 [EventBus] Hotel-level guest message notification:', { channel, eventName, payload });
+      
+      // Extract hotel slug from channel name
+      const hotelSlug = channel.split('-guest-messages')[0];
+      
+      // Show toast notification to all staff using utility function
+      showGuestMessageNotification({
+        guest_name: payload?.guest_name || 'Guest',
+        room_number: payload?.room_number || 'Unknown', 
+        message_preview: payload?.message ? payload.message.substring(0, 50) : 'New message',
+        conversation_id: payload?.conversation_id,
+        booking_id: payload?.booking_id,
+        hotel_slug: hotelSlug
+      });
+      
+      // Create normalized event for notification center
+      const guestMessageNotification = {
+        category: 'guest_notification',
+        type: 'new_guest_message',
+        payload: {
+          guest_name: payload?.guest_name || 'Guest',
+          room_number: payload?.room_number || 'Unknown',
+          message_preview: payload?.message ? payload.message.substring(0, 50) : 'New message',
+          conversation_id: payload?.conversation_id,
+          booking_id: payload?.booking_id,
+          timestamp: payload?.timestamp || new Date().toISOString()
+        },
+        meta: {
+          channel,
+          eventName,
+          event_id: payload?.event_id || payload?.id || `guest-msg-${Date.now()}`,
+          hotel_slug: hotelSlug
+        },
+        source,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Add to notification center
+      maybeAddToNotificationCenter(guestMessageNotification);
+      
+      return;
     }
 
     // Guest chat: only accept booking-based private channels

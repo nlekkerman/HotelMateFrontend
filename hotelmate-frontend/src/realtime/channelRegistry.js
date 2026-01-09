@@ -68,6 +68,21 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
     const roomsChannel = pusher.subscribe(roomsChannelName);
     channels.push(roomsChannel);
 
+    // Guest Messages (hotel-wide notifications when any guest sends message)
+    const guestMessagesChannelName = `${hotelSlug}-guest-messages`;
+    const guestMessagesChannel = pusher.subscribe(guestMessagesChannelName);
+    channels.push(guestMessagesChannel);
+    
+    // Enhanced guest messages event binding for debugging
+    guestMessagesChannel.bind_global((eventName, data) => {
+      console.log('💬 [channelRegistry] Guest messages event received:', {
+        channel: guestMessagesChannelName,
+        eventName,
+        data,
+        timestamp: new Date().toISOString()
+      });
+    });
+
     // Personal staff notifications (if staffId provided)
     if (staffId) {
       const personalChannelName = `${hotelSlug}.staff-${staffId}-notifications`;

@@ -31,10 +31,12 @@ import {
 import {
   handleMessageShare
 } from "./utils/messageShare";
-import {
+import {        
   handleMessageDownload,
   getCloudinaryUrl
 } from "./utils/messageDownload";
+import { showStaffAssignmentNotification } from '@/utils/guestNotifications.jsx';
+import { staffChatConversationChannel } from '@/lib/pusher/channels';
 
 const MESSAGE_LIMIT = 10;
 
@@ -439,6 +441,16 @@ const ChatWindow = ({
           if (response.data?.messages_marked_read !== undefined) {
             console.log('✅ [STAFF ASSIGN] Marked', response.data.messages_marked_read, 'guest messages as read');
           }
+          
+          // Show local notification for staff assignment
+          if (response.data?.guest_name || response.data?.room_number) {
+            showStaffAssignmentNotification({
+              guest_name: response.data.guest_name || 'Guest',
+              room_number: response.data.room_number || roomNumber || 'Unknown',
+              unread_count: response.data.messages_marked_read || 0,
+              conversation_id: conversationId
+            });
+          }
         }
         
         // ADDITIONAL: Explicitly mark conversation as read to trigger Pusher event
@@ -506,45 +518,11 @@ const ChatWindow = ({
       return;
     }
 
-    // For authenticated staff, determine if this is a guest conversation or staff conversation
+    // For authenticated staff, use staff conversation channels for ALL conversations (guest and staff)
     if (userId && pusherInstance) {
-      let channelName;
-      let isGuestConversation = false;
-      
-      // Detect if this is a guest conversation (has room number)
-      if (roomNumber) {
-        // This is a GUEST conversation - staff viewing guest room chat
-        // Backend sends to: private-hotel-hotel-killarney-guest-chat-booking-BK-2026-0003
-        // We need to find the booking ID for this room/conversation
-        // For now, try both possible channel formats:
-        
-        // Try the booking-based channel format that backend actually uses
-        // We need to get the booking ID somehow - check if it's in the conversation data
-        const guestConversation = activeGuestConversation || guestChatState?.conversationsById?.[conversationId];
-        const bookingId = guestConversation?.booking_id || guestConversation?.bookingId;
-        
-        console.log('🔍 [DEBUG] Guest conversation data:', {
-          conversationId,
-          guestConversation,
-          bookingId,
-          roomNumber
-        });
-        
-        if (bookingId) {
-          channelName = `private-hotel-${hotelSlug}-guest-chat-booking-${bookingId}`;
-          console.log('👥 [STAFF-VIEW-GUEST] Using booking-based channel:', channelName);
-        } else {
-          // Fallback to room-based channel if no booking ID
-          channelName = `${hotelSlug}-room-${roomNumber}-chat`;
-          console.log('👥 [STAFF-VIEW-GUEST] Using room-based channel (fallback):', channelName);
-        }
-        
-        isGuestConversation = true;
-      } else {
-        // This is a STAFF conversation - staff-to-staff chat
-        channelName = `${hotelSlug}-conversation-${conversationId}-chat`;
-        console.log('👨‍💼 [STAFF-TO-STAFF] Staff-to-staff conversation, using staff channel:', channelName);
-      }
+      // ✅ BACKEND SENDS TO: hotel-killarney.staff-chat.100 (for all staff conversations)
+      const channelName = `${hotelSlug}.staff-chat.${conversationId}`;
+      console.log('👨‍💼 [STAFF-CONVERSATION] Using staff chat channel:', channelName, { conversationId, roomNumber });
       
       // Get existing channel or subscribe to a new one
       let channel = pusherInstance.channel(channelName);
