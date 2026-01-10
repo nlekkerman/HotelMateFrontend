@@ -6,6 +6,17 @@ import api from "@/services/api";
 import ViewOrders from "@/components/rooms/ViewOrders";
 import { useRoomServiceState } from "@/realtime/stores/roomServiceStore.jsx";
 
+// Add CSS animation styles
+const animationStyles = `
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out;
+  }
+`;
+
 const TIME_SLOTS = [
   "7:00-8:00",
   "8:00-8:30",
@@ -30,7 +41,7 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
   const [showOrders, setShowOrders] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [showPolicy, setShowPolicy] = useState(false);
-  const [activeTab, setActiveTab] = useState("");
+  const [visibleCategories, setVisibleCategories] = useState(new Set());
   const categoryRefs = useRef({});
   
   // Use room service store for real-time updates
@@ -58,6 +69,15 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
       .then((res) => {
         const formatted = res.data.map((item) => ({ ...item, quantity: 1 }));
         setItems(formatted);
+        // Show first category by default
+        if (formatted.length > 0) {
+          const firstCategory = categoryOrder.find(cat => 
+            formatted.some(item => (item.category || "Other") === cat)
+          );
+          if (firstCategory) {
+            setVisibleCategories(new Set([firstCategory]));
+          }
+        }
       })
       .catch((err) => {
         console.error("Failed to fetch breakfast items:", err);
@@ -141,46 +161,18 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
     });
   };
 
-  // Tab scrolling
-  const scrollToCategory = (category) => {
-    const element = categoryRefs.current[category];
-    if (element) {
-      const headerOffset = 160; // Account for sticky headers
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-      
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: "smooth"
-      });
-    }
-  };
-
-  // Intersection observer for active tab
-  useEffect(() => {
-    const observers = [];
-    
-    availableCategories.forEach(category => {
-      const element = categoryRefs.current[category];
-      if (element) {
-        const observer = new IntersectionObserver(
-          ([entry]) => {
-            if (entry.isIntersecting) {
-              setActiveTab(category);
-            }
-          },
-          { 
-            rootMargin: '-160px 0px -60% 0px',
-            threshold: 0.1
-          }
-        );
-        observer.observe(element);
-        observers.push(observer);
+  // Toggle category visibility
+  const toggleCategory = (category) => {
+    setVisibleCategories(prev => {
+      const newVisible = new Set(prev);
+      if (newVisible.has(category)) {
+        newVisible.delete(category);
+      } else {
+        newVisible.add(category);
       }
+      return newVisible;
     });
-
-    return () => observers.forEach(obs => obs.disconnect());
-  }, [availableCategories]);
+  };
 
   // Submit order
   const handleSubmit = async () => {
@@ -247,21 +239,23 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
     }
   };
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <>
+      <style>{animationStyles}</style>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-orange-100 pb-24">
       {/* Sticky Header */}
-      <div className="sticky top-0 bg-white border-b border-gray-200 z-40 px-4 py-3">
+      <div className="sticky top-0 bg-gradient-to-r from-orange-50 to-yellow-50 border-b border-orange-200 z-40 px-4 py-4 shadow-sm">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">
-              Breakfast · Room {roomNumber}
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              🍳 Breakfast · Room {roomNumber}
             </h1>
-            <p className="text-sm text-gray-600">
-              {timeSlot || "Select delivery time"}
+            <p className="text-sm text-orange-700 font-medium">
+              {timeSlot || "Select delivery time"} • {visibleCategories.size} categories selected
             </p>
           </div>
           <button
             onClick={() => setShowPolicy(true)}
-            className="text-gray-500 hover:text-gray-700 text-xl"
+            className="bg-orange-100 hover:bg-orange-200 text-orange-700 p-2 rounded-full transition-colors"
             title="Pricing Information"
           >
             ℹ️
@@ -270,22 +264,42 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
       </div>
 
       {/* Sticky Category Tabs */}
-      <div className="sticky top-16 bg-white border-b border-gray-200 z-30">
+      <div className="sticky top-20 bg-white border-b border-gray-200 z-30 shadow-sm">
         <div className="max-w-3xl mx-auto">
-          <div className="flex overflow-x-auto scrollbar-hide px-4">
-            {availableCategories.map((category) => (
-              <button
-                key={category}
-                onClick={() => scrollToCategory(category)}
-                className={`flex-shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === category
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {category}
-              </button>
-            ))}
+          <div className="flex overflow-x-auto scrollbar-hide px-4 py-2">
+            {availableCategories.map((category) => {
+              const isVisible = visibleCategories.has(category);
+              const categoryEmojis = {
+                'Mains': '🍳',
+                'Hot Buffet': '🔥',
+                'Cold Buffet': '🥗',
+                'Breads': '🍞',
+                'Condiments': '🧈',
+                'Drinks': '☕',
+                'Other': '🍽️'
+              };
+              
+              return (
+                <button
+                  key={category}
+                  onClick={() => toggleCategory(category)}
+                  className={`flex-shrink-0 mx-1 px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 flex items-center gap-2 ${
+                    isVisible
+                      ? 'bg-orange-500 text-white shadow-md transform scale-105'
+                      : 'bg-gray-100 text-gray-600 hover:bg-orange-100 hover:text-orange-700'
+                  }`}
+                >
+                  <span>{categoryEmojis[category] || '🍽️'}</span>
+                  {category}
+                  {isVisible && <span className="text-xs">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+          <div className="px-4 pb-2">
+            <p className="text-xs text-gray-500 text-center">
+              Tap categories to show/hide • {totalCount} items in cart
+            </p>
           </div>
         </div>
       </div>
@@ -300,30 +314,58 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
                 if (!showOrders) fetchOrders();
                 setShowOrders(!showOrders);
               }}
-              className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 disabled:bg-gray-300"
+              className="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-3 rounded-lg hover:from-green-600 hover:to-green-700 disabled:bg-gray-300 font-medium shadow-md transition-all duration-200 flex items-center gap-2"
             >
+              <span>📋</span>
               {showOrders ? "Hide Your Breakfast Orders" : "View Your Breakfast Orders"}
             </button>
           </div>
-          {loadingOrders && <p className="text-center mt-4">Loading orders...</p>}
+          {loadingOrders && <p className="text-center mt-4 text-gray-600">Loading orders...</p>}
           {showOrders && !loadingOrders && <ViewOrders orders={orders} />}
         </div>
+
+        {/* No Categories Selected Message */}
+        {visibleCategories.size === 0 && (
+          <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+            <div className="text-6xl mb-4">🍳</div>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">Select categories to start ordering</h3>
+            <p className="text-gray-500">Tap on the category buttons above to browse our breakfast menu</p>
+          </div>
+        )}
 
         {/* Category Sections */}
         {availableCategories.map((category) => {
           const categoryItems = groupedItems[category];
+          const isVisible = visibleCategories.has(category);
+          
+          if (!isVisible) return null;
+          
+          const categoryEmojis = {
+            'Mains': '🍳',
+            'Hot Buffet': '🔥', 
+            'Cold Buffet': '🥗',
+            'Breads': '🍞',
+            'Condiments': '🧈',
+            'Drinks': '☕',
+            'Other': '🍽️'
+          };
           
           return (
             <div 
               key={category} 
               ref={el => categoryRefs.current[category] = el}
               id={`cat-${category.toLowerCase().replace(/\s+/g, '-')}`}
-              className="mb-8"
+              className="mb-8 animate-fadeIn"
             >
-              <h3 className="text-xl font-bold mb-4 pb-2 border-b-2 border-gray-300">
-                {category}
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-6 py-4 rounded-t-xl">
+                <h3 className="text-2xl font-bold flex items-center gap-3">
+                  <span className="text-3xl">{categoryEmojis[category] || '🍽️'}</span>
+                  {category}
+                  <span className="text-sm font-normal opacity-80">({categoryItems.length} items)</span>
+                </h3>
+              </div>
+              <div className="bg-white rounded-b-xl p-6 shadow-lg border border-gray-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {categoryItems.map((item) => {
                   const isOutOfStock = item.is_on_stock === false;
                   const currentQty = orderQtyById[item.id] || 0;
@@ -331,44 +373,53 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
                   return (
                     <div 
                       key={item.id} 
-                      className={`border rounded-xl p-4 shadow-sm bg-white ${isOutOfStock ? 'opacity-50' : ''}`}
+                      className={`border-2 rounded-2xl p-5 shadow-md bg-gradient-to-br from-white to-gray-50 hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] ${
+                        isOutOfStock ? 'opacity-50 grayscale' : ''
+                      } ${
+                        currentQty > 0 ? 'border-orange-300 bg-gradient-to-br from-orange-50 to-yellow-50' : 'border-gray-200'
+                      }`}
                     >
                       {item.image && (
                         <div className="relative">
                           <img
                             src={item.image}
                             alt={item.name}
-                            className="w-full h-40 object-cover rounded-md mb-2"
+                            className="w-full h-40 object-cover rounded-xl mb-3 shadow-sm"
                           />
                           {isOutOfStock && (
-                            <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded text-xs font-bold">
-                              OUT OF STOCK
+                            <div className="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md">
+                              ❌ OUT OF STOCK
+                            </div>
+                          )}
+                          {currentQty > 0 && !isOutOfStock && (
+                            <div className="absolute top-3 left-3 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md">
+                              {currentQty} in cart
                             </div>
                           )}
                         </div>
                       )}
-                      <h4 className="text-lg font-semibold mb-2">{item.name}</h4>
-                      <p className="text-sm text-gray-600 mb-3">{item.description}</p>
+                      <h4 className="text-xl font-bold mb-2 text-gray-800">{item.name}</h4>
+                      <p className="text-sm text-gray-600 mb-4 leading-relaxed">{item.description}</p>
 
                       {isOutOfStock ? (
-                        <div className="text-red-600 font-semibold text-sm">
-                          Currently unavailable
+                        <div className="text-red-600 font-bold text-sm bg-red-50 p-3 rounded-lg text-center">
+                          ❌ Currently unavailable
                         </div>
                       ) : (
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Quantity:</span>
-                          <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl">
+                          <span className="text-sm font-medium text-gray-700">Quantity:</span>
+                          <div className="flex items-center gap-3">
                             <button
                               onClick={() => decrementQty(item.id)}
                               disabled={currentQty === 0}
-                              className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-lg font-bold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="w-10 h-10 rounded-full border-2 border-orange-300 bg-white flex items-center justify-center text-xl font-bold hover:bg-orange-50 hover:border-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
                             >
                               −
                             </button>
-                            <span className="w-8 text-center font-medium">{currentQty}</span>
+                            <span className="w-8 text-center font-bold text-lg text-orange-600">{currentQty}</span>
                             <button
                               onClick={() => incrementQty(item.id)}
-                              className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-lg font-bold hover:bg-blue-700"
+                              className="w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 text-white flex items-center justify-center text-xl font-bold hover:from-orange-600 hover:to-orange-700 transition-all shadow-md"
                             >
                               +
                             </button>
@@ -399,17 +450,32 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
       </div>
 
       {/* Sticky Bottom Order Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-orange-500 to-yellow-500 border-t-4 border-orange-300 p-4 z-50 shadow-2xl">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            {totalCount > 0 ? `${totalCount} item${totalCount !== 1 ? 's' : ''}` : 'No items selected'}
+          <div className="text-white">
+            <div className="font-bold text-lg">
+              {totalCount > 0 ? (
+                <span className="flex items-center gap-2">
+                  🛍️ {totalCount} item{totalCount !== 1 ? 's' : ''}
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">🛍️ No items selected</span>
+              )}
+            </div>
+            <div className="text-xs opacity-90">
+              {visibleCategories.size} categories showing
+            </div>
           </div>
           <button
             onClick={() => setShowReview(true)}
             disabled={totalCount === 0}
-            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className={`px-8 py-3 rounded-xl font-bold text-lg transition-all duration-200 shadow-lg ${
+              totalCount > 0
+                ? 'bg-white text-orange-600 hover:bg-orange-50 hover:shadow-xl transform hover:scale-105'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
           >
-            Review Order
+            {totalCount > 0 ? '👀 Review Order' : 'Select Items'}
           </button>
         </div>
       </div>
@@ -530,7 +596,8 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
           <p className="font-medium text-center">Order submitted successfully!</p>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 
