@@ -111,9 +111,9 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
           // Show notification if order was updated within the last 30 seconds
           if (timeDiff < 30000) {
             const statusMessages = {
-              'pending': '📋 Your breakfast order is being reviewed',
+              'pending': '⏳ Your breakfast order is being reviewed',
               'accepted': '✅ Great! Your breakfast order is being prepared',
-              'completed': '🏁 Your breakfast is ready for delivery!'
+              'completed': '🎉 Your breakfast is ready for delivery!'
             };
             
             const message = statusMessages[order.status] || `Breakfast order status: ${order.status}`;
@@ -247,7 +247,7 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              🍳 Breakfast · Room {roomNumber}
+              🥐 Breakfast · Room {roomNumber}
             </h1>
             <p className="text-sm text-orange-700 font-medium">
               {timeSlot || "Select delivery time"} • {visibleCategories.size} categories selected
@@ -258,7 +258,7 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
             className="bg-orange-100 hover:bg-orange-200 text-orange-700 p-2 rounded-full transition-colors"
             title="Pricing Information"
           >
-            ℹ️
+            ℹ
           </button>
         </div>
       </div>
@@ -270,13 +270,13 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
             {availableCategories.map((category) => {
               const isVisible = visibleCategories.has(category);
               const categoryEmojis = {
-                'Mains': '🍳',
+                'Mains': '🥐',
                 'Hot Buffet': '🔥',
                 'Cold Buffet': '🥗',
                 'Breads': '🍞',
                 'Condiments': '🧈',
                 'Drinks': '☕',
-                'Other': '🍽️'
+                'Other': '🍽'
               };
               
               return (
@@ -289,7 +289,7 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
                       : 'bg-gray-100 text-gray-600 hover:bg-orange-100 hover:text-orange-700'
                   }`}
                 >
-                  <span>{categoryEmojis[category] || '🍽️'}</span>
+                  <span>{categoryEmojis[category] || '🍽'}</span>
                   {category}
                   {isVisible && <span className="text-xs">✓</span>}
                 </button>
@@ -316,7 +316,7 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
               }}
               className="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-3 rounded-lg hover:from-green-600 hover:to-green-700 disabled:bg-gray-300 font-medium shadow-md transition-all duration-200 flex items-center gap-2"
             >
-              <span>📋</span>
+              <span>Orders</span>
               {showOrders ? "Hide Your Breakfast Orders" : "View Your Breakfast Orders"}
             </button>
           </div>
@@ -327,7 +327,7 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
         {/* No Categories Selected Message */}
         {visibleCategories.size === 0 && (
           <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
-            <div className="text-6xl mb-4">🍳</div>
+            <div className="text-6xl mb-4">🥐</div>
             <h3 className="text-xl font-semibold text-gray-700 mb-2">Select categories to start ordering</h3>
             <p className="text-gray-500">Tap on the category buttons above to browse our breakfast menu</p>
           </div>
@@ -341,13 +341,13 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
           if (!isVisible) return null;
           
           const categoryEmojis = {
-            'Mains': '🍳',
+            'Mains': '🥐',
             'Hot Buffet': '🔥', 
             'Cold Buffet': '🥗',
             'Breads': '🍞',
             'Condiments': '🧈',
             'Drinks': '☕',
-            'Other': '🍽️'
+            'Other': '🍽'
           };
           
           return (
@@ -359,7 +359,7 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
             >
               <div className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-6 py-4 rounded-t-xl">
                 <h3 className="text-2xl font-bold flex items-center gap-3">
-                  <span className="text-3xl">{categoryEmojis[category] || '🍽️'}</span>
+                  <span className="text-3xl">{categoryEmojis[category] || '🍽'}</span>
                   {category}
                   <span className="text-sm font-normal opacity-80">({categoryItems.length} items)</span>
                 </h3>
@@ -442,7 +442,8 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
                       )}
                     </div>
                   );
-                })}
+                  })}
+                </div>
               </div>
             </div>
           );
@@ -456,10 +457,10 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
             <div className="font-bold text-lg">
               {totalCount > 0 ? (
                 <span className="flex items-center gap-2">
-                  🛍️ {totalCount} item{totalCount !== 1 ? 's' : ''}
+                  Cart: {totalCount} items
                 </span>
               ) : (
-                <span className="flex items-center gap-2">🛍️ No items selected</span>
+                <span className="flex items-center gap-2">No items selected</span>
               )}
             </div>
             <div className="text-xs opacity-90">
@@ -475,7 +476,7 @@ const Breakfast = ({ isAdmin = false, roomNumber: propRoomNumber, hotelIdentifie
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-            {totalCount > 0 ? '👀 Review Order' : 'Select Items'}
+            {totalCount > 0 ? 'Review Order' : 'Select Items'}
           </button>
         </div>
       </div>
