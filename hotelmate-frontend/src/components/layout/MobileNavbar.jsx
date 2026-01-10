@@ -216,6 +216,23 @@ const MobileNavbar = () => {
               </li>
             )}
 
+            {/* Super User Button - Only visible to super users */}
+            {user?.is_superuser && (
+              <li className="nav-item">
+                <button
+                  className="btn btn-warning text-dark w-100"
+                  onClick={() => {
+                    navigate('/super-user');
+                    toggleNavbar();
+                  }}
+                  title="Super User Admin Panel"
+                >
+                  <i className="bi bi-shield-check me-2" />
+                  Super User
+                </button>
+              </li>
+            )}
+
             {/* Preset Selector Menu Items (when on public pages) */}
             {location.pathname.includes(`/${hotelIdentifier}`) && !location.pathname.includes('/staff/') && (
               <li className="nav-item mobile-preset-nav">

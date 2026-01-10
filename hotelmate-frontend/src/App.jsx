@@ -38,6 +38,7 @@ import RealtimeProvider from "@/realtime/RealtimeProvider";
 import { AttendanceProvider } from "@/realtime/stores/attendanceStore.jsx";
 import { RoomServiceProvider } from "@/realtime/stores/roomServiceStore.jsx";
 import { ServiceBookingProvider } from "@/realtime/stores/serviceBookingStore.jsx";
+import { HousekeepingProvider } from "@/realtime/stores/housekeepingStore.jsx";
 
 // Layout Policy - Single source of truth for layout mode classification
 import { getLayoutMode } from "@/policy/layoutPolicy.js";
@@ -90,6 +91,8 @@ import Staff from "@/components/staff/Staff";
 import StaffCreate from "@/components/staff/StaffCreate";
 import StaffDetails from "@/components/staff/StaffDetails";
 import StaffProfile from "@/components/staff/StaffProfile";
+
+import { HousekeepingRooms } from "@/pages/housekeeping";
 
 import GuestList from "@/components/guests/GuestList";
 import GuestEdit from "@/components/guests/GuestEdit";
@@ -154,6 +157,9 @@ import EnhancedAttendanceDashboard from "@/features/attendance/components/Enhanc
 // Face Attendance
 import FaceRegisterPage from "@/features/faceAttendance/pages/FaceRegisterPage";
 import FaceClockInPage from "@/features/faceAttendance/pages/FaceClockInPage";
+
+// Super User
+import SuperUser from "@/pages/SuperUser";
 
 const queryClient = new QueryClient();
 // Default settings for all games
@@ -313,6 +319,15 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 element={
                   <ProtectedRoute>
                     <Settings />
+                  </ProtectedRoute>
+                }
+              />
+              {/* Super User - Only accessible to super users */}
+              <Route
+                path="/super-user"
+                element={
+                  <ProtectedRoute>
+                    <SuperUser />
                   </ProtectedRoute>
                 }
               />
@@ -572,6 +587,15 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 element={
                   <ProtectedRoute>
                     <BookingManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              {/* Housekeeping */}
+              <Route
+                path="/staff/hotel/:hotelSlug/housekeeping"
+                element={
+                  <ProtectedRoute>
+                    <HousekeepingRooms />
                   </ProtectedRoute>
                 }
               />
@@ -957,7 +981,8 @@ export default function App() {
             <AttendanceProvider>
               <RoomServiceProvider>
                 <ServiceBookingProvider>
-                  <GuestChatProvider>
+                  <HousekeepingProvider>
+                    <GuestChatProvider>
                     <StaffChatStoreProvider>
                       <ChatProvider>
                         <MessengerProvider>
@@ -981,8 +1006,7 @@ export default function App() {
                         </MessengerProvider>
                       </ChatProvider>
                     </StaffChatStoreProvider>
-                  </GuestChatProvider>
-                </ServiceBookingProvider>
+                  </GuestChatProvider>              </HousekeepingProvider>                </ServiceBookingProvider>
               </RoomServiceProvider>
             </AttendanceProvider>
           </RealtimeProvider>

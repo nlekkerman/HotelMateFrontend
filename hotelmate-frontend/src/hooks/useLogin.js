@@ -34,7 +34,7 @@ export default function useLogin() {
         hotel_id: data.hotel_id,
         hotel_name: data.hotel_name,
         hotel_slug: data.hotel_slug,
-        is_staff: data.is_staff,
+        is_staff: data.is_staff || data.is_superuser, // Fix: Superusers should always be staff
         is_superuser: data.is_superuser,
         access_level: data.access_level,
         isAdmin: data.is_superuser || ["staff_admin", "super_staff_admin"].includes(data.access_level),

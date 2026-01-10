@@ -320,6 +320,16 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
       return [];
     }
     
+    // HOUSEKEEPING - Housekeeping management actions
+    if (path.includes('/housekeeping')) {
+      return [
+        { icon: 'house-gear', label: 'All Rooms', action: () => navigate(`/staff/hotel/${hotelIdentifier}/housekeeping`) },
+        { icon: 'door-closed', label: 'Rooms List', action: () => navigate('/rooms') },
+        { icon: 'tools', label: 'Maintenance', action: () => navigate('/maintenance') },
+        { icon: 'calendar-event', label: 'Bookings', action: () => navigate('/bookings') },
+      ];
+    }
+    
     // GUESTS - Guest management
     if (path.includes('/guests')) {
       return [
@@ -673,6 +683,23 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                   </Link>
                 );
               })()}
+
+              {/* Super User Button - Only visible to super users */}
+              {user?.is_superuser && (
+                <button
+                  className="btn btn-warning btn-sm top-nav-btn"
+                  onClick={() => navigate('/super-user')}
+                  title="Super User Admin Panel"
+                  style={{
+                    borderRadius: '50px',
+                    padding: '6px 16px',
+                    marginLeft: '10px'
+                  }}
+                >
+                  <i className="bi bi-shield-check me-1" />
+                  <span className="btn-label">Super User</span>
+                </button>
+              )}
             </div>
 
             {/* Right side: Main Navigation Items - Categories & Uncategorized */}

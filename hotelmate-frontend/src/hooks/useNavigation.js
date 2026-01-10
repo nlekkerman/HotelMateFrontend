@@ -13,6 +13,7 @@ export const DEFAULT_NAV_ITEMS = [
   // Removed 'staff-chat' - using MessengerWidget instead
   { slug: 'reception', name: 'Reception', path: '/reception', icon: 'bell' },
   { slug: 'rooms', name: 'Rooms', path: '/rooms', icon: 'door-closed' },
+  { slug: 'housekeeping', name: 'Housekeeping', path: '/staff/hotel/{hotelSlug}/housekeeping', icon: 'house-gear' },
   { slug: 'guests', name: 'Guests', path: '/{hotelSlug}/guests', icon: 'people' },
   { slug: 'staff', name: 'Staff', path: '/{hotelSlug}/staff', icon: 'person-badge' },
   { slug: 'attendance', name: 'Attendance', path: '/attendance/{hotelSlug}', icon: 'clock-history' },
