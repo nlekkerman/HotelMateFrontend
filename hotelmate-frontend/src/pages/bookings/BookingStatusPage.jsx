@@ -720,7 +720,7 @@ const BookingStatusPage = () => {
           has_guest_token: !!guestToken
         });
         setGuestContext({
-          allowed_actions: ['chat', 'room_service'],
+          allowed_actions: ['chat', 'room_service', 'breakfast'],
           guest_id: booking.booking_id,
           temp_workaround: true,
           message: 'Using temporary context for checked-in guest'
