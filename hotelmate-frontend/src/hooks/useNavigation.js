@@ -70,25 +70,8 @@ export function useNavigation() {
 
 
   
-  const visibleNavItems = isSuperUser 
-    ? allNavItems 
-    : allNavItems.filter(item => {
-        // Settings is ONLY for Django superuser
-        if (item.slug === 'settings') {
-          return false;
-        }
-        
-        // Check role-based permissions for items with allowedRoles
-        if (item.allowedRoles && item.allowedRoles.length > 0) {
-          const hasRoleAccess = canAccess(item.allowedRoles);
-          if (!hasRoleAccess) {
-            return false;
-          }
-        }
-        
-        const hasNavAccess = canAccessNav(item.slug);
-        return hasNavAccess;
-      });
+  // Show all navigation items without conditional filtering
+  const visibleNavItems = allNavItems;
 
   // 🎯 BACKEND AUTHORITATIVE: Trust allowed_navs from canonical resolver
   // Backend handles superuser bypass and M2M filtering correctly
@@ -123,14 +106,14 @@ export function useNavigation() {
   // Create categorized navigation structure
   const { categorized: categorizedItems, uncategorized } = groupItemsByCategory(finalVisibleItems);
   
-  // Build categories with items and filter out empty categories
+  // Build categories with items - show ALL categories regardless of content
   const categories = NAVIGATION_CATEGORIES
     .map(category => ({
       ...category,
       items: categorizedItems[category.id] || [],
       hasNotifications: false, // Will be calculated by navbar components
-    }))
-    .filter(category => category.items.length > 0); // Only show categories with items
+    }));
+    // Show all categories without filtering
 
 
   return { 
@@ -138,6 +121,6 @@ export function useNavigation() {
     allNavItems,
     categories,
     uncategorizedItems: uncategorized,
-    hasNavigation: finalVisibleItems.length > 0
+    hasNavigation: true // Always show navigation
   };
 }

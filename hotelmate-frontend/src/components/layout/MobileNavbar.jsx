@@ -126,7 +126,7 @@ const MobileNavbar = () => {
 
   // 🎯 LAYOUT POLICY: Visibility controlled by App.jsx using layoutMode
   // No internal visibility logic needed - App.jsx decides whether to render this component
-  if (!user || !hasNavigation) return null;
+  if (!user) return null;
 
   return (
     <nav
@@ -215,6 +215,7 @@ const MobileNavbar = () => {
                 </Link>
               </li>
             )}
+
 
             {/* Super User Button - Only visible to super users */}
             {user?.is_superuser && (
