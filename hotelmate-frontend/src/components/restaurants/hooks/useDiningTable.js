@@ -11,7 +11,7 @@ export function useDiningTable(hotelSlug, restaurantSlug) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const baseUrl = `/bookings/${hotelSlug}/${restaurantSlug}/tables/`;
+  const baseUrl = `/staff/hotel/${hotelSlug}/service-bookings/${restaurantSlug}/tables/`;
 
   // Fetch tables from backend
   const fetchTables = async () => {

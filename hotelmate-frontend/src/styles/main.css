@@ -13,6 +13,15 @@
   --border-color: #e5e7eb;
   --link-color: #007bff;
   --link-hover-color: #0056b3;
+  
+  /* HotelMate Button System Variables */
+  --color-primary: var(--main-color);
+  --color-secondary: var(--secondary-color);
+  --color-border: var(--border-color);
+  --color-link: var(--link-color);
+  --color-link-hover: var(--link-hover-color);
+  --color-disabled: #6c757d;
+  --color-focus: rgba(0, 123, 255, 0.25);
 }
 
 html,
@@ -25,6 +34,109 @@ html,
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+}
+/* ===============================
+   HotelMate Buttons – SIMPLE
+   One base, few meanings
+   =============================== */
+
+/* ---- BASE BUTTON (shape, padding, behavior) ---- */
+.hm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0.65rem 1.4rem;
+  border-radius: 9999px; /* pill everywhere */
+  border: none;
+
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1;
+
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.hm-btn:hover {
+  transform: translateY(-1px);
+}
+
+.hm-btn:active {
+  transform: translateY(0);
+}
+
+.hm-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-focus);
+}
+
+.hm-btn:disabled {
+  background-color: var(--color-disabled);
+  color: #ffffff;
+  cursor: not-allowed;
+  opacity: 0.7;
+  transform: none;
+}
+
+/* ===============================
+   MEANING CLASSES (same style, different color)
+   =============================== */
+
+/* CONFIRM / SAVE / ACCEPT */
+.hm-btn-confirm {
+  background-color: var(--color-primary);
+  color: #ffffff;
+}
+.hm-btn-confirm:hover {
+  background-color: color-mix(in srgb, var(--color-primary), black 15%);
+}
+
+/* NEUTRAL / EDIT / OPEN */
+.hm-btn-neutral {
+  background-color: var(--color-secondary);
+  color: #ffffff;
+}
+.hm-btn-neutral:hover {
+  background-color: color-mix(in srgb, var(--color-secondary), black 15%);
+}
+
+/* DELETE / DANGER */
+.hm-btn-danger {
+  background-color: color-mix(in srgb, var(--color-primary), red 60%);
+  color: #ffffff;
+}
+.hm-btn-danger:hover {
+  background-color: color-mix(in srgb, var(--color-primary), red 75%);
+}
+
+/* OUTLINE / LOW PRIORITY */
+.hm-btn-outline {
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-primary);
+}
+.hm-btn-outline:hover {
+  background-color: var(--color-primary);
+  color: #ffffff;
+}
+
+/* LINK / TEXT ACTION */
+.hm-btn-link {
+  background: none;
+  color: var(--color-link);
+  padding: 0;
+}
+.hm-btn-link:hover {
+  color: var(--color-link-hover);
+  text-decoration: underline;
 }
 
 body {
@@ -1170,7 +1282,9 @@ body.terminal-mode,
 */
 /* Hotel Logo Display - No hero/header background, just logo */
 .hotel-logo-display {
-  text-align: start;
+  display: flex;
+  justify-content: center;
+
   padding: 1.5rem 0 1rem 0;
   margin-top: 90px; /* Space for navbar + quick actions */
   animation: fadeInLogo 0.6s ease-in both;
@@ -1181,6 +1295,9 @@ body.terminal-mode,
   max-width: 300px;
   object-fit: contain;
   display: inline-block;
+  border-radius: 50%;
+  border: 10px solid rgba(var(--secondary-color-rgb), 0.4);
+
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));

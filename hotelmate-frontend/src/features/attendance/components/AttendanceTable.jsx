@@ -35,14 +35,14 @@ export default function AttendanceTable({
           <div className="btn-group btn-group-sm" role="group">
             <button
               type="button"
-              className={`btn ${currentViewMode === 'table' ? 'btn-primary' : 'btn-outline-primary'}`}
+              className={`hm-btn ${currentViewMode === 'table' ? 'hm-btn-confirm' : 'hm-btn-outline'}`}
               onClick={() => setCurrentViewMode('table')}
             >
               <i className="bi bi-table me-1"></i>Table
             </button>
             <button
               type="button"
-              className={`btn ${currentViewMode === 'cards' ? 'btn-primary' : 'btn-outline-primary'}`}
+              className={`hm-btn ${currentViewMode === 'cards' ? 'hm-btn-confirm' : 'hm-btn-outline'}`}
               onClick={() => setCurrentViewMode('cards')}
             >
               <i className="bi bi-grid-3x3-gap me-1"></i>Cards
@@ -72,14 +72,14 @@ export default function AttendanceTable({
           <div className="btn-group btn-group-sm" role="group">
             <button
               type="button"
-              className={`btn ${currentViewMode === 'table' ? 'btn-primary' : 'btn-outline-primary'}`}
+              className={`hm-btn ${currentViewMode === 'table' ? 'hm-btn-confirm' : 'hm-btn-outline'}`}
               onClick={() => setCurrentViewMode('table')}
             >
               <i className="bi bi-table me-1"></i>Table
             </button>
             <button
               type="button"
-              className={`btn ${currentViewMode === 'cards' ? 'btn-primary' : 'btn-outline-primary'}`}
+              className={`hm-btn ${currentViewMode === 'cards' ? 'hm-btn-confirm' : 'hm-btn-outline'}`}
               onClick={() => setCurrentViewMode('cards')}
             >
               <i className="bi bi-grid-3x3-gap me-1"></i>Cards

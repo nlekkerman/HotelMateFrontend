@@ -25,7 +25,7 @@ export const DEFAULT_NAV_ITEMS = [
   { slug: 'maintenance', name: 'Maintenance', path: '/maintenance', icon: 'tools' },
   { slug: 'hotel_info', name: 'Hotel Info', path: '/hotel_info/{hotelSlug}', icon: 'info-circle' },
   { slug: 'good_to_know', name: 'Good to Know', path: '/good_to_know_console/{hotelSlug}', icon: 'book' },
-  { slug: 'stock_tracker', name: 'Stock Dashboard', path: '/stock_tracker/{hotelSlug}', icon: 'graph-up' },
+  { slug: 'stock_tracker', name: 'Dashboard', path: '/stock_tracker/{hotelSlug}', icon: 'graph-up' },
   { slug: 'games', name: 'Games', path: '/games/?hotel={hotelSlug}', icon: 'controller' },
   { slug: 'settings', name: 'Settings', path: '/staff/{hotelSlug}/settings', icon: 'gear', requiresHotelSlug: true },
   { slug: 'room_service', name: 'Room Service', path: '/room_services/{hotelSlug}/orders-management', icon: 'box' },
@@ -89,7 +89,15 @@ export function useNavigation() {
       // Special handling: room_bookings is always independent
       if (item.slug === 'room_bookings') {
         uncategorized.push(item);
-      } else if (categoryId) {
+      } 
+      // Special handling: stock_tracker must be categorized under stock
+      else if (item.slug === 'stock_tracker') {
+        if (!categorized['stock']) {
+          categorized['stock'] = [];
+        }
+        categorized['stock'].push(item);
+      }
+      else if (categoryId) {
         if (!categorized[categoryId]) {
           categorized[categoryId] = [];
         }

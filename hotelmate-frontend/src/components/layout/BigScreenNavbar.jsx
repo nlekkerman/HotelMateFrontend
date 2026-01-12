@@ -497,11 +497,11 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
         }}
 
       >
-        <div className="container-fluid h-100">
+        <div className="container-fluid h-100 ">
           <div className="d-flex align-items-center justify-content-between h-100 px-3">
             
             {/* Left side: Logout + Clock In + Profile */}
-            <div className="d-flex align-items-center gap-2">
+            <div className="d-flex align-items-center gap-2 ">
               {user && (
                 <button
                   className="top-nav-link logout-link"
@@ -669,17 +669,13 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                 
                 return (
                   <Link
-                    className="btn btn-light btn-sm top-nav-btn"
+                    className="top-nav-link"
                     to={targetPath}
                     title={buttonLabel}
-                    style={{
-                      borderRadius: '50px',
-                      padding: '6px 16px',
-                      marginLeft: '10px'
-                    }}
                   >
-                    <i className={`bi bi-${buttonIcon} me-1`} />
-                    <span className="btn-label">{buttonLabel}</span>
+                    <div className="top-nav-item">
+                      <span className="top-nav-label">{buttonLabel}</span>
+                    </div>
                   </Link>
                 );
               })()}
@@ -687,17 +683,13 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
               {/* Super User Button - Only visible to super users */}
               {user?.is_superuser && (
                 <button
-                  className="btn btn-warning btn-sm top-nav-btn"
+                  className="top-nav-link"
                   onClick={() => navigate('/super-user')}
                   title="Super User Admin Panel"
-                  style={{
-                    borderRadius: '50px',
-                    padding: '6px 16px',
-                    marginLeft: '10px'
-                  }}
                 >
-                  <i className="bi bi-shield-check me-1" />
-                  <span className="btn-label">Super User</span>
+                  <div className="top-nav-item">
+                    <span className="top-nav-label">Super User</span>
+                  </div>
                 </button>
               )}
             </div>
@@ -751,7 +743,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                         >
                           <Link
                             className="category-dropdown-item"
-                            to={`/staff/hotel/${hotelIdentifier}/bookings?filter=pending`}
+                            to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=pending`}
                             onClick={() => setOpenCategoryId(null)}
                           >
                             <i className="bi bi-clock me-2" />
@@ -759,7 +751,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                           </Link>
                           <Link
                             className="category-dropdown-item"
-                            to={`/staff/hotel/${hotelIdentifier}/bookings?filter=confirmed`}
+                            to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=confirmed`}
                             onClick={() => setOpenCategoryId(null)}
                           >
                             <i className="bi bi-check-circle me-2" />
@@ -767,7 +759,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                           </Link>
                           <Link
                             className="category-dropdown-item"
-                            to={`/staff/hotel/${hotelIdentifier}/bookings?filter=cancelled`}
+                            to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=cancelled`}
                             onClick={() => setOpenCategoryId(null)}
                           >
                             <i className="bi bi-x-circle me-2" />
@@ -775,7 +767,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                           </Link>
                           <Link
                             className="category-dropdown-item"
-                            to={`/staff/hotel/${hotelIdentifier}/bookings`}
+                            to={`/staff/hotel/${hotelIdentifier}/room-bookings`}
                             onClick={() => setOpenCategoryId(null)}
                           >
                             <i className="bi bi-calendar-event me-2" />
@@ -783,7 +775,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
                           </Link>
                           <Link
                             className="category-dropdown-item"
-                            to={`/staff/hotel/${hotelIdentifier}/bookings?filter=history`}
+                            to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=history`}
                             onClick={() => setOpenCategoryId(null)}
                           >
                             <i className="bi bi-archive me-2" />

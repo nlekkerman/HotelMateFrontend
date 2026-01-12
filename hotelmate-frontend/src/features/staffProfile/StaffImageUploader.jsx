@@ -68,7 +68,7 @@ export default function StaffImageUploader({ staff, hotelSlug, isOwnProfile, onU
       </label>
       {imageFile && (
         <button 
-          className="btn btn-sm btn-success ms-2" 
+          className="hm-btn hm-btn-confirm ms-2" 
           onClick={handleImageUpload} 
           disabled={imageUploading}
         >

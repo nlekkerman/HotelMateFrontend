@@ -25,13 +25,7 @@ export const NAVIGATION_CATEGORIES = [
     slug: 'staff',
     order: 3,
   },
-  {
-    id: 'stock',
-    name: 'Stock',
-    icon: 'box-seam',
-    slug: 'stock',
-    order: 4,
-  },
+ 
   {
     id: 'guest-relations',
     name: 'Guest Relations',

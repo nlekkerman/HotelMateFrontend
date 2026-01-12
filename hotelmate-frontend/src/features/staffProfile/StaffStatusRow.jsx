@@ -137,14 +137,14 @@ export default function StaffStatusRow({
             ))}
           </select>
           <button 
-            className="btn btn-success btn-sm ms-2" 
+            className="hm-btn hm-btn-confirm ms-2" 
             onClick={handleSave}
             disabled={saving}
           >
             {saving ? "Saving..." : "Save"}
           </button>
           <button 
-            className="btn btn-secondary btn-sm ms-1" 
+            className="hm-btn hm-btn-outline ms-1" 
             onClick={handleCancel}
             disabled={saving}
           >

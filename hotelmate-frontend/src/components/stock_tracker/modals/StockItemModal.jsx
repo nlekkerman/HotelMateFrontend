@@ -256,10 +256,10 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
             </div>
 
             <div className="modal-footer">
-              <button type="button" className="btn btn-secondary" onClick={onClose}>
+              <button type="button" className="hm-btn hm-btn-outline" onClick={onClose}>
                 Cancel
               </button>
-              <button type="submit" className="btn btn-primary">
+              <button type="submit" className="hm-btn hm-btn-confirm">
                 {item ? "Update Item" : "Create Item"}
               </button>
             </div>

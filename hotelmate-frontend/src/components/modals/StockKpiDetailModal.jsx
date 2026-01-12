@@ -839,8 +839,9 @@ const StockKpiDetailModal = ({
       <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
         {renderContent()}
       </Modal.Body>
+      
       <Modal.Footer>
-        <button className="btn btn-secondary" onClick={onClose}>
+        <button className="hm-btn hm-btn-outline" onClick={onClose}>
           Close
         </button>
       </Modal.Footer>

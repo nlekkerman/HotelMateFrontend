@@ -14,12 +14,12 @@ export const useRestaurantDetail = (hotelSlug, restaurantSlug) => {
     const fetchRestaurantDetail = async () => {
       setLoading(true);
       try {
-        // Fetch restaurant by slug
-        const res = await api.get(`/bookings/restaurants/${restaurantSlug}/`);
+        // Fetch restaurant by slug using staff API
+        const res = await api.get(`/staff/hotel/${hotelSlug}/service-bookings/restaurants/${restaurantSlug}/`);
         setRestaurant(res.data);
 
-        // Fetch blueprint for this restaurant
-        const bpRes = await api.get(`/bookings/${hotelSlug}/${restaurantSlug}/blueprint/`);
+        // Fetch blueprint for this restaurant using staff API
+        const bpRes = await api.get(`/staff/hotel/${hotelSlug}/service-bookings/${restaurantSlug}/blueprint/`);
         setBlueprint(bpRes.data.results?.[0] || null);
       } catch (err) {
         console.error("Error fetching restaurant detail:", err);

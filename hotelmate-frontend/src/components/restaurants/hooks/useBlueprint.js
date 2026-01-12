@@ -31,7 +31,7 @@ export const useBlueprint = (hotelSlug, restaurantSlug) => {
     setLoading(true);
     try {
       log("Fetching blueprint for", hotelSlug, restaurantSlug);
-      const res = await api.get(`/bookings/${hotelSlug}/${restaurantSlug}/blueprint/`);
+      const res = await api.get(`/staff/hotel/${hotelSlug}/service-bookings/${restaurantSlug}/blueprint/`);
       log("Fetch successful, response:", res.data);
       setBlueprint(res.data.results[0] || null);
     } catch (err) {
@@ -100,7 +100,7 @@ export const useBlueprint = (hotelSlug, restaurantSlug) => {
 
     try {
       log("Updating blueprint", blueprint.id, "with data:", data);
-      const res = await api.put(`/bookings/${hotelSlug}/${restaurantSlug}/blueprint/${blueprint.id}/`, data);
+      const res = await api.put(`/staff/hotel/${hotelSlug}/service-bookings/${restaurantSlug}/blueprint/${blueprint.id}/`, data);
       log("Blueprint update successful:", res.data);
       setBlueprint(res.data);
     } catch (err) {
@@ -119,7 +119,7 @@ export const useBlueprint = (hotelSlug, restaurantSlug) => {
 
     try {
       log("Deleting blueprint", blueprint.id);
-      await api.delete(`/bookings/${hotelSlug}/${restaurantSlug}/blueprint/${blueprint.id}/`);
+      await api.delete(`/staff/hotel/${hotelSlug}/service-bookings/${restaurantSlug}/blueprint/${blueprint.id}/`);
       log("Blueprint deleted successfully");
       setBlueprint(null);
     } catch (err) {

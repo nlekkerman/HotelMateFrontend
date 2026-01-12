@@ -225,7 +225,7 @@ const FCMTestPanel = () => {
           
           {permissionStatus === 'default' && (
             <button 
-              className="btn btn-primary btn-sm"
+              className="hm-btn hm-btn-confirm"
               onClick={handleRequestPermission}
               disabled={loading}
             >
@@ -282,7 +282,7 @@ const FCMTestPanel = () => {
               <p className="text-muted mb-2">No token available</p>
               {permissionStatus === 'granted' && (
                 <button 
-                  className="btn btn-success btn-sm"
+                  className="hm-btn hm-btn-confirm"
                   onClick={handleGetToken}
                   disabled={loading}
                 >
@@ -316,7 +316,7 @@ const FCMTestPanel = () => {
           </button>
           
           <button 
-            className="btn btn-warning btn-sm"
+            className="hm-btn hm-btn-neutral"
             onClick={handleReinitialize}
             disabled={loading}
             title="Reinitialize FCM service"
@@ -327,7 +327,7 @@ const FCMTestPanel = () => {
           
           {fcmToken && (
             <button 
-              className="btn btn-danger btn-sm"
+              className="hm-btn hm-btn-danger"
               onClick={handleDeleteToken}
               disabled={loading}
               title="Delete FCM token from backend and localStorage"

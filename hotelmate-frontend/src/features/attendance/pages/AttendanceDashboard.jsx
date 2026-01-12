@@ -643,7 +643,7 @@ function AttendanceDashboardComponent() {
                 <div className="kiosk-control-block d-flex gap-2">
                   
                   <button
-                    className={`btn btn-sm ${isKioskMode ? 'btn-warning' : 'btn-info'} kiosk-toggle-btn`}
+                    className={`hm-btn ${isKioskMode ? 'hm-btn-neutral' : 'hm-btn-confirm'} kiosk-toggle-btn`}
                     onClick={handleToggleKioskMode}
                     title={isKioskMode ? 'Disable Kiosk Mode' : 'Enable Kiosk Mode'}
                   >

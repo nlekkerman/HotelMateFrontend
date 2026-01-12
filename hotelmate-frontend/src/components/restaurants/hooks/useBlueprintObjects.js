@@ -9,7 +9,7 @@ export function useBlueprintObjects(hotelSlug, restaurantSlug, blueprintId) {
   const [error, setError] = useState(null);
 
   const baseUrl = blueprintId
-    ? `/bookings/${hotelSlug}/${restaurantSlug}/blueprint/${blueprintId}/objects/`
+    ? `/staff/hotel/${hotelSlug}/service-bookings/${restaurantSlug}/blueprint/${blueprintId}/objects/`
     : null;
 
   // ✅ Always run effect, but guard inside
@@ -43,7 +43,7 @@ export function useBlueprintObjects(hotelSlug, restaurantSlug, blueprintId) {
 const createObject = async (obj) => {
   try {
     // 1. Send object to backend
-    const response = await api.post(`/bookings/${hotelSlug}/${restaurantSlug}/blueprint/${blueprintId}/objects/`, obj);
+    const response = await api.post(`/staff/hotel/${hotelSlug}/service-bookings/${restaurantSlug}/blueprint/${blueprintId}/objects/`, obj);
     const savedObject = response.data; // backend should return the object with id
 
     // 2. Update local state
@@ -58,7 +58,7 @@ const deleteObject = async (objectId) => {
   try {
     // 1. Send DELETE request to backend
     await api.delete(
-      `/bookings/${hotelSlug}/${restaurantSlug}/blueprint/${blueprintId}/objects/${objectId}/`
+      `/staff/hotel/${hotelSlug}/service-bookings/${restaurantSlug}/blueprint/${blueprintId}/objects/${objectId}/`
     );
 
     // 2. Remove the object from local state
@@ -74,7 +74,7 @@ const deleteObject = async (objectId) => {
   const updateObject = async (objectId, payload) => {
   try {
     const res = await api.patch(
-      `/bookings/${hotelSlug}/${restaurantSlug}/blueprint/${blueprintId}/objects/${objectId}/`,
+      `/staff/hotel/${hotelSlug}/service-bookings/${restaurantSlug}/blueprint/${blueprintId}/objects/${objectId}/`,
       payload
     );
     setObjects((prev) =>

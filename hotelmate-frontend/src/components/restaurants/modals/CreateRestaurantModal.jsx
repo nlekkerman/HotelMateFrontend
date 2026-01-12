@@ -48,7 +48,7 @@ const CreateRestaurantModal = ({ show, toggle, onCreated, api, hotelSlug: propHo
           : `${closingTime}:00`;
       }
 
-      const res = await api.post(`/bookings/${hotelSlug}/restaurants/`, requestData);
+      const res = await api.post(`/staff/hotel/${hotelSlug}/service-bookings/restaurants/`, requestData);
 
       onCreated(res.data);
       toggle();

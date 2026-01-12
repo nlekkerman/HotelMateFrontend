@@ -76,14 +76,14 @@ class AttendanceErrorBoundary extends React.Component {
 
                   <div className="d-flex gap-2 flex-wrap mb-4">
                     <button 
-                      className="btn btn-primary" 
+                      className="hm-btn hm-btn-confirm" 
                       onClick={this.handleRetry}
                     >
                       <i className="bi bi-arrow-clockwise me-1"></i>
                       Try Again
                     </button>
                     <button 
-                      className="btn btn-outline-secondary" 
+                      className="hm-btn hm-btn-outline" 
                       onClick={this.handleReloadPage}
                     >
                       <i className="bi bi-arrow-repeat me-1"></i>

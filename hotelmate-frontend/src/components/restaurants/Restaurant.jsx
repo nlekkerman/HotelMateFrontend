@@ -12,7 +12,7 @@ const Restaurant = () => {
     useRestaurantDetail(hotelSlug, restaurantSlug);
 
   const { formData, handleChange, saveRestaurant, saving, error: saveError } =
-    useEditRestaurant(restaurantSlug, fetchedRestaurant || {});
+    useEditRestaurant(hotelSlug, restaurantSlug, fetchedRestaurant || {});
 
   const [restaurant, setRestaurant] = useState(fetchedRestaurant);
   const [showModal, setShowModal] = useState(false);

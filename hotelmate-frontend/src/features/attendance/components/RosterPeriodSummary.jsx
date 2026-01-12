@@ -50,7 +50,7 @@ export default function RosterPeriodSummary({
               {!period.finalized ? (
                 <button
                   type="button"
-                  className="btn btn-sm btn-primary"
+                  className="hm-btn hm-btn-confirm"
                   disabled={finalizing}
                   onClick={onFinalize}
                 >

@@ -250,7 +250,7 @@ export default function StaffDetailModal({
             </div>
             <button
               type="button"
-              className="btn btn-secondary btn-sm"
+              className="hm-btn hm-btn-outline"
               onClick={handleClose}
             >
               Close

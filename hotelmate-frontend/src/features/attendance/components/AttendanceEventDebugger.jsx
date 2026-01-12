@@ -44,7 +44,7 @@ export default function AttendanceEventDebugger({ hotelIdentifier }) {
     return (
       <button
         onClick={() => setIsVisible(true)}
-        className="btn btn-sm btn-secondary position-fixed"
+        className="hm-btn hm-btn-neutral position-fixed"
         style={{
           top: '10px',
           right: '10px',
@@ -76,21 +76,21 @@ export default function AttendanceEventDebugger({ hotelIdentifier }) {
         <div>
           <button
             onClick={testEvent}
-            className="btn btn-sm btn-primary me-2"
+            className="hm-btn hm-btn-confirm me-2"
             title="Send test event"
           >
             Test
           </button>
           <button
             onClick={clearEvents}
-            className="btn btn-sm btn-warning me-2"
+            className="hm-btn hm-btn-neutral me-2"
             title="Clear events"
           >
             Clear
           </button>
           <button
             onClick={() => setIsVisible(false)}
-            className="btn btn-sm btn-outline-light"
+            className="hm-btn hm-btn-outline"
             title="Hide debugger"
           >
             ×

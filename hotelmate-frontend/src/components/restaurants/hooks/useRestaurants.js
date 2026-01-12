@@ -14,8 +14,8 @@ export const useRestaurants = (hotelSlug) => {
     setLoading(true);
     setError(null);
     try {
-      // Use hotel-scoped endpoint as per RESTAURANT_API_GUIDE.md
-      const endpoint = `/bookings/${hotelSlug}/restaurants/`;
+      // Use staff hotel-scoped endpoint for restaurant management
+      const endpoint = `/staff/hotel/${hotelSlug}/service-bookings/restaurants/`;
       console.log("🔍 Fetching restaurants from:", endpoint);
       console.log("📍 Hotel Slug:", hotelSlug);
       

@@ -49,35 +49,41 @@ const RestaurantList = ({ restaurants, selectedRestaurant, onSelect, onAddRestau
       </Col>
 
       {/* Restaurant Cards */}
-      {restaurants.map((restaurant) => (
-        <Col xs={12} sm={6} md={4} lg={3} key={restaurant.id}>
-          <Card 
-            className={`h-100 border-0 shadow-sm ${selectedRestaurant?.id === restaurant.id ? 'border-primary' : ''}`}
-            onClick={() => onSelect(restaurant)}
-            style={{ 
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              minHeight: '280px',
-              borderWidth: selectedRestaurant?.id === restaurant.id ? '3px' : '0',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-8px)';
-              e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.15)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-            }}
-          >
-            <div 
-              style={{
-                height: '160px',
-                backgroundImage: 'url(https://res.cloudinary.com/dg0ssec7u/image/upload/v1758363070/ypfbole10rpggvq1vdgq.webp)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                display: 'flex',
-                alignItems: 'center',
+      {restaurants.map((restaurant) => {
+        // Construct image URL from environment variable, same as bookings
+        const imageUrl = restaurant.image 
+          ? `${import.meta.env.VITE_CLOUDINARY_BASE}image/upload/${restaurant.image.split('/image/upload/')[1]}`
+          : 'https://res.cloudinary.com/dg0ssec7u/image/upload/v1758363070/ypfbole10rpggvq1vdgq.webp';
+
+        return (
+          <Col xs={12} sm={6} md={4} lg={3} key={restaurant.id}>
+            <Card 
+              className={`h-100 border-0 shadow-sm ${selectedRestaurant?.id === restaurant.id ? 'border-primary' : ''}`}
+              onClick={() => onSelect(restaurant)}
+              style={{ 
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                minHeight: '280px',
+                borderWidth: selectedRestaurant?.id === restaurant.id ? '3px' : '0',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+              }}
+            >
+              <div 
+                style={{
+                  height: '160px',
+                  backgroundImage: `url(${imageUrl})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                  display: 'flex',
+                  alignItems: 'center',
                 justifyContent: 'center',
                 position: 'relative',
                 overflow: 'hidden',
@@ -128,7 +134,8 @@ const RestaurantList = ({ restaurants, selectedRestaurant, onSelect, onAddRestau
             </Card.Body>
           </Card>
         </Col>
-      ))}
+        );
+      })}
 
       {/* Empty State */}
       {restaurants.length === 0 && (
