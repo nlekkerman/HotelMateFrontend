@@ -180,13 +180,19 @@ export function HousekeepingProvider({ children }) {
 
     updateRoomStatus: useCallback(async (hotelSlug, roomId, toStatus, note = '') => {
       try {
+        // Check if this is a "Back in Service" action (OUT_OF_ORDER → READY_FOR_GUEST)
+        const currentRoom = state.roomsById[roomId];
+        const isBackInService = currentRoom?.room_status === 'OUT_OF_ORDER' && toStatus === 'READY_FOR_GUEST';
+        
+        const requestBody = {
+          to_status: toStatus,
+          source: isBackInService ? 'MANAGER_OVERRIDE' : 'HOUSEKEEPING',
+          note: isBackInService && !note ? 'Room maintenance completed - back in service' : note
+        };
+
         const response = await api.post(
           `/staff/hotel/${hotelSlug}/housekeeping/rooms/${roomId}/status/`,
-          {
-            to_status: toStatus,
-            source: 'HOUSEKEEPING',
-            note: note
-          }
+          requestBody
         );
 
         // Update will come via Pusher, but we can optimistically update
@@ -208,7 +214,7 @@ export function HousekeepingProvider({ children }) {
         dispatch({ type: ACTIONS.SET_ERROR, payload: errorMessage });
         throw error;
       }
-    }, []),
+    }, [state.roomsById]),
 
     handleRealtimeEvent: useCallback((event) => {
       // Handle Pusher room-status-changed events

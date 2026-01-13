@@ -92,6 +92,22 @@ export const completeMaintenance = async (hotelSlug, roomNumber) => {
   return api.post(url);
 };
 
+/**
+ * Manager override room status (bypasses workflow restrictions)
+ * @param {string} hotelSlug - The hotel slug
+ * @param {string} roomId - The room ID (not room_number)
+ * @param {Object} payload - { to_status: string, note?: string }
+ * @returns {Promise} - API response
+ */
+export const managerOverrideRoomStatus = async (hotelSlug, roomId, { to_status, note }) => {
+  const url = buildStaffURL(hotelSlug, 'housekeeping', `/rooms/${roomId}/manager_override/`);
+  const payload = { to_status };
+  if (note && note.trim()) {
+    payload.note = note.trim();
+  }
+  return api.post(url, payload);
+};
+
 // ============= GUEST OPERATIONS (room_number) =============
 
 /**

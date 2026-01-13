@@ -93,6 +93,7 @@ import StaffDetails from "@/components/staff/StaffDetails";
 import StaffProfile from "@/components/staff/StaffProfile";
 
 import { HousekeepingRooms } from "@/pages/housekeeping";
+import HousekeepingRoomDetails from "@/pages/housekeeping/components/HousekeepingRoomDetails";
 
 import GuestList from "@/components/guests/GuestList";
 import GuestEdit from "@/components/guests/GuestEdit";
@@ -596,6 +597,14 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 element={
                   <ProtectedRoute>
                     <HousekeepingRooms />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/staff/hotel/:hotelSlug/housekeeping/rooms/:roomNumber"
+                element={
+                  <ProtectedRoute>
+                    <HousekeepingRoomDetails />
                   </ProtectedRoute>
                 }
               />

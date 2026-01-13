@@ -10,7 +10,8 @@ import {
   markCleaned,
   inspectRoom,
   markMaintenance,
-  completeMaintenance
+  completeMaintenance,
+  managerOverrideRoomStatus
 } from "@/services/roomOperations";
 import { handleRoomOperationError } from "@/utils/errorHandling";
 
@@ -47,6 +48,7 @@ function RoomDetails() {
   
   const userData = JSON.parse(localStorage.getItem("user"));
   const canManageRooms = ['housekeeping', 'admin', 'manager'].includes(userData?.role?.toLowerCase()) || userData?.is_superuser;
+  const canUseManagerOverride = userData?.is_manager || userData?.is_superuser || userData?.role?.toLowerCase() === 'manager';
 
   // Realtime store integration
   const roomsState = useRoomsState();
@@ -153,25 +155,49 @@ function RoomDetails() {
   const handleMarkMaintenance = () => handleAction('markMaintenance', markMaintenance, `Room ${roomNumber} marked for maintenance`);
   const handleCompleteMaintenance = () => handleAction('completeMaintenance', completeMaintenance, `Maintenance completed for Room ${roomNumber}`);
 
-  // Advanced status override handler
+  // Status override handler with manager override support
   const handleStatusOverride = async () => {
     if (!selectedStatus || actionStates.statusOverride || !room?.id) return;
+    
+    // Check if this requires manager override (bypassing workflow rules)
+    const requiresManagerOverride = canUseManagerOverride && (
+      statusNote.toLowerCase().includes('override') ||
+      statusNote.toLowerCase().includes('bypass') ||
+      statusNote.toLowerCase().includes('force') ||
+      statusNote.toLowerCase().includes('emergency')
+    );
     
     setActionStates(prev => ({ ...prev, statusOverride: true }));
     try {
       const hotelSlug = getHotelSlug();
-      await updateHousekeepingRoomStatus(hotelSlug, room.id, {
-        status: selectedStatus,
-        note: statusNote || `Status overridden to ${selectedStatus}`
-      });
       
-      toast.success(`Room ${roomNumber} status override requested. Waiting for realtime update.`);
+      if (requiresManagerOverride) {
+        // Use manager override endpoint
+        await managerOverrideRoomStatus(hotelSlug, room.id, {
+          to_status: selectedStatus,
+          note: statusNote || `Manager override to ${selectedStatus}`
+        });
+        toast.success(`🔑 Manager Override: Room ${roomNumber} status changed. Waiting for realtime update.`);
+      } else {
+        // Use regular housekeeping endpoint
+        await updateHousekeepingRoomStatus(hotelSlug, room.id, {
+          status: selectedStatus,
+          note: statusNote || `Status changed to ${selectedStatus}`
+        });
+        toast.success(`Room ${roomNumber} status updated. Waiting for realtime update.`);
+      }
+      
       setShowStatusModal(false);
       setSelectedStatus('');
       setStatusNote('');
     } catch (error) {
       const errorMessage = handleRoomOperationError(error, 'status_override', roomNumber);
-      toast.error(errorMessage);
+      // Check for manager privilege error
+      if (error.response?.data?.error?.includes('Manager privileges')) {
+        toast.error('Manager privileges required for this override operation.');
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setActionStates(prev => ({ ...prev, statusOverride: false }));
     }
@@ -527,16 +553,21 @@ function RoomDetails() {
         {/* Quick Status Override */}
         {canManageRooms && (
           <div className="card">
-            <div className="card-header bg-warning text-dark">
+            <div className={`card-header ${canUseManagerOverride ? 'bg-danger text-white' : 'bg-warning text-dark'}`}>
               <h6 className="mb-0">
-                <i className="bi bi-exclamation-triangle me-2"></i>
+                <i className={`bi ${canUseManagerOverride ? 'bi-key' : 'bi-exclamation-triangle'} me-2`}></i>
                 Quick Status Override
+                {canUseManagerOverride && <small className="ms-2 opacity-75">Manager Privileges</small>}
               </h6>
             </div>
             <div className="card-body">
-              <div className="alert alert-warning py-2 mb-3">
-                <small><i className="bi bi-exclamation-triangle me-1"></i>
-                Use only if workflow buttons are not applicable.</small>
+              <div className={`alert ${canUseManagerOverride ? 'alert-danger' : 'alert-warning'} py-2 mb-3`}>
+                <small>
+                  <i className={`bi ${canUseManagerOverride ? 'bi-key' : 'bi-exclamation-triangle'} me-1`}></i>
+                  {canUseManagerOverride 
+                    ? 'Manager override can bypass workflow restrictions and will be logged in audit trail.' 
+                    : 'Use only if workflow buttons are not applicable.'}
+                </small>
               </div>
               
               <div className="mb-3">
@@ -554,6 +585,7 @@ function RoomDetails() {
                   <option value="READY_FOR_GUEST">Ready For Guest</option>
                   <option value="MAINTENANCE_REQUIRED">Maintenance Required</option>
                   <option value="OUT_OF_ORDER">Out of Order</option>
+                  <option value="OCCUPIED">Occupied</option>
                 </select>
               </div>
               
@@ -564,13 +596,60 @@ function RoomDetails() {
                   rows="2" 
                   value={statusNote}
                   onChange={(e) => setStatusNote(e.target.value)}
-                  placeholder="Why is this override needed?"
+                  placeholder={canUseManagerOverride 
+                    ? 'Why is this manager override needed? (Use keywords: override, bypass, force, emergency for manager override)' 
+                    : 'Why is this override needed?'}
                   disabled={actionStates.statusOverride}
                 ></textarea>
+                {canUseManagerOverride && statusNote && (
+                  statusNote.toLowerCase().includes('override') ||
+                  statusNote.toLowerCase().includes('bypass') ||
+                  statusNote.toLowerCase().includes('force') ||
+                  statusNote.toLowerCase().includes('emergency')
+                ) && (
+                  <small className="text-danger mt-1 d-block">
+                    <i className="bi bi-key me-1"></i>
+                    This will use Manager Override (bypasses workflow rules)
+                  </small>
+                )}
               </div>
               
+              {canUseManagerOverride && (
+                <div className="mb-3">
+                  <div className="d-flex gap-2">
+                    <button 
+                      type="button"
+                      className="btn btn-sm btn-outline-danger flex-fill"
+                      onClick={() => setStatusNote('Emergency override - room ready for guest')}
+                      disabled={actionStates.statusOverride}
+                    >
+                      🔓 Force Ready
+                    </button>
+                    <button 
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary flex-fill"
+                      onClick={() => setStatusNote('Manager override - maintenance required')}
+                      disabled={actionStates.statusOverride}
+                    >
+                      🔧 Force Maintenance
+                    </button>
+                    <button 
+                      type="button"
+                      className="btn btn-sm btn-outline-warning flex-fill"
+                      onClick={() => setStatusNote('Manager override - room out of service')}
+                      disabled={actionStates.statusOverride}
+                    >
+                      🚫 Force OOO
+                    </button>
+                  </div>
+                  <small className="text-muted d-block mt-1 text-center">
+                    Quick override templates (click to use)
+                  </small>
+                </div>
+              )}
+              
               <button 
-                className="btn btn-warning w-100"
+                className={`btn w-100 ${canUseManagerOverride ? 'btn-danger' : 'btn-warning'}`}
                 onClick={handleStatusOverride}
                 disabled={!selectedStatus || actionStates.statusOverride}
               >
@@ -581,8 +660,8 @@ function RoomDetails() {
                   </>
                 ) : (
                   <>
-                    <i className="bi bi-gear me-2"></i>
-                    Override Status Now
+                    <i className={`bi ${canUseManagerOverride ? 'bi-key' : 'bi-gear'} me-2`}></i>
+                    {canUseManagerOverride ? 'Manager Override Status' : 'Override Status Now'}
                   </>
                 )}
               </button>

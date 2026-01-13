@@ -1,5 +1,7 @@
 // src/pages/housekeeping/components/RoomCard.jsx
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 
 // Status styling mapping
 const STATUS_STYLES = {
@@ -62,12 +64,7 @@ const getQuickActions = (currentStatus) => {
       break;
       
     case 'READY_FOR_GUEST':
-      actions.push({
-        label: 'Mark Occupied',
-        toStatus: 'OCCUPIED',
-        variant: 'btn-dark',
-        icon: 'person-check'
-      });
+      // No quick actions needed - room is ready
       break;
       
     case 'OUT_OF_ORDER':
@@ -84,24 +81,23 @@ const getQuickActions = (currentStatus) => {
       break;
   }
 
-  // Always allow marking as Out of Order (except if already OOO)
-  if (currentStatus !== 'OUT_OF_ORDER') {
-    actions.push({
-      label: 'Mark OOO',
-      toStatus: 'OUT_OF_ORDER',
-      variant: 'btn-outline-danger',
-      icon: 'exclamation-triangle'
-    });
-  }
-
   return actions;
 };
 
 const RoomCard = ({ room, onAction, disabled = false }) => {
   const [processing, setProcessing] = useState(null); // Track which action is processing
+  const navigate = useNavigate();
+  const { user } = useAuth();
   
   const statusStyle = STATUS_STYLES[room.room_status] || { bg: 'bg-light', text: 'text-dark' };
   const quickActions = getQuickActions(room.room_status);
+  
+  // Handle room click navigation
+  const handleRoomClick = () => {
+    if (user?.hotel_slug && room.room_number) {
+      navigate(`/staff/hotel/${user.hotel_slug}/housekeeping/rooms/${room.room_number}`);
+    }
+  };
 
   const handleAction = async (toStatus) => {
     setProcessing(toStatus);
@@ -129,7 +125,7 @@ const RoomCard = ({ room, onAction, disabled = false }) => {
   };
 
   return (
-    <div className="card h-100 shadow-sm">
+    <div className="card h-100 shadow-sm" style={{ cursor: 'pointer' }} onClick={handleRoomClick}>
       <div className="card-body">
         {/* Room Header */}
         <div className="d-flex align-items-start justify-content-between mb-3">
@@ -186,7 +182,7 @@ const RoomCard = ({ room, onAction, disabled = false }) => {
 
       {/* Quick Actions */}
       {quickActions.length > 0 && (
-        <div className="card-footer bg-transparent pt-0">
+        <div className="card-footer bg-transparent pt-0" onClick={(e) => e.stopPropagation()}>
           <div className="d-grid gap-2">
             {quickActions.map(action => (
               <button

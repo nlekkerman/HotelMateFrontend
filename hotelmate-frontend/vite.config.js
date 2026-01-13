@@ -3,7 +3,14 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      babel: {
+        babelrc: false,
+        configFile: false,
+      },
+    }),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
@@ -35,7 +42,7 @@ export default defineConfig({
       },
       // Ensure service worker is copied to build output
       input: {
-        main: path.resolve(__dirname, 'index.html'),
+        main: path.resolve(__dirname, "index.html"),
       },
     },
     // Copy service worker to build output

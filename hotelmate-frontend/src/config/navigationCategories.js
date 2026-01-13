@@ -25,7 +25,7 @@ export const NAVIGATION_CATEGORIES = [
     slug: 'staff',
     order: 3,
   },
- 
+  
   {
     id: 'guest-relations',
     name: 'Guest Relations',
@@ -44,11 +44,11 @@ export const NAV_ITEM_CATEGORY_MAP = {
   'rooms': 'front-office',
   'guests': 'front-office',
   'chat': 'front-office', // Guest Chat
-  'room_bookings': 'front-office', // Room bookings/reservations
+  'room-bookings': 'front-office', // Room bookings/reservations
   
   // F&B
   'restaurants': 'fnb',
-  'bookings': 'fnb', // Restaurant bookings
+  'restaurant-bookings': 'fnb', // Restaurant bookings
   'room_service': 'fnb',
   'breakfast': 'fnb',
   'menus_management': 'fnb',
@@ -60,9 +60,6 @@ export const NAV_ITEM_CATEGORY_MAP = {
   'management_analytics': 'staff',
   'maintenance': 'staff',
   'staff_chat': 'staff',
-  
-  // Stock
-  'stock_tracker': 'stock',
   
   // Guest Relations
   'hotel_info': 'guest-relations',
@@ -112,7 +109,7 @@ export const SUBCATEGORIES = {
   ],
   'fnb': [
     { slug: 'restaurants', name: 'Restaurants', order: 1 },
-    { slug: 'bookings', name: 'Restaurant Bookings', order: 2 },
+    { slug: 'restaurant-bookings', name: 'Restaurant Bookings', order: 2 },
     { slug: 'room_service', name: 'Room Service', order: 3 },
     { slug: 'breakfast', name: 'Breakfast', order: 4 },
     { slug: 'menus_management', name: 'Menus Management', order: 5 },
@@ -125,7 +122,7 @@ export const SUBCATEGORIES = {
     { slug: 'staff_chat', name: 'Staff Chat', order: 5 },
   ],
   'stock': [
-    { slug: 'items', name: 'Items', order: 1 },
+    { slug: 'stock_dashboard', name: 'Stock Dashboard', order: 1 },
     { slug: 'stocktakes', name: 'Stocktakes', order: 2 },
     { slug: 'periods', name: 'Periods', order: 3 },
     { slug: 'operations', name: 'Operations', order: 4 },
