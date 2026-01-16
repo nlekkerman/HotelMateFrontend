@@ -12,35 +12,11 @@ const FILTER_OPTIONS = [
   { key: 'occupied', label: 'Occupied', variant: 'outline-dark' }
 ];
 
-const STATUS_TO_COUNT_KEY = {
-  'all': null, // Special case - count all rooms
-  'checkout-dirty': 'CHECKOUT_DIRTY',
-  'cleaning': 'CLEANING_IN_PROGRESS',
-  'cleaned': 'CLEANED_UNINSPECTED',
-  'ready': 'READY_FOR_GUEST',
-  'maintenance': 'MAINTENANCE_REQUIRED',
-  'out-of-order': 'OUT_OF_ORDER',
-  'occupied': 'OCCUPIED'
-};
-
-const FilterPills = ({ activeFilter, onFilterChange, counts, roomsById }) => {
+const FilterPills = ({ activeFilter, onFilterChange, counts, rooms = [] }) => {
   
   const getFilterCount = (filterKey) => {
-    if (filterKey === 'all') {
-      return Object.keys(roomsById).length;
-    }
-
-    const statusKey = STATUS_TO_COUNT_KEY[filterKey];
-    if (!statusKey) return 0;
-
-    // For out-of-order, also check is_out_of_order flag
-    if (filterKey === 'out-of-order') {
-      return Object.values(roomsById).filter(room => 
-        room.room_status === 'OUT_OF_ORDER' || room.is_out_of_order
-      ).length;
-    }
-
-    return counts[statusKey] || 0;
+    // counts is now pill-keyed, so we can use it directly
+    return counts[filterKey] || 0;
   };
 
   return (

@@ -9,7 +9,6 @@ const RoomsDispatchContext = createContext(null);
 const initialState = {
   byRoomNumber: {}, // { [room_number]: roomSnapshot } - Room objects indexed by room_number
   list: [], // [room_number, ...] - Sorted numerically for display
-  lastEventIds: {}, // { [eventId]: true } - Deduplication via meta.event_id
   lastUpdatedAt: null, // ISO timestamp
 };
 
@@ -23,9 +22,15 @@ const ACTIONS = {
 
 // Helper function to extract room number from event
 const extractRoomNumber = (event) => {
-  // Priority: meta.scope.room_number → payload.room_number
-  return event.meta?.scope?.room_number || 
-         event.payload?.room_number;
+  const p = event?.payload || {};
+  return (
+    event?.meta?.scope?.room_number ??
+    p.room_number ??
+    p.roomNumber ??
+    p.number ??
+    p.room?.room_number ??
+    p.room?.number
+  );
 };
 
 // Helper function to sort room list numerically
@@ -231,24 +236,52 @@ export const roomsActions = {
         });
         break;
 
-      case "room_status_changed":
-        // Extract new_status from payload and update room
-        const { new_status } = payload;
-        if (new_status) {
-          if (!import.meta.env.PROD) {
-            console.log(`[roomsStore] Room ${roomNumber} status changed to:`, new_status);
-          }
-          dispatchRef({
-            type: ACTIONS.ROOM_UPSERT,
-            payload: { 
-              roomSnapshot: { room_status: new_status }, 
-              roomNumber 
-            },
-          });
-        } else {
-          console.warn('[roomsStore] room_status_changed event missing new_status:', payload);
+      case "room_status_changed": {
+        const roomId = payload?.room_id ?? payload?.id;
+        const resolvedRoomNumber =
+          extractRoomNumber(event) ??
+          payload?.room_number ??
+          payload?.roomNumber ??
+          payload?.room_number_str;
+
+        const status =
+          payload?.new_status ??
+          payload?.to_status ??
+          payload?.room_status;
+
+        if (!status) {
+          console.warn('[roomsStore] room_status_changed missing status field:', payload);
+          break;
         }
+
+        // Store is keyed by room_number. If we can't resolve it, we cannot safely upsert.
+        if (!resolvedRoomNumber) {
+          console.warn('[roomsStore] room_status_changed missing room_number; dropping event. roomId=', roomId, 'payload=', payload);
+          break;
+        }
+
+        if (!import.meta.env.PROD) {
+          console.log(`[roomsStore] Room ${resolvedRoomNumber} status changed to:`, status);
+        }
+
+        const roomSnapshot = {
+          room_status: status,
+          last_status_change: payload?.timestamp ?? new Date().toISOString(),
+        };
+
+        if (payload?.note) roomSnapshot.note = payload.note;
+        if (payload?.is_occupied !== undefined) roomSnapshot.is_occupied = payload.is_occupied;
+        if (payload?.maintenance_required !== undefined) roomSnapshot.maintenance_required = payload.maintenance_required;
+        if (payload?.is_out_of_order !== undefined) roomSnapshot.is_out_of_order = payload.is_out_of_order;
+        if (roomId) roomSnapshot.id = roomId;
+        roomSnapshot.room_number = resolvedRoomNumber;
+
+        dispatchRef({
+          type: ACTIONS.ROOM_UPSERT,
+          payload: { roomSnapshot, roomNumber: resolvedRoomNumber },
+        });
         break;
+      }
 
       default:
         if (!import.meta.env.PROD) {

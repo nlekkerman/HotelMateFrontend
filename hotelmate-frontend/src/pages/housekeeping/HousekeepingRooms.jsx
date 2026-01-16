@@ -1,7 +1,9 @@
 // src/pages/housekeeping/HousekeepingRooms.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { useHousekeeping } from '@/realtime/stores/housekeepingStore';
+import { useRoomsState, roomsActions } from '@/realtime/stores/roomsStore';
+import api from '@/services/api';
+import { roomOperationsService } from '@/services/roomOperations';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-toastify';
 import HousekeepingHeader from './components/HousekeepingHeader';
@@ -22,66 +24,90 @@ const FILTER_MAPPINGS = {
 
 const HousekeepingRooms = () => {
   const { hotelSlug } = useParams();
-  const { user } = useAuth();
-  const {
-    roomsById,
-    counts,
-    loading,
-    error,
-    loadDashboard,
-    updateRoomStatus,
-    handleRealtimeEvent,
-    clearData
-  } = useHousekeeping();
-
+  const { byRoomNumber, list } = useRoomsState();
+  
+  // Local UI state
   const [activeFilter, setActiveFilter] = useState('all');
-  const [pusherSubscribed, setPusherSubscribed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Load dashboard data on mount
   useEffect(() => {
-    if (hotelSlug) {
-      loadDashboard(hotelSlug).catch(err => {
+    const loadRooms = async () => {
+      if (!hotelSlug) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const response = await api.get(`/staff/hotel/${hotelSlug}/housekeeping/dashboard/`);
+        const { rooms_by_status = {} } = response.data;
+        
+        // Flatten all rooms from all status categories
+        const allRooms = [];
+        Object.entries(rooms_by_status).forEach(([status, rooms]) => {
+          if (Array.isArray(rooms)) {
+            rooms.forEach(room => {
+              // Clone room to avoid mutating API objects
+              allRooms.push({
+                ...room,
+                room_status: room.room_status || status,
+              });
+            });
+          }
+        });
+        
+        // Update roomsStore with loaded rooms
+        roomsActions.bulkReplace(allRooms);
+      } catch (err) {
         console.error('Failed to load housekeeping dashboard:', err);
+        setError(err.response?.data?.message || err.message || 'Failed to load housekeeping data');
         toast.error('Failed to load housekeeping data');
-      });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadRooms();
+  }, [hotelSlug]);
+
+
+
+  // Build rooms array from roomsStore
+  const allRooms = React.useMemo(() => {
+    return list.map(roomNumber => byRoomNumber[roomNumber]).filter(Boolean);
+  }, [byRoomNumber, list]);
+  
+  // Compute counts from current rooms
+  const counts = React.useMemo(() => {
+    const c = {
+      all: allRooms.length,
+      'checkout-dirty': 0,
+      cleaning: 0,
+      cleaned: 0,
+      ready: 0,
+      maintenance: 0,
+      'out-of-order': 0,
+      occupied: 0,
+    };
+
+    for (const room of allRooms) {
+      const s = room.room_status;
+
+      if (s === 'CHECKOUT_DIRTY') c['checkout-dirty']++;
+      if (s === 'CLEANING_IN_PROGRESS') c.cleaning++;
+      if (s === 'CLEANED_UNINSPECTED') c.cleaned++;
+      if (s === 'READY_FOR_GUEST') c.ready++;
+      if (room.maintenance_required || s === 'MAINTENANCE_REQUIRED') c.maintenance++;
+      if (room.is_out_of_order || s === 'OUT_OF_ORDER') c['out-of-order']++;
+      if (s === 'OCCUPIED') c.occupied++;
     }
 
-    return () => {
-      clearData();
-    };
-  }, [hotelSlug, loadDashboard, clearData]);
-
-  // Setup Pusher subscription for realtime updates
-  useEffect(() => {
-    if (!hotelSlug || !window.pusher || pusherSubscribed) return;
-
-    const channelName = `hotel-${hotelSlug}`;
-    const channel = window.pusher.subscribe(channelName);
-
-    const handleRoomStatusChanged = (eventData) => {
-      console.log('[HousekeepingRooms] Received room-status-changed event:', eventData);
-      handleRealtimeEvent({
-        event: 'room-status-changed',
-        data: eventData
-      });
-    };
-
-    channel.bind('room-status-changed', handleRoomStatusChanged);
-    setPusherSubscribed(true);
-
-    return () => {
-      if (channel) {
-        channel.unbind('room-status-changed', handleRoomStatusChanged);
-        window.pusher.unsubscribe(channelName);
-      }
-      setPusherSubscribed(false);
-    };
-  }, [hotelSlug, handleRealtimeEvent, pusherSubscribed]);
+    return c;
+  }, [allRooms]);
 
   // Filter rooms based on active filter
   const filteredRooms = React.useMemo(() => {
-    const allRooms = Object.values(roomsById);
-    
     if (activeFilter === 'all') {
       return allRooms;
     }
@@ -99,20 +125,23 @@ const HousekeepingRooms = () => {
       
       return room.room_status === statusFilter;
     });
-  }, [roomsById, activeFilter]);
+  }, [allRooms, activeFilter]);
 
   // Handle room status change
   const handleRoomAction = useCallback(async (roomId, toStatus, note = '') => {
     try {
-      await updateRoomStatus(hotelSlug, roomId, toStatus, note);
-      toast.success('Room status updated successfully');
+      await roomOperationsService.updateStatus(hotelSlug, roomId, { 
+        status: toStatus, 
+        note 
+      });
+      toast.success('Room status update sent - waiting for realtime confirmation');
     } catch (error) {
       console.error('Failed to update room status:', error);
-      toast.error('Failed to update room status');
+      toast.error(error.response?.data?.message || 'Failed to update room status');
     }
-  }, [hotelSlug, updateRoomStatus]);
+  }, [hotelSlug]);
 
-  if (loading && Object.keys(roomsById).length === 0) {
+  if (loading && allRooms.length === 0) {
     return (
       <div className="container mt-4">
         <div className="text-center py-5">
@@ -125,7 +154,7 @@ const HousekeepingRooms = () => {
     );
   }
 
-  if (error && Object.keys(roomsById).length === 0) {
+  if (error && allRooms.length === 0) {
     return (
       <div className="container mt-4">
         <div className="alert alert-danger" role="alert">
@@ -133,7 +162,7 @@ const HousekeepingRooms = () => {
           <p>{error}</p>
           <button 
             className="btn btn-outline-danger" 
-            onClick={() => loadDashboard(hotelSlug)}
+            onClick={() => window.location.reload()}
           >
             <i className="bi bi-arrow-clockwise me-2"></i>
             Retry
@@ -146,8 +175,8 @@ const HousekeepingRooms = () => {
   return (
     <div className="housekeeping-rooms">
       <HousekeepingHeader 
-        totalRooms={Object.keys(roomsById).length}
-        isLive={pusherSubscribed}
+        totalRooms={allRooms.length}
+        isLive={true}
         loading={loading}
       />
       
@@ -156,7 +185,7 @@ const HousekeepingRooms = () => {
           activeFilter={activeFilter}
           onFilterChange={setActiveFilter}
           counts={counts}
-          roomsById={roomsById}
+          rooms={allRooms}
         />
         
         <RoomGrid 

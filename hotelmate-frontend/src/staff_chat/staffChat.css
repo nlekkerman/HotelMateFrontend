@@ -856,7 +856,8 @@
 .messenger-widget {
   position: fixed;
   bottom: 0;
-  width: 340px;
+  width: 90px;
+ 
   max-width: 30%;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 900;
@@ -864,7 +865,7 @@
 
 /* Position Variants */
 .messenger-widget--bottom-right {
-  right: 24px;
+  right: 0px;
 }
 
 .messenger-widget--bottom-left {
@@ -903,6 +904,7 @@
 /* Expanded State - Conversations Panel */
 .messenger-widget--expanded {
   height: 520px;
+  width: 340px;
 }
 
 .messenger-widget__panel {
@@ -921,6 +923,8 @@
   justify-content: space-between;
   padding: 10px 5px;
   border-top-left-radius: 20px;
+  color: white;
+   background-color: goldenrod;
   border-bottom: 1px solid var(--bs-border-color, rgba(255, 255, 255, 0.1));
 
 }

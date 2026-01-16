@@ -363,7 +363,7 @@ const MessengerWidget = ({
         <div className="messenger-widget__panel bg-light">
           {/* Header - Always visible, acts as toggle */}
           <div
-            className="messenger-widget__header text-white main-bg"
+            className="messenger-widget__header"
             onClick={toggleWidget}
             style={{ cursor: "pointer" }}
           >
@@ -376,21 +376,7 @@ const MessengerWidget = ({
               }}
             >
               <h3 className="messenger-widget__title" style={{ margin: 0 }}>
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  style={{ marginRight: "8px" }}
-                >
-                  <path
-                    d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"
-                    fill="currentColor"
-                  />
-                  <circle cx="12" cy="10" r="1.5" fill="currentColor" />
-                  <circle cx="8" cy="10" r="1.5" fill="currentColor" />
-                  <circle cx="16" cy="10" r="1.5" fill="currentColor" />
-                </svg>
+               
                 Staff Chat
               </h3>
               {/* Unread Count Badge */}
