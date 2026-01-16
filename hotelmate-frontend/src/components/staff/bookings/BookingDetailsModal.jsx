@@ -6,6 +6,7 @@ import {
   useSafeAssignRoom, 
   useUnassignRoom, 
   useCheckInBooking,
+  useCheckOutBooking,
   useSendPrecheckinLink 
 } from '@/hooks/useStaffRoomBookingDetail';
 import { format } from 'date-fns';
@@ -53,6 +54,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
   const safeAssignMutation = useSafeAssignRoom(hotelSlug);
   const unassignMutation = useUnassignRoom(hotelSlug);
   const checkInMutation = useCheckInBooking(hotelSlug);
+  const checkOutMutation = useCheckOutBooking(hotelSlug);
   const sendPrecheckinLinkMutation = useSendPrecheckinLink(hotelSlug);
   
   
@@ -128,6 +130,19 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
       await sendPrecheckinLinkMutation.mutateAsync({ bookingId });
     } catch (error) {
       // Error handled by mutation
+    }
+  };
+
+  const handleCheckOut = async () => {
+    if (!booking?.booking_id) return;
+    
+    try {
+      await checkOutMutation.mutateAsync({ 
+        bookingId: booking.booking_id 
+      });
+    } catch (error) {
+      // Error handling is done in the mutation
+      console.error('Check-out failed:', error);
     }
   };
   
@@ -992,6 +1007,34 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
       </Card>
     );
   };
+
+  const renderCheckOutSection = () => {
+    // TASK D: Use checked_in_at/checked_out_at logic instead of status
+    const isInHouse = !!booking?.checked_in_at && !booking?.checked_out_at;
+    
+    if (!isInHouse) return null;
+    
+    return (
+      <Card className="mt-3">
+        <Card.Header>
+          <h6 className="mb-0">Check-Out</h6>
+        </Card.Header>
+        <Card.Body>
+          <div>
+            <p className="text-info mb-3">✅ Guest is checked in to Room {booking?.assigned_room_number || booking?.assigned_room?.room_number}</p>
+            <Button
+              variant="warning"
+              onClick={handleCheckOut}
+              disabled={checkOutMutation.isPending}
+              size="lg"
+            >
+              {checkOutMutation.isPending ? 'Checking Out...' : 'Check Out Guest'}
+            </Button>
+          </div>
+        </Card.Body>
+      </Card>
+    );
+  };
   
   if (isLoadingBooking) {
     return (
@@ -1131,6 +1174,9 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
         
         {/* Check-In Section */}
         {renderCheckInSection()}
+
+        {/* Check-Out Section */}
+        {renderCheckOutSection()}
         
         {/* Pricing */}
         <Card className="mt-3">

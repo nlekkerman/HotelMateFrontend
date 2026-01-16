@@ -26,93 +26,10 @@ const OffersSection = ({ hotel, onRefreshNeeded }) => {
   useEffect(() => {
     if (!hotel?.slug) return;
 
-    const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
-      cluster: import.meta.env.VITE_PUSHER_CLUSTER,
-    });
-
-    const channel = pusher.subscribe(`hotel-${hotel.slug}`);
-
-    // Listen for new offer creation
-    channel.bind('offer-created', (data) => {
-      setOffers(prevOffers => {
-        // Avoid duplicates
-        const exists = prevOffers.some(o => o.id === data.offer.id);
-        if (exists) return prevOffers;
-        
-        // Only add active offers to public page
-        if (data.offer?.is_active) {
-          return [data.offer, ...prevOffers];
-        }
-        return prevOffers;
-      });
-    });
-
-    // Listen for offer updates
-    channel.bind('offer-updated', (data) => {
-      setOffers(prevOffers => {
-        const offerExists = prevOffers.some(o => o.id === data.offer.id);
-        
-        // If offer became inactive, remove it from public view
-        if (!data.offer?.is_active && offerExists) {
-          return prevOffers.filter(o => o.id !== data.offer.id);
-        }
-        
-        // If offer became active, add it
-        if (data.offer?.is_active && !offerExists) {
-          return [data.offer, ...prevOffers];
-        }
-        
-        // If offer is active and exists, update it
-        if (data.offer?.is_active && offerExists) {
-          return prevOffers.map(offer => {
-            if (offer.id === data.offer.id) {
-              // If photo_url changed, add cache buster
-              const updatedOffer = { ...data.offer };
-              if (updatedOffer.photo_url && updatedOffer.photo_url !== offer.photo_url) {
-                updatedOffer.photo_url = `${updatedOffer.photo_url}?t=${Date.now()}`;
-              }
-              return updatedOffer;
-            }
-            return offer;
-          });
-        }
-        
-        return prevOffers;
-      });
-    });
-
-    // Listen for offer deletion
-    channel.bind('offer-deleted', (data) => {
-      setOffers(prevOffers => 
-        prevOffers.filter(offer => offer.id !== data.offer_id)
-      );
-    });
-
-    // Listen for image updates
-    channel.bind('offer-image-updated', (data) => {
-      setOffers(prevOffers => 
-        prevOffers.map(offer => 
-          offer.id === data.offer_id 
-            ? { ...offer, photo_url: `${data.photo_url}?t=${Date.now()}` }
-            : offer
-        )
-      );
-    });
-
-    // Listen for generic offers-updated (fallback/refresh trigger)
-    channel.bind('offers-updated', (data) => {
-      // Trigger parent refresh to get updated offers
-      if (onRefreshNeeded) {
-        onRefreshNeeded();
-      }
-    });
-
-    return () => {
-      channel.unbind_all();
-      pusher.unsubscribe(`hotel-${hotel.slug}`);
-      pusher.disconnect();
-    };
-  }, [hotel?.slug, onRefreshNeeded]);
+    // REMOVED: Direct Pusher usage - offers updates should come through canonical stores
+    // All realtime updates must flow through channelRegistry → eventBus → stores
+    console.warn('[OffersSection] Direct Pusher usage removed - implement offers store if realtime needed');
+  }, [hotel?.slug]);
 
   if (offers.length === 0) return null;
 

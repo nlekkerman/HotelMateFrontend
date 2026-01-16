@@ -9,8 +9,9 @@ import {
   Modal,
   Form,
 } from "react-bootstrap";
-import { guestAPI, publicAPI } from "@/services/api";
-import Pusher from "pusher-js";
+import { publicAPI } from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
+import { useRoomBookingState } from '@/realtime/stores/roomBookingStore';
 import RoomService from "@/components/rooms/RoomService";
 import Breakfast from "@/components/rooms/Breakfast";
 
@@ -40,11 +41,6 @@ const BookingStatusPage = () => {
   const [cancelError, setCancelError] = useState(null);
   const [cancellationSuccess, setCancellationSuccess] = useState(null);
 
-  // Real-time updates state
-  const [realtimeBooking, setRealtimeBooking] = useState(null);
-  const pusherRef = useRef(null);
-  const channelRef = useRef(null);
-
   // Service view state
   const [activeService, setActiveService] = useState(null); // 'room_service', 'breakfast'
 
@@ -67,158 +63,50 @@ const BookingStatusPage = () => {
     hotelTimezone: null,
   });
 
-  // Initialize Pusher and subscribe to guest booking events
+  // Get canonical store state for realtime updates
+  const roomBookingState = useRoomBookingState();
+
+  // Use canonical store for realtime booking updates (no direct Pusher)
   useEffect(() => {
-    if (!bookingId || !token) return;
-
-    console.log("🚀 Initializing Pusher for booking:", bookingId);
-
-    // Initialize Pusher with public channel (no auth required)
-    const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
-      cluster: import.meta.env.VITE_PUSHER_CLUSTER || "eu",
-      encrypted: true,
-      forceTLS: true,
-      // Remove auth section for public channels
-    });
-
-    console.log("🔧 Pusher initialized for public channels");
-
-    pusherRef.current = pusher;
-
-    // Subscribe to public guest booking channel (no authentication required)
-    const channelName = `guest-booking.${bookingId}`;
-    console.log("📺 Subscribing to public channel:", channelName);
-    const channel = pusher.subscribe(channelName);
-    channelRef.current = channel;
-
-    // Handle booking confirmation event
-    channel.bind("guest-booking-confirmed", function (data) {
-      console.log("🎉 Guest booking confirmed:", data);
-      const updatedBooking = data.booking;
-      setRealtimeBooking(updatedBooking);
-
-      // Show success toast
-      if (window.location.pathname.includes("booking-status")) {
-        import("react-toastify")
-          .then(({ toast }) => {
-            toast.success("🎉 Your booking has been confirmed!");
-          })
-          .catch(() => {
-            console.log("✅ Booking confirmed");
-          });
-      }
-    });
-
-    // Handle booking cancellation event
-    channel.bind("guest-booking-cancelled", function (data) {
-      console.log("❌ Guest booking cancelled:", data);
-      const updatedBooking = data.booking;
-      setRealtimeBooking(updatedBooking);
-
-      // Show info toast
-      if (window.location.pathname.includes("booking-status")) {
-        import("react-toastify")
-          .then(({ toast }) => {
-            toast.error("❌ Your booking has been cancelled");
-          })
-          .catch(() => {
-            console.log("❌ Booking cancelled");
-          });
-      }
-    });
-
-    // Handle check-in event
-    channel.bind("guest-booking-checked-in", function (data) {
-      console.log("🏨 Guest booking checked in:", data);
-      // Use complete canonical booking data from event
-      const updatedBooking = data.booking;
-      setRealtimeBooking(updatedBooking);
-
-      // Show success toast
-      if (window.location.pathname.includes("booking-status")) {
+    if (!bookingId || !roomBookingState?.byBookingId) return;
+    
+    const storeBooking = roomBookingState.byBookingId[bookingId];
+    if (storeBooking && booking) {
+      console.log("📡 [BookingStatusPage] Store booking updated:", storeBooking);
+      
+      // Check for status changes and show appropriate toasts
+      if (storeBooking.checked_in_at && !booking.checked_in_at) {
         import("react-toastify")
           .then(({ toast }) => {
             toast.success(
               `🎉 Welcome to ${
-                updatedBooking.hotel?.name || "the hotel"
+                storeBooking.hotel?.name || "the hotel"
               }! You're checked in to Room ${
-                updatedBooking.assigned_room_number
+                storeBooking.assigned_room_number
               }`
             );
           })
           .catch(() => {
-            console.log(
-              "✅ Checked in to room",
-              updatedBooking.assigned_room_number
-            );
+            console.log("✅ Checked in to room", storeBooking.assigned_room_number);
           });
       }
-    });
-
-    // Handle general booking updates (room changes, special requests, etc.)
-    channel.bind("guest-booking-updated", function (data) {
-      console.log("📝 Guest booking updated:", data);
-      const updatedBooking = data.booking;
-      setRealtimeBooking(updatedBooking);
-
-      // Show info toast for non-status updates
-      if (window.location.pathname.includes("booking-status")) {
+      
+      if (storeBooking.checked_out_at && !booking.checked_out_at) {
         import("react-toastify")
           .then(({ toast }) => {
-            // Show different messages based on what changed
-            if (
-              updatedBooking.assigned_room_number &&
-              !booking?.assigned_room_number
-            ) {
-              toast.info(
-                `🏠 Room ${updatedBooking.assigned_room_number} has been assigned to your booking`
-              );
-            } else if (updatedBooking.status === "CHECKED_OUT") {
-              toast.info("👋 You have been checked out. Safe travels!");
-            } else {
-              toast.info("📝 Your booking has been updated");
-            }
+            toast.info("👋 You have been checked out. Safe travels!");
           })
           .catch(() => {
-            console.log("📝 Booking updated");
+            console.log("📝 Checked out");
           });
       }
-    });
-
-    channel.bind("pusher:subscription_succeeded", () => {
-      console.log(
-        "✅ Successfully subscribed to guest booking channel:",
-        channelName
-      );
-    });
-
-    channel.bind("pusher:subscription_error", (error) => {
-      console.error("❌ Failed to subscribe to guest booking channel:", error);
-    });
-
-    // Cleanup on unmount
-    return () => {
-      if (channelRef.current) {
-        channelRef.current.unbind_all();
-        pusherRef.current?.unsubscribe(channelName);
-      }
-      if (pusherRef.current) {
-        pusherRef.current.disconnect();
-      }
-    };
-  }, [bookingId, token, booking, hotelSlug]);
-
-  // Update booking state when real-time data changes
-  useEffect(() => {
-    if (realtimeBooking) {
-      console.log("📡 Updating booking with realtime data:", realtimeBooking);
-      setBooking((prevBooking) => {
-        const updated = { ...prevBooking, ...realtimeBooking };
-        console.log("📡 Updated booking state:", updated);
-        return updated;
-      });
+      
+      // Update booking state with store data
+      setBooking(prevBooking => ({ ...prevBooking, ...storeBooking }));
     }
-  }, [realtimeBooking]);
+  }, [bookingId, roomBookingState?.byBookingId, booking?.checked_in_at, booking?.checked_out_at]);
+
+  // Booking state is now updated directly from canonical store above
 
   // Check-in window calculator
   useEffect(() => {

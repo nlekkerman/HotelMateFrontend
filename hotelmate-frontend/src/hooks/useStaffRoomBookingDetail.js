@@ -208,3 +208,35 @@ export const useCheckInBooking = (hotelSlug) => {
     },
   });
 };
+
+export const useCheckOutBooking = (hotelSlug) => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ bookingId }) => {
+      // Use booking-centric check-out endpoint
+      const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/check-out/`);
+      const response = await api.post(url, {});
+      return response.data;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['staff-room-bookings', hotelSlug]
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.staffRoomBooking(hotelSlug, variables.bookingId)
+      });
+      toast.success('Processing check-out... waiting for realtime confirmation');
+    },
+    onError: (error) => {
+      // Handle 400 errors from backend with specific message
+      const data = error.response?.data || {};
+      const message = 
+        data.detail || 
+        data.message || 
+        (typeof data.error === 'string' ? data.error : null) || 
+        'Check-out failed';
+      toast.error(message);
+    },
+  });
+};

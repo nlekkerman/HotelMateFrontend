@@ -354,6 +354,27 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
       return;
     }
 
+    // 4b️⃣ ROOM OCCUPANCY EVENTS NORMALIZATION
+    if (channel?.includes('.rooms') && eventName === 'room-occupancy-updated') {
+      console.log('🏠 [EventBus] Normalizing room-occupancy-updated event:', { channel, eventName, payload });
+      const normalized = {
+        category: "rooms",
+        type: "room_updated", // Map to existing room_updated handler
+        payload: payload,
+        meta: { 
+          channel, 
+          eventName, 
+          event_id: payload?.event_id || payload?.id || `room-occupancy-${Date.now()}`,
+          scope: { room_number: payload?.room_number }
+        },
+        source,
+        timestamp: new Date().toISOString()
+      };
+      console.log('🏠 [EventBus] Normalized room-occupancy-updated:', normalized);
+      routeToDomainStores(normalized);
+      return;
+    }
+
     // 5️⃣ GUEST MESSAGE REAL-TIME UPDATE FOR STAFF
     if (channel?.endsWith('-notifications') && eventName === 'new-guest-message' && !eventName?.startsWith('pusher:')) {
       console.log('🔔 [EventBus] New guest message - creating real-time chat update:', { channel, eventName, payload });

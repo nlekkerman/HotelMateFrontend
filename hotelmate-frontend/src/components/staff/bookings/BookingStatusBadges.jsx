@@ -1,6 +1,10 @@
 import React from 'react';
 import { Badge } from 'react-bootstrap';
 
+// TASK D: Helper functions for in-house logic using checked_in_at/checked_out_at instead of status
+const isInHouse = (booking) => !!booking?.checked_in_at && !booking?.checked_out_at;
+const isCheckedOut = (booking) => !!booking?.checked_out_at;
+
 /**
  * BookingStatusBadges - 3-Badge System for Staff Booking Status
  * Shows: Payment/Admin | Assignment | In-House status
@@ -20,24 +24,20 @@ const BookingStatusBadges = ({ booking }) => {
     booking.room?.room_number ??
     null;
 
-  const isInHouse =
-    checkedInAt !== undefined && checkedOutAt !== undefined
-      ? (checkedInAt !== null && checkedOutAt === null)
-      : false;
-
-  const isCheckedOut =
-    checkedOutAt !== undefined ? checkedOutAt !== null : false;
+  // TASK D: Use helper functions instead of direct boolean logic
+  const isGuestInHouse = isInHouse(booking);
+  const isGuestCheckedOut = isCheckedOut(booking);
 
   // 1) Primary badge (single)
   let primaryBadge = null;
 
-  if (isCheckedOut) {
+  if (isGuestCheckedOut) {
     primaryBadge = (
       <Badge bg="dark" className="me-1 text-white">
         {roomNumber ? `Checked-out · Room ${roomNumber}` : 'Checked-out'}
       </Badge>
     );
-  } else if (isInHouse) {
+  } else if (isGuestInHouse) {
     primaryBadge = (
       <Badge bg="success" className="me-1">
         {roomNumber ? `In-house · Room ${roomNumber}` : 'In-house'}

@@ -77,26 +77,9 @@ const GallerySection = ({ hotelSlug, hotelName, isStaff = false }) => {
     // Initial fetch
     fetchGalleries();
 
-    // Setup Pusher for real-time updates
-    const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
-      cluster: import.meta.env.VITE_PUSHER_CLUSTER,
-    });
-
-    const channel = pusher.subscribe(`hotel-${hotelSlug}`);
-
-    // Listen for gallery updates
-    channel.bind('gallery-updated', (data) => {
-      console.log('[GallerySection] 🔄 Real-time gallery update:', data);
-      
-      // Refresh galleries when changes occur
-      fetchGalleries();
-    });
-
-    // Cleanup
-    return () => {
-      channel.unbind_all();
-      pusher.unsubscribe(`hotel-${hotelSlug}`);
-    };
+    // REMOVED: Direct Pusher usage - gallery updates should come through canonical stores  
+    // All realtime updates must flow through channelRegistry → eventBus → stores
+    console.warn('[GallerySection] Direct Pusher usage removed - implement gallery store if realtime needed');
   }, [hotelSlug]);
 
   // Get unique categories that actually have galleries
