@@ -161,7 +161,7 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
     );
   }
 
-  if (error) return <div className="alert alert-danger">{error}</div>;
+  if (error) return <div className="alert alert-danger">{error?.message || 'Failed to load restaurant bookings'}</div>;
 
   return (
     <>

@@ -285,10 +285,10 @@ const BookingTable = ({
         </td>
 
         <td>
-          <div className="d-flex align-items-center gap-2">
+          <div className="d-flex flex-column gap-1">
             <BookingTimeWarningBadges booking={booking} />
             {!booking.staff_seen_at && (
-              <span className="badge bg-danger">NEW</span>
+              <span className="badge bg-danger" >NEW</span>
             )}
           </div>
         </td>

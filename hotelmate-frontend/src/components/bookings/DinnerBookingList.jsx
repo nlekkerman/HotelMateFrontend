@@ -105,7 +105,7 @@ export default function DinnerBookingList() {
     return <p>Loading restaurants…</p>;
   }
   if (error) {
-    return <p style={{ color: "red" }}>{error}</p>;
+    return <p style={{ color: "red" }}>{error?.message || 'Failed to load dinner bookings'}</p>;
   }
   if (restaurants.length === 0) {
     return <p>No restaurants found for your hotel.</p>;

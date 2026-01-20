@@ -69,7 +69,7 @@ const BookingList = ({ hotelSlug, urlParams }) => {
       <div className="booking-list-error">
         <div className="alert alert-danger" role="alert">
           <i className="bi bi-exclamation-triangle me-2"></i>
-          {error}
+          {error.message || error.response?.data?.message || 'Failed to load bookings'}
         </div>
       </div>
     );

@@ -88,7 +88,7 @@ export default function Bookings() {
     );
   }
 
-  if (error) return <p className="text-danger text-center">{error}</p>;
+  if (error) return <p className="text-danger text-center">{error?.message || 'Failed to load booking categories'}</p>;
   if (categories.length === 0)
     return <p className="text-center">No booking categories found for your hotel.</p>;
 
