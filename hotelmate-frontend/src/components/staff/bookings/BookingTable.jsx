@@ -3,6 +3,9 @@ import BookingActions from './BookingActions';
 import BookingDetailsModal from './BookingDetailsModal';
 import BookingStatusBadges from './BookingStatusBadges';
 import BookingTimeWarningBadges from './BookingTimeWarningBadges';
+import { useRoomBookingDispatch } from '@/realtime/stores/roomBookingStore';
+import { useAuth } from '@/context/AuthContext';
+import api from '@/services/api';
 
 /**
  * Booking Table Component
@@ -20,6 +23,8 @@ const BookingTable = ({
 }) => {
   const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const dispatch = useRoomBookingDispatch();
+  const { user } = useAuth();
   
   const handleViewPrecheckin = (bookingId) => {
     setSelectedBookingId(bookingId);
@@ -31,6 +36,40 @@ const BookingTable = ({
         precheckinSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }, 300); // Wait for modal to fully render
+  };
+  
+  const handleBookingClick = async (booking) => {
+    // Mark as seen if not already seen
+    if (!booking.staff_seen_at) {
+      // 🔥 Optimistic update (instant UI feedback)
+      const optimisticUpdate = {
+        ...booking,
+        staff_seen_at: new Date().toISOString(),
+        staff_seen_by: user?.full_name || user?.email || 'Staff',
+      };
+      
+      // Update in store immediately via dispatch
+      dispatch({
+        type: 'ROOM_BOOKING_UPDATED',
+        payload: { 
+          booking: optimisticUpdate, 
+          bookingId: booking.booking_id 
+        }
+      });
+      
+      // 🔒 Persist in backend (async, no waiting)
+      try {
+        await api.post(
+          `/api/staff/hotel/${hotelSlug}/room-bookings/${booking.booking_id}/mark-seen/`
+        );
+      } catch (error) {
+        console.warn('[BookingTable] Failed to mark booking as seen:', error);
+        // Note: Realtime event will eventually sync if this fails
+      }
+    }
+    
+    setSelectedBookingId(booking.booking_id);
+    setShowDetailsModal(true);
   };
   const formatCurrency = (amount, currency = 'EUR') => {
     return new Intl.NumberFormat('en-IE', {
@@ -52,11 +91,6 @@ const BookingTable = ({
     const end = new Date(checkOut);
     const diffTime = Math.abs(end - start);
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
-
-  const handleBookingClick = (booking) => {
-    setSelectedBookingId(booking.booking_id);
-    setShowDetailsModal(true);
   };
 
   const handleCloseModal = () => {
@@ -251,7 +285,12 @@ const BookingTable = ({
         </td>
 
         <td>
-          <BookingTimeWarningBadges booking={booking} />
+          <div className="d-flex align-items-center gap-2">
+            <BookingTimeWarningBadges booking={booking} />
+            {!booking.staff_seen_at && (
+              <span className="badge bg-danger">NEW</span>
+            )}
+          </div>
         </td>
 
         <td onClick={(e) => e.stopPropagation()}>
