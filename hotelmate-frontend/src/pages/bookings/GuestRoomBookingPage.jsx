@@ -1260,7 +1260,13 @@ const GuestRoomBookingPage = () => {
                                     <small className="fw-bold text-warning d-block">
                                       {quote.cancellation_policy.penalty_type === 'PERCENTAGE' ? 
                                         `${quote.cancellation_policy.penalty_amount}% Charge` : 
-                                        `€${quote.cancellation_policy.penalty_amount} Fee`
+                                        quote.cancellation_policy.penalty_type === 'FIXED' ?
+                                        `€${quote.cancellation_policy.penalty_amount} Fee` :
+                                        quote.cancellation_policy.penalty_type === 'FIRST_NIGHT' ?
+                                        'First Night Charge' :
+                                        quote.cancellation_policy.penalty_type === 'FULL_STAY' ?
+                                        'Full Stay Charge' :
+                                        'Penalty Applies'
                                       }
                                     </small>
                                     <small className="text-muted">After cancellation deadline</small>

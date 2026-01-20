@@ -383,9 +383,9 @@ Proposed: Payment → PENDING_HOTEL_CONFIRMATION → Staff confirms → CONFIRME
             <div className="rounded-circle bg-primary d-inline-flex align-items-center justify-content-center mb-3" style={{ width: '80px', height: '80px' }}>
               <i className="bi bi-check-circle text-white" style={{ fontSize: '2.5rem' }}></i>
             </div>
-            <h1 className="display-6 fw-bold text-primary mb-2">Payment Authorized ✅</h1>
+            <h1 className="display-6 fw-bold text-primary mb-2">Payment Received ✅</h1>
             <p className="lead text-muted mb-3">
-              Your card has been authorized. The hotel will review and confirm your booking.
+              Payment received. The hotel will now review and confirm your booking.
             </p>
             <div className="bg-light p-4 rounded-3 mx-auto" style={{ maxWidth: '500px' }}>
               <div className="d-flex align-items-center mb-2">
@@ -479,9 +479,9 @@ Proposed: Payment → PENDING_HOTEL_CONFIRMATION → Staff confirms → CONFIRME
                   <i className="bi bi-info-circle text-white"></i>
                 </div>
                 <div>
-                  <div className="fw-bold text-primary mb-2">Payment Authorized - Awaiting Hotel Confirmation</div>
+                  <div className="fw-bold text-primary mb-2">Payment Received - Awaiting Hotel Confirmation</div>
                   <div className="mb-2">
-                    <small className="text-primary d-block mb-1">✓ No charge will be captured unless the booking is accepted</small>
+                    <small className="text-primary d-block mb-1">✓ Payment received. If declined, a refund will be issued</small>
                     <small className="text-primary d-block">✓ You don't need to stay on this page — we'll email you once confirmed</small>
                   </div>
                 </div>

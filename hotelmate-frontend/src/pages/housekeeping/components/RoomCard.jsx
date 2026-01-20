@@ -3,15 +3,15 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 
-// Status styling mapping
+// Status styling mapping with better color logic
 const STATUS_STYLES = {
-  'OCCUPIED': { bg: 'bg-dark', text: 'text-white' },
-  'CHECKOUT_DIRTY': { bg: 'bg-warning', text: 'text-dark' },
-  'CLEANING_IN_PROGRESS': { bg: 'bg-info', text: 'text-white' },
-  'CLEANED_UNINSPECTED': { bg: 'bg-success', text: 'text-white' },
-  'MAINTENANCE_REQUIRED': { bg: 'bg-secondary', text: 'text-white' },
-  'OUT_OF_ORDER': { bg: 'bg-danger', text: 'text-white' },
-  'READY_FOR_GUEST': { bg: 'bg-primary', text: 'text-white' }
+  'OCCUPIED': { bg: 'bg-primary', text: 'text-white' },           // Blue - guest in room
+  'CHECKOUT_DIRTY': { bg: 'bg-danger', text: 'text-white' },      // Red - needs attention
+  'CLEANING_IN_PROGRESS': { bg: 'bg-info', text: 'text-white' },  // Light blue - in progress
+  'CLEANED_UNINSPECTED': { bg: 'bg-warning', text: 'text-white' }, // Yellow - needs inspection
+  'MAINTENANCE_REQUIRED': { bg: 'bg-danger', text: 'text-white' }, // Red - needs fixing
+  'OUT_OF_ORDER': { bg: 'bg-dark', text: 'text-white' },         // Dark - not available
+  'READY_FOR_GUEST': { bg: 'bg-success', text: 'text-white' }     // Green - ready to go
 };
 
 // Quick action button configurations based on current status
@@ -89,8 +89,17 @@ const RoomCard = ({ room, onAction, disabled = false }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  const statusStyle = STATUS_STYLES[room.room_status] || { bg: 'bg-light', text: 'text-dark' };
+  const statusStyle = STATUS_STYLES[room.room_status] || { bg: 'bg-secondary', text: 'text-white' };
   const quickActions = getQuickActions(room.room_status);
+  
+  // Helper function to format status text
+  const formatStatusText = (status) => {
+    if (!status) return 'Unknown';
+    return status
+      .replace(/_/g, ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, c => c.toUpperCase());
+  };
   
   // Handle room click navigation
   const handleRoomClick = () => {
@@ -140,7 +149,7 @@ const RoomCard = ({ room, onAction, disabled = false }) => {
           
           {/* Status Badge */}
           <span className={`badge ${statusStyle.bg} ${statusStyle.text}`}>
-            {room.room_status_display || room.room_status}
+            {formatStatusText(room.room_status_display || room.room_status)}
           </span>
         </div>
 
@@ -161,19 +170,25 @@ const RoomCard = ({ room, onAction, disabled = false }) => {
           )}
         </div>
 
-        {/* Timestamps */}
+        {/* Timestamps with Staff Names */}
         {(room.last_cleaned_at || room.last_inspected_at) && (
           <div className="mb-3">
             {room.last_cleaned_at && (
               <small className="text-muted d-block">
                 <i className="bi bi-check-circle me-1"></i>
                 Cleaned: {formatDateTime(room.last_cleaned_at)}
+                {room.cleaned_by_staff_name && (
+                  <span className="text-primary"> by {room.cleaned_by_staff_name}</span>
+                )}
               </small>
             )}
             {room.last_inspected_at && (
               <small className="text-muted d-block">
                 <i className="bi bi-eye me-1"></i>
                 Inspected: {formatDateTime(room.last_inspected_at)}
+                {room.inspected_by_staff_name && (
+                  <span className="text-success"> by {room.inspected_by_staff_name}</span>
+                )}
               </small>
             )}
           </div>

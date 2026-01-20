@@ -1286,7 +1286,7 @@ body.terminal-mode,
   justify-content: center;
 
   padding: 1.5rem 0 1rem 0;
-  margin-top: 90px; /* Space for navbar + quick actions */
+  margin-top: 10px; /* Space for navbar + quick actions */
   animation: fadeInLogo 0.6s ease-in both;
 }
 
@@ -1311,7 +1311,7 @@ body.terminal-mode,
 /* Mobile adjustments for logo */
 @media (max-width: 991px) {
   .hotel-logo-display {
-    margin-top: 120px; /* Extra space for mobile quick actions bar */
+    margin-top: 10px; /* Extra space for mobile quick actions bar */
     padding: 1rem 0 0.5rem 0;
   }
   

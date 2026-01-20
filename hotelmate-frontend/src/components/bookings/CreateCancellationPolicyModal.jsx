@@ -19,9 +19,10 @@ const CreateCancellationPolicyModal = ({
   // Form state
   const [formData, setFormData] = useState({
     name: '',
-    template_type: 'flexible',
+    code: '',
+    template_type: 'FLEXIBLE',
     hours_before_checkin: 48,
-    penalty_type: 'first_night',
+    penalty_type: 'FIRST_NIGHT',
     penalty_amount: '',
     description: ''
   });
@@ -32,18 +33,19 @@ const CreateCancellationPolicyModal = ({
 
   // Template type options
   const templateTypes = [
-    { value: 'flexible', label: 'Flexible (Free cancellation)' },
-    { value: 'moderate', label: 'Moderate (Partial penalty)' },
-    { value: 'strict', label: 'Strict (Non-refundable)' },
-    { value: 'custom', label: 'Custom Policy' }
+    { value: 'FLEXIBLE', label: 'Flexible (Free cancellation)' },
+    { value: 'MODERATE', label: 'Moderate (Partial penalty)' },
+    { value: 'NON_REFUNDABLE', label: 'Non-Refundable (Strict)' },
+    { value: 'CUSTOM', label: 'Custom Policy' }
   ];
 
   // Penalty type options
   const penaltyTypes = [
-    { value: 'first_night', label: 'First Night Charge' },
-    { value: 'full_amount', label: 'Full Amount' },
-    { value: 'percentage', label: 'Percentage of Total' },
-    { value: 'fixed_fee', label: 'Fixed Fee' }
+    { value: 'FIRST_NIGHT', label: 'First Night Charge' },
+    { value: 'FULL_STAY', label: 'Full Amount' },
+    { value: 'PERCENTAGE', label: 'Percentage of Total' },
+    { value: 'FIXED', label: 'Fixed Fee' },
+    { value: 'NONE', label: 'No Penalty' }
   ];
 
   // Handle form field changes
@@ -58,9 +60,10 @@ const CreateCancellationPolicyModal = ({
   const resetForm = () => {
     setFormData({
       name: '',
-      template_type: 'flexible',
+      code: '',
+      template_type: 'FLEXIBLE',
       hours_before_checkin: 48,
-      penalty_type: 'first_night',
+      penalty_type: 'FIRST_NIGHT',
       penalty_amount: '',
       description: ''
     });
@@ -80,7 +83,13 @@ const CreateCancellationPolicyModal = ({
       return;
     }
 
-    if (formData.template_type !== 'flexible' && !formData.penalty_amount) {
+    if (!formData.code.trim()) {
+      setError('Policy code is required');
+      setLoading(false);
+      return;
+    }
+
+    if (formData.template_type !== 'FLEXIBLE' && formData.template_type !== 'NON_REFUNDABLE' && !formData.penalty_amount) {
       setError('Penalty amount is required for non-flexible policies');
       setLoading(false);
       return;
@@ -90,17 +99,18 @@ const CreateCancellationPolicyModal = ({
       // Prepare payload
       const payload = {
         name: formData.name.trim(),
+        code: formData.code.trim().toUpperCase(),
         template_type: formData.template_type,
         free_until_hours: parseInt(formData.hours_before_checkin),
         penalty_type: formData.penalty_type,
         description: formData.description.trim() || null
       };
 
-      // Add penalty amount for non-flexible policies
-      if (formData.template_type !== 'flexible' && formData.penalty_amount) {
-        if (formData.penalty_type === 'percentage') {
+      // Add penalty amount for applicable penalty types
+      if (formData.penalty_amount && (formData.penalty_type === 'PERCENTAGE' || formData.penalty_type === 'FIXED')) {
+        if (formData.penalty_type === 'PERCENTAGE') {
           payload.penalty_percentage = parseFloat(formData.penalty_amount);
-        } else if (formData.penalty_type === 'fixed_fee') {
+        } else if (formData.penalty_type === 'FIXED') {
           payload.penalty_amount = parseFloat(formData.penalty_amount);
         }
       }
@@ -177,6 +187,22 @@ const CreateCancellationPolicyModal = ({
           </Form.Group>
 
           <Form.Group className="mb-3">
+            <Form.Label>Policy Code <span className="text-danger">*</span></Form.Label>
+            <Form.Control
+              type="text"
+              value={formData.code}
+              onChange={(e) => handleChange('code', e.target.value)}
+              placeholder="e.g., FLEX48, MOD24, NONREF"
+              disabled={loading}
+              required
+              maxLength={20}
+            />
+            <Form.Text className="text-muted">
+              Short identifier for this policy (will be converted to uppercase)
+            </Form.Text>
+          </Form.Group>
+
+          <Form.Group className="mb-3">
             <Form.Label>Template Type</Form.Label>
             <Form.Select
               value={formData.template_type}
@@ -208,7 +234,7 @@ const CreateCancellationPolicyModal = ({
             </Form.Text>
           </Form.Group>
 
-          {formData.template_type !== 'flexible' && (
+          {formData.template_type !== 'FLEXIBLE' && (
             <>
               <Form.Group className="mb-3">
                 <Form.Label>Penalty Type</Form.Label>
@@ -225,26 +251,26 @@ const CreateCancellationPolicyModal = ({
                 </Form.Select>
               </Form.Group>
 
-              {(formData.penalty_type === 'percentage' || formData.penalty_type === 'fixed_fee') && (
+              {(formData.penalty_type === 'PERCENTAGE' || formData.penalty_type === 'FIXED') && (
                 <Form.Group className="mb-3">
                   <Form.Label>
-                    {formData.penalty_type === 'percentage' ? 'Penalty Percentage' : 'Fixed Fee Amount'} 
+                    {formData.penalty_type === 'PERCENTAGE' ? 'Penalty Percentage' : 'Fixed Fee Amount'} 
                     <span className="text-danger">*</span>
                   </Form.Label>
                   <div className="input-group">
                     <Form.Control
                       type="number"
                       min="0"
-                      step={formData.penalty_type === 'percentage' ? '1' : '0.01'}
-                      max={formData.penalty_type === 'percentage' ? '100' : undefined}
+                      step={formData.penalty_type === 'PERCENTAGE' ? '1' : '0.01'}
+                      max={formData.penalty_type === 'PERCENTAGE' ? '100' : undefined}
                       value={formData.penalty_amount}
                       onChange={(e) => handleChange('penalty_amount', e.target.value)}
-                      placeholder={formData.penalty_type === 'percentage' ? '25' : '50.00'}
+                      placeholder={formData.penalty_type === 'PERCENTAGE' ? '25' : '50.00'}
                       disabled={loading}
                       required
                     />
                     <span className="input-group-text">
-                      {formData.penalty_type === 'percentage' ? '%' : '$'}
+                      {formData.penalty_type === 'PERCENTAGE' ? '%' : '$'}
                     </span>
                   </div>
                 </Form.Group>

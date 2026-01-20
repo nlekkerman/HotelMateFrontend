@@ -692,11 +692,17 @@ function HousekeepingRoomDetails() {
                   {currentRoom.last_cleaned_at && (
                     <div className="mb-2">
                       <strong>Last Cleaned:</strong> {new Date(currentRoom.last_cleaned_at).toLocaleString()}
+                      {currentRoom.cleaned_by_staff_name && (
+                        <span className="text-primary"> by {currentRoom.cleaned_by_staff_name}</span>
+                      )}
                     </div>
                   )}
                   {currentRoom.last_inspected_at && (
                     <div className="mb-2">
                       <strong>Last Inspected:</strong> {new Date(currentRoom.last_inspected_at).toLocaleString()}
+                      {currentRoom.inspected_by_staff_name && (
+                        <span className="text-success"> by {currentRoom.inspected_by_staff_name}</span>
+                      )}
                     </div>
                   )}
                 </div>

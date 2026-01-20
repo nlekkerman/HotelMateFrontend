@@ -12,7 +12,9 @@ const FilterControls = ({ filters, onFilterChange, onClearFilters, stats }) => {
   const getStatusLabel = (status) => {
     switch (status) {
       case 'PENDING_PAYMENT':
-        return `Pending Payment (${stats.pending})`;
+        return `Pending Payment (${stats.pendingPayment || stats.pending || 0})`;
+      case 'PENDING_APPROVAL':
+        return `Pending Approval (${stats.pendingApproval || 0})`;
       case 'CONFIRMED':
         return `Confirmed (${stats.confirmed})`;
       case 'CANCELLED':
@@ -35,7 +37,8 @@ const FilterControls = ({ filters, onFilterChange, onClearFilters, stats }) => {
           className="form-select"
         >
           <option value="">All Statuses ({stats.total})</option>
-          <option value="PENDING_PAYMENT">Pending Payment ({stats.pending})</option>
+          <option value="PENDING_PAYMENT">Pending Payment ({stats.pendingPayment || 0})</option>
+          <option value="PENDING_APPROVAL">Pending Approval ({stats.pendingApproval || 0})</option>
           <option value="CONFIRMED">Confirmed ({stats.confirmed})</option>
           <option value="CANCELLED">Cancelled ({stats.cancelled})</option>
           <option value="COMPLETED">Completed ({stats.completed})</option>

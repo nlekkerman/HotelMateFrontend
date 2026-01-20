@@ -1,0 +1,212 @@
+/* Theme Settings Specific Styles */
+
+.theme-settings {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card styling improvements */
+.theme-settings .card {
+  border-radius: 12px !important;
+  transition: all 0.2s ease;
+}
+
+.theme-settings .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+}
+
+/* Preset button styling */
+.theme-settings .preset-button {
+  transition: all 0.2s ease;
+  border-radius: 12px !important;
+}
+
+.theme-settings .preset-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.theme-settings .preset-button.active {
+  border-width: 2px !important;
+  box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb), 0.25);
+}
+
+/* Color control styling */
+.theme-settings .color-picker-wrapper {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.theme-settings .color-picker-wrapper:hover {
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* Section icons */
+.theme-settings .section-icon {
+  font-size: 1.1rem;
+  opacity: 0.8;
+}
+
+/* Subtle dividers */
+.theme-settings .subtle-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,0.1), transparent);
+  border: none;
+  margin: 1.5rem 0;
+}
+
+/* Live preview enhancements */
+.theme-settings .preview-card {
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-settings .preview-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--bs-primary), var(--bs-info));
+}
+
+/* Sticky save bar */
+.theme-settings .save-bar {
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(0,0,0,0.05);
+}
+
+/* Badge improvements */
+.theme-settings .badge {
+  font-weight: 500;
+  letter-spacing: 0.025em;
+}
+
+/* Color control improvements */
+.theme-settings .color-control input[type="color"] {
+  border: none !important;
+  padding: 0 !important;
+}
+
+.theme-settings .color-control input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.theme-settings .color-control input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 6px;
+}
+
+/* Button enhancements */
+.theme-settings .btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.theme-settings .btn:hover {
+  transform: translateY(-1px);
+}
+
+.theme-settings .btn-lg {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .theme-settings .card-body {
+    padding: 1.25rem !important;
+  }
+  
+  .theme-settings .preset-button {
+    padding: 1rem !important;
+  }
+  
+  .theme-settings .save-bar {
+    padding: 1rem !important;
+  }
+}
+
+/* Success/Error states */
+.theme-settings .alert {
+  border-radius: 10px;
+  border: none;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Loading states */
+.theme-settings .spinner-border {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Color category headers */
+.theme-settings .category-header {
+  background: linear-gradient(135deg, rgba(0,0,0,0.02), rgba(0,0,0,0.05));
+  border-radius: 6px;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Enhanced shadows */
+.theme-settings .shadow-sm {
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08) !important;
+}
+
+/* Text improvements */
+.theme-settings h3, 
+.theme-settings h4, 
+.theme-settings h5 {
+  letter-spacing: -0.025em;
+}
+
+.theme-settings .text-muted {
+  opacity: 0.7;
+}
+
+/* Interactive elements */
+.theme-settings .interactive:hover {
+  cursor: pointer;
+}
+
+/* Focus states */
+.theme-settings input:focus {
+  box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb), 0.25) !important;
+  border-color: var(--bs-primary) !important;
+}
+
+/* Special highlight for buttons section */
+.theme-settings .buttons-card {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border: 1px solid rgba(0,0,0,0.05);
+}

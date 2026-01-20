@@ -64,7 +64,14 @@ const BookingStatusBadges = ({ booking }) => {
   const showAdminBadge =
     !isInHouse && !isCheckedOut && status && status !== 'CONFIRMED';
 
-  const adminBadge = showAdminBadge ? (
+  // Special badge for paid pending approval
+  const paidPendingBadge = status === 'PENDING_APPROVAL' && booking?.paid_at ? (
+    <Badge bg="primary" className="me-1">
+      Paid — Under Review
+    </Badge>
+  ) : null;
+
+  const adminBadge = showAdminBadge && !(status === 'PENDING_APPROVAL' && booking?.paid_at) ? (
     <Badge bg="secondary" className="me-1">
       {status.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
     </Badge>
@@ -73,6 +80,7 @@ const BookingStatusBadges = ({ booking }) => {
   return (
     <div className="d-flex flex-wrap gap-1">
       {primaryBadge}
+      {paidPendingBadge}
       {adminBadge}
     </div>
   );

@@ -92,7 +92,7 @@ const BookingActions = ({
         <button 
           onClick={handleApprove}
           className="btn btn-success btn-sm me-2"
-          title="Approve booking and capture payment"
+          title={booking.paid_at ? "Confirm booking" : "Approve booking and capture payment"}
           disabled={isAccepting || isDeclining}
         >
           {isAccepting ? (
@@ -113,7 +113,7 @@ const BookingActions = ({
         <button 
           onClick={handleDecline}
           className="btn btn-outline-warning btn-sm me-2"
-          title="Decline booking and release authorization"
+          title={booking.paid_at ? "Decline & refund" : "Decline booking"}
           disabled={isAccepting || isDeclining}
         >
           {isDeclining ? (

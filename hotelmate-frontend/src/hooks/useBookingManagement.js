@@ -211,7 +211,8 @@ export const useBookingManagement = (hotelSlug) => {
       completed: bookings.filter(b => b.status === 'COMPLETED' || b.checked_out_at != null).length,
       arrivals: bookings.filter(b => {
         const isToday = new Date(b.check_in).toDateString() === new Date().toDateString();
-        return isToday && !b.checked_in_at && (b.status === 'CONFIRMED' || b.status === 'PENDING_APPROVAL');
+        const isEligibleArrival = b.status === 'CONFIRMED' || (b.status === 'PENDING_APPROVAL' && Boolean(b.paid_at));
+        return isToday && !b.checked_in_at && isEligibleArrival;
       }).length,
       in_house: bookings.filter(b => b.checked_in_at && !b.checked_out_at).length,
       departures: bookings.filter(b => {

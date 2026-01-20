@@ -16,8 +16,8 @@ const HousekeepingHeader = ({ totalRooms, isLive, loading }) => {
                 <strong>Rooms</strong> • {totalRooms} total
               </span>
               {isLive && (
-                <span className="badge bg-success d-flex align-items-center gap-1">
-                  <i className="bi bi-circle-fill" style={{ fontSize: '0.5rem' }}></i>
+                <span className="badge bg-success  d-flex align-items-center gap-1">
+                  <i className="bi bi-circle-fill  text-danger" style={{ fontSize: '0.5rem' }}></i>
                   Live
                 </span>
               )}

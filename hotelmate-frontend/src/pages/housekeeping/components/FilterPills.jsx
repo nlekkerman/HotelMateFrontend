@@ -21,7 +21,7 @@ const FilterPills = ({ activeFilter, onFilterChange, counts, rooms = [] }) => {
 
   return (
     <div className="mb-4">
-      <div className="d-flex flex-wrap gap-2">
+      <div className="d-flex flex-wrap gap-2 justify-content-center">
         {FILTER_OPTIONS.map(option => {
           const count = getFilterCount(option.key);
           const isActive = activeFilter === option.key;
@@ -29,11 +29,11 @@ const FilterPills = ({ activeFilter, onFilterChange, counts, rooms = [] }) => {
           return (
             <button
               key={option.key}
-              className={`btn ${isActive ? option.variant.replace('outline-', '') : option.variant} btn-sm d-flex align-items-center gap-2`}
+              className={`btn ${isActive ? option.variant.replace('outline-', '') + ' text-white' : option.variant} btn-sm d-flex align-items-center gap-2`}
               onClick={() => onFilterChange(option.key)}
             >
               <span>{option.label}</span>
-              <span className={`badge ${isActive ? 'bg-white text-dark' : 'bg-primary'}`}>
+              <span className={`badge ${isActive ? 'bg-white text-dark' : 'bg-primary text-white'}`}>
                 {count}
               </span>
             </button>
