@@ -28,6 +28,12 @@ const BookingActions = ({
     (booking.guest_email || booking.primary_email || booking.booker_email);
   const isPrecheckinComplete = booking?.precheckin_submitted_at != null;
   
+  // Disable all actions if booking is expired
+  const isExpired = booking.status === 'EXPIRED';
+  const effectiveCanApprove = canApprove && !isExpired;
+  const effectiveCanDecline = canDecline && !isExpired;
+  const effectiveCanSendPrecheckin = canSendPrecheckin && !isExpired;
+  
   // Room operations logic
   const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
   const isCheckedOut = !!booking.checked_out_at;
@@ -87,8 +93,16 @@ const BookingActions = ({
 
   return (
     <div className="booking-actions">
-      {/* Approve/Decline buttons - only for PENDING_APPROVAL */}
-      {canApprove && (
+      {/* Show EXPIRED notice if booking is expired */}
+      {isExpired && (
+        <small className="text-muted">
+          <i className="bi bi-clock-history me-1"></i>
+          Actions disabled - booking expired
+        </small>
+      )}
+      
+      {/* Approve/Decline buttons - only for PENDING_APPROVAL and not expired */}
+      {effectiveCanApprove && (
         <button 
           onClick={handleApprove}
           className="btn btn-success btn-sm me-2"
@@ -109,7 +123,7 @@ const BookingActions = ({
         </button>
       )}
       
-      {canDecline && (
+      {effectiveCanDecline && (
         <button 
           onClick={handleDecline}
           className="btn btn-outline-warning btn-sm me-2"
@@ -130,8 +144,8 @@ const BookingActions = ({
         </button>
       )}
 
-      {/* Pre-check-in button - conditional based on completion status */}
-      {canSendPrecheckin && (
+      {/* Pre-check-in button - conditional based on completion status and not expired */}
+      {effectiveCanSendPrecheckin && (
         isPrecheckinComplete ? (
           <button 
             onClick={() => {

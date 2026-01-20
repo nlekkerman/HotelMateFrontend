@@ -12,6 +12,8 @@ import {
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import BookingStatusBadges from './BookingStatusBadges';
+import BookingTimeWarningBadges from './BookingTimeWarningBadges';
+import { useBookingTimeWarnings } from '@/hooks/useBookingTimeWarnings';
 
 /**
  * Canonical Booking Details Modal Component
@@ -56,6 +58,9 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
   const checkInMutation = useCheckInBooking(hotelSlug);
   const checkOutMutation = useCheckOutBooking(hotelSlug);
   const sendPrecheckinLinkMutation = useSendPrecheckinLink(hotelSlug);
+  
+  // Get booking time warnings (must be at top level)
+  const bookingWarnings = useBookingTimeWarnings(booking);
   
   
   const handleAssignRoom = async () => {
@@ -441,6 +446,152 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
           </Button>
         </div>
       </Alert>
+    );
+  };
+  
+  const renderTimeControlsSection = () => {
+    const warnings = bookingWarnings; // Use the warnings from top-level hook
+    const isExpired = booking.status === 'EXPIRED';
+    
+    // Show section if there are warnings or booking is expired
+    if (!warnings.approval && !warnings.overstay && !isExpired) {
+      return null;
+    }
+
+    return (
+      <Card className="mb-3">
+        <Card.Header>
+          <h5 className="mb-0">
+            <i className="bi bi-clock me-2"></i>
+            Time Controls
+          </h5>
+        </Card.Header>
+        <Card.Body>
+          {/* EXPIRED Status Banner */}
+          {isExpired && (
+            <Alert variant="danger" className="mb-3">
+              <Alert.Heading>
+                <i className="bi bi-exclamation-triangle me-2"></i>
+                Auto-Expired: Approval Timeout
+              </Alert.Heading>
+              <p className="mb-1">
+                This booking was automatically expired due to approval timeout.
+              </p>
+              {booking.expired_at && (
+                <small className="text-muted">
+                  Expired: {format(new Date(booking.expired_at), 'MMM dd, yyyy HH:mm')}
+                </small>
+              )}
+              {booking.auto_expire_reason_code && (
+                <div>
+                  <small className="text-muted">
+                    Reason: {booking.auto_expire_reason_code}
+                  </small>
+                </div>
+              )}
+            </Alert>
+          )}
+
+          {/* Approval Section */}
+          {warnings.approval && (
+            <div className="mb-3">
+              <div className="d-flex align-items-center mb-2">
+                <strong className="me-2">Approval Status:</strong>
+                <BookingTimeWarningBadges booking={booking} showTooltips={false} />
+              </div>
+              
+              {warnings.approval.deadline && (
+                <div className="small text-muted mb-1">
+                  <i className="bi bi-calendar-event me-1"></i>
+                  Deadline: {format(new Date(warnings.approval.deadline), 'MMM dd, yyyy HH:mm')}
+                </div>
+              )}
+              
+              {warnings.approval.isOverdue && (
+                <div className="small text-danger mb-1">
+                  <i className="bi bi-exclamation-circle me-1"></i>
+                  Overdue by {warnings.approval.minutesOverdue} minutes
+                </div>
+              )}
+              
+              <div className="small text-muted">
+                <i className="bi bi-lightbulb me-1"></i>
+                Suggested action: Confirm or Decline booking
+              </div>
+            </div>
+          )}
+
+          {/* Overstay Section */}
+          {warnings.overstay && (
+            <div className="mb-3">
+              <div className="d-flex align-items-center mb-2">
+                <strong className="me-2">Checkout Status:</strong>
+                <Badge bg={warnings.overstay.variant} className="me-2">
+                  <i className="bi bi-hourglass-split me-1"></i>
+                  {warnings.overstay.displayText}
+                </Badge>
+              </div>
+              
+              {warnings.overstay.deadline && (
+                <div className="small text-muted mb-1">
+                  <i className="bi bi-calendar-event me-1"></i>
+                  Checkout deadline: {format(new Date(warnings.overstay.deadline), 'MMM dd, yyyy HH:mm')}
+                </div>
+              )}
+              
+              {warnings.overstay.isOverstay && (
+                <div className="small text-danger mb-1">
+                  <i className="bi bi-exclamation-circle me-1"></i>
+                  Overstay by {warnings.overstay.minutesOverdue} minutes
+                </div>
+              )}
+              
+              {warnings.overstay.flaggedAt && (
+                <div className="small text-warning mb-1">
+                  <i className="bi bi-flag me-1"></i>
+                  Flagged: {format(new Date(warnings.overstay.flaggedAt), 'MMM dd, yyyy HH:mm')}
+                </div>
+              )}
+              
+              {warnings.overstay.acknowledgedAt && (
+                <div className="small text-success mb-1">
+                  <i className="bi bi-check-circle me-1"></i>
+                  Acknowledged: {format(new Date(warnings.overstay.acknowledgedAt), 'MMM dd, yyyy HH:mm')}
+                </div>
+              )}
+              
+              <div className="small text-muted mb-2">
+                <i className="bi bi-lightbulb me-1"></i>
+                Suggested action: Checkout guest or Extend stay
+              </div>
+              
+              {/* Action Buttons - Disabled for now */}
+              <div className="d-flex gap-2">
+                <OverlayTrigger
+                  overlay={<Tooltip>Backend endpoint coming soon</Tooltip>}
+                >
+                  <span>
+                    <Button variant="outline-warning" size="sm" disabled>
+                      <i className="bi bi-flag me-1"></i>
+                      Acknowledge Overstay
+                    </Button>
+                  </span>
+                </OverlayTrigger>
+                <OverlayTrigger
+                  overlay={<Tooltip>Backend endpoint coming soon</Tooltip>}
+                >
+                  <span>
+                    <Button variant="outline-primary" size="sm" disabled>
+                      <i className="bi bi-calendar-plus me-1"></i>
+                      Extend Stay
+                    </Button>
+                  </span>
+                </OverlayTrigger>
+              </div>
+            </div>
+          )}
+        </Card.Body>
+      </Card>
     );
   };
   
@@ -1133,6 +1284,9 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
         
         {/* Party Status Banner */}
         {renderPartyStatusBanner()}
+        
+        {/* Time Controls Section */}
+        {renderTimeControlsSection()}
         
         {/* Pre-Check-In Summary Section */}
         <Card className="mb-3" data-precheckin-summary>

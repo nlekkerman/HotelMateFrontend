@@ -163,9 +163,9 @@ function RoomList() {
       </h2>
 
       <div className="row row-cols-1 row-cols-md-2 row-cols-lg-5 justify-content-center g-2">
-        {paginatedRooms.map((room) => (
+        {paginatedRooms.map((room, index) => (
           <RoomCard
-            key={room.id}
+            key={room.id || room.room_number || `room-${index}`}
             room={{ ...room }} // spread to force re-render
           />
         ))}

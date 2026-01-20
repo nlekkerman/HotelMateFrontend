@@ -270,8 +270,8 @@ function RoomDetails() {
     const actions = [];
 
     // Check-in is handled from booking management, not room management
-    // Only show checkout if room is actually occupied AND status indicates occupancy
-    if (room?.is_occupied && currentRoom?.room_status === 'OCCUPIED') {
+    // Only show checkout if room status is OCCUPIED (use consistent real-time data)
+    if (currentRoom?.room_status === 'OCCUPIED') {
       actions.push({
         key: 'checkout',
         label: 'Check Out',

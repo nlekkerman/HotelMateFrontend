@@ -31,7 +31,15 @@ const BookingStatusBadges = ({ booking }) => {
   // 1) Primary badge (single)
   let primaryBadge = null;
 
-  if (isGuestCheckedOut) {
+  // Handle EXPIRED status first
+  if (status === 'EXPIRED') {
+    primaryBadge = (
+      <Badge bg="dark" className="me-1 text-white">
+        <i className="bi bi-clock-history me-1"></i>
+        EXPIRED
+      </Badge>
+    );
+  } else if (isGuestCheckedOut) {
     primaryBadge = (
       <Badge bg="dark" className="me-1 text-white">
         {roomNumber ? `Checked-out · Room ${roomNumber}` : 'Checked-out'}
@@ -62,7 +70,7 @@ const BookingStatusBadges = ({ booking }) => {
 
   // 2) Optional secondary badge only when it matters
   const showAdminBadge =
-    !isInHouse && !isCheckedOut && status && status !== 'CONFIRMED';
+    !isInHouse && !isCheckedOut && status && status !== 'CONFIRMED' && status !== 'EXPIRED';
 
   // Special badge for paid pending approval
   const paidPendingBadge = status === 'PENDING_APPROVAL' && booking?.paid_at ? (

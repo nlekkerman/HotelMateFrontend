@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import BookingActions from './BookingActions';
 import BookingDetailsModal from './BookingDetailsModal';
 import BookingStatusBadges from './BookingStatusBadges';
+import BookingTimeWarningBadges from './BookingTimeWarningBadges';
 
 /**
  * Booking Table Component
@@ -91,6 +92,7 @@ const BookingTable = ({
               <th>Party</th>
               <th>Amount</th>
               <th>Status</th>
+              <th>Warnings</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -246,6 +248,10 @@ const BookingTable = ({
 
         <td>
           <BookingStatusBadges booking={booking} />
+        </td>
+
+        <td>
+          <BookingTimeWarningBadges booking={booking} />
         </td>
 
         <td onClick={(e) => e.stopPropagation()}>

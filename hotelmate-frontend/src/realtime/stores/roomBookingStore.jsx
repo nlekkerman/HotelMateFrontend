@@ -280,6 +280,14 @@ export const roomBookingActions = {
         });
         break;
 
+      case "booking_expired":
+        dispatchRef({
+          type: ACTIONS.ROOM_BOOKING_UPDATED,
+          payload: { booking: payload, bookingId },
+        });
+        this.maybeShowToast('warning', `Booking ${bookingId} expired due to timeout`, event);
+        break;
+
       // Healing events - console.debug only per backend contract
       case "integrity_healed":
       case "party_healed":

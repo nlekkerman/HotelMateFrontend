@@ -349,6 +349,7 @@ const RoomCard = ({ room }) => {
           {room.is_occupied &&
             !room.primary_guest &&
             room.guests_in_room &&
+            Array.isArray(room.guests_in_room) &&
             room.guests_in_room.map((guest) => (
               <span
                 key={guest.id}

@@ -123,7 +123,7 @@ const BookingStatusPage = () => {
         return updatedBooking;
       });
     }
-  }, [bookingId, roomBookingState?.byBookingId, roomBookingState]);
+  }, [bookingId, roomBookingState?.byBookingId]);
 
   // Booking state is now updated directly from canonical store above
 
