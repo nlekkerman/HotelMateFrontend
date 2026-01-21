@@ -19,7 +19,7 @@ import { useBookingTimeWarnings } from '@/hooks/useBookingTimeWarnings';
  * Canonical Booking Details Modal Component
  * Features room assignment, check-in, and flags-driven actions
  */
-const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
+const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile }) => {
   const [selectedRoomId, setSelectedRoomId] = useState('');
   const [assignmentNotes, setAssignmentNotes] = useState('');
   const [showRoomAssignment, setShowRoomAssignment] = useState(false);
@@ -472,10 +472,10 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
             <Alert variant="danger" className="mb-3">
               <Alert.Heading>
                 <i className="bi bi-exclamation-triangle me-2"></i>
-                Auto-Expired: Approval Timeout
+                EXPIRED: Booking expired due to approval timeout.
               </Alert.Heading>
               <p className="mb-1">
-                This booking was automatically expired due to approval timeout.
+                This booking cannot be approved as it has exceeded the approval deadline.
               </p>
               {booking.expired_at && (
                 <small className="text-muted">
@@ -1279,6 +1279,56 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug }) => {
                 </div>
               </Col>
             </Row>
+          </Card.Body>
+        </Card>
+        
+        {/* Staff Seen Information Section */}
+        <Card className="mb-3">
+          <Card.Body>
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <strong className="text-muted">Staff View Status:</strong>
+                <div className="mt-1">
+                  <span className="me-3">
+                    <i className="bi bi-eye me-1"></i>
+                    Seen: {booking.staff_seen_at 
+                      ? format(new Date(booking.staff_seen_at), 'MMM dd, yyyy HH:mm')
+                      : <span className="text-warning">Not seen yet</span>
+                    }
+                  </span>
+                  {booking.staff_seen_at && (
+                    <span>
+                      <i className="bi bi-person me-1"></i>
+                      Seen first by: {(() => {
+                        try {
+                          const seenBy = booking.staff_seen_by_display || booking.staff_seen_by;
+                          if (!seenBy) return '—';
+                          
+                          // Handle both string and object formats
+                          if (typeof seenBy === 'string') {
+                            return seenBy;
+                          }
+                          
+                          // Handle object format
+                          if (seenBy.full_name) return seenBy.full_name;
+                          if (seenBy.first_name && seenBy.last_name) {
+                            return `${seenBy.first_name} ${seenBy.last_name}`;
+                          }
+                          
+                          return String(seenBy);
+                        } catch (error) {
+                          // Graceful degradation - dev warning only
+                          if (process.env.NODE_ENV !== 'production') {
+                            console.warn('[BookingDetailsModal] Error processing staff_seen_by:', error);
+                          }
+                          return '—';
+                        }
+                      })()} 
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
           </Card.Body>
         </Card>
         

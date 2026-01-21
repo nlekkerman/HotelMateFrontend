@@ -4,7 +4,7 @@ import { useBookingTimeWarnings, logMissingWarningFields } from '@/hooks/useBook
 
 /**
  * BookingTimeWarningBadges Component
- * Displays approval and overstay warning badges with tooltips
+ * Displays NEW badge first for unseen bookings, then approval and overstay warning badges
  * Integrates with useBookingTimeWarnings hook for real-time updates
  */
 const BookingTimeWarningBadges = ({ booking, showTooltips = true }) => {
@@ -15,80 +15,190 @@ const BookingTimeWarningBadges = ({ booking, showTooltips = true }) => {
     logMissingWarningFields(booking);
   }, [booking]);
 
-  if (!warnings.approval && !warnings.overstay) {
-    return null;
-  }
+  // Check if booking is unseen (NEW badge)
+  const isUnseen = !booking?.staff_seen_at || booking?.is_new_for_staff === true;
 
   const badges = [];
 
-  // Approval warning badge
-  if (warnings.approval && warnings.approval.displayText) {
-    const approvalBadge = (
+  // 1) NEW badge first if unseen (RED)
+  if (isUnseen) {
+    const newBadge = (
       <Badge
-        key="approval"
-        bg={warnings.approval.variant}
+        key="new"
+        bg="danger"
         className="me-1"
         style={{ fontSize: '0.75em' }}
       >
-        <i className="bi bi-clock me-1"></i>
-        {warnings.approval.displayText}
+        NEW
       </Badge>
     );
 
-    if (showTooltips && warnings.approval.tooltipText) {
+    if (showTooltips) {
       badges.push(
         <OverlayTrigger
-          key="approval"
+          key="new"
           placement="top"
           overlay={
             <Tooltip>
-              <div style={{ whiteSpace: 'pre-line' }}>
-                {warnings.approval.tooltipText}
-              </div>
+              New booking - not yet seen by staff
             </Tooltip>
           }
         >
-          {approvalBadge}
+          {newBadge}
         </OverlayTrigger>
       );
     } else {
-      badges.push(approvalBadge);
+      badges.push(newBadge);
     }
   }
 
-  // Overstay warning badge
-  if (warnings.overstay && warnings.overstay.displayText) {
-    const overstayBadge = (
-      <Badge
-        key="overstay"
-        bg={warnings.overstay.variant}
-        className="me-1"
-        style={{ fontSize: '0.75em' }}
-      >
-        <i className="bi bi-hourglass-split me-1"></i>
-        {warnings.overstay.displayText}
-      </Badge>
-    );
+  // 2) Approval warning badge if approval_risk_level != OK
+  if (booking?.approval_risk_level && booking.approval_risk_level !== 'OK') {
+    let displayText = '';
+    let variant = 'warning';
 
-    if (showTooltips && warnings.overstay.tooltipText) {
-      badges.push(
-        <OverlayTrigger
-          key="overstay"
-          placement="top"
-          overlay={
-            <Tooltip>
-              <div style={{ whiteSpace: 'pre-line' }}>
-                {warnings.overstay.tooltipText}
-              </div>
-            </Tooltip>
+    try {
+      switch (booking.approval_risk_level.toUpperCase()) {
+        case 'DUE_SOON':
+          displayText = 'Approval due soon';
+          variant = 'warning';
+          break;
+        case 'OVERDUE':
+          const overdueMinutes = booking.approval_overdue_minutes;
+          displayText = overdueMinutes 
+            ? `Approval overdue +${overdueMinutes}m`
+            : 'Approval overdue';
+          variant = 'danger';
+          break;
+        case 'CRITICAL':
+          const criticalMinutes = booking.approval_overdue_minutes;
+          displayText = criticalMinutes 
+            ? `Approval CRITICAL +${criticalMinutes}m`
+            : 'Approval CRITICAL';
+          variant = 'danger';
+          break;
+        default:
+          // Dev-only warning for unknown values
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn('[BookingTimeWarningBadges] Unknown approval_risk_level:', booking.approval_risk_level);
           }
-        >
-          {overstayBadge}
-        </OverlayTrigger>
-      );
-    } else {
-      badges.push(overstayBadge);
+          break;
+      }
+
+      if (displayText) {
+        const approvalBadge = (
+          <Badge
+            key="approval"
+            bg={variant}
+            className="me-1"
+            style={{ fontSize: '0.75em' }}
+          >
+            <i className="bi bi-clock me-1"></i>
+            {displayText}
+          </Badge>
+        );
+
+        if (showTooltips) {
+          badges.push(
+            <OverlayTrigger
+              key="approval"
+              placement="top"
+              overlay={
+                <Tooltip>
+                  {displayText}
+                </Tooltip>
+              }
+            >
+              {approvalBadge}
+            </OverlayTrigger>
+          );
+        } else {
+          badges.push(approvalBadge);
+        }
+      }
+    } catch (error) {
+      // Graceful degradation - render nothing, dev warning only
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('[BookingTimeWarningBadges] Error processing approval warning:', error);
+      }
     }
+  }
+
+  // 3) Overstay warning badge if overstay_risk_level != OK
+  if (booking?.overstay_risk_level && booking.overstay_risk_level !== 'OK') {
+    let displayText = '';
+    let variant = 'warning';
+
+    try {
+      switch (booking.overstay_risk_level.toUpperCase()) {
+        case 'GRACE':
+          displayText = 'Checkout grace';
+          variant = 'info';
+          break;
+        case 'OVERDUE':
+          const overdueMinutes = booking.overstay_minutes;
+          displayText = overdueMinutes 
+            ? `Overstay +${overdueMinutes}m`
+            : 'Overstay';
+          variant = 'warning';
+          break;
+        case 'CRITICAL':
+          const criticalMinutes = booking.overstay_minutes;
+          displayText = criticalMinutes 
+            ? `Overstay CRITICAL +${criticalMinutes}m`
+            : 'Overstay CRITICAL';
+          variant = 'danger';
+          break;
+        default:
+          // Dev-only warning for unknown values
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn('[BookingTimeWarningBadges] Unknown overstay_risk_level:', booking.overstay_risk_level);
+          }
+          break;
+      }
+
+      if (displayText) {
+        const overstayBadge = (
+          <Badge
+            key="overstay"
+            bg={variant}
+            className="me-1"
+            style={{ fontSize: '0.75em' }}
+          >
+            <i className="bi bi-hourglass-split me-1"></i>
+            {displayText}
+          </Badge>
+        );
+
+        if (showTooltips) {
+          badges.push(
+            <OverlayTrigger
+              key="overstay"
+              placement="top"
+              overlay={
+                <Tooltip>
+                  {displayText}
+                </Tooltip>
+              }
+            >
+              {overstayBadge}
+            </OverlayTrigger>
+          );
+        } else {
+          badges.push(overstayBadge);
+        }
+      }
+    } catch (error) {
+      // Graceful degradation - render nothing, dev warning only
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('[BookingTimeWarningBadges] Error processing overstay warning:', error);
+      }
+    }
+  }
+
+  // Render nothing if no badges to show (graceful degradation)
+  if (badges.length === 0) {
+    return null;
   }
 
   return (

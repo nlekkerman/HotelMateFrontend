@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import BookingActions from './BookingActions';
 import BookingDetailsModal from './BookingDetailsModal';
 import BookingStatusBadges from './BookingStatusBadges';
@@ -23,8 +23,40 @@ const BookingTable = ({
 }) => {
   const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [staffProfile, setStaffProfile] = useState(null);
   const dispatch = useRoomBookingDispatch();
   const { user } = useAuth();
+  
+  // Fetch staff profile for proper name display
+  useEffect(() => {
+    if (!user || !hotelSlug) {
+      setStaffProfile(null);
+      return;
+    }
+    
+    console.log('🔍 [BookingTable] Fetching staff profile for user:', user.staff_id, 'hotelSlug:', hotelSlug);
+    
+    api
+      .get(`/staff/hotel/${hotelSlug}/me/`)
+      .then((res) => {
+        console.log('🔍 [BookingTable] Staff profile response:', res.data);
+        setStaffProfile(res.data);
+      })
+      .catch((error) => {
+        console.log('🔍 [BookingTable] Staff profile fetch failed, trying fallback:', error);
+        // Fallback to old endpoint
+        api
+          .get("/staff/me/")
+          .then((res) => {
+            console.log('🔍 [BookingTable] Fallback staff profile response:', res.data);
+            setStaffProfile(res.data);
+          })
+          .catch((fallbackError) => {
+            console.log('🔍 [BookingTable] Both staff profile endpoints failed:', fallbackError);
+            setStaffProfile(null);
+          });
+      });
+  }, [user, hotelSlug]);
   
   const handleViewPrecheckin = (bookingId) => {
     setSelectedBookingId(bookingId);
@@ -42,10 +74,32 @@ const BookingTable = ({
     // Mark as seen if not already seen
     if (!booking.staff_seen_at) {
       // 🔥 Optimistic update (instant UI feedback)
+      // Create a better display name from available staff profile data
+      console.log('🔍 [BookingTable] Creating display name from:', {
+        staffProfile,
+        staffProfile_first_name: staffProfile?.first_name,
+        staffProfile_last_name: staffProfile?.last_name,
+        staffProfile_full_name: staffProfile?.full_name,
+        user_username: user?.username,
+        user_email: user?.email,
+        user_staff_id: user?.staff_id,
+        user_id: user?.id
+      });
+      
+      const displayName = staffProfile?.first_name && staffProfile?.last_name 
+                           ? `${staffProfile.first_name} ${staffProfile.last_name}` 
+                           : staffProfile?.full_name ||
+                             user?.username || 
+                             user?.email?.split('@')[0] ||
+                             `Staff #${user?.staff_id || user?.id}`;
+                             
+      console.log('🔍 [BookingTable] Final display name:', displayName);
+      
       const optimisticUpdate = {
         ...booking,
         staff_seen_at: new Date().toISOString(),
-        staff_seen_by: user?.full_name || user?.email || 'Staff',
+        staff_seen_by: displayName,
+        is_new_for_staff: false, // Explicitly set to false to remove NEW badge
       };
       
       // Update in store immediately via dispatch
@@ -60,7 +114,7 @@ const BookingTable = ({
       // 🔒 Persist in backend (async, no waiting)
       try {
         await api.post(
-          `/api/staff/hotel/${hotelSlug}/room-bookings/${booking.booking_id}/mark-seen/`
+          `/staff/hotel/${hotelSlug}/room-bookings/${booking.booking_id}/mark-seen/`
         );
       } catch (error) {
         console.warn('[BookingTable] Failed to mark booking as seen:', error);
@@ -98,7 +152,82 @@ const BookingTable = ({
     setSelectedBookingId(null);
   };
 
+  // Sorting by urgency rank system with unseen bookings pinned at top
+  const sortedBookings = React.useMemo(() => {
+    if (!bookings || bookings.length === 0) return [];
 
+    const getApprovalRank = (approvalRiskLevel) => {
+      if (!approvalRiskLevel) return 3; // Missing field = OK rank
+      switch (approvalRiskLevel.toUpperCase()) {
+        case 'CRITICAL': return 0;
+        case 'OVERDUE': return 1;
+        case 'DUE_SOON': return 2;
+        case 'OK': return 3;
+        default: 
+          // Dev-only warning for unknown values
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn('[BookingTable] Unknown approval_risk_level:', approvalRiskLevel);
+          }
+          return 3;
+      }
+    };
+
+    const getOverstayRank = (overstayRiskLevel) => {
+      if (!overstayRiskLevel) return 3; // Missing field = OK rank
+      switch (overstayRiskLevel.toUpperCase()) {
+        case 'CRITICAL': return 0;
+        case 'OVERDUE': return 1;
+        case 'GRACE': return 2;
+        case 'OK': return 3;
+        default:
+          // Dev-only warning for unknown values
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn('[BookingTable] Unknown overstay_risk_level:', overstayRiskLevel);
+          }
+          return 3;
+      }
+    };
+
+    const getUrgencyRank = (booking) => {
+      const approvalRank = getApprovalRank(booking.approval_risk_level);
+      const overstayRank = getOverstayRank(booking.overstay_risk_level);
+      // Use the worst of the two (min rank = highest urgency)
+      return Math.min(approvalRank, overstayRank);
+    };
+
+    const isUnseen = (booking) => {
+      return !booking.staff_seen_at || booking.is_new_for_staff === true;
+    };
+
+    return [...bookings].sort((a, b) => {
+      const aUnseen = isUnseen(a);
+      const bUnseen = isUnseen(b);
+
+      // Unseen bookings ALWAYS come first
+      if (aUnseen && !bUnseen) return -1;
+      if (!aUnseen && bUnseen) return 1;
+
+      // If both unseen or both seen, sort by urgency rank
+      if (aUnseen && bUnseen) {
+        const aUrgency = getUrgencyRank(a);
+        const bUrgency = getUrgencyRank(b);
+        
+        if (aUrgency !== bUrgency) {
+          return aUrgency - bUrgency; // Lower rank = higher urgency
+        }
+        
+        // Same urgency rank, sort by created_at DESC (newest first)
+        const aTime = new Date(a.created_at || 0);
+        const bTime = new Date(b.created_at || 0);
+        return bTime - aTime;
+      }
+
+      // Both seen - keep existing behavior (or created_at DESC if no other sorting)
+      const aTime = new Date(a.created_at || 0);
+      const bTime = new Date(b.created_at || 0);
+      return bTime - aTime;
+    });
+  }, [bookings]);
 
   if (bookings.length === 0) {
     return (
@@ -131,7 +260,7 @@ const BookingTable = ({
             </tr>
           </thead>
         <tbody>
-  {bookings.map((booking) => {
+  {sortedBookings.map((booking) => {
     // 🔥 DEBUG: verify what the LIST row actually receives (not the modal)
     if (booking?.booking_id === "BK-2025-0005") {
       console.log("LIST ROW BK-2025-0005", {
@@ -246,7 +375,7 @@ const BookingTable = ({
             {(() => {
               const isPrecheckinComplete = booking?.precheckin_submitted_at != null;
               return (
-                <span className={`badge ${isPrecheckinComplete ? 'bg-info' : 'bg-secondary'}`}>
+                <span className={`badge ${isPrecheckinComplete ? 'bg-checked' : 'bg-pre-checkin-pending'}`}>
                   {isPrecheckinComplete ? (
                     <>
                       <i className="bi bi-check-circle me-1"></i>Pre-Check-In Complete
@@ -287,8 +416,22 @@ const BookingTable = ({
         <td>
           <div className="d-flex flex-column gap-1">
             <BookingTimeWarningBadges booking={booking} />
-            {!booking.staff_seen_at && (
-              <span className="badge bg-danger" >NEW</span>
+            {booking.staff_seen_at && booking.staff_seen_by && (
+              <span className="badge bg-info" title={`First seen at ${new Date(booking.staff_seen_at).toLocaleString()}`}>
+                First seen by: {(() => {
+                  // Convert to string to ensure we can check it safely
+                  const staffSeenByStr = String(booking.staff_seen_by);
+                  // If staff_seen_by is already a formatted name (contains space), use it
+                  if (staffSeenByStr.includes(' ')) {
+                    return staffSeenByStr;
+                  }
+                  // Otherwise, try to format from staff profile or fall back to existing value
+                  if (staffProfile?.first_name && staffProfile?.last_name) {
+                    return `${staffProfile.first_name} ${staffProfile.last_name}`;
+                  }
+                  return staffSeenByStr;
+                })()}
+              </span>
             )}
           </div>
         </td>
@@ -319,6 +462,7 @@ const BookingTable = ({
         bookingId={selectedBookingId}
         hotelSlug={hotelSlug}
         onClose={handleCloseModal}
+        staffProfile={staffProfile}
       />
     </div>
   );

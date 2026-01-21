@@ -245,7 +245,25 @@ export const useBookingManagement = (hotelSlug) => {
   const acceptBookingMutation = useMutation({
     mutationKey: ['acceptBooking'],
     mutationFn: async (bookingId) => {
-      return await staffBookingService.acceptRoomBooking(hotelSlug, bookingId);
+      try {
+        return await staffBookingService.acceptRoomBooking(hotelSlug, bookingId);
+      } catch (error) {
+        // Handle HTTP 409 (booking expired) specifically
+        if (error.response?.status === 409) {
+          // Show specific error message from backend
+          const errorMessage = error.response?.data?.message || 'Booking expired due to approval timeout and cannot be approved.';
+          toast.error(errorMessage);
+          
+          // Refresh the booking state to reflect EXPIRED status
+          queryClient.invalidateQueries({
+            queryKey: ['staff-room-bookings', hotelSlug]
+          });
+          
+          // Re-throw to ensure mutation shows as failed
+          throw error;
+        }
+        throw error;
+      }
     },
     onSuccess: (updatedBooking) => {
       // Invalidate all booking queries to refresh the UI
@@ -255,7 +273,10 @@ export const useBookingManagement = (hotelSlug) => {
       toast.success('Booking approved, payment captured.');
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Failed to approve booking');
+      // Only show generic error if not already handled (409)
+      if (error.response?.status !== 409) {
+        toast.error(error.response?.data?.message || 'Failed to approve booking');
+      }
     }
   });
 

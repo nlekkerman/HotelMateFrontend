@@ -133,23 +133,35 @@ button:focus-visible {
 }
 
 .badge.bg-info {
-  background-color: #d1ecf1 !important;
-  color: #000000 !important;
+  background-color: #006cf0 !important;
+  color: #ffffff !important;
   border: 1px solid #b8daff;
   font-weight: 700 !important;
 }
 
 .badge.bg-danger {
-  background-color: #f8d7da !important;
-  color: #000000 !important;
+  background-color: #bb0716 !important;
+  color: #ffffff !important;
   border: 1px solid #f5c2c7;
   font-weight: 700 !important;
 }
 
 .badge.bg-secondary {
-  background-color: #e2e3e5 !important;
-  color: #000000 !important;
+  background-color: #5305e4 !important;
+  color: #ffffff !important;
   border: 1px solid #d3d3d4;
+  font-weight: 700 !important;
+}
+.bg-checked{
+  background-color: #198754 !important;
+  color: #ffffff !important;
+  border: 1px solid #146c43;
+  font-weight: 700 !important;
+}
+.bg-pre-checkin-pending{
+  background-color: #ffc107 !important;
+  color: #000000 !important;
+  border: 1px solid #ffecb5;
   font-weight: 700 !important;
 }
 

@@ -58,13 +58,15 @@ function RoomList() {
   const totalPages = Math.ceil(allRooms.length / 10); // Remove pagination since we have all data
 
   // Prefer rooms from store when available, fallback to API
-  const rooms = roomsState.list.length > 0 
-    ? roomsState.list.map(n => roomsState.byRoomNumber[String(n)]).filter(Boolean) // Convert to string for consistent lookup
-    : apiRooms;
+  const rooms = React.useMemo(() => {
+    return roomsState.list.length > 0 
+      ? roomsState.list.map(n => roomsState.byRoomNumber[String(n)]).filter(Boolean) // Convert to string for consistent lookup
+      : apiRooms;
+  }, [roomsState.list, roomsState.byRoomNumber, apiRooms]);
 
   // Keep local reactive state for UI interactions
   useEffect(() => {
-    if (rooms.length) {
+    if (rooms.length > 0) {
       setLocalRooms(rooms);
     }
   }, [rooms]);

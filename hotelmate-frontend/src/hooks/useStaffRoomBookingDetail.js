@@ -226,6 +226,10 @@ export const useCheckOutBooking = (hotelSlug) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.staffRoomBooking(hotelSlug, variables.bookingId)
       });
+      // Invalidate rooms cache to refresh room list after checkout
+      queryClient.invalidateQueries({
+        queryKey: ["rooms"]
+      });
       toast.success('Processing check-out... waiting for realtime confirmation');
     },
     onError: (error) => {

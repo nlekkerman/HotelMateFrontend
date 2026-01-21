@@ -95,8 +95,8 @@ const RoomCard = ({ room }) => {
             <span
               className={`badge bg-${getStatusColor(room.room_status)} fs-6`}
             >
-              {room.room_status_display ||
-                room.room_status ||
+              {formatStatus(room.room_status_display) ||
+                formatStatus(room.room_status) ||
                 (room.is_occupied ? "Occupied" : "Ready")}
             </span>
           </div>
@@ -122,17 +122,36 @@ const RoomCard = ({ room }) => {
           )}
 
           <div className="card-text mb-3">
-            <div className="d-flex justify-content-between align-items-center mb-2">
+            <div className="d-flex justify-content-between align-items-center my-3">
               <small className="text-muted">
                 <i className="bi bi-person-circle me-1" />
                 <strong>Occupancy:</strong>
               </small>
               <span
-                className={`badge ${
-                  room.is_occupied ? "bg-danger" : "bg-success"
-                }`}
+                className={`badge ${(() => {
+                  // If room is occupied, show as occupied
+                  if (room.is_occupied) return "bg-danger";
+                  // If room needs housekeeping work, show as not ready
+                  if (room.room_status === 'CHECKOUT_DIRTY' || 
+                      room.room_status === 'CLEANING_IN_PROGRESS' || 
+                      room.room_status === 'CLEANED_UNINSPECTED' ||
+                      room.room_status === 'MAINTENANCE_REQUIRED' ||
+                      room.room_status === 'OUT_OF_ORDER') {
+                    return "bg-warning";
+                  }
+                  // Otherwise ready
+                  return "bg-success";
+                })()}`}
               >
-                {room.is_occupied ? "Occupied" : "Ready"}
+                {(() => {
+                  if (room.is_occupied) return "Occupied";
+                  if (room.room_status === 'CHECKOUT_DIRTY') return "Needs Cleaning";
+                  if (room.room_status === 'CLEANING_IN_PROGRESS') return "Being Cleaned";
+                  if (room.room_status === 'CLEANED_UNINSPECTED') return "Awaiting Inspection";
+                  if (room.room_status === 'MAINTENANCE_REQUIRED') return "Maintenance Needed";
+                  if (room.room_status === 'OUT_OF_ORDER') return "Out of Order";
+                  return "Ready";
+                })()}
               </span>
             </div>
 
