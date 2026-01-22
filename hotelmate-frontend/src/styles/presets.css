@@ -688,7 +688,7 @@ a[class*="footer-"] {
 [data-preset="1"] .gallery-add-images {
   background: transparent !important;
   border: 2px dashed rgba(59, 169, 255, 0.4) !important;
-  color: rgba(251, 252, 252, 0.8) !important;
+  color: rgba(2, 7, 135, 0.8) !important;
 }
 
 [data-preset="1"] .gallery-add-gallery:hover,

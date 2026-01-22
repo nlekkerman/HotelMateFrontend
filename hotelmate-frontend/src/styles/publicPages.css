@@ -1850,8 +1850,13 @@ section:not(:first-of-type)::before {
 }
 
 .section-header--preset-4 .section-header__title {
-  color: #ffe9fb;
+  color: #ed548f;
   transform: rotate(0.5deg);
+}
+
+/* Apply same styling to section-header-title for consistency */
+.section-header-preset[data-preset="4"] .section-header-title {
+  color: #ed548f;
 }
 
 /* Preset 5: Professional & Structured - Green accent */

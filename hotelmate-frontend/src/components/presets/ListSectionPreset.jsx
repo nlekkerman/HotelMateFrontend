@@ -72,7 +72,7 @@ const ListSectionPreset = ({ section, onUpdate }) => {
             <h2 className={`section-header__title font-preset-${variant}-heading`}>{section.name}</h2>
             {isStaff && (
               <button
-                className="list-section-add-list"
+                className="list-section-add-list me-4 btn btn-hm"
                 onClick={() => setShowAddList(true)}
               >
                 <i className="bi bi-plus-circle me-2"></i>

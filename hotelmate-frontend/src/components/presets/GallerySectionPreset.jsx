@@ -173,7 +173,7 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
             <h2 className={`section-header__title font-preset-${variant}-heading`}>{section.name}</h2>
             {isStaff && (
               <button
-                className="btn btn-hm btn-gallery gallery-add-gallery"
+                className="btn btn-hm btn-gallery gallery-add-gallery me-4"
                 onClick={() => setShowAddGallery(true)}
               >
                 <i className="bi bi-plus-circle me-2"></i>

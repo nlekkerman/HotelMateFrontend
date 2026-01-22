@@ -787,7 +787,7 @@ const GuestRoomBookingPage = () => {
                       )}
 
                       {/* Pricing Section */}
-                      <div className="mb-3 p-3 bg-light rounded">
+                      <div className="mb-3 p-3 border rounded">
                         <div className="d-flex justify-content-between align-items-center">
                           <span className="text-muted">Price per night</span>
                           <div className="text-end">
@@ -823,7 +823,7 @@ const GuestRoomBookingPage = () => {
                       {/* Action Button */}
                       <Button 
                         variant={isPreselected ? "success" : "primary"}
-                        className="w-100 mt-auto py-2"
+                        className="w-100 mt-auto py-2 booking-room-select-btn"
                         onClick={() => getPriceQuote(room.room_type_code || room.code || room.name)}
                         disabled={!room.is_available || loading}
                         size="lg"
@@ -1075,7 +1075,7 @@ const GuestRoomBookingPage = () => {
                       </div>
                     )}
 
-                    <Button type="submit" variant="success" size="lg" disabled={loading}>
+                    <Button type="submit"  size="lg" disabled={loading} className="booking-room-select-btn">
                       {loading ? <Spinner animation="border" size="sm" /> : 'Confirm Booking'}
                     </Button>
                   </Form>
@@ -1084,7 +1084,7 @@ const GuestRoomBookingPage = () => {
             </Col>
 
             <Col lg={4}>
-              <Card className="sticky-top booking-summary-card">
+              <Card className="sticky-top booking-summary-card booking-summary-preset">
                 <Card.Body>
                   <h5 className="mb-3">Booking Summary</h5>
                   <div className="mb-3">

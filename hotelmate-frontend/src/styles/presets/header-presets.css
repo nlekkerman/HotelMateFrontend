@@ -54,6 +54,8 @@
   font-family: var(--font-playful-heading);
   color: var(--preset-4-primary);
   font-weight: 600;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
+  transform: rotate(0.5deg);
 }
 
 [data-preset="4"] .section-header-subtitle {

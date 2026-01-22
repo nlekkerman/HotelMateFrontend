@@ -1540,6 +1540,13 @@
   font-weight: 600;
 }
 
+/* Calendar icon for date inputs in preset 1 */
+.booking-page.page-style-1
+  input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.4) sepia(1) saturate(2) hue-rotate(200deg) brightness(0.8) !important;
+  cursor: pointer;
+}
+
 /* Preset 2 - Form Controls */
 .booking-page.page-style-2 .form-control,
 .booking-page.page-style-2 .form-select {
@@ -1668,6 +1675,363 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600 !important;
+}
+
+/* Force white text for booking room select buttons across all presets */
+.booking-page .booking-room-select-btn,
+.booking-page .booking-room-select-btn *,
+.booking-page .card .booking-room-select-btn,
+.booking-page .card .booking-room-select-btn * {
+  color: #ffffff !important;
+}
+
+/* ========================================
+   STEP 3 FORM ELEMENTS STYLING - ALL PRESETS
+   ======================================== */
+
+/* Base styling for Step 3 form elements */
+.booking-step--3 .form-control,
+.booking-step--3 .form-select {
+  padding: 0.75rem 1rem !important;
+  font-size: 1rem !important;
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+  border-width: 2px !important;
+}
+
+.booking-step--3 .form-control:focus,
+.booking-step--3 .form-select:focus {
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+  outline: none !important;
+}
+
+.booking-step--3 textarea.form-control {
+  min-height: 120px !important;
+  resize: vertical !important;
+}
+
+/* Form Check (Checkbox) styling */
+.booking-step--3 .form-check {
+  margin-bottom: 1rem !important;
+}
+
+.booking-step--3 .form-check-input {
+  width: 1.2em !important;
+  height: 1.2em !important;
+  margin-top: 0.1em !important;
+  border-radius: 4px !important;
+  border-width: 2px !important;
+}
+
+.booking-step--3 .form-check-label {
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+  margin-left: 0.5rem !important;
+  cursor: pointer !important;
+}
+
+/* Helper text styling */
+.booking-step--3 .text-muted {
+  font-size: 0.875rem !important;
+  line-height: 1.4 !important;
+}
+
+/* ========================================
+   PRESET 1 - MODERN & CLEAN (BLUE)
+   ======================================== */
+
+.booking-step--preset-1 .form-control,
+.booking-step--preset-1 .form-select {
+  border-color: rgba(59, 169, 255, 0.3) !important;
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.booking-step--preset-1 .form-control:focus,
+.booking-step--preset-1 .form-select:focus {
+  border-color: #3ba9ff !important;
+  box-shadow: 0 0 0 0.2rem rgba(59, 169, 255, 0.25) !important;
+}
+
+.booking-step--preset-1 .form-control::placeholder {
+  color: rgba(59, 169, 255, 0.6) !important;
+}
+
+.booking-step--preset-1 .form-check-input {
+  border-color: rgba(59, 169, 255, 0.5) !important;
+}
+
+.booking-step--preset-1 .form-check-input:checked {
+  background-color: #3ba9ff !important;
+  border-color: #3ba9ff !important;
+}
+
+/* ========================================
+   PRESET 2 - DARK & ELEGANT (GOLD)
+   ======================================== */
+
+.booking-step--preset-2 .form-control,
+.booking-step--preset-2 .form-select {
+  border-color: rgba(242, 201, 76, 0.4) !important;
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.booking-step--preset-2 .form-control:focus,
+.booking-step--preset-2 .form-select:focus {
+  border-color: #f2c94c !important;
+  box-shadow: 0 0 0 0.2rem rgba(242, 201, 76, 0.25) !important;
+}
+
+.booking-step--preset-2 .form-control::placeholder {
+  color: rgba(242, 201, 76, 0.7) !important;
+}
+
+.booking-step--preset-2 .form-check-input {
+  border-color: rgba(242, 201, 76, 0.6) !important;
+}
+
+.booking-step--preset-2 .form-check-input:checked {
+  background-color: #f2c94c !important;
+  border-color: #f2c94c !important;
+}
+
+/* ========================================
+   PRESET 3 - MINIMAL & SLEEK (BLACK/WHITE)
+   ======================================== */
+
+.booking-step--preset-3 .form-control,
+.booking-step--preset-3 .form-select {
+  border-color: rgba(0, 0, 0, 0.2) !important;
+  background-color: rgba(255, 255, 255, 0.98) !important;
+}
+
+.booking-step--preset-3 .form-control:focus,
+.booking-step--preset-3 .form-select:focus {
+  border-color: #1a1a1a !important;
+  box-shadow: 0 0 0 0.2rem rgba(0, 0, 0, 0.1) !important;
+}
+
+.booking-step--preset-3 .form-control::placeholder {
+  color: rgba(0, 0, 0, 0.5) !important;
+}
+
+.booking-step--preset-3 .form-check-input {
+  border-color: rgba(0, 0, 0, 0.3) !important;
+}
+
+.booking-step--preset-3 .form-check-input:checked {
+  background-color: #1a1a1a !important;
+  border-color: #1a1a1a !important;
+}
+
+/* ========================================
+   PRESET 4 - VIBRANT & PLAYFUL (PINK)
+   ======================================== */
+
+.booking-step--preset-4 .form-control,
+.booking-step--preset-4 .form-select {
+  border-color: rgba(255, 107, 157, 0.3) !important;
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.booking-step--preset-4 .form-control:focus,
+.booking-step--preset-4 .form-select:focus {
+  border-color: #ff6b9d !important;
+  box-shadow: 0 0 0 0.2rem rgba(255, 107, 157, 0.25) !important;
+}
+
+.booking-step--preset-4 .form-control::placeholder {
+  color: rgba(255, 107, 157, 0.6) !important;
+}
+
+.booking-step--preset-4 .form-check-input {
+  border-color: rgba(255, 107, 157, 0.5) !important;
+}
+
+.booking-step--preset-4 .form-check-input:checked {
+  background-color: #ff6b9d !important;
+  border-color: #ff6b9d !important;
+}
+
+/* ========================================
+   PRESET 5 - PROFESSIONAL & STRUCTURED (GREEN)
+   ======================================== */
+
+.booking-step--preset-5 .form-control,
+.booking-step--preset-5 .form-select {
+  border-color: rgba(46, 204, 113, 0.3) !important;
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.booking-step--preset-5 .form-control:focus,
+.booking-step--preset-5 .form-select:focus {
+  border-color: #2ecc71 !important;
+  box-shadow: 0 0 0 0.2rem rgba(46, 204, 113, 0.25) !important;
+}
+
+.booking-step--preset-5 .form-control::placeholder {
+  color: rgba(46, 204, 113, 0.6) !important;
+}
+
+.booking-step--preset-5 .form-check-input {
+  border-color: rgba(46, 204, 113, 0.5) !important;
+}
+
+.booking-step--preset-5 .form-check-input:checked {
+  background-color: #2ecc71 !important;
+  border-color: #2ecc71 !important;
+}
+
+/* ========================================
+   BOOKING SUMMARY PRESET STYLING
+   ======================================== */
+
+/* Base booking summary styling */
+.booking-summary-preset {
+  border: none !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 12px !important;
+}
+
+.booking-summary-preset .card-body {
+  padding: 1.5rem !important;
+}
+
+/* Override general card text color rules with high specificity */
+.booking-page .booking-summary-preset,
+.booking-page .booking-summary-preset *,
+.booking-page .card.booking-summary-preset,
+.booking-page .card.booking-summary-preset * {
+  color: inherit !important;
+}
+
+/* PRESET 1 - Modern Blue */
+.booking-step--preset-1 .booking-summary-preset {
+  background: linear-gradient(145deg, #f8fcff 0%, #e3f2fd 100%) !important;
+  border-left: 4px solid #3ba9ff !important;
+}
+
+.booking-step--preset-1 .booking-summary-preset h5 {
+  color: #1565c0 !important;
+  font-weight: 700 !important;
+}
+
+.booking-step--preset-1 .booking-summary-preset .text-muted {
+  color: #666 !important;
+}
+
+.booking-step--preset-1 .booking-summary-preset strong {
+  color: #1565c0 !important;
+}
+
+.booking-step--preset-1 .booking-summary-preset .fs-4 {
+  color: #1565c0 !important;
+}
+
+/* PRESET 2 - Dark Gold */
+.booking-step--preset-2 .booking-summary-preset {
+  background: linear-gradient(145deg, #fffdf7 0%, #fef9e7 100%) !important;
+  border-left: 4px solid #f2c94c !important;
+}
+
+.booking-step--preset-2 .booking-summary-preset h5 {
+  color: #8b7136 !important;
+  font-weight: 700 !important;
+}
+
+.booking-step--preset-2 .booking-summary-preset .text-muted {
+  color: #666 !important;
+}
+
+.booking-step--preset-2 .booking-summary-preset strong {
+  color: #8b7136 !important;
+}
+
+.booking-step--preset-2 .booking-summary-preset .fs-4 {
+  color: #8b7136 !important;
+}
+
+/* PRESET 3 - Minimal Black */
+.booking-step--preset-3 .booking-summary-preset {
+  background: linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%) !important;
+  border-left: 4px solid #1a1a1a !important;
+}
+
+.booking-step--preset-3 .booking-summary-preset h5 {
+  color: #1a1a1a !important;
+  font-weight: 700 !important;
+}
+
+.booking-step--preset-3 .booking-summary-preset .text-muted {
+  color: #666 !important;
+}
+
+.booking-step--preset-3 .booking-summary-preset strong {
+  color: #1a1a1a !important;
+}
+
+.booking-step--preset-3 .booking-summary-preset .fs-4 {
+  color: #1a1a1a !important;
+}
+
+/* PRESET 4 - Vibrant Pink */
+.booking-step--preset-4 .booking-summary-preset {
+  background: linear-gradient(145deg, #fff8fc 0%, #fce4f0 100%) !important;
+  border-left: 4px solid #ff6b9d !important;
+}
+
+.booking-step--preset-4 .booking-summary-preset h5 {
+  color: #d63384 !important;
+  font-weight: 700 !important;
+}
+
+.booking-step--preset-4 .booking-summary-preset .text-muted {
+  color: #666 !important;
+}
+
+.booking-step--preset-4 .booking-summary-preset strong {
+  color: #d63384 !important;
+}
+
+.booking-step--preset-4 .booking-summary-preset .fs-4 {
+  color: #d63384 !important;
+}
+
+/* PRESET 5 - Professional Green */
+.booking-step--preset-5 .booking-summary-preset {
+  background: linear-gradient(145deg, #f8fffe 0%, #e8f5f0 100%) !important;
+  border-left: 4px solid #2ecc71 !important;
+}
+
+.booking-step--preset-5 .booking-summary-preset h5 {
+  color: #198754 !important;
+  font-weight: 700 !important;
+}
+
+.booking-step--preset-5 .booking-summary-preset .text-muted {
+  color: #666 !important;
+}
+
+.booking-step--preset-5 .booking-summary-preset strong {
+  color: #198754 !important;
+}
+
+.booking-step--preset-5 .booking-summary-preset .fs-4 {
+  color: #198754 !important;
+}
+
+/* Common styling for all presets */
+.booking-summary-preset hr {
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  margin: 1rem 0 !important;
+}
+
+.booking-summary-preset .d-flex {
+  align-items: center !important;
+}
+
+.booking-summary-preset p {
+  color: #333 !important;
+  margin-bottom: 0.25rem !important;
 }
 
 /* Preset 1 - Enhanced Labels */
@@ -2053,12 +2417,12 @@
 
 .booking-page.page-style-4 .booking-step .card.border-primary {
   border: 2px solid #c2185b !important;
-  background: rgba(255, 107, 157, 0.05) !important;
+  background: rgba(169, 3, 3, 0.3) !important;
 }
 
 .booking-page.page-style-5 .booking-step .card.border-primary {
   border: 2px solid #2e7d32 !important;
-  background: rgba(46, 204, 113, 0.05) !important;
+  background: rgba(81, 2, 2, 1) !important;
 }
 
 /* ========================================
@@ -2113,14 +2477,14 @@
 .page-style-2 .card,
 .page-style-2 .modal-content {
   background: rgba(20, 20, 20, 0.9);
-  color: #f8f9fa;
+  color: #fafaf8;
   border: 1px solid rgba(242, 201, 76, 0.3);
   backdrop-filter: blur(8px);
 }
 
 .page-style-2 .card *,
 .page-style-2 .modal-content * {
-  color: #f8f9fa !important;
+  color: #8b6f00 !important;
 }
 
 .page-style-2 .card .card-title,

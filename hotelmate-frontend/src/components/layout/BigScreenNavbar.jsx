@@ -960,47 +960,10 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
         </div>
       </nav>
 
-      {/* Spacer to push content down - adjusted for navbar + quick actions */}
+      {/* Spacer to push content down - navbar height only */}
       <div className="d-none d-lg-block" style={{ 
-        height: contextualActions.length > 0 ? "90px" : "50px" 
+        height: "60px" 
       }}></div>
-
-
-
-      {/* Contextual Quick Actions Bar - Desktop - Always Visible Below Navbar */}
-      {contextualActions.length > 0 && (
-        <div 
-          className="d-none d-lg-flex position-fixed start-0 end-0 contextual-actions-bar"
-          style={{
-            top: "50px",
-            zIndex: 1045,
-            background: "transparent",
-          }}
-        >
-          <div className="container-fluid">
-            <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-3 my-3 contextual-actions-container glassmorphic-bar">
-              {/* Contextual action buttons */}
-              {contextualActions.map((action, idx) => (
-                <button
-                  key={idx}
-                  className="contextual-action-btn"
-                  onClick={action.action}
-                  title={action.label}
-                  style={{
-                    color: mainColor || '#3498db',
-                    boxShadow: `0 4px 15px ${mainColor ? mainColor + '40' : 'rgba(0, 0, 0, 0.2)'}`,
-                  }}
-                >
-                  <i className={`bi bi-${action.icon}`} style={{ color: mainColor || '#3498db' }} />
-                  <span className="action-label" style={{ color: mainColor || '#3498db' }}>{action.label}</span>
-                </button>
-              ))}
-              
-              {/* Quick notification buttons moved to GlobalQuickNotifications - always visible globally */}
-            </div>
-          </div>
-        </div>
-      )}
 
       {staffProfile && (
         <ClockModal
