@@ -43,22 +43,19 @@ export const useBookingTimeWarnings = (booking) => {
  * Compute approval warning details
  */
 function computeApprovalWarning(booking, now) {
-  // Only show for PENDING_APPROVAL or if risk level is not OK
-  const shouldShow = booking.status === 'PENDING_APPROVAL' || 
-                    (booking.approval_risk_level && booking.approval_risk_level !== 'OK');
+  // Only show approval warnings for guests who are NOT checked in yet
+  // Once checked in, overstay logic takes over
+  const isCheckedIn = !!booking.checked_in_at && !booking.checked_out_at;
+  const shouldShow = !isCheckedIn && (
+    booking.status === 'PENDING_APPROVAL' || 
+    (booking.approval_risk_level && booking.approval_risk_level !== 'OK')
+  );
   
   if (!shouldShow) return null;
 
-  // Use backend fields if available, fallback to local calculation
+  // Use backend fields if available
   const riskLevel = booking.approval_risk_level || 'OK';
-  let minutesOverdue = booking.approval_overdue_minutes;
-  
-  // Local calculation fallback
-  if (!minutesOverdue && booking.approval_deadline_at) {
-    const deadline = new Date(booking.approval_deadline_at);
-    const diffMs = now.getTime() - deadline.getTime();
-    minutesOverdue = Math.max(0, Math.floor(diffMs / (1000 * 60)));
-  }
+  const minutesOverdue = booking.approval_overdue_minutes || 0;
 
   return {
     riskLevel,
@@ -83,16 +80,9 @@ function computeOverstayWarning(booking, now) {
   
   if (!shouldShow) return null;
 
-  // Use backend fields if available, fallback to local calculation
+  // Use backend fields if available
   const riskLevel = booking.overstay_risk_level || 'OK';
-  let minutesOverdue = booking.overstay_minutes;
-  
-  // Local calculation fallback
-  if (!minutesOverdue && booking.checkout_deadline_at) {
-    const deadline = new Date(booking.checkout_deadline_at);
-    const diffMs = now.getTime() - deadline.getTime();
-    minutesOverdue = Math.max(0, Math.floor(diffMs / (1000 * 60)));
-  }
+  const minutesOverdue = booking.overstay_minutes || 0;
 
   return {
     riskLevel,
@@ -131,9 +121,9 @@ function getOverstayDisplayText(riskLevel, minutesOverdue = 0) {
     case 'GRACE':
       return 'Checkout grace';
     case 'OVERDUE':
-      return `Overstay +${minutesOverdue}m`;
+      return `Checkout overdue +${minutesOverdue}m`;
     case 'CRITICAL':
-      return `Overstay CRITICAL +${minutesOverdue}m`;
+      return `Checkout CRITICAL +${minutesOverdue}m`;
     default:
       return null;
   }
@@ -201,8 +191,8 @@ export const logMissingWarningFields = (booking, isDev = process.env.NODE_ENV ==
   const expectedFields = [
     'approval_deadline_at', 'is_approval_due_soon', 'is_approval_overdue', 
     'approval_overdue_minutes', 'approval_risk_level',
-    'checkout_deadline_at', 'is_overstay', 'overstay_minutes', 
-    'overstay_risk_level', 'overstay_flagged_at', 'overstay_acknowledged_at'
+    'checkout_deadline_at', 'overstay_minutes', 
+    'overstay_risk_level'
   ];
 
   const missingFields = expectedFields.filter(field => booking[field] === undefined);

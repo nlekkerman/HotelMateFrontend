@@ -14,6 +14,10 @@ import { toast } from 'react-toastify';
 import BookingStatusBadges from './BookingStatusBadges';
 import BookingTimeWarningBadges from './BookingTimeWarningBadges';
 import { useBookingTimeWarnings } from '@/hooks/useBookingTimeWarnings';
+import { staffOverstayAPI } from '@/services/staffApi';
+import StaffConfirmationModal from '../modals/StaffConfirmationModal';
+import StaffInputModal from '../modals/StaffInputModal';
+import { useRoomBookingState } from '@/realtime/stores/roomBookingStore';
 
 /**
  * Canonical Booking Details Modal Component
@@ -25,6 +29,22 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
   const [showRoomAssignment, setShowRoomAssignment] = useState(false);
   const [reason, setReason] = useState('');
   const [reasonError, setReasonError] = useState('');
+  
+  // Overstay state management
+  const [overstayStatus, setOverstayStatus] = useState(null);
+  const [isLoadingOverstayStatus, setIsLoadingOverstayStatus] = useState(false);
+  const [showAcknowledgeModal, setShowAcknowledgeModal] = useState(false);
+  const [showExtendModal, setShowExtendModal] = useState(false);
+  const [isAcknowledging, setIsAcknowledging] = useState(false);
+  const [isExtending, setIsExtending] = useState(false);
+  const [acknowledgeNote, setAcknowledgeNote] = useState('');
+  const [dismissOverstay, setDismissOverstay] = useState(false);
+  const [extendIdempotencyKey, setExtendIdempotencyKey] = useState(null);
+  const [extendMode, setExtendMode] = useState('nights'); // 'nights' or 'date'
+  const [extendNights, setExtendNights] = useState(1);
+  const [extendDate, setExtendDate] = useState('');
+  const [extendValidationError, setExtendValidationError] = useState('');
+  const [extendConflictError, setExtendConflictError] = useState(null);
   
   // Fetch booking detail
   const { 
@@ -61,6 +81,62 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
   
   // Get booking time warnings (must be at top level)
   const bookingWarnings = useBookingTimeWarnings(booking);
+  
+  // Listen for realtime booking updates to refresh overstay status
+  const roomBookingState = useRoomBookingState();
+  
+  // Fetch overstay status when booking data is available
+  useEffect(() => {
+    const fetchOverstayStatus = async () => {
+      if (!booking?.booking_id || !hotelSlug) return;
+      
+      console.log('[BookingDetailsModal] Fetching overstay status for:', booking.booking_id);
+      setIsLoadingOverstayStatus(true);
+      try {
+        const response = await staffOverstayAPI.staffOverstayStatus(hotelSlug, booking.booking_id);
+        console.log('[BookingDetailsModal] Overstay status response:', response.data);
+        setOverstayStatus(response.data);
+      } catch (error) {
+        console.warn('[BookingDetailsModal] Failed to fetch overstay status:', error);
+        console.warn('[BookingDetailsModal] Error response:', error.response?.data);
+        // Don't toast error for overstay status - it's supplementary data
+      } finally {
+        setIsLoadingOverstayStatus(false);
+      }
+    };
+    
+    fetchOverstayStatus();
+  }, [booking?.booking_id, hotelSlug]);
+  
+  // Function to refresh overstay status (used by realtime events)
+  const refreshOverstayStatus = async () => {
+    if (!booking?.booking_id || !hotelSlug) return;
+    
+    try {
+      const response = await staffOverstayAPI.staffOverstayStatus(hotelSlug, booking.booking_id);
+      setOverstayStatus(response.data);
+    } catch (error) {
+      console.warn('[BookingDetailsModal] Failed to refresh overstay status:', error);
+    }
+  };
+  
+  // Listen for realtime overstay events to refresh status
+  useEffect(() => {
+    if (!booking?.booking_id) return;
+    
+    const handleOverstayRefresh = (event) => {
+      if (event.detail?.bookingId === booking.booking_id) {
+        // Refresh overstay status when realtime events occur
+        refreshOverstayStatus();
+      }
+    };
+    
+    window.addEventListener('overstayStatusRefresh', handleOverstayRefresh);
+    
+    return () => {
+      window.removeEventListener('overstayStatusRefresh', handleOverstayRefresh);
+    };
+  }, [booking?.booking_id, hotelSlug]);
   
   
   const handleAssignRoom = async () => {
@@ -148,6 +224,145 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
     } catch (error) {
       // Error handling is done in the mutation
       console.error('Check-out failed:', error);
+    }
+  };
+  
+  // Overstay action handlers
+  const generateIdempotencyKey = () => {
+    const now = new Date();
+    const timestamp = now.getFullYear().toString() +
+      (now.getMonth() + 1).toString().padStart(2, '0') +
+      now.getDate().toString().padStart(2, '0') +
+      now.getHours().toString().padStart(2, '0') +
+      now.getMinutes().toString().padStart(2, '0') +
+      now.getSeconds().toString().padStart(2, '0');
+    const rand4 = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `ext_${booking?.booking_id}_${timestamp}_${rand4}`;
+  };
+  
+  const handleOpenExtendModal = () => {
+    setExtendIdempotencyKey(generateIdempotencyKey());
+    setExtendMode('nights');
+    setExtendNights(1);
+    setExtendDate('');
+    setExtendValidationError('');
+    setExtendConflictError(null);
+    setShowExtendModal(true);
+  };
+  
+  const handleAcknowledgeOverstay = async (note = '', dismiss = false) => {
+    if (!booking?.booking_id) return;
+    
+    setIsAcknowledging(true);
+    try {
+      await staffOverstayAPI.staffOverstayAcknowledge(hotelSlug, booking.booking_id, {
+        note: note || '',
+        dismiss: dismiss || false
+      });
+      toast.success('Overstay acknowledged successfully');
+      setShowAcknowledgeModal(false);
+      setAcknowledgeNote('');
+      setDismissOverstay(false);
+      
+      // Refresh overstay status
+      await refreshOverstayStatus();
+    } catch (error) {
+      toast.error('Failed to acknowledge overstay: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setIsAcknowledging(false);
+    }
+  };
+  
+  const handleExtendStay = async () => {
+    if (!booking?.booking_id) return;
+    
+    // Debug logging to help diagnose the issue
+    console.log('[BookingDetailsModal] Extend stay debug info:', {
+      booking_id: booking.booking_id,
+      status: booking.status,
+      checked_in_at: booking.checked_in_at,
+      checked_out_at: booking.checked_out_at,
+      assigned_room: booking.assigned_room,
+      room: booking.room,
+      isInHouse: !!booking.checked_in_at && !booking.checked_out_at,
+      is_checked_in: !!booking.checked_in_at && !booking.checked_out_at,
+      current_status: booking.checked_in_at ? (booking.checked_out_at ? 'checked-out' : 'checked-in') : 'not-checked-in',
+      booking_status_field: booking.status,
+      check_in_date: booking.check_in,
+      check_out_date: booking.check_out,
+      extendMode,
+      extendNights,
+      extendDate
+    });
+    console.log('[BookingDetailsModal] Full booking object:', booking);
+    console.log('[BookingDetailsModal] Full booking object:', booking);
+    
+    // Validate exactly one of add_nights or new_checkout_date
+    const hasNights = extendMode === 'nights' && extendNights > 0;
+    const hasDate = extendMode === 'date' && extendDate.trim();
+    
+    if (!hasNights && !hasDate) {
+      setExtendValidationError('Must specify either additional nights or new checkout date');
+      return;
+    }
+    
+    setExtendValidationError('');
+    setExtendConflictError(null);
+    
+    const payload = extendMode === 'nights' 
+      ? { add_nights: extendNights }
+      : { new_checkout_date: extendDate };
+      
+    console.log('[BookingDetailsModal] Sending extend request:', {
+      hotelSlug,
+      bookingId: booking.booking_id,
+      payload,
+      idempotencyKey: extendIdempotencyKey
+    });
+      
+    setIsExtending(true);
+    try {
+      const response = await staffOverstayAPI.staffOverstayExtend(hotelSlug, booking.booking_id, payload, {
+        idempotencyKey: extendIdempotencyKey
+      });
+      console.log('[BookingDetailsModal] Extend response:', response.data);
+      toast.success('Stay extended successfully');
+      setShowExtendModal(false);
+      
+      // Refresh overstay status
+      await refreshOverstayStatus();
+    } catch (error) {
+      console.error('[BookingDetailsModal] Extend error:', error);
+      console.error('[BookingDetailsModal] Error response data:', error.response?.data);
+      console.error('[BookingDetailsModal] Error status:', error.response?.status);
+      console.error('[BookingDetailsModal] Error message:', error.message);
+      
+      if (error.response?.status === 409) {
+        // Handle room conflicts - use the exact backend response structure
+        const errorData = error.response?.data;
+        console.log('[BookingDetailsModal] 409 conflict data:', errorData);
+        
+        // Check if this is a check-in status issue
+        if (errorData?.detail?.includes('not checked-in')) {
+          console.warn('[BookingDetailsModal] Backend reports booking not checked-in, but frontend shows:', {
+            frontend_checked_in_at: booking.checked_in_at,
+            frontend_checked_out_at: booking.checked_out_at,
+            frontend_status: booking.status,
+            backend_error: errorData?.detail
+          });
+          toast.error(`Cannot extend stay: ${errorData?.detail}\n\nPlease refresh the page and try again.`);
+        } else {
+          setExtendConflictError({
+            detail: errorData?.detail || 'Room conflict detected',
+            conflicts: errorData?.conflicts || [],
+            suggested_rooms: errorData?.suggested_rooms || []
+          });
+        }
+      } else {
+        toast.error('Failed to extend stay: ' + (error.response?.data?.message || error.message));
+      }
+    } finally {
+      setIsExtending(false);
     }
   };
   
@@ -565,29 +780,145 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
                 Suggested action: Checkout guest or Extend stay
               </div>
               
-              {/* Action Buttons - Disabled for now */}
+              {/* Action Buttons - Now functional */}
               <div className="d-flex gap-2">
-                <OverlayTrigger
-                  overlay={<Tooltip>Backend endpoint coming soon</Tooltip>}
-                >
-                  <span>
-                    <Button variant="outline-warning" size="sm" disabled>
-                      <i className="bi bi-flag me-1"></i>
-                      Acknowledge Overstay
-                    </Button>
-                  </span>
-                </OverlayTrigger>
-                <OverlayTrigger
-                  overlay={<Tooltip>Backend endpoint coming soon</Tooltip>}
-                >
-                  <span>
-                    <Button variant="outline-primary" size="sm" disabled>
-                      <i className="bi bi-calendar-plus me-1"></i>
-                      Extend Stay
-                    </Button>
-                  </span>
-                </OverlayTrigger>
+                {(() => {
+                  const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
+                  const hasIncident = overstayStatus?.incident !== null && overstayStatus?.incident !== undefined;
+                  const incidentStatus = overstayStatus?.incident?.status;
+                  const showExtend = hasIncident || (booking?.is_overstay === true);
+                  const showAcknowledge = hasIncident && incidentStatus === 'OPEN';
+                  const isAcknowledged = incidentStatus === 'ACKNOWLEDGED';
+                  const isResolved = incidentStatus === 'RESOLVED' || incidentStatus === 'DISMISSED';
+                  
+                  if (!isInHouse) return null;
+                  
+                  return (
+                    <>
+                      {showAcknowledge && (
+                        <Button 
+                          variant={isAcknowledged ? "outline-success" : "outline-warning"} 
+                          size="sm" 
+                          disabled={isAcknowledged || isAcknowledging}
+                          onClick={() => setShowAcknowledgeModal(true)}
+                        >
+                          <i className={`bi ${isAcknowledged ? 'bi-check-circle' : 'bi-flag'} me-1`}></i>
+                          {isAcknowledging ? (
+                            <>
+                              <Spinner animation="border" size="sm" className="me-1" />
+                              Acknowledging...
+                            </>
+                          ) : (
+                            isAcknowledged ? 'Acknowledged ✓' : 'Acknowledge Overstay'
+                          )}
+                        </Button>
+                      )}
+                      {showExtend && !isResolved && (
+                        <Button 
+                          variant="outline-primary" 
+                          size="sm" 
+                          disabled={isExtending}
+                          onClick={handleOpenExtendModal}
+                        >
+                          <i className="bi bi-calendar-plus me-1"></i>
+                          {isExtending ? (
+                            <>
+                              <Spinner animation="border" size="sm" className="me-1" />
+                              Extending...
+                            </>
+                          ) : (
+                            'Extend Stay'
+                          )}
+                        </Button>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
+            </div>
+          )}
+          
+          {/* Overstay Incident Panel - Backend-backed overstay data */}
+          {(overstayStatus || isLoadingOverstayStatus || booking?.checkout_overdue || warnings.overstay) && (
+            <div className="mb-3">
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <strong>Overstay Incident:</strong>
+                {isLoadingOverstayStatus && (
+                  <Spinner animation="border" size="sm" className="text-muted" />
+                )}
+              </div>
+              
+              {overstayStatus ? (
+                <>
+                  {overstayStatus.incident ? (
+                    <>
+                      <Badge 
+                        bg={
+                          overstayStatus.incident.status === 'OPEN' ? 'danger' :
+                          overstayStatus.incident.status === 'ACKNOWLEDGED' ? 'warning' :
+                          overstayStatus.incident.status === 'RESOLVED' ? 'success' :
+                          'secondary'
+                        }
+                        className="mb-2"
+                      >
+                        {overstayStatus.incident.status}
+                      </Badge>
+                    </>
+                  ) : (
+                    <Badge bg="secondary" className="mb-2">
+                      Not flagged yet
+                    </Badge>
+                  )}
+                  
+                  {overstayStatus.incident ? (
+                    <>
+                      {overstayStatus.incident.expected_checkout_date && (
+                        <div className="small text-muted mb-1">
+                          <i className="bi bi-calendar-event me-1"></i>
+                          Expected checkout: {format(new Date(overstayStatus.incident.expected_checkout_date), 'MMM dd, yyyy')}
+                        </div>
+                      )}
+                      
+                      {overstayStatus.incident.detected_at && (
+                        <div className="small text-muted mb-1">
+                          <i className="bi bi-clock me-1"></i>
+                          Detected: {format(new Date(overstayStatus.incident.detected_at), 'MMM dd, yyyy HH:mm')}
+                        </div>
+                      )}
+                      
+                      {overstayStatus.incident.hours_overdue !== null && overstayStatus.incident.hours_overdue !== undefined && (
+                        <div className="small text-danger mb-1">
+                          <i className="bi bi-hourglass-split me-1"></i>
+                          Hours overdue: {overstayStatus.incident.hours_overdue}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="small text-info mb-1">
+                      <i className="bi bi-info-circle me-1"></i>
+                      Backend has not flagged overstay incident yet (flagging occurs at 12:00 hotel time)
+                    </div>
+                  )}
+                </>
+              ) : isLoadingOverstayStatus ? (
+                <div className="small text-muted">
+                  <i className="bi bi-clock me-1"></i>
+                  Loading overstay status...
+                </div>
+              ) : (
+                <>
+                  <div className="small text-warning mb-1">
+                    <i className="bi bi-exclamation-triangle me-1"></i>
+                    Unable to load backend overstay status
+                  </div>
+                  {(booking?.checkout_overdue || warnings.overstay) && (
+                    <div className="small text-info">
+                      <i className="bi bi-info-circle me-1"></i>
+                      Checkout is overdue but backend status unavailable
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
         </Card.Body>
@@ -1239,7 +1570,8 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
   }
   
   return (
-    <Modal show={show} onHide={onClose} size="lg">
+    <>
+      <Modal show={show} onHide={onClose} size="lg">
       <Modal.Header closeButton>
         <Modal.Title>
           Booking Details - {booking.booking_id}
@@ -1309,11 +1641,13 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
                             return seenBy;
                           }
                           
-                          // Handle object format
+                          // Handle object format with improved field priority
                           if (seenBy.full_name) return seenBy.full_name;
+                          if (seenBy.name) return seenBy.name;
                           if (seenBy.first_name && seenBy.last_name) {
                             return `${seenBy.first_name} ${seenBy.last_name}`;
                           }
+                          if (seenBy.email) return seenBy.email;
                           
                           return String(seenBy);
                         } catch (error) {
@@ -1414,6 +1748,236 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
         </Button>
       </Modal.Footer>
     </Modal>
+    
+    {/* Overstay Action Modals */}
+    <StaffConfirmationModal
+        show={showAcknowledgeModal}
+        title="Acknowledge Overstay"
+        message={
+          <div>
+            <p>Acknowledge overstay incident for booking <strong>{booking?.booking_id}</strong>?</p>
+            <Form>
+              <Form.Group className="mb-3">
+                <Form.Label>Optional internal note:</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  placeholder="Enter internal note..."
+                  value={acknowledgeNote || ''}
+                  onChange={(e) => setAcknowledgeNote(e.target.value)}
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Check
+                  type="checkbox"
+                  id="dismissOverstay"
+                  label="Dismiss this overstay incident (mark as resolved)"
+                  checked={dismissOverstay || false}
+                  onChange={(e) => setDismissOverstay(e.target.checked)}
+                />
+                <Form.Text className="text-muted">
+                  Check this box to dismiss the incident as a non-issue
+                </Form.Text>
+              </Form.Group>
+            </Form>
+          </div>
+        }
+        confirmText={isAcknowledging ? 'Acknowledging...' : 'Acknowledge'}
+        confirmVariant="warning"
+        onConfirm={() => handleAcknowledgeOverstay(acknowledgeNote, dismissOverstay)}
+        onCancel={() => {
+          setShowAcknowledgeModal(false);
+          setAcknowledgeNote('');
+          setDismissOverstay(false);
+        }}
+      />
+      
+      <StaffConfirmationModal
+        show={showExtendModal}
+        title="Extend Stay"
+        message={
+          <>
+            <div className="mb-3 text-center">
+              Extend stay for booking <strong>{booking?.booking_id}</strong>
+            </div>
+            
+            <Form>
+              <Form.Group className="mb-3">
+                <Form.Check
+                  type="radio"
+                  name="extendMode"
+                  id="extendModeNights"
+                  label="Add additional nights"
+                  checked={extendMode === 'nights'}
+                  onChange={() => setExtendMode('nights')}
+                />
+                <Form.Check
+                  type="radio"
+                  name="extendMode"
+                  id="extendModeDate"
+                  label="Set new checkout date"
+                  checked={extendMode === 'date'}
+                  onChange={() => setExtendMode('date')}
+                />
+              </Form.Group>
+              
+              {extendMode === 'nights' && (
+                <Form.Group className="mb-3">
+                  <Form.Label>Additional nights</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={additionalNights}
+                    onChange={(e) => setAdditionalNights(parseInt(e.target.value) || 1)}
+                  />
+                </Form.Group>
+              )}
+              
+              {extendMode === 'date' && (
+                <Form.Group className="mb-3">
+                  <Form.Label>New checkout date</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={newCheckoutDate}
+                    onChange={(e) => setNewCheckoutDate(e.target.value)}
+                  />
+                </Form.Group>
+              )}
+            </Form>
+          </>
+        }
+                  onChange={() => {
+                    setExtendMode('nights');
+                    setExtendValidationError('');
+                    setExtendConflictError(null);
+                  }}
+                />
+                {extendMode === 'nights' && (
+                  <div className="mt-2 ms-4">
+                    <div className="d-flex align-items-center">
+                      <Button 
+                        variant="outline-secondary" 
+                        size="sm" 
+                        onClick={() => setExtendNights(Math.max(1, extendNights - 1))}
+                        disabled={extendNights <= 1}
+                      >
+                        -
+                      </Button>
+                      <span className="mx-3 fw-bold">{extendNights} night{extendNights !== 1 ? 's' : ''}</span>
+                      <Button 
+                        variant="outline-secondary" 
+                        size="sm" 
+                        onClick={() => setExtendNights(Math.min(14, extendNights + 1))}
+                        disabled={extendNights >= 14}
+                      >
+                        +
+                      </Button>
+                    </div>
+                    <Form.Text className="text-muted">Choose 1-14 additional nights</Form.Text>
+                  </div>
+                )}
+              </Form.Group>
+              
+              <Form.Group className="mb-3">
+                <Form.Check
+                  type="radio"
+                  name="extendMode"
+                  id="extendModeDate"
+                  label="Pick new checkout date"
+                  checked={extendMode === 'date'}
+                  onChange={() => {
+                    setExtendMode('date');
+                    setExtendValidationError('');
+                    setExtendConflictError(null);
+                  }}
+                />
+                {extendMode === 'date' && (
+                  <div className="mt-2 ms-4">
+                    <Form.Control
+                      type="date"
+                      value={extendDate}
+                      onChange={(e) => {
+                        setExtendDate(e.target.value);
+                        setExtendValidationError('');
+                        setExtendConflictError(null);
+                      }}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+                )}
+              </Form.Group>
+            </Form>
+            
+            {extendValidationError && (
+              <Alert variant="danger" className="mt-2">
+                {extendValidationError}
+              </Alert>
+            )}
+            
+            {extendConflictError && (
+              <Alert variant="warning" className="mt-2">
+                <Alert.Heading>Room Conflict Detected</Alert.Heading>
+                <p>{extendConflictError.detail}</p>
+                
+                {extendConflictError.conflicts && extendConflictError.conflicts.length > 0 ? (
+                  <>
+                    <p><strong>Conflicting bookings:</strong></p>
+                    <ul className="mb-3">
+                      {extendConflictError.conflicts.map((conflict, index) => (
+                        <li key={index}>
+                          <strong>{conflict.booking_id}</strong> in Room {conflict.room_number} 
+                          ({new Date(conflict.start_date).toLocaleDateString()} - {new Date(conflict.end_date).toLocaleDateString()})
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <p className="text-muted">No specific conflict details available.</p>
+                )}
+                
+                {extendConflictError.suggested_rooms && extendConflictError.suggested_rooms.length > 0 ? (
+                  <>
+                    <p><strong>Suggested alternative rooms:</strong></p>
+                    <ul className="mb-3">
+                      {extendConflictError.suggested_rooms.map((room, index) => (
+                        <li key={index}>
+                          Room {room.room_number} ({room.room_type})
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <p className="text-muted">No room suggestions available.</p>
+                )}
+                
+                <div className="d-flex gap-2 mt-3">
+                  <Button 
+                    variant="outline-secondary" 
+                    size="sm"
+                    onClick={() => {
+                      setShowExtendModal(false);
+                      setExtendConflictError(null);
+                    }}
+                  >
+                    Close (Handle Manually)
+                  </Button>
+                  {/* TODO: Add Room Move flow if available */}
+                </div>
+                
+                <p className="text-muted mt-2 mb-0">
+                  <small>Consider assigning the guest to a different room or handling the conflict manually.</small>
+                </p>
+              </Alert>
+            )}
+          </>
+        }
+        confirmText={isExtending ? 'Extending...' : 'Extend Stay'}
+        confirmVariant="primary"
+        onConfirm={handleExtendStay}
+        onCancel={() => setShowExtendModal(false)}
+      />
+    </>
   );
 };
 

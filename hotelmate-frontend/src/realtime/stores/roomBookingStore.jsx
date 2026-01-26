@@ -288,6 +288,25 @@ export const roomBookingActions = {
         this.maybeShowToast('warning', `Booking ${bookingId} expired due to timeout`, event);
         break;
 
+      // Overstay event handlers - trigger refresh instead of direct booking updates
+      case "booking_overstay_flagged":
+        // Emit refresh signal for BookingDetailsModal if open for this booking
+        this.emitOverstayRefresh(bookingId);
+        this.maybeShowToast('warning', `Overstay incident flagged for booking ${bookingId}`, event);
+        break;
+
+      case "booking_overstay_acknowledged":
+        // Emit refresh signal for BookingDetailsModal if open for this booking
+        this.emitOverstayRefresh(bookingId);
+        this.maybeShowToast('info', `Overstay acknowledged for booking ${bookingId}`, event);
+        break;
+
+      case "booking_overstay_extended":
+        // Emit refresh signal for BookingDetailsModal if open for this booking
+        this.emitOverstayRefresh(bookingId);
+        this.maybeShowToast('success', `Stay extended for booking ${bookingId}`, event);
+        break;
+
       // Healing events - console.debug only per backend contract
       case "integrity_healed":
       case "party_healed":
@@ -300,6 +319,16 @@ export const roomBookingActions = {
           console.log("[roomBookingStore] Ignoring eventType:", eventType, event);
         }
         break;
+    }
+  },
+
+  // Emit overstay refresh signal for BookingDetailsModal
+  emitOverstayRefresh(bookingId) {
+    // Emit a custom event that BookingDetailsModal can listen for
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('overstayStatusRefresh', { 
+        detail: { bookingId } 
+      }));
     }
   },
 

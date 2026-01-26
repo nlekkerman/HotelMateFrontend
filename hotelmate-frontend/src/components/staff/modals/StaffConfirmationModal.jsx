@@ -144,7 +144,7 @@ const StaffConfirmationModal = ({
                 ></i>
               </div>
             )}
-            <p className="mb-0 text-center fs-6">{message}</p>
+            <div className="mb-0 text-center fs-6">{message}</div>
           </div>
           
           <div className="modal-footer border-0 justify-content-center">

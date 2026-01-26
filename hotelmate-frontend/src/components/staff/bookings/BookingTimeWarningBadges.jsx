@@ -52,8 +52,9 @@ const BookingTimeWarningBadges = ({ booking, showTooltips = true }) => {
     }
   }
 
-  // 2) Approval warning badge if approval_risk_level != OK
-  if (booking?.approval_risk_level && booking.approval_risk_level !== 'OK') {
+  // 2) Approval warning badge if approval_risk_level != OK AND guest not checked in
+  const isCheckedIn = !!booking?.checked_in_at && !booking?.checked_out_at;
+  if (booking?.approval_risk_level && booking.approval_risk_level !== 'OK' && !isCheckedIn) {
     let displayText = '';
     let variant = 'warning';
 
@@ -138,15 +139,15 @@ const BookingTimeWarningBadges = ({ booking, showTooltips = true }) => {
         case 'OVERDUE':
           const overdueMinutes = booking.overstay_minutes;
           displayText = overdueMinutes 
-            ? `Overstay +${overdueMinutes}m`
-            : 'Overstay';
+            ? `Checkout overdue +${overdueMinutes}m`
+            : 'Checkout overdue';
           variant = 'warning';
           break;
         case 'CRITICAL':
           const criticalMinutes = booking.overstay_minutes;
           displayText = criticalMinutes 
-            ? `Overstay CRITICAL +${criticalMinutes}m`
-            : 'Overstay CRITICAL';
+            ? `Checkout CRITICAL +${criticalMinutes}m`
+            : 'Checkout CRITICAL';
           variant = 'danger';
           break;
         default:

@@ -342,7 +342,7 @@ const RoomCard = ({ room }) => {
           </div>
 
           {/* Guest Summary */}
-          {room.primary_guest && (
+          {room.primary_guest && room.room_status !== 'READY_FOR_GUEST' && (
             <div className="mb-2">
               <div className="d-flex align-items-center">
                 <i className="bi bi-person-fill text-primary me-2" />

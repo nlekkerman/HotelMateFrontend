@@ -160,4 +160,79 @@ export const publicPageBuilderAPI = {
   }
 };
 
+/**
+ * Staff Overstay Actions API
+ * For handling overstay incidents in booking details
+ */
+export const staffOverstayAPI = {
+  /**
+   * Get overstay status for a booking
+   * @param {string} hotelSlug - The hotel slug
+   * @param {string} bookingId - Booking reference (e.g. BK-2026-0005)
+   * @returns {Promise} - Overstay status data
+   */
+  staffOverstayStatus: (hotelSlug, bookingId) => {
+    const url = buildStaffURL(hotelSlug, 'room-bookings', `${bookingId}/overstay/status/`);
+    console.log('[staffOverstayAPI] Status request URL:', url);
+    return api.get(url);
+  },
+
+  /**
+   * Acknowledge overstay incident
+   * @param {string} hotelSlug - The hotel slug
+   * @param {string} bookingId - Booking reference (e.g. BK-2026-0005)
+   * @param {object} payload - { note: string, dismiss: boolean }
+   * @returns {Promise} - Acknowledgment response
+   */
+  staffOverstayAcknowledge: (hotelSlug, bookingId, payload) => {
+    const url = buildStaffURL(hotelSlug, 'room-bookings', `${bookingId}/overstay/acknowledge/`);
+    console.log('[staffOverstayAPI] Acknowledge request URL:', url);
+    return api.post(url, {
+      note: payload.note || '',
+      dismiss: payload.dismiss || false
+    });
+  },
+
+  /**
+   * Extend stay for overstay incident
+   * @param {string} hotelSlug - The hotel slug
+   * @param {string} bookingId - Booking reference (e.g. BK-2026-0005)
+   * @param {object} payload - { add_nights?: number, new_checkout_date?: string }
+   * @param {object} options - { idempotencyKey?: string }
+   * @returns {Promise} - Extension response with pricing/conflicts
+   */
+  staffOverstayExtend: (hotelSlug, bookingId, payload, options = {}) => {
+    const url = buildStaffURL(hotelSlug, 'room-bookings', `${bookingId}/overstay/extend/`);
+    
+    console.log('[staffOverstayAPI] Extend request details:', {
+      hotelSlug,
+      bookingId,
+      url,
+      payload,
+      options
+    });
+    
+    // Validate payload - exactly one of add_nights or new_checkout_date
+    const hasAddNights = payload.add_nights !== undefined && payload.add_nights !== null;
+    const hasNewCheckoutDate = payload.new_checkout_date !== undefined && payload.new_checkout_date !== null && payload.new_checkout_date !== '';
+    
+    if (hasAddNights && hasNewCheckoutDate) {
+      return Promise.reject(new Error('Cannot specify both add_nights and new_checkout_date'));
+    }
+    if (!hasAddNights && !hasNewCheckoutDate) {
+      return Promise.reject(new Error('Must specify either add_nights or new_checkout_date'));
+    }
+    
+    // Build request config with idempotency header if provided and not empty
+    const config = {};
+    if (options.idempotencyKey && options.idempotencyKey.trim()) {
+      config.headers = {
+        'Idempotency-Key': options.idempotencyKey.trim()
+      };
+    }
+    
+    return api.post(url, payload, config);
+  }
+};
+
 export default publicPageBuilderAPI;
