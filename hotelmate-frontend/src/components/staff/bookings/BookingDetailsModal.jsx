@@ -40,6 +40,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
   // Overstay state management
   const [overstayStatus, setOverstayStatus] = useState(null);
   const [isLoadingOverstayStatus, setIsLoadingOverstayStatus] = useState(false);
+  const [overstayStatusError, setOverstayStatusError] = useState(false);
   const [showAcknowledgeModal, setShowAcknowledgeModal] = useState(false);
   const [showExtendModal, setShowExtendModal] = useState(false);
   const [isAcknowledging, setIsAcknowledging] = useState(false);
@@ -99,13 +100,16 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
       
       console.log('[BookingDetailsModal] Fetching overstay status for:', booking.booking_id);
       setIsLoadingOverstayStatus(true);
+      setOverstayStatusError(false);
       try {
         const response = await staffOverstayAPI.staffOverstayStatus(hotelSlug, booking.booking_id);
         console.log('[BookingDetailsModal] Overstay status response:', response.data);
         setOverstayStatus(response.data);
+        setOverstayStatusError(false);
       } catch (error) {
         console.warn('[BookingDetailsModal] Failed to fetch overstay status:', error);
         console.warn('[BookingDetailsModal] Error response:', error.response?.data);
+        setOverstayStatusError(true);
         // Don't toast error for overstay status - it's supplementary data
       } finally {
         setIsLoadingOverstayStatus(false);
@@ -119,11 +123,14 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
   const refreshOverstayStatus = async () => {
     if (!booking?.booking_id || !hotelSlug) return;
     
+    setOverstayStatusError(false);
     try {
       const response = await staffOverstayAPI.staffOverstayStatus(hotelSlug, booking.booking_id);
       setOverstayStatus(response.data);
+      setOverstayStatusError(false);
     } catch (error) {
       console.warn('[BookingDetailsModal] Failed to refresh overstay status:', error);
+      setOverstayStatusError(true);
     }
   };
   
@@ -271,7 +278,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
       setAcknowledgeNote('');
       setDismissOverstay(false);
       
-      // Refresh overstay status
+      // Immediate refresh after success
       await refreshOverstayStatus();
     } catch (error) {
       toast.error('Failed to acknowledge overstay: ' + (error.response?.data?.message || error.message));
@@ -336,7 +343,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
       toast.success('Stay extended successfully');
       setShowExtendModal(false);
       
-      // Refresh overstay status
+      // Immediate refresh after success
       await refreshOverstayStatus();
     } catch (error) {
       console.error('[BookingDetailsModal] Extend error:', error);
@@ -578,11 +585,13 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
           overstayState={{
             overstayStatus,
             isLoadingOverstayStatus,
+            overstayStatusError,
             isAcknowledging,
             isExtending
           }}
           onAcknowledgeOverstay={() => setShowAcknowledgeModal(true)}
           onExtendStay={handleOpenExtendModal}
+          onRetryOverstayStatus={refreshOverstayStatus}
         />
         
         {/* Pre-Check-In Summary Section */}

@@ -8,11 +8,13 @@ const BookingDetailsTimeControlsSection = ({
   bookingWarnings,
   overstayState,
   onAcknowledgeOverstay,
-  onExtendStay
+  onExtendStay,
+  onRetryOverstayStatus
 }) => {
   const {
     overstayStatus,
     isLoadingOverstayStatus,
+    overstayStatusError,
     isAcknowledging,
     isExtending
   } = overstayState;
@@ -244,6 +246,81 @@ const BookingDetailsTimeControlsSection = ({
                         Hours overdue: {overstayStatus.incident.hours_overdue}
                       </div>
                     )}
+                    
+                    {/* Extensions Display */}
+                    <div className="mt-2">
+                      <div className="small fw-semibold text-muted mb-1">Extensions:</div>
+                      {overstayStatus.incident.extensions && overstayStatus.incident.extensions.length > 0 ? (
+                        <div className="small">
+                          {overstayStatus.incident.extensions.map((ext, index) => (
+                            <div key={index} className="mb-1 ps-2 border-start border-2 border-info">
+                              {ext.created_at && (
+                                <div className="text-muted">
+                                  <i className="bi bi-clock me-1"></i>
+                                  {format(new Date(ext.created_at), 'MMM dd, yyyy HH:mm')}
+                                </div>
+                              )}
+                              {ext.extended_at && (
+                                <div className="text-muted">
+                                  <i className="bi bi-clock me-1"></i>
+                                  {format(new Date(ext.extended_at), 'MMM dd, yyyy HH:mm')}
+                                </div>
+                              )}
+                              {ext.minutes && (
+                                <div className="text-info">
+                                  <i className="bi bi-plus-circle me-1"></i>
+                                  +{ext.minutes} minutes
+                                </div>
+                              )}
+                              {ext.hours && (
+                                <div className="text-info">
+                                  <i className="bi bi-plus-circle me-1"></i>
+                                  +{ext.hours} hours
+                                </div>
+                              )}
+                              {ext.new_deadline && (
+                                <div className="text-info">
+                                  <i className="bi bi-calendar-event me-1"></i>
+                                  New deadline: {format(new Date(ext.new_deadline), 'MMM dd, yyyy HH:mm')}
+                                </div>
+                              )}
+                              {ext.expected_checkout_date && (
+                                <div className="text-info">
+                                  <i className="bi bi-calendar-event me-1"></i>
+                                  New checkout: {format(new Date(ext.expected_checkout_date), 'MMM dd, yyyy')}
+                                </div>
+                              )}
+                              {ext.staff_name && (
+                                <div className="text-muted">
+                                  <i className="bi bi-person me-1"></i>
+                                  By: {ext.staff_name}
+                                </div>
+                              )}
+                              {ext.staff_id && !ext.staff_name && (
+                                <div className="text-muted">
+                                  <i className="bi bi-person me-1"></i>
+                                  Staff ID: {ext.staff_id}
+                                </div>
+                              )}
+                              {ext.notes && (
+                                <div className="text-muted">
+                                  <i className="bi bi-chat me-1"></i>
+                                  {ext.notes}
+                                </div>
+                              )}
+                              {ext.reason && (
+                                <div className="text-muted">
+                                  <i className="bi bi-chat me-1"></i>
+                                  {ext.reason}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="small text-muted">No extensions recorded.</div>
+                      )}
+                    </div>
                   </>
                 ) : (
                   <div className="small text-info mb-1">
@@ -259,10 +336,28 @@ const BookingDetailsTimeControlsSection = ({
               </div>
             ) : (
               <>
-                <div className="small text-warning mb-1">
-                  <i className="bi bi-exclamation-triangle me-1"></i>
-                  Unable to load backend overstay status
-                </div>
+                {overstayStatusError ? (
+                  <>
+                    <div className="small text-warning mb-2">
+                      <i className="bi bi-exclamation-triangle me-1"></i>
+                      Incident details unavailable.
+                    </div>
+                    <Button 
+                      variant="outline-primary" 
+                      size="sm" 
+                      onClick={onRetryOverstayStatus}
+                      className="mb-2"
+                    >
+                      <i className="bi bi-arrow-clockwise me-1"></i>
+                      Retry
+                    </Button>
+                  </>
+                ) : (
+                  <div className="small text-warning mb-1">
+                    <i className="bi bi-exclamation-triangle me-1"></i>
+                    Unable to load backend overstay status
+                  </div>
+                )}
                 {(booking?.checkout_overdue || warnings.overstay) && (
                   <div className="small text-info mb-1">
                     <i className="bi bi-info-circle me-1"></i>

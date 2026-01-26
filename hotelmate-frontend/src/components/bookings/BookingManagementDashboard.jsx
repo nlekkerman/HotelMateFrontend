@@ -3,6 +3,7 @@ import { Container, Row, Col } from 'react-bootstrap';
 import PrecheckinRequirementsConfig from './PrecheckinRequirementsConfig';
 import SurveyRequirementsConfig from './SurveyRequirementsConfig';
 import CancellationPolicyControl from './CancellationPolicyControl';
+import ApprovalCutoffConfig from './ApprovalCutoffConfig';
 
 /**
  * BookingManagementDashboard - Dashboard component for managing bookings
@@ -45,6 +46,9 @@ const BookingManagementDashboard = ({ hotelSlug }) => {
               </div>
               <div className="mt-4">
                 <CancellationPolicyControl hotelSlug={currentHotelSlug} />
+              </div>
+              <div className="mt-4">
+                <ApprovalCutoffConfig hotelSlug={currentHotelSlug} />
               </div>
             </>
           ) : (
