@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Spinner, Alert, Card, Badge, Form, Row, Col, OverlayTrigger, Tooltip } from 'react-bootstrap';
+import { Modal, Button, Spinner, Alert, Card, Badge, Form, OverlayTrigger, Tooltip, Row, Col } from 'react-bootstrap';
 import { 
   useRoomBookingDetail, 
   useAvailableRooms, 
@@ -13,6 +13,13 @@ import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import BookingStatusBadges from './BookingStatusBadges';
 import BookingTimeWarningBadges from './BookingTimeWarningBadges';
+import BookingDetailsPartySection from './BookingDetailsPartySection';
+import BookingDetailsRoomAssignmentSection from './BookingDetailsRoomAssignmentSection';
+import BookingDetailsCheckinSection from './BookingDetailsCheckinSection';
+import BookingDetailsCheckoutSection from './BookingDetailsCheckoutSection';
+import BookingDetailsPrecheckinSummary from './BookingDetailsPrecheckinSummary';
+import BookingDetailsSurveyStatus from './BookingDetailsSurveyStatus';
+import BookingDetailsTimeControlsSection from './BookingDetailsTimeControlsSection';
 import { useBookingTimeWarnings } from '@/hooks/useBookingTimeWarnings';
 import { staffOverstayAPI } from '@/services/staffApi';
 import StaffConfirmationModal from '../modals/StaffConfirmationModal';
@@ -366,269 +373,6 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
     }
   };
   
-  const renderPrecheckinSummary = () => {
-    const isComplete = booking?.precheckin_submitted_at != null;
-    
-    // Debug logging to verify canonical contract compliance
-    console.log('🔍 [CANONICAL CONTRACT] Booking detail response:', {
-      booking_id: booking?.booking_id,
-      adults: booking?.adults,
-      children: booking?.children,
-      party_complete: booking?.party_complete,
-      party_missing_count: booking?.party_missing_count,
-      party_total_count: booking?.party?.total_count,
-      precheckin_submitted_at: booking?.precheckin_submitted_at,
-      has_precheckin_payload: !!booking?.precheckin_payload,
-      has_party_primary: !!booking?.party?.primary,
-      has_party_primary_precheckin: !!booking?.party?.primary?.precheckin_payload
-    });
-    
-    // EXPANDED DEBUG: Check individual precheckin payload data
-    console.log('🔬 [PRECHECKIN PAYLOAD DEBUG] Detailed breakdown:');
-    console.log('Booking-level precheckin_payload:', booking?.precheckin_payload);
-    console.log('Primary guest precheckin_payload:', booking?.party?.primary?.precheckin_payload);
-    console.log('Primary guest nationality:', booking?.party?.primary?.precheckin_payload?.nationality);
-    
-    if (booking?.party?.companions) {
-      booking.party.companions.forEach((companion, index) => {
-        console.log(`Companion ${index + 1} precheckin_payload:`, companion.precheckin_payload);
-        console.log(`Companion ${index + 1} nationality:`, companion.precheckin_payload?.nationality);
-      });
-    }
-    
-    // Check if any precheckin data exists anywhere
-    const hasAnyPrecheckinData = !!(
-      booking?.precheckin_payload && Object.keys(booking.precheckin_payload).length > 0 ||
-      booking?.party?.primary?.precheckin_payload && Object.keys(booking.party.primary.precheckin_payload).length > 0 ||
-      booking?.party?.companions?.some(c => c.precheckin_payload && Object.keys(c.precheckin_payload).length > 0)
-    );
-    console.log('🚨 [DATA CHECK] Has ANY precheckin data?', hasAnyPrecheckinData);
-    
-    if (!isComplete) {
-      return (
-        <Alert variant="warning">
-          <Alert.Heading>⏳ Pre-check-in Pending</Alert.Heading>
-          <p>Guest has not completed pre-check-in yet.</p>
-        </Alert>
-      );
-    }
-    
-    return (
-      <Alert variant="success">
-        <Alert.Heading>✅ Pre-check-in Completed</Alert.Heading>
-        <p><strong>Submitted:</strong> {format(new Date(booking.precheckin_submitted_at), 'MMM dd, yyyy HH:mm')}</p>
-        
-        {/* Booking-level data */}
-        <h6>Booking Information:</h6>
-        {booking.precheckin_payload && Object.keys(booking.precheckin_payload).length > 0 ? (
-          <ul>
-            {Object.entries(booking.precheckin_payload).map(([key, value]) => (
-              <li key={key}>
-                <strong>{key.replace(/_/g, ' ')}:</strong> {
-                  typeof value === 'boolean' ? (value ? '✅ Yes' : '❌ No') : (value || '—')
-                }
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>No booking-level pre-check-in data.</p>
-        )}
-        
-        {/* Guest-level data */}
-        <h6>Guest Information:</h6>
-        <Row>
-          <Col md={6}>
-            <strong>Primary Guest:</strong> {booking.party?.primary?.first_name} {booking.party?.primary?.last_name}
-            {(() => {
-              const primary = booking.party?.primary;
-              const guestFields = ['nationality', 'country_of_residence', 'date_of_birth', 'id_document_type', 'id_document_number', 'address_line_1', 'city', 'postcode', 'postal_code'];
-              const hasGuestData = guestFields.some(field => primary?.[field]);
-              const hasPayloadData = primary?.precheckin_payload && Object.keys(primary.precheckin_payload).length > 0;
-              
-              if (hasGuestData || hasPayloadData) {
-                return (
-                  <ul>
-                    {/* Direct guest fields */}
-                    {guestFields.map(field => {
-                      if (primary?.[field]) {
-                        return <li key={field}><strong>{field.replace(/_/g, ' ')}:</strong> {primary[field]}</li>;
-                      }
-                      return null;
-                    })}
-                    {/* Legacy precheckin_payload fields */}
-                    {hasPayloadData && Object.entries(primary.precheckin_payload).map(([key, value]) => (
-                      <li key={key}><strong>{key.replace(/_/g, ' ')}:</strong> {value || '—'}</li>
-                    ))}
-                  </ul>
-                );
-              }
-              return <p className="text-muted">No pre-check-in data for primary guest.</p>;
-            })()}
-          </Col>
-          <Col md={6}>
-            {booking.party?.companions && booking.party.companions.length > 0 ? (
-              booking.party.companions.map((companion, index) => {
-                const guestFields = ['nationality', 'country_of_residence', 'date_of_birth', 'id_document_type', 'id_document_number', 'address_line_1', 'city', 'postcode', 'postal_code'];
-                const hasGuestData = guestFields.some(field => companion?.[field]);
-                const hasPayloadData = companion.precheckin_payload && Object.keys(companion.precheckin_payload).length > 0;
-                
-                return (
-                  <div key={companion.id || index} className="mb-2">
-                    <strong>Companion {index + 1}:</strong> {companion.first_name} {companion.last_name}
-                    {hasGuestData || hasPayloadData ? (
-                      <ul>
-                        {/* Direct guest fields */}
-                        {guestFields.map(field => {
-                          if (companion?.[field]) {
-                            return <li key={field}><strong>{field.replace(/_/g, ' ')}:</strong> {companion[field]}</li>;
-                          }
-                          return null;
-                        })}
-                        {/* Legacy precheckin_payload fields */}
-                        {hasPayloadData && Object.entries(companion.precheckin_payload).map(([key, value]) => (
-                          <li key={key}><strong>{key.replace(/_/g, ' ')}:</strong> {value || '—'}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-muted small">No pre-check-in data.</p>
-                    )}
-                  </div>
-                );
-              })
-            ) : (
-              <p className="text-muted">No companions.</p>
-            )}
-          </Col>
-        </Row>
-      </Alert>
-    );
-  };
-
-  const renderSurveyStatus = () => {
-    // Check if booking is eligible (COMPLETED status)
-    if (booking?.status !== 'COMPLETED') {
-      return (
-        <Alert variant="secondary">
-          <Alert.Heading>— Survey</Alert.Heading>
-          <p>Survey will be available after checkout.</p>
-        </Alert>
-      );
-    }
-
-    const surveyScheduledAt = booking?.survey_send_at;
-    const surveySentAt = booking?.survey_sent_at;
-    const surveyCompleted = booking?.survey_completed;
-    const surveyResponse = booking?.survey_response;
-    const surveyLastSentTo = booking?.survey_last_sent_to;
-
-    // State 5: Completed
-    if (surveyCompleted) {
-      const surveyResponse = booking?.survey_response;
-      const surveyPayload = surveyResponse?.payload;
-      const submittedAt = surveyResponse?.submitted_at;
-      const overallRating = surveyResponse?.overall_rating || booking?.survey_rating;
-
-      // Debug logging to see what survey data we have
-      console.log('🔍 Survey Response Debug:', {
-        surveyResponse,
-        surveyPayload, 
-        overallRating,
-        bookingSurveyRating: booking?.survey_rating
-      });
-
-      return (
-        <Alert variant="success">
-          <Alert.Heading>✅ Survey completed</Alert.Heading>
-          {submittedAt ? (
-            <p><strong>Submitted:</strong> {format(new Date(submittedAt), 'MMM dd, yyyy HH:mm')}</p>
-          ) : surveySentAt && (
-            <p><strong>Completed after:</strong> {format(new Date(surveySentAt), 'MMM dd, yyyy HH:mm')}</p>
-          )}
-          {overallRating && (
-            <p><strong>Overall rating:</strong> {overallRating}/5</p>
-          )}
-          
-          {/* Survey Response Information */}
-          <h6>Survey Information</h6>
-          {surveyPayload && Object.keys(surveyPayload).length > 0 ? (
-            // Expected structure: survey_response.payload contains all fields
-            <ul>
-              {Object.entries(surveyPayload).map(([key, value]) => {
-                // Skip if value is null/empty
-                if (value == null || value === '') return null;
-                
-                return (
-                  <li key={key}>
-                    <strong>{key.replace(/_/g, ' ')}:</strong> {
-                      (key.includes('_rating') || key === 'overall_rating') && value ? `${value}/5` :
-                      key === 'contact_permission' ? (value ? '✅ Yes' : '❌ No') :
-                      key === 'recommend_hotel' ? (value ? '✅ Yes' : '❌ No') :
-                      typeof value === 'boolean' ? (value ? '✅ Yes' : '❌ No') : 
-                      value
-                    }
-                  </li>
-                );
-              })}
-            </ul>
-          ) : surveyResponse && Object.keys(surveyResponse).length > 0 ? (
-            // Fallback: if no payload, try to display response fields directly
-            <ul>
-              {Object.entries(surveyResponse).map(([key, value]) => {
-                // Skip internal fields and already displayed fields
-                if (['submitted_at', 'overall_rating'].includes(key) || value == null || value === '') return null;
-                
-                return (
-                  <li key={key}>
-                    <strong>{key.replace(/_/g, ' ')}:</strong> {
-                      (key.includes('_rating') || key === 'overall_rating') && value ? `${value}/5` :
-                      key === 'contact_permission' ? (value ? '✅ Yes' : '❌ No') :
-                      key === 'recommend_hotel' ? (value ? '✅ Yes' : '❌ No') :
-                      typeof value === 'boolean' ? (value ? '✅ Yes' : '❌ No') : 
-                      value
-                    }
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p>Survey completed - detailed response data will appear here once backend provides survey_response.payload</p>
-          )}
-        </Alert>
-      );
-    }
-
-    // State 4: Sent
-    if (surveySentAt) {
-      return (
-        <Alert variant="info">
-          <Alert.Heading>📨 Survey sent</Alert.Heading>
-          <p><strong>Sent:</strong> {format(new Date(surveySentAt), 'MMM dd, yyyy HH:mm')}</p>
-          {surveyLastSentTo && (
-            <p><strong>Sent to:</strong> {surveyLastSentTo}</p>
-          )}
-        </Alert>
-      );
-    }
-
-    // State 3: Scheduled
-    if (surveyScheduledAt) {
-      return (
-        <Alert variant="warning">
-          <Alert.Heading>🕒 Survey scheduled</Alert.Heading>
-          <p><strong>Scheduled:</strong> {format(new Date(surveyScheduledAt), 'MMM dd, yyyy HH:mm')}</p>
-        </Alert>
-      );
-    }
-
-    // State 2: Eligible but not scheduled/sent
-    return (
-      <Alert variant="secondary">
-        <Alert.Heading>⏳ Survey not scheduled</Alert.Heading>
-        <p>Survey is eligible to be sent but has not been scheduled.</p>
-      </Alert>
-    );
-  };
-
   const renderPartyStatusBanner = () => {
     const partyComplete = booking?.party_complete ?? false;
     const partyMissingCount = booking?.party_missing_count; // NO fallback - use actual backend value
@@ -663,860 +407,18 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
       </Alert>
     );
   };
-  
-  const renderTimeControlsSection = () => {
-    const warnings = bookingWarnings; // Use the warnings from top-level hook
-    const isExpired = booking.status === 'EXPIRED';
-    
-    // Show section if there are warnings or booking is expired
-    if (!warnings.approval && !warnings.overstay && !isExpired) {
-      return null;
-    }
 
-    return (
-      <Card className="mb-3">
-        <Card.Header>
-          <h5 className="mb-0">
-            <i className="bi bi-clock me-2"></i>
-            Time Controls
-          </h5>
-        </Card.Header>
-        <Card.Body>
-          {/* EXPIRED Status Banner */}
-          {isExpired && (
-            <Alert variant="danger" className="mb-3">
-              <Alert.Heading>
-                <i className="bi bi-exclamation-triangle me-2"></i>
-                EXPIRED: Booking expired due to approval timeout.
-              </Alert.Heading>
-              <p className="mb-1">
-                This booking cannot be approved as it has exceeded the approval deadline.
-              </p>
-              {booking.expired_at && (
-                <small className="text-muted">
-                  Expired: {format(new Date(booking.expired_at), 'MMM dd, yyyy HH:mm')}
-                </small>
-              )}
-              {booking.auto_expire_reason_code && (
-                <div>
-                  <small className="text-muted">
-                    Reason: {booking.auto_expire_reason_code}
-                  </small>
-                </div>
-              )}
-            </Alert>
-          )}
 
-          {/* Approval Section */}
-          {warnings.approval && (
-            <div className="mb-3">
-              <div className="d-flex align-items-center mb-2">
-                <strong className="me-2">Approval Status:</strong>
-                <BookingTimeWarningBadges booking={booking} showTooltips={false} />
-              </div>
-              
-              {warnings.approval.deadline && (
-                <div className="small text-muted mb-1">
-                  <i className="bi bi-calendar-event me-1"></i>
-                  Deadline: {format(new Date(warnings.approval.deadline), 'MMM dd, yyyy HH:mm')}
-                </div>
-              )}
-              
-              {warnings.approval.isOverdue && (
-                <div className="small text-danger mb-1">
-                  <i className="bi bi-exclamation-circle me-1"></i>
-                  Overdue by {warnings.approval.minutesOverdue} minutes
-                </div>
-              )}
-              
-              <div className="small text-muted">
-                <i className="bi bi-lightbulb me-1"></i>
-                Suggested action: Confirm or Decline booking
-              </div>
-            </div>
-          )}
+  
 
-          {/* Overstay Section */}
-          {warnings.overstay && (
-            <div className="mb-3">
-              <div className="d-flex align-items-center mb-2">
-                <strong className="me-2">Checkout Status:</strong>
-                <Badge bg={warnings.overstay.variant} className="me-2">
-                  <i className="bi bi-hourglass-split me-1"></i>
-                  {warnings.overstay.displayText}
-                </Badge>
-              </div>
-              
-              {warnings.overstay.deadline && (
-                <div className="small text-muted mb-1">
-                  <i className="bi bi-calendar-event me-1"></i>
-                  Checkout deadline: {format(new Date(warnings.overstay.deadline), 'MMM dd, yyyy HH:mm')}
-                </div>
-              )}
-              
-              {warnings.overstay.isOverstay && (
-                <div className="small text-danger mb-1">
-                  <i className="bi bi-exclamation-circle me-1"></i>
-                  Overstay by {warnings.overstay.minutesOverdue} minutes
-                </div>
-              )}
-              
-              {warnings.overstay.flaggedAt && (
-                <div className="small text-warning mb-1">
-                  <i className="bi bi-flag me-1"></i>
-                  Flagged: {format(new Date(warnings.overstay.flaggedAt), 'MMM dd, yyyy HH:mm')}
-                </div>
-              )}
-              
-              {warnings.overstay.acknowledgedAt && (
-                <div className="small text-success mb-1">
-                  <i className="bi bi-check-circle me-1"></i>
-                  Acknowledged: {format(new Date(warnings.overstay.acknowledgedAt), 'MMM dd, yyyy HH:mm')}
-                </div>
-              )}
-              
-              <div className="small text-muted mb-2">
-                <i className="bi bi-lightbulb me-1"></i>
-                Suggested action: Checkout guest or Extend stay
-              </div>
-              
-              {/* Action Buttons - Now functional */}
-              <div className="d-flex gap-2">
-                {(() => {
-                  const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
-                  const hasIncident = overstayStatus?.incident !== null && overstayStatus?.incident !== undefined;
-                  const incidentStatus = overstayStatus?.incident?.status;
-                  const showExtend = hasIncident || (booking?.is_overstay === true);
-                  const showAcknowledge = hasIncident && incidentStatus === 'OPEN';
-                  const isAcknowledged = incidentStatus === 'ACKNOWLEDGED';
-                  const isResolved = incidentStatus === 'RESOLVED' || incidentStatus === 'DISMISSED';
-                  
-                  if (!isInHouse) return null;
-                  
-                  return (
-                    <>
-                      {showAcknowledge && (
-                        <Button 
-                          variant={isAcknowledged ? "outline-success" : "outline-warning"} 
-                          size="sm" 
-                          disabled={isAcknowledged || isAcknowledging}
-                          onClick={() => setShowAcknowledgeModal(true)}
-                        >
-                          <i className={`bi ${isAcknowledged ? 'bi-check-circle' : 'bi-flag'} me-1`}></i>
-                          {isAcknowledging ? (
-                            <>
-                              <Spinner animation="border" size="sm" className="me-1" />
-                              Acknowledging...
-                            </>
-                          ) : (
-                            isAcknowledged ? 'Acknowledged ✓' : 'Acknowledge Overstay'
-                          )}
-                        </Button>
-                      )}
-                      {showExtend && !isResolved && (
-                        <Button 
-                          variant="outline-primary" 
-                          size="sm" 
-                          disabled={isExtending}
-                          onClick={handleOpenExtendModal}
-                        >
-                          <i className="bi bi-calendar-plus me-1"></i>
-                          {isExtending ? (
-                            <>
-                              <Spinner animation="border" size="sm" className="me-1" />
-                              Extending...
-                            </>
-                          ) : (
-                            'Extend Stay'
-                          )}
-                        </Button>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
-            </div>
-          )}
-          
-          {/* Overstay Incident Panel - Backend-backed overstay data */}
-          {(overstayStatus || isLoadingOverstayStatus || booking?.checkout_overdue || warnings.overstay) && (
-            <div className="mb-3">
-              <div className="d-flex align-items-center justify-content-between mb-2">
-                <strong>Overstay Incident:</strong>
-                {isLoadingOverstayStatus && (
-                  <Spinner animation="border" size="sm" className="text-muted" />
-                )}
-              </div>
-              
-              {overstayStatus ? (
-                <>
-                  {overstayStatus.incident ? (
-                    <>
-                      <Badge 
-                        bg={
-                          overstayStatus.incident.status === 'OPEN' ? 'danger' :
-                          overstayStatus.incident.status === 'ACKNOWLEDGED' ? 'warning' :
-                          overstayStatus.incident.status === 'RESOLVED' ? 'success' :
-                          'secondary'
-                        }
-                        className="mb-2"
-                      >
-                        {overstayStatus.incident.status}
-                      </Badge>
-                    </>
-                  ) : (
-                    <Badge bg="secondary" className="mb-2">
-                      Not flagged yet
-                    </Badge>
-                  )}
-                  
-                  {overstayStatus.incident ? (
-                    <>
-                      {overstayStatus.incident.expected_checkout_date && (
-                        <div className="small text-muted mb-1">
-                          <i className="bi bi-calendar-event me-1"></i>
-                          Expected checkout: {format(new Date(overstayStatus.incident.expected_checkout_date), 'MMM dd, yyyy')}
-                        </div>
-                      )}
-                      
-                      {overstayStatus.incident.detected_at && (
-                        <div className="small text-muted mb-1">
-                          <i className="bi bi-clock me-1"></i>
-                          Detected: {format(new Date(overstayStatus.incident.detected_at), 'MMM dd, yyyy HH:mm')}
-                        </div>
-                      )}
-                      
-                      {overstayStatus.incident.hours_overdue !== null && overstayStatus.incident.hours_overdue !== undefined && (
-                        <div className="small text-danger mb-1">
-                          <i className="bi bi-hourglass-split me-1"></i>
-                          Hours overdue: {overstayStatus.incident.hours_overdue}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="small text-info mb-1">
-                      <i className="bi bi-info-circle me-1"></i>
-                      Backend has not flagged overstay incident yet (flagging occurs at 12:00 hotel time)
-                    </div>
-                  )}
-                </>
-              ) : isLoadingOverstayStatus ? (
-                <div className="small text-muted">
-                  <i className="bi bi-clock me-1"></i>
-                  Loading overstay status...
-                </div>
-              ) : (
-                <>
-                  <div className="small text-warning mb-1">
-                    <i className="bi bi-exclamation-triangle me-1"></i>
-                    Unable to load backend overstay status
-                  </div>
-                  {(booking?.checkout_overdue || warnings.overstay) && (
-                    <div className="small text-info">
-                      <i className="bi bi-info-circle me-1"></i>
-                      Checkout is overdue but backend status unavailable
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-        </Card.Body>
-      </Card>
-    );
-  };
   
-  const renderPrimaryGuest = () => {
-    const party = booking?.party;
-    let primaryGuest = null;
-    
-    // Use party.primary if available, fallback to primary_* fields
-    if (party?.primary) {
-      primaryGuest = party.primary;
-    } else if (booking?.primary_first_name || booking?.primary_last_name) {
-      primaryGuest = {
-        first_name: booking.primary_first_name,
-        last_name: booking.primary_last_name,
-        full_name: `${booking.primary_first_name || ''} ${booking.primary_last_name || ''}`.trim(),
-        email: booking.primary_email,
-        phone: booking.primary_phone
-      };
-    }
-    
-    if (!primaryGuest) {
-      return (
-        <Card className="mt-3">
-          <Card.Header>
-            <h6 className="mb-0">Primary Guest</h6>
-          </Card.Header>
-          <Card.Body>
-            <div className="text-muted">Not provided yet</div>
-          </Card.Body>
-        </Card>
-      );
-    }
-    
-    return (
-      <Card className="mt-3">
-        <Card.Header>
-          <h6 className="mb-0">Primary Guest</h6>
-        </Card.Header>
-        <Card.Body>
-          <div>
-            <strong>{primaryGuest.full_name || `${primaryGuest.first_name || ''} ${primaryGuest.last_name || ''}`.trim()}</strong>
-            {primaryGuest.email && (
-              <div className="text-muted">Email: {primaryGuest.email}</div>
-            )}
-            {primaryGuest.phone && (
-              <div className="text-muted">Phone: {primaryGuest.phone}</div>
-            )}
-          </div>
-        </Card.Body>
-      </Card>
-    );
-  };
-  
-  const renderBooker = () => {
-    const hasBooker = booking?.booker_first_name || booking?.booker_last_name || booking?.booker_email;
-    
-    if (!hasBooker || booking?.booker_type === 'SELF') {
-      return null; // Don't show booker section if it's self-booking or no booker data
-    }
-    
-    return (
-      <Card className="mt-3">
-        <Card.Header>
-          <h6 className="mb-0">Booker</h6>
-        </Card.Header>
-        <Card.Body>
-          <div>
-            <strong>{booking.booker_first_name} {booking.booker_last_name}</strong>
-            {booking.booker_email && (
-              <div className="text-muted">Email: {booking.booker_email}</div>
-            )}
-            {booking.booker_company && (
-              <div className="text-muted">Company: {booking.booker_company}</div>
-            )}
-          </div>
-        </Card.Body>
-      </Card>
-    );
-  };
-  
-  const renderCompanions = () => {
-    const companions = booking?.party?.companions || [];
-    const totalPartySize = booking?.party?.total_count;
-    
-    if (companions.length === 0 && !totalPartySize) {
-      return null;
-    }
-    
-    return (
-      <Card className="mt-3">
-        <Card.Header>
-          <h6 className="mb-0">
-            Booking Party
-            {totalPartySize && (
-              <span className="text-muted ms-2">({totalPartySize} guests total)</span>
-            )}
-          </h6>
-        </Card.Header>
-        <Card.Body>
-          {companions.length > 0 ? (
-            <div>
-              <strong>Companions:</strong>
-              {companions.map((companion, index) => (
-                <div key={index} className="ms-2 mt-1">
-                  • {companion.full_name || `${companion.first_name || ''} ${companion.last_name || ''}`.trim()}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-muted">No companions added yet</div>
-          )}
-        </Card.Body>
-      </Card>
-    );
-  };
-  
-  const renderRoomAssignmentSection = () => {
-    const flags = booking?.flags || {};
-    
-    // Debug: Check what room assignment fields are available
-    console.log('🏨 Room assignment debug:', {
-      booking,
-      assigned_room: booking?.assigned_room,
-      room: booking?.room,
-      room_number: booking?.room_number,
-      room_assigned_at: booking?.room_assigned_at,
-      allBookingKeys: booking ? Object.keys(booking) : null
-    });
-    
-    if (booking?.assigned_room || booking?.room) {
-      // Room is assigned
-      const assignedRoom = booking?.assigned_room || booking?.room;
-      console.log('🔧 Rendering assigned room section:', {
-        showRoomAssignment,
-        assignedRoomNumber: assignedRoom?.room_number,
-        booking: booking?.booking_id
-      });
-      
-      return (
-        <Card className="mt-3">
-          <Card.Header>
-            <h6 className="mb-0">Room Assignment</h6>
-          </Card.Header>
-          <Card.Body>
-            {!showRoomAssignment ? (
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <strong>Room {assignedRoom?.room_number}</strong>
-                  <br />
-                  {booking?.room_assigned_at && (
-                    <small className="text-muted">
-                      Assigned on {format(new Date(booking.room_assigned_at), 'MMM dd, yyyy HH:mm')}
-                    </small>
-                  )}
-                </div>
-                <div className="d-flex gap-2">
-                  {flags.can_unassign_room && (
-                    <Button
-                      variant="outline-danger"
-                      size="sm"
-                      onClick={handleUnassignRoom}
-                      disabled={unassignMutation.isPending}
-                    >
-                      {unassignMutation.isPending ? 'Unassigning...' : 'Unassign'}
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline-primary"
-                    size="sm"
-                    onClick={() => {
-                      console.log('🔧 Change Room button clicked!');
-                      console.log('🔧 Current showRoomAssignment:', showRoomAssignment);
-                      console.log('🔧 Booking status:', {
-                        checked_in_at: booking?.checked_in_at,
-                        checked_out_at: booking?.checked_out_at,
-                        isInHouse: !!booking.checked_in_at && !booking.checked_out_at
-                      });
-                      
-                      setReason('');
-                      setReasonError('');
-                      setShowRoomAssignment(true);
-                      
-                      console.log('🔧 Set showRoomAssignment to true');
-                    }}
-                    disabled={!!booking?.checked_out_at}
-                  >
-                    {(() => {
-                      if (booking?.checked_out_at) return 'Cannot Change (Checked Out)';
-                      const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
-                      return isInHouse ? 'Move Room' : 'Reassign Room';
-                    })()}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              /* Room assignment form - shown when showRoomAssignment is true */
-              <div>
-                <Form.Group className="mb-3">
-                  <Form.Label>Select Room</Form.Label>
-                  <Form.Select
-                    value={selectedRoomId}
-                    onChange={(e) => setSelectedRoomId(e.target.value)}
-                    disabled={isLoadingRooms}
-                  >
-                    <option value="">
-                      {isLoadingRooms ? 'Loading rooms...' : 'Choose a room...'}
-                    </option>
-                    {(() => {
-                      // Handle API response structure: { available_rooms: [...] }
-                      let roomsArray = [];
-                      
-                      if (Array.isArray(availableRooms)) {
-                        // Direct array format
-                        roomsArray = availableRooms;
-                      } else if (availableRooms?.available_rooms && Array.isArray(availableRooms.available_rooms)) {
-                        // API format: { available_rooms: [...] }
-                        roomsArray = availableRooms.available_rooms;
-                      }
-                      
-                      return roomsArray.map(room => (
-                        <option key={room.id} value={room.id}>
-                          Room {room.room_number} - {room.room_type}
-                        </option>
-                      ));
-                    })()}
-                  </Form.Select>
-                </Form.Group>
-                
-                {/* Reason field - only show for in-house guests (Move Room mode) */}
-                {(() => {
-                  const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
-                  if (!isInHouse) return null;
-                  
-                  return (
-                    <Form.Group className="mb-3">
-                      <Form.Label>Reason for Move <span className="text-danger">*</span></Form.Label>
-                      <Form.Control
-                        as="textarea"
-                        rows={2}
-                        value={reason}
-                        onChange={(e) => {
-                          setReason(e.target.value);
-                          if (e.target.value.trim()) setReasonError('');
-                        }}
-                        placeholder="Why is this guest being moved? (e.g., guest complaint, maintenance issue, upgrade)"
-                        isInvalid={!!reasonError}
-                      />
-                      {reasonError && (
-                        <Form.Control.Feedback type="invalid">
-                          {reasonError}
-                        </Form.Control.Feedback>
-                      )}
-                    </Form.Group>
-                  );
-                })()}
-                
-                <Form.Group className="mb-3">
-                  <Form.Label>
-                    {(() => {
-                      const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
-                      return isInHouse ? 'Additional Notes (Optional)' : 'Assignment Notes (Optional)';
-                    })()}
-                  </Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    rows={2}
-                    value={assignmentNotes}
-                    onChange={(e) => setAssignmentNotes(e.target.value)}
-                    placeholder={(() => {
-                      const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
-                      return isInHouse 
-                        ? "Any additional notes, compensation offered, etc..." 
-                        : "Add any notes about this room assignment...";
-                    })()}
-                  />
-                </Form.Group>
-                
-                <div className="d-flex gap-2">
-                  {(() => {
-                    const partyComplete = booking?.party_complete ?? true; // Default to true if not present
-                    const partyMissingCount = booking?.party_missing_count; // NO fallback
-                    const isPartyIncomplete = !partyComplete;
-                    const isDisabled = !selectedRoomId || safeAssignMutation.isPending || isPartyIncomplete;
-                    
-                    const button = (
-                      <Button
-                        variant="success"
-                        onClick={handleAssignRoom}
-                        disabled={isDisabled}
-                        className={isPartyIncomplete ? 'party-gated-button' : ''}
-                      >
-                        {(() => {
-                          if (safeAssignMutation.isPending) {
-                            const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
-                            return isInHouse ? 'Moving...' : 'Assigning...';
-                          }
-                          
-                          const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
-                          return isInHouse ? 'Confirm & Move' : 'Confirm & Reassign';
-                        })()}
-                      </Button>
-                    );
-                    
-                    if (isPartyIncomplete) {
-                      return (
-                        <OverlayTrigger
-                          placement="top"
-                          overlay={
-                            <Tooltip>
-                              Missing {partyMissingCount == null ? '—' : partyMissingCount} guest name(s). Send pre-check-in link first.
-                            </Tooltip>
-                          }
-                        >
-                          <span className="d-inline-block">{button}</span>
-                        </OverlayTrigger>
-                      );
-                    }
-                    
-                    return button;
-                  })()}
-                  <Button
-                    variant="secondary"
-                    onClick={() => setShowRoomAssignment(false)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            )}
-          </Card.Body>
-        </Card>
-      );
-    } else {
-      // No room assigned - always show if showRoomAssignment is true (triggered from check-in)
-      if (!flags.can_assign_room && !showRoomAssignment) return null;
-      
-      return (
-        <Card className="mt-3">
-          <Card.Header>
-            <h6 className="mb-0">Room Assignment</h6>
-          </Card.Header>
-          <Card.Body>
-            {!showRoomAssignment ? (
-              (() => {
-                const partyComplete = booking?.party_complete ?? true; // Default to true if not present
-                const partyMissingCount = booking?.party_missing_count; // NO fallback
-                const isDisabled = !partyComplete;
-                
-                const button = (
-                  <Button
-                    variant="primary"
-                    onClick={() => {
-                      setReason('');
-                      setReasonError('');
-                      setShowRoomAssignment(true);
-                    }}
-                    disabled={isDisabled || !!booking?.checked_out_at}
-                    className={isDisabled ? 'party-gated-button' : ''}
-                  >
-                    {(() => {
-                      if (booking?.checked_out_at) return 'Cannot Assign (Checked Out)';
-                      const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
-                      return isInHouse ? 'Move Room' : 'Assign Room';
-                    })()}
-                  </Button>
-                );
-                
-                if (isDisabled) {
-                  return (
-                    <OverlayTrigger
-                      placement="top"
-                      overlay={
-                        <Tooltip>
-                          Missing {partyMissingCount == null ? '—' : partyMissingCount} guest name(s). Send pre-check-in link first.
-                        </Tooltip>
-                      }
-                    >
-                      <span className="d-inline-block">{button}</span>
-                    </OverlayTrigger>
-                  );
-                }
-                
-                return button;
-              })()
-            ) : (
-              <div>
-                <Form.Group className="mb-3">
-                  <Form.Label>Select Room</Form.Label>
-                  <Form.Select
-                    value={selectedRoomId}
-                    onChange={(e) => setSelectedRoomId(e.target.value)}
-                    disabled={isLoadingRooms}
-                  >
-                    <option value="">
-                      {isLoadingRooms ? 'Loading rooms...' : 'Choose a room...'}
-                    </option>
-                    {(() => {
-                      // Handle API response structure: { available_rooms: [...] }
-                      let roomsArray = [];
-                      
-                      if (Array.isArray(availableRooms)) {
-                        // Direct array format
-                        roomsArray = availableRooms;
-                      } else if (availableRooms?.available_rooms && Array.isArray(availableRooms.available_rooms)) {
-                        // API format: { available_rooms: [...] }
-                        roomsArray = availableRooms.available_rooms;
-                      }
-                      
-                      return roomsArray.map(room => (
-                        <option key={room.id} value={room.id}>
-                          Room {room.room_number} - {room.room_type}
-                        </option>
-                      ));
-                    })()}
-                  </Form.Select>
-                </Form.Group>
-                
-                {/* Reason field - only show for in-house guests (Move Room mode) */}
-                {(() => {
-                  const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
-                  if (!isInHouse) return null;
-                  
-                  return (
-                    <Form.Group className="mb-3">
-                      <Form.Label>Reason for Move <span className="text-danger">*</span></Form.Label>
-                      <Form.Control
-                        as="textarea"
-                        rows={2}
-                        value={reason}
-                        onChange={(e) => {
-                          setReason(e.target.value);
-                          if (e.target.value.trim()) setReasonError('');
-                        }}
-                        placeholder="Why is this guest being moved? (e.g., guest complaint, maintenance issue, upgrade)"
-                        isInvalid={!!reasonError}
-                      />
-                      {reasonError && (
-                        <Form.Control.Feedback type="invalid">
-                          {reasonError}
-                        </Form.Control.Feedback>
-                      )}
-                    </Form.Group>
-                  );
-                })()}
-                
-                <Form.Group className="mb-3">
-                  <Form.Label>
-                    {(() => {
-                      const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
-                      return isInHouse ? 'Additional Notes (Optional)' : 'Assignment Notes (Optional)';
-                    })()}
-                  </Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    rows={2}
-                    value={assignmentNotes}
-                    onChange={(e) => setAssignmentNotes(e.target.value)}
-                    placeholder={(() => {
-                      const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
-                      return isInHouse 
-                        ? "Any additional notes, compensation offered, etc..." 
-                        : "Add any notes about this room assignment...";
-                    })()}
-                  />
-                </Form.Group>
-                
-                <div className="d-flex gap-2">
-                  {(() => {
-                    const partyComplete = booking?.party_complete ?? true; // Default to true if not present
-                    const partyMissingCount = booking?.party_missing_count; // NO fallback
-                    const isPartyIncomplete = !partyComplete;
-                    const isDisabled = !selectedRoomId || safeAssignMutation.isPending || isPartyIncomplete;
-                    
-                    const button = (
-                      <Button
-                        variant="success"
-                        onClick={handleAssignRoom}
-                        disabled={isDisabled}
-                        className={isPartyIncomplete ? 'party-gated-button' : ''}
-                      >
-                        {(() => {
-                          if (safeAssignMutation.isPending) {
-                            const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
-                            return isInHouse ? 'Moving...' : 'Assigning...';
-                          }
-                          
-                          const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
-                          return isInHouse ? 'Confirm & Move' : 'Confirm & Assign';
-                        })()}
-                      </Button>
-                    );
-                    
-                    if (isPartyIncomplete) {
-                      return (
-                        <OverlayTrigger
-                          placement="top"
-                          overlay={
-                            <Tooltip>
-                              Missing {partyMissingCount == null ? '—' : partyMissingCount} guest name(s). Send pre-check-in link first.
-                            </Tooltip>
-                          }
-                        >
-                          <span className="d-inline-block">{button}</span>
-                        </OverlayTrigger>
-                      );
-                    }
-                    
-                    return button;
-                  })()}
-                  <Button
-                    variant="secondary"
-                    onClick={() => setShowRoomAssignment(false)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            )}
-          </Card.Body>
-        </Card>
-      );
-    }
-  };
-  
-  const renderCheckInSection = () => {
-    const flags = booking?.flags || {};
-    const assignedRoom = booking?.assigned_room || booking?.room;
-    
-    if (booking?.checked_in_at) return null;
-    
-    return (
-      <Card className="mt-3">
-        <Card.Header>
-          <h6 className="mb-0">Check-In</h6>
-        </Card.Header>
-        <Card.Body>
-          {!assignedRoom ? (
-            <div>
-              <p className="text-muted mb-3">Room assignment required before check-in.</p>
-              <Button
-                variant="warning"
-                onClick={() => {
-                  console.log('Assign Room First clicked, setting showRoomAssignment to true');
-                  setShowRoomAssignment(true);
-                }}
-              >
-                Assign Room First
-              </Button>
-            </div>
-          ) : (
-            <div>
-              <p className="text-success mb-3">✅ Ready to check in to Room {assignedRoom.room_number}</p>
-              <Button
-                variant="success"
-                onClick={handleCheckIn}
-                disabled={checkInMutation.isPending || (booking?.flags?.can_check_in === false)}
-                size="lg"
-              >
-                {checkInMutation.isPending ? 'Checking In...' : 'Check In Guest'}
-              </Button>
-            </div>
-          )}
-        </Card.Body>
-      </Card>
-    );
-  };
 
-  const renderCheckOutSection = () => {
-    // TASK D: Use checked_in_at/checked_out_at logic instead of status
-    const isInHouse = !!booking?.checked_in_at && !booking?.checked_out_at;
-    
-    if (!isInHouse) return null;
-    
-    return (
-      <Card className="mt-3">
-        <Card.Header>
-          <h6 className="mb-0">Check-Out</h6>
-        </Card.Header>
-        <Card.Body>
-          <div>
-            <p className="text-info mb-3">✅ Guest is checked in to Room {booking?.assigned_room_number || booking?.assigned_room?.room_number}</p>
-            <Button
-              variant="warning"
-              onClick={handleCheckOut}
-              disabled={checkOutMutation.isPending}
-              size="lg"
-            >
-              {checkOutMutation.isPending ? 'Checking Out...' : 'Check Out Guest'}
-            </Button>
-          </div>
-        </Card.Body>
-      </Card>
-    );
-  };
+  
+
+  
+
+
+
   
   if (isLoadingBooking) {
     return (
@@ -1670,7 +572,18 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
         {renderPartyStatusBanner()}
         
         {/* Time Controls Section */}
-        {renderTimeControlsSection()}
+        <BookingDetailsTimeControlsSection 
+          booking={booking}
+          bookingWarnings={bookingWarnings}
+          overstayState={{
+            overstayStatus,
+            isLoadingOverstayStatus,
+            isAcknowledging,
+            isExtending
+          }}
+          onAcknowledgeOverstay={() => setShowAcknowledgeModal(true)}
+          onExtendStay={handleOpenExtendModal}
+        />
         
         {/* Pre-Check-In Summary Section */}
         <Card className="mb-3" data-precheckin-summary>
@@ -1681,7 +594,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
             </h5>
           </Card.Header>
           <Card.Body>
-            {renderPrecheckinSummary()}
+            <BookingDetailsPrecheckinSummary booking={booking} />
           </Card.Body>
         </Card>
 
@@ -1694,27 +607,53 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
             </h5>
           </Card.Header>
           <Card.Body>
-            {renderSurveyStatus()}
+            <BookingDetailsSurveyStatus booking={booking} />
           </Card.Body>
         </Card>
         
-        {/* Primary Guest */}
-        {renderPrimaryGuest()}
-        
-        {/* Booker */}
-        {renderBooker()}
-        
-        {/* Companions */}
-        {renderCompanions()}
+        {/* Party Information */}
+        <BookingDetailsPartySection booking={booking} />
         
         {/* Room Assignment Section */}
-        {renderRoomAssignmentSection()}
+        <BookingDetailsRoomAssignmentSection 
+          booking={booking}
+          roomAssignment={{
+            selectedRoomId,
+            setSelectedRoomId,
+            assignmentNotes,
+            setAssignmentNotes,
+            showRoomAssignment,
+            reason,
+            setReason,
+            reasonError,
+            setReasonError
+          }}
+          availableRooms={availableRooms}
+          isLoadingRooms={isLoadingRooms}
+          onAssignRoom={handleAssignRoom}
+          onUnassignRoom={handleUnassignRoom}
+          onShowAssignment={() => setShowRoomAssignment(true)}
+          onHideAssignment={() => setShowRoomAssignment(false)}
+          mutations={{
+            safeAssignMutation,
+            unassignMutation
+          }}
+        />
         
         {/* Check-In Section */}
-        {renderCheckInSection()}
+        <BookingDetailsCheckinSection 
+          booking={booking}
+          onCheckIn={handleCheckIn}
+          onShowRoomAssignment={() => setShowRoomAssignment(true)}
+          checkInMutation={checkInMutation}
+        />
 
         {/* Check-Out Section */}
-        {renderCheckOutSection()}
+        <BookingDetailsCheckoutSection 
+          booking={booking}
+          onCheckOut={handleCheckOut}
+          checkOutMutation={checkOutMutation}
+        />
         
         {/* Pricing */}
         <Card className="mt-3">
@@ -1753,6 +692,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
     <StaffConfirmationModal
         show={showAcknowledgeModal}
         title="Acknowledge Overstay"
+        style={{ zIndex: 1060 }}
         message={
           <div>
             <p>Acknowledge overstay incident for booking <strong>{booking?.booking_id}</strong>?</p>
@@ -1795,6 +735,7 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
       <StaffConfirmationModal
         show={showExtendModal}
         title="Extend Stay"
+        style={{ zIndex: 1060 }}
         message={
           <>
             <div className="mb-3 text-center">
@@ -1809,44 +750,6 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
                   id="extendModeNights"
                   label="Add additional nights"
                   checked={extendMode === 'nights'}
-                  onChange={() => setExtendMode('nights')}
-                />
-                <Form.Check
-                  type="radio"
-                  name="extendMode"
-                  id="extendModeDate"
-                  label="Set new checkout date"
-                  checked={extendMode === 'date'}
-                  onChange={() => setExtendMode('date')}
-                />
-              </Form.Group>
-              
-              {extendMode === 'nights' && (
-                <Form.Group className="mb-3">
-                  <Form.Label>Additional nights</Form.Label>
-                  <Form.Control
-                    type="number"
-                    min="1"
-                    max="30"
-                    value={additionalNights}
-                    onChange={(e) => setAdditionalNights(parseInt(e.target.value) || 1)}
-                  />
-                </Form.Group>
-              )}
-              
-              {extendMode === 'date' && (
-                <Form.Group className="mb-3">
-                  <Form.Label>New checkout date</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={newCheckoutDate}
-                    onChange={(e) => setNewCheckoutDate(e.target.value)}
-                  />
-                </Form.Group>
-              )}
-            </Form>
-          </>
-        }
                   onChange={() => {
                     setExtendMode('nights');
                     setExtendValidationError('');

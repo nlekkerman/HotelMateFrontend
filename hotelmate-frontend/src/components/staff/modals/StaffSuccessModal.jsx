@@ -14,6 +14,7 @@ const StaffSuccessModal = ({
   preset = null, // Preset logic support
   autoClose = false,
   autoCloseDelay = 3000,
+  style = {}, // Additional style support
   onClose 
 }) => {
   const { mainColor, accentColor } = useTheme();
@@ -94,7 +95,8 @@ const StaffSuccessModal = ({
 
   const modalStyles = {
     backgroundColor: 'rgba(0,0,0,0.6)',
-    backdropFilter: 'blur(4px)'
+    backdropFilter: 'blur(4px)',
+    ...style // Merge any additional styles passed as props
   };
 
   const headerStyles = {

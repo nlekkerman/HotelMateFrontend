@@ -14,6 +14,7 @@ const StaffConfirmationModal = ({
   cancelText = 'Cancel',
   confirmVariant = 'primary',
   preset = null, // New preset logic support
+  style = {}, // Additional style support
   onConfirm, 
   onCancel 
 }) => {
@@ -90,7 +91,8 @@ const StaffConfirmationModal = ({
 
   const modalStyles = {
     backgroundColor: 'rgba(0,0,0,0.6)',
-    backdropFilter: 'blur(4px)'
+    backdropFilter: 'blur(4px)',
+    ...style // Merge any additional styles passed as props
   };
 
   const headerStyles = {

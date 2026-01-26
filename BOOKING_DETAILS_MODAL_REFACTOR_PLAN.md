@@ -1,166 +1,115 @@
-# BookingDetailsModal INVENTORY & REFACTOR PLAN
+# STAFF BOOKINGS CODEBASE AUDIT
 
 Generated on: January 26, 2026
 
-## PHASE 0 — INVENTORY (Complete Analysis)
+## Section 1: Existing Modals
 
-### User Operations Inventory
+### System-Wide Staff Modals (Generic)
+- `src/components/staff/modals/StaffConfirmationModal.jsx` - Generic confirmation modal with preset support
+  - Used in: BookingDetailsModal.jsx (overstay operations), BookingActions.jsx (approve/decline)
+- `src/components/staff/modals/StaffInputModal.jsx` - Generic input modal with localStorage support
+  - Used in: BookingActions.jsx (imported but usage unknown)
+- `src/components/staff/modals/StaffSuccessModal.jsx` - Generic success modal with auto-close support  
+  - Used in: BookingList.jsx (imported but usage unknown)
 
-Based on thorough examination of [hotelmate-frontend/src/components/staff/bookings/BookingDetailsModal.jsx](hotelmate-frontend/src/components/staff/bookings/BookingDetailsModal.jsx), here are **ALL** user operations currently supported:
+### Booking-Specific Modals
+- `src/components/staff/bookings/BookingDetailsModal.jsx` - Main booking details modal (1,984 lines)
+  - Operations: All booking operations (room assignment, check-in/out, overstay management)
+  - Used in: BookingTable.jsx
 
-#### ✅ Room Assignment Operations
-- **Assign Room** (new bookings) — handler: `handleAssignRoom` — no confirmation modal — success: toast notification — API: `useSafeAssignRoom` mutation
-- **Move Room** (in-house guests) — handler: `handleAssignRoom` (same handler, different mode) — no confirmation modal — success: toast notification — API: `useSafeAssignRoom` mutation (with reason required)
-- **Unassign Room** — handler: `handleUnassignRoom` — no confirmation modal — success: toast notification — API: `useUnassignRoom` mutation
+### Other Staff Modals
+- `src/components/staff/ClockModal.jsx` - Staff clock-in/out modal
+  - Operations: Staff time tracking
 
-#### ✅ Check-in/Check-out Operations
-- **Check-in** — handler: `handleCheckIn` — no confirmation modal — success: toast notification — API: `useCheckInBooking` mutation
-- **Check-out** — handler: `handleCheckOut` — no confirmation modal — success: toast notification — API: `useCheckOutBooking` mutation
+## Section 2: Existing Alerts
 
-#### ✅ Guest Communication
-- **Send Pre-check-in Link** — handler: `handleSendPrecheckinLink` — no confirmation modal — success: toast notification — API: `useSendPrecheckinLink` mutation
+### INLINE ONLY - Alert components exist only inside BookingDetailsModal.jsx:
+- **Variant "warning"**: Pre-check-in pending alert, party status banner, expired booking alert
+- **Variant "success"**: Pre-check-in completed alert, survey status alert  
+- **Variant "danger"**: Booking expired alert, extend validation errors
+- **Variant "info"**: Survey available alert
+- **Variant "secondary"**: Survey not available alert, no incident alert
 
-#### ✅ Overstay Management
-- **Acknowledge Overstay** — handler: `handleAcknowledgeOverstay` — modal: `StaffConfirmationModal` (showAcknowledgeModal) — success: toast notification — API: `staffOverstayAPI.staffOverstayAcknowledge`
-- **Extend Stay** — handler: `handleExtendStay` — modal: `StaffConfirmationModal` (showExtendModal) — success: toast notification — API: `staffOverstayAPI.staffOverstayExtend`
+**NO EXTRACTED ALERT COMPONENTS EXIST**
 
-#### ❌ NOT IMPLEMENTED Operations
-Searched extensively for these keywords and **confirmed NOT implemented**:
-- **Approve booking** - mentioned in suggestions but no handler/button
-- **Decline/Reject booking** - mentioned in suggestions but no handler/button  
-- **Cancel booking** - no handler/button found
-- **No-show booking** - no handler/button found
+## Section 3: Existing Sections / Panels
 
-### Detailed Operation Analysis
+### Badge Components (Extracted)
+- `src/components/staff/bookings/BookingStatusBadges.jsx` - 3-badge system for booking status
+- `src/components/staff/bookings/BookingTimeWarningBadges.jsx` - Time-sensitive warning badges (NEW, approval, overstay)
 
-#### Room Assignment Details
-- **Flags**: `booking.flags.can_assign_room`, `booking.flags.can_unassign_room`
-- **Party Gates**: Disabled when `!booking.party_complete` with tooltip showing missing guest count
-- **UI State**: `showRoomAssignment`, `selectedRoomId`, `assignmentNotes`, `reason`
-- **Validation**: Requires reason for moves (in-house guests), validates party completeness
-- **Realtime**: Query invalidations handled by mutation hooks
+### Action Components (Extracted)  
+- `src/components/staff/bookings/BookingActions.jsx` - Action buttons for booking operations (approve, decline, send precheckin/survey)
 
-#### Check-in/Check-out Details  
-- **Flags**: `booking.flags.can_check_in`
-- **Prerequisites**: Check-in requires assigned room, shows room assignment if missing
-- **UI State**: No special state management beyond mutation loading states
-- **Realtime**: Query invalidations handled by mutation hooks
+### List/Table Components (Extracted)
+- `src/components/staff/bookings/BookingTable.jsx` - Booking data table with details modal trigger
+- `src/components/staff/bookings/BookingList.jsx` - Booking list view
+- `src/components/staff/bookings/FilterControls.jsx` - Booking filter controls
 
-#### Overstay Management Details
-- **Backend Integration**: Uses `staffOverstayAPI` for incident management
-- **UI State**: Complex state with `overstayStatus`, multiple modals, extend modes, conflict handling
-- **Realtime**: Listens for `overstayStatusRefresh` events, auto-refreshes incident status
-- **Conflict Resolution**: Handles room conflicts with suggested alternatives
+### INLINE ONLY - Section functions exist only inside BookingDetailsModal.jsx:
+- `renderTimeControlsSection()` - Time warnings, approval deadlines, overstay indicators
+- `renderPrecheckinSummary()` - Pre-check-in completion status and data
+- `renderSurveyStatus()` - Survey completion and sending status
+- `renderPartyStatusBanner()` - Missing guest information banner
+- `renderPrimaryGuest()` - Primary guest information display
+- `renderBooker()` - Booker information display  
+- `renderCompanions()` - Companion guest information display
+- `renderRoomAssignmentSection()` - Room assignment/move operations with all UI
+- `renderCheckInSection()` - Check-in operations and requirements
+- `renderCheckOutSection()` - Check-out operations
 
-### Modal Components Used
-1. **StaffConfirmationModal** (2 instances):
-   - Acknowledge Overstay modal (`showAcknowledgeModal`)
-   - Extend Stay modal (`showExtendModal`)
-2. **No StaffSuccessModal usage found** - all success feedback via toast notifications
-3. **StaffInputModal imported but not used** in current implementation
+**NO EXTRACTED SECTION/PANEL COMPONENTS EXIST**
 
-### API Integration Points
-- **Staff Room Booking Hooks**: `useRoomBookingDetail`, `useAvailableRooms`, `useSafeAssignRoom`, etc.
-- **Staff Overstay API**: Direct API calls to `staffOverstayAPI`
-- **Realtime**: `useRoomBookingState` hook + event bus listeners
-- **Query Management**: React Query invalidations handled within mutation hooks
+## Section 4: Existing Staff System Modals
 
-### Current File Structure Issues
-- **Massive 1,984-line monolith** with multiple complex responsibilities
-- **Mixed concerns**: Room assignment, check-in/out, overstay management, UI rendering all in one file
-- **Complex state management**: 15+ state variables for modals, forms, and UI
-- **Deeply nested render functions** with complex conditional logic
+### Generic Staff Modal System
+- `src/components/staff/modals/StaffConfirmationModal.jsx` - Confirmation operations
+- `src/components/staff/modals/StaffInputModal.jsx` - Text input operations  
+- `src/components/staff/modals/StaffSuccessModal.jsx` - Success notifications
+- `src/components/staff/modals/StaffModals.css` - Shared styling for staff modals
 
-## PHASE 1 — REFACTOR PLAN
+### Modal Usage Patterns
+- **BookingDetailsModal.jsx**: Uses StaffConfirmationModal for overstay acknowledgment and extend stay
+- **BookingActions.jsx**: Uses StaffConfirmationModal and StaffInputModal for approve/decline operations
+- **BookingTable.jsx**: Uses BookingDetailsModal as details popup
+- **BookingList.jsx**: Imports StaffSuccessModal (usage unclear)
 
-### Extraction Strategy
+## Section 5: Duplicates
 
-#### 1. Container + Hook Pattern
-- **BookingDetailsContainer.jsx** - Main orchestrator, data fetching, modal state management
-- **useBookingDetails.js** - Custom hook consolidating all booking-related state and API calls
+### Modal Management Duplication
+- BookingDetailsModal.jsx manages own modal state: `showAcknowledgeModal`, `showExtendModal`
+- BookingActions.jsx manages own modal state: `showPrecheckinModal`, `showSurveyModal`, `showApproveModal`, `showDeclineModal`  
+- BookingTable.jsx manages own modal state: `showDetailsModal`
 
-#### 2. Feature-Based Section Components
-Based on existing `render*Section()` functions:
+### No Component Logic Duplication Found
+- Each component handles different operations
+- No duplicate implementations of same functionality
 
-- **BookingInfoSection.jsx** - Basic booking info, status badges, pricing
-- **BookingPartySection.jsx** - Primary guest, booker, companions display  
-- **BookingTimeControlsSection.jsx** - Time warnings, approval deadlines, overstay indicators
-- **BookingRoomSection.jsx** - Room assignment/move operations with all related UI
-- **BookingCheckinSection.jsx** - Check-in operations and precheckin summary
-- **BookingCheckoutSection.jsx** - Check-out operations
-- **BookingOverstaySection.jsx** - Overstay incident display and basic actions
+## Section 6: Inline-only UI in BookingDetailsModal.jsx
 
-#### 3. Operation-Specific Components  
-For complex operations requiring their own state:
+### Render Functions (All inline, no extracted components)
+- `renderTimeControlsSection()` - Complex warning display with action buttons
+- `renderPrecheckinSummary()` - Pre-check-in data parsing and display  
+- `renderSurveyStatus()` - Survey state management and display
+- `renderPartyStatusBanner()` - Party completion validation with send link button
+- `renderPrimaryGuest()` - Guest data display with fallbacks
+- `renderBooker()` - Booker information conditional display
+- `renderCompanions()` - Companion list with precheckin data
+- `renderRoomAssignmentSection()` - Complete room assignment/move interface with form validation
+- `renderCheckInSection()` - Check-in button with room requirement logic  
+- `renderCheckOutSection()` - Check-out button for in-house guests
 
-- **RoomAssignmentPanel.jsx** - Complete room assignment/move interface
-- **OverstayActionPanels.jsx** - Acknowledge and extend stay operations
+### UI State Management (All inline)
+- Room assignment: `showRoomAssignment`, `selectedRoomId`, `assignmentNotes`, `reason`
+- Overstay management: `overstayStatus`, `showAcknowledgeModal`, `showExtendModal`, extend mode variables
+- Form validation: `reasonError`, `extendValidationError`, `extendConflictError`
 
-#### 4. Shared Infrastructure
-- **BookingOperationModal.jsx** - Generic modal wrapper for booking operations
-- **BookingActionButton.jsx** - Reusable button with party-gating, tooltips, loading states
+### Business Logic (All inline)
+- Party completion validation
+- In-house status detection  
+- Room assignment vs move mode detection
+- Overstay incident management
+- Conflict resolution handling
+- Realtime status refresh logic
 
-### New Files to Create
-
-#### Core Container & Hook
-1. `BookingDetailsContainer.jsx` - Main modal shell, coordinates all sections
-2. `hooks/useBookingDetails.js` - Consolidated state and API management
-
-#### Section Components (7 files)
-3. `sections/BookingInfoSection.jsx` - Basic info display
-4. `sections/BookingPartySection.jsx` - Guest/party information  
-5. `sections/BookingTimeControlsSection.jsx` - Warnings and time-based controls
-6. `sections/BookingRoomSection.jsx` - Room-related operations
-7. `sections/BookingCheckinSection.jsx` - Check-in flow
-8. `sections/BookingCheckoutSection.jsx` - Check-out flow  
-9. `sections/BookingOverstaySection.jsx` - Overstay status display
-
-#### Operation Panels (2 files)
-10. `operations/RoomAssignmentPanel.jsx` - Room assignment/move interface
-11. `operations/OverstayActionPanels.jsx` - Overstay management operations
-
-#### Shared Components (2 files)  
-12. `shared/BookingOperationModal.jsx` - Generic modal wrapper
-13. `shared/BookingActionButton.jsx` - Smart button component
-
-### Move Room Implementation Status
-
-**CONFIRMED**: Move room functionality **IS IMPLEMENTED** in current code.
-
-**Current Implementation**:
-- Uses same `handleAssignRoom` handler with different mode detection
-- Detects in-house status via `!!booking.checked_in_at && !booking.checked_out_at`
-- Requires reason field for moves (validation: `setReasonError('Reason is required for room moves')`)
-- Button text changes: "Move Room" vs "Assign Room"  
-- Uses same API endpoint: `useSafeAssignRoom` mutation
-
-**Refactor Plan**:
-- Extract to `RoomAssignmentPanel.jsx` with clear assign vs move modes
-- Keep existing functionality intact, just organize better
-- **NO stub needed** - feature is fully implemented
-
-### Implementation Priority
-
-1. **Phase 1**: Extract core container and basic sections (files 1-4)
-2. **Phase 2**: Extract operation sections (files 5-9)  
-3. **Phase 3**: Extract complex operation panels (files 10-11)
-4. **Phase 4**: Create shared components (files 12-13)
-5. **Phase 5**: Final cleanup and testing
-
-### Success Criteria
-
-- ✅ All 8 current operations preserved exactly
-- ✅ No changes to API calls or realtime behavior
-- ✅ Modal state management simplified
-- ✅ Each file under 200 lines
-- ✅ Clear separation of concerns
-- ✅ Improved maintainability and testability
-- ✅ Preserved party-gating and flags-driven behavior
-
-### Architecture Benefits
-
-- **Maintainability**: Each operation in focused, single-purpose component
-- **Testability**: Isolated components easier to unit test
-- **Reusability**: Section components could be used in other booking contexts
-- **Performance**: Potential for more granular re-rendering
-- **Developer Experience**: Much easier to locate and modify specific functionality
+**TOTAL INLINE LOGIC: ~1,500 lines of UI rendering, state management, and business logic inside BookingDetailsModal.jsx**
