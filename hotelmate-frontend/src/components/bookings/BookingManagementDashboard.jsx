@@ -4,6 +4,7 @@ import PrecheckinRequirementsConfig from './PrecheckinRequirementsConfig';
 import SurveyRequirementsConfig from './SurveyRequirementsConfig';
 import CancellationPolicyControl from './CancellationPolicyControl';
 import ApprovalCutoffConfig from './ApprovalCutoffConfig';
+import CheckoutTimeConfig from './CheckoutTimeConfig';
 
 /**
  * BookingManagementDashboard - Dashboard component for managing bookings
@@ -49,6 +50,9 @@ const BookingManagementDashboard = ({ hotelSlug }) => {
               </div>
               <div className="mt-4">
                 <ApprovalCutoffConfig hotelSlug={currentHotelSlug} />
+              </div>
+              <div className="mt-4">
+                <CheckoutTimeConfig hotelSlug={currentHotelSlug} />
               </div>
             </>
           ) : (

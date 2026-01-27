@@ -138,11 +138,17 @@ const BookingDetailsTimeControlsSection = ({
             <div className="d-flex gap-2">
               {(() => {
                 const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
-                const hasIncident = overstayStatus?.incident !== null && overstayStatus?.incident !== undefined;
-                const incidentStatus = overstayStatus?.incident?.status;
-                const showExtend = hasIncident || (booking?.is_overstay === true);
+                
+                // Use new backend contract for incident detection
+                const incidentState = overstayStatus?.incident_state;
+                const incident = overstayStatus?.overstay;
+                const hasIncident = (incidentState === "ACTIVE");
+                const incidentStatus = incident?.status;
+                const isOverstay = overstayStatus?.is_overstay === true;
+                
+                const showExtend = hasIncident || isOverstay;
                 const showAcknowledge = hasIncident && incidentStatus === 'OPEN';
-                const isAcknowledged = incidentStatus === 'ACKNOWLEDGED';
+                const isAcknowledged = incidentStatus === 'ACKED';
                 const isResolved = incidentStatus === 'RESOLVED' || incidentStatus === 'DISMISSED';
                 
                 if (!isInHouse) return null;
@@ -204,55 +210,69 @@ const BookingDetailsTimeControlsSection = ({
             
             {overstayStatus ? (
               <>
-                {overstayStatus.incident ? (
-                  <>
-                    <Badge 
-                      bg={
-                        overstayStatus.incident.status === 'OPEN' ? 'danger' :
-                        overstayStatus.incident.status === 'ACKNOWLEDGED' ? 'warning' :
-                        overstayStatus.incident.status === 'RESOLVED' ? 'success' :
-                        'secondary'
-                      }
-                      className="mb-2"
-                    >
-                      {overstayStatus.incident.status}
-                    </Badge>
-                  </>
-                ) : (
-                  <Badge bg="secondary" className="mb-2">
-                    Not flagged yet
-                  </Badge>
-                )}
+                {(() => {
+                  const incidentState = overstayStatus?.incident_state;
+                  const isOverstay = overstayStatus?.is_overstay === true;
+                  const incident = overstayStatus?.overstay;
+                  
+                  if (incidentState === "ACTIVE" && incident) {
+                    return (
+                      <Badge 
+                        bg={
+                          incident.status === 'OPEN' ? 'danger' :
+                          incident.status === 'ACKED' ? 'warning' :
+                          incident.status === 'RESOLVED' ? 'success' :
+                          'secondary'
+                        }
+                        className="mb-2"
+                      >
+                        {incident.status}
+                      </Badge>
+                    );
+                  } else if (incidentState === "MISSING" && isOverstay) {
+                    return (
+                      <Badge bg="secondary" className="mb-2">
+                        Incident not created yet
+                      </Badge>
+                    );
+                  }
+                  return null;
+                })()}
                 
-                {overstayStatus.incident ? (
-                  <>
-                    {overstayStatus.incident.expected_checkout_date && (
-                      <div className="small text-muted mb-1">
-                        <i className="bi bi-calendar-event me-1"></i>
-                        Expected checkout: {format(new Date(overstayStatus.incident.expected_checkout_date), 'MMM dd, yyyy')}
-                      </div>
-                    )}
+                {(() => {
+                  const incidentState = overstayStatus?.incident_state;
+                  const incident = overstayStatus?.overstay;
+                  
+                  if (incidentState === "ACTIVE" && incident) {
+                    return (
+                      <>
+                        {incident.expected_checkout_date && (
+                          <div className="small text-muted mb-1">
+                            <i className="bi bi-calendar-event me-1"></i>
+                            Expected checkout: {format(new Date(incident.expected_checkout_date), 'MMM dd, yyyy')}
+                          </div>
+                        )}
+                        
+                        {incident.detected_at && (
+                          <div className="small text-muted mb-1">
+                            <i className="bi bi-clock me-1"></i>
+                            Detected: {format(new Date(incident.detected_at), 'MMM dd, yyyy HH:mm')}
+                          </div>
+                        )}
+                        
+                        {incident.hours_overdue !== null && incident.hours_overdue !== undefined && (
+                          <div className="small text-danger mb-1">
+                            <i className="bi bi-hourglass-split me-1"></i>
+                            Hours overdue: {incident.hours_overdue}
+                          </div>
+                        )}
                     
-                    {overstayStatus.incident.detected_at && (
-                      <div className="small text-muted mb-1">
-                        <i className="bi bi-clock me-1"></i>
-                        Detected: {format(new Date(overstayStatus.incident.detected_at), 'MMM dd, yyyy HH:mm')}
-                      </div>
-                    )}
-                    
-                    {overstayStatus.incident.hours_overdue !== null && overstayStatus.incident.hours_overdue !== undefined && (
-                      <div className="small text-danger mb-1">
-                        <i className="bi bi-hourglass-split me-1"></i>
-                        Hours overdue: {overstayStatus.incident.hours_overdue}
-                      </div>
-                    )}
-                    
-                    {/* Extensions Display */}
-                    <div className="mt-2">
-                      <div className="small fw-semibold text-muted mb-1">Extensions:</div>
-                      {overstayStatus.incident.extensions && overstayStatus.incident.extensions.length > 0 ? (
-                        <div className="small">
-                          {overstayStatus.incident.extensions.map((ext, index) => (
+                        {/* Extensions Display */}
+                        <div className="mt-2">
+                          <div className="small fw-semibold text-muted mb-1">Extensions:</div>
+                          {incident.extensions && incident.extensions.length > 0 ? (
+                            <div className="small">
+                              {incident.extensions.map((ext, index) => (
                             <div key={index} className="mb-1 ps-2 border-start border-2 border-info">
                               {ext.created_at && (
                                 <div className="text-muted">
@@ -315,19 +335,32 @@ const BookingDetailsTimeControlsSection = ({
                                 </div>
                               )}
                             </div>
-                          ))}
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="small text-muted">No extensions recorded.</div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="small text-muted">No extensions recorded.</div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div className="small text-info mb-1">
-                    <i className="bi bi-info-circle me-1"></i>
-                    Backend has not flagged overstay incident yet (flagging occurs at 12:00 hotel time)
-                  </div>
-                )}
+                      </>
+                    );
+                  }
+                  return null;
+                })()}
+                
+                {(() => {
+                  const incidentState = overstayStatus?.incident_state;
+                  const isOverstay = overstayStatus?.is_overstay === true;
+                  
+                  if (incidentState === "MISSING" && isOverstay) {
+                    return (
+                      <div className="small text-info mb-1">
+                        <i className="bi bi-info-circle me-1"></i>
+                        Overstay detected, incident will be created by the scheduled overstay check.
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </>
             ) : isLoadingOverstayStatus ? (
               <div className="small text-muted">
