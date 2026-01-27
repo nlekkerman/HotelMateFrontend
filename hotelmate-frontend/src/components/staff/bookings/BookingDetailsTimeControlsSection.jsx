@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, Alert, Badge, Button, Spinner } from 'react-bootstrap';
 import { format } from 'date-fns';
 import BookingTimeWarningBadges from './BookingTimeWarningBadges';
+import AcknowledgeOverstayForm from '../modals/AcknowledgeOverstayForm';
 
 const BookingDetailsTimeControlsSection = ({ 
   booking,
@@ -9,7 +10,8 @@ const BookingDetailsTimeControlsSection = ({
   overstayState,
   onAcknowledgeOverstay,
   onExtendStay,
-  onRetryOverstayStatus
+  onRetryOverstayStatus,
+  acknowledgeForm
 }) => {
   const {
     overstayStatus,
@@ -195,6 +197,23 @@ const BookingDetailsTimeControlsSection = ({
                 );
               })()}
             </div>
+            
+            {/* Acknowledge Overstay Form - Directly Below Buttons */}
+            {acknowledgeForm && (
+              <div className="mt-3">
+                <AcknowledgeOverstayForm
+                  show={acknowledgeForm.showAcknowledgeModal}
+                  bookingId={booking?.booking_id}
+                  isAcknowledging={isAcknowledging}
+                  onConfirm={acknowledgeForm.onConfirm}
+                  onCancel={() => {
+                    acknowledgeForm.setShowAcknowledgeModal(false);
+                    acknowledgeForm.setAcknowledgeNote('');
+                    acknowledgeForm.setDismissOverstay(false);
+                  }}
+                />
+              </div>
+            )}
           </div>
         )}
         

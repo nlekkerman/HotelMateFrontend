@@ -12,7 +12,6 @@ import {
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import BookingStatusBadges from './BookingStatusBadges';
-import BookingTimeWarningBadges from './BookingTimeWarningBadges';
 import BookingDetailsPartySection from './BookingDetailsPartySection';
 import BookingDetailsRoomAssignmentSection from './BookingDetailsRoomAssignmentSection';
 import BookingDetailsCheckinSection from './BookingDetailsCheckinSection';
@@ -23,7 +22,8 @@ import BookingDetailsTimeControlsSection from './BookingDetailsTimeControlsSecti
 import { useBookingTimeWarnings } from '@/hooks/useBookingTimeWarnings';
 import { staffOverstayAPI } from '@/services/staffApi';
 import StaffConfirmationModal from '../modals/StaffConfirmationModal';
-import StaffInputModal from '../modals/StaffInputModal';
+
+import AcknowledgeOverstayForm from '../modals/AcknowledgeOverstayForm';
 import { useRoomBookingState } from '@/realtime/stores/roomBookingStore';
 
 /**
@@ -274,15 +274,17 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
         dismiss: dismiss || false
       });
       toast.success('Overstay acknowledged successfully');
-      setShowAcknowledgeModal(false);
-      setAcknowledgeNote('');
-      setDismissOverstay(false);
       
       // Immediate refresh after success
       await refreshOverstayStatus();
+      
+      // Reset state and close modal
+      setIsAcknowledging(false);
+      setShowAcknowledgeModal(false);
+      setAcknowledgeNote('');
+      setDismissOverstay(false);
     } catch (error) {
       toast.error('Failed to acknowledge overstay: ' + (error.response?.data?.message || error.message));
-    } finally {
       setIsAcknowledging(false);
     }
   };
@@ -480,7 +482,12 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
   
   return (
     <>
-      <Modal show={show} onHide={onClose} size="lg">
+      <Modal 
+        show={show} 
+        onHide={onClose} 
+        size="lg" 
+        centered
+      >
       <Modal.Header closeButton>
         <Modal.Title>
           Booking Details - {booking.booking_id}
@@ -589,7 +596,16 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
             isAcknowledging,
             isExtending
           }}
-          onAcknowledgeOverstay={() => setShowAcknowledgeModal(true)}
+          acknowledgeForm={{
+            showAcknowledgeModal,
+            setShowAcknowledgeModal,
+            acknowledgeNote,
+            setAcknowledgeNote,
+            dismissOverstay,
+            setDismissOverstay,
+            onConfirm: handleAcknowledgeOverstay
+          }}
+          onAcknowledgeOverstay={() => setShowAcknowledgeModal(!showAcknowledgeModal)}
           onExtendStay={handleOpenExtendModal}
           onRetryOverstayStatus={refreshOverstayStatus}
         />
@@ -698,48 +714,6 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
     </Modal>
     
     {/* Overstay Action Modals */}
-    <StaffConfirmationModal
-        show={showAcknowledgeModal}
-        title="Acknowledge Overstay"
-        style={{ zIndex: 1060 }}
-        message={
-          <div>
-            <p>Acknowledge overstay incident for booking <strong>{booking?.booking_id}</strong>?</p>
-            <Form>
-              <Form.Group className="mb-3">
-                <Form.Label>Optional internal note:</Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={3}
-                  placeholder="Enter internal note..."
-                  value={acknowledgeNote || ''}
-                  onChange={(e) => setAcknowledgeNote(e.target.value)}
-                />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Check
-                  type="checkbox"
-                  id="dismissOverstay"
-                  label="Dismiss this overstay incident (mark as resolved)"
-                  checked={dismissOverstay || false}
-                  onChange={(e) => setDismissOverstay(e.target.checked)}
-                />
-                <Form.Text className="text-muted">
-                  Check this box to dismiss the incident as a non-issue
-                </Form.Text>
-              </Form.Group>
-            </Form>
-          </div>
-        }
-        confirmText={isAcknowledging ? 'Acknowledging...' : 'Acknowledge'}
-        confirmVariant="warning"
-        onConfirm={() => handleAcknowledgeOverstay(acknowledgeNote, dismissOverstay)}
-        onCancel={() => {
-          setShowAcknowledgeModal(false);
-          setAcknowledgeNote('');
-          setDismissOverstay(false);
-        }}
-      />
       
       <StaffConfirmationModal
         show={showExtendModal}
