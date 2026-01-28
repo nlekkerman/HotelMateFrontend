@@ -20,7 +20,7 @@ export const useBookingTimeWarnings = (booking) => {
   }, [booking]);
 
   const warnings = useMemo(() => {
-    if (!booking) return { approval: null, overstay: null };
+    if (!booking) return { approval: null, overstay: null, active: null };
 
     const now = new Date(lastUpdate); // Use lastUpdate to trigger recalculation
     
@@ -30,9 +30,13 @@ export const useBookingTimeWarnings = (booking) => {
     // Overstay warnings for IN_HOUSE bookings
     const overstayWarning = computeOverstayWarning(booking, now);
 
+    // Determine single active warning based on priority
+    const activeWarning = getActiveWarning(booking, approvalWarning, overstayWarning);
+
     return {
       approval: approvalWarning,
-      overstay: overstayWarning
+      overstay: overstayWarning,
+      active: activeWarning
     };
   }, [booking, lastUpdate]);
 
@@ -105,12 +109,31 @@ function getApprovalDisplayText(riskLevel, minutesOverdue = 0) {
     case 'DUE_SOON':
       return 'Approval due soon';
     case 'OVERDUE':
-      return `Approval overdue +${minutesOverdue}m`;
+      return `Approval overdue by ${formatMinutesToHuman(minutesOverdue)}`;
     case 'CRITICAL':
-      return `Approval CRITICAL +${minutesOverdue}m`;
+      return `Approval CRITICAL overdue by ${formatMinutesToHuman(minutesOverdue)}`;
     default:
       return null;
   }
+}
+
+/**
+ * Format minutes into human-readable duration
+ * Examples: 42 -> "42m", 90 -> "1h 30m", 1462 -> "24h 22m"
+ */
+function formatMinutesToHuman(minutes) {
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+  
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  
+  if (remainingMinutes === 0) {
+    return `${hours}h`;
+  }
+  
+  return `${hours}h ${remainingMinutes}m`;
 }
 
 /**
@@ -121,9 +144,9 @@ function getOverstayDisplayText(riskLevel, minutesOverdue = 0) {
     case 'GRACE':
       return 'Checkout grace';
     case 'OVERDUE':
-      return `Checkout overdue +${minutesOverdue}m`;
+      return `Checkout overdue by ${formatMinutesToHuman(minutesOverdue)}`;
     case 'CRITICAL':
-      return `Checkout CRITICAL +${minutesOverdue}m`;
+      return `Checkout CRITICAL overdue by ${formatMinutesToHuman(minutesOverdue)}`;
     default:
       return null;
   }
@@ -176,10 +199,125 @@ function getRiskVariant(riskLevel) {
 }
 
 /**
+ * Determine single active warning based on priority
+ * Priority order: CHECKOUT OVERSTAY > APPROVAL ISSUE > OK
+ * Note: EXPIRED is a status, not a warning - no action possible
+ */
+function getActiveWarning(booking, approvalWarning, overstayWarning) {
+  // Priority 1: CHECKOUT OVERSTAY (only if checked in and overdue checkout)
+  const isCheckedIn = !!booking?.checked_in_at && !booking?.checked_out_at;
+  if (isCheckedIn && overstayWarning) {
+    // Map overstay risk levels to severity
+    const severityMap = {
+      'CRITICAL': 'CRITICAL',
+      'OVERDUE': 'OVERDUE',
+      'GRACE': 'GRACE'
+    };
+    
+    return {
+      type: 'checkout_overstay',
+      severity: severityMap[overstayWarning.riskLevel] || 'OVERDUE',
+      displayText: `Checkout · ${getDisplaySeverity(overstayWarning.riskLevel)}`,
+      variant: overstayWarning.variant,
+      data: overstayWarning
+    };
+  }
+
+  // Priority 2: APPROVAL ISSUE (only if not checked in)
+  if (!isCheckedIn && approvalWarning) {
+    // Map approval risk levels to severity
+    const severityMap = {
+      'CRITICAL': 'CRITICAL',
+      'OVERDUE': 'OVERDUE',
+      'DUE_SOON': 'DUE_SOON'
+    };
+    
+    return {
+      type: 'approval_issue',
+      severity: severityMap[approvalWarning.riskLevel] || 'DUE_SOON',
+      displayText: `Approval · ${getDisplaySeverity(approvalWarning.riskLevel)}`,
+      variant: approvalWarning.variant,
+      data: approvalWarning
+    };
+  }
+
+  // Priority 3: OK (no active warning - includes EXPIRED bookings)
+  return null;
+}
+
+/**
+ * Map risk level to human-readable severity
+ */
+function getDisplaySeverity(riskLevel) {
+  switch (riskLevel) {
+    case 'CRITICAL':
+      return 'CRITICAL';
+    case 'OVERDUE':
+      return 'Overdue';
+    case 'DUE_SOON':
+      return 'Due Soon';
+    case 'GRACE':
+      return 'Grace Period';
+    default:
+      return 'Unknown';
+  }
+}
+
+/**
+ * Determine single active warning for LIST display only
+ * MANDATORY: EXPIRED bookings show NO warnings (logic gate)
+ */
+export const getActiveListWarning = (booking, warnings, overstayStatus) => {
+  // MANDATORY GATE: EXPIRED bookings have no warnings
+  if (booking?.status === 'EXPIRED') return null;
+
+  // Priority 1: Checkout overstay (checked_in_at && !checked_out_at && checkout overdue)
+  const isCheckedIn = !!booking?.checked_in_at && !booking?.checked_out_at;
+  if (isCheckedIn && warnings?.overstay) {
+    // Check if acknowledged
+    const incident = overstayStatus?.overstay;
+    if (incident?.status === 'ACKED') {
+      return {
+        type: 'checkout_overstay',
+        displayText: 'Checkout · Acknowledged',
+        variant: 'warning'
+      };
+    }
+    
+    // Map overstay severity
+    const riskLevel = warnings.overstay.riskLevel;
+    const severityText = riskLevel === 'CRITICAL' ? 'CRITICAL' : 
+                        riskLevel === 'GRACE' ? 'Grace Period' : 'Overdue';
+    
+    return {
+      type: 'checkout_overstay',
+      displayText: `Checkout · ${severityText}`,
+      variant: warnings.overstay.variant
+    };
+  }
+
+  // Priority 2: Approval issue (NOT checked in)
+  if (!isCheckedIn && warnings?.approval) {
+    const riskLevel = warnings.approval.riskLevel;
+    const severityText = riskLevel === 'CRITICAL' ? 'CRITICAL' : 
+                        riskLevel === 'DUE_SOON' ? 'Due Soon' : 'Overdue';
+    
+    return {
+      type: 'approval_issue', 
+      displayText: `Approval · ${severityText}`,
+      variant: warnings.approval.variant
+    };
+  }
+
+  // Priority 3: No warning
+  return null;
+};
+
+/**
  * Check if booking has any warnings
  */
 export const hasBookingWarnings = (warnings) => {
-  return !!(warnings?.approval || warnings?.overstay);
+  return !!(warnings?.active);
 };
 
 /**

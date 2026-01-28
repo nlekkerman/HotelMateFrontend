@@ -416,23 +416,6 @@ const BookingTable = ({
         <td>
           <div className="d-flex flex-column gap-1">
             <BookingTimeWarningBadges booking={booking} />
-            {booking.staff_seen_at && booking.staff_seen_by && (
-              <span className="badge bg-info" title={`First seen at ${new Date(booking.staff_seen_at).toLocaleString()}`}>
-                First seen by: {(() => {
-                  // Convert to string to ensure we can check it safely
-                  const staffSeenByStr = String(booking.staff_seen_by);
-                  // If staff_seen_by is already a formatted name (contains space), use it
-                  if (staffSeenByStr.includes(' ')) {
-                    return staffSeenByStr;
-                  }
-                  // Otherwise, try to format from staff profile or fall back to existing value
-                  if (staffProfile?.first_name && staffProfile?.last_name) {
-                    return `${staffProfile.first_name} ${staffProfile.last_name}`;
-                  }
-                  return staffSeenByStr;
-                })()}
-              </span>
-            )}
           </div>
         </td>
 
