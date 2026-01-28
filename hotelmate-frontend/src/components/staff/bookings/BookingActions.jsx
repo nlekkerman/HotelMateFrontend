@@ -257,7 +257,19 @@ const BookingActions = ({
       <StaffConfirmationModal
         show={showDeclineModal}
         title="Decline Booking"
-        message="This will cancel the authorization (guest won't be charged)."
+        message={`You will decline booking ${booking.booking_id || booking.id} for ${
+          booking.party?.primary?.full_name ||
+          booking.party_primary_full_name ||
+          booking.guest_display_name ||
+          booking.guest_name ||
+          (booking.party?.primary?.first_name && booking.party?.primary?.last_name
+            ? `${booking.party.primary.first_name} ${booking.party.primary.last_name}`
+            : (booking.primary_first_name && booking.primary_last_name
+              ? `${booking.primary_first_name} ${booking.primary_last_name}`
+              : (booking.first_name && booking.last_name
+                ? `${booking.first_name} ${booking.last_name}`
+                : 'Guest Information Pending')))
+        }.\n\nCheck-in: ${booking.check_in ? new Date(booking.check_in).toLocaleDateString() : 'Not set'}\nStay duration: ${booking.check_in && booking.check_out ? Math.ceil((new Date(booking.check_out) - new Date(booking.check_in)) / (1000 * 60 * 60 * 24)) + ' nights' : 'Not calculated'}\n\nThe guest will be refunded.`}
         preset="decline_booking"
         onConfirm={handleDeclineConfirm}
         onCancel={() => setShowDeclineModal(false)}
