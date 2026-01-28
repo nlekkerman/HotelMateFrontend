@@ -1,40 +1,99 @@
 import React, { useState } from 'react';
-import FilterControls from './FilterControls';
-import BookingTable from './BookingTable';
-import StaffSuccessModal from '@/components/staff/modals/StaffSuccessModal';
-import { useBookingManagement } from '@/hooks/useBookingManagement';
+import { Container, Row, Col } from 'react-bootstrap';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
+import BookingTable from './BookingTable';
+import AdvancedFiltersPanel from './AdvancedFiltersPanel';
+import BookingSearchInput from './BookingSearchInput';
+import StaffSuccessModal from '@/components/staff/modals/StaffSuccessModal';
+import { useStaffRoomBookings } from '@/hooks/useStaffRoomBookings';
+import { staffBookingService } from '@/services/api';
+import { BUCKET_OPTIONS } from '@/types/bookingFilters';
 
 /**
- * Booking List Component
- * Main component for displaying and managing hotel bookings
+ * Modern Booking List Component
+ * Uses canonical FilterSet backend with new filter UI
  */
-const BookingList = ({ hotelSlug, urlParams }) => {
+const BookingList = ({ hotelSlug }) => {
+  const queryClient = useQueryClient();
   const [successModal, setSuccessModal] = useState({ show: false, title: '', message: '', preset: null });
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
   const {
     bookings,
+    pagination,
     statistics,
+    filters,
+    page,
     isLoading,
+    isFetching,
     error,
-    sendPrecheckinLink,
-    acceptBooking,
-    declineBooking,
-    isSendingPrecheckin,
-    isBookingAccepting,
-    isBookingDeclining,
+    updateFilters,
+    updatePage,
+    resetFilters,
+    setBucket,
+    setSearch,
+    refetch,
     hasBookings,
     isEmpty,
-    currentFilter,
-    currentBucket,
-    setFilter
-  } = useBookingManagement(hotelSlug);
+    isFiltered
+  } = useStaffRoomBookings(hotelSlug);
 
+  // Send pre-check-in link mutation
+  const sendPrecheckinMutation = useMutation({
+    mutationFn: async (bookingId) => {
+      return await staffBookingService.sendPrecheckinLink(hotelSlug, bookingId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['staff-room-bookings', hotelSlug]
+      });
+    }
+  });
 
+  // Accept booking mutation
+  const acceptBookingMutation = useMutation({
+    mutationFn: async (bookingId) => {
+      return await staffBookingService.acceptRoomBooking(hotelSlug, bookingId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['staff-room-bookings', hotelSlug]
+      });
+      toast.success('Booking approved, payment captured.');
+    },
+    onError: (error) => {
+      if (error.response?.status === 409) {
+        const errorMessage = error.response?.data?.message || 'Booking expired and cannot be approved.';
+        toast.error(errorMessage);
+        queryClient.invalidateQueries({
+          queryKey: ['staff-room-bookings', hotelSlug]
+        });
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to approve booking');
+      }
+    }
+  });
+
+  // Decline booking mutation
+  const declineBookingMutation = useMutation({
+    mutationFn: async (bookingId) => {
+      return await staffBookingService.declineRoomBooking(hotelSlug, bookingId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['staff-room-bookings', hotelSlug]
+      });
+      toast.success('Booking declined, authorization released.');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || 'Failed to decline booking');
+    }
+  });
 
   const handleSendPrecheckin = async (bookingId) => {
     try {
-      const result = await sendPrecheckinLink(bookingId);
+      const result = await sendPrecheckinMutation.mutateAsync(bookingId);
       const sentTo = result.sent_to || 'guest';
       setSuccessModal({
         show: true,
@@ -47,21 +106,11 @@ const BookingList = ({ hotelSlug, urlParams }) => {
   };
 
   const handleApprove = async (bookingId) => {
-    try {
-      await acceptBooking(bookingId);
-      // Success toast is handled in the mutation
-    } catch (error) {
-      // Error toast is handled in the mutation
-    }
+    await acceptBookingMutation.mutateAsync(bookingId);
   };
 
   const handleDecline = async (bookingId) => {
-    try {
-      await declineBooking(bookingId);
-      // Success toast is handled in the mutation
-    } catch (error) {
-      // Error toast is handled in the mutation
-    }
+    await declineBookingMutation.mutateAsync(bookingId);
   };
 
   if (error) {
