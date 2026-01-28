@@ -113,105 +113,174 @@ const BookingList = ({ hotelSlug }) => {
     await declineBookingMutation.mutateAsync(bookingId);
   };
 
+  // Error state
   if (error) {
     return (
-      <div className="booking-list-error">
+      <Container fluid>
         <div className="alert alert-danger" role="alert">
           <i className="bi bi-exclamation-triangle me-2"></i>
           {error.message || error.response?.data?.message || 'Failed to load bookings'}
+          <button className="btn btn-outline-danger btn-sm ms-3" onClick={refetch}>
+            <i className="bi bi-arrow-clockwise me-1"></i>
+            Retry
+          </button>
         </div>
-      </div>
+      </Container>
     );
   }
 
   return (
-    <div className="booking-list">
-      {/* Unified Filter Bar - NEW IMPLEMENTATION */}
-      <div className="unified-booking-filters mb-4">
-        {/* Left Side: Operational Buckets (Daily Operations) */}
-        <div className="operational-group">
-          <button
-            className={`btn btn-outline-primary btn-sm ${(!currentFilter || currentFilter === 'all') && !currentBucket ? 'active' : ''}`}
-            onClick={() => setFilter('filter', 'all')}
-          >
-            All ({statistics.total || 0})
-          </button>
-          <button
-            className={`btn btn-outline-primary btn-sm ${currentBucket === 'arrivals' ? 'active' : ''}`}
-            onClick={() => setFilter('bucket', currentBucket === 'arrivals' ? null : 'arrivals')}
-          >
-            Arrivals ({statistics.arrivals || 0})
-          </button>
-          <button
-            className={`btn btn-outline-primary btn-sm ${currentBucket === 'in_house' ? 'active' : ''}`}
-            onClick={() => setFilter('bucket', currentBucket === 'in_house' ? null : 'in_house')}
-          >
-            In-House ({statistics.in_house || 0})
-          </button>
-          <button
-            className={`btn btn-outline-primary btn-sm ${currentBucket === 'departures' ? 'active' : ''}`}
-            onClick={() => setFilter('bucket', currentBucket === 'departures' ? null : 'departures')}
-          >
-            Departures ({statistics.departures || 0})
-          </button>
+    <Container fluid>
+      {/* Modern Bucket Filter Bar */}
+      <div className="modern-bucket-bar mb-4">
+        <div className="d-flex flex-wrap gap-2 align-items-center">
+          {BUCKET_OPTIONS.map((bucket) => {
+            const isActive = filters.bucket === bucket.value;
+            const count = filters.include_counts ? statistics[bucket.key] : null;
+            
+            return (
+              <button
+                key={bucket.key}
+                className={`btn btn-sm ${isActive ? 'btn-primary' : 'btn-outline-primary'}`}
+                onClick={() => setBucket(isActive ? null : bucket.value)}
+              >
+                {bucket.label}
+                {count !== null && ` (${count})`}
+              </button>
+            );
+          })}
         </div>
-
-        {/* Right Side: Administrative Status (Business Operations) */}
-        <div className="administrative-group">
-          <button
-            className={`btn btn-outline-secondary btn-sm ${currentBucket === 'pending' ? 'active' : ''}`}
-            onClick={() => setFilter('bucket', currentBucket === 'pending' ? null : 'pending')}
-          >
-            Pending ({(statistics.pendingPayment || 0) + (statistics.pendingApproval || 0)})
-          </button>
-          <button
-            className={`btn btn-outline-secondary btn-sm ${currentFilter === 'confirmed' ? 'active' : ''}`}
-            onClick={() => setFilter('filter', currentFilter === 'confirmed' ? 'all' : 'confirmed')}
-          >
-            Completed ({statistics.confirmed || 0})
-          </button>
-          <button
-            className={`btn btn-outline-secondary btn-sm ${currentBucket === 'checked_out' ? 'active' : ''}`}
-            onClick={() => setFilter('bucket', currentBucket === 'checked_out' ? null : 'checked_out')}
-          >
-            History ({statistics.checked_out || 0})
-          </button>
-          <button
-            className={`btn btn-outline-secondary btn-sm ${currentBucket === 'cancelled' ? 'active' : ''}`}
-            onClick={() => setFilter('bucket', currentBucket === 'cancelled' ? null : 'cancelled')}
-          >
-            Cancelled ({statistics.cancelled || 0})
-          </button>
-        </div>
+        {/* Temporary UI sanity indicator */}
+        <small className="text-muted mt-2 d-block">
+          Active bucket: {filters.bucket || 'all'}
+        </small>
       </div>
+
+      {/* Search and Advanced Filters */}
+      <Row className="mb-4">
+        <Col md={8}>
+          <BookingSearchInput
+            value={filters.q}
+            onChange={setSearch}
+            placeholder="Search guests, emails, booking IDs, rooms..."
+          />
+        </Col>
+        <Col md={4} className="d-flex gap-2">
+          {isFiltered && (
+            <button
+              className="btn btn-outline-warning btn-sm"
+              onClick={resetFilters}
+              title="Clear all filters"
+            >
+              <i className="bi bi-funnel"></i>
+              Clear ({Object.values(filters).filter(v => 
+                v !== null && v !== '' && (!Array.isArray(v) || v.length > 0)
+              ).length})
+            </button>
+          )}
+          <div className="d-flex align-items-center">
+            {isFetching && (
+              <div className="spinner-border spinner-border-sm me-2" role="status">
+                <span className="visually-hidden">Updating...</span>
+              </div>
+            )}
+            <small className="text-muted">
+              {pagination ? `${pagination.count} total` : `${bookings.length} results`}
+            </small>
+          </div>
+        </Col>
+      </Row>
+
+      {/* Advanced Filters Panel */}
+      <AdvancedFiltersPanel
+        filters={filters}
+        onFilterChange={updateFilters}
+        show={showAdvancedFilters}
+        onToggle={() => setShowAdvancedFilters(!showAdvancedFilters)}
+        roomTypes={[]} // TODO: Add room types from hotel data
+      />
 
       {/* Loading State */}
       {isLoading && (
-        <div className="booking-list-loading">
-          <div className="text-center py-5">
-            <div className="spinner-border" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
-            <p className="mt-3 text-muted">Loading bookings...</p>
+        <div className="text-center py-5">
+          <div className="spinner-border" role="status">
+            <span className="visually-hidden">Loading bookings...</span>
           </div>
+          <p className="mt-3 text-muted">Loading bookings...</p>
         </div>
       )}
 
-      {/* Booking Table */}
-      {!isLoading && (
+      {/* Empty State */}
+      {isEmpty && (
+        <div className="text-center py-5">
+          <i className="bi bi-calendar-x" style={{ fontSize: '3rem', color: '#6c757d' }}></i>
+          <h5 className="mt-3 text-muted">No bookings found</h5>
+          <p className="text-muted">
+            {isFiltered 
+              ? 'Try adjusting your filters or search terms.' 
+              : 'No bookings available for this hotel.'}
+          </p>
+        </div>
+      )}
+
+      {/* Bookings Table */}
+      {hasBookings && (
         <BookingTable
           bookings={bookings}
           onSendPrecheckin={handleSendPrecheckin}
           onApprove={handleApprove}
           onDecline={handleDecline}
-          loading={isSendingPrecheckin}
-          isBookingAccepting={isBookingAccepting}
-          isBookingDeclining={isBookingDeclining}
+          loading={sendPrecheckinMutation.isPending}
+          isBookingAccepting={(bookingId) => acceptBookingMutation.isPending && acceptBookingMutation.variables === bookingId}
+          isBookingDeclining={(bookingId) => declineBookingMutation.isPending && declineBookingMutation.variables === bookingId}
           hotelSlug={hotelSlug}
         />
       )}
 
-      {/* Staff Success/Error Modal */}
+      {/* Pagination */}
+      {pagination && pagination.total_pages > 1 && (
+        <div className="d-flex justify-content-center mt-4">
+          <nav aria-label="Booking list pagination">
+            <ul className="pagination">
+              <li className={`page-item ${page <= 1 ? 'disabled' : ''}`}>
+                <button 
+                  className="page-link" 
+                  onClick={() => updatePage(page - 1)}
+                  disabled={page <= 1}
+                >
+                  Previous
+                </button>
+              </li>
+              
+              {Array.from({ length: Math.min(pagination.total_pages, 10) }, (_, i) => {
+                const pageNum = i + 1;
+                return (
+                  <li key={pageNum} className={`page-item ${page === pageNum ? 'active' : ''}`}>
+                    <button 
+                      className="page-link"
+                      onClick={() => updatePage(pageNum)}
+                    >
+                      {pageNum}
+                    </button>
+                  </li>
+                );
+              })}
+              
+              <li className={`page-item ${page >= pagination.total_pages ? 'disabled' : ''}`}>
+                <button 
+                  className="page-link" 
+                  onClick={() => updatePage(page + 1)}
+                  disabled={page >= pagination.total_pages}
+                >
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      )}
+
+      {/* Success Modal */}
       <StaffSuccessModal
         show={successModal.show}
         title={successModal.title}
@@ -219,7 +288,7 @@ const BookingList = ({ hotelSlug }) => {
         preset={successModal.preset}
         onClose={() => setSuccessModal({ show: false, title: '', message: '', preset: null })}
       />
-    </div>
+    </Container>
   );
 };
 

@@ -159,6 +159,18 @@ export async function getHotelPublicPage(hotelSlug) {
  */
 export const staffBookingService = {
   /**
+   * Send pre-checkin link to guest
+   * @param {string} hotelSlug - The hotel slug
+   * @param {string} bookingId - The booking ID
+   * @returns {Promise} - Response with sent_to info
+   */
+  sendPrecheckinLink: async (hotelSlug, bookingId) => {
+    const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/send-precheckin-link/`);
+    const response = await api.post(url);
+    return response.data;
+  },
+
+  /**
    * Accept a pending room booking and capture payment
    * @param {string} hotelSlug - The hotel slug
    * @param {string} bookingId - The booking ID

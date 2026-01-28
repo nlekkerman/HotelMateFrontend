@@ -61,6 +61,21 @@ export const defaultBookingListFilters = {
 };
 
 /**
+ * Backend-validated allowed bucket values
+ */
+export const ALLOWED_BUCKETS = [
+  'arrivals',
+  'in_house', 
+  'departures',
+  'pending',
+  'checked_out',
+  'cancelled',
+  'expired',
+  'no_show',
+  'overdue_checkout'
+];
+
+/**
  * Available bucket options
  */
 export const BUCKET_OPTIONS = [
@@ -142,7 +157,7 @@ export function buildBookingListSearchParams(filters, page = 1) {
   }
 
   // Add filters (only non-null, non-empty values)
-  if (filters.bucket) {
+  if (filters.bucket && ALLOWED_BUCKETS.includes(filters.bucket)) {
     params.append('bucket', filters.bucket);
   }
 
@@ -248,7 +263,7 @@ export function parseBookingListFiltersFromSearchParams(searchParams) {
   // Parse bucket
   if (searchParams.has('bucket')) {
     const bucket = searchParams.get('bucket');
-    if (BUCKET_OPTIONS.some(opt => opt.value === bucket)) {
+    if (bucket && ALLOWED_BUCKETS.includes(bucket)) {
       filters.bucket = bucket;
     }
   }

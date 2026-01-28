@@ -6,7 +6,8 @@ import {
   buildBookingListSearchParams, 
   parseBookingListFiltersFromSearchParams, 
   getCurrentPageFromSearchParams,
-  defaultBookingListFilters
+  defaultBookingListFilters,
+  ALLOWED_BUCKETS
 } from '@/types/bookingFilters';
 
 /**
@@ -47,8 +48,13 @@ export const useStaffRoomBookings = (hotelSlug) => {
       const params = buildBookingListSearchParams(filters, page);
       const url = buildStaffURL(hotelSlug, 'room-bookings', `/?${params.toString()}`);
       
-      console.log('Fetching bookings with URL:', url);
-      console.log('Query params:', params.toString());
+      console.group('🔍 Booking List Query Debug');
+      console.log('A) Request URL with query string:', url);
+      console.log('B) Query Key:', queryKey);
+      console.log('C) Current filters.bucket:', filters.bucket);
+      console.log('D) Full filters object:', filters);
+      console.log('E) Serialized params:', params.toString());
+      console.groupEnd();
       
       const response = await api.get(url);
       
