@@ -56,7 +56,26 @@ const BookingList = ({ hotelSlug }) => {
     mutationFn: async (bookingId) => {
       return await staffBookingService.acceptRoomBooking(hotelSlug, bookingId);
     },
-    onSuccess: () => {
+    onSuccess: (result, bookingId) => {
+      // Mark the booking as seen to remove NEW badge
+      queryClient.setQueryData(['staff-room-bookings', hotelSlug], (oldData) => {
+        if (!oldData?.results) return oldData;
+        
+        return {
+          ...oldData,
+          results: oldData.results.map(booking => 
+            booking.booking_id === bookingId || booking.id === bookingId
+              ? {
+                  ...booking,
+                  staff_seen_at: new Date().toISOString(),
+                  is_new_for_staff: false,
+                  status: 'CONFIRMED' // Update status optimistically
+                }
+              : booking
+          )
+        };
+      });
+      
       queryClient.invalidateQueries({
         queryKey: ['staff-room-bookings', hotelSlug]
       });
@@ -80,7 +99,26 @@ const BookingList = ({ hotelSlug }) => {
     mutationFn: async (bookingId) => {
       return await staffBookingService.declineRoomBooking(hotelSlug, bookingId);
     },
-    onSuccess: () => {
+    onSuccess: (result, bookingId) => {
+      // Mark the booking as seen to remove NEW badge
+      queryClient.setQueryData(['staff-room-bookings', hotelSlug], (oldData) => {
+        if (!oldData?.results) return oldData;
+        
+        return {
+          ...oldData,
+          results: oldData.results.map(booking => 
+            booking.booking_id === bookingId || booking.id === bookingId
+              ? {
+                  ...booking,
+                  staff_seen_at: new Date().toISOString(),
+                  is_new_for_staff: false,
+                  status: 'CANCELLED' // Update status optimistically
+                }
+              : booking
+          )
+        };
+      });
+      
       queryClient.invalidateQueries({
         queryKey: ['staff-room-bookings', hotelSlug]
       });
@@ -93,6 +131,24 @@ const BookingList = ({ hotelSlug }) => {
 
   const handleSendPrecheckin = async (bookingId) => {
     try {
+      // Mark the booking as seen first
+      queryClient.setQueryData(['staff-room-bookings', hotelSlug], (oldData) => {
+        if (!oldData?.results) return oldData;
+        
+        return {
+          ...oldData,
+          results: oldData.results.map(booking => 
+            booking.booking_id === bookingId || booking.id === bookingId
+              ? {
+                  ...booking,
+                  staff_seen_at: new Date().toISOString(),
+                  is_new_for_staff: false
+                }
+              : booking
+          )
+        };
+      });
+      
       const result = await sendPrecheckinMutation.mutateAsync(bookingId);
       const sentTo = result.sent_to || 'guest';
       setSuccessModal({
@@ -133,7 +189,7 @@ const BookingList = ({ hotelSlug }) => {
     <Container fluid>
       {/* Modern Bucket Filter Bar */}
       <div className="modern-bucket-bar mb-4">
-        <div className="d-flex flex-wrap gap-2 align-items-center">
+        <div className="d-flex flex-wrap gap-2 align-items-center justify-content-center">
           {BUCKET_OPTIONS.map((bucket) => {
             const isActive = filters.bucket === bucket.value;
             const count = filters.include_counts ? statistics[bucket.key] : null;
@@ -150,10 +206,7 @@ const BookingList = ({ hotelSlug }) => {
             );
           })}
         </div>
-        {/* Temporary UI sanity indicator */}
-        <small className="text-muted mt-2 d-block">
-          Active bucket: {filters.bucket || 'all'}
-        </small>
+       
       </div>
 
       {/* Search and Advanced Filters */}

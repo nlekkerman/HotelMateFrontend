@@ -236,7 +236,19 @@ const BookingActions = ({
       <StaffConfirmationModal
         show={showApproveModal}
         title="Approve Booking"
-        message="This will charge the guest now."
+        message={`You will accept booking ${booking.booking_id || booking.id} for ${
+          booking.party?.primary?.full_name ||
+          booking.party_primary_full_name ||
+          booking.guest_display_name ||
+          booking.guest_name ||
+          (booking.party?.primary?.first_name && booking.party?.primary?.last_name
+            ? `${booking.party.primary.first_name} ${booking.party.primary.last_name}`
+            : (booking.primary_first_name && booking.primary_last_name
+              ? `${booking.primary_first_name} ${booking.primary_last_name}`
+              : (booking.first_name && booking.last_name
+                ? `${booking.first_name} ${booking.last_name}`
+                : 'Guest Information Pending')))
+        }.\n\nCheck-in: ${booking.check_in ? new Date(booking.check_in).toLocaleDateString() : 'Not set'}\nStay duration: ${booking.check_in && booking.check_out ? Math.ceil((new Date(booking.check_out) - new Date(booking.check_in)) / (1000 * 60 * 60 * 24)) + ' nights' : 'Not calculated'}`}
         preset="approve_booking"
         onConfirm={handleApproveConfirm}
         onCancel={() => setShowApproveModal(false)}
