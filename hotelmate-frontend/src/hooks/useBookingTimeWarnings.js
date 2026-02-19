@@ -217,7 +217,7 @@ function getActiveWarning(booking, approvalWarning, overstayWarning) {
     return {
       type: 'checkout_overstay',
       severity: severityMap[overstayWarning.riskLevel] || 'OVERDUE',
-      displayText: `Checkout · ${getDisplaySeverity(overstayWarning.riskLevel)}`,
+      displayText: `Checkout${getDisplaySeverity(overstayWarning.riskLevel) ? ` · ${getDisplaySeverity(overstayWarning.riskLevel)}` : ''}`,
       variant: overstayWarning.variant,
       data: overstayWarning
     };
@@ -235,7 +235,7 @@ function getActiveWarning(booking, approvalWarning, overstayWarning) {
     return {
       type: 'approval_issue',
       severity: severityMap[approvalWarning.riskLevel] || 'DUE_SOON',
-      displayText: `Approval · ${getDisplaySeverity(approvalWarning.riskLevel)}`,
+      displayText: `Approval${getDisplaySeverity(approvalWarning.riskLevel) ? ` · ${getDisplaySeverity(approvalWarning.riskLevel)}` : ''}`,
       variant: approvalWarning.variant,
       data: approvalWarning
     };
@@ -258,8 +258,13 @@ function getDisplaySeverity(riskLevel) {
       return 'Due Soon';
     case 'GRACE':
       return 'Grace Period';
+    case 'OK':
+    case null:
+    case undefined:
+      return null; // Don't show severity for OK/null states
     default:
-      return 'Unknown';
+      console.warn('[useBookingTimeWarnings] Unknown risk level:', riskLevel);
+      return null; // Don't show severity for unknown states
   }
 }
 
