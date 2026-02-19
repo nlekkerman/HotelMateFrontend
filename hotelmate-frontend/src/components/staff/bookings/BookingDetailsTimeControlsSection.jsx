@@ -169,10 +169,41 @@ const BookingDetailsTimeControlsSection = ({
                 </div>
               )}
               
-              <div className="small text-muted mb-2">
-                <i className="bi bi-lightbulb me-1"></i>
-                Suggested action: Checkout guest or Extend stay
-              </div>
+              {(() => {
+                const checkoutDeadline = booking.checkout_deadline_at;
+                if (!checkoutDeadline) return null;
+                
+                const now = new Date();
+                const deadline = new Date(checkoutDeadline);
+                
+                // Calculate checkout time (typically check_out date at 11:00 AM)
+                const checkoutDate = booking.check_out;
+                if (!checkoutDate) return null;
+                
+                const checkoutTime = new Date(checkoutDate + 'T11:00:00');
+                
+                // Dynamic logic based on checkout deadline and current time
+                let actionText = null;
+                if (now < checkoutTime) {
+                  actionText = `Guest checkout ${format(checkoutTime, 'MMM dd')} at ${format(checkoutTime, 'HH:mm')}`;
+                } else if (now < deadline) {
+                  actionText = "Checkout due soon";
+                } else {
+                  actionText = "Checkout guest or Extend stay";
+                }
+                
+                // Only show suggested action if there's an urgent action needed
+                if (now >= checkoutTime && actionText) {
+                  return (
+                    <div className="small text-muted mb-2">
+                      <i className="bi bi-lightbulb me-1"></i>
+                      Suggested action: {actionText}
+                    </div>
+                  );
+                }
+                
+                return null; // No suggested action needed before checkout time
+              })()}
               
               {/* Action Buttons - Now functional */}
               <div className="d-flex gap-2">
