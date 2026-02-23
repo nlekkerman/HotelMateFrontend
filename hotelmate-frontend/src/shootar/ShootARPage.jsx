@@ -6,8 +6,7 @@ import "aframe";
 import * as THREE from "three";
 
 const GLB_MODELS = [
-  "/shootar/military_drone.glb",
-  "/shootar/scific_drone_for_free.glb",
+  "/shootar/space_ship_low_poly.glb",
 ];
 
 /* ------------------------------------------------------------------ */
@@ -30,10 +29,10 @@ if (!AFRAME.components["rocket-projectile"]) {
 
       // Red laser bolt
       const bolt = document.createElement("a-cylinder");
-      bolt.setAttribute("radius", 0.03);
+      bolt.setAttribute("radius", 0.09);
       bolt.setAttribute("height", 0.6);
       bolt.setAttribute("color", "#ff0000");
-      bolt.setAttribute("shader", "flat");
+      bolt.setAttribute("shader", "");
       bolt.setAttribute("rotation", "90 0 0");
       this.el.appendChild(bolt);
 
@@ -103,7 +102,17 @@ if (!AFRAME.components["enemy-brain"]) {
       this.camera = document.querySelector("[camera]");
       this.isDead = false;
       this.initialY = this.el.getAttribute("position").y;
+      this.initialX = this.el.getAttribute("position").x;
+      this.initialZ = this.el.getAttribute("position").z;
       this.hoverOffset = Math.random() * Math.PI * 2;
+      this.driftPhaseX = Math.random() * Math.PI * 2;
+      this.driftPhaseZ = Math.random() * Math.PI * 2;
+      this.driftSpeedX = 0.4 + Math.random() * 0.6; // unique drift speed per axis
+      this.driftSpeedY = 0.3 + Math.random() * 0.5;
+      this.driftSpeedZ = 0.4 + Math.random() * 0.6;
+      this.driftRangeX = 3 + Math.random() * 5;  // how far it drifts left/right
+      this.driftRangeY = 2 + Math.random() * 4;  // how far it drifts up/down
+      this.driftRangeZ = 3 + Math.random() * 5;  // how far it drifts forward/back
       
       // Create visual model immediately
       this._createVisuals();
@@ -116,11 +125,11 @@ if (!AFRAME.components["enemy-brain"]) {
       const modelPath = GLB_MODELS[Math.floor(Math.random() * GLB_MODELS.length)];
       const model = document.createElement("a-gltf-model");
       model.setAttribute("src", modelPath);
-      model.setAttribute("scale", "2 2 2");
+      model.setAttribute("scale", "6 6 6");
       
       // Hit sphere (invisible collision volume)
       const hitSphere = document.createElement("a-sphere");
-      hitSphere.setAttribute("radius", 1.2);
+      hitSphere.setAttribute("radius", 3.5);
       hitSphere.setAttribute("visible", "false");
       hitSphere.setAttribute("class", "enemy-hitbox");
       
@@ -155,8 +164,11 @@ if (!AFRAME.components["enemy-brain"]) {
       // Always face player
       this.el.object3D.lookAt(camPos.x, camPos.y, camPos.z);
 
-      // Stay in place — just hover/bob gently
-      myPos.y = this.initialY + Math.sin(time / 800 + this.hoverOffset) * 0.5;
+      // Drift left/right, up/down, forward/back using sine waves
+      const t = time / 1000;
+      myPos.x = this.initialX + Math.sin(t * this.driftSpeedX + this.driftPhaseX) * this.driftRangeX;
+      myPos.y = this.initialY + Math.sin(t * this.driftSpeedY + this.hoverOffset) * this.driftRangeY;
+      myPos.z = this.initialZ + Math.sin(t * this.driftSpeedZ + this.driftPhaseZ) * this.driftRangeZ;
       if (myPos.y < 0.5) myPos.y = 0.5;
       this.el.object3D.position.copy(myPos);
     },
