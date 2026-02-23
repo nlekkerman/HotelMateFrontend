@@ -149,6 +149,7 @@ import QuizPlayScreen from "@/games/quiz-game/pages/QuizPlayScreen";
 import QuizResultsScreen from "@/games/quiz-game/pages/QuizResultsScreen";
 import QuizLeaderboard from "@/games/quiz-game/pages/QuizLeaderboard";
 import QuizTournaments from "@/games/quiz-game/pages/QuizTournaments";
+import ShootARPage from "@/shootar/ShootARPage.jsx";
 
 // Attendance
 import AttendanceDashboard from "@/features/attendance/pages/AttendanceDashboard";
@@ -955,6 +956,8 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                 path="/booking/payment/cancel"
                 element={<BookingPaymentCancel />}
               />
+              {/* ShootAR - Isolated experimental AR shooter game */}
+              <Route path="/shootar" element={<ShootARPage />} />
               {/* Hotel Portal - Public (guest view) or Staff (with toggle) - MUST be last specific route */}
               <Route path="/:hotelSlug" element={<HotelPortalPage />} />
               {/* Catch All */}
