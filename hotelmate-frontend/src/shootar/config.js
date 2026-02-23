@@ -39,7 +39,7 @@ const CONFIG = {
     "/shootar/military_drone.glb",
     "/shootar/scific_drone_for_free.glb",
   ],
-  ENEMY_MODEL_SCALE: 0.6,         // uniform scale applied to GLB clones
+  ENEMY_MODEL_SCALE: 2.6,         // uniform scale applied to GLB clones
 
   // Colors for fallback primitive enemies
   ENEMY_COLORS: [0xff4444, 0x44ff44, 0x4444ff, 0xff44ff, 0xffff44, 0x44ffff],
