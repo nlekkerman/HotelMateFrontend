@@ -87,43 +87,31 @@ export default class EnemyManager {
     const id = this._idCounter++;
     const mesh = this._createMesh(id);
 
+    // Forward direction from camera
     const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-    const right   = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
 
-    // Distance based on room depth, not infinite
+    // Distance in front of camera
     const distance = randomBetween(CONFIG.SPAWN_DISTANCE_MIN, CONFIG.SPAWN_DISTANCE_MAX);
 
-    // Horizontal spread within room width
-    const lateral = randomBetween(-CONFIG.ROOM_WIDTH / 2, CONFIG.ROOM_WIDTH / 2);
+    // Lateral offset (left/right of aim)
+    const lateral = new THREE.Vector3(1, 0, 0)
+      .applyQuaternion(camera.quaternion)
+      .multiplyScalar(randomBetween(-3, 3));
 
-    // Calculate position
+    // Position = camera + forward * distance + lateral
     const spawnPos = new THREE.Vector3()
       .copy(camera.position)
       .addScaledVector(forward, distance)
-      .addScaledVector(right, lateral);
+      .add(lateral);
 
-    // HEIGHT: Realistic room positions only
-    const floorY = Math.max(0, camera.position.y - CONFIG.PLAYER_EYE_HEIGHT);
-    spawnPos.y = floorY + randomBetween(
-      CONFIG.SPAWN_HEIGHT_MIN,       // 1m – table/couch level
-      CONFIG.SPAWN_HEIGHT_MAX        // 2.2m – below ceiling
-    );
+    // HEIGHT: eye level range (-0.5 to +1.5 from eye), never below floor + 1m
+    const eyeY = camera.position.y;
+    const floorY = Math.max(0, eyeY - CONFIG.PLAYER_EYE_HEIGHT);
+    spawnPos.y = randomBetween(eyeY - 0.5, eyeY + 1.5);
+    spawnPos.y = Math.max(floorY + 1.0, spawnPos.y); // at least 1m above floor
 
-    // CLAMP to room bounds
-    spawnPos.x = Math.max(-CONFIG.ROOM_WIDTH / 2, Math.min(CONFIG.ROOM_WIDTH / 2, spawnPos.x));
-    spawnPos.z = Math.max(
-      camera.position.z - CONFIG.ROOM_DEPTH / 2,
-      Math.min(camera.position.z + CONFIG.ROOM_DEPTH / 2, spawnPos.z)
-    );
-
-    // Ensure in front of camera
-    const toSpawn = new THREE.Vector3().subVectors(spawnPos, camera.position);
-    if (toSpawn.dot(forward) < 0) {
-      debugWarn("SPAWN BEHIND CAMERA — flipping to front");
-      spawnPos.copy(camera.position).addScaledVector(forward, distance);
-    }
-
-    debugLog("SPAWN POS:", spawnPos.x.toFixed(2), spawnPos.y.toFixed(2), spawnPos.z.toFixed(2));
+    debugLog("SPAWN POS:", spawnPos.x.toFixed(2), spawnPos.y.toFixed(2), spawnPos.z.toFixed(2),
+             "cam:", camera.position.x.toFixed(2), camera.position.y.toFixed(2), camera.position.z.toFixed(2));
 
     const anchor = spawnPos.clone();
     const pos = spawnPos.clone();
@@ -228,9 +216,10 @@ export default class EnemyManager {
 
       // WALL COLLISION — stay in room
       enemy.pos.x = Math.max(-CONFIG.ROOM_WIDTH / 2, Math.min(CONFIG.ROOM_WIDTH / 2, enemy.pos.x));
+      // Z: allow full room depth IN FRONT, never behind camera
       enemy.pos.z = Math.max(
-        camera.position.z - CONFIG.ROOM_DEPTH / 2,
-        Math.min(camera.position.z + CONFIG.ROOM_DEPTH / 2, enemy.pos.z)
+        camera.position.z + 1,
+        Math.min(camera.position.z + CONFIG.ROOM_DEPTH, enemy.pos.z)
       );
 
       enemy.mesh.position.copy(enemy.pos);
@@ -326,36 +315,26 @@ export default class EnemyManager {
     if (!this.canSpawn()) return;
     if (!this._camera) return;
 
-    // Build a raycaster pointing from camera center (forward)
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(new THREE.Vector2(0, 0), this._camera);
-
-    // Offset the direction randomly so respawns aren't dead-centre
-    const jitter = new THREE.Vector3(
-      randomBetween(-0.3, 0.3),
-      randomBetween(-0.15, 0.15),
-      randomBetween(-0.3, 0.3)
-    );
-    raycaster.ray.direction.add(jitter).normalize();
-
     const id = this._idCounter++;
     const mesh = this._createMesh(id);
 
+    // Forward direction + lateral offset (same logic as spawnOnShoot)
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this._camera.quaternion);
     const spawnDist = randomBetween(CONFIG.SPAWN_DISTANCE_MIN, CONFIG.SPAWN_DISTANCE_MAX);
+    const lateral = new THREE.Vector3(1, 0, 0)
+      .applyQuaternion(this._camera.quaternion)
+      .multiplyScalar(randomBetween(-3, 3));
+
     const spawnPos = new THREE.Vector3()
-      .copy(raycaster.ray.origin)
-      .addScaledVector(raycaster.ray.direction, spawnDist);
+      .copy(this._camera.position)
+      .addScaledVector(forward, spawnDist)
+      .add(lateral);
 
-    // Room-constrained Y
-    const floorY = Math.max(0, this._camera.position.y - CONFIG.PLAYER_EYE_HEIGHT);
-    spawnPos.y = floorY + randomBetween(CONFIG.SPAWN_HEIGHT_MIN, CONFIG.SPAWN_HEIGHT_MAX);
-
-    // Clamp to room bounds
-    spawnPos.x = Math.max(-CONFIG.ROOM_WIDTH / 2, Math.min(CONFIG.ROOM_WIDTH / 2, spawnPos.x));
-    spawnPos.z = Math.max(
-      this._camera.position.z - CONFIG.ROOM_DEPTH / 2,
-      Math.min(this._camera.position.z + CONFIG.ROOM_DEPTH / 2, spawnPos.z)
-    );
+    // Eye-level height, never below floor + 1m
+    const eyeY = this._camera.position.y;
+    const floorY = Math.max(0, eyeY - CONFIG.PLAYER_EYE_HEIGHT);
+    spawnPos.y = randomBetween(eyeY - 0.5, eyeY + 1.5);
+    spawnPos.y = Math.max(floorY + 1.0, spawnPos.y);
 
     const anchor = spawnPos.clone();
     const pos = spawnPos.clone();
