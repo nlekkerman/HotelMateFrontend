@@ -1,7 +1,8 @@
 // ShootAR — EnemyManager
 // Spawns, moves, and manages enemy meshes in the Three.js scene.
-// Spawning: 360° around player on the XZ (horizontal) plane only;
-//   y is set independently for hover height.
+// Enemies are true world-space objects with persistent XYZ positions.
+// Position (THREE.Vector3) is the single source of truth — never
+// recomputed from polar coordinates after spawn.
 // Movement: enemies approach on XZ only, with lateral "step" jitter.
 // Supports GLB model templates (cloned) with primitive-mesh fallback.
 
@@ -29,18 +30,6 @@ function createFallbackMesh(color) {
   return new THREE.Mesh(geometry, material);
 }
 
-/**
- * Compute world position from horizontal polar coords + separate height.
- * bearing (θ) determines direction on XZ plane; y is hover height only.
- */
-function xzPosition(bearing, radius, heightRelativeToEye) {
-  return new THREE.Vector3(
-    Math.cos(bearing) * radius,
-    CONFIG.PLAYER_EYE_HEIGHT + heightRelativeToEye, // ✅ eye-relative -> world y
-    Math.sin(bearing) * radius
-  );
-}
-
 function disposeMesh(root) {
   if (!root) return;
   root.traverse((child) => {
@@ -58,9 +47,12 @@ function disposeMesh(root) {
 /* ── EnemyManager ────────────────────────────────────────── */
 
 export default class EnemyManager {
-  constructor(scene) {
-    this.scene = scene;
-    this.enemies = []; // { id, mesh, alive, bearing, radius, height, nextStepAt }
+  /**
+   * @param {THREE.Group} parentGroup – the world-root group to add meshes to
+   */
+  constructor(parentGroup) {
+    this.parentGroup = parentGroup;
+    this.enemies = []; // { id, mesh, alive, pos: THREE.Vector3, nextStepAt }
     this._idCounter = 0;
     this._modelTemplates = []; // Object3D roots loaded from GLBs
     this._lastTime = performance.now() / 1000;
@@ -124,24 +116,29 @@ export default class EnemyManager {
     const id = this._idCounter++;
     const mesh = this._createMesh(id);
 
-    const bearing = Math.random() * Math.PI * 2;
+    // Random horizontal angle and radius
+    const theta = Math.random() * Math.PI * 2;
     const radius = Math.max(
       randomBetween(CONFIG.SPAWN_RADIUS_MIN, CONFIG.SPAWN_RADIUS_MAX),
       CONFIG.SPAWN_MIN_DISTANCE
     );
-    const height = randomBetween(CONFIG.ENEMY_HEIGHT_MIN, CONFIG.ENEMY_HEIGHT_MAX);
 
-    // Horizontal spawn: x,z from polar on XZ plane; y = hover height
-    mesh.position.copy(xzPosition(bearing, radius, height));
-    this.scene.add(mesh);
+    // Persistent world-space position (source of truth)
+    const x = Math.cos(theta) * radius;
+    const z = Math.sin(theta) * radius;
+    const y =
+      CONFIG.PLAYER_EYE_HEIGHT +
+      randomBetween(CONFIG.ENEMY_HEIGHT_MIN, CONFIG.ENEMY_HEIGHT_MAX);
+
+    const pos = new THREE.Vector3(x, y, z);
+    mesh.position.copy(pos);
+    this.parentGroup.add(mesh);
 
     const enemy = {
       id,
       mesh,
       alive: true,
-      bearing,  // yaw angle θ on XZ plane
-      radius,   // XZ distance from origin
-      height,   // hover height (y), independent of XZ
+      pos, // THREE.Vector3 — single source of truth
       nextStepAt: Date.now() + CONFIG.STEP_INTERVAL,
     };
     this.enemies.push(enemy);
@@ -160,40 +157,45 @@ export default class EnemyManager {
     for (const enemy of this.enemies) {
       if (!enemy.alive) continue;
 
-      // Approach player on XZ plane only — shrink horizontal radius
-     enemy.radius = Math.max(
-  CONFIG.COMFORT_DISTANCE,
-  enemy.radius - CONFIG.APPROACH_SPEED * dt
-);
+      // --- Approach player (origin) on XZ plane only ---
+      const dx = enemy.pos.x;
+      const dz = enemy.pos.z;
+      const dist = Math.hypot(dx, dz) || 1;
 
-      // Sudden lateral step
+      if (dist > CONFIG.COMFORT_DISTANCE) {
+        enemy.pos.x -= (dx / dist) * CONFIG.APPROACH_SPEED * dt;
+        enemy.pos.z -= (dz / dist) * CONFIG.APPROACH_SPEED * dt;
+      }
+
+      // --- Sudden lateral step (jitter) ---
       if (nowMs >= enemy.nextStepAt) {
-        enemy.bearing += randomBetween(
-          -CONFIG.STEP_BEARING_DELTA,
-          CONFIG.STEP_BEARING_DELTA
+        // Perpendicular direction on XZ plane
+        const sideX = -dz / dist;
+        const sideZ = dx / dist;
+        const stepAmount = randomBetween(-0.8, 0.8);
+        enemy.pos.x += sideX * stepAmount;
+        enemy.pos.z += sideZ * stepAmount;
+
+        // Small Y jitter
+        enemy.pos.y += randomBetween(
+          -CONFIG.STEP_HEIGHT_DELTA,
+          CONFIG.STEP_HEIGHT_DELTA
         );
-        enemy.height = clamp(
-          enemy.height +
-            randomBetween(-CONFIG.STEP_HEIGHT_DELTA, CONFIG.STEP_HEIGHT_DELTA),
-          CONFIG.ENEMY_HEIGHT_MIN,
-          CONFIG.ENEMY_HEIGHT_MAX
-        );
+
         enemy.nextStepAt = nowMs + CONFIG.STEP_INTERVAL;
       }
 
-      // Always clamp height
-      enemy.height = clamp(
-        enemy.height,
-        CONFIG.ENEMY_HEIGHT_MIN,
-        CONFIG.ENEMY_HEIGHT_MAX
+      // --- Clamp Y to eye-relative range ---
+      enemy.pos.y = clamp(
+        enemy.pos.y,
+        CONFIG.PLAYER_EYE_HEIGHT + CONFIG.ENEMY_HEIGHT_MIN,
+        CONFIG.PLAYER_EYE_HEIGHT + CONFIG.ENEMY_HEIGHT_MAX
       );
 
-      // Recompute world position: XZ from polar, y from hover height
-      enemy.mesh.position.copy(
-        xzPosition(enemy.bearing, enemy.radius, enemy.height)
-      );
+      // --- Sync mesh to authoritative position ---
+      enemy.mesh.position.copy(enemy.pos);
 
-      // Rotate for visual flair
+      // Visual flair rotation
       enemy.mesh.rotation.y += 0.01;
       enemy.mesh.rotation.x += 0.005;
     }
@@ -206,9 +208,8 @@ export default class EnemyManager {
     const close = [];
     for (const enemy of this.enemies) {
       if (!enemy.alive) continue;
-      // Use XZ distance only (ignore y) for damage proximity
-      const pos = enemy.mesh.position;
-      const xzDist = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
+      // XZ distance from player (origin) — ignore Y
+      const xzDist = Math.hypot(enemy.pos.x, enemy.pos.z);
       if (xzDist < CONFIG.ENEMY_DAMAGE_DISTANCE) {
         close.push(enemy.id);
       }
@@ -247,7 +248,7 @@ export default class EnemyManager {
 
   destroyEnemy(enemy) {
     enemy.alive = false;
-    this.scene.remove(enemy.mesh);
+    this.parentGroup.remove(enemy.mesh);
     disposeMesh(enemy.mesh);
 
     // Respawn after delay, still obeying MAX_ENEMIES_ACTIVE
@@ -262,15 +263,21 @@ export default class EnemyManager {
     const id = this._idCounter++;
     const mesh = this._createMesh(id);
 
-    const bearing = Math.random() * Math.PI * 2;
+    const theta = Math.random() * Math.PI * 2;
     const radius = Math.max(
       randomBetween(CONFIG.SPAWN_RADIUS_MIN, CONFIG.SPAWN_RADIUS_MAX),
       CONFIG.SPAWN_MIN_DISTANCE
     );
-    const height = randomBetween(CONFIG.ENEMY_HEIGHT_MIN, CONFIG.ENEMY_HEIGHT_MAX);
 
-    mesh.position.copy(xzPosition(bearing, radius, height));
-    this.scene.add(mesh);
+    const x = Math.cos(theta) * radius;
+    const z = Math.sin(theta) * radius;
+    const y =
+      CONFIG.PLAYER_EYE_HEIGHT +
+      randomBetween(CONFIG.ENEMY_HEIGHT_MIN, CONFIG.ENEMY_HEIGHT_MAX);
+
+    const pos = new THREE.Vector3(x, y, z);
+    mesh.position.copy(pos);
+    this.parentGroup.add(mesh);
 
     // Reuse array slot
     const idx = this.enemies.indexOf(oldEnemy);
@@ -278,9 +285,7 @@ export default class EnemyManager {
       id,
       mesh,
       alive: true,
-      bearing,
-      radius,
-      height,
+      pos,
       nextStepAt: Date.now() + CONFIG.STEP_INTERVAL,
     };
 
@@ -296,7 +301,7 @@ export default class EnemyManager {
   clear() {
     for (const enemy of this.enemies) {
       if (enemy.alive) {
-        this.scene.remove(enemy.mesh);
+        this.parentGroup.remove(enemy.mesh);
         disposeMesh(enemy.mesh);
       }
     }

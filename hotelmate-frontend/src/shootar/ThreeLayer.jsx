@@ -56,6 +56,10 @@ const ThreeLayer = forwardRef(function ThreeLayer({ gameEngine }, ref) {
     // --- Scene ---
     const scene = new THREE.Scene();
 
+    // --- World root group (enemies live here; counter-rotated to anchor in space) ---
+    const worldRoot = new THREE.Group();
+    scene.add(worldRoot);
+
     // --- Camera ---
     const camera = new THREE.PerspectiveCamera(
       CONFIG.FOV,
@@ -72,8 +76,8 @@ const ThreeLayer = forwardRef(function ThreeLayer({ gameEngine }, ref) {
     dirLight.position.set(5, 10, 7);
     scene.add(dirLight);
 
-    // --- Enemies ---
-    const enemyManager = new EnemyManager(scene);
+    // --- Enemies (added to worldRoot, not scene directly) ---
+    const enemyManager = new EnemyManager(worldRoot);
     enemyManager.spawnAll(); // spawns with fallback primitives immediately
 
     // --- Load GLB enemy models (async) ---
@@ -184,7 +188,7 @@ const ThreeLayer = forwardRef(function ThreeLayer({ gameEngine }, ref) {
     window.addEventListener("resize", onResize);
 
     // Store internals
-    internals.current = { scene, camera, renderer, enemyManager };
+    internals.current = { scene, camera, renderer, enemyManager, worldRoot };
 
     // --- Animation loop ---
     let frameId = 0;
@@ -200,6 +204,14 @@ const ThreeLayer = forwardRef(function ThreeLayer({ gameEngine }, ref) {
       } else {
         camera.rotation.set(dragPitch, dragYaw, 0, "YXZ");
       }
+
+      // Anchor worldRoot: counter-rotate by camera yaw so enemies
+      // feel fixed in space when the phone turns horizontally.
+      const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+      forward.y = 0;
+      forward.normalize();
+      const yaw = Math.atan2(forward.x, -forward.z);
+      worldRoot.rotation.set(0, -yaw, 0);
 
       // Game logic
       if (gameEngine.running) {
