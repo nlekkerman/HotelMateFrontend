@@ -132,36 +132,36 @@ if (!AFRAME.components["rocket-projectile"]) {
         x: pos.x, y: pos.y, z: pos.z
       });
       
-      // Shockwave ring
+      // Shockwave ring — small & quick, won't wash out the screen
       const ring = document.createElement("a-ring");
       ring.setAttribute("radius-inner", 0.1);
       ring.setAttribute("radius-outer", 0.2);
-      ring.setAttribute("color", "#ffff00");
+      ring.setAttribute("color", "#ff6600");
       ring.setAttribute("shader", "flat");
       ring.setAttribute("animation", {
         property: "scale",
-        to: "10 10 10",
-        dur: 300,
+        to: "3 3 3",
+        dur: 250,
         easing: "easeOutQuad"
       });
       ring.setAttribute("animation__fade", {
         property: "material.opacity",
-        from: 1,
+        from: 0.8,
         to: 0,
-        dur: 300,
+        dur: 250,
         easing: "easeOutQuad"
       });
       
-      // Light flash
+      // Brief light flash — low intensity so it doesn't white-out
       const light = document.createElement("a-light");
       light.setAttribute("type", "point");
       light.setAttribute("color", "#ff4400");
-      light.setAttribute("intensity", 5);
-      light.setAttribute("distance", 20);
+      light.setAttribute("intensity", 1.5);
+      light.setAttribute("distance", 8);
       light.setAttribute("animation", {
         property: "intensity",
         to: 0,
-        dur: 200
+        dur: 150
       });
       
       explosion.appendChild(ring);
@@ -208,23 +208,8 @@ if (!AFRAME.components["enemy-brain"]) {
       hitSphere.setAttribute("visible", "false");
       hitSphere.setAttribute("class", "enemy-hitbox");
       
-      // Engine glow
-      const engine = document.createElement("a-sphere");
-      engine.setAttribute("radius", 0.3);
-      engine.setAttribute("color", "#00ffff");
-      engine.setAttribute("position", "0 0 1");
-      engine.setAttribute("shader", "flat");
-      engine.setAttribute("animation", {
-        property: "scale",
-        to: "1.2 1.2 1.2",
-        dir: "alternate",
-        dur: 200,
-        loop: true
-      });
-      
       container.appendChild(model);
       container.appendChild(hitSphere);
-      container.appendChild(engine);
       this.el.appendChild(container);
       
       this.modelContainer = container;
