@@ -20,7 +20,7 @@ if (!AFRAME.components["rocket-projectile"]) {
     },
 
     init() {
-      this.life = 2.0; // seconds
+      this.life = 4.0; // seconds — travels far enough to reach distant enemies
       // Read world direction from element dataset (set by shoot())
       const dx = parseFloat(this.el.dataset.dirX) || 0;
       const dy = parseFloat(this.el.dataset.dirY) || 0;
@@ -65,7 +65,7 @@ if (!AFRAME.components["rocket-projectile"]) {
       
       // Check collisions with enemies (swept check along travel path)
       const enemies = document.querySelectorAll("[enemy-brain]");
-      const HIT_RADIUS = 8.0;
+      const HIT_RADIUS = 15.0;
       
       for (const enemy of enemies) {
         const brain = enemy.components["enemy-brain"];
@@ -73,10 +73,11 @@ if (!AFRAME.components["rocket-projectile"]) {
         const enemyPos = enemy.object3D.position;
         
         const dist = pos.distanceTo(enemyPos);
-        const midPos = prevPos.clone().lerp(pos, 0.5);
-        const midDist = midPos.distanceTo(enemyPos);
+        const q1 = prevPos.clone().lerp(pos, 0.25);
+        const q2 = prevPos.clone().lerp(pos, 0.5);
+        const q3 = prevPos.clone().lerp(pos, 0.75);
         
-        if (dist < HIT_RADIUS || midDist < HIT_RADIUS) {
+        if (dist < HIT_RADIUS || q1.distanceTo(enemyPos) < HIT_RADIUS || q2.distanceTo(enemyPos) < HIT_RADIUS || q3.distanceTo(enemyPos) < HIT_RADIUS) {
           // Remove rocket
           if (this.el.parentNode) this.el.remove();
           // Kill enemy
@@ -107,9 +108,9 @@ if (!AFRAME.components["enemy-brain"]) {
       this.hoverOffset = Math.random() * Math.PI * 2;
       this.driftPhaseX = Math.random() * Math.PI * 2;
       this.driftPhaseZ = Math.random() * Math.PI * 2;
-      this.driftSpeedX = 0.8 + Math.random() * 1.2; // faster drift
-      this.driftSpeedY = 0.6 + Math.random() * 1.0;
-      this.driftSpeedZ = 0.8 + Math.random() * 1.2;
+      this.driftSpeedX = 0.3 + Math.random() * 0.4; // slower drift — easier to track
+      this.driftSpeedY = 0.2 + Math.random() * 0.3;
+      this.driftSpeedZ = 0.3 + Math.random() * 0.4;
       this.driftRangeX = 15 + Math.random() * 15;  // 15-30m left/right
       this.driftRangeY = 8 + Math.random() * 12;   // 8-20m up/down
       this.driftRangeZ = 15 + Math.random() * 15;  // 15-30m forward/back
