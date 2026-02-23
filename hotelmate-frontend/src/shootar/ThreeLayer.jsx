@@ -78,7 +78,7 @@ const ThreeLayer = forwardRef(function ThreeLayer({ gameEngine }, ref) {
 
     // --- Enemies (added to worldRoot, not scene directly) ---
     const enemyManager = new EnemyManager(worldRoot);
-    enemyManager.spawnAll(); // spawns with fallback primitives immediately
+    enemyManager.spawnAll(camera); // spawns with fallback primitives immediately
 
     // --- Load GLB enemy models (async) ---
     const gltfLoader = new GLTFLoader();
@@ -102,7 +102,7 @@ const ThreeLayer = forwardRef(function ThreeLayer({ gameEngine }, ref) {
       if (templates.length > 0) {
         enemyManager.setModelTemplates(templates);
         // Re-spawn with proper GLB meshes now that templates are ready
-        enemyManager.spawnAll();
+        enemyManager.spawnAll(camera);
       }
     });
 
@@ -210,10 +210,10 @@ const ThreeLayer = forwardRef(function ThreeLayer({ gameEngine }, ref) {
 
       // Game logic
       if (gameEngine.running) {
-        enemyManager.update();
+        enemyManager.update(camera);
 
-        // Damage check
-        const closeIds = enemyManager.getCloseEnemies();
+        // Damage check (camera-distance based, with spawn grace)
+        const closeIds = enemyManager.getCloseEnemies(camera);
         for (const id of closeIds) {
           gameEngine.takeDamage(id);
         }

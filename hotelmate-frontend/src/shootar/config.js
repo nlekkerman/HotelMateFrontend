@@ -12,29 +12,23 @@ const CONFIG = {
 
   // Enemy spawning
   MAX_ENEMIES_ACTIVE: 5,
-  SPAWN_RADIUS_MIN: 16,
-  SPAWN_RADIUS_MAX: 26,
-  SPAWN_MIN_DISTANCE: 10,
 
-  // CHANGE MEANING: height relative to eye (not ground)
-  ENEMY_HEIGHT_MIN: -0.2,   // slightly below eye ok
-  ENEMY_HEIGHT_MAX: 1.0,    // up to 1m above eye
-
-  // Enemy movement
-  APPROACH_SPEED: 0.35,           // meters per second toward player
-  DRIFT_AMPLITUDE: 0.0,           // disabled — replaced by step movement
-  DRIFT_SPEED: 0.0,               // disabled — replaced by step movement
-  STEP_INTERVAL: 2000,            // ms between sudden lateral steps
-  STEP_BEARING_DELTA: 0.35,       // max radians per step
-  STEP_HEIGHT_DELTA: 0.5,         // max height change per step (m)
-
-  // Enemies stop approaching at this distance (meters)
-  COMFORT_DISTANCE: 7,
+  // World-anchor system
+  ANCHOR_DISTANCE_MIN: 12,        // min distance in front of camera for anchor
+  ANCHOR_DISTANCE_MAX: 30,        // max distance in front of camera for anchor
+  ANCHOR_HORIZONTAL_SPREAD: 5,    // ±units horizontal offset from camera forward
+  ANCHOR_HEIGHT_MIN: 1.5,         // min height above camera.y for anchor
+  ANCHOR_HEIGHT_MAX: 4.0,         // max height above camera.y for anchor
+  ANCHOR_LERP_MIN: 0.04,          // min lerp smoothing factor per frame
+  ANCHOR_LERP_MAX: 0.08,          // max lerp smoothing factor per frame
+  ANCHOR_INTERVAL_MIN: 1200,      // min ms between anchor retargets
+  ANCHOR_INTERVAL_MAX: 2400,      // max ms between anchor retargets
+  SPAWN_DAMAGE_GRACE: 2000,       // ms after spawn before enemy can deal damage
 
   // Damage / game
   HIT_DISTANCE: 50,               // max raycast hit distance (meters)
   HIT_THRESHOLD: 1.2,             // radius around enemy center for a hit (m)
-  ENEMY_DAMAGE_DISTANCE: 8,       // damage zone starts here (must be > COMFORT_DISTANCE)
+  ENEMY_DAMAGE_DISTANCE: 8,       // 3D distance at which enemies deal damage
   DAMAGE_PER_HIT: 10,             // reduced — enemies stay in range longer
   SCORE_PER_KILL: 100,
   MAX_HEALTH: 100,
