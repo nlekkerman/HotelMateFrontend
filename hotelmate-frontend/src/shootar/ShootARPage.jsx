@@ -22,6 +22,8 @@ if (!AFRAME.components["rocket-projectile"]) {
 
     init() {
       this.life = 2.0; // seconds
+      // Default forward direction (overridden by shoot() via _worldDir)
+      this._worldDir = new THREE.Vector3(0, 0, -1);
       // Create rocket mesh
       const rocket = document.createElement("a-entity");
       
@@ -87,43 +89,48 @@ if (!AFRAME.components["rocket-projectile"]) {
       this.life -= dt;
       
       if (this.life <= 0) {
-        this.el.remove();
+        if (this.el.parentNode) this.el.remove();
         return;
       }
 
-      // Move forward
+      // Move forward using stored world direction
       const pos = this.el.object3D.position;
-      const dir = new THREE.Vector3(0, 0, -1);
-      dir.applyQuaternion(this.el.object3D.quaternion);
-      dir.multiplyScalar(this.data.speed * dt);
+      const moveVec = this._worldDir.clone().multiplyScalar(this.data.speed * dt);
+      const prevPos = pos.clone();
+      pos.add(moveVec);
       
-      pos.add(dir);
-      this.el.object3D.position.copy(pos);
-      
-      // Check collisions with enemies
+      // Check collisions with enemies (swept check along travel path)
       const enemies = document.querySelectorAll("[enemy-brain]");
-      const myPos = this.el.object3D.position;
+      const HIT_RADIUS = 3.0;
       
       for (const enemy of enemies) {
-        if (enemy.components["enemy-brain"].isDead) continue;
+        const brain = enemy.components["enemy-brain"];
+        if (!brain || brain.isDead) continue;
         const enemyPos = enemy.object3D.position;
-        const dist = myPos.distanceTo(enemyPos);
         
-        if (dist < 1.5) { // Hit radius
-          // Explosion effect
+        // Check current position
+        const dist = pos.distanceTo(enemyPos);
+        // Also check midpoint (prevents tunneling at high speed)
+        const midPos = prevPos.clone().lerp(pos, 0.5);
+        const midDist = midPos.distanceTo(enemyPos);
+        
+        if (dist < HIT_RADIUS || midDist < HIT_RADIUS) {
           this._explode(enemyPos);
-          // Kill enemy
-          enemy.components["enemy-brain"].die();
-          // Remove rocket
-          this.el.remove();
+          brain.die();
+          if (this.el.parentNode) this.el.remove();
           return;
         }
       }
     },
 
     _explode(pos) {
+      const scene = this.el.sceneEl;
+      if (!scene) return;
+      
       const explosion = document.createElement("a-entity");
-      explosion.setAttribute("position", pos);
+      explosion.setAttribute("position", {
+        x: pos.x, y: pos.y, z: pos.z
+      });
       
       // Shockwave ring
       const ring = document.createElement("a-ring");
@@ -159,9 +166,9 @@ if (!AFRAME.components["rocket-projectile"]) {
       
       explosion.appendChild(ring);
       explosion.appendChild(light);
-      this.el.sceneEl.appendChild(explosion);
+      scene.appendChild(explosion);
       
-      setTimeout(() => explosion.remove(), 350);
+      setTimeout(() => { if (explosion.parentNode) explosion.remove(); }, 350);
     }
   });
 }
@@ -442,50 +449,39 @@ export default function ShootARPage() {
 
   // SHOOT - Now fires a rocket projectile!
   const shoot = useCallback(() => {
+    if (gameOverRef.current) return;
     const cam = document.querySelector("[camera]");
-    if (!cam) return;
+    if (!cam || !cam.sceneEl) return;
 
-    // Create rocket at camera position
-    const rocket = document.createElement("a-entity");
-    
-    // Get camera world position and rotation
+    // Get camera world position and direction
     const camPos = new THREE.Vector3();
     const camQuat = new THREE.Quaternion();
     cam.object3D.getWorldPosition(camPos);
     cam.object3D.getWorldQuaternion(camQuat);
     
-    // Offset to right side of screen (like holding a rocket launcher)
-    const offset = new THREE.Vector3(0.3, -0.2, -0.5);
-    offset.applyQuaternion(camQuat);
+    // World-space forward direction from camera
+    const worldDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camQuat).normalize();
+    
+    // Spawn rocket slightly ahead + right of camera
+    const offset = new THREE.Vector3(0.3, -0.2, -0.5).applyQuaternion(camQuat);
     const spawnPos = camPos.clone().add(offset);
     
-    rocket.setAttribute("position", spawnPos);
-    rocket.setAttribute("rotation", {
-      x: cam.object3D.rotation.x * (180/Math.PI),
-      y: cam.object3D.rotation.y * (180/Math.PI),
-      z: cam.object3D.rotation.z * (180/Math.PI)
-    });
-    
-    rocket.setAttribute("rocket-projectile", {
-      speed: 80 // m/s
-    });
+    const rocket = document.createElement("a-entity");
+    rocket.setAttribute("position", { x: spawnPos.x, y: spawnPos.y, z: spawnPos.z });
+    rocket.setAttribute("rocket-projectile", { speed: 80 });
     
     cam.sceneEl.appendChild(rocket);
     
-    // Recoil animation on camera
-    cam.setAttribute("animation", {
-      property: "position",
-      to: {
-        x: camPos.x,
-        y: camPos.y - 0.05,
-        z: camPos.z
-      },
-      dur: 50,
-      dir: "alternate",
-      loop: 1
+    // Store world direction on the component so tick() uses it
+    // (must wait one frame for component to initialize)
+    requestAnimationFrame(() => {
+      const comp = rocket.components["rocket-projectile"];
+      if (comp) {
+        comp._worldDir = worldDir;
+      }
     });
     
-    // Screen flash
+    // Screen flash (muzzle effect)
     const flash = document.createElement("div");
     flash.style.cssText = `
       position: fixed; inset: 0; background: #ff6600; opacity: 0.3;
@@ -494,7 +490,7 @@ export default function ShootARPage() {
     document.body.appendChild(flash);
     setTimeout(() => {
       flash.style.opacity = "0";
-      setTimeout(() => flash.remove(), 100);
+      setTimeout(() => { if (flash.parentNode) flash.remove(); }, 100);
     }, 50);
     
   }, []);
