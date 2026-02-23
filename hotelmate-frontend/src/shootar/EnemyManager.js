@@ -14,12 +14,14 @@ function randomBetween(a, b) {
 }
 
 function createFallbackMesh(color) {
-  const geometry = new THREE.SphereGeometry(0.4, 16, 16);
+  // Realistic drone-sized sphere
+  const geometry = new THREE.SphereGeometry(CONFIG.ENEMY_HEIGHT / 2, 32, 32);
   const material = new THREE.MeshStandardMaterial({
     color,
+    metalness: 0.8,
+    roughness: 0.2,
     emissive: color,
-    emissiveIntensity: 0.3,
-    roughness: 0.5,
+    emissiveIntensity: 0.5,
   });
   return new THREE.Mesh(geometry, material);
 }
@@ -79,23 +81,41 @@ export default class EnemyManager {
     const id = this._idCounter++;
     const mesh = this._createMesh(id);
 
-    // Point along aim ray at spawn distance
-    const spawnDist = randomBetween(CONFIG.SPAWN_DISTANCE_MIN, CONFIG.SPAWN_DISTANCE_MAX);
-    const aimPoint = new THREE.Vector3()
-      .copy(raycaster.ray.origin)
-      .addScaledVector(raycaster.ray.direction, spawnDist);
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    const right   = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
 
-    // Slight offset so enemy doesn't appear exactly on crosshair
-    const off = CONFIG.SPAWN_OFFSET;
-    const offset = new THREE.Vector3(
-      randomBetween(-off, off),
-      randomBetween(-off / 2, off / 2),
-      randomBetween(-off, off)
+    // Distance based on room depth, not infinite
+    const distance = randomBetween(CONFIG.SPAWN_DISTANCE_MIN, CONFIG.SPAWN_DISTANCE_MAX);
+
+    // Horizontal spread within room width
+    const lateral = randomBetween(-CONFIG.ROOM_WIDTH / 2, CONFIG.ROOM_WIDTH / 2);
+
+    // Calculate position
+    const spawnPos = new THREE.Vector3()
+      .copy(camera.position)
+      .addScaledVector(forward, distance)
+      .addScaledVector(right, lateral);
+
+    // HEIGHT: Realistic room positions only
+    const floorY = Math.max(0, camera.position.y - CONFIG.PLAYER_EYE_HEIGHT);
+    spawnPos.y = floorY + randomBetween(
+      CONFIG.SPAWN_HEIGHT_MIN,       // 1m – table/couch level
+      CONFIG.SPAWN_HEIGHT_MAX        // 2.2m – below ceiling
     );
-    const spawnPos = aimPoint.add(offset);
 
-    // Absolute world-Y limits
-    spawnPos.y = Math.max(0.5, Math.min(8, spawnPos.y));
+    // CLAMP to room bounds
+    spawnPos.x = Math.max(-CONFIG.ROOM_WIDTH / 2, Math.min(CONFIG.ROOM_WIDTH / 2, spawnPos.x));
+    spawnPos.z = Math.max(
+      camera.position.z - CONFIG.ROOM_DEPTH / 2,
+      Math.min(camera.position.z + CONFIG.ROOM_DEPTH / 2, spawnPos.z)
+    );
+
+    // Ensure in front of camera
+    const toSpawn = new THREE.Vector3().subVectors(spawnPos, camera.position);
+    if (toSpawn.dot(forward) < 0) {
+      // Behind camera — flip to front
+      spawnPos.copy(camera.position).addScaledVector(forward, distance);
+    }
 
     const anchor = spawnPos.clone();
     const pos = spawnPos.clone();
@@ -155,6 +175,9 @@ export default class EnemyManager {
   update(camera, deltaTime) {
     this._camera = camera;
 
+    const floorY = Math.max(0, camera.position.y - CONFIG.PLAYER_EYE_HEIGHT);
+    const ceilingY = floorY + CONFIG.ROOM_HEIGHT;
+
     for (const enemy of this.enemies) {
       if (!enemy.alive) continue;
 
@@ -163,7 +186,8 @@ export default class EnemyManager {
       const distToPlayer = toPlayer.length();
 
       if (distToPlayer < CONFIG.MIN_PLAYER_DISTANCE) {
-        // Close enough — hover / orbit at minimum distance
+        // Close enough — hover in place, don't get closer
+        this._hoverInPlace(enemy, floorY, ceilingY);
         enemy.mesh.lookAt(camera.position);
         continue;
       }
@@ -175,12 +199,43 @@ export default class EnemyManager {
       enemy.pos.addScaledVector(toPlayer, moveDist);
       enemy.anchor.copy(enemy.pos); // keep anchor synced
 
+      // HARD FLOOR COLLISION — never clip through floor
+      if (enemy.pos.y < floorY + CONFIG.ENEMY_HEIGHT / 2) {
+        enemy.pos.y = floorY + CONFIG.ENEMY_HEIGHT / 2;
+      }
+
+      // CEILING COLLISION
+      if (enemy.pos.y > ceilingY - CONFIG.ENEMY_HEIGHT / 2) {
+        enemy.pos.y = ceilingY - CONFIG.ENEMY_HEIGHT / 2;
+      }
+
+      // WALL COLLISION — stay in room
+      enemy.pos.x = Math.max(-CONFIG.ROOM_WIDTH / 2, Math.min(CONFIG.ROOM_WIDTH / 2, enemy.pos.x));
+      enemy.pos.z = Math.max(
+        camera.position.z - CONFIG.ROOM_DEPTH,
+        Math.min(camera.position.z + 2, enemy.pos.z) // don't go behind
+      );
+
       enemy.mesh.position.copy(enemy.pos);
       enemy.mesh.lookAt(camera.position); // always face player
 
       // --- Visual flair ---
       enemy.mesh.rotation.z += 0.02; // slight roll while approaching
     }
+  }
+
+  /**
+   * Gentle bobbing hover when enemy is close enough to the player.
+   * Keeps enemy within floor/ceiling bounds.
+   */
+  _hoverInPlace(enemy, floorY, ceilingY) {
+    const time = Date.now() * 0.001;
+    const hoverY = Math.sin(time) * 0.1;
+    enemy.pos.y += hoverY * 0.01;
+
+    // Keep in bounds while hovering
+    enemy.pos.y = Math.max(floorY + 1, Math.min(ceilingY - 1, enemy.pos.y));
+    enemy.mesh.position.copy(enemy.pos);
   }
 
   /* ── queries ───────────────────────────────────────────── */
@@ -273,7 +328,17 @@ export default class EnemyManager {
     const spawnPos = new THREE.Vector3()
       .copy(raycaster.ray.origin)
       .addScaledVector(raycaster.ray.direction, spawnDist);
-    spawnPos.y = Math.max(0.5, Math.min(8, spawnPos.y));
+
+    // Room-constrained Y
+    const floorY = Math.max(0, this._camera.position.y - CONFIG.PLAYER_EYE_HEIGHT);
+    spawnPos.y = floorY + randomBetween(CONFIG.SPAWN_HEIGHT_MIN, CONFIG.SPAWN_HEIGHT_MAX);
+
+    // Clamp to room bounds
+    spawnPos.x = Math.max(-CONFIG.ROOM_WIDTH / 2, Math.min(CONFIG.ROOM_WIDTH / 2, spawnPos.x));
+    spawnPos.z = Math.max(
+      this._camera.position.z - CONFIG.ROOM_DEPTH / 2,
+      Math.min(this._camera.position.z + CONFIG.ROOM_DEPTH / 2, spawnPos.z)
+    );
 
     const anchor = spawnPos.clone();
     const pos = spawnPos.clone();
