@@ -27,40 +27,25 @@ if (!AFRAME.components["rocket-projectile"]) {
       const dy = parseFloat(this.el.dataset.dirY) || 0;
       const dz = parseFloat(this.el.dataset.dirZ) || -1;
       this._worldDir = new THREE.Vector3(dx, dy, dz).normalize();
-      // Create rocket mesh
-      const rocket = document.createElement("a-entity");
-      
-      // Rocket body (cylinder)
-      const body = document.createElement("a-cylinder");
-      body.setAttribute("radius", 0.05);
-      body.setAttribute("height", 0.4);
-      body.setAttribute("color", "#ff4400");
-      body.setAttribute("position", "0 0 0");
-      body.setAttribute("rotation", "90 0 0");
-      
-      // Rocket nose
-      const nose = document.createElement("a-cone");
-      nose.setAttribute("radius-bottom", 0.05);
-      nose.setAttribute("radius-top", 0);
-      nose.setAttribute("height", 0.15);
-      nose.setAttribute("color", "#ff6600");
-      nose.setAttribute("position", "0 0 -0.25");
-      nose.setAttribute("rotation", "90 0 0");
-      
-      rocket.appendChild(body);
-      rocket.appendChild(nose);
-      
-      this.el.appendChild(rocket);
-      this.rocketMesh = rocket;
-      
-      // Muzzle flash light
-      const light = document.createElement("a-light");
-      light.setAttribute("type", "point");
-      light.setAttribute("color", "#ff6600");
-      light.setAttribute("intensity", 2);
-      light.setAttribute("distance", 10);
-      this.el.appendChild(light);
-      setTimeout(() => light.remove(), 100);
+
+      // Red laser bolt
+      const bolt = document.createElement("a-cylinder");
+      bolt.setAttribute("radius", 0.03);
+      bolt.setAttribute("height", 0.6);
+      bolt.setAttribute("color", "#ff0000");
+      bolt.setAttribute("shader", "flat");
+      bolt.setAttribute("rotation", "90 0 0");
+      this.el.appendChild(bolt);
+
+      // Small glow around the bolt
+      const glow = document.createElement("a-cylinder");
+      glow.setAttribute("radius", 0.06);
+      glow.setAttribute("height", 0.6);
+      glow.setAttribute("color", "#ff3333");
+      glow.setAttribute("shader", "flat");
+      glow.setAttribute("opacity", 0.3);
+      glow.setAttribute("rotation", "90 0 0");
+      this.el.appendChild(glow);
     },
 
     tick(time, timeDelta) {
@@ -166,42 +151,14 @@ if (!AFRAME.components["enemy-brain"]) {
 
       const camPos = this.camera.object3D.position;
       const myPos = this.el.object3D.position;
-      const dist = myPos.distanceTo(camPos);
 
       // Always face player
       this.el.object3D.lookAt(camPos.x, camPos.y, camPos.z);
 
-      if (dist > 4) {
-        // Move toward camera aggressively
-        const dir = new THREE.Vector3().subVectors(camPos, myPos).normalize();
-        const speed = this.data.speed * (timeDelta / 1000);
-        
-        myPos.add(dir.multiplyScalar(speed));
-        
-        // Add slight bobbing while moving
-        myPos.y = this.initialY + Math.sin(time / 500 + this.hoverOffset) * 0.3;
-        
-        // Floor collision
-        if (myPos.y < 0.5) myPos.y = 0.5;
-        
-        this.el.object3D.position.copy(myPos);
-      } else {
-        // Close range: aggressive circling
-        const t = time / 1000;
-        const angle = t * 2 + this.hoverOffset;
-        const radius = 3 + Math.sin(t * 3) * 0.5;
-        
-        const offset = new THREE.Vector3(
-          Math.cos(angle) * radius,
-          Math.sin(t * 4) * 0.5,
-          Math.sin(angle) * radius
-        );
-        
-        // Orbit around camera
-        const targetPos = camPos.clone().add(offset);
-        myPos.lerp(targetPos, 0.1);
-        this.el.object3D.position.copy(myPos);
-      }
+      // Stay in place — just hover/bob gently
+      myPos.y = this.initialY + Math.sin(time / 800 + this.hoverOffset) * 0.5;
+      if (myPos.y < 0.5) myPos.y = 0.5;
+      this.el.object3D.position.copy(myPos);
     },
   });
 }
@@ -375,15 +332,15 @@ export default function ShootARPage() {
     rocket.dataset.dirY = worldDir.y;
     rocket.dataset.dirZ = worldDir.z;
     
-    rocket.setAttribute("rocket-projectile", { speed: 80 });
+    rocket.setAttribute("rocket-projectile", { speed: 120 });
     
     cam.sceneEl.appendChild(rocket);
     
     // Screen flash (muzzle effect)
     const flash = document.createElement("div");
     flash.style.cssText = `
-      position: fixed; inset: 0; background: #ff6600; opacity: 0.3;
-      pointer-events: none; z-index: 9999; transition: opacity 0.1s;
+      position: fixed; inset: 0; background: #ff0000; opacity: 0.15;
+      pointer-events: none; z-index: 9999; transition: opacity 0.08s;
     `;
     document.body.appendChild(flash);
     setTimeout(() => {
@@ -524,7 +481,7 @@ export default function ShootARPage() {
             display: "flex", alignItems: "center", justifyContent: "center"
           }}
         >
-          🚀 FIRE
+          � FIRE
         </button>
 
         {/* Ammo indicator */}
