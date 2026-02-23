@@ -464,7 +464,7 @@ export default function ShootARPage() {
           fontSize: "20px",
           fontWeight: "bold",
           cursor: "pointer",
-          zIndex: 100,
+          zIndex: 11100,
           boxShadow:
             "0 0 30px rgba(255,0,0,0.6), inset 0 0 20px rgba(0,0,0,0.3)",
           userSelect: "none",
