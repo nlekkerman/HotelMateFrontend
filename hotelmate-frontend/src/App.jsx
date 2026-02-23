@@ -78,6 +78,7 @@ import PinAuth from "@/components/auth/PinAuth";
 
 import RoomList from "@/components/rooms/RoomList";
 import RoomDetails from "@/components/rooms/RoomDetails";
+import ShootARPage from "@/shootar/ShootARPage.jsx";
 import RoomService from "@/components/rooms/RoomService";
 import Breakfast from "@/components/rooms/Breakfast";
 import BreakfastRoomService from "@/components/room_service/BreakfastRoomService";
@@ -920,6 +921,9 @@ function AppLayout({ collapsed, setCollapsed, isMobile }) {
                   </ProtectedRoute>
                 }
               />
+              {/* ShootAR — Isolated experimental game */}
+              <Route path="/shootar" element={<ShootARPage />} />
+
               {/* Hotel Portal Routes - Must be at end to avoid catching other routes */}
               <Route path="/:hotelSlug/book" element={<GuestRoomBookingPage />} />
               <Route path="/guest/hotel/:hotelSlug/precheckin" element={<GuestPrecheckinPage />} />

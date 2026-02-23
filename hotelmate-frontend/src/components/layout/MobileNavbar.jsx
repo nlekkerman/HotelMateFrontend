@@ -598,6 +598,20 @@ const MobileNavbar = () => {
                   );
                 })}
 
+                {/* ShootAR — experimental game */}
+                <li className="nav-item">
+                  <Link
+                    className={`nav-link ${
+                      location.pathname === "/shootar" ? "active" : ""
+                    } text-white`}
+                    to="/shootar"
+                    onClick={toggleNavbar}
+                  >
+                    <i className="bi bi-crosshair me-2" />
+                    ShootAR
+                  </Link>
+                </li>
+
                 <li className="nav-item">
                   <button
                     className="btn btn-link nav-link"
