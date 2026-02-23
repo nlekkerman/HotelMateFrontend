@@ -36,8 +36,12 @@ const ThreeLayer = forwardRef(function ThreeLayer({ gameEngine }, ref) {
 
       const hit = enemyManager.hitTest(raycaster);
       if (hit) {
+        // Hit existing enemy → destroy + score
         enemyManager.destroyEnemy(hit);
         gameEngine.addScore(CONFIG.SCORE_PER_KILL);
+      } else {
+        // Miss → spawn new enemy near aim point
+        enemyManager.spawnOnShoot(raycaster, camera);
       }
     },
   }));
@@ -78,7 +82,7 @@ const ThreeLayer = forwardRef(function ThreeLayer({ gameEngine }, ref) {
 
     // --- Enemies (added to worldRoot, not scene directly) ---
     const enemyManager = new EnemyManager(worldRoot);
-    enemyManager.spawnAll(camera); // spawns with fallback primitives immediately
+    // No initial spawn — enemies appear when the player shoots and misses
 
     // --- Load GLB enemy models (async) ---
     const gltfLoader = new GLTFLoader();
@@ -101,8 +105,6 @@ const ThreeLayer = forwardRef(function ThreeLayer({ gameEngine }, ref) {
       const templates = results.filter(Boolean);
       if (templates.length > 0) {
         enemyManager.setModelTemplates(templates);
-        // Re-spawn with proper GLB meshes now that templates are ready
-        enemyManager.spawnAll(camera);
       }
     });
 

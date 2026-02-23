@@ -1,8 +1,8 @@
 // ShootAR — EnemyManager
 // Spawns and manages enemy meshes in the Three.js scene.
-// True world-space static anchors: enemies spawn at fixed 360°
-// positions around the player and NEVER move. The player must
-// physically rotate the device to find them.
+// Spawn-on-shoot system: enemies appear near where the player fires,
+// then home directly toward the player at a constant speed.
+// Miss = spawn, Hit = destroy + score.
 
 import * as THREE from "three";
 import CONFIG from "./config.js";
@@ -11,27 +11,6 @@ import CONFIG from "./config.js";
 
 function randomBetween(a, b) {
   return a + Math.random() * (b - a);
-}
-
-/**
- * Compute a world-space anchor in a random 360° direction around the camera.
- * Used only at spawn / respawn — position is permanent after that.
- * @param {THREE.Camera} camera
- * @returns {THREE.Vector3}
- */
-function computeAnchor(camera) {
-  // Random direction on a full sphere around the player
-  const theta  = randomBetween(0, Math.PI * 2);   // horizontal 360°
-  const phi    = randomBetween(0, Math.PI);        // vertical 180°
-  const radius = randomBetween(CONFIG.ANCHOR_DISTANCE_MIN, CONFIG.ANCHOR_DISTANCE_MAX);
-
-  // Spherical → Cartesian (centred on camera)
-  const x = camera.position.x + radius * Math.sin(phi) * Math.cos(theta);
-  const y = camera.position.y + radius * Math.cos(phi) + randomBetween(-5, 5);
-  const z = camera.position.z + radius * Math.sin(phi) * Math.sin(theta);
-
-  // Floor at 0.5 m so enemies never clip underground
-  return new THREE.Vector3(x, Math.max(0.5, y), z);
 }
 
 function createFallbackMesh(color) {
@@ -67,7 +46,7 @@ export default class EnemyManager {
    */
   constructor(parentGroup) {
     this.parentGroup = parentGroup;
-    this.enemies = []; // { id, mesh, alive, pos, anchor, spawnTime }
+    this.enemies = []; // { id, mesh, alive, pos, anchor, spawnTime, speed }
     this._idCounter = 0;
     this._modelTemplates = []; // Object3D roots loaded from GLBs
   }
@@ -88,14 +67,54 @@ export default class EnemyManager {
   }
 
   /**
-   * Initial spawn up to MAX_ENEMIES_ACTIVE.
-   * @param {THREE.Camera} camera – needed to compute initial anchors
+   * Spawn enemy near the player's aim ray with a slight offset.
+   * Called when a shot misses all existing enemies.
+   * @param {THREE.Raycaster} raycaster – player's aim ray
+   * @param {THREE.Camera} camera – for distance reference
+   * @returns {Object|null} the spawned enemy record, or null
    */
-  spawnAll(camera) {
-    this.clear();
-    for (let i = 0; i < CONFIG.MAX_ENEMIES_ACTIVE; i++) {
-      this._spawnOne(camera);
-    }
+  spawnOnShoot(raycaster, camera) {
+    if (!this.canSpawn()) return null;
+
+    const id = this._idCounter++;
+    const mesh = this._createMesh(id);
+
+    // Point along aim ray at spawn distance
+    const spawnDist = randomBetween(CONFIG.SPAWN_DISTANCE_MIN, CONFIG.SPAWN_DISTANCE_MAX);
+    const aimPoint = new THREE.Vector3()
+      .copy(raycaster.ray.origin)
+      .addScaledVector(raycaster.ray.direction, spawnDist);
+
+    // Slight offset so enemy doesn't appear exactly on crosshair
+    const off = CONFIG.SPAWN_OFFSET;
+    const offset = new THREE.Vector3(
+      randomBetween(-off, off),
+      randomBetween(-off / 2, off / 2),
+      randomBetween(-off, off)
+    );
+    const spawnPos = aimPoint.add(offset);
+
+    // Absolute world-Y limits
+    spawnPos.y = Math.max(0.5, Math.min(8, spawnPos.y));
+
+    const anchor = spawnPos.clone();
+    const pos = spawnPos.clone();
+
+    mesh.position.copy(pos);
+    mesh.lookAt(camera.position); // face the player immediately
+    this.parentGroup.add(mesh);
+
+    const enemy = {
+      id,
+      mesh,
+      alive: true,
+      pos,             // THREE.Vector3 — authoritative world-space position
+      anchor,          // kept in sync with pos
+      spawnTime: Date.now(),
+      speed: randomBetween(CONFIG.ENEMY_SPEED_MIN, CONFIG.ENEMY_SPEED_MAX),
+    };
+    this.enemies.push(enemy);
+    return enemy;
   }
 
   _createMesh(enemyId) {
@@ -127,53 +146,40 @@ export default class EnemyManager {
     return root;
   }
 
-  _spawnOne(camera) {
-    if (!this.canSpawn()) return null;
-
-    const id = this._idCounter++;
-    const mesh = this._createMesh(id);
-
-    // Compute fixed world-space anchor (360° around player)
-    const anchor = computeAnchor(camera);
-    const pos = anchor.clone();
-
-    mesh.position.copy(pos);
-    this.parentGroup.add(mesh);
-
-    const enemy = {
-      id,
-      mesh,
-      alive: true,
-      pos,            // THREE.Vector3 — authoritative world-space position
-      anchor,         // THREE.Vector3 — fixed forever
-      spawnTime: Date.now(),
-    };
-    this.enemies.push(enemy);
-    return enemy;
-  }
-
-  /* ── per-frame update (static world-anchor system) ─────── */
+  /* ── per-frame update (homing movement) ────────────────── */
 
   /**
-   * @param {THREE.Camera} camera – stashed for async respawn only.
-   *   Enemies are NOT repositioned relative to the camera.
+   * @param {THREE.Camera} camera – target for homing movement
+   * @param {number} [deltaTime] – frame delta in seconds (defaults to ~60 fps)
    */
-  update(camera) {
-    this._camera = camera; // keep for respawn only
+  update(camera, deltaTime) {
+    this._camera = camera;
 
     for (const enemy of this.enemies) {
       if (!enemy.alive) continue;
 
-      // --- NO ANCHOR RETARGETING ---
-      // Enemy stays at its fixed world-space position forever.
+      // --- DIRECT HOMING TOWARD PLAYER ---
+      const toPlayer = new THREE.Vector3().subVectors(camera.position, enemy.pos);
+      const distToPlayer = toPlayer.length();
 
-      // Gentle settle toward anchor (only matters right after spawn)
-      enemy.pos.lerp(enemy.anchor, 0.02);
+      if (distToPlayer < CONFIG.MIN_PLAYER_DISTANCE) {
+        // Close enough — hover / orbit at minimum distance
+        enemy.mesh.lookAt(camera.position);
+        continue;
+      }
+
+      // Move toward player at constant speed
+      toPlayer.normalize();
+      const moveDist = enemy.speed * (deltaTime || 0.016);
+
+      enemy.pos.addScaledVector(toPlayer, moveDist);
+      enemy.anchor.copy(enemy.pos); // keep anchor synced
+
       enemy.mesh.position.copy(enemy.pos);
+      enemy.mesh.lookAt(camera.position); // always face player
 
-      // --- Visual flair rotation only ---
-      enemy.mesh.rotation.y += 0.01;
-      enemy.mesh.rotation.x += 0.005;
+      // --- Visual flair ---
+      enemy.mesh.rotation.z += 0.02; // slight roll while approaching
     }
   }
 
@@ -241,20 +247,38 @@ export default class EnemyManager {
   }
 
   /**
-   * Respawn needs a camera reference to compute the new anchor.
-   * We store the camera on the instance during update() so respawn
-   * can access it asynchronously.
+   * Recycle a destroyed enemy slot with a fresh spawn near the player's
+   * forward direction. Uses stashed camera reference.
    */
   _respawnSlot(oldEnemy) {
     if (!this.canSpawn()) return;
-    if (!this._camera) return; // safety — need camera for anchor
+    if (!this._camera) return;
+
+    // Build a raycaster pointing from camera center (forward)
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(new THREE.Vector2(0, 0), this._camera);
+
+    // Offset the direction randomly so respawns aren't dead-centre
+    const jitter = new THREE.Vector3(
+      randomBetween(-0.3, 0.3),
+      randomBetween(-0.15, 0.15),
+      randomBetween(-0.3, 0.3)
+    );
+    raycaster.ray.direction.add(jitter).normalize();
 
     const id = this._idCounter++;
     const mesh = this._createMesh(id);
 
-    const anchor = computeAnchor(this._camera); // new random 360° position
-    const pos = anchor.clone();
+    const spawnDist = randomBetween(CONFIG.SPAWN_DISTANCE_MIN, CONFIG.SPAWN_DISTANCE_MAX);
+    const spawnPos = new THREE.Vector3()
+      .copy(raycaster.ray.origin)
+      .addScaledVector(raycaster.ray.direction, spawnDist);
+    spawnPos.y = Math.max(0.5, Math.min(8, spawnPos.y));
+
+    const anchor = spawnPos.clone();
+    const pos = spawnPos.clone();
     mesh.position.copy(pos);
+    mesh.lookAt(this._camera.position);
     this.parentGroup.add(mesh);
 
     const entry = {
@@ -262,8 +286,9 @@ export default class EnemyManager {
       mesh,
       alive: true,
       pos,
-      anchor,          // fixed forever
+      anchor,
       spawnTime: Date.now(),
+      speed: randomBetween(CONFIG.ENEMY_SPEED_MIN, CONFIG.ENEMY_SPEED_MAX),
     };
 
     const idx = this.enemies.indexOf(oldEnemy);

@@ -11,13 +11,15 @@ const CONFIG = {
   PLAYER_EYE_HEIGHT: 1.65,
 
   // Enemy spawning
-  MAX_ENEMIES_ACTIVE: 5,
+  MAX_ENEMIES_ACTIVE: 6,
 
-  // World-anchor system (360° static placement)
-  ANCHOR_DISTANCE_MIN: 15,        // min spawn radius around player (m)
-  ANCHOR_DISTANCE_MAX: 60,        // max spawn radius — wider spread
-  ANCHOR_HEIGHT_MIN: -2,          // can spawn below camera
-  ANCHOR_HEIGHT_MAX: 8,           // can spawn above camera
+  // Spawn-on-shoot system
+  SPAWN_DISTANCE_MIN: 15,        // min distance along aim ray for spawn (m)
+  SPAWN_DISTANCE_MAX: 30,        // max distance along aim ray for spawn (m)
+  SPAWN_OFFSET: 4,               // ±m random offset from aim point
+  ENEMY_SPEED_MIN: 2,            // min homing speed (m/s)
+  ENEMY_SPEED_MAX: 5,            // max homing speed (m/s)
+  MIN_PLAYER_DISTANCE: 3,        // stop homing at this distance (m)
   SPAWN_DAMAGE_GRACE: 2000,       // ms after spawn before enemy can deal damage
 
   // Damage / game
