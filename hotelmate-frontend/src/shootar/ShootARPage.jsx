@@ -108,23 +108,25 @@ if (!AFRAME.components["rocket-projectile"]) {
         if (!brain || brain.isDead) continue;
         const enemyPos = enemy.object3D.position;
         
-        // Check current position
         const dist = pos.distanceTo(enemyPos);
-        // Also check midpoint (prevents tunneling at high speed)
         const midPos = prevPos.clone().lerp(pos, 0.5);
         const midDist = midPos.distanceTo(enemyPos);
         
         if (dist < HIT_RADIUS || midDist < HIT_RADIUS) {
-          this._explode(enemyPos);
-          brain.die();
+          // Cache sceneEl BEFORE any removal happens
+          const sceneEl = this.el.sceneEl;
+          // Remove rocket first
           if (this.el.parentNode) this.el.remove();
+          // Then explode (uses cached sceneEl)
+          this._explode(enemyPos, sceneEl);
+          // Then kill enemy
+          brain.die();
           return;
         }
       }
     },
 
-    _explode(pos) {
-      const scene = this.el.sceneEl;
+    _explode(pos, scene) {
       if (!scene) return;
       
       const explosion = document.createElement("a-entity");
@@ -219,34 +221,18 @@ if (!AFRAME.components["enemy-brain"]) {
       if (this.isDead) return;
       this.isDead = true;
       
-      // Explosion animation
-      this.el.setAttribute("animation", {
-        property: "scale",
-        to: "0.1 0.1 0.1",
-        dur: 200,
-        easing: "easeInBack"
-      });
-      
-      // Spin out
-      this.el.setAttribute("animation__spin", {
-        property: "rotation",
-        to: "360 360 360",
-        dur: 200,
-        easing: "linear"
-      });
-      
-      setTimeout(() => {
-        if (this.el.parentNode) {
-          this.el.parentNode.removeChild(this.el);
-        }
-        window.dispatchEvent(
-          new CustomEvent("enemy-died", { detail: this.data.id })
-        );
-      }, 200);
+      // Remove immediately — no heavy animations that stall the render loop
+      const id = this.data.id;
+      if (this.el.parentNode) {
+        this.el.parentNode.removeChild(this.el);
+      }
+      window.dispatchEvent(
+        new CustomEvent("enemy-died", { detail: id })
+      );
     },
 
     tick(time, timeDelta) {
-      if (this.isDead || !this.camera) return;
+      if (this.isDead || !this.camera || !this.el.parentNode) return;
 
       const camPos = this.camera.object3D.position;
       const myPos = this.el.object3D.position;
