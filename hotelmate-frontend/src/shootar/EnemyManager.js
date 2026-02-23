@@ -1,9 +1,8 @@
 // ShootAR — EnemyManager
-// Spawns, moves, and manages enemy meshes in the Three.js scene.
-// World-Anchor system: enemies hold persistent world-space positions
-// and glide toward periodically-retargeted anchors.
-// Camera rotation alone reveals/hides enemies — no per-frame
-// camera-relative repositioning.
+// Spawns and manages enemy meshes in the Three.js scene.
+// True world-space static anchors: enemies spawn at fixed 360°
+// positions around the player and NEVER move. The player must
+// physically rotate the device to find them.
 
 import * as THREE from "three";
 import CONFIG from "./config.js";
@@ -15,38 +14,24 @@ function randomBetween(a, b) {
 }
 
 /**
- * Compute a world-space anchor point in front of the given camera.
- * Use only for initial spawn / respawn, NOT for periodic retargeting.
+ * Compute a world-space anchor in a random 360° direction around the camera.
+ * Used only at spawn / respawn — position is permanent after that.
  * @param {THREE.Camera} camera
  * @returns {THREE.Vector3}
  */
 function computeAnchor(camera) {
-  // Camera forward direction (world-space)
-  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-  const right   = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+  // Random direction on a full sphere around the player
+  const theta  = randomBetween(0, Math.PI * 2);   // horizontal 360°
+  const phi    = randomBetween(0, Math.PI);        // vertical 180°
+  const radius = randomBetween(CONFIG.ANCHOR_DISTANCE_MIN, CONFIG.ANCHOR_DISTANCE_MAX);
 
-  const distance = randomBetween(CONFIG.ANCHOR_DISTANCE_MIN, CONFIG.ANCHOR_DISTANCE_MAX);
-  const lateral  = randomBetween(-CONFIG.ANCHOR_HORIZONTAL_SPREAD, CONFIG.ANCHOR_HORIZONTAL_SPREAD);
-  const height   = randomBetween(CONFIG.ANCHOR_HEIGHT_MIN, CONFIG.ANCHOR_HEIGHT_MAX);
+  // Spherical → Cartesian (centred on camera)
+  const x = camera.position.x + radius * Math.sin(phi) * Math.cos(theta);
+  const y = camera.position.y + radius * Math.cos(phi) + randomBetween(-5, 5);
+  const z = camera.position.z + radius * Math.sin(phi) * Math.sin(theta);
 
-  const anchor = new THREE.Vector3()
-    .copy(camera.position)
-    .addScaledVector(forward, distance)
-    .addScaledVector(right, lateral);
-
-  anchor.y = camera.position.y + height;
-  return anchor;
-}
-
-/**
- * Smoothly move an enemy toward its anchor.
- * @param {Object} enemy  – enemy record with .pos and .mesh
- * @param {number} deltaTime – frame delta in seconds (unused for lerp-style, but available)
- */
-function updateEnemyMovement(enemy) {
-  const lerpFactor = randomBetween(CONFIG.ANCHOR_LERP_MIN, CONFIG.ANCHOR_LERP_MAX);
-  enemy.pos.lerp(enemy.anchor, lerpFactor);
-  enemy.mesh.position.copy(enemy.pos);
+  // Floor at 0.5 m so enemies never clip underground
+  return new THREE.Vector3(x, Math.max(0.5, y), z);
 }
 
 function createFallbackMesh(color) {
@@ -82,7 +67,7 @@ export default class EnemyManager {
    */
   constructor(parentGroup) {
     this.parentGroup = parentGroup;
-    this.enemies = []; // { id, mesh, alive, pos, anchor, spawnTime, lastAnchorUpdate, anchorInterval, lerpFactor }
+    this.enemies = []; // { id, mesh, alive, pos, anchor, spawnTime }
     this._idCounter = 0;
     this._modelTemplates = []; // Object3D roots loaded from GLBs
   }
@@ -148,72 +133,45 @@ export default class EnemyManager {
     const id = this._idCounter++;
     const mesh = this._createMesh(id);
 
-    // Compute world-space anchor in front of camera
+    // Compute fixed world-space anchor (360° around player)
     const anchor = computeAnchor(camera);
-
-    // Enemy starts at anchor position
     const pos = anchor.clone();
+
     mesh.position.copy(pos);
     this.parentGroup.add(mesh);
 
-    const nowMs = Date.now();
     const enemy = {
       id,
       mesh,
       alive: true,
-      pos,                  // THREE.Vector3 — authoritative world-space position
-      anchor,               // THREE.Vector3 — current glide target
-      spawnTime: nowMs,
-      lastAnchorUpdate: nowMs,
-      anchorInterval: randomBetween(CONFIG.ANCHOR_INTERVAL_MIN, CONFIG.ANCHOR_INTERVAL_MAX),
+      pos,            // THREE.Vector3 — authoritative world-space position
+      anchor,         // THREE.Vector3 — fixed forever
+      spawnTime: Date.now(),
     };
     this.enemies.push(enemy);
     return enemy;
   }
 
-  /* ── per-frame update (world-anchor system) ────────────── */
+  /* ── per-frame update (static world-anchor system) ─────── */
 
   /**
-   * @param {THREE.Camera} camera – used only for anchor retargeting, NOT
-   *   for repositioning enemies relative to camera orientation.
+   * @param {THREE.Camera} camera – stashed for async respawn only.
+   *   Enemies are NOT repositioned relative to the camera.
    */
   update(camera) {
-    this._camera = camera; // stash for async respawn
-    const nowMs = Date.now();
+    this._camera = camera; // keep for respawn only
 
     for (const enemy of this.enemies) {
       if (!enemy.alive) continue;
 
-      // --- Anchor retarget (world-space drift, NOT camera-relative) ---
-      if (nowMs - enemy.lastAnchorUpdate >= enemy.anchorInterval) {
-        const driftRange = 10; // meters
-        enemy.anchor.x += randomBetween(-driftRange, driftRange);
-        enemy.anchor.y += randomBetween(-driftRange / 2, driftRange / 2);
-        enemy.anchor.z += randomBetween(-driftRange, driftRange);
+      // --- NO ANCHOR RETARGETING ---
+      // Enemy stays at its fixed world-space position forever.
 
-        // Clamp height relative to camera so enemies stay in a visible vertical band
-        const minY = camera.position.y + CONFIG.ANCHOR_HEIGHT_MIN;
-        const maxY = camera.position.y + CONFIG.ANCHOR_HEIGHT_MAX;
-        enemy.anchor.y = Math.max(minY, Math.min(maxY, enemy.anchor.y));
+      // Gentle settle toward anchor (only matters right after spawn)
+      enemy.pos.lerp(enemy.anchor, 0.02);
+      enemy.mesh.position.copy(enemy.pos);
 
-        // If enemy drifted too far from origin, respawn in front of camera
-        const maxRange = 60;
-        const origin = new THREE.Vector3(0, CONFIG.PLAYER_EYE_HEIGHT, 0);
-        if (enemy.anchor.distanceTo(origin) > maxRange) {
-          enemy.anchor.copy(computeAnchor(camera));
-        }
-
-        enemy.lastAnchorUpdate = nowMs;
-        enemy.anchorInterval = randomBetween(
-          CONFIG.ANCHOR_INTERVAL_MIN,
-          CONFIG.ANCHOR_INTERVAL_MAX
-        );
-      }
-
-      // --- Smooth glide toward anchor (no direct velocity toward player) ---
-      updateEnemyMovement(enemy);
-
-      // --- Visual flair rotation ---
+      // --- Visual flair rotation only ---
       enemy.mesh.rotation.y += 0.01;
       enemy.mesh.rotation.x += 0.005;
     }
@@ -294,24 +252,21 @@ export default class EnemyManager {
     const id = this._idCounter++;
     const mesh = this._createMesh(id);
 
-    const anchor = computeAnchor(this._camera);
+    const anchor = computeAnchor(this._camera); // new random 360° position
     const pos = anchor.clone();
     mesh.position.copy(pos);
     this.parentGroup.add(mesh);
 
-    const nowMs = Date.now();
-    const idx = this.enemies.indexOf(oldEnemy);
     const entry = {
       id,
       mesh,
       alive: true,
       pos,
-      anchor,
-      spawnTime: nowMs,
-      lastAnchorUpdate: nowMs,
-      anchorInterval: randomBetween(CONFIG.ANCHOR_INTERVAL_MIN, CONFIG.ANCHOR_INTERVAL_MAX),
+      anchor,          // fixed forever
+      spawnTime: Date.now(),
     };
 
+    const idx = this.enemies.indexOf(oldEnemy);
     if (idx !== -1) {
       this.enemies[idx] = entry;
     } else {

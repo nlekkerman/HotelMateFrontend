@@ -13,16 +13,11 @@ const CONFIG = {
   // Enemy spawning
   MAX_ENEMIES_ACTIVE: 5,
 
-  // World-anchor system
-  ANCHOR_DISTANCE_MIN: 120,        // min distance in front of camera for anchor
-  ANCHOR_DISTANCE_MAX: 100,        // max distance in front of camera for anchor
-  ANCHOR_HORIZONTAL_SPREAD: 5,    // ±units horizontal offset from camera forward
-  ANCHOR_HEIGHT_MIN: 1.5,         // min height above camera.y for anchor
-  ANCHOR_HEIGHT_MAX: 4.0,         // max height above camera.y for anchor
-  ANCHOR_LERP_MIN: 0.04,          // min lerp smoothing factor per frame
-  ANCHOR_LERP_MAX: 0.08,          // max lerp smoothing factor per frame
-  ANCHOR_INTERVAL_MIN: 1200,      // min ms between anchor retargets
-  ANCHOR_INTERVAL_MAX: 2400,      // max ms between anchor retargets
+  // World-anchor system (360° static placement)
+  ANCHOR_DISTANCE_MIN: 15,        // min spawn radius around player (m)
+  ANCHOR_DISTANCE_MAX: 60,        // max spawn radius — wider spread
+  ANCHOR_HEIGHT_MIN: -2,          // can spawn below camera
+  ANCHOR_HEIGHT_MAX: 8,           // can spawn above camera
   SPAWN_DAMAGE_GRACE: 2000,       // ms after spawn before enemy can deal damage
 
   // Damage / game
