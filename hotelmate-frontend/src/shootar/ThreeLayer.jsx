@@ -175,7 +175,7 @@ const ThreeLayer = forwardRef(function ThreeLayer({ gameEngine }, ref) {
 
       // Game logic
       if (gameEngine.running) {
-        enemyManager.update(frameCount);
+        enemyManager.update();
 
         // Damage check
         const closeIds = enemyManager.getCloseEnemies();

@@ -15,8 +15,11 @@ const CONFIG = {
 
   // Enemy movement
   APPROACH_SPEED: 0.02,       // units per frame toward player
-  DRIFT_AMPLITUDE: 0.03,      // lateral / vertical drift size
-  DRIFT_SPEED: 0.008,         // drift oscillation speed
+  DRIFT_AMPLITUDE: 0.0,       // disabled — replaced by step movement
+  DRIFT_SPEED: 0.0,           // disabled — replaced by step movement
+  STEP_INTERVAL: 2000,        // ms between sudden lateral steps
+  STEP_BEARING_DELTA: 0.35,   // max radians per step
+  STEP_HEIGHT_DELTA: 1.5,     // max height change per step
 
   // Damage / game
   HIT_DISTANCE: 100,          // max raycast hit distance

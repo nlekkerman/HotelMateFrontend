@@ -1,11 +1,16 @@
 // ShootAR — EnemyManager
 // Spawns, moves, and manages enemy meshes in the Three.js scene.
+// Movement: enemies hold position, then do a sudden lateral "step" every STEP_INTERVAL ms.
 
 import * as THREE from "three";
 import CONFIG from "./config.js";
 
 function randomBetween(a, b) {
   return a + Math.random() * (b - a);
+}
+
+function clamp(val, min, max) {
+  return Math.max(min, Math.min(max, val));
 }
 
 function createEnemyMesh(color) {
@@ -19,19 +24,18 @@ function createEnemyMesh(color) {
   return new THREE.Mesh(geometry, material);
 }
 
-function randomSpawnPosition() {
-  const angle = Math.random() * Math.PI * 2;
-  const radius = randomBetween(CONFIG.SPAWN_RADIUS_MIN, CONFIG.SPAWN_RADIUS_MAX);
-  const x = Math.cos(angle) * radius;
-  const z = Math.sin(angle) * radius;
-  const y = randomBetween(CONFIG.SPAWN_HEIGHT_MIN, CONFIG.SPAWN_HEIGHT_MAX);
-  return new THREE.Vector3(x, y, z);
+function positionFromPolar(bearing, radius, height) {
+  return new THREE.Vector3(
+    Math.cos(bearing) * radius,
+    height,
+    Math.sin(bearing) * radius
+  );
 }
 
 export default class EnemyManager {
   constructor(scene) {
     this.scene = scene;
-    this.enemies = []; // { id, mesh, alive, driftOffset }
+    this.enemies = []; // { id, mesh, alive, bearing, radius, height, nextStepAt, color }
     this._idCounter = 0;
   }
 
@@ -46,8 +50,12 @@ export default class EnemyManager {
     const color =
       CONFIG.ENEMY_COLORS[Math.floor(Math.random() * CONFIG.ENEMY_COLORS.length)];
     const mesh = createEnemyMesh(color);
-    const pos = randomSpawnPosition();
-    mesh.position.copy(pos);
+
+    const bearing = Math.random() * Math.PI * 2;
+    const radius = randomBetween(CONFIG.SPAWN_RADIUS_MIN, CONFIG.SPAWN_RADIUS_MAX);
+    const height = randomBetween(CONFIG.SPAWN_HEIGHT_MIN, CONFIG.SPAWN_HEIGHT_MAX);
+
+    mesh.position.copy(positionFromPolar(bearing, radius, height));
     this.scene.add(mesh);
 
     const id = this._idCounter++;
@@ -55,25 +63,42 @@ export default class EnemyManager {
       id,
       mesh,
       alive: true,
-      driftOffset: Math.random() * 1000,
+      bearing,
+      radius,
+      height,
+      nextStepAt: Date.now() + CONFIG.STEP_INTERVAL,
       color,
     });
   }
 
-  update(frameCount) {
-    const origin = new THREE.Vector3(0, 0, 0);
+  update() {
+    const now = Date.now();
 
     for (const enemy of this.enemies) {
       if (!enemy.alive) continue;
 
-      // Approach player (origin)
-      const dir = origin.clone().sub(enemy.mesh.position).normalize();
-      enemy.mesh.position.add(dir.multiplyScalar(CONFIG.APPROACH_SPEED));
+      // Approach player: shrink radius each frame
+      enemy.radius -= CONFIG.APPROACH_SPEED;
 
-      // Drift (hover)
-      const t = frameCount * CONFIG.DRIFT_SPEED + enemy.driftOffset;
-      enemy.mesh.position.x += Math.sin(t) * CONFIG.DRIFT_AMPLITUDE;
-      enemy.mesh.position.y += Math.cos(t * 1.3) * CONFIG.DRIFT_AMPLITUDE * 0.5;
+      // Sudden lateral step
+      if (now >= enemy.nextStepAt) {
+        enemy.bearing += randomBetween(
+          -CONFIG.STEP_BEARING_DELTA,
+          CONFIG.STEP_BEARING_DELTA
+        );
+        enemy.height = clamp(
+          enemy.height +
+            randomBetween(-CONFIG.STEP_HEIGHT_DELTA, CONFIG.STEP_HEIGHT_DELTA),
+          CONFIG.SPAWN_HEIGHT_MIN,
+          CONFIG.SPAWN_HEIGHT_MAX
+        );
+        enemy.nextStepAt = now + CONFIG.STEP_INTERVAL;
+      }
+
+      // Recompute world position from polar coords
+      enemy.mesh.position.copy(
+        positionFromPolar(enemy.bearing, enemy.radius, enemy.height)
+      );
 
       // Rotate for visual flair
       enemy.mesh.rotation.y += 0.01;
@@ -86,7 +111,7 @@ export default class EnemyManager {
     const close = [];
     for (const enemy of this.enemies) {
       if (!enemy.alive) continue;
-      if (enemy.mesh.position.length() < CONFIG.ENEMY_DAMAGE_DISTANCE) {
+      if (enemy.radius < CONFIG.ENEMY_DAMAGE_DISTANCE) {
         close.push(enemy.id);
       }
     }
@@ -123,14 +148,21 @@ export default class EnemyManager {
     const color =
       CONFIG.ENEMY_COLORS[Math.floor(Math.random() * CONFIG.ENEMY_COLORS.length)];
     const mesh = createEnemyMesh(color);
-    const pos = randomSpawnPosition();
-    mesh.position.copy(pos);
+
+    const bearing = Math.random() * Math.PI * 2;
+    const radius = randomBetween(CONFIG.SPAWN_RADIUS_MIN, CONFIG.SPAWN_RADIUS_MAX);
+    const height = randomBetween(CONFIG.SPAWN_HEIGHT_MIN, CONFIG.SPAWN_HEIGHT_MAX);
+
+    mesh.position.copy(positionFromPolar(bearing, radius, height));
     this.scene.add(mesh);
 
     enemy.mesh = mesh;
     enemy.alive = true;
     enemy.color = color;
-    enemy.driftOffset = Math.random() * 1000;
+    enemy.bearing = bearing;
+    enemy.radius = radius;
+    enemy.height = height;
+    enemy.nextStepAt = Date.now() + CONFIG.STEP_INTERVAL;
   }
 
   clear() {
