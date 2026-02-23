@@ -22,8 +22,11 @@ if (!AFRAME.components["rocket-projectile"]) {
 
     init() {
       this.life = 2.0; // seconds
-      // Default forward direction (overridden by shoot() via _worldDir)
-      this._worldDir = new THREE.Vector3(0, 0, -1);
+      // Read world direction from element dataset (set by shoot())
+      const dx = parseFloat(this.el.dataset.dirX) || 0;
+      const dy = parseFloat(this.el.dataset.dirY) || 0;
+      const dz = parseFloat(this.el.dataset.dirZ) || -1;
+      this._worldDir = new THREE.Vector3(dx, dy, dz).normalize();
       // Create rocket mesh
       const rocket = document.createElement("a-entity");
       
@@ -439,18 +442,15 @@ export default function ShootARPage() {
     
     const rocket = document.createElement("a-entity");
     rocket.setAttribute("position", { x: spawnPos.x, y: spawnPos.y, z: spawnPos.z });
+    
+    // Store direction on the element so the component can read it in init()
+    rocket.dataset.dirX = worldDir.x;
+    rocket.dataset.dirY = worldDir.y;
+    rocket.dataset.dirZ = worldDir.z;
+    
     rocket.setAttribute("rocket-projectile", { speed: 80 });
     
     cam.sceneEl.appendChild(rocket);
-    
-    // Store world direction on the component so tick() uses it
-    // (must wait one frame for component to initialize)
-    requestAnimationFrame(() => {
-      const comp = rocket.components["rocket-projectile"];
-      if (comp) {
-        comp._worldDir = worldDir;
-      }
-    });
     
     // Screen flash (muzzle effect)
     const flash = document.createElement("div");
