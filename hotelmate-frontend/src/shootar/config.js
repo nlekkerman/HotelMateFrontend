@@ -19,8 +19,8 @@ const CONFIG = {
   MAX_ENEMIES_ACTIVE: 6,
 
   // Spawn-on-shoot system — room-scale distances
-  SPAWN_DISTANCE_MIN: 4,          // not closer than 4m
-  SPAWN_DISTANCE_MAX: 8,          // not farther than 8m (room depth)
+  SPAWN_DISTANCE_MIN: 14,          // not closer than 4m
+  SPAWN_DISTANCE_MAX: 28,          // not farther than 8m (room depth)
   SPAWN_HEIGHT_MIN: 1.0,          // 1m above floor (table height)
   SPAWN_HEIGHT_MAX: 2.2,          // below ceiling
   SPAWN_OFFSET: 2,                // ±m random offset from aim point (tighter)
@@ -30,8 +30,8 @@ const CONFIG = {
   SPAWN_DAMAGE_GRACE: 2000,       // ms after spawn before enemy can deal damage
 
   // Enemy dimensions
-  ENEMY_MODEL_SCALE: 4.5,         // 2-3m wide objects (drone size)
-  ENEMY_HEIGHT: 2.8,              // 1.8m tall
+  ENEMY_MODEL_SCALE: 7.5,         // 2-3m wide objects (drone size)
+  ENEMY_HEIGHT: 3.8,              // 1.8m tall
 
   // Damage / game
   HIT_DISTANCE: 20,               // max raycast hit distance (room scale)
