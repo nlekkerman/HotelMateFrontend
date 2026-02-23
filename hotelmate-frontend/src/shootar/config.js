@@ -49,6 +49,7 @@ const CONFIG = {
   GLB_MODELS: [
     "/shootar/military_drone.glb",
     "/shootar/scific_drone_for_free.glb",
+    "/shootar/space_ship_low_poly.glb",
   ],
 
   // Colors for fallback primitive enemies
