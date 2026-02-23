@@ -102,18 +102,7 @@ if (!AFRAME.components["enemy-brain"]) {
     init() {
       this.camera = document.querySelector("[camera]");
       this.isDead = false;
-      this.initialY = this.el.getAttribute("position").y;
-      this.initialX = this.el.getAttribute("position").x;
-      this.initialZ = this.el.getAttribute("position").z;
       this.hoverOffset = Math.random() * Math.PI * 2;
-      this.driftPhaseX = Math.random() * Math.PI * 2;
-      this.driftPhaseZ = Math.random() * Math.PI * 2;
-      this.driftSpeedX = 0.3 + Math.random() * 0.4; // slower drift — easier to track
-      this.driftSpeedY = 0.2 + Math.random() * 0.3;
-      this.driftSpeedZ = 0.3 + Math.random() * 0.4;
-      this.driftRangeX = 15 + Math.random() * 15;  // 15-30m left/right
-      this.driftRangeY = 8 + Math.random() * 12;   // 8-20m up/down
-      this.driftRangeZ = 15 + Math.random() * 15;  // 15-30m forward/back
       
       // Create visual model immediately
       this._createVisuals();
@@ -145,8 +134,6 @@ if (!AFRAME.components["enemy-brain"]) {
       if (this.isDead) return;
       this.isDead = true;
       
-      // DON'T remove from DOM — React owns this element.
-      // Just hide it; React will unmount after state update.
       this.el.setAttribute("visible", false);
       this.el.object3D.position.set(0, -9999, 0);
       
@@ -161,16 +148,28 @@ if (!AFRAME.components["enemy-brain"]) {
 
       const camPos = this.camera.object3D.position;
       const myPos = this.el.object3D.position;
+      const dist = myPos.distanceTo(camPos);
 
       // Always face player
       this.el.object3D.lookAt(camPos.x, camPos.y, camPos.z);
 
-      // Drift left/right, up/down, forward/back using sine waves
-      const t = time / 1000;
-      myPos.x = this.initialX + Math.sin(t * this.driftSpeedX + this.driftPhaseX) * this.driftRangeX;
-      myPos.y = this.initialY + Math.sin(t * this.driftSpeedY + this.hoverOffset) * this.driftRangeY;
-      myPos.z = this.initialZ + Math.sin(t * this.driftSpeedZ + this.driftPhaseZ) * this.driftRangeZ;
+      // Kamikaze: if close enough, hit the player and die
+      if (dist < 5) {
+        // Deal 10 HP damage to player
+        window.dispatchEvent(new CustomEvent("enemy-hit-player", { detail: 10 }));
+        this.die();
+        return;
+      }
+
+      // Move toward player
+      const dir = new THREE.Vector3().subVectors(camPos, myPos).normalize();
+      const speed = this.data.speed * (timeDelta / 1000);
+      myPos.add(dir.multiplyScalar(speed));
+
+      // Slight bobbing while flying in
+      myPos.y += Math.sin(time / 600 + this.hoverOffset) * 0.02;
       if (myPos.y < 0.5) myPos.y = 0.5;
+
       this.el.object3D.position.copy(myPos);
     },
   });
@@ -235,11 +234,11 @@ export default function ShootARPage() {
   const spawnEnemy = useCallback(() => {
     const id = `enemy-${enemyIdCounter.current++}`;
     const angle = Math.random() * Math.PI * 2;
-    const dist = 200 + Math.random() * 200; // 200-400m away
+    const dist = 400 + Math.random() * 300; // 400-700m away
     const x = Math.sin(angle) * dist;
     const z = Math.cos(angle) * dist;
     const y = 5 + Math.random() * 20; // 5-25m height
-    const speed = 10 + Math.random() * 8; // 10-18 m/s
+    const speed = 15 + Math.random() * 15; // 15-30 m/s
     setEnemies((prev) => [...prev, { id, x, y, z, speed }]);
   }, []);
 
@@ -272,7 +271,7 @@ export default function ShootARPage() {
         if (prev.length < 8) {
           const id = `enemy-${enemyIdCounter.current++}`;
           const angle = Math.random() * Math.PI * 2;
-          const dist = 200 + Math.random() * 200;
+          const dist = 400 + Math.random() * 300;
           return [
             ...prev,
             {
@@ -280,7 +279,7 @@ export default function ShootARPage() {
               x: Math.sin(angle) * dist,
               y: 5 + Math.random() * 20,
               z: Math.cos(angle) * dist,
-              speed: 10 + Math.random() * 8,
+              speed: 15 + Math.random() * 15,
             },
           ];
         }
@@ -288,32 +287,20 @@ export default function ShootARPage() {
       });
     }, 5000);
 
-    // Damage from close enemies
-    const damageInterval = setInterval(() => {
-      if (gameOverRef.current) return;
-      const enemyEls = document.querySelectorAll("[enemy-brain]");
-      const cam = document.querySelector("[camera]");
-      if (!cam) return;
-
-      let closeCount = 0;
-      enemyEls.forEach((el) => {
-        if (el.components["enemy-brain"]?.isDead) return;
-        if (el.object3D.position.distanceTo(cam.object3D.position) < 5)
-          closeCount++;
+    // Listen for kamikaze hits (enemy reaches player)
+    const onEnemyHitPlayer = (e) => {
+      const dmg = e.detail || 10;
+      setHealth((h) => {
+        const next = Math.max(0, h - dmg);
+        if (next <= 0) setGameOver(true);
+        return next;
       });
-
-      if (closeCount > 0) {
-        setHealth((h) => {
-          const next = Math.max(0, h - closeCount * 8);
-          if (next <= 0) setGameOver(true);
-          return next;
-        });
-      }
-    }, 1000);
+    };
+    window.addEventListener("enemy-hit-player", onEnemyHitPlayer);
 
     return () => {
       window.removeEventListener("enemy-died", onEnemyDied);
-      clearInterval(damageInterval);
+      window.removeEventListener("enemy-hit-player", onEnemyHitPlayer);
       clearInterval(spawnInterval);
     };
   }, [gameKey, destroyEnemy, spawnEnemy]);
