@@ -14,8 +14,8 @@ const CONFIG = {
   MAX_ENEMIES_ACTIVE: 5,
 
   // World-anchor system
-  ANCHOR_DISTANCE_MIN: 12,        // min distance in front of camera for anchor
-  ANCHOR_DISTANCE_MAX: 30,        // max distance in front of camera for anchor
+  ANCHOR_DISTANCE_MIN: 120,        // min distance in front of camera for anchor
+  ANCHOR_DISTANCE_MAX: 100,        // max distance in front of camera for anchor
   ANCHOR_HORIZONTAL_SPREAD: 5,    // ±units horizontal offset from camera forward
   ANCHOR_HEIGHT_MIN: 1.5,         // min height above camera.y for anchor
   ANCHOR_HEIGHT_MAX: 4.0,         // max height above camera.y for anchor
