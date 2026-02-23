@@ -16,6 +16,7 @@ function randomBetween(a, b) {
 
 /**
  * Compute a world-space anchor point in front of the given camera.
+ * Use only for initial spawn / respawn, NOT for periodic retargeting.
  * @param {THREE.Camera} camera
  * @returns {THREE.Vector3}
  */
@@ -183,9 +184,23 @@ export default class EnemyManager {
     for (const enemy of this.enemies) {
       if (!enemy.alive) continue;
 
-      // --- Anchor retarget ---
+      // --- Anchor retarget (world-space drift, NOT camera-relative) ---
       if (nowMs - enemy.lastAnchorUpdate >= enemy.anchorInterval) {
-        enemy.anchor.copy(computeAnchor(camera));
+        const driftRange = 10; // meters
+        enemy.anchor.x += randomBetween(-driftRange, driftRange);
+        enemy.anchor.y += randomBetween(-driftRange / 2, driftRange / 2);
+        enemy.anchor.z += randomBetween(-driftRange, driftRange);
+
+        // Clamp height so enemies don't drift underground or too high
+        enemy.anchor.y = Math.max(CONFIG.ANCHOR_HEIGHT_MIN, Math.min(CONFIG.ANCHOR_HEIGHT_MAX + CONFIG.PLAYER_EYE_HEIGHT, enemy.anchor.y));
+
+        // If enemy drifted too far from origin, respawn in front of camera
+        const maxRange = 60;
+        const origin = new THREE.Vector3(0, CONFIG.PLAYER_EYE_HEIGHT, 0);
+        if (enemy.anchor.distanceTo(origin) > maxRange) {
+          enemy.anchor.copy(computeAnchor(camera));
+        }
+
         enemy.lastAnchorUpdate = nowMs;
         enemy.anchorInterval = randomBetween(
           CONFIG.ANCHOR_INTERVAL_MIN,
