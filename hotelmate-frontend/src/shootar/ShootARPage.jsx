@@ -65,7 +65,7 @@ if (!AFRAME.components["rocket-projectile"]) {
       
       // Check collisions with enemies (swept check along travel path)
       const enemies = document.querySelectorAll("[enemy-brain]");
-      const HIT_RADIUS = 3.0;
+      const HIT_RADIUS = 8.0;
       
       for (const enemy of enemies) {
         const brain = enemy.components["enemy-brain"];
