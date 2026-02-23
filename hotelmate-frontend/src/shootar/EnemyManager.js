@@ -191,8 +191,10 @@ export default class EnemyManager {
         enemy.anchor.y += randomBetween(-driftRange / 2, driftRange / 2);
         enemy.anchor.z += randomBetween(-driftRange, driftRange);
 
-        // Clamp height so enemies don't drift underground or too high
-        enemy.anchor.y = Math.max(CONFIG.ANCHOR_HEIGHT_MIN, Math.min(CONFIG.ANCHOR_HEIGHT_MAX + CONFIG.PLAYER_EYE_HEIGHT, enemy.anchor.y));
+        // Clamp height relative to camera so enemies stay in a visible vertical band
+        const minY = camera.position.y + CONFIG.ANCHOR_HEIGHT_MIN;
+        const maxY = camera.position.y + CONFIG.ANCHOR_HEIGHT_MAX;
+        enemy.anchor.y = Math.max(minY, Math.min(maxY, enemy.anchor.y));
 
         // If enemy drifted too far from origin, respawn in front of camera
         const maxRange = 60;
