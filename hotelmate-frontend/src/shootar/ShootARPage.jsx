@@ -107,12 +107,12 @@ if (!AFRAME.components["enemy-brain"]) {
       this.hoverOffset = Math.random() * Math.PI * 2;
       this.driftPhaseX = Math.random() * Math.PI * 2;
       this.driftPhaseZ = Math.random() * Math.PI * 2;
-      this.driftSpeedX = 0.4 + Math.random() * 0.6; // unique drift speed per axis
-      this.driftSpeedY = 0.3 + Math.random() * 0.5;
-      this.driftSpeedZ = 0.4 + Math.random() * 0.6;
-      this.driftRangeX = 3 + Math.random() * 5;  // how far it drifts left/right
-      this.driftRangeY = 2 + Math.random() * 4;  // how far it drifts up/down
-      this.driftRangeZ = 3 + Math.random() * 5;  // how far it drifts forward/back
+      this.driftSpeedX = 0.8 + Math.random() * 1.2; // faster drift
+      this.driftSpeedY = 0.6 + Math.random() * 1.0;
+      this.driftSpeedZ = 0.8 + Math.random() * 1.2;
+      this.driftRangeX = 15 + Math.random() * 15;  // 15-30m left/right
+      this.driftRangeY = 8 + Math.random() * 12;   // 8-20m up/down
+      this.driftRangeZ = 15 + Math.random() * 15;  // 15-30m forward/back
       
       // Create visual model immediately
       this._createVisuals();
@@ -125,11 +125,11 @@ if (!AFRAME.components["enemy-brain"]) {
       const modelPath = GLB_MODELS[Math.floor(Math.random() * GLB_MODELS.length)];
       const model = document.createElement("a-gltf-model");
       model.setAttribute("src", modelPath);
-      model.setAttribute("scale", "3.5 3.5 3.5");
+      model.setAttribute("scale", "1.5 1.5 1.5");
       
       // Hit sphere (invisible collision volume)
       const hitSphere = document.createElement("a-sphere");
-      hitSphere.setAttribute("radius", 2.0);
+      hitSphere.setAttribute("radius", 1.0);
       hitSphere.setAttribute("visible", "false");
       hitSphere.setAttribute("class", "enemy-hitbox");
       
@@ -234,10 +234,10 @@ export default function ShootARPage() {
   const spawnEnemy = useCallback(() => {
     const id = `enemy-${enemyIdCounter.current++}`;
     const angle = Math.random() * Math.PI * 2;
-    const dist = 100 + Math.random() * 100; // 100-200m away
+    const dist = 200 + Math.random() * 200; // 200-400m away
     const x = Math.sin(angle) * dist;
     const z = Math.cos(angle) * dist;
-    const y = 3 + Math.random() * 12; // 3-15m height
+    const y = 5 + Math.random() * 20; // 5-25m height
     const speed = 10 + Math.random() * 8; // 10-18 m/s
     setEnemies((prev) => [...prev, { id, x, y, z, speed }]);
   }, []);
@@ -271,13 +271,13 @@ export default function ShootARPage() {
         if (prev.length < 8) {
           const id = `enemy-${enemyIdCounter.current++}`;
           const angle = Math.random() * Math.PI * 2;
-          const dist = 100 + Math.random() * 100;
+          const dist = 200 + Math.random() * 200;
           return [
             ...prev,
             {
               id,
               x: Math.sin(angle) * dist,
-              y: 3 + Math.random() * 12,
+              y: 5 + Math.random() * 20,
               z: Math.cos(angle) * dist,
               speed: 10 + Math.random() * 8,
             },

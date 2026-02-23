@@ -30,8 +30,8 @@ const CONFIG = {
   SPAWN_DAMAGE_GRACE: 2000,        // ms after spawn before enemy can deal damage
 
   // Enemy dimensions — smaller, not giant
-  ENEMY_MODEL_SCALE: 5.5,          // ~1m wide drones
-  ENEMY_HEIGHT: 5.2,               // 1.2m tall
+  ENEMY_MODEL_SCALE:1.5,          // ~1m wide drones
+  ENEMY_HEIGHT: 1.2,               // 1.2m tall
 
   // Damage / game
   HIT_DISTANCE: 50,               // max raycast hit distance (50m range)
