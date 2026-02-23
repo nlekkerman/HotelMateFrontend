@@ -227,15 +227,33 @@ export default class EnemyManager {
   }
 
   /**
-   * Gentle bobbing hover when enemy is close enough to the player.
-   * Keeps enemy within floor/ceiling bounds.
+   * Orbit and spread when enemy is close enough to the player.
+   * Each enemy gets a unique orbit angle based on its id so they don't stack.
    */
   _hoverInPlace(enemy, floorY, ceilingY) {
     const time = Date.now() * 0.001;
-    const hoverY = Math.sin(time) * 0.1;
-    enemy.pos.y += hoverY * 0.01;
 
-    // Keep in bounds while hovering
+    // Unique orbit angle per enemy — spreads them around the player
+    const orbitSpeed = 0.3 + (enemy.id % 5) * 0.1; // slightly different speeds
+    const orbitAngle = time * orbitSpeed + (enemy.id * Math.PI * 2 / 6);
+    const orbitRadius = CONFIG.MIN_PLAYER_DISTANCE + (enemy.id % 3) * 3; // stagger radius
+
+    // Orbit around current center (camera-relative)
+    const cam = this._camera;
+    if (cam) {
+      const targetX = cam.position.x + Math.cos(orbitAngle) * orbitRadius;
+      const targetZ = cam.position.z + Math.sin(orbitAngle) * orbitRadius;
+
+      // Smoothly move toward orbit position
+      enemy.pos.x += (targetX - enemy.pos.x) * 0.02;
+      enemy.pos.z += (targetZ - enemy.pos.z) * 0.02;
+    }
+
+    // Gentle vertical bobbing
+    const hoverY = Math.sin(time * 1.5 + enemy.id) * 0.3;
+    enemy.pos.y += (hoverY + floorY + 2 - enemy.pos.y) * 0.02;
+
+    // Keep in bounds
     enemy.pos.y = Math.max(floorY + 1, Math.min(ceilingY - 1, enemy.pos.y));
     enemy.mesh.position.copy(enemy.pos);
   }

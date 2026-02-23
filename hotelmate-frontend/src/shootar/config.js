@@ -24,9 +24,9 @@ const CONFIG = {
   SPAWN_HEIGHT_MIN: 1.0,          // 1m above floor (table height)
   SPAWN_HEIGHT_MAX: 2.2,          // below ceiling
   SPAWN_OFFSET: 2,                // ±m random offset from aim point (tighter)
-  ENEMY_SPEED_MIN: 3,             // faster approach for longer distance
-  ENEMY_SPEED_MAX: 8,             // max 8 m/s
-  MIN_PLAYER_DISTANCE: 12,        // stop 12m away (not in face)
+  ENEMY_SPEED_MIN: 1,             // slow creeping approach
+  ENEMY_SPEED_MAX: 2.5,           // max 2.5 m/s (takes time to reach player)
+  MIN_PLAYER_DISTANCE: 15,        // stop 15m away (comfortable viewing)
   SPAWN_DAMAGE_GRACE: 2000,       // ms after spawn before enemy can deal damage
 
   // Enemy dimensions
