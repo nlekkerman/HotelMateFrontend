@@ -234,12 +234,15 @@ export default function ShootARPage() {
   const spawnEnemy = useCallback(() => {
     const id = `enemy-${enemyIdCounter.current++}`;
     const angle = Math.random() * Math.PI * 2;
-    const dist = 400 + Math.random() * 300; // 400-700m away
+    const dist = 500; // always spawn at 500m
     const x = Math.sin(angle) * dist;
     const z = Math.cos(angle) * dist;
     const y = 5 + Math.random() * 20; // 5-25m height
     const speed = 15 + Math.random() * 15; // 15-30 m/s
-    setEnemies((prev) => [...prev, { id, x, y, z, speed }]);
+    setEnemies((prev) => {
+      if (prev.length >= 5) return prev; // max 5 at a time
+      return [...prev, { id, x, y, z, speed }];
+    });
   }, []);
 
   const destroyEnemy = useCallback((id) => {
@@ -261,31 +264,8 @@ export default function ShootARPage() {
     };
     window.addEventListener("enemy-died", onEnemyDied);
 
-    // Initial wave
+    // Initial wave — exactly 5
     for (let i = 0; i < 5; i++) spawnEnemy();
-
-    // Spawn interval
-    const spawnInterval = setInterval(() => {
-      if (gameOverRef.current) return;
-      setEnemies((prev) => {
-        if (prev.length < 8) {
-          const id = `enemy-${enemyIdCounter.current++}`;
-          const angle = Math.random() * Math.PI * 2;
-          const dist = 400 + Math.random() * 300;
-          return [
-            ...prev,
-            {
-              id,
-              x: Math.sin(angle) * dist,
-              y: 5 + Math.random() * 20,
-              z: Math.cos(angle) * dist,
-              speed: 15 + Math.random() * 15,
-            },
-          ];
-        }
-        return prev;
-      });
-    }, 5000);
 
     // Listen for kamikaze hits (enemy reaches player)
     const onEnemyHitPlayer = (e) => {
@@ -301,7 +281,6 @@ export default function ShootARPage() {
     return () => {
       window.removeEventListener("enemy-died", onEnemyDied);
       window.removeEventListener("enemy-hit-player", onEnemyHitPlayer);
-      clearInterval(spawnInterval);
     };
   }, [gameKey, destroyEnemy, spawnEnemy]);
 
