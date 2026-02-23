@@ -103,6 +103,50 @@ if (!AFRAME.components["enemy-brain"]) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Register camera-background component ONCE                          */
+/* ------------------------------------------------------------------ */
+if (!AFRAME.components["camera-background"]) {
+  AFRAME.registerComponent("camera-background", {
+    init() {
+      this._video = document.createElement("video");
+      this._video.setAttribute("autoplay", "");
+      this._video.setAttribute("playsinline", "");
+      this._video.setAttribute("muted", "");
+      this._video.style.display = "none";
+      document.body.appendChild(this._video);
+
+      navigator.mediaDevices
+        .getUserMedia({ video: { facingMode: "environment" }, audio: false })
+        .then((stream) => {
+          this._stream = stream;
+          this._video.srcObject = stream;
+
+          const texture = new THREE.VideoTexture(this._video);
+          texture.minFilter = THREE.LinearFilter;
+          texture.magFilter = THREE.LinearFilter;
+          texture.format = THREE.RGBFormat;
+
+          this.el.sceneEl.object3D.background = texture;
+          console.log("[ShootAR] Camera feed attached to scene background");
+        })
+        .catch((err) => {
+          console.warn("[ShootAR] Camera failed, using black bg:", err);
+          this.el.sceneEl.object3D.background = new THREE.Color(0x000000);
+        });
+    },
+
+    remove() {
+      if (this._stream) {
+        this._stream.getTracks().forEach((t) => t.stop());
+      }
+      if (this._video && this._video.parentNode) {
+        this._video.parentNode.removeChild(this._video);
+      }
+    },
+  });
+}
+
+/* ------------------------------------------------------------------ */
 /*  React component                                                    */
 /* ------------------------------------------------------------------ */
 export default function ShootARPage() {
@@ -128,6 +172,27 @@ export default function ShootARPage() {
   const destroyEnemy = useCallback((id) => {
     setEnemies((prev) => prev.filter((e) => e.id !== id));
     setScore((s) => s + 100);
+  }, []);
+
+  /* ---- start fallback camera video behind A-Frame canvas ---- */
+  useEffect(() => {
+    let stream = null;
+    const video = document.getElementById("shootar-camera-fallback");
+    if (video) {
+      navigator.mediaDevices
+        .getUserMedia({ video: { facingMode: "environment" }, audio: false })
+        .then((s) => {
+          stream = s;
+          video.srcObject = stream;
+          console.log("[ShootAR] Fallback camera video started");
+        })
+        .catch((err) => {
+          console.warn("[ShootAR] Fallback camera failed:", err);
+        });
+    }
+    return () => {
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+    };
   }, []);
 
   /* ---- lifecycle ---- */
@@ -200,8 +265,12 @@ export default function ShootARPage() {
 
   /* ---- shooting ---- */
   const shoot = useCallback(() => {
+    console.log("[ShootAR] SHOOT clicked");
     const cam = document.querySelector("[camera]");
-    if (!cam) return;
+    if (!cam) {
+      console.error("[ShootAR] No camera entity found");
+      return;
+    }
 
     const raycaster = new THREE.Raycaster();
     const center = new THREE.Vector2(0, 0);
@@ -248,6 +317,23 @@ export default function ShootARPage() {
         overflow: "hidden",
       }}
     >
+      {/* ---- Device camera video fallback behind canvas ---- */}
+      <video
+        id="shootar-camera-fallback"
+        autoPlay
+        playsInline
+        muted
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          zIndex: 0,
+        }}
+      />
+
       {/* ---- A-Frame Scene ---- */}
       <a-scene
         ref={sceneRef}
@@ -255,6 +341,7 @@ export default function ShootARPage() {
         vr-mode-ui="enabled: false"
         renderer="antialias: true; alpha: true; colorManagement: true"
         background="color: transparent"
+        camera-background
       >
         {/* Pre-load GLB assets */}
         <a-assets>
@@ -309,8 +396,7 @@ export default function ShootARPage() {
           />
         ))}
 
-        {/* Transparent sky + invisible floor */}
-        <a-sky color="#000" opacity="0" />
+        {/* No sky — camera feed shows through transparent canvas */}
         <a-plane
           position="0 0 0"
           rotation="-90 0 0"
