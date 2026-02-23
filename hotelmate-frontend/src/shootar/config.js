@@ -21,15 +21,15 @@ const CONFIG = {
   ENEMY_HEIGHT_MAX: 1.0,    // up to 1m above eye
 
   // Enemy movement
-  APPROACH_SPEED: 0.5,            // meters per second toward player (slow)
+  APPROACH_SPEED: 0.35,           // meters per second toward player
   DRIFT_AMPLITUDE: 0.0,           // disabled — replaced by step movement
   DRIFT_SPEED: 0.0,               // disabled — replaced by step movement
   STEP_INTERVAL: 2000,            // ms between sudden lateral steps
   STEP_BEARING_DELTA: 0.35,       // max radians per step
   STEP_HEIGHT_DELTA: 0.5,         // max height change per step (m)
 
-  // Enemies stop approaching at this radius (so not inside you)
-  COMFORT_DISTANCE: 8,
+  // Enemies stop approaching at this distance (meters)
+  COMFORT_DISTANCE: 7,
 
   // Damage / game
   HIT_DISTANCE: 50,               // max raycast hit distance (meters)
