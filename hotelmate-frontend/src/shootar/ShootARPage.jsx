@@ -47,32 +47,8 @@ if (!AFRAME.components["rocket-projectile"]) {
       nose.setAttribute("position", "0 0 -0.25");
       nose.setAttribute("rotation", "90 0 0");
       
-      // Fire trail particles
-      const trail = document.createElement("a-entity");
-      trail.setAttribute("particle-system", {
-        preset: "dust",
-        color: "#ff4400,#ffff00,#ff0000",
-        particleCount: 20,
-        maxAge: 0.3,
-        maxParticleCount: 50,
-        velocityValue: "0 0 -5",
-        accelerationValue: "0 2 0",
-        opacity: 0.8,
-        blending: 1,
-        size: 0.1,
-      });
-
-      // Engine glow
-      const glow = document.createElement("a-sphere");
-      glow.setAttribute("radius", 0.08);
-      glow.setAttribute("color", "#ffff00");
-      glow.setAttribute("position", "0 0 0.2");
-      glow.setAttribute("shader", "flat");
-      
       rocket.appendChild(body);
       rocket.appendChild(nose);
-      rocket.appendChild(trail);
-      rocket.appendChild(glow);
       
       this.el.appendChild(rocket);
       this.rocketMesh = rocket;
@@ -88,6 +64,7 @@ if (!AFRAME.components["rocket-projectile"]) {
     },
 
     tick(time, timeDelta) {
+      if (!this.el.parentNode || !this.el.object3D) return;
       const dt = timeDelta / 1000;
       this.life -= dt;
       
@@ -173,18 +150,19 @@ if (!AFRAME.components["enemy-brain"]) {
       if (this.isDead) return;
       this.isDead = true;
       
-      // Remove immediately — no heavy animations that stall the render loop
+      // DON'T remove from DOM — React owns this element.
+      // Just hide it; React will unmount after state update.
+      this.el.setAttribute("visible", false);
+      this.el.object3D.position.set(0, -9999, 0);
+      
       const id = this.data.id;
-      if (this.el.parentNode) {
-        this.el.parentNode.removeChild(this.el);
-      }
       window.dispatchEvent(
         new CustomEvent("enemy-died", { detail: id })
       );
     },
 
     tick(time, timeDelta) {
-      if (this.isDead || !this.camera || !this.el.parentNode) return;
+      if (this.isDead || !this.camera || !this.el.parentNode || !this.el.object3D) return;
 
       const camPos = this.camera.object3D.position;
       const myPos = this.el.object3D.position;
@@ -475,9 +453,8 @@ export default function ShootARPage() {
                 position="0 0 -0.2" rotation="90 0 0"
                 radius="0.07" radius-tubular="0.01"
                 color="#00ffff" shader="flat"
-              >
-                <a-animation attribute="rotation" to="90 360 0" dur="1000" loop="true" easing="linear"/>
-              </a-torus>
+                animation="property: rotation; to: 90 360 0; dur: 1000; loop: true; easing: linear"
+              />
               <a-ring
                 position="0 0 -0.4" rotation="0 0 0"
                 radius-inner="0.05" radius-outer="0.08"
