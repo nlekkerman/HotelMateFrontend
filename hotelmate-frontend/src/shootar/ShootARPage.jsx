@@ -116,65 +116,14 @@ if (!AFRAME.components["rocket-projectile"]) {
         const midDist = midPos.distanceTo(enemyPos);
         
         if (dist < HIT_RADIUS || midDist < HIT_RADIUS) {
-          // Cache sceneEl BEFORE any removal happens
-          const sceneEl = this.el.sceneEl;
-          // Remove rocket first
+          // Remove rocket
           if (this.el.parentNode) this.el.remove();
-          // Then explode (uses cached sceneEl)
-          this._explode(enemyPos, sceneEl);
-          // Then kill enemy
+          // Kill enemy
           brain.die();
           return;
         }
       }
     },
-
-    _explode(pos, scene) {
-      if (!scene) return;
-      
-      const explosion = document.createElement("a-entity");
-      explosion.setAttribute("position", {
-        x: pos.x, y: pos.y, z: pos.z
-      });
-      
-      // Shockwave ring — small & quick, won't wash out the screen
-      const ring = document.createElement("a-ring");
-      ring.setAttribute("radius-inner", 0.1);
-      ring.setAttribute("radius-outer", 0.2);
-      ring.setAttribute("color", "#ff6600");
-      ring.setAttribute("shader", "flat");
-      ring.setAttribute("animation", {
-        property: "scale",
-        to: "3 3 3",
-        dur: 250,
-        easing: "easeOutQuad"
-      });
-      ring.setAttribute("animation__fade", {
-        property: "material.opacity",
-        from: 0.8,
-        to: 0,
-        dur: 250,
-        easing: "easeOutQuad"
-      });
-      
-      // Brief light flash — low intensity so it doesn't white-out
-      const light = document.createElement("a-light");
-      light.setAttribute("type", "point");
-      light.setAttribute("color", "#ff4400");
-      light.setAttribute("intensity", 1.5);
-      light.setAttribute("distance", 8);
-      light.setAttribute("animation", {
-        property: "intensity",
-        to: 0,
-        dur: 150
-      });
-      
-      explosion.appendChild(ring);
-      explosion.appendChild(light);
-      scene.appendChild(explosion);
-      
-      setTimeout(() => { if (explosion.parentNode) explosion.remove(); }, 350);
-    }
   });
 }
 

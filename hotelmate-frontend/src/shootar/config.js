@@ -19,8 +19,8 @@ const CONFIG = {
   MAX_ENEMIES_ACTIVE: 10,
 
   // Spawn distances — far away so enemies charge in
-  SPAWN_DISTANCE_MIN: 260,          // 60m minimum
-  SPAWN_DISTANCE_MAX: 340,         // up to 140m away
+  SPAWN_DISTANCE_MIN: 360,          // 60m minimum
+  SPAWN_DISTANCE_MAX: 740,         // up to 140m away
   SPAWN_HEIGHT_MIN: 0.5,           // near ground
   SPAWN_HEIGHT_MAX: 10,            // up in sky
   SPAWN_OFFSET: 2,                 // ±m random offset from aim point
@@ -30,8 +30,8 @@ const CONFIG = {
   SPAWN_DAMAGE_GRACE: 2000,        // ms after spawn before enemy can deal damage
 
   // Enemy dimensions — smaller, not giant
-  ENEMY_MODEL_SCALE: 3.5,          // ~1m wide drones
-  ENEMY_HEIGHT: 3.2,               // 1.2m tall
+  ENEMY_MODEL_SCALE: 5.5,          // ~1m wide drones
+  ENEMY_HEIGHT: 5.2,               // 1.2m tall
 
   // Damage / game
   HIT_DISTANCE: 50,               // max raycast hit distance (50m range)
