@@ -63,7 +63,7 @@ const ThreeLayer = forwardRef(function ThreeLayer({ gameEngine }, ref) {
       CONFIG.NEAR,
       CONFIG.FAR
     );
-    camera.position.set(0, 0, 0);
+    camera.position.set(0, CONFIG.PLAYER_EYE_HEIGHT ?? 1.65, 0);
 
     // --- Lighting ---
     const ambient = new THREE.AmbientLight(0xffffff, 0.6);

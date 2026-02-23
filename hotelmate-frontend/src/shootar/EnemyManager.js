@@ -33,11 +33,11 @@ function createFallbackMesh(color) {
  * Compute world position from horizontal polar coords + separate height.
  * bearing (θ) determines direction on XZ plane; y is hover height only.
  */
-function xzPosition(bearing, radius, height) {
+function xzPosition(bearing, radius, heightRelativeToEye) {
   return new THREE.Vector3(
-    Math.cos(bearing) * radius, // x = cos(θ) * r
-    height,                      // y = hover height (independent)
-    Math.sin(bearing) * radius   // z = sin(θ) * r
+    Math.cos(bearing) * radius,
+    CONFIG.PLAYER_EYE_HEIGHT + heightRelativeToEye, // ✅ eye-relative -> world y
+    Math.sin(bearing) * radius
   );
 }
 
@@ -161,7 +161,10 @@ export default class EnemyManager {
       if (!enemy.alive) continue;
 
       // Approach player on XZ plane only — shrink horizontal radius
-      enemy.radius = Math.max(0, enemy.radius - CONFIG.APPROACH_SPEED * dt);
+     enemy.radius = Math.max(
+  CONFIG.COMFORT_DISTANCE,
+  enemy.radius - CONFIG.APPROACH_SPEED * dt
+);
 
       // Sudden lateral step
       if (nowMs >= enemy.nextStepAt) {
