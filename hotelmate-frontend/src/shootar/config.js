@@ -9,8 +9,8 @@ const CONFIG = {
 
   // Enemy spawning
   MAX_ENEMIES_ACTIVE: 5,          // hard cap on alive enemies in the world
-  SPAWN_RADIUS_MIN: 10,           // meters — closest spawn distance from player
-  SPAWN_RADIUS_MAX: 18,           // meters — farthest spawn distance
+  SPAWN_RADIUS_MIN: 100,           // meters — closest spawn distance from player
+  SPAWN_RADIUS_MAX: 180 ,           // meters — farthest spawn distance
   SPAWN_MIN_DISTANCE: 3,          // meters — absolute minimum distance guard
   ENEMY_HEIGHT_MIN: 1,            // meters above ground
   ENEMY_HEIGHT_MAX: 3,            // meters above ground

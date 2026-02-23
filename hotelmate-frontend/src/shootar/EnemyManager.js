@@ -1,6 +1,8 @@
 // ShootAR — EnemyManager
 // Spawns, moves, and manages enemy meshes in the Three.js scene.
-// Movement: enemies approach slowly, then do a sudden lateral "step" every STEP_INTERVAL ms.
+// Spawning: 360° around player on the XZ (horizontal) plane only;
+//   y is set independently for hover height.
+// Movement: enemies approach on XZ only, with lateral "step" jitter.
 // Supports GLB model templates (cloned) with primitive-mesh fallback.
 
 import * as THREE from "three";
@@ -27,11 +29,15 @@ function createFallbackMesh(color) {
   return new THREE.Mesh(geometry, material);
 }
 
-function positionFromPolar(bearing, radius, height) {
+/**
+ * Compute world position from horizontal polar coords + separate height.
+ * bearing (θ) determines direction on XZ plane; y is hover height only.
+ */
+function xzPosition(bearing, radius, height) {
   return new THREE.Vector3(
-    Math.cos(bearing) * radius,
-    height,
-    Math.sin(bearing) * radius
+    Math.cos(bearing) * radius, // x = cos(θ) * r
+    height,                      // y = hover height (independent)
+    Math.sin(bearing) * radius   // z = sin(θ) * r
   );
 }
 
@@ -125,16 +131,17 @@ export default class EnemyManager {
     );
     const height = randomBetween(CONFIG.ENEMY_HEIGHT_MIN, CONFIG.ENEMY_HEIGHT_MAX);
 
-    mesh.position.copy(positionFromPolar(bearing, radius, height));
+    // Horizontal spawn: x,z from polar on XZ plane; y = hover height
+    mesh.position.copy(xzPosition(bearing, radius, height));
     this.scene.add(mesh);
 
     const enemy = {
       id,
       mesh,
       alive: true,
-      bearing,
-      radius,
-      height,
+      bearing,  // yaw angle θ on XZ plane
+      radius,   // XZ distance from origin
+      height,   // hover height (y), independent of XZ
       nextStepAt: Date.now() + CONFIG.STEP_INTERVAL,
     };
     this.enemies.push(enemy);
@@ -153,7 +160,7 @@ export default class EnemyManager {
     for (const enemy of this.enemies) {
       if (!enemy.alive) continue;
 
-      // Approach player — shrink radius at APPROACH_SPEED m/s
+      // Approach player on XZ plane only — shrink horizontal radius
       enemy.radius = Math.max(0, enemy.radius - CONFIG.APPROACH_SPEED * dt);
 
       // Sudden lateral step
@@ -178,9 +185,9 @@ export default class EnemyManager {
         CONFIG.ENEMY_HEIGHT_MAX
       );
 
-      // Recompute world position from polar coords
+      // Recompute world position: XZ from polar, y from hover height
       enemy.mesh.position.copy(
-        positionFromPolar(enemy.bearing, enemy.radius, enemy.height)
+        xzPosition(enemy.bearing, enemy.radius, enemy.height)
       );
 
       // Rotate for visual flair
@@ -191,12 +198,15 @@ export default class EnemyManager {
 
   /* ── queries ───────────────────────────────────────────── */
 
-  /** Returns ids of enemies closer than ENEMY_DAMAGE_DISTANCE. */
+  /** Returns ids of enemies whose XZ distance is below ENEMY_DAMAGE_DISTANCE. */
   getCloseEnemies() {
     const close = [];
     for (const enemy of this.enemies) {
       if (!enemy.alive) continue;
-      if (enemy.radius < CONFIG.ENEMY_DAMAGE_DISTANCE) {
+      // Use XZ distance only (ignore y) for damage proximity
+      const pos = enemy.mesh.position;
+      const xzDist = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
+      if (xzDist < CONFIG.ENEMY_DAMAGE_DISTANCE) {
         close.push(enemy.id);
       }
     }
@@ -256,7 +266,7 @@ export default class EnemyManager {
     );
     const height = randomBetween(CONFIG.ENEMY_HEIGHT_MIN, CONFIG.ENEMY_HEIGHT_MAX);
 
-    mesh.position.copy(positionFromPolar(bearing, radius, height));
+    mesh.position.copy(xzPosition(bearing, radius, height));
     this.scene.add(mesh);
 
     // Reuse array slot
