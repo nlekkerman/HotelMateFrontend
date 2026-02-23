@@ -154,8 +154,11 @@ export default function ShootARPage() {
   const [health, setHealth] = useState(100);
   const [gameOver, setGameOver] = useState(false);
   const [enemies, setEnemies] = useState([]);
+  const [gameKey, setGameKey] = useState(0); // increment to force full restart
   const sceneRef = useRef(null);
   const enemyIdCounter = useRef(0);
+  const gameOverRef = useRef(false); // mutable ref so intervals see latest value
+  gameOverRef.current = gameOver;
 
   /* ---- spawn / destroy helpers ---- */
   const spawnEnemy = useCallback(() => {
@@ -195,16 +198,23 @@ export default function ShootARPage() {
     };
   }, []);
 
-  /* ---- lifecycle ---- */
+  /* ---- lifecycle: runs on mount and on restart (gameKey change) ---- */
   useEffect(() => {
+    // Clean any leftover DOM enemies from previous round
+    document.querySelectorAll("[enemy-brain]").forEach((e) => e.remove());
+
     const onEnemyDied = (e) => {
       destroyEnemy(e.detail);
       // Respawn a replacement enemy after a short delay
-      setTimeout(() => spawnEnemy(), 1500);
+      if (!gameOverRef.current) {
+        setTimeout(() => {
+          if (!gameOverRef.current) spawnEnemy();
+        }, 1500);
+      }
     };
     window.addEventListener("enemy-died", onEnemyDied);
 
-    // Spawn initial wave of enemies on load
+    // Spawn initial wave of enemies on load / restart
     const INITIAL_ENEMY_COUNT = 5;
     for (let i = 0; i < INITIAL_ENEMY_COUNT; i++) {
       spawnEnemy();
@@ -213,7 +223,7 @@ export default function ShootARPage() {
     // Continuously spawn new enemies every few seconds (up to a max)
     const MAX_ENEMIES = 10;
     const spawnInterval = setInterval(() => {
-      if (gameOver) return;
+      if (gameOverRef.current) return;
       setEnemies((prev) => {
         if (prev.length < MAX_ENEMIES) {
           const id = `enemy-${enemyIdCounter.current++}`;
@@ -236,7 +246,7 @@ export default function ShootARPage() {
 
     // Damage tick — enemies within 6 m hurt the player
     const damageInterval = setInterval(() => {
-      if (gameOver) return;
+      if (gameOverRef.current) return;
       const enemyEls = document.querySelectorAll("[enemy-brain]");
       const cam = document.querySelector("[camera]");
       if (!cam) return;
@@ -261,7 +271,7 @@ export default function ShootARPage() {
       clearInterval(damageInterval);
       clearInterval(spawnInterval);
     };
-  }, [gameOver, destroyEnemy, spawnEnemy]);
+  }, [gameKey, destroyEnemy, spawnEnemy]); // gameKey, NOT gameOver
 
   /* ---- shooting ---- */
   const shoot = useCallback(() => {
@@ -298,11 +308,15 @@ export default function ShootARPage() {
 
   /* ---- restart ---- */
   const restart = useCallback(() => {
+    // Remove all enemy DOM nodes immediately
+    document.querySelectorAll("[enemy-brain]").forEach((e) => e.remove());
+    // Reset all state
     setScore(0);
     setHealth(100);
-    setGameOver(false);
     setEnemies([]);
-    document.querySelectorAll("[enemy-brain]").forEach((e) => e.remove());
+    setGameOver(false);
+    // Bump gameKey to re-trigger the lifecycle effect (fresh spawn wave)
+    setGameKey((k) => k + 1);
   }, []);
 
   /* ---------------------------------------------------------------- */

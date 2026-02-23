@@ -19,8 +19,8 @@ const CONFIG = {
   MAX_ENEMIES_ACTIVE: 6,
 
   // Spawn-on-shoot system — farther for large objects
-  SPAWN_DISTANCE_MIN: 15,         // minimum 15m away
-  SPAWN_DISTANCE_MAX: 40,         // up to 40m away
+  SPAWN_DISTANCE_MIN: 150,         // minimum 15m away
+  SPAWN_DISTANCE_MAX: 400,         // up to 40m away
   SPAWN_HEIGHT_MIN: 1.0,          // 1m above floor (table height)
   SPAWN_HEIGHT_MAX: 2.2,          // below ceiling
   SPAWN_OFFSET: 2,                // ±m random offset from aim point (tighter)
