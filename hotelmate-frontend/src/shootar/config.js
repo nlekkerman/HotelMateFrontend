@@ -19,8 +19,8 @@ const CONFIG = {
   MAX_ENEMIES_ACTIVE: 10,
 
   // Spawn distances — far away so enemies charge in
-  SPAWN_DISTANCE_MIN: 360,          // 60m minimum
-  SPAWN_DISTANCE_MAX: 740,         // up to 140m away
+  SPAWN_DISTANCE_MIN: 160,          // 60m minimum
+  SPAWN_DISTANCE_MAX: 440,         // up to 140m away
   SPAWN_HEIGHT_MIN: 0.5,           // near ground
   SPAWN_HEIGHT_MAX: 10,            // up in sky
   SPAWN_OFFSET: 2,                 // ±m random offset from aim point
@@ -47,8 +47,6 @@ const CONFIG = {
 
   // GLB model paths (served from public/)
   GLB_MODELS: [
-    "/shootar/military_drone.glb",
-    "/shootar/scific_drone_for_free.glb",
     "/shootar/space_ship_low_poly.glb",
   ],
 
