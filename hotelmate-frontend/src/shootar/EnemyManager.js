@@ -214,13 +214,9 @@ export default class EnemyManager {
         enemy.pos.y = ceilingY - CONFIG.ENEMY_HEIGHT / 2;
       }
 
-      // WALL COLLISION — stay in room
-      enemy.pos.x = Math.max(-CONFIG.ROOM_WIDTH / 2, Math.min(CONFIG.ROOM_WIDTH / 2, enemy.pos.x));
-      // Z: allow full room depth IN FRONT, never behind camera
-      enemy.pos.z = Math.max(
-        camera.position.z + 1,
-        Math.min(camera.position.z + CONFIG.ROOM_DEPTH, enemy.pos.z)
-      );
+      // Keep enemies from clipping through floor/ceiling (world Y is always valid)
+      // No X/Z world-space clamping — spawn positions are camera-relative
+      // and the camera can face any direction via gyroscope
 
       enemy.mesh.position.copy(enemy.pos);
       enemy.mesh.lookAt(camera.position); // always face player
