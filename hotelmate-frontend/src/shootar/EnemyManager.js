@@ -14,7 +14,7 @@ function clamp(val, min, max) {
 }
 
 function createEnemyMesh(color) {
-  const geometry = new THREE.SphereGeometry(1.2, 16, 16);
+  const geometry = new THREE.SphereGeometry(4, 16, 16);
   const material = new THREE.MeshStandardMaterial({
     color,
     emissive: color,

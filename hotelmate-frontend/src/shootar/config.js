@@ -7,11 +7,11 @@ const CONFIG = {
   FAR: 1000,
 
   // Enemy spawning
-  ENEMY_COUNT: 8,
-  SPAWN_RADIUS_MIN: 30,
-  SPAWN_RADIUS_MAX: 60,
-  SPAWN_HEIGHT_MIN: -5,
-  SPAWN_HEIGHT_MAX: 10,
+  ENEMY_COUNT: 4,
+  SPAWN_RADIUS_MIN: 80,
+  SPAWN_RADIUS_MAX: 150,
+  SPAWN_HEIGHT_MIN: 1,
+  SPAWN_HEIGHT_MAX: 5,
 
   // Enemy movement
   APPROACH_SPEED: 0.02,       // units per frame toward player
@@ -24,7 +24,7 @@ const CONFIG = {
   // Damage / game
   HIT_DISTANCE: 100,          // max raycast hit distance
   HIT_THRESHOLD: 1.8,         // radius around enemy center for a hit
-  ENEMY_DAMAGE_DISTANCE: 3,   // when enemy is this close → damage
+  ENEMY_DAMAGE_DISTANCE: 6,   // when enemy is this close → damage
   DAMAGE_PER_HIT: 20,
   SCORE_PER_KILL: 100,
   MAX_HEALTH: 100,
