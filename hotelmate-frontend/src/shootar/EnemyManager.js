@@ -6,6 +6,7 @@
 
 import * as THREE from "three";
 import CONFIG from "./config.js";
+import { debugLog, debugWarn } from "./DebugConsole.jsx";
 
 /* ── helpers ─────────────────────────────────────────────── */
 
@@ -76,7 +77,12 @@ export default class EnemyManager {
    * @returns {Object|null} the spawned enemy record, or null
    */
   spawnOnShoot(raycaster, camera) {
-    if (!this.canSpawn()) return null;
+    debugLog("SPAWN ATTEMPT", this.activeCount, "of", CONFIG.MAX_ENEMIES_ACTIVE);
+
+    if (!this.canSpawn()) {
+      debugLog("CANNOT SPAWN - MAX REACHED");
+      return null;
+    }
 
     const id = this._idCounter++;
     const mesh = this._createMesh(id);
@@ -113,9 +119,11 @@ export default class EnemyManager {
     // Ensure in front of camera
     const toSpawn = new THREE.Vector3().subVectors(spawnPos, camera.position);
     if (toSpawn.dot(forward) < 0) {
-      // Behind camera — flip to front
+      debugWarn("SPAWN BEHIND CAMERA — flipping to front");
       spawnPos.copy(camera.position).addScaledVector(forward, distance);
     }
+
+    debugLog("SPAWN POS:", spawnPos.x.toFixed(2), spawnPos.y.toFixed(2), spawnPos.z.toFixed(2));
 
     const anchor = spawnPos.clone();
     const pos = spawnPos.clone();
@@ -178,6 +186,15 @@ export default class EnemyManager {
     const floorY = Math.max(0, camera.position.y - CONFIG.PLAYER_EYE_HEIGHT);
     const ceilingY = floorY + CONFIG.ROOM_HEIGHT;
 
+    // Periodic debug log
+    if (Date.now() % 1000 < 50) {
+      debugLog("Enemies:", this.activeCount, "positions:",
+        this.enemies.filter(e => e.alive).map(e => ({
+          x: e.pos.x.toFixed(1), y: e.pos.y.toFixed(1), z: e.pos.z.toFixed(1)
+        }))
+      );
+    }
+
     for (const enemy of this.enemies) {
       if (!enemy.alive) continue;
 
@@ -212,8 +229,8 @@ export default class EnemyManager {
       // WALL COLLISION — stay in room
       enemy.pos.x = Math.max(-CONFIG.ROOM_WIDTH / 2, Math.min(CONFIG.ROOM_WIDTH / 2, enemy.pos.x));
       enemy.pos.z = Math.max(
-        camera.position.z - CONFIG.ROOM_DEPTH,
-        Math.min(camera.position.z + 2, enemy.pos.z) // don't go behind
+        camera.position.z - CONFIG.ROOM_DEPTH / 2,
+        Math.min(camera.position.z + CONFIG.ROOM_DEPTH / 2, enemy.pos.z)
       );
 
       enemy.mesh.position.copy(enemy.pos);

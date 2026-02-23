@@ -6,6 +6,7 @@ import CameraLayer from "./CameraLayer.jsx";
 import ThreeLayer from "./ThreeLayer.jsx";
 import HUD from "./HUD.jsx";
 import GameEngine from "./GameEngine.js";
+import DebugConsole from "./DebugConsole.jsx";
 
 const containerStyle = {
   position: "fixed",
@@ -68,6 +69,7 @@ export default function ShootARPage() {
         onShoot={handleShoot}
         onRestart={handleRestart}
       />
+      <DebugConsole />
     </div>
   );
 }
