@@ -510,180 +510,174 @@ export default function ShootARPage() {
   }, []);
 
   return (
-    <div style={{ width: "100vw", height: "100vh", position: "relative", overflow: "hidden" }}>
-      <video
-        id="shootar-camera-fallback"
-        autoPlay
-        playsInline
-        muted
-        style={{
-          position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-          objectFit: "cover", zIndex: 0
-        }}
-      />
+    <>
+      {/* ---- 3D LAYER: camera + A-Frame (z-index 1) ---- */}
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 1, overflow: "hidden"
+      }}>
+        <video
+          id="shootar-camera-fallback"
+          autoPlay
+          playsInline
+          muted
+          style={{
+            position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+            objectFit: "cover", zIndex: 0
+          }}
+        />
 
-      <a-scene
-        ref={sceneRef}
-        embedded
-        vr-mode-ui="enabled: false"
-        renderer="antialias: true; alpha: true; colorManagement: true"
-        background="color: transparent"
-        camera-background
-      >
-        <a-assets>
-          {GLB_MODELS.map((path, i) => (
-            <a-asset-item key={i} id={`model-${i}`} src={path} crossOrigin="anonymous" />
-          ))}
-        </a-assets>
-
-        {/* Camera with weapon sight */}
-        <a-entity
-          camera
-          look-controls="touchEnabled: true; magicWindowTrackingEnabled: true"
-          position="0 1.6 0"
-          wasd-controls="enabled: false"
+        <a-scene
+          ref={sceneRef}
+          embedded
+          vr-mode-ui="enabled: false"
+          renderer="antialias: true; alpha: true; colorManagement: true"
+          background="color: transparent"
+          camera-background
+          style={{ position: "absolute", inset: 0, zIndex: 1 }}
         >
-          {/* Rocket launcher sight - sci-fi style */}
-          <a-entity position="0.3 -0.2 -0.8">
-            {/* Main tube */}
-            <a-cylinder 
-              position="0 0 0" 
-              rotation="90 0 0"
-              radius="0.06" 
-              height="0.8" 
-              color="#444"
-              metalness="0.8"
-              roughness="0.2"
-            />
-            {/* Energy coils */}
-            <a-torus 
-              position="0 0 -0.2" 
-              rotation="90 0 0"
-              radius="0.07" 
-              radius-tubular="0.01"
-              color="#00ffff"
-              shader="flat"
-            >
-              <a-animation attribute="rotation" to="90 360 0" dur="1000" loop="true" easing="linear"/>
-            </a-torus>
-            {/* Muzzle */}
-            <a-ring 
-              position="0 0 -0.4" 
-              rotation="0 0 0"
-              radius-inner="0.05" 
-              radius-outer="0.08"
-              color="#ff6600"
-              shader="flat"
-            />
-          </a-entity>
-          
-          {/* Crosshair */}
-          <a-ring
-            position="0 0 -2"
-            radius-inner="0.015"
-            radius-outer="0.025"
-            color="#0f0"
-            shader="flat"
-            look-at="[camera]"
-          />
-          <a-circle position="0 0 -2" radius="0.003" color="#0f0" shader="flat" />
-          
-          {/* Range finder arcs */}
-          <a-torus position="0 0 -2" rotation="0 0 0" radius="0.08" radius-tubular="0.002" color="#0f0" arc="60" />
-          <a-torus position="0 0 -2" rotation="0 0 180" radius="0.08" radius-tubular="0.002" color="#0f0" arc="60" />
-        </a-entity>
+          <a-assets>
+            {GLB_MODELS.map((path, i) => (
+              <a-asset-item key={i} id={`model-${i}`} src={path} crossOrigin="anonymous" />
+            ))}
+          </a-assets>
 
-        <a-light type="ambient" intensity="0.4" />
-        <a-light type="directional" position="10 20 10" intensity="0.8" castShadow />
-
-        {enemies.map((enemy) => (
+          {/* Camera with weapon sight */}
           <a-entity
-            key={enemy.id}
-            id={enemy.id}
-            enemy-brain={`speed: ${enemy.speed}; id: ${enemy.id}`}
-            position={`${enemy.x} ${enemy.y} ${enemy.z}`}
-          />
-        ))}
-      </a-scene>
-
-      {/* HUD */}
-      <div style={{
-        position: "absolute", top: 0, left: 0, right: 0, padding: "20px",
-        display: "flex", justifyContent: "space-between", pointerEvents: "none", zIndex: 100
-      }}>
-        <div style={{ color: "#0f0", fontFamily: "monospace", fontSize: "28px", fontWeight: "bold", textShadow: "0 0 10px #0f0" }}>
-          SCORE: {score}
-        </div>
-        <div style={{ 
-          color: health < 30 ? "#f00" : "#0f0", 
-          fontFamily: "monospace", 
-          fontSize: "28px", 
-          fontWeight: "bold", 
-          textShadow: `0 0 10px ${health < 30 ? "#f00" : "#0f0"}` 
-        }}>
-          HP: {health}
-        </div>
-      </div>
-
-      {/* FIRE button with rocket icon */}
-      <button
-        onClick={shoot}
-        onTouchStart={(e) => { e.preventDefault(); shoot(); }}
-        style={{
-          position: "absolute", bottom: "40px", right: "40px",
-          width: "100px", height: "100px", borderRadius: "50%",
-          background: "radial-gradient(circle, #ff6600 0%, #cc3300 100%)",
-          border: "3px solid #fff", color: "#fff", fontSize: "16px",
-          fontWeight: "bold", cursor: "pointer", zIndex: 11100,
-          boxShadow: "0 0 40px rgba(255,100,0,0.8), inset 0 0 20px rgba(0,0,0,0.3)",
-          userSelect: "none", WebkitTapHighlightColor: "transparent",
-          display: "flex", alignItems: "center", justifyContent: "center"
-        }}
-      >
-        🚀 FIRE
-      </button>
-
-      {/* Ammo indicator */}
-      <div style={{
-        position: "absolute", bottom: "40px", right: "160px",
-        color: "#ff6600", fontFamily: "monospace", fontSize: "20px",
-        fontWeight: "bold", textShadow: "0 0 10px #ff6600", zIndex: 100
-      }}>
-        ∞
-      </div>
-
-      {/* Enemy count */}
-      <div style={{
-        position: "absolute", top: "80px", left: "20px",
-        color: "#0f0", fontFamily: "monospace", fontSize: "14px",
-        opacity: 0.7, pointerEvents: "none"
-      }}>
-        Threats: {enemies.length}
-      </div>
-
-      {gameOver && (
-        <div style={{
-          position: "absolute", inset: 0, background: "rgba(0,0,0,0.9)",
-          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 200
-        }}>
-          <div style={{ color: "#f00", fontSize: "64px", fontFamily: "monospace", fontWeight: "bold", textShadow: "0 0 20px #f00" }}>
-            GAME OVER
-          </div>
-          <div style={{ color: "#fff", fontSize: "32px", fontFamily: "monospace", marginBottom: "40px" }}>
-            Final Score: {score}
-          </div>
-          <button
-            onClick={restart}
-            style={{
-              padding: "20px 60px", fontSize: "28px", background: "#0f0",
-              color: "#000", border: "none", borderRadius: "10px",
-              cursor: "pointer", fontWeight: "bold", boxShadow: "0 0 20px #0f0"
-            }}
+            camera
+            look-controls="touchEnabled: true; magicWindowTrackingEnabled: true"
+            position="0 1.6 0"
+            wasd-controls="enabled: false"
           >
-            RESTART
-          </button>
+            {/* Rocket launcher sight */}
+            <a-entity position="0.3 -0.2 -0.8">
+              <a-cylinder
+                position="0 0 0" rotation="90 0 0"
+                radius="0.06" height="0.8" color="#444"
+                metalness="0.8" roughness="0.2"
+              />
+              <a-torus
+                position="0 0 -0.2" rotation="90 0 0"
+                radius="0.07" radius-tubular="0.01"
+                color="#00ffff" shader="flat"
+              >
+                <a-animation attribute="rotation" to="90 360 0" dur="1000" loop="true" easing="linear"/>
+              </a-torus>
+              <a-ring
+                position="0 0 -0.4" rotation="0 0 0"
+                radius-inner="0.05" radius-outer="0.08"
+                color="#ff6600" shader="flat"
+              />
+            </a-entity>
+
+            {/* Crosshair */}
+            <a-ring position="0 0 -2" radius-inner="0.015" radius-outer="0.025" color="#0f0" shader="flat" />
+            <a-circle position="0 0 -2" radius="0.003" color="#0f0" shader="flat" />
+
+            {/* Range finder arcs */}
+            <a-torus position="0 0 -2" rotation="0 0 0" radius="0.08" radius-tubular="0.002" color="#0f0" arc="60" />
+            <a-torus position="0 0 -2" rotation="0 0 180" radius="0.08" radius-tubular="0.002" color="#0f0" arc="60" />
+          </a-entity>
+
+          <a-light type="ambient" intensity="0.4" />
+          <a-light type="directional" position="10 20 10" intensity="0.8" castShadow />
+
+          {enemies.map((enemy) => (
+            <a-entity
+              key={enemy.id}
+              id={enemy.id}
+              enemy-brain={`speed: ${enemy.speed}; id: ${enemy.id}`}
+              position={`${enemy.x} ${enemy.y} ${enemy.z}`}
+            />
+          ))}
+        </a-scene>
+      </div>
+
+      {/* ---- UI LAYER: HUD + buttons (z-index 10, above A-Frame) ---- */}
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 10,
+        pointerEvents: "none" /* let touches pass through to 3D except on UI elements */
+      }}>
+        {/* HUD — score & health */}
+        <div style={{
+          position: "absolute", top: 0, left: 0, right: 0, padding: "20px",
+          display: "flex", justifyContent: "space-between"
+        }}>
+          <div style={{ color: "#0f0", fontFamily: "monospace", fontSize: "28px", fontWeight: "bold", textShadow: "0 0 10px #0f0" }}>
+            SCORE: {score}
+          </div>
+          <div style={{
+            color: health < 30 ? "#f00" : "#0f0",
+            fontFamily: "monospace", fontSize: "28px", fontWeight: "bold",
+            textShadow: `0 0 10px ${health < 30 ? "#f00" : "#0f0"}`
+          }}>
+            HP: {health}
+          </div>
         </div>
-      )}
-    </div>
+
+        {/* FIRE button — pointerEvents auto so it catches clicks */}
+        <button
+          onClick={shoot}
+          onTouchStart={(e) => { e.preventDefault(); shoot(); }}
+          style={{
+            position: "absolute", bottom: "40px", right: "40px",
+            width: "100px", height: "100px", borderRadius: "50%",
+            background: "radial-gradient(circle, #ff6600 0%, #cc3300 100%)",
+            border: "3px solid #fff", color: "#fff", fontSize: "16px",
+            fontWeight: "bold", cursor: "pointer",
+            pointerEvents: "auto",
+            touchAction: "manipulation",
+            boxShadow: "0 0 40px rgba(255,100,0,0.8), inset 0 0 20px rgba(0,0,0,0.3)",
+            userSelect: "none", WebkitTapHighlightColor: "transparent",
+            display: "flex", alignItems: "center", justifyContent: "center"
+          }}
+        >
+          🚀 FIRE
+        </button>
+
+        {/* Ammo indicator */}
+        <div style={{
+          position: "absolute", bottom: "40px", right: "160px",
+          color: "#ff6600", fontFamily: "monospace", fontSize: "20px",
+          fontWeight: "bold", textShadow: "0 0 10px #ff6600"
+        }}>
+          ∞
+        </div>
+
+        {/* Enemy count */}
+        <div style={{
+          position: "absolute", top: "80px", left: "20px",
+          color: "#0f0", fontFamily: "monospace", fontSize: "14px", opacity: 0.7
+        }}>
+          Threats: {enemies.length}
+        </div>
+
+        {/* Game Over overlay */}
+        {gameOver && (
+          <div style={{
+            position: "absolute", inset: 0, background: "rgba(0,0,0,0.9)",
+            display: "flex", flexDirection: "column", alignItems: "center",
+            justifyContent: "center", pointerEvents: "auto"
+          }}>
+            <div style={{ color: "#f00", fontSize: "64px", fontFamily: "monospace", fontWeight: "bold", textShadow: "0 0 20px #f00" }}>
+              GAME OVER
+            </div>
+            <div style={{ color: "#fff", fontSize: "32px", fontFamily: "monospace", marginBottom: "40px" }}>
+              Final Score: {score}
+            </div>
+            <button
+              onClick={restart}
+              style={{
+                padding: "20px 60px", fontSize: "28px", background: "#0f0",
+                color: "#000", border: "none", borderRadius: "10px",
+                cursor: "pointer", fontWeight: "bold", boxShadow: "0 0 20px #0f0",
+                pointerEvents: "auto", touchAction: "manipulation"
+              }}
+            >
+              RESTART
+            </button>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
