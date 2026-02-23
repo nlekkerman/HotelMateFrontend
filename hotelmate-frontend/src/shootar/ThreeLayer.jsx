@@ -205,13 +205,8 @@ const ThreeLayer = forwardRef(function ThreeLayer({ gameEngine }, ref) {
         camera.rotation.set(dragPitch, dragYaw, 0, "YXZ");
       }
 
-      // Anchor worldRoot: counter-rotate by camera yaw so enemies
-      // feel fixed in space when the phone turns horizontally.
-      const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-      forward.y = 0;
-      forward.normalize();
-      const yaw = Math.atan2(forward.x, -forward.z);
-      worldRoot.rotation.set(0, -yaw, 0);
+      // No worldRoot rotation needed — enemies are already in world-space
+      // coordinates. Turning the camera naturally reveals/hides them.
 
       // Game logic
       if (gameEngine.running) {
