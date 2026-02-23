@@ -103,6 +103,13 @@ if (!AFRAME.components["enemy-brain"]) {
       this.camera = document.querySelector("[camera]");
       this.isDead = false;
       this.hoverOffset = Math.random() * Math.PI * 2;
+      this.swingPhase = Math.random() * Math.PI * 2;
+      this.swingSpeedX = 1.5 + Math.random() * 1.5; // swing speed left/right
+      this.swingSpeedY = 1.0 + Math.random() * 1.5; // bob speed up/down
+      this.swingRangeX = 8 + Math.random() * 10;    // 8-18m swing left/right
+      this.swingRangeY = 4 + Math.random() * 8;     // 4-12m bob up/down
+      this.baseY = 0;
+      this.hasDealtDamage = false;
       
       // Create visual model immediately
       this._createVisuals();
@@ -155,10 +162,15 @@ if (!AFRAME.components["enemy-brain"]) {
 
       // Kamikaze: if close enough, hit the player and die
       if (dist < 5) {
-        // Deal 10 HP damage to player
         window.dispatchEvent(new CustomEvent("enemy-hit-player", { detail: 10 }));
         this.die();
         return;
+      }
+
+      // Take HP earlier — start dealing damage when within 50m
+      if (dist < 50 && !this.hasDealtDamage) {
+        this.hasDealtDamage = true;
+        window.dispatchEvent(new CustomEvent("enemy-hit-player", { detail: 10 }));
       }
 
       // Move toward player
@@ -166,8 +178,17 @@ if (!AFRAME.components["enemy-brain"]) {
       const speed = this.data.speed * (timeDelta / 1000);
       myPos.add(dir.multiplyScalar(speed));
 
-      // Slight bobbing while flying in
-      myPos.y += Math.sin(time / 600 + this.hoverOffset) * 0.02;
+      // Get a perpendicular axis for swinging left/right
+      const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+      const t = time / 1000;
+
+      // Swing left/right
+      const swingX = Math.sin(t * this.swingSpeedX + this.swingPhase) * this.swingRangeX;
+      myPos.add(right.multiplyScalar(swingX * (timeDelta / 1000)));
+
+      // Bob up/down
+      if (this.baseY === 0) this.baseY = myPos.y;
+      myPos.y = this.baseY + Math.sin(t * this.swingSpeedY + this.hoverOffset) * this.swingRangeY;
       if (myPos.y < 0.5) myPos.y = 0.5;
 
       this.el.object3D.position.copy(myPos);
