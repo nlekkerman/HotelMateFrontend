@@ -1,9 +1,11 @@
 // ShootAR — ThreeLayer
 // Transparent Three.js canvas overlay. Handles scene, camera, lighting,
 // enemy updates, shooting, and damage via a single rAF loop.
+// Loads GLB enemy models; falls back to primitive meshes while loading.
 
 import React, { useRef, useEffect, useImperativeHandle, forwardRef } from "react";
 import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import CONFIG from "./config.js";
 import EnemyManager from "./EnemyManager.js";
 
@@ -72,7 +74,33 @@ const ThreeLayer = forwardRef(function ThreeLayer({ gameEngine }, ref) {
 
     // --- Enemies ---
     const enemyManager = new EnemyManager(scene);
-    enemyManager.spawnAll();
+    enemyManager.spawnAll(); // spawns with fallback primitives immediately
+
+    // --- Load GLB enemy models (async) ---
+    const gltfLoader = new GLTFLoader();
+    const modelPromises = CONFIG.GLB_MODELS.map(
+      (url) =>
+        new Promise((resolve) => {
+          gltfLoader.load(
+            url,
+            (gltf) => resolve(gltf.scene),
+            undefined,
+            (err) => {
+              console.warn(`[ShootAR] Failed to load ${url}:`, err);
+              resolve(null); // don't reject — just skip this model
+            }
+          );
+        })
+    );
+
+    Promise.all(modelPromises).then((results) => {
+      const templates = results.filter(Boolean);
+      if (templates.length > 0) {
+        enemyManager.setModelTemplates(templates);
+        // Re-spawn with proper GLB meshes now that templates are ready
+        enemyManager.spawnAll();
+      }
+    });
 
     // --- Device orientation for camera rotation ---
     let deviceQuaternion = new THREE.Quaternion();
