@@ -125,11 +125,11 @@ if (!AFRAME.components["enemy-brain"]) {
       const modelPath = GLB_MODELS[Math.floor(Math.random() * GLB_MODELS.length)];
       const model = document.createElement("a-gltf-model");
       model.setAttribute("src", modelPath);
-      model.setAttribute("scale", "6 6 6");
+      model.setAttribute("scale", "3.5 3.5 3.5");
       
       // Hit sphere (invisible collision volume)
       const hitSphere = document.createElement("a-sphere");
-      hitSphere.setAttribute("radius", 3.5);
+      hitSphere.setAttribute("radius", 2.0);
       hitSphere.setAttribute("visible", "false");
       hitSphere.setAttribute("class", "enemy-hitbox");
       
@@ -234,10 +234,10 @@ export default function ShootARPage() {
   const spawnEnemy = useCallback(() => {
     const id = `enemy-${enemyIdCounter.current++}`;
     const angle = Math.random() * Math.PI * 2;
-    const dist = 60 + Math.random() * 80; // 60-140m away
+    const dist = 100 + Math.random() * 100; // 100-200m away
     const x = Math.sin(angle) * dist;
     const z = Math.cos(angle) * dist;
-    const y = 2 + Math.random() * 8; // 2-10m height
+    const y = 3 + Math.random() * 12; // 3-15m height
     const speed = 10 + Math.random() * 8; // 10-18 m/s
     setEnemies((prev) => [...prev, { id, x, y, z, speed }]);
   }, []);
@@ -271,13 +271,13 @@ export default function ShootARPage() {
         if (prev.length < 8) {
           const id = `enemy-${enemyIdCounter.current++}`;
           const angle = Math.random() * Math.PI * 2;
-          const dist = 60 + Math.random() * 80;
+          const dist = 100 + Math.random() * 100;
           return [
             ...prev,
             {
               id,
               x: Math.sin(angle) * dist,
-              y: 2 + Math.random() * 8,
+              y: 3 + Math.random() * 12,
               z: Math.cos(angle) * dist,
               speed: 10 + Math.random() * 8,
             },
