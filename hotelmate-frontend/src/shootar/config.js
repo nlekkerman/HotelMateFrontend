@@ -36,7 +36,7 @@ const CONFIG = {
 
   // GLB model paths (served from public/)
   GLB_MODELS: [
-    "/shootar/sci-fi_camera_drone.glb",
+    "/shootar/military_drone.glb",
     "/shootar/scific_drone_for_free.glb",
   ],
   ENEMY_MODEL_SCALE: 0.6,         // uniform scale applied to GLB clones
