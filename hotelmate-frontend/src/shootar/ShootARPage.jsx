@@ -132,8 +132,42 @@ export default function ShootARPage() {
 
   /* ---- lifecycle ---- */
   useEffect(() => {
-    const onEnemyDied = (e) => destroyEnemy(e.detail);
+    const onEnemyDied = (e) => {
+      destroyEnemy(e.detail);
+      // Respawn a replacement enemy after a short delay
+      setTimeout(() => spawnEnemy(), 1500);
+    };
     window.addEventListener("enemy-died", onEnemyDied);
+
+    // Spawn initial wave of enemies on load
+    const INITIAL_ENEMY_COUNT = 5;
+    for (let i = 0; i < INITIAL_ENEMY_COUNT; i++) {
+      spawnEnemy();
+    }
+
+    // Continuously spawn new enemies every few seconds (up to a max)
+    const MAX_ENEMIES = 10;
+    const spawnInterval = setInterval(() => {
+      if (gameOver) return;
+      setEnemies((prev) => {
+        if (prev.length < MAX_ENEMIES) {
+          const id = `enemy-${enemyIdCounter.current++}`;
+          const angle = Math.random() * Math.PI * 2;
+          const dist = 20 + Math.random() * 30;
+          return [
+            ...prev,
+            {
+              id,
+              x: Math.sin(angle) * dist,
+              y: 2 + Math.random() * 3,
+              z: Math.cos(angle) * dist,
+              speed: 2 + Math.random() * 4,
+            },
+          ];
+        }
+        return prev;
+      });
+    }, 4000);
 
     // Damage tick — enemies within 6 m hurt the player
     const damageInterval = setInterval(() => {
@@ -160,8 +194,9 @@ export default function ShootARPage() {
     return () => {
       window.removeEventListener("enemy-died", onEnemyDied);
       clearInterval(damageInterval);
+      clearInterval(spawnInterval);
     };
-  }, [gameOver, destroyEnemy]);
+  }, [gameOver, destroyEnemy, spawnEnemy]);
 
   /* ---- shooting ---- */
   const shoot = useCallback(() => {
@@ -187,14 +222,10 @@ export default function ShootARPage() {
         const comp = target.el.components["enemy-brain"];
         if (comp && !comp.isDead) {
           comp.die();
-          return;
         }
       }
     }
-
-    // Miss → spawn a new enemy
-    spawnEnemy();
-  }, [spawnEnemy]);
+  }, []);
 
   /* ---- restart ---- */
   const restart = useCallback(() => {
