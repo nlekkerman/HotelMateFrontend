@@ -321,6 +321,23 @@ if (!AFRAME.components["camera-background"]) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  LEVEL / PROGRESSION HELPERS                                       */
+/* ------------------------------------------------------------------ */
+const KILLS_PER_LEVEL = 5;
+
+function getMaxEnemiesForLevel(lvl) {
+  return Math.min(5 + (lvl - 1), 12);
+}
+
+function getSpawnDelayForLevel(lvl) {
+  return Math.max(2000 - 150 * (lvl - 1), 250);
+}
+
+function getSpeedMultiplierForLevel(lvl) {
+  return 1 + 0.08 * (lvl - 1);
+}
+
+/* ------------------------------------------------------------------ */
 /*  MAIN COMPONENT                                                    */
 /* ------------------------------------------------------------------ */
 export default function ShootARPage() {
@@ -340,7 +357,11 @@ export default function ShootARPage() {
   const shootIntervalRef = useRef(null);
   const startYawRef = useRef(0);
   const startPosRef = useRef(new THREE.Vector3(0, 0, 0));
+  const [level, setLevel] = useState(1);
+  const levelRef = useRef(1);
+  const killsTotalRef = useRef(0);
   gameOverRef.current = gameOver;
+  levelRef.current = level;
 
   // Snapshot camera heading + position at game start/reset
   const snapshotStartHeading = useCallback(() => {
@@ -375,10 +396,13 @@ export default function ShootARPage() {
     const z = basePos.z + zOff;
 
     const y = basePos.y + (-30 + Math.random() * 90); // -30 to +60m relative to camera (wide vertical spread)
-    const speed = 25 + Math.random() * 325; // 125-150 m/s (faster approach)
+    const lvl = levelRef.current;
+    const baseSpeed = 15 + Math.random() * 15; // 15-30 base speed
+    const speed = baseSpeed * getSpeedMultiplierForLevel(lvl);
 
+    const maxEnemies = getMaxEnemiesForLevel(lvl);
     setEnemies((prev) => {
-      if (prev.length >= 5) return prev;
+      if (prev.length >= maxEnemies) return prev;
       return [...prev, { id, x, y, z, speed }];
     });
   }, []);
@@ -420,14 +444,21 @@ export default function ShootARPage() {
     const onEnemyDied = (e) => {
       destroyEnemy(e.detail);
       if (!gameOverRef.current) {
-        // Spawn health pack every 5 kills
         killCounter.current++;
+        killsTotalRef.current++;
+        const nextLevel = Math.floor(killsTotalRef.current / KILLS_PER_LEVEL) + 1;
+        if (nextLevel !== levelRef.current) {
+          levelRef.current = nextLevel;
+          setLevel(nextLevel);
+        }
+        // Spawn health pack every 5 kills
         if (killCounter.current % 5 === 0) {
           spawnHealthPack();
         }
+        const delay = getSpawnDelayForLevel(levelRef.current);
         setTimeout(() => {
           if (!gameOverRef.current) spawnEnemy();
-        }, 3500); // slightly longer respawn delay
+        }, delay);
       }
     };
     window.addEventListener("enemy-died", onEnemyDied);
@@ -524,6 +555,9 @@ export default function ShootARPage() {
     setEnemies([]);
     setHealthPacks([]);
     killCounter.current = 0;
+    killsTotalRef.current = 0;
+    levelRef.current = 1;
+    setLevel(1);
     stopFiring();
     snapshotStartHeading();
     setGameOver(false);
@@ -643,6 +677,9 @@ export default function ShootARPage() {
         }}>
           <div style={{ color: "#0f0", fontFamily: "monospace", fontSize: "28px", fontWeight: "bold", textShadow: "0 0 10px #0f0" }}>
             SCORE: {score}
+          </div>
+          <div style={{ color: "#0f0", fontFamily: "monospace", fontSize: "28px", fontWeight: "bold", textShadow: "0 0 10px #0f0" }}>
+            LEVEL: {level}
           </div>
           <div style={{
             color: health < 30 ? "#f00" : "#0f0",
