@@ -85,6 +85,97 @@ if (!AFRAME.components["rocket-projectile"]) {
           return;
         }
       }
+
+      // Check collisions with health packs
+      const packs = document.querySelectorAll("[health-pack]");
+      const PACK_HIT_RADIUS = 10.0;
+      for (const pack of packs) {
+        const hp = pack.components["health-pack"];
+        if (!hp || hp.isDead) continue;
+        const packPos = pack.object3D.position;
+        if (pos.distanceTo(packPos) < PACK_HIT_RADIUS || q2.distanceTo(packPos) < PACK_HIT_RADIUS) {
+          if (this.el.parentNode) this.el.remove();
+          hp.die();
+          return;
+        }
+      }
+    },
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/*  HEALTH PACK COMPONENT — red cross, gives +10 HP when shot         */
+/* ------------------------------------------------------------------ */
+if (!AFRAME.components["health-pack"]) {
+  AFRAME.registerComponent("health-pack", {
+    schema: {
+      id: { type: "string" },
+    },
+
+    init() {
+      this.isDead = false;
+      this.hoverOffset = Math.random() * Math.PI * 2;
+      this.initialY = this.el.getAttribute("position").y;
+
+      // Build a red cross shape
+      const cross = document.createElement("a-entity");
+
+      // Vertical bar
+      const vBar = document.createElement("a-box");
+      vBar.setAttribute("width", 0.4);
+      vBar.setAttribute("height", 1.6);
+      vBar.setAttribute("depth", 0.2);
+      vBar.setAttribute("color", "#ff0000");
+      vBar.setAttribute("shader", "flat");
+
+      // Horizontal bar
+      const hBar = document.createElement("a-box");
+      hBar.setAttribute("width", 1.6);
+      hBar.setAttribute("height", 0.4);
+      hBar.setAttribute("depth", 0.2);
+      hBar.setAttribute("color", "#ff0000");
+      hBar.setAttribute("shader", "flat");
+
+      // White outline glow
+      const glow = document.createElement("a-box");
+      glow.setAttribute("width", 0.6);
+      glow.setAttribute("height", 1.8);
+      glow.setAttribute("depth", 0.1);
+      glow.setAttribute("color", "#ffffff");
+      glow.setAttribute("shader", "flat");
+      glow.setAttribute("opacity", 0.3);
+
+      const glow2 = document.createElement("a-box");
+      glow2.setAttribute("width", 1.8);
+      glow2.setAttribute("height", 0.6);
+      glow2.setAttribute("depth", 0.1);
+      glow2.setAttribute("color", "#ffffff");
+      glow2.setAttribute("shader", "flat");
+      glow2.setAttribute("opacity", 0.3);
+
+      cross.appendChild(glow);
+      cross.appendChild(glow2);
+      cross.appendChild(vBar);
+      cross.appendChild(hBar);
+      this.el.appendChild(cross);
+    },
+
+    die() {
+      if (this.isDead) return;
+      this.isDead = true;
+      this.el.setAttribute("visible", false);
+      this.el.object3D.position.set(0, -9999, 0);
+      window.dispatchEvent(
+        new CustomEvent("health-pack-collected", { detail: this.data.id })
+      );
+    },
+
+    tick(time) {
+      if (this.isDead || !this.el.parentNode || !this.el.object3D) return;
+      // Gentle spin + bob
+      const t = time / 1000;
+      this.el.object3D.rotation.y = t * 1.5;
+      this.el.object3D.position.y = this.initialY + Math.sin(t * 2 + this.hoverOffset) * 1.5;
     },
   });
 }
@@ -244,9 +335,11 @@ export default function ShootARPage() {
   const [health, setHealth] = useState(100);
   const [gameOver, setGameOver] = useState(false);
   const [enemies, setEnemies] = useState([]);
+  const [healthPacks, setHealthPacks] = useState([]);
   const [gameKey, setGameKey] = useState(0);
   const sceneRef = useRef(null);
   const enemyIdCounter = useRef(0);
+  const packIdCounter = useRef(0);
   const gameOverRef = useRef(false);
   const cameraRef = useRef(null);
   gameOverRef.current = gameOver;
@@ -263,6 +356,20 @@ export default function ShootARPage() {
     setEnemies((prev) => {
       if (prev.length >= 5) return prev; // max 5 at a time
       return [...prev, { id, x, y, z, speed }];
+    });
+  }, []);
+
+  // Spawn health pack at random position
+  const spawnHealthPack = useCallback(() => {
+    const id = `hp-${packIdCounter.current++}`;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 80 + Math.random() * 200; // 80-280m away (closer than enemies)
+    const x = Math.sin(angle) * dist;
+    const z = Math.cos(angle) * dist;
+    const y = 3 + Math.random() * 15;
+    setHealthPacks((prev) => {
+      if (prev.length >= 3) return prev; // max 3 health packs
+      return [...prev, { id, x, y, z }];
     });
   }, []);
 
@@ -288,6 +395,32 @@ export default function ShootARPage() {
     // Initial wave — exactly 5
     for (let i = 0; i < 5; i++) spawnEnemy();
 
+    // Spawn initial health packs
+    for (let i = 0; i < 2; i++) spawnHealthPack();
+
+    // Respawn health packs periodically
+    const hpSpawnInterval = setInterval(() => {
+      if (gameOverRef.current) return;
+      setHealthPacks((prev) => {
+        if (prev.length < 3) {
+          const id = `hp-${packIdCounter.current++}`;
+          const angle = Math.random() * Math.PI * 2;
+          const dist = 80 + Math.random() * 200;
+          return [...prev, { id, x: Math.sin(angle) * dist, y: 3 + Math.random() * 15, z: Math.cos(angle) * dist }];
+        }
+        return prev;
+      });
+    }, 10000);
+
+    // Listen for health pack collection
+    const onHealthPackCollected = (e) => {
+      const packId = e.detail;
+      setHealthPacks((prev) => prev.filter((p) => p.id !== packId));
+      setHealth((h) => Math.min(100, h + 10));
+      setScore((s) => s + 50);
+    };
+    window.addEventListener("health-pack-collected", onHealthPackCollected);
+
     // Listen for kamikaze hits (enemy reaches player)
     const onEnemyHitPlayer = (e) => {
       const dmg = e.detail || 10;
@@ -302,8 +435,10 @@ export default function ShootARPage() {
     return () => {
       window.removeEventListener("enemy-died", onEnemyDied);
       window.removeEventListener("enemy-hit-player", onEnemyHitPlayer);
+      window.removeEventListener("health-pack-collected", onHealthPackCollected);
+      clearInterval(hpSpawnInterval);
     };
-  }, [gameKey, destroyEnemy, spawnEnemy]);
+  }, [gameKey, destroyEnemy, spawnEnemy, spawnHealthPack]);
 
   // SHOOT - Now fires a rocket projectile!
   const shoot = useCallback(() => {
@@ -353,9 +488,11 @@ export default function ShootARPage() {
   const restart = useCallback(() => {
     document.querySelectorAll("[enemy-brain]").forEach((e) => e.remove());
     document.querySelectorAll("[rocket-projectile]").forEach((e) => e.remove());
+    document.querySelectorAll("[health-pack]").forEach((e) => e.remove());
     setScore(0);
     setHealth(100);
     setEnemies([]);
+    setHealthPacks([]);
     setGameOver(false);
     setGameKey((k) => k + 1);
   }, []);
@@ -437,6 +574,15 @@ export default function ShootARPage() {
               id={enemy.id}
               enemy-brain={`speed: ${enemy.speed}; id: ${enemy.id}`}
               position={`${enemy.x} ${enemy.y} ${enemy.z}`}
+            />
+          ))}
+
+          {healthPacks.map((pack) => (
+            <a-entity
+              key={pack.id}
+              id={pack.id}
+              health-pack={`id: ${pack.id}`}
+              position={`${pack.x} ${pack.y} ${pack.z}`}
             />
           ))}
         </a-scene>
