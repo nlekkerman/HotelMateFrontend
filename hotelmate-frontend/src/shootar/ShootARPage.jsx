@@ -70,7 +70,7 @@ if (!AFRAME.components["rocket-projectile"]) {
       
       // Check collisions with enemies (swept check along travel path)
       const enemies = document.querySelectorAll("[enemy-brain]");
-      const HIT_RADIUS = 20.0;
+      const HIT_RADIUS = 35.0;
       
       for (const enemy of enemies) {
         const brain = enemy.components["enemy-brain"];
@@ -175,10 +175,10 @@ if (!AFRAME.components["enemy-brain"]) {
       this.isDead = false;
       this.hoverOffset = Math.random() * Math.PI * 2;
       this.swingPhase = Math.random() * Math.PI * 2;
-      this.swingSpeedX = 2.5 + Math.random() * 2.0; // swing speed left/right (faster)
-      this.swingSpeedY = 1.5 + Math.random() * 2.0; // bob speed up/down (faster)
-      this.swingRangeX = 20 + Math.random() * 25;   // 20-45m swing left/right
-      this.swingRangeY = 10 + Math.random() * 18;   // 10-28m bob up/down
+      this.swingSpeedX = 4.0 + Math.random() * 3.0; // swing speed left/right (much faster)
+      this.swingSpeedY = 3.0 + Math.random() * 3.0; // bob speed up/down (much faster)
+      this.swingRangeX = 35 + Math.random() * 40;   // 35-75m swing left/right
+      this.swingRangeY = 25 + Math.random() * 30;   // 25-55m bob up/down
       this.baseY = null; // instead of 0
       this.hasDealtDamage = false;
       
@@ -374,7 +374,7 @@ export default function ShootARPage() {
     const z = basePos.z + zOff;
 
     const y = basePos.y + (-30 + Math.random() * 90); // -30 to +60m relative to camera (wide vertical spread)
-    const speed = 25 + Math.random() * 25; // 25-50 m/s (faster approach)
+    const speed = 25 + Math.random() * 125; // 125-150 m/s (faster approach)
 
     setEnemies((prev) => {
       if (prev.length >= 5) return prev;
