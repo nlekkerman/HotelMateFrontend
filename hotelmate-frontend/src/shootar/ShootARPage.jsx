@@ -70,7 +70,7 @@ if (!AFRAME.components["rocket-projectile"]) {
       
       // Check collisions with enemies (swept check along travel path)
       const enemies = document.querySelectorAll("[enemy-brain]");
-      const HIT_RADIUS = 15.0;
+      const HIT_RADIUS = 20.0;
       
       for (const enemy of enemies) {
         const brain = enemy.components["enemy-brain"];
@@ -234,7 +234,7 @@ if (!AFRAME.components["enemy-brain"]) {
       const dist = myPos.distanceTo(camPos);
 
       // If close enough: deal damage ONCE, then die cleanly (no NaNs, no extra motion)
-      if (dist < 6) {
+      if (dist < 12) {
         if (!this.hasDealtDamage) {
           this.hasDealtDamage = true;
           window.dispatchEvent(new CustomEvent("enemy-hit-player", { detail: 10 }));
@@ -362,8 +362,8 @@ export default function ShootARPage() {
     const id = `enemy-${enemyIdCounter.current++}`;
 
     const baseYaw = startYawRef.current;          // frozen heading
-    const cone = Math.PI / 4;                     // 45°
-    const angle = baseYaw + (Math.random() * 2 - 1) * cone; // ±45°
+    const cone = Math.PI * 35 / 180;               // 35°
+    const angle = baseYaw + (Math.random() * 2 - 1) * cone; // ±35°
 
     const dist = 500;
     const xOff = Math.sin(angle) * dist;
@@ -373,8 +373,8 @@ export default function ShootARPage() {
     const x = basePos.x + xOff;
     const z = basePos.z + zOff;
 
-    const y = basePos.y + (5 + Math.random() * 20); // 5–25m above start camera height
-    const speed = 15 + Math.random() * 15;
+    const y = basePos.y + (-15 + Math.random() * 55); // -15 to +40m relative to camera (higher & lower spread)
+    const speed = 25 + Math.random() * 25; // 25-50 m/s (faster approach)
 
     setEnemies((prev) => {
       if (prev.length >= 5) return prev;
@@ -387,7 +387,7 @@ export default function ShootARPage() {
     const id = `hp-${packIdCounter.current++}`;
 
     const baseYaw = startYawRef.current;
-    const cone = Math.PI / 4; // 45°
+    const cone = Math.PI * 35 / 180; // 35°
     const angle = baseYaw + (Math.random() * 2 - 1) * cone;
 
     const dist = 80 + Math.random() * 200;
@@ -398,7 +398,7 @@ export default function ShootARPage() {
     const x = basePos.x + xOff;
     const z = basePos.z + zOff;
 
-    const y = basePos.y + (3 + Math.random() * 15);
+    const y = basePos.y + (-10 + Math.random() * 35); // -10 to +25m relative to camera
 
     setHealthPacks((prev) => {
       if (prev.length >= 3) return prev;
@@ -426,7 +426,7 @@ export default function ShootARPage() {
         }
         setTimeout(() => {
           if (!gameOverRef.current) spawnEnemy();
-        }, 2000);
+        }, 3500); // slightly longer respawn delay
       }
     };
     window.addEventListener("enemy-died", onEnemyDied);
