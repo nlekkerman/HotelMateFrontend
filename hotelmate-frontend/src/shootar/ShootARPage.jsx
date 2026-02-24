@@ -179,7 +179,7 @@ if (!AFRAME.components["enemy-brain"]) {
       this.swingSpeedY = 1.5 + Math.random() * 2.0; // bob speed up/down (faster)
       this.swingRangeX = 20 + Math.random() * 25;   // 20-45m swing left/right
       this.swingRangeY = 10 + Math.random() * 18;   // 10-28m bob up/down
-      this.baseY = 0;
+      this.baseY = null; // instead of 0
       this.hasDealtDamage = false;
       
       // Create visual model immediately
@@ -224,38 +224,58 @@ if (!AFRAME.components["enemy-brain"]) {
     tick(time, timeDelta) {
       if (this.isDead || !this.camera || !this.el.parentNode || !this.el.object3D) return;
 
-      const camPos = this.camera.object3D.position;
+      const dt = Math.min(0.05, timeDelta / 1000); // clamp dt (mobile spikes)
+
+      // Use WORLD positions (more robust if camera is parented)
+      const camPos = new THREE.Vector3();
+      this.camera.object3D.getWorldPosition(camPos);
+
       const myPos = this.el.object3D.position;
       const dist = myPos.distanceTo(camPos);
 
-      // Always face player
-      this.el.object3D.lookAt(camPos.x, camPos.y, camPos.z);
-
-      // Kamikaze: if close enough, just die (no damage to avoid crash)
-      if (dist < 5) {
+      // If close enough: deal damage ONCE, then die cleanly (no NaNs, no extra motion)
+      if (dist < 6) {
+        if (!this.hasDealtDamage) {
+          this.hasDealtDamage = true;
+          window.dispatchEvent(new CustomEvent("enemy-hit-player", { detail: 10 }));
+        }
         this.die();
         return;
       }
 
       // Move toward player
-      const dir = new THREE.Vector3().subVectors(camPos, myPos).normalize();
-      const speed = this.data.speed * (timeDelta / 1000);
-      myPos.add(dir.multiplyScalar(speed));
+      const dir = new THREE.Vector3().subVectors(camPos, myPos);
+      const len = dir.length();
+      if (len < 1e-6) return; // prevent normalize(0)
+      dir.multiplyScalar(1 / len);
 
-      // Get a perpendicular axis for swinging left/right
-      const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+      // Face player (safe)
+      this.el.object3D.lookAt(camPos.x, camPos.y, camPos.z);
+
+      const speedStep = this.data.speed * dt;
+      myPos.addScaledVector(dir, speedStep);
+
+      // SAFE right vector (avoid NaN when dir ~ up)
+      const up = new THREE.Vector3(0, 1, 0);
+      const right = new THREE.Vector3().crossVectors(dir, up);
+      if (right.lengthSq() < 1e-6) {
+        // If dir is almost vertical, choose a stable fallback axis
+        right.set(1, 0, 0);
+      } else {
+        right.normalize();
+      }
+
       const t = time / 1000;
 
-      // Swing left/right
+      // Swing left/right (small step, NOT "teleport sideways")
       const swingX = Math.sin(t * this.swingSpeedX + this.swingPhase) * this.swingRangeX;
-      myPos.add(right.multiplyScalar(swingX * (timeDelta / 1000)));
+      myPos.addScaledVector(right, swingX * dt);
 
-      // Bob up/down
-      if (this.baseY === 0) this.baseY = myPos.y;
+      // Bob up/down (baseY init only once, don't use "=== 0" as sentinel)
+      if (this.baseY === null || this.baseY === undefined) this.baseY = myPos.y;
+
       myPos.y = this.baseY + Math.sin(t * this.swingSpeedY + this.hoverOffset) * this.swingRangeY;
       if (myPos.y < 0.5) myPos.y = 0.5;
-
-      this.el.object3D.position.copy(myPos);
     },
   });
 }
