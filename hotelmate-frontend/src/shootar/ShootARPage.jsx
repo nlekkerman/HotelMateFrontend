@@ -537,7 +537,7 @@ export default function ShootARPage() {
     shootIntervalRef.current = setInterval(() => {
       if (!gameOverRef.current) shoot();
       else stopFiring();
-    }, 150); // fire every 150ms
+    }, 60); // fire every 60ms (very fast)
   }, [shoot]);
 
   const stopFiring = useCallback(() => {
