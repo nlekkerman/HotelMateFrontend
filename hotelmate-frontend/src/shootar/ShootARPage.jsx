@@ -337,50 +337,74 @@ export default function ShootARPage() {
   const gameOverRef = useRef(false);
   const cameraRef = useRef(null);
   const shootIntervalRef = useRef(null);
+  const startYawRef = useRef(0);
+  const startPosRef = useRef(new THREE.Vector3(0, 0, 0));
   gameOverRef.current = gameOver;
 
-  // Get camera forward angle on XZ plane
-  const getCameraAngle = useCallback(() => {
+  // Snapshot camera heading + position at game start/reset
+  const snapshotStartHeading = useCallback(() => {
     const cam = document.querySelector("[camera]");
-    if (!cam || !cam.object3D) return 0;
-    const dir = new THREE.Vector3(0, 0, -1);
+    if (!cam?.object3D) return;
+
+    const camPos = new THREE.Vector3();
+    cam.object3D.getWorldPosition(camPos);
+    startPosRef.current.copy(camPos);
+
+    // yaw from world forward direction
     const quat = new THREE.Quaternion();
     cam.object3D.getWorldQuaternion(quat);
-    dir.applyQuaternion(quat);
-    return Math.atan2(dir.x, dir.z);
+    const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(quat);
+    startYawRef.current = Math.atan2(dir.x, dir.z);
   }, []);
 
-  // Spawn enemy in 180° arc in front of camera
+  // Spawn enemy inside ±45° cone from frozen start heading
   const spawnEnemy = useCallback(() => {
     const id = `enemy-${enemyIdCounter.current++}`;
-    const camAngle = getCameraAngle();
-    // Random angle within ±90° of camera forward (180° arc)
-    const angle = camAngle + (Math.random() - 0.5) * Math.PI;
-    const dist = 500; // always spawn at 500m
-    const x = Math.sin(angle) * dist;
-    const z = Math.cos(angle) * dist;
-    const y = 5 + Math.random() * 20; // 5-25m height
-    const speed = 15 + Math.random() * 15; // 15-30 m/s
+
+    const baseYaw = startYawRef.current;          // frozen heading
+    const cone = Math.PI / 4;                     // 45°
+    const angle = baseYaw + (Math.random() * 2 - 1) * cone; // ±45°
+
+    const dist = 500;
+    const xOff = Math.sin(angle) * dist;
+    const zOff = Math.cos(angle) * dist;
+
+    const basePos = startPosRef.current;
+    const x = basePos.x + xOff;
+    const z = basePos.z + zOff;
+
+    const y = basePos.y + (5 + Math.random() * 20); // 5–25m above start camera height
+    const speed = 15 + Math.random() * 15;
+
     setEnemies((prev) => {
-      if (prev.length >= 5) return prev; // max 5 at a time
+      if (prev.length >= 5) return prev;
       return [...prev, { id, x, y, z, speed }];
     });
-  }, [getCameraAngle]);
+  }, []);
 
-  // Spawn health pack in 180° arc in front of camera
+  // Spawn health pack inside ±45° cone from frozen start heading
   const spawnHealthPack = useCallback(() => {
     const id = `hp-${packIdCounter.current++}`;
-    const camAngle = getCameraAngle();
-    const angle = camAngle + (Math.random() - 0.5) * Math.PI;
-    const dist = 80 + Math.random() * 200; // 80-280m away (closer than enemies)
-    const x = Math.sin(angle) * dist;
-    const z = Math.cos(angle) * dist;
-    const y = 3 + Math.random() * 15;
+
+    const baseYaw = startYawRef.current;
+    const cone = Math.PI / 4; // 45°
+    const angle = baseYaw + (Math.random() * 2 - 1) * cone;
+
+    const dist = 80 + Math.random() * 200;
+    const xOff = Math.sin(angle) * dist;
+    const zOff = Math.cos(angle) * dist;
+
+    const basePos = startPosRef.current;
+    const x = basePos.x + xOff;
+    const z = basePos.z + zOff;
+
+    const y = basePos.y + (3 + Math.random() * 15);
+
     setHealthPacks((prev) => {
-      if (prev.length >= 3) return prev; // max 3 health packs
+      if (prev.length >= 3) return prev;
       return [...prev, { id, x, y, z }];
     });
-  }, [getCameraAngle]);
+  }, []);
 
   const destroyEnemy = useCallback((id) => {
     setEnemies((prev) => prev.filter((e) => e.id !== id));
@@ -389,6 +413,7 @@ export default function ShootARPage() {
 
   // Game loop
   useEffect(() => {
+    snapshotStartHeading();
     document.querySelectorAll("[enemy-brain]").forEach((e) => e.remove());
 
     const onEnemyDied = (e) => {
@@ -434,7 +459,7 @@ export default function ShootARPage() {
       window.removeEventListener("enemy-hit-player", onEnemyHitPlayer);
       window.removeEventListener("health-pack-collected", onHealthPackCollected);
     };
-  }, [gameKey, destroyEnemy, spawnEnemy, spawnHealthPack]);
+  }, [gameKey, snapshotStartHeading, destroyEnemy, spawnEnemy, spawnHealthPack]);
 
   // SHOOT - Now fires a rocket projectile!
   const shoot = useCallback(() => {
@@ -496,9 +521,10 @@ export default function ShootARPage() {
     setHealthPacks([]);
     killCounter.current = 0;
     stopFiring();
+    snapshotStartHeading();
     setGameOver(false);
     setGameKey((k) => k + 1);
-  }, [stopFiring]);
+  }, [stopFiring, snapshotStartHeading]);
 
   return (
     <>
