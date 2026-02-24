@@ -340,6 +340,7 @@ export default function ShootARPage() {
   const sceneRef = useRef(null);
   const enemyIdCounter = useRef(0);
   const packIdCounter = useRef(0);
+  const killCounter = useRef(0);
   const gameOverRef = useRef(false);
   const cameraRef = useRef(null);
   gameOverRef.current = gameOver;
@@ -385,6 +386,11 @@ export default function ShootARPage() {
     const onEnemyDied = (e) => {
       destroyEnemy(e.detail);
       if (!gameOverRef.current) {
+        // Spawn health pack every 5 kills
+        killCounter.current++;
+        if (killCounter.current % 5 === 0) {
+          spawnHealthPack();
+        }
         setTimeout(() => {
           if (!gameOverRef.current) spawnEnemy();
         }, 2000);
@@ -394,23 +400,6 @@ export default function ShootARPage() {
 
     // Initial wave — exactly 5
     for (let i = 0; i < 5; i++) spawnEnemy();
-
-    // Spawn initial health packs
-    for (let i = 0; i < 2; i++) spawnHealthPack();
-
-    // Respawn health packs periodically
-    const hpSpawnInterval = setInterval(() => {
-      if (gameOverRef.current) return;
-      setHealthPacks((prev) => {
-        if (prev.length < 3) {
-          const id = `hp-${packIdCounter.current++}`;
-          const angle = Math.random() * Math.PI * 2;
-          const dist = 80 + Math.random() * 200;
-          return [...prev, { id, x: Math.sin(angle) * dist, y: 3 + Math.random() * 15, z: Math.cos(angle) * dist }];
-        }
-        return prev;
-      });
-    }, 10000);
 
     // Listen for health pack collection
     const onHealthPackCollected = (e) => {
@@ -436,7 +425,6 @@ export default function ShootARPage() {
       window.removeEventListener("enemy-died", onEnemyDied);
       window.removeEventListener("enemy-hit-player", onEnemyHitPlayer);
       window.removeEventListener("health-pack-collected", onHealthPackCollected);
-      clearInterval(hpSpawnInterval);
     };
   }, [gameKey, destroyEnemy, spawnEnemy, spawnHealthPack]);
 
@@ -493,6 +481,7 @@ export default function ShootARPage() {
     setHealth(100);
     setEnemies([]);
     setHealthPacks([]);
+    killCounter.current = 0;
     setGameOver(false);
     setGameKey((k) => k + 1);
   }, []);
