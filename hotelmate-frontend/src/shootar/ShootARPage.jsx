@@ -9,6 +9,7 @@ const GLB_MODELS = [
   "/shootar/Emerald_Sentinel_Sphere.glb",
   "/shootar/luminaris_starship.glb",
   "/shootar/spaceship_fighter_is_a_free_low-poly_3d_model.glb",
+  "/shootar/Meshy_AI_Golden_Fusion_Orb_0224132856_texture.glb",
 ];
 
 /* ------------------------------------------------------------------ */
