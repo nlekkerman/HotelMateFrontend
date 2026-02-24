@@ -93,7 +93,9 @@ if (!AFRAME.components["rocket-projectile"]) {
         const hp = pack.components["health-pack"];
         if (!hp || hp.isDead) continue;
         const packPos = pack.object3D.position;
-        if (pos.distanceTo(packPos) < PACK_HIT_RADIUS || q2.distanceTo(packPos) < PACK_HIT_RADIUS) {
+        // Calculate swept collision point for health packs
+        const packMid = prevPos.clone().lerp(pos, 0.5);
+        if (pos.distanceTo(packPos) < PACK_HIT_RADIUS || packMid.distanceTo(packPos) < PACK_HIT_RADIUS) {
           if (this.el.parentNode) this.el.remove();
           hp.die();
           return;
@@ -115,13 +117,17 @@ if (!AFRAME.components["health-pack"]) {
     init() {
       this.isDead = false;
       this.hoverOffset = Math.random() * Math.PI * 2;
-      this.initialY = this.el.getAttribute("position").y;
+      this._initialised = false;
 
-      // Use sci-fi camera drone model
-      const model = document.createElement("a-gltf-model");
-      model.setAttribute("src", "/shootar/sci-fi_camera_drone.glb");
-      model.setAttribute("scale", "1.5 1.5 1.5");
-      this.el.appendChild(model);
+      // Use sci-fi camera drone model (preloaded in a-assets as #health-pack-model)
+      try {
+        const model = document.createElement("a-entity");
+        model.setAttribute("gltf-model", "#health-pack-model");
+        model.setAttribute("scale", "1.5 1.5 1.5");
+        this.el.appendChild(model);
+      } catch (e) {
+        console.warn("health-pack: model load error", e);
+      }
     },
 
     die() {
@@ -136,6 +142,11 @@ if (!AFRAME.components["health-pack"]) {
 
     tick(time) {
       if (this.isDead || !this.el.parentNode || !this.el.object3D) return;
+      // Capture initial Y on first tick (safe — position is guaranteed parsed)
+      if (!this._initialised) {
+        this._initialised = true;
+        this.initialY = this.el.object3D.position.y || 0;
+      }
       // Gentle spin + bob
       const t = time / 1000;
       this.el.object3D.rotation.y = t * 1.5;
@@ -476,10 +487,11 @@ export default function ShootARPage() {
           camera-background
           style={{ position: "absolute", inset: 0, zIndex: 1 }}
         >
-          <a-assets>
+          <a-assets timeout="10000">
             {GLB_MODELS.map((path, i) => (
               <a-asset-item key={i} id={`model-${i}`} src={path} crossOrigin="anonymous" />
             ))}
+            <a-asset-item id="health-pack-model" src="/shootar/sci-fi_camera_drone.glb" crossOrigin="anonymous" />
           </a-assets>
 
           {/* Camera with weapon sight */}
