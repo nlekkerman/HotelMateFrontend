@@ -117,47 +117,11 @@ if (!AFRAME.components["health-pack"]) {
       this.hoverOffset = Math.random() * Math.PI * 2;
       this.initialY = this.el.getAttribute("position").y;
 
-      // Build a red cross shape
-      const cross = document.createElement("a-entity");
-
-      // Vertical bar
-      const vBar = document.createElement("a-box");
-      vBar.setAttribute("width", 0.4);
-      vBar.setAttribute("height", 1.6);
-      vBar.setAttribute("depth", 0.2);
-      vBar.setAttribute("color", "#ff0000");
-      vBar.setAttribute("shader", "flat");
-
-      // Horizontal bar
-      const hBar = document.createElement("a-box");
-      hBar.setAttribute("width", 1.6);
-      hBar.setAttribute("height", 0.4);
-      hBar.setAttribute("depth", 0.2);
-      hBar.setAttribute("color", "#ff0000");
-      hBar.setAttribute("shader", "flat");
-
-      // White outline glow
-      const glow = document.createElement("a-box");
-      glow.setAttribute("width", 0.6);
-      glow.setAttribute("height", 1.8);
-      glow.setAttribute("depth", 0.1);
-      glow.setAttribute("color", "#ffffff");
-      glow.setAttribute("shader", "flat");
-      glow.setAttribute("opacity", 0.3);
-
-      const glow2 = document.createElement("a-box");
-      glow2.setAttribute("width", 1.8);
-      glow2.setAttribute("height", 0.6);
-      glow2.setAttribute("depth", 0.1);
-      glow2.setAttribute("color", "#ffffff");
-      glow2.setAttribute("shader", "flat");
-      glow2.setAttribute("opacity", 0.3);
-
-      cross.appendChild(glow);
-      cross.appendChild(glow2);
-      cross.appendChild(vBar);
-      cross.appendChild(hBar);
-      this.el.appendChild(cross);
+      // Use sci-fi camera drone model
+      const model = document.createElement("a-gltf-model");
+      model.setAttribute("src", "/shootar/sci-fi_camera_drone.glb");
+      model.setAttribute("scale", "1.5 1.5 1.5");
+      this.el.appendChild(model);
     },
 
     die() {
