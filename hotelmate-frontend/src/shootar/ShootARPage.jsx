@@ -363,6 +363,7 @@ export default function ShootARPage() {
   const killsTotalRef = useRef(0);
   const [compassAngle, setCompassAngle] = useState(0);
   const [compassLabel, setCompassLabel] = useState("CLEAR");
+  const [compassVisible, setCompassVisible] = useState(false);
   const compassRafRef = useRef(null);
   gameOverRef.current = gameOver;
   levelRef.current = level;
@@ -423,9 +424,11 @@ export default function ShootARPage() {
         if (relative < -Math.PI) relative += 2 * Math.PI;
         setCompassAngle(relative * (180 / Math.PI));
         setCompassLabel(`${closestType} ${Math.round(closestDist)}m`);
+        setCompassVisible(true);
       } else {
         setCompassAngle(0);
         setCompassLabel("CLEAR");
+        setCompassVisible(false);
       }
     }
 
@@ -801,47 +804,53 @@ export default function ShootARPage() {
           Threats: {enemies.length}
         </div>
 
-        {/* ---- Threat Compass ---- */}
+        {/* ---- Crosshair Compass Ring ---- */}
         {!gameOver && (
           <div style={{
-            position: "absolute", top: "70px", left: "50%", transform: "translateX(-50%)",
-            width: "100px", height: "100px", borderRadius: "50%",
-            border: "2px solid rgba(0,255,0,0.5)",
-            background: "rgba(0,0,0,0.35)",
-            display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center",
-            pointerEvents: "none",
-            boxShadow: "0 0 12px rgba(0,255,0,0.25), inset 0 0 12px rgba(0,255,0,0.08)"
+            position: "absolute", top: "50%", left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "140px", height: "140px",
+            pointerEvents: "none"
           }}>
-            {/* Rotating arrow */}
+            {/* Ring */}
             <div style={{
-              width: "100%", height: "100%",
-              position: "absolute",
-              transform: `rotate(${compassAngle}deg)`,
-              transition: "transform 0.08s linear",
-              display: "flex", alignItems: "center", justifyContent: "center"
-            }}>
+              position: "absolute", inset: 0,
+              borderRadius: "50%",
+              border: `2px solid rgba(0,255,0,${compassVisible ? 0.45 : 0.15})`,
+              boxShadow: compassVisible
+                ? "0 0 10px rgba(0,255,0,0.25), inset 0 0 10px rgba(0,255,0,0.06)"
+                : "none",
+              transition: "border-color 0.3s, box-shadow 0.3s"
+            }} />
+            {/* Arrow marker orbiting on ring edge */}
+            {compassVisible && (
               <div style={{
+                position: "absolute", top: "50%", left: "50%",
                 width: 0, height: 0,
-                borderLeft: "8px solid transparent",
-                borderRight: "8px solid transparent",
-                borderBottom: "28px solid #0f0",
-                filter: "drop-shadow(0 0 6px #0f0)",
-                position: "absolute", top: "10px"
-              }} />
-              <div style={{
-                width: "2px", height: "24px",
-                background: "#0f0",
-                position: "absolute", bottom: "14px",
-                boxShadow: "0 0 4px #0f0"
-              }} />
-            </div>
-            {/* Distance label */}
+                transform: `translate(-50%, -50%) rotate(${compassAngle}deg) translateY(-70px) rotate(${-compassAngle}deg)`,
+                transition: "transform 0.08s linear"
+              }}>
+                {/* Chevron arrow */}
+                <div style={{
+                  width: 0, height: 0,
+                  borderLeft: "7px solid transparent",
+                  borderRight: "7px solid transparent",
+                  borderBottom: "14px solid #0f0",
+                  filter: "drop-shadow(0 0 6px #0f0)",
+                  transform: "translate(-50%, -50%)"
+                }} />
+              </div>
+            )}
+            {/* Distance label below ring */}
             <div style={{
-              position: "absolute", bottom: "-22px",
+              position: "absolute", top: "100%", left: "50%",
+              transform: "translateX(-50%)",
+              marginTop: "6px",
               color: "#0f0", fontFamily: "monospace", fontSize: "12px",
               fontWeight: "bold", textShadow: "0 0 6px #0f0",
-              whiteSpace: "nowrap", textAlign: "center"
+              whiteSpace: "nowrap", textAlign: "center",
+              opacity: compassVisible ? 1 : 0.4,
+              transition: "opacity 0.3s"
             }}>
               {compassLabel}
             </div>
