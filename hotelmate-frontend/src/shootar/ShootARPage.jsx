@@ -234,7 +234,7 @@ if (!AFRAME.components["enemy-brain"]) {
       const dist = myPos.distanceTo(camPos);
 
       // If close enough: deal damage ONCE, then die cleanly (no NaNs, no extra motion)
-      if (dist < 30) {
+      if (dist < 90) {
         if (!this.hasDealtDamage) {
           this.hasDealtDamage = true;
           window.dispatchEvent(new CustomEvent("enemy-hit-player", { detail: 10 }));
