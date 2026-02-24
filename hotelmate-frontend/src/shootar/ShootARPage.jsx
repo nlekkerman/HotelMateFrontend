@@ -6,7 +6,7 @@ import "aframe";
 import * as THREE from "three";
 
 const GLB_MODELS = [
-  "/shootar/space_ship_low_poly.glb",
+  "/shootar/Emerald_Sentinel_Sphere.glb",
   "/shootar/luminaris_starship.glb",
   "/shootar/spaceship_fighter_is_a_free_low-poly_3d_model.glb",
 ];
