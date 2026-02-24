@@ -329,6 +329,7 @@ export default function ShootARPage() {
   const [gameOver, setGameOver] = useState(false);
   const [enemies, setEnemies] = useState([]);
   const [healthPacks, setHealthPacks] = useState([]);
+  const [damageFlash, setDamageFlash] = useState(false);
   const [gameKey, setGameKey] = useState(0);
   const sceneRef = useRef(null);
   const enemyIdCounter = useRef(0);
@@ -374,7 +375,7 @@ export default function ShootARPage() {
     const z = basePos.z + zOff;
 
     const y = basePos.y + (-30 + Math.random() * 90); // -30 to +60m relative to camera (wide vertical spread)
-    const speed = 25 + Math.random() * 125; // 125-150 m/s (faster approach)
+    const speed = 25 + Math.random() * 325; // 125-150 m/s (faster approach)
 
     setEnemies((prev) => {
       if (prev.length >= 5) return prev;
@@ -451,6 +452,9 @@ export default function ShootARPage() {
         if (next <= 0) setGameOver(true);
         return next;
       });
+      // Red flash
+      setDamageFlash(true);
+      setTimeout(() => setDamageFlash(false), 300);
     };
     window.addEventListener("enemy-hit-player", onEnemyHitPlayer);
 
@@ -617,6 +621,15 @@ export default function ShootARPage() {
           ))}
         </a-scene>
       </div>
+
+      {/* ---- DAMAGE FLASH OVERLAY (z-index 5, between 3D and UI) ---- */}
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 5,
+        background: "radial-gradient(ellipse at center, rgba(255,0,0,0.0) 30%, rgba(255,0,0,0.6) 100%)",
+        opacity: damageFlash ? 1 : 0,
+        transition: "opacity 0.3s ease-out",
+        pointerEvents: "none"
+      }} />
 
       {/* ---- UI LAYER: HUD + buttons (z-index 10, above A-Frame) ---- */}
       <div style={{
