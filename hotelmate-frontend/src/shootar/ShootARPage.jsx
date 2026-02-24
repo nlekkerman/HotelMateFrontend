@@ -7,6 +7,7 @@ import * as THREE from "three";
 
 const GLB_MODELS = [
   "/shootar/space_ship_low_poly.glb",
+  "/shootar/scific_drone_for_free.glb",
 ];
 
 /* ------------------------------------------------------------------ */
@@ -491,7 +492,7 @@ export default function ShootARPage() {
             {GLB_MODELS.map((path, i) => (
               <a-asset-item key={i} id={`model-${i}`} src={path} crossOrigin="anonymous" />
             ))}
-            <a-asset-item id="health-pack-model" src="/shootar/sci-fi_camera_drone.glb" crossOrigin="anonymous" />
+            <a-asset-item id="health-pack-model" src="/shootar/scific_drone_for_free.glb" crossOrigin="anonymous" />
           </a-assets>
 
           {/* Camera with weapon sight */}
