@@ -365,7 +365,7 @@ export default function ShootARPage() {
     const cone = Math.PI * 35 / 180;               // 35°
     const angle = baseYaw + (Math.random() * 2 - 1) * cone; // ±35°
 
-    const dist = 500;
+    const dist = 900;
     const xOff = Math.sin(angle) * dist;
     const zOff = Math.cos(angle) * dist;
 
@@ -373,7 +373,7 @@ export default function ShootARPage() {
     const x = basePos.x + xOff;
     const z = basePos.z + zOff;
 
-    const y = basePos.y + (-15 + Math.random() * 55); // -15 to +40m relative to camera (higher & lower spread)
+    const y = basePos.y + (-30 + Math.random() * 90); // -30 to +60m relative to camera (wide vertical spread)
     const speed = 25 + Math.random() * 25; // 25-50 m/s (faster approach)
 
     setEnemies((prev) => {
@@ -390,7 +390,7 @@ export default function ShootARPage() {
     const cone = Math.PI * 35 / 180; // 35°
     const angle = baseYaw + (Math.random() * 2 - 1) * cone;
 
-    const dist = 80 + Math.random() * 200;
+    const dist = 180 + Math.random() * 200;
     const xOff = Math.sin(angle) * dist;
     const zOff = Math.cos(angle) * dist;
 
@@ -398,7 +398,7 @@ export default function ShootARPage() {
     const x = basePos.x + xOff;
     const z = basePos.z + zOff;
 
-    const y = basePos.y + (-10 + Math.random() * 35); // -10 to +25m relative to camera
+    const y = basePos.y + (-20 + Math.random() * 60); // -20 to +40m relative to camera
 
     setHealthPacks((prev) => {
       if (prev.length >= 3) return prev;
