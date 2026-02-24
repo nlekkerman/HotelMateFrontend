@@ -28,24 +28,28 @@ if (!AFRAME.components["rocket-projectile"]) {
       const dz = parseFloat(this.el.dataset.dirZ) || -1;
       this._worldDir = new THREE.Vector3(dx, dy, dz).normalize();
 
-      // Red laser bolt
-      const bolt = document.createElement("a-cylinder");
-      bolt.setAttribute("radius", 0.09);
-      bolt.setAttribute("height", 0.6);
-      bolt.setAttribute("color", "#ff0000");
-      bolt.setAttribute("shader", "");
-      bolt.setAttribute("rotation", "90 0 0");
-      this.el.appendChild(bolt);
+      // Red energy orb bullet
+      const orb = document.createElement("a-sphere");
+      orb.setAttribute("radius", 0.12);
+      orb.setAttribute("color", "#ff0000");
+      orb.setAttribute("shader", "flat");
+      this.el.appendChild(orb);
 
-      // Small glow around the bolt
-      const glow = document.createElement("a-cylinder");
-      glow.setAttribute("radius", 0.06);
-      glow.setAttribute("height", 0.6);
-      glow.setAttribute("color", "#ff3333");
+      // Neon glow around bullet
+      const glow = document.createElement("a-sphere");
+      glow.setAttribute("radius", 0.3);
+      glow.setAttribute("color", "#ff0044");
       glow.setAttribute("shader", "flat");
-      glow.setAttribute("opacity", 0.3);
-      glow.setAttribute("rotation", "90 0 0");
+      glow.setAttribute("opacity", 0.15);
       this.el.appendChild(glow);
+
+      // Outer neon haze
+      const haze = document.createElement("a-sphere");
+      haze.setAttribute("radius", 0.55);
+      haze.setAttribute("color", "#ff0066");
+      haze.setAttribute("shader", "flat");
+      haze.setAttribute("opacity", 0.06);
+      this.el.appendChild(haze);
     },
 
     tick(time, timeDelta) {
@@ -227,17 +231,10 @@ if (!AFRAME.components["enemy-brain"]) {
       // Always face player
       this.el.object3D.lookAt(camPos.x, camPos.y, camPos.z);
 
-      // Kamikaze: if close enough, hit the player and die
+      // Kamikaze: if close enough, just die (no damage to avoid crash)
       if (dist < 5) {
-        window.dispatchEvent(new CustomEvent("enemy-hit-player", { detail: 10 }));
         this.die();
         return;
-      }
-
-      // Take HP earlier — start dealing damage when within 50m
-      if (dist < 50 && !this.hasDealtDamage) {
-        this.hasDealtDamage = true;
-        window.dispatchEvent(new CustomEvent("enemy-hit-player", { detail: 10 }));
       }
 
       // Move toward player
@@ -449,18 +446,6 @@ export default function ShootARPage() {
     rocket.setAttribute("rocket-projectile", { speed: 120 });
     
     cam.sceneEl.appendChild(rocket);
-    
-    // Screen flash (muzzle effect)
-    const flash = document.createElement("div");
-    flash.style.cssText = `
-      position: fixed; inset: 0; background: #ff0000; opacity: 0.15;
-      pointer-events: none; z-index: 9999; transition: opacity 0.08s;
-    `;
-    document.body.appendChild(flash);
-    setTimeout(() => {
-      flash.style.opacity = "0";
-      setTimeout(() => { if (flash.parentNode) flash.remove(); }, 100);
-    }, 50);
     
   }, []);
 
