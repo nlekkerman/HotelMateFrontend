@@ -7,7 +7,7 @@ import * as THREE from "three";
 
 const GLB_MODELS = [
   "/shootar/space_ship_low_poly.glb",
-  "/shootar/scific_drone_for_free.glb",
+  "/shootar/sci-fi_camera_drone.glb",
 ];
 
 /* ------------------------------------------------------------------ */
@@ -171,10 +171,10 @@ if (!AFRAME.components["enemy-brain"]) {
       this.isDead = false;
       this.hoverOffset = Math.random() * Math.PI * 2;
       this.swingPhase = Math.random() * Math.PI * 2;
-      this.swingSpeedX = 1.5 + Math.random() * 1.5; // swing speed left/right
-      this.swingSpeedY = 1.0 + Math.random() * 1.5; // bob speed up/down
-      this.swingRangeX = 8 + Math.random() * 10;    // 8-18m swing left/right
-      this.swingRangeY = 4 + Math.random() * 8;     // 4-12m bob up/down
+      this.swingSpeedX = 2.5 + Math.random() * 2.0; // swing speed left/right (faster)
+      this.swingSpeedY = 1.5 + Math.random() * 2.0; // bob speed up/down (faster)
+      this.swingRangeX = 20 + Math.random() * 25;   // 20-45m swing left/right
+      this.swingRangeY = 10 + Math.random() * 18;   // 10-28m bob up/down
       this.baseY = 0;
       this.hasDealtDamage = false;
       
@@ -319,6 +319,7 @@ export default function ShootARPage() {
   const killCounter = useRef(0);
   const gameOverRef = useRef(false);
   const cameraRef = useRef(null);
+  const shootIntervalRef = useRef(null);
   gameOverRef.current = gameOver;
 
   // Spawn enemy at far distance
@@ -449,6 +450,23 @@ export default function ShootARPage() {
     
   }, []);
 
+  // Start/stop continuous fire
+  const startFiring = useCallback(() => {
+    if (shootIntervalRef.current) return;
+    shoot(); // fire immediately
+    shootIntervalRef.current = setInterval(() => {
+      if (!gameOverRef.current) shoot();
+      else stopFiring();
+    }, 150); // fire every 150ms
+  }, [shoot]);
+
+  const stopFiring = useCallback(() => {
+    if (shootIntervalRef.current) {
+      clearInterval(shootIntervalRef.current);
+      shootIntervalRef.current = null;
+    }
+  }, []);
+
   const restart = useCallback(() => {
     document.querySelectorAll("[enemy-brain]").forEach((e) => e.remove());
     document.querySelectorAll("[rocket-projectile]").forEach((e) => e.remove());
@@ -458,9 +476,10 @@ export default function ShootARPage() {
     setEnemies([]);
     setHealthPacks([]);
     killCounter.current = 0;
+    stopFiring();
     setGameOver(false);
     setGameKey((k) => k + 1);
-  }, []);
+  }, [stopFiring]);
 
   return (
     <>
@@ -492,7 +511,7 @@ export default function ShootARPage() {
             {GLB_MODELS.map((path, i) => (
               <a-asset-item key={i} id={`model-${i}`} src={path} crossOrigin="anonymous" />
             ))}
-            <a-asset-item id="health-pack-model" src="/shootar/scific_drone_for_free.glb" crossOrigin="anonymous" />
+            <a-asset-item id="health-pack-model" src="/shootar/sci-fi_camera_drone.glb" crossOrigin="anonymous" />
           </a-assets>
 
           {/* Camera with weapon sight */}
@@ -576,10 +595,14 @@ export default function ShootARPage() {
           </div>
         </div>
 
-        {/* FIRE button — pointerEvents auto so it catches clicks */}
+        {/* FIRE button — hold for continuous fire */}
         <button
-          onClick={shoot}
-          onTouchStart={(e) => { e.preventDefault(); shoot(); }}
+          onMouseDown={startFiring}
+          onMouseUp={stopFiring}
+          onMouseLeave={stopFiring}
+          onTouchStart={(e) => { e.preventDefault(); startFiring(); }}
+          onTouchEnd={stopFiring}
+          onTouchCancel={stopFiring}
           style={{
             position: "absolute", bottom: "40px", right: "40px",
             width: "100px", height: "100px", borderRadius: "50%",
