@@ -323,7 +323,7 @@ if (!AFRAME.components["camera-background"]) {
 /* ------------------------------------------------------------------ */
 /*  LEVEL / PROGRESSION HELPERS                                       */
 /* ------------------------------------------------------------------ */
-const KILLS_PER_LEVEL = 5;
+const KILLS_PER_LEVEL = 10;
 
 function getMaxEnemiesForLevel(lvl) {
   return Math.min(5 + (lvl - 1), 12);
@@ -397,7 +397,7 @@ export default function ShootARPage() {
 
     const y = basePos.y + (-30 + Math.random() * 90); // -30 to +60m relative to camera (wide vertical spread)
     const lvl = levelRef.current;
-    const baseSpeed = 15 + Math.random() * 15; // 15-30 base speed
+    const baseSpeed = 180 + Math.random() * 70; // 80-150 base speed (fast from the start)
     const speed = baseSpeed * getSpeedMultiplierForLevel(lvl);
 
     const maxEnemies = getMaxEnemiesForLevel(lvl);
