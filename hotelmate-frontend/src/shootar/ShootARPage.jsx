@@ -7,7 +7,7 @@ import * as THREE from "three";
 
 const GLB_MODELS = [
   "/shootar/space_ship_low_poly.glb",
-  "/shootar/military_drone.glb",
+  "/shootar/luminaris_starship.glb",
 ];
 
 /* ------------------------------------------------------------------ */
@@ -322,10 +322,23 @@ export default function ShootARPage() {
   const shootIntervalRef = useRef(null);
   gameOverRef.current = gameOver;
 
-  // Spawn enemy at far distance
+  // Get camera forward angle on XZ plane
+  const getCameraAngle = useCallback(() => {
+    const cam = document.querySelector("[camera]");
+    if (!cam || !cam.object3D) return 0;
+    const dir = new THREE.Vector3(0, 0, -1);
+    const quat = new THREE.Quaternion();
+    cam.object3D.getWorldQuaternion(quat);
+    dir.applyQuaternion(quat);
+    return Math.atan2(dir.x, dir.z);
+  }, []);
+
+  // Spawn enemy in 180° arc in front of camera
   const spawnEnemy = useCallback(() => {
     const id = `enemy-${enemyIdCounter.current++}`;
-    const angle = Math.random() * Math.PI * 2;
+    const camAngle = getCameraAngle();
+    // Random angle within ±90° of camera forward (180° arc)
+    const angle = camAngle + (Math.random() - 0.5) * Math.PI;
     const dist = 500; // always spawn at 500m
     const x = Math.sin(angle) * dist;
     const z = Math.cos(angle) * dist;
@@ -335,12 +348,13 @@ export default function ShootARPage() {
       if (prev.length >= 5) return prev; // max 5 at a time
       return [...prev, { id, x, y, z, speed }];
     });
-  }, []);
+  }, [getCameraAngle]);
 
-  // Spawn health pack at random position
+  // Spawn health pack in 180° arc in front of camera
   const spawnHealthPack = useCallback(() => {
     const id = `hp-${packIdCounter.current++}`;
-    const angle = Math.random() * Math.PI * 2;
+    const camAngle = getCameraAngle();
+    const angle = camAngle + (Math.random() - 0.5) * Math.PI;
     const dist = 80 + Math.random() * 200; // 80-280m away (closer than enemies)
     const x = Math.sin(angle) * dist;
     const z = Math.cos(angle) * dist;
@@ -349,7 +363,7 @@ export default function ShootARPage() {
       if (prev.length >= 3) return prev; // max 3 health packs
       return [...prev, { id, x, y, z }];
     });
-  }, []);
+  }, [getCameraAngle]);
 
   const destroyEnemy = useCallback((id) => {
     setEnemies((prev) => prev.filter((e) => e.id !== id));
@@ -511,7 +525,7 @@ export default function ShootARPage() {
             {GLB_MODELS.map((path, i) => (
               <a-asset-item key={i} id={`model-${i}`} src={path} crossOrigin="anonymous" />
             ))}
-            <a-asset-item id="health-pack-model" src="/shootar/military_drone.glb" crossOrigin="anonymous" />
+            <a-asset-item id="health-pack-model" src="/shootar/luminaris_starship.glb" crossOrigin="anonymous" />
           </a-assets>
 
           {/* Camera with weapon sight */}
