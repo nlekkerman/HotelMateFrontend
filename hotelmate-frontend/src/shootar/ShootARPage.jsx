@@ -179,7 +179,7 @@ if (!AFRAME.components["enemy-brain"]) {
       this.swingSpeedX = 4.0 + Math.random() * 3.0; // swing speed left/right (much faster)
       this.swingSpeedY = 3.0 + Math.random() * 3.0; // bob speed up/down (much faster)
       this.swingRangeX = 35 + Math.random() * 40;   // 35-75m swing left/right
-      this.swingRangeY = 25 + Math.random() * 30;   // 25-55m bob up/down
+      this.swingRangeY = 8 + Math.random() * 10;    // 8-18m bob up/down (reduced)
       this.baseY = null; // instead of 0
       this.hasDealtDamage = false;
       
