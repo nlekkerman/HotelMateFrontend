@@ -361,8 +361,77 @@ export default function ShootARPage() {
   const [level, setLevel] = useState(1);
   const levelRef = useRef(1);
   const killsTotalRef = useRef(0);
+  const [compassAngle, setCompassAngle] = useState(0);
+  const [compassLabel, setCompassLabel] = useState("CLEAR");
+  const compassRafRef = useRef(null);
   gameOverRef.current = gameOver;
   levelRef.current = level;
+
+  // ---- Threat Compass rAF loop ----
+  useEffect(() => {
+    const camWorldPos = new THREE.Vector3();
+    const camQuat = new THREE.Quaternion();
+    const camFwd = new THREE.Vector3();
+    const dirVec = new THREE.Vector3();
+
+    function compassTick() {
+      if (gameOverRef.current) return;          // stop when game over
+      compassRafRef.current = requestAnimationFrame(compassTick);
+
+      const cam = document.querySelector("[camera]");
+      if (!cam?.object3D) return;
+
+      cam.object3D.getWorldPosition(camWorldPos);
+      cam.object3D.getWorldQuaternion(camQuat);
+      camFwd.set(0, 0, -1).applyQuaternion(camQuat);
+      const camYaw = Math.atan2(camFwd.x, camFwd.z);
+
+      let closestDist = Infinity;
+      let closestPos = null;
+      let closestType = null;
+
+      // 1) Check enemies
+      const enemyEls = document.querySelectorAll("[enemy-brain]");
+      for (let i = 0; i < enemyEls.length; i++) {
+        const brain = enemyEls[i].components["enemy-brain"];
+        if (!brain || brain.isDead) continue;
+        const pos = enemyEls[i].object3D.position;
+        const d = camWorldPos.distanceTo(pos);
+        if (d < closestDist) { closestDist = d; closestPos = pos; closestType = "ENEMY"; }
+      }
+
+      // 2) Fallback to health packs if no living enemies
+      if (!closestPos) {
+        const packEls = document.querySelectorAll("[health-pack]");
+        for (let i = 0; i < packEls.length; i++) {
+          const hp = packEls[i].components["health-pack"];
+          if (!hp || hp.isDead) continue;
+          const pos = packEls[i].object3D.position;
+          const d = camWorldPos.distanceTo(pos);
+          if (d < closestDist) { closestDist = d; closestPos = pos; closestType = "HP"; }
+        }
+      }
+
+      if (closestPos) {
+        dirVec.subVectors(closestPos, camWorldPos);
+        dirVec.y = 0;
+        dirVec.normalize();
+        const targetYaw = Math.atan2(dirVec.x, dirVec.z);
+        let relative = targetYaw - camYaw;
+        // normalise to [-PI, PI]
+        if (relative > Math.PI) relative -= 2 * Math.PI;
+        if (relative < -Math.PI) relative += 2 * Math.PI;
+        setCompassAngle(relative * (180 / Math.PI));
+        setCompassLabel(`${closestType} ${Math.round(closestDist)}m`);
+      } else {
+        setCompassAngle(0);
+        setCompassLabel("CLEAR");
+      }
+    }
+
+    compassRafRef.current = requestAnimationFrame(compassTick);
+    return () => { if (compassRafRef.current) cancelAnimationFrame(compassRafRef.current); };
+  }, [gameKey]);
 
   // Snapshot camera heading + position at game start/reset
   const snapshotStartHeading = useCallback(() => {
@@ -731,6 +800,53 @@ export default function ShootARPage() {
         }}>
           Threats: {enemies.length}
         </div>
+
+        {/* ---- Threat Compass ---- */}
+        {!gameOver && (
+          <div style={{
+            position: "absolute", top: "70px", left: "50%", transform: "translateX(-50%)",
+            width: "100px", height: "100px", borderRadius: "50%",
+            border: "2px solid rgba(0,255,0,0.5)",
+            background: "rgba(0,0,0,0.35)",
+            display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            pointerEvents: "none",
+            boxShadow: "0 0 12px rgba(0,255,0,0.25), inset 0 0 12px rgba(0,255,0,0.08)"
+          }}>
+            {/* Rotating arrow */}
+            <div style={{
+              width: "100%", height: "100%",
+              position: "absolute",
+              transform: `rotate(${compassAngle}deg)`,
+              transition: "transform 0.08s linear",
+              display: "flex", alignItems: "center", justifyContent: "center"
+            }}>
+              <div style={{
+                width: 0, height: 0,
+                borderLeft: "8px solid transparent",
+                borderRight: "8px solid transparent",
+                borderBottom: "28px solid #0f0",
+                filter: "drop-shadow(0 0 6px #0f0)",
+                position: "absolute", top: "10px"
+              }} />
+              <div style={{
+                width: "2px", height: "24px",
+                background: "#0f0",
+                position: "absolute", bottom: "14px",
+                boxShadow: "0 0 4px #0f0"
+              }} />
+            </div>
+            {/* Distance label */}
+            <div style={{
+              position: "absolute", bottom: "-22px",
+              color: "#0f0", fontFamily: "monospace", fontSize: "12px",
+              fontWeight: "bold", textShadow: "0 0 6px #0f0",
+              whiteSpace: "nowrap", textAlign: "center"
+            }}>
+              {compassLabel}
+            </div>
+          </div>
+        )}
 
         {/* Game Over overlay */}
         {gameOver && (
