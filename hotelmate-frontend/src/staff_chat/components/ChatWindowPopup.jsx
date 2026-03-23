@@ -53,6 +53,7 @@ const ChatWindowPopup = ({
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
+  const markedUpToRef = useRef(0);
 
   // Get event subscription from StaffChatContext
   // ✅ UNIFIED: Using chatStore only - no legacy useStaffChat subscriptions
@@ -169,6 +170,7 @@ const ChatWindowPopup = ({
         }
       };
 
+      markedUpToRef.current = 0;
       loadMessages();
     }
   }, [conversation?.id, hotelSlug, chatDispatch]);
@@ -353,21 +355,11 @@ const ChatWindowPopup = ({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Mark ALL messages as read when popup opens with messages
+  // Mark ALL messages as read when popup opens (or un-minimizes) with messages
   useEffect(() => {
-    if (conversation?.id && messages.length > 0 && !isMinimized) {
-      console.log(
-        "🎯🎯🎯 [POPUP MARK ALL] Popup opened with messages, marking ALL as read"
-      );
-      console.log("🎯 [POPUP MARK ALL] Conversation ID:", conversation.id);
-      console.log("🎯 [POPUP MARK ALL] Total messages:", messages.length);
-
+    if (conversation?.id && messages.length > 0 && !isMinimized && messages.length > markedUpToRef.current) {
       // Set this conversation as active to prevent notifications
       if (chatDispatch) {
-        console.log(
-          "🎯 [POPUP OPEN] Setting conversation as active:",
-          conversation.id
-        );
         chatDispatch({
           type: CHAT_ACTIONS.SET_ACTIVE_CONVERSATION,
           payload: { conversationId: conversation.id },
@@ -375,16 +367,14 @@ const ChatWindowPopup = ({
       }
 
       const timer = setTimeout(async () => {
-        console.log("📮 [POPUP MARK ALL] Calling markConversationRead...");
         await markConversationRead();
-        console.log("✅ [POPUP MARK ALL] markConversationRead completed");
+        markedUpToRef.current = messages.length;
       }, 500);
 
       return () => clearTimeout(timer);
     }
   }, [
     conversation?.id,
-    messages.length,
     isMinimized,
     markConversationRead,
     chatDispatch,
@@ -407,22 +397,20 @@ const ChatWindowPopup = ({
   // ✅ UNIFIED: Infinite scroll removed - chatStore loads messages automatically via API
   // No need for infinite scroll with unified architecture
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive + mark as read if new unreads
   useEffect(() => {
     if (!isMinimized && messages.length > 0) {
       scrollToBottom();
 
-      // Mark ALL messages as read when new messages arrive and popup is visible
-      console.log(
-        "👁️ [POPUP MARK ALL] New messages arrived, marking ALL as read"
-      );
-      const timer = setTimeout(async () => {
-        console.log("📮 [POPUP MARK ALL] Calling markConversationRead...");
-        await markConversationRead();
-        console.log("✅ [POPUP MARK ALL] markConversationRead completed");
-      }, 1000);
+      // Only mark as read if there are genuinely new messages since last mark
+      if (messages.length > markedUpToRef.current) {
+        const timer = setTimeout(async () => {
+          await markConversationRead();
+          markedUpToRef.current = messages.length;
+        }, 1000);
 
-      return () => clearTimeout(timer);
+        return () => clearTimeout(timer);
+      }
     }
   }, [messages.length, isMinimized, markConversationRead]);
 

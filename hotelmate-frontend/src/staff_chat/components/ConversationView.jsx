@@ -43,6 +43,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const messagesEndRef = useRef(null);
   const lastMessageRef = useRef(null);
+  const markedUpToRef = useRef(0);
 
   // Get current user from AuthContext, fallback to prop
   const { user: authUser } = useAuth();
@@ -162,6 +163,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
   };
 
   useEffect(() => {
+    markedUpToRef.current = 0;
     if (conversation?.id) {
       setCurrentConversationId(conversation.id);
       loadMessages();
@@ -190,10 +192,10 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
 
     const observer = new IntersectionObserver(
       async (entries) => {
-        if (entries[0].isIntersecting) {
+        if (entries[0].isIntersecting && messages.length > markedUpToRef.current) {
           console.log('👁️ [AUTO MARK READ] Last message is visible, marking conversation as read');
           await markConversationRead();
-          console.log('✅ [MARK ALL AS READ] markConversationRead completed');
+          markedUpToRef.current = messages.length;
         }
       },
       { threshold: 1.0 }
@@ -204,18 +206,12 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     return () => observer.disconnect();
   }, [messages.length, markConversationRead]);
 
-  // Mark ALL messages as read when conversation is opened
+  // Mark ALL messages as read when conversation is opened or new unreads arrive
   useEffect(() => {
-    if (conversation?.id && messages.length > 0) {
-      console.log('🎯🎯🎯 [MARK ALL AS READ] Conversation opened with messages, marking ALL as read');
-      console.log('🎯 [MARK ALL AS READ] Conversation ID:', conversation.id);
-      console.log('🎯 [MARK ALL AS READ] Total messages:', messages.length);
-      
-      // Small delay to ensure messages are loaded
+    if (conversation?.id && messages.length > 0 && messages.length > markedUpToRef.current) {
       const timer = setTimeout(async () => {
-        console.log('📮 [MARK ALL AS READ] Calling markConversationRead...');
         await markConversationRead();
-        console.log('✅ [MARK ALL AS READ] markConversationRead completed');
+        markedUpToRef.current = messages.length;
       }, 500);
       
       return () => clearTimeout(timer);

@@ -262,6 +262,7 @@ class FirebaseService {
     if (currentPermission === 'granted') {
       // Permission already granted, get token
       await this.getFCMToken();
+      this._startTokenRefreshCheck();
       return true;
     } else if (currentPermission === 'default') {
       // Permission not requested yet, request it
@@ -269,6 +270,7 @@ class FirebaseService {
       
       if (granted) {
         await this.getFCMToken();
+        this._startTokenRefreshCheck();
         return true;
       }
     } else {
@@ -281,10 +283,41 @@ class FirebaseService {
   }
 
   /**
+   * Periodically check if FCM token was rotated and re-save if changed.
+   * Firebase v9 has no onTokenRefresh — getToken() returns the current
+   * (possibly rotated) token, so we compare against the stored value.
+   */
+  _startTokenRefreshCheck() {
+    // Check every 60 minutes
+    if (this._tokenRefreshInterval) return;
+    this._tokenRefreshInterval = setInterval(async () => {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const freshToken = await getToken(messaging, {
+          vapidKey: VAPID_KEY,
+          serviceWorkerRegistration: registration,
+        });
+        const storedToken = localStorage.getItem('fcm_token');
+        if (freshToken && freshToken !== storedToken) {
+          console.log('FCM token rotated — re-saving to backend');
+          localStorage.setItem('fcm_token', freshToken);
+          await this.saveFCMTokenToBackend(freshToken);
+        }
+      } catch (err) {
+        console.error('Token refresh check failed:', err);
+      }
+    }, 60 * 60 * 1000);
+  }
+
+  /**
    * Delete FCM token (e.g., on logout)
    */
   async deleteFCMToken() {
     try {
+      if (this._tokenRefreshInterval) {
+        clearInterval(this._tokenRefreshInterval);
+        this._tokenRefreshInterval = null;
+      }
       localStorage.removeItem('fcm_token');
       console.log('FCM token removed from localStorage');
       
