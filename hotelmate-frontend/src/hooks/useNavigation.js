@@ -70,8 +70,9 @@ export function useNavigation() {
 
 
   
-  // Show all navigation items without conditional filtering
-  const visibleNavItems = allNavItems;
+  // Hide temporarily disabled nav items
+  const HIDDEN_NAV_SLUGS = ['stock_tracker', 'maintenance'];
+  const visibleNavItems = allNavItems.filter(item => !HIDDEN_NAV_SLUGS.includes(item.slug));
 
   // 🎯 BACKEND AUTHORITATIVE: Trust allowed_navs from canonical resolver
   // Backend handles superuser bypass and M2M filtering correctly
