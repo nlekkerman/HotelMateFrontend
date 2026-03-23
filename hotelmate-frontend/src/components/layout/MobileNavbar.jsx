@@ -31,6 +31,7 @@ const MobileNavbar = () => {
   const { canAccess } = usePermissions();
   const { visibleNavItems, categories, uncategorizedItems, hasNavigation } = useNavigation();
   const [expandedCategoryId, setExpandedCategoryId] = useState(null);
+  const [roomBookingsExpanded, setRoomBookingsExpanded] = useState(false);
 
   useEffect(() => {
     if (!user || !hotelIdentifier) {
@@ -361,18 +362,95 @@ const MobileNavbar = () => {
                 {/* Quick Access: Room Bookings */}
                 {canAccess('room-bookings') && (
                   <li className="nav-item">
-                    <Link
+                    <button
                       className={`nav-link ${
-                        location.pathname.includes('/room-bookings') ? "active" : ""
-                      } text-white d-flex justify-content-between align-items-center`}
-                      to={`/staff/hotel/${hotelIdentifier}/room-bookings`}
-                      onClick={toggleNavbar}
+                        location.pathname.includes('/room-bookings') || location.pathname.includes('/booking-management') ? "active" : ""
+                      } text-white d-flex justify-content-between align-items-center w-100 border-0 bg-transparent text-start`}
+                      onClick={() => setRoomBookingsExpanded(!roomBookingsExpanded)}
                     >
                       <div>
                         <i className="bi bi-calendar-check me-2" />
                         Room Bookings
                       </div>
-                    </Link>
+                      <i className={`bi bi-chevron-${roomBookingsExpanded ? 'up' : 'down'}`} />
+                    </button>
+
+                    {roomBookingsExpanded && (
+                      <ul className="list-unstyled ps-4 mt-1">
+                        <li className="mb-1">
+                          <Link
+                            className={`nav-link ${
+                              location.pathname.includes('/room-bookings') && location.search.includes('filter=pending') ? "active" : ""
+                            } text-white py-1 px-2 small`}
+                            to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=pending`}
+                            onClick={toggleNavbar}
+                          >
+                            <i className="bi bi-clock me-2" />
+                            Pending Bookings
+                          </Link>
+                        </li>
+                        <li className="mb-1">
+                          <Link
+                            className={`nav-link ${
+                              location.pathname.includes('/room-bookings') && location.search.includes('filter=confirmed') ? "active" : ""
+                            } text-white py-1 px-2 small`}
+                            to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=confirmed`}
+                            onClick={toggleNavbar}
+                          >
+                            <i className="bi bi-check-circle me-2" />
+                            Confirmed Bookings
+                          </Link>
+                        </li>
+                        <li className="mb-1">
+                          <Link
+                            className={`nav-link ${
+                              location.pathname.includes('/room-bookings') && location.search.includes('filter=cancelled') ? "active" : ""
+                            } text-white py-1 px-2 small`}
+                            to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=cancelled`}
+                            onClick={toggleNavbar}
+                          >
+                            <i className="bi bi-x-circle me-2" />
+                            Cancelled Bookings
+                          </Link>
+                        </li>
+                        <li className="mb-1">
+                          <Link
+                            className={`nav-link ${
+                              location.pathname.includes('/room-bookings') && !location.search.includes('filter=') ? "active" : ""
+                            } text-white py-1 px-2 small`}
+                            to={`/staff/hotel/${hotelIdentifier}/room-bookings`}
+                            onClick={toggleNavbar}
+                          >
+                            <i className="bi bi-calendar-event me-2" />
+                            All Bookings
+                          </Link>
+                        </li>
+                        <li className="mb-1">
+                          <Link
+                            className={`nav-link ${
+                              location.pathname.includes('/room-bookings') && location.search.includes('filter=history') ? "active" : ""
+                            } text-white py-1 px-2 small`}
+                            to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=history`}
+                            onClick={toggleNavbar}
+                          >
+                            <i className="bi bi-archive me-2" />
+                            Booking History
+                          </Link>
+                        </li>
+                        <li className="mb-1">
+                          <Link
+                            className={`nav-link ${
+                              location.pathname.includes('/booking-management') ? "active" : ""
+                            } text-white py-1 px-2 small`}
+                            to={`/staff/hotel/${hotelIdentifier}/booking-management`}
+                            onClick={toggleNavbar}
+                          >
+                            <i className="bi bi-gear me-2" />
+                            Management Dashboard
+                          </Link>
+                        </li>
+                      </ul>
+                    )}
                   </li>
                 )}
 
@@ -455,6 +533,18 @@ const MobileNavbar = () => {
                                       >
                                         <i className="bi bi-check-circle me-2" />
                                         Confirmed Bookings
+                                      </Link>
+                                    </li>
+                                    <li className="mb-1">
+                                      <Link
+                                        className={`nav-link ${
+                                          location.pathname.includes('/room-bookings') && location.search.includes('filter=cancelled') ? "active" : ""
+                                        } text-white py-1 px-2 small`}
+                                        to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=cancelled`}
+                                        onClick={toggleNavbar}
+                                      >
+                                        <i className="bi bi-x-circle me-2" />
+                                        Cancelled Bookings
                                       </Link>
                                     </li>
                                     <li className="mb-1">
