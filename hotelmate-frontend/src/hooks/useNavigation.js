@@ -71,7 +71,7 @@ export function useNavigation() {
 
   
   // Hide temporarily disabled nav items
-  const HIDDEN_NAV_SLUGS = ['stock_tracker', 'housekeeping'];
+  const HIDDEN_NAV_SLUGS = ['stock_tracker', 'stock_dashboard', 'housekeeping'];
   const visibleNavItems = allNavItems.filter(item => !HIDDEN_NAV_SLUGS.includes(item.slug));
 
   // 🎯 BACKEND AUTHORITATIVE: Trust allowed_navs from canonical resolver
