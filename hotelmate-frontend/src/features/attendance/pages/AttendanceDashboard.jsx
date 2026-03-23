@@ -23,6 +23,7 @@ import ClockedInByDepartment from "../components/ClockedInByDepartment";
 import { AttendanceDashboardSkeleton, AttendanceTableSkeleton, PeriodSelectorSkeleton } from "../components/AttendanceSkeletons";
 import { deriveStatus } from "../utils/attendanceStatus";
 import useStaffMetadata from "@/hooks/useStaffMetadata";
+import { useAuth } from '@/context/AuthContext';
 import "../components/AttendanceCards.css";
 import { handleRealTimeStatusUpdate, showStatusNotification } from "../utils/statusUpdates";
 import { safeStaffId, safeStaffName, safeTimeSlice, safeNumber } from "../utils/safeUtils";
@@ -112,6 +113,7 @@ function mergeRosterAndLogs(rosterItems, logItems) {
 function AttendanceDashboardComponent() {
   const { hotelSlug } = useParams();
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   
   console.log('[AttendanceDashboardComponent] Rendering with hotelSlug:', hotelSlug);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -632,14 +634,13 @@ function AttendanceDashboardComponent() {
             
             {/* Enhanced Dashboard & Kiosk Mode Toggle - Only for Super Staff/Admin */}
             {(() => {
-              const user = JSON.parse(localStorage.getItem('user') || '{}');
-              const isSuperStaff = user?.is_super_staff || user?.role === 'admin' || user?.access_level === 'super_admin' || user?.is_staff;
+              const isSuperStaff = authUser?.is_super_staff || authUser?.role === 'admin' || authUser?.access_level === 'super_admin' || authUser?.is_staff;
               const isKioskMode = localStorage.getItem('kioskMode') === 'true';
               
-              console.log('[AttendanceDashboard] Kiosk button check:', { user, isSuperStaff, isKioskMode });
+              console.log('[AttendanceDashboard] Kiosk button check:', { user: authUser, isSuperStaff, isKioskMode });
               
               // For now, show to all staff users for testing
-              return user?.is_staff ? (
+              return authUser?.is_staff ? (
                 <div className="kiosk-control-block d-flex gap-2">
                   
                   <button

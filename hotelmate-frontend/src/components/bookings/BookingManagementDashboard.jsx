@@ -5,28 +5,16 @@ import SurveyRequirementsConfig from './SurveyRequirementsConfig';
 import CancellationPolicyControl from './CancellationPolicyControl';
 import ApprovalCutoffConfig from './ApprovalCutoffConfig';
 import CheckoutTimeConfig from './CheckoutTimeConfig';
+import { useAuth } from '@/context/AuthContext';
 
 /**
  * BookingManagementDashboard - Dashboard component for managing bookings
  * Includes pre-checkin requirements configuration
  */
 const BookingManagementDashboard = ({ hotelSlug }) => {
-  // Get hotel slug from props or localStorage as fallback
-  const getHotelSlug = () => {
-    if (hotelSlug) return hotelSlug;
-    
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser) return null;
-    
-    try {
-      const userData = JSON.parse(storedUser);
-      return userData.hotel_slug || null;
-    } catch {
-      return null;
-    }
-  };
-
-  const currentHotelSlug = getHotelSlug();
+  const { user } = useAuth();
+  // Get hotel slug from props or auth context as fallback
+  const currentHotelSlug = hotelSlug || user?.hotel_slug || null;
 
   return (
     <Container fluid className="py-4">

@@ -4,6 +4,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import DownloadRosters from "@/components/analytics/DownloadRosters";
 import { useAnalytics } from "@/components/analytics/hooks/useAnalytics";
 import KpiDetailModal from "@/components/modals/KpiDetailModal";
+import { useAuth } from '@/context/AuthContext';
 
 // Cards import
 import {
@@ -22,18 +23,10 @@ const METRIC_OPTIONS = [
   { value: "weekly", label: "Weekly Totals" },
 ];
 
-function getHotelSlugFromStorage() {
-  try {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    return user.hotel_slug || (user.hotel && user.hotel.slug) || "";
-  } catch {
-    return "";
-  }
-}
-
 export default function RosterAnalytics(props) {
-  // Get hotelSlug from localStorage if not passed as prop
-  const hotelSlug = props.hotelSlug || getHotelSlugFromStorage();
+  const { user: authUser } = useAuth();
+  // Get hotelSlug from auth context if not passed as prop
+  const hotelSlug = props.hotelSlug || authUser?.hotel_slug || '';
 
   // Pass hotelSlug and other params to your hook
   const {

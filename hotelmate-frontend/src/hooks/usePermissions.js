@@ -1,73 +1,44 @@
+import { useAuth } from '@/context/AuthContext';
+
 export function usePermissions() {
-  // Parse user object from localStorage safely
-  let storedUser = null;
-  try {
-    storedUser = JSON.parse(localStorage.getItem("user"));
-  } catch {
-    storedUser = null;
-  }
+  const { user } = useAuth();
 
-  const role = storedUser?.role?.toLowerCase(); // Normalize role string
-  const isSuperUser = storedUser?.is_superuser;
-  const allowedNavs = storedUser?.allowed_navs || [];
-  const accessLevel = storedUser?.access_level;
+  const role = user?.role?.toLowerCase();
+  const isSuperUser = user?.is_superuser;
+  const allowedNavs = user?.allowed_navs || [];
+  const accessLevel = user?.access_level;
 
-  // 🎯 BACKEND AUTHORITATIVE: No client-side permission fixes
-  // If payload is missing, treat as denied and force re-auth/refresh
-  if (storedUser && !Array.isArray(allowedNavs)) {
+  // Backend authoritative — if payload is missing, treat as denied
+  if (user && !Array.isArray(user?.allowed_navs)) {
     console.warn('⚠️ Invalid allowed_navs from backend, treating as empty array');
-    // Don't auto-fix, let backend handle permission grants
   }
 
-  // 🎯 BACKEND AUTHORITATIVE: Trust navigation_items structure from backend
-  // Backend canonical resolver guarantees valid navigation items structure
-  // No client-side cleanup or repair needed
-
-  // ✅ NEW: Check if user can access navigation by slug
   const canAccessNav = (slug) => {
-    // 🛡️ DEFENSIVE: Handle undefined/null slug gracefully
     if (!slug) {
-      console.warn(`🚨 canAccessNav: Received undefined/null slug, returning false`);
+      console.warn('canAccessNav: Received undefined/null slug, returning false');
       return false;
     }
-    
-    if (!storedUser) {
-      console.log(`🚫 canAccessNav(${slug}): No stored user`);
-      return false;
-    }
-    
-    // ⭐ Django superuser sees EVERYTHING (bypass all checks)
-    if (isSuperUser) {
-      // 🔇 REDUCED LOGGING: Only log first time or for specific debugging
-      return true;
-    }
-    
-    // Regular staff: check allowed_navs array
+    if (!user) return false;
+    if (isSuperUser) return true;
+
     const hasAccess = allowedNavs.includes(slug);
-    // 🔇 REDUCED LOGGING: Only log when access is denied or for debugging specific slugs
     if (!hasAccess) {
-      console.log(`🔍 canAccessNav(${slug}): Regular user - DENIED (allowed: ${allowedNavs.join(', ')})`);
+      console.log(`canAccessNav(${slug}): DENIED (allowed: ${allowedNavs.join(', ')})`);
     }
     return hasAccess;
   };
 
-  // ✅ KEEP: Check access level for feature flags and role-based permissions
   const canAccess = (allowedRoles = []) => {
-    if (!storedUser || !role) {
-      return false;
-    }
-    if (isSuperUser) {
-      return true;
-    }
-    const normalizedAllowedRoles = allowedRoles.map(r => r.toLowerCase());
-    return normalizedAllowedRoles.includes(role);
+    if (!user || !role) return false;
+    if (isSuperUser) return true;
+    return allowedRoles.map(r => r.toLowerCase()).includes(role);
   };
 
-  return { 
-    canAccessNav,  // NEW: For navigation filtering by slug
-    canAccess,     // EXISTING: For feature/button permissions by role
-    allowedNavs,   // Expose for debugging/direct access
-    accessLevel,   // Expose for UI logic
-    isSuperUser    // Expose superuser flag
+  return {
+    canAccessNav,
+    canAccess,
+    allowedNavs,
+    accessLevel,
+    isSuperUser,
   };
 }

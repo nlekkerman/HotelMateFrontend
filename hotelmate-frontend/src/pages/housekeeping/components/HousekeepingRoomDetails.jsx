@@ -15,6 +15,7 @@ import {
   managerOverrideRoomStatus
 } from "@/services/roomOperations";
 import { handleRoomOperationError } from "@/utils/errorHandling";
+import { useAuth } from '@/context/AuthContext';
 
 function HousekeepingRoomDetails() {
   const { hotelSlug, roomNumber } = useParams();
@@ -48,7 +49,7 @@ function HousekeepingRoomDetails() {
   const [newNote, setNewNote] = useState('');
   const [addingNote, setAddingNote] = useState(false);
   
-  const userData = JSON.parse(localStorage.getItem("user"));
+  const { user: userData } = useAuth();
   const canManageRooms = ['housekeeping', 'admin', 'manager'].includes(userData?.role?.toLowerCase()) || userData?.is_superuser;
   const canUseManagerOverride = userData?.is_manager || userData?.is_superuser || userData?.role?.toLowerCase() === 'manager';
 

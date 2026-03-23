@@ -2,6 +2,7 @@ import { getToken, onMessage } from 'firebase/messaging';
 import { messaging } from '../firebase';
 import api from './api';
 import { showNotification, canShowNotifications } from '@/utils/notificationUtils';
+import { getAuthUser } from '@/lib/authStore';
 
 
 // VAPID key from Firebase Console -> Project Settings -> Cloud Messaging -> Web Push certificates
@@ -137,14 +138,16 @@ class FirebaseService {
       console.log('💾 Attempting to save FCM token to backend...');
       console.log('📝 Token:', fcmToken.substring(0, 50) + '...');
       
-      // Get user object from localStorage
-      const userStr = localStorage.getItem('user');
-      if (!userStr) {
-        console.error('❌ No user found in localStorage. Cannot save FCM token to backend.');
+      // Get user object from authStore bridge (primary) with localStorage fallback
+      // Fallback needed: saveFCMTokenToBackend can be called before React mounts
+      const user = getAuthUser() || (() => {
+        try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
+      })();
+      if (!user) {
+        console.error('❌ No user found. Cannot save FCM token to backend.');
         return;
       }
 
-      const user = JSON.parse(userStr);
       console.log('👤 User found:', user.username, 'ID:', user.staff_id);
       
       const authToken = user.token;
@@ -286,17 +289,16 @@ class FirebaseService {
       console.log('FCM token removed from localStorage');
       
       // Optionally notify backend to remove token
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        const authToken = user.token;
-        
-        if (authToken) {
-          await api.post(
-            '/staff/save-fcm-token/',
-            { fcm_token: null }
-          );
-        }
+      const user = getAuthUser() || (() => {
+        try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
+      })();
+      const authToken = user?.token;
+      
+      if (authToken) {
+        await api.post(
+          '/staff/save-fcm-token/',
+          { fcm_token: null }
+        );
       }
     } catch (error) {
       console.error('Error deleting FCM token:', error);

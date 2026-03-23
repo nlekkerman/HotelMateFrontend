@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/services/api';
 import { toast } from 'react-toastify';
+import { useAuth } from '@/context/AuthContext';
 
 const NavigationPermissionManager = ({ staffId }) => {
   const [availableNavItems, setAvailableNavItems] = useState([]);
@@ -8,15 +9,11 @@ const NavigationPermissionManager = ({ staffId }) => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [apiError, setApiError] = useState(null);
+  const { user } = useAuth();
 
-  // Get hotel_slug from localStorage
+  // Get hotel_slug from auth context
   const getHotelSlug = () => {
-    try {
-      const user = JSON.parse(localStorage.getItem('user'));
-      return user?.hotel_slug || 'hotel-killarney';
-    } catch {
-      return 'hotel-killarney';
-    }
+    return user?.hotel_slug || 'hotel-killarney';
   };
 
   useEffect(() => {

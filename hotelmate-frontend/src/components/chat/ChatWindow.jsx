@@ -37,6 +37,7 @@ import {
 } from "./utils/messageDownload";
 import { showStaffAssignmentNotification } from '@/utils/guestNotifications.jsx';
 import { staffChatConversationChannel } from '@/lib/pusher/channels';
+import { useAuth } from '@/context/AuthContext';
 
 const MESSAGE_LIMIT = 10;
 
@@ -86,9 +87,9 @@ const ChatWindow = ({
   const hotelSlug = propHotelSlug || paramHotelSlug;
   const conversationId = propConversationId || paramConversationIdFromURL;
   
-  const storedUser = localStorage.getItem("user");
+  const { user: authUser } = useAuth();
   const userId =
-    propUserId || (storedUser ? JSON.parse(storedUser).id : undefined);
+    propUserId || authUser?.id || undefined;
   
   // Guest is someone WITHOUT a userId (not authenticated as staff)
   const isGuest = !userId;
@@ -1193,12 +1194,10 @@ const ChatWindow = ({
         const headers = {};
         
         if (userId) {
-          // Staff authentication - get token and hotel info from localStorage
-          const storedUser = localStorage.getItem("user");
-          const userData = storedUser ? JSON.parse(storedUser) : null;
-          const token = userData?.token || null;
-          const hotelId = userData?.hotel_id || null;
-          const hotelSlug_header = userData?.hotel_slug || null;
+          // Staff authentication - get token and hotel info from auth context
+          const token = authUser?.token || null;
+          const hotelId = authUser?.hotel_id || null;
+          const hotelSlug_header = authUser?.hotel_slug || null;
 
           if (token) {
             headers['Authorization'] = `Token ${token}`;

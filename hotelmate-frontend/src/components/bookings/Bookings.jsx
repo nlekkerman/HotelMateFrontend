@@ -4,6 +4,7 @@ import api from "@/services/api";
 import RestaurantBookings from "./RestaurantBookings";
 import { useBookingNotifications } from "@/context/BookingNotificationContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from '@/context/AuthContext';
 
 export default function Bookings() {
   const {
@@ -14,6 +15,7 @@ export default function Bookings() {
   const navigate = useNavigate();
   const { markAllBookingRead } = useBookingNotifications();
   const { mainColor } = useTheme();
+  const { user: authUser } = useAuth();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -24,18 +26,10 @@ export default function Bookings() {
   const getHotelInfo = () => {
     if (qrHotelSlug) return { slug: qrHotelSlug, name: null };
 
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser) return { slug: null, name: null };
-
-    try {
-      const userData = JSON.parse(storedUser);
-      return {
-        slug: userData.hotel_slug || null,
-        name: userData.hotel_name || "Unknown Hotel",
-      };
-    } catch {
-      return { slug: null, name: null };
-    }
+    return {
+      slug: authUser?.hotel_slug || null,
+      name: authUser?.hotel_name || "Unknown Hotel",
+    };
   };
 
   const { slug: hotelSlug, name: hotelName } = getHotelInfo();

@@ -6,6 +6,7 @@ import { formatCurrency } from '../utils/stockDisplayUtils';
 import { ReopenPeriodModal } from '../modals/ReopenPeriodModal';
 import { CreatePeriodModal } from '../modals/CreatePeriodModal';
 import { DeletePeriodModal } from '../modals/DeletePeriodModal';
+import { useAuth } from '@/context/AuthContext';
 
 export const PeriodSnapshots = () => {
   const { hotel_slug } = useParams();
@@ -22,18 +23,7 @@ export const PeriodSnapshots = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [periodToDelete, setPeriodToDelete] = useState(null);
   
-  // Check if user is superuser from localStorage
-  const getUserFromLocalStorage = () => {
-    try {
-      const userStr = localStorage.getItem('user');
-      return userStr ? JSON.parse(userStr) : null;
-    } catch (err) {
-      console.error('Error reading user from localStorage:', err);
-      return null;
-    }
-  };
-  
-  const user = getUserFromLocalStorage();
+  const { user } = useAuth();
   const isSuperuser = user?.is_superuser === true;
 
   useEffect(() => {

@@ -1,7 +1,11 @@
 // TODO: migrate remaining domains to centralized realtime (eventBus + store)
+// See src/migration/realtime-migration.md for full tracking
+// FLAG: Bearer vs Token auth mismatch — do NOT replace new Pusher() with realtimeClient
+//       until backend auth prefix is verified. See migration tracker.
 import { useEffect, useCallback, useRef } from 'react';
 import Pusher from 'pusher-js';
 import { pusherLogger } from '../utils/logger';
+import { getAuthUser } from '@/lib/authStore';
 
 /**
  * Custom hook for managing Pusher real-time connections
@@ -28,14 +32,15 @@ const usePusher = ({ appKey, cluster = 'mt1', enabled = true }) => {
 
     try {
       // Initialize Pusher instance
+      // FLAG: Uses 'Bearer' prefix — realtimeClient uses 'Token'. Do not unify until backend verified.
+      const authToken = getAuthUser()?.token || null;
       pusherRef.current = new Pusher(appKey, {
         cluster,
         encrypted: true,
         authEndpoint: '/api/pusher/auth', // Adjust based on your backend
         auth: {
           headers: {
-            // Add authentication headers if needed
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${authToken}`
           }
         }
       });

@@ -1,4 +1,5 @@
 // TODO: migrate this domain to centralized realtime (eventBus + store)
+// See src/migration/realtime-migration.md for full tracking
 import { useState, useEffect } from 'react';
 import Pusher from 'pusher-js';
 import api from '@/services/api';

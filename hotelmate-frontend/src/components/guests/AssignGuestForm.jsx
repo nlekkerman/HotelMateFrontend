@@ -4,10 +4,12 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import api from "@/services/api";
 import { addDays } from "date-fns";
+import { useAuth } from '@/context/AuthContext';
 
 function AssignGuestForm() {
   const { roomNumber } = useParams();
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
 
   const [room, setRoom] = useState(null);
   const [hotelSlug, setHotelSlug] = useState("");
@@ -26,8 +28,7 @@ function AssignGuestForm() {
   useEffect(() => {
     async function fetchRoom() {
       try {
-        const userData = JSON.parse(localStorage.getItem("user"));
-        const hotelSlug = userData?.hotel_slug;
+        const hotelSlug = authUser?.hotel_slug;
         const res = await api.get(`/staff/hotel/${hotelSlug}/rooms/${roomNumber}/`);
         const roomData = res.data;
 

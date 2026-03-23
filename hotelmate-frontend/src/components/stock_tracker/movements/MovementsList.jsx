@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useMovements } from "../hooks/useMovements";
 import { useStockItems } from "../hooks/useStockItems";
 import { MovementModal } from "../modals/MovementModal";
+import { useAuth } from '@/context/AuthContext';
 
 export const MovementsList = () => {
   const { hotel_slug } = useParams();
@@ -10,8 +11,8 @@ export const MovementsList = () => {
   const { movements, loading, error, createMovement } = useMovements(hotel_slug);
   const { items } = useStockItems(hotel_slug);
   
-  // Get user data from localStorage
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const { user } = useAuth();
+  // user may be null briefly during mount
   
   const [modalOpen, setModalOpen] = useState(false);
   const [filters, setFilters] = useState({

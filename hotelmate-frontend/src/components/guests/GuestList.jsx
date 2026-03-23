@@ -5,6 +5,7 @@ import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import api from "@/services/api";
 import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from '@/context/AuthContext';
 
 // Extend dayjs with the plugins
 dayjs.extend(isSameOrBefore);
@@ -16,9 +17,9 @@ const GuestList = () => {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const { mainColor } = useTheme();
+  const { user } = useAuth();
 
-  const hotelName =
-    JSON.parse(localStorage.getItem("user"))?.hotel_name || "Your Hotel";
+  const hotelName = user?.hotel_name || "Your Hotel";
   const navigate = useNavigate();
 
   useEffect(() => {

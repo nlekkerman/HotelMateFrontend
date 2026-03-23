@@ -1,11 +1,16 @@
 // src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { setAuthUser } from '@/lib/authStore';
+
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
+    const initial = stored ? JSON.parse(stored) : null;
+    // Hydrate authStore bridge so non-React code has access immediately
+    setAuthUser(initial);
+    return initial;
   });
 
   // View mode: 'guest' or 'staff'
@@ -44,12 +49,8 @@ export const AuthProvider = ({ children }) => {
     console.log('🔍 [AuthContext] userData.allowed_navs:', userData?.allowed_navs);
     
     setUser(userData);
+    setAuthUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
-    
-    // Verify what was actually saved
-    const savedData = JSON.parse(localStorage.getItem('user'));
-    console.log('🔍 [AuthContext] Data saved to localStorage:', savedData);
-    console.log('🔍 [AuthContext] Saved is_superuser:', savedData?.is_superuser);
     
     // If staff logs in, default to staff view
     if (userData?.is_staff) {
@@ -66,6 +67,7 @@ export const AuthProvider = ({ children }) => {
   // Logout (clear everything)
   const logout = () => {
     setUser(null);
+    setAuthUser(null);
     setViewModeState('guest');
     setSelectedHotel(null);
     

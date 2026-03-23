@@ -12,6 +12,7 @@ import ReactionsList from './ReactionsList';
 import ParticipantsModal from './ParticipantsModal';
 import useReadReceipts from '../hooks/useReadReceipts';
 import { useStaffChat } from '../context/StaffChatContext';
+import { useAuth } from '@/context/AuthContext';
 
 /**
  * ConversationView Component
@@ -43,8 +44,9 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
   const messagesEndRef = useRef(null);
   const lastMessageRef = useRef(null);
 
-  // Get current user ID from localStorage or props
-  const currentUserData = currentUser || JSON.parse(localStorage.getItem('user') || '{}');
+  // Get current user from AuthContext, fallback to prop
+  const { user: authUser } = useAuth();
+  const currentUserData = currentUser || authUser || {};
   const currentUserId = currentUserData?.staff_id || currentUserData?.id || null;
 
   // Read receipts management

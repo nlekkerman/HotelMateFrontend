@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useStaffChat } from '../context/StaffChatContext';
 import StaffChatList from './StaffChatList';
 import ConversationView from './ConversationView';
+import { useAuth } from '@/context/AuthContext';
 
 /**
  * StaffChatContainer Component
@@ -18,6 +19,7 @@ const StaffChatContainer = ({
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { conversations } = useStaffChat();
+  const { user: authUser } = useAuth();
   const [activeView, setActiveView] = useState('list'); // 'list' or 'conversation'
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [selectedStaff, setSelectedStaff] = useState(null);
@@ -33,8 +35,8 @@ const StaffChatContainer = ({
       if (conversation) {
         console.log('📱 [StaffChatContainer] Opening conversation from URL:', conversationId);
         
-        // Get current user ID to find the other participant
-        const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
+        // Get current user ID from auth context
+        const currentUserData = authUser || {};
         const currentUserId = currentUserData?.staff_id || currentUserData?.id;
         
         // Find the other participant

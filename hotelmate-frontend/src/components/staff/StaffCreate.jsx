@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import api from "@/services/api";
 import { useNavigate,useParams  } from "react-router-dom";
 import { DEFAULT_NAV_ITEMS } from "@/hooks/useNavigation";
+import { useAuth } from '@/context/AuthContext';
 
 const StaffCreate = () => {
   const [users, setUsers] = useState([]);
@@ -25,19 +26,13 @@ const StaffCreate = () => {
   });
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
 
   useEffect(() => {
-    // Log the current user object from localStorage
-    try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      console.log("[StaffCreate] Current logged-in user from localStorage:", user);
-    } catch (e) {
-      console.warn("[StaffCreate] Could not parse user from localStorage.", e);
-    }
+    console.log("[StaffCreate] Current logged-in user:", authUser);
     const fetchPendingRegistrations = async () => {
       try {
-        const user = JSON.parse(localStorage.getItem("user"));
-        const hotelSlug = user?.hotel_slug;
+        const hotelSlug = authUser?.hotel_slug;
         
         if (!hotelSlug) {
           setError("Hotel information not found");
@@ -51,10 +46,10 @@ const StaffCreate = () => {
         // Set the pending users list
         setUsers(response.data.pending_users || []);
         
-        // Set hotel info from localStorage
-        if (user?.hotel_id) {
-          setSelectedHotelId(user.hotel_id);
-          setHotels([{ id: user.hotel_id, name: user.hotel_name }]);
+        // Set hotel info from auth context
+        if (authUser?.hotel_id) {
+          setSelectedHotelId(authUser.hotel_id);
+          setHotels([{ id: authUser.hotel_id, name: authUser.hotel_name }]);
         }
       } catch (err) {
         setError("Failed to fetch pending registrations");
@@ -130,8 +125,7 @@ const StaffCreate = () => {
 
   const fetchNavigationItems = async () => {
     try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      const hotelSlug = user?.hotel_slug;
+      const hotelSlug = authUser?.hotel_slug;
       
       if (!hotelSlug) {
         console.warn("No hotel slug found, using default navigation items");
@@ -226,8 +220,7 @@ const StaffCreate = () => {
   console.log("Creating staff profile for user:", selectedUser);
 
   try {
-    const user = JSON.parse(localStorage.getItem("user"));
-    const hotelSlug = user?.hotel_slug;
+    const hotelSlug = authUser?.hotel_slug;
     
     if (!hotelSlug) {
       setError("Hotel information not found");

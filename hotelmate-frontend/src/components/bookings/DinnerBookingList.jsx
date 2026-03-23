@@ -3,9 +3,11 @@
 import React, { useEffect, useState } from "react";
 import api from "@/services/api";
 import { useServiceBookingState, serviceBookingActions } from "@/realtime/stores/serviceBookingStore";
+import { useAuth } from '@/context/AuthContext';
 
 export default function DinnerBookingList() {
   const bookingState = useServiceBookingState();
+  const { user: authUser } = useAuth();
   const [restaurants, setRestaurants] = useState([]);   // list of { id, name, slug }
   const [selectedSlug, setSelectedSlug] = useState(""); // slug of the restaurant to fetch
   const [bookings, setBookings] = useState([]);  // Keep local state for filtered bookings by restaurant
@@ -16,15 +18,9 @@ export default function DinnerBookingList() {
   // Get all bookings from store for any realtime updates
   const storeBookings = Object.values(bookingState.bookingsById);
 
-  // 1) Read hotel_slug from localStorage
+  // 1) Read hotel_slug from auth context
   const getHotelSlug = () => {
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser) return null;
-    try {
-      return JSON.parse(storedUser).hotel_slug;
-    } catch {
-      return null;
-    }
+    return authUser?.hotel_slug || null;
   };
 
   // 2) On mount, fetch the list of restaurants for this hotel

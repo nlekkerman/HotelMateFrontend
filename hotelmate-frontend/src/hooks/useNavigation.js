@@ -49,8 +49,7 @@ export function useNavigation() {
   // Backend resolver guarantees hotel-scoped, validated navigation structure
   let savedNavItems = [];
   try {
-    const storedUser = JSON.parse(localStorage.getItem('user'));
-    savedNavItems = storedUser?.navigation_items || [];
+    savedNavItems = user?.navigation_items || [];
     // Backend canonical resolver ensures valid structure - no client validation needed
   } catch {
     savedNavItems = [];

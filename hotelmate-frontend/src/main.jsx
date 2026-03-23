@@ -10,14 +10,16 @@ import { PresetsProvider } from "@/context/PresetsContext";
 import { listenForFirebaseMessages } from "@/utils/firebaseNotifications";
 import { showNotification } from "@/utils/notificationUtils";
 import { handleIncomingRealtimeEvent } from "@/realtime/eventBus";
+import { getAuthUser } from "@/lib/authStore";
 
 
-// Helper to pull hotel_slug out of localStorage
+// Helper to pull hotel_slug — authStore primary, localStorage fallback (runs before React)
 function getHotelSlug() {
-  const stored = localStorage.getItem("user");
-  if (!stored) return null;
+  const user = getAuthUser();
+  if (user?.hotel_slug) return user.hotel_slug;
   try {
-    return JSON.parse(stored).hotel_slug;
+    const stored = localStorage.getItem("user");
+    return stored ? JSON.parse(stored).hotel_slug : null;
   } catch {
     return null;
   }

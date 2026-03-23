@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
+import { getAuthUser } from "@/lib/authStore";
 
 const ThemeContext = createContext({
   mainColor: "#3498db",
@@ -54,30 +55,33 @@ const ThemeProvider = ({ children }) => {
       console.log('[ThemeContext] User from AuthContext:', user);
       console.log('[ThemeContext] User is staff:', user?.is_staff, 'User hotel_slug:', user?.hotel_slug);
       
-      // Debug: Check what's actually in localStorage
-      const storedUser = localStorage.getItem('user');
+      // Debug: Cross-check AuthContext user against authStore bridge
+      // NOTE: This intentional fallback corrects stale AuthContext state during login transitions.
+      // Safe to keep until AuthContext is verified as single source of truth in all flows.
+      const bridgeUser = getAuthUser() || (() => {
+        try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
+      })();
       let actualIsStaff = user?.is_staff;
       let actualHotelSlug = user?.hotel_slug;
       
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        console.log('[ThemeContext] User in localStorage:', parsedUser);
-        console.log('[ThemeContext] localStorage is_staff:', parsedUser.is_staff);
+      if (bridgeUser) {
+        console.log('[ThemeContext] Bridge user:', bridgeUser);
+        console.log('[ThemeContext] Bridge is_staff:', bridgeUser.is_staff);
         
         // Fix: If user has staff-level access but is_staff is false, correct it
-        const shouldBeStaff = parsedUser.is_superuser || 
-                             parsedUser.access_level === 'staff_admin' || 
-                             parsedUser.access_level === 'super_staff_admin' ||
-                             parsedUser.staff_id;
+        const shouldBeStaff = bridgeUser.is_superuser || 
+                             bridgeUser.access_level === 'staff_admin' || 
+                             bridgeUser.access_level === 'super_staff_admin' ||
+                             bridgeUser.staff_id;
                              
-        if (shouldBeStaff && !parsedUser.is_staff) {
+        if (shouldBeStaff && !bridgeUser.is_staff) {
           console.log('[ThemeContext] 🔧 FIXING: User should be staff but is_staff=false, correcting...');
           actualIsStaff = true;
-          actualHotelSlug = parsedUser.hotel_slug;
-        } else if (!user?.is_staff && parsedUser.is_staff) {
-          console.log('[ThemeContext] Using localStorage data as AuthContext seems incorrect');
-          actualIsStaff = parsedUser.is_staff;
-          actualHotelSlug = parsedUser.hotel_slug;
+          actualHotelSlug = bridgeUser.hotel_slug;
+        } else if (!user?.is_staff && bridgeUser.is_staff) {
+          console.log('[ThemeContext] Using bridge data as AuthContext seems incorrect');
+          actualIsStaff = bridgeUser.is_staff;
+          actualHotelSlug = bridgeUser.hotel_slug;
         }
       }
       

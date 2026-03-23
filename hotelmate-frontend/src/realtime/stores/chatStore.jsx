@@ -1,6 +1,7 @@
 // src/realtime/stores/chatStore.jsx
 import React, { createContext, useContext, useReducer } from 'react';
 import { CHAT_ACTIONS } from './chatActions.js';
+import { getAuthUser } from '@/lib/authStore';
 
 // Re-export for backward compatibility
 export { CHAT_ACTIONS };
@@ -321,7 +322,7 @@ function chatReducer(state, action) {
       if (!conversation) return state;
 
       // Mark conversation as read if current user's read receipt
-      const currentUserId = parseInt(localStorage.getItem('staff_id'));
+      const currentUserId = parseInt(getAuthUser()?.staff_id);
       if (readByStaffId === currentUserId) {
         return {
           ...state,

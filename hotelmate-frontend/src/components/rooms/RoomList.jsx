@@ -4,9 +4,11 @@ import { useNavigate } from "react-router-dom";
 import api, { buildStaffURL } from "@/services/api";
 import RoomCard from "@/components/rooms/RoomCard";
 import { useRoomsState, useRoomsDispatch, roomsActions } from "@/realtime/stores/roomsStore.jsx";
+import { getAuthUser } from '@/lib/authStore';
+import { useAuth } from '@/context/AuthContext';
 
 const fetchRooms = async () => {
-  const userData = JSON.parse(localStorage.getItem("user"));
+  const userData = getAuthUser();
   const hotelSlug = userData?.hotel_slug;
 
   if (!hotelSlug) {
@@ -46,7 +48,7 @@ function RoomList() {
 
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const userData = JSON.parse(localStorage.getItem("user"));
+  const { user: userData } = useAuth();
 
   // Handle categorical response format - flatten all rooms
   const allRooms = React.useMemo(() => {

@@ -1,5 +1,6 @@
 // src/realtime/realtimeClient.js
 import Pusher from 'pusher-js';
+import { getAuthUser } from '@/lib/authStore';
 
 let pusherInstance = null;
 
@@ -17,11 +18,12 @@ export function getPusherClient() {
       throw new Error('VITE_PUSHER_KEY environment variable is required');
     }
 
-    // Get token from user object in localStorage
+    // Get token from authStore bridge (primary) with localStorage fallback
+    // Fallback needed: getPusherClient() can be called before AuthProvider mounts
     const getAuthToken = () => {
       try {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        return user.token || null;
+        const user = getAuthUser() || JSON.parse(localStorage.getItem('user') || '{}');
+        return user?.token || null;
       } catch {
         return null;
       }

@@ -1,5 +1,6 @@
 import axios from "axios";
 import { Capacitor } from "@capacitor/core";
+import { getAuthUser } from "@/lib/authStore";
 
 // Detect if we're in a native Capacitor runtime (Android/iOS)
 // Detect if we're in a native Capacitor runtime (Android/iOS)
@@ -55,12 +56,14 @@ api.interceptors.response.use(
 // Request interceptor to add token + hotel_id + slug
 api.interceptors.request.use(
   (config) => {
-    const storedUser = localStorage.getItem("user");
-    const userData = storedUser ? JSON.parse(storedUser) : null;
+    // Primary: read from authStore bridge (synced by AuthProvider).
+    // Fallback: localStorage for requests fired before AuthProvider mounts.
+    const userData = getAuthUser() || (() => {
+      try { return JSON.parse(localStorage.getItem("user")); } catch { return null; }
+    })();
 
     const token = userData?.token || null;
     const hotelId = userData?.hotel_id || null;
-    const hotelName = userData?.hotel_name || null;
     const hotelSlug = userData?.hotel_slug || null;
 
     if (token) {
@@ -128,9 +131,12 @@ export function buildStaffURL(hotelSlug, app, path = "") {
  * @returns {string|null}
  */
 export function getHotelSlug() {
-  const storedUser = localStorage.getItem("user");
-  const userData = storedUser ? JSON.parse(storedUser) : null;
-  return userData?.hotel_slug || null;
+  const userData = getAuthUser();
+  if (userData?.hotel_slug) return userData.hotel_slug;
+  // Fallback for pre-mount
+  try {
+    return JSON.parse(localStorage.getItem("user"))?.hotel_slug || null;
+  } catch { return null; }
 }
 
 /**

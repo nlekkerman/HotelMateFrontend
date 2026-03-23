@@ -10,6 +10,7 @@ import { RoomServiceProvider } from './stores/roomServiceStore.jsx';
 import { ServiceBookingProvider } from './stores/serviceBookingStore.jsx';
 import { RoomBookingProvider } from './stores/roomBookingStore.jsx';
 import { RoomsProvider } from './stores/roomsStore.jsx';
+import { HousekeepingProvider } from './stores/housekeepingStore.jsx';
 
 /**
  * RealtimeProvider - Manages centralized realtime subscriptions
@@ -76,6 +77,7 @@ function RealtimeManager({ children }) {
  * ✅ Provides unified realtime architecture with all 6 domain stores
  */
 export function RealtimeProvider({ children }) {
+  console.log('[RealtimeProvider] HousekeepingProvider mounted via RealtimeProvider');
   return (
     <NotificationsProviderWithCallback>
       <AttendanceProvider>
@@ -83,13 +85,15 @@ export function RealtimeProvider({ children }) {
           <GuestChatProvider>
             <RoomServiceProvider>
               <ServiceBookingProvider>
-                <RoomBookingProvider>
-                  <RoomsProvider>
-                    <RealtimeManager>
-                      {children}
-                    </RealtimeManager>
-                  </RoomsProvider>
-                </RoomBookingProvider>
+                <HousekeepingProvider>
+                  <RoomBookingProvider>
+                    <RoomsProvider>
+                      <RealtimeManager>
+                        {children}
+                      </RealtimeManager>
+                    </RoomsProvider>
+                  </RoomBookingProvider>
+                </HousekeepingProvider>
               </ServiceBookingProvider>
             </RoomServiceProvider>
           </GuestChatProvider>

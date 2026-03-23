@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
 
 const QRRegistrationManager = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [packages, setPackages] = useState([]);
   const [currentPackage, setCurrentPackage] = useState(null);
+  const { user } = useAuth();
 
   // Auth headers and base URL are now handled automatically by api.js service
 
@@ -15,9 +17,7 @@ const QRRegistrationManager = () => {
     setError(null);
 
     try {
-      const storedUser = localStorage.getItem('user');
-      const userData = storedUser ? JSON.parse(storedUser) : null;
-      const hotelSlug = userData?.hotel_slug;
+      const hotelSlug = user?.hotel_slug;
 
       if (!hotelSlug) {
         throw new Error('Hotel slug not found. Please log in again.');

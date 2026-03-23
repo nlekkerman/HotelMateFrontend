@@ -5,24 +5,17 @@ import { useParams, Link } from "react-router-dom";
 import api from "@/services/api";
 import Post from "@/components/home/Post";
 import PostComposer from "@/components/home/PostComposer";
+import { useAuth } from '@/context/AuthContext';
 
 export default function Feed() {
   const { hotelSlug: qrHotelSlug } = useParams();
+  const { user: authUser } = useAuth();
 
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const hotelSlug =
-    qrHotelSlug ||
-    (() => {
-      try {
-        const storedUser = JSON.parse(localStorage.getItem("user"));
-        return storedUser?.hotel_slug || null;
-      } catch {
-        return null;
-      }
-    })();
+  const hotelSlug = qrHotelSlug || authUser?.hotel_slug || null;
 
   // Fetch posts with memoized function
   const fetchPosts = useCallback(async () => {

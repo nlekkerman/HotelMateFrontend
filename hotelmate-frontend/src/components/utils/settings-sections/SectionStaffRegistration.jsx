@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card, Button, Form, InputGroup } from 'react-bootstrap';
 import axios from 'axios';
+import { useAuth } from '@/context/AuthContext';
 
 export default function SectionStaffRegistration() {
   const [loading, setLoading] = useState(false);
@@ -8,6 +9,7 @@ export default function SectionStaffRegistration() {
   const [currentPackage, setCurrentPackage] = useState(null);
   const [requireBoth, setRequireBoth] = useState(true);
   const [hasExpiration, setHasExpiration] = useState(false);
+  const { user } = useAuth();
 
   // Auth headers and base URL are now handled automatically by api.js service
 
@@ -16,9 +18,7 @@ export default function SectionStaffRegistration() {
     setError(null);
 
     try {
-      const storedUser = localStorage.getItem('user');
-      const userData = storedUser ? JSON.parse(storedUser) : null;
-      const hotelSlug = userData?.hotel_slug;
+      const hotelSlug = user?.hotel_slug;
 
       if (!hotelSlug) {
         throw new Error('Hotel slug not found. Please log in again.');

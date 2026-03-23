@@ -10,13 +10,14 @@ import {
   completeMaintenance,
 } from "@/services/roomOperations";
 import { handleRoomOperationError } from "@/utils/errorHandling";
+import { useAuth } from '@/context/AuthContext';
 
 const RoomCard = ({ room }) => {
   const navigate = useNavigate();
   const [isHovering, setIsHovering] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const userData = JSON.parse(localStorage.getItem("user"));
+  const { user: userData } = useAuth();
   const userRole = userData?.role || userData?.user_type;
   const canPerformQuickActions =
     ["housekeeping", "admin", "manager"].includes(userRole?.toLowerCase()) ||

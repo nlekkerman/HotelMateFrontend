@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import api from "@/services/api";
 import { format } from "date-fns";
+import { getAuthUser } from "@/lib/authStore";
 // ---- helpers to detect overlaps ----
 function toMinutes(t) {
   // accepts "HH:mm" or "HH:mm:ss"
@@ -83,7 +84,7 @@ useEffect(() => {
   // 6️⃣ Hotel ID
   const hotelId =
     injectedHotelId ??
-    JSON.parse(localStorage.getItem("user") || "{}").hotel_id;
+    getAuthUser()?.hotel_id ?? null;
 
   // 7️⃣ Handlers
   const open = useCallback((staff, date, shift) => {

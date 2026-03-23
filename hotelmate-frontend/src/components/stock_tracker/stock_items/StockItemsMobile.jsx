@@ -6,13 +6,14 @@ import { useStockItems } from '../hooks/useStockItems';
 import StockItemCard from './StockItemCard';
 import StockItemDetail from './StockItemDetail';
 import { StockItemModal } from '../modals/StockItemModal';
+import { useAuth } from '@/context/AuthContext';
 
 const StockItemsMobile = () => {
   const { hotel_slug } = useParams();
   const { items, categories, loading, error, fetchItems, createItem, updateItem, deleteItem } = useStockItems(hotel_slug);
   
-  // Get user data from localStorage
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const { user } = useAuth();
+  // user may be null briefly during mount
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');

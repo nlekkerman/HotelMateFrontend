@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { SketchPicker } from "react-color";
 import { useNavigate } from "react-router-dom";
 import api from "@/services/api";
+import { useAuth } from '@/context/AuthContext';
 
 export default function ColorSelector() {
   const [mainColor, setMainColor] = useState("#3498db");
@@ -18,18 +19,9 @@ export default function ColorSelector() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
 
-  const getHotelSlug = () => {
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser) return null;
-    try {
-      return JSON.parse(storedUser).hotel_slug;
-    } catch {
-      return null;
-    }
-  };
-
-  const hotel_slug = getHotelSlug();
+  const hotel_slug = authUser?.hotel_slug || null;
 
   useEffect(() => {
     async function load() {

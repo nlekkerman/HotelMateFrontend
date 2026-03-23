@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import FirebaseService from '@/services/FirebaseService';
+import { useAuth } from '@/context/AuthContext';
 
 /**
  * FCMTestPanel Component
@@ -7,6 +8,7 @@ import FirebaseService from '@/services/FirebaseService';
  * Shows permission status, token, and allows sending test notifications
  */
 const FCMTestPanel = () => {
+  const { user: authUser } = useAuth();
   const [permissionStatus, setPermissionStatus] = useState('checking');
   const [fcmToken, setFcmToken] = useState(null);
   const [isSupported, setIsSupported] = useState(false);
@@ -87,8 +89,7 @@ const FCMTestPanel = () => {
         showMessage('FCM token obtained and saved to backend!', 'success');
         
         // Check backend response
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        // console.log('✅ FCM Token saved for staff:', user.staff_id);
+        // console.log('✅ FCM Token saved for staff:', authUser?.staff_id);
         // console.log('📝 Token:', token);
       } else {
         showMessage('Failed to get FCM token. Check console for errors.', 'error');
@@ -354,12 +355,11 @@ const FCMTestPanel = () => {
         <div className="mt-3 pt-3 border-top">
           <h6 className="fw-bold">Current User</h6>
           {(() => {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
             return (
               <div className="small">
-                <div><strong>Staff ID:</strong> {user.staff_id || 'N/A'}</div>
-                <div><strong>Username:</strong> {user.username || 'N/A'}</div>
-                <div><strong>Hotel:</strong> {user.hotel_slug || 'N/A'}</div>
+                <div><strong>Staff ID:</strong> {authUser?.staff_id || 'N/A'}</div>
+                <div><strong>Username:</strong> {authUser?.username || 'N/A'}</div>
+                <div><strong>Hotel:</strong> {authUser?.hotel_slug || 'N/A'}</div>
               </div>
             );
           })()}

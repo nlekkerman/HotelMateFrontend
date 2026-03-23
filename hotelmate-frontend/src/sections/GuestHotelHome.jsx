@@ -9,6 +9,7 @@ import LocationContactSection from '@/components/hotels/LocationContactSection';
 import GuestPortalStub from '@/components/hotels/GuestPortalStub';
 import GallerySection from '@/components/hotels/GallerySection';
 import AmenitiesSection from '@/components/hotels/AmenitiesSection';
+import { getAuthUser } from '@/lib/authStore';
 
 /**
  * GuestHotelHome - Guest view of the hotel portal
@@ -28,21 +29,20 @@ const GuestHotelHome = ({ hotel, settings, editorMode = 'view', canEdit = false,
     );
   }
   
-  // Check if user is authenticated staff - check localStorage if user prop not passed
+  // Check if user is authenticated staff - check authStore if user prop not passed
   let isStaff = false;
   
   if (user) {
     isStaff = user.is_staff || user.is_staff_member || user.role === 'staff' || user.staff_id;
   } else {
-    // Fallback to localStorage
+    // Fallback to authStore bridge
     try {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        const userData = JSON.parse(storedUser);
-        isStaff = userData.is_staff || userData.is_staff_member || userData.role === 'staff' || userData.staff_id;
+      const bridgeUser = getAuthUser();
+      if (bridgeUser) {
+        isStaff = bridgeUser.is_staff || bridgeUser.is_staff_member || bridgeUser.role === 'staff' || bridgeUser.staff_id;
       }
     } catch (error) {
-      console.error('[GuestHotelHome] Error reading user from localStorage:', error);
+      console.error('[GuestHotelHome] Error reading user from authStore:', error);
     }
   }
 

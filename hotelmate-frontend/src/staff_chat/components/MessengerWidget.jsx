@@ -46,20 +46,6 @@ const MessengerWidget = ({
       return user.hotel_slug;
     }
 
-    // 2) localStorage fallback
-    try {
-      const userData = localStorage.getItem("user");
-      if (userData) {
-        const parsedUser = JSON.parse(userData);
-        if (parsedUser?.hotel_slug) {
-         
-          return parsedUser.hotel_slug;
-        }
-      }
-    } catch (error) {
-      console.error("Error getting hotel slug from localStorage:", error);
-    }
-
     console.warn("❌ No hotel slug found - chat will not work");
     return null;
   };

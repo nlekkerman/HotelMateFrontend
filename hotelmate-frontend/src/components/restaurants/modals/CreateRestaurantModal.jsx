@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useAuth } from '@/context/AuthContext';
 
 const CreateRestaurantModal = ({ show, toggle, onCreated, api, hotelSlug: propHotelSlug }) => {
   const [name, setName] = useState("");
@@ -11,6 +12,7 @@ const CreateRestaurantModal = ({ show, toggle, onCreated, api, hotelSlug: propHo
   const [takingBookings, setTakingBookings] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { user: authUser } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,11 +20,10 @@ const CreateRestaurantModal = ({ show, toggle, onCreated, api, hotelSlug: propHo
     setError("");
 
     try {
-      // Use prop hotelSlug first, fallback to localStorage
+      // Use prop hotelSlug first, fallback to auth context
       let hotelSlug = propHotelSlug;
       if (!hotelSlug) {
-        const user = JSON.parse(localStorage.getItem("user"));
-        hotelSlug = user?.hotel_slug;
+        hotelSlug = authUser?.hotel_slug;
       }
       if (!hotelSlug) throw new Error("Hotel slug not found");
 

@@ -1,21 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 
 const RegistrationSuccess = () => {
   const navigate = useNavigate();
-  const [userData, setUserData] = useState(null);
-
-  useEffect(() => {
-    // Get user data from localStorage
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        setUserData(JSON.parse(storedUser));
-      } catch (e) {
-        console.error('Error parsing user data:', e);
-      }
-    }
-  }, []);
+  const { user } = useAuth();
 
   const handleGoToLogin = () => {
     navigate('/login');
@@ -32,17 +21,17 @@ const RegistrationSuccess = () => {
                 <h2 className="text-success">Registration Successful!</h2>
               </div>
 
-              {userData && (
+              {user && (
                 <div className="alert alert-info mb-4">
                   <h5 className="alert-heading">
-                    <i className="fas fa-info-circle me-2"></i>Welcome, {userData.username}!
+                    <i className="fas fa-info-circle me-2"></i>Welcome, {user.username}!
                   </h5>
                   <hr />
                   <p className="mb-2">
-                    <strong>Hotel:</strong> {userData.hotel_name || 'Not assigned yet'}
+                    <strong>Hotel:</strong> {user.hotel_name || 'Not assigned yet'}
                   </p>
                   <p className="mb-2">
-                    <strong>Registration Code:</strong> {userData.registration_code}
+                    <strong>Registration Code:</strong> {user.registration_code}
                   </p>
                   <p className="mb-0">
                     <strong>Status:</strong>{' '}

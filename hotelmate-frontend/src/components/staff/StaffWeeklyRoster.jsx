@@ -3,6 +3,7 @@ import React, { useMemo } from "react";
 import { startOfWeek, addDays, format, differenceInMinutes } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/services/api";
+import { useAuth } from '@/context/AuthContext';
 
 const fetchStaffShifts = async ({ hotelSlug, staffId, start, end }) => {
   const { data } = await api.get(`/staff/hotel/${hotelSlug}/attendance/shifts/`, {
@@ -24,17 +25,10 @@ export default function StaffWeeklyRoster({
   weekStartDate = new Date(),
   hotelSlug: injectedHotelSlug,
 }) {
-  // Resolve hotel slug (prop > localStorage)
+  const { user: authUser } = useAuth();
+  // Resolve hotel slug (prop > auth context)
   const hotelSlug =
-    injectedHotelSlug ||
-    (() => {
-      try {
-        const u = JSON.parse(localStorage.getItem("user") || "{}");
-        return u.hotel?.slug || u.hotel_slug || null;
-      } catch {
-        return null;
-      }
-    })();
+    injectedHotelSlug || authUser?.hotel_slug || null;
 
   // Sunday → Saturday week
   const start = startOfWeek(weekStartDate, { weekStartsOn: 0 });
