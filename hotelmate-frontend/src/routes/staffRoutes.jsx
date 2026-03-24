@@ -67,13 +67,14 @@ import ChatHomePage from '@/pages/chat/ChatHomePage';
  * `requiredSlug` = overrides auto-mapping when provided.
  *
  * Routes without `mode: "staff"` get auth-only protection (Layer 1).
- * TODO comments mark routes pending incremental permission rollout.
+ * Auth-only routes: feed (all staff need it), own profile (self-service).
  */
 
 const staffRoutes = [
   // Staff dashboard / feed
   { path: '/staff/:hotelSlug/feed', element: <Home />, protected: true },
-  { path: '/staff/:hotelSlug/section-editor', element: <SectionEditorPage />, protected: true },
+  // TODO: Consider restricting section editing to admin-only if it should be limited
+  { path: '/staff/:hotelSlug/section-editor', element: <SectionEditorPage />, protected: true, mode: 'staff' },
 
   // Reception
   { path: '/reception', element: <Reception />, protected: true, mode: 'staff', requiredSlug: 'reception' },
@@ -88,53 +89,54 @@ const staffRoutes = [
   { path: '/maintenance', element: <Maintenance />, protected: true, mode: 'staff', requiredSlug: 'maintenance' },
 
   // Staff management
-  { path: '/:hotelSlug/staff', element: <Staff />, protected: true }, // TODO: Add mode="staff" requiredSlug
-  { path: '/:hotelSlug/staff/create', element: <StaffCreate />, protected: true }, // TODO: Add mode="staff"
-  { path: '/:hotelSlug/staff/:id', element: <StaffDetails />, protected: true }, // TODO: Add mode="staff"
+  { path: '/:hotelSlug/staff', element: <Staff />, protected: true, mode: 'staff', requiredSlug: 'staff_management' },
+  { path: '/:hotelSlug/staff/create', element: <StaffCreate />, protected: true, mode: 'staff', requiredSlug: 'staff_management' },
+  { path: '/:hotelSlug/staff/:id', element: <StaffDetails />, protected: true, mode: 'staff', requiredSlug: 'staff_management' },
+  // Own profile — auth-only, every staff member can view their own profile
   { path: '/:hotelSlug/staff/me', element: <StaffProfile />, protected: true },
 
   // Attendance
-  { path: '/attendance/:hotelSlug', element: <AttendanceDashboard />, protected: true }, // TODO: Add mode="staff" requiredSlug="attendance"
-  { path: '/roster/:hotelSlug', element: <AttendanceDashboard />, protected: true }, // Legacy route
-  { path: '/department-roster/:hotelSlug', element: <DepartmentRosterDashboard />, protected: true }, // TODO: Add mode="staff"
-  { path: '/enhanced-attendance/:hotelSlug', element: <EnhancedAttendanceDashboard />, protected: true }, // TODO: Add mode="staff"
+  { path: '/attendance/:hotelSlug', element: <AttendanceDashboard />, protected: true, mode: 'staff', requiredSlug: 'attendance' },
+  { path: '/roster/:hotelSlug', element: <AttendanceDashboard />, protected: true, mode: 'staff', requiredSlug: 'attendance' },
+  { path: '/department-roster/:hotelSlug', element: <DepartmentRosterDashboard />, protected: true, mode: 'staff', requiredSlug: 'department_roster' },
+  { path: '/enhanced-attendance/:hotelSlug', element: <EnhancedAttendanceDashboard />, protected: true, mode: 'staff', requiredSlug: 'management_analytics' },
 
-  // Face attendance (register is staff-only)
-  { path: '/face/:hotelSlug/register', element: <FaceRegisterPage />, protected: true },
+  // Face attendance registration — staff-only setup, requires attendance permission
+  { path: '/face/:hotelSlug/register', element: <FaceRegisterPage />, protected: true, mode: 'staff', requiredSlug: 'attendance' },
 
   // Restaurant management
-  { path: '/hotel-:hotelSlug/restaurants', element: <RestaurantManagementDashboard />, protected: true }, // TODO: Add mode="staff" requiredSlug="restaurants"
-  { path: '/:hotelSlug/:restaurantSlug', element: <RestaurantManagementDashboard />, protected: true }, // TODO: Add mode="staff"
+  { path: '/hotel-:hotelSlug/restaurants', element: <RestaurantManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'restaurants' },
+  { path: '/:hotelSlug/:restaurantSlug', element: <RestaurantManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'restaurants' },
 
   // Rooms
   { path: '/rooms', element: <RoomList />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
-  { path: '/room-management/:hotelIdentifier/room/:roomNumber', element: <RoomDetails />, protected: true, mode: 'staff' },
-  { path: '/rooms/:roomNumber/add-guest', element: <AssignGuestForm />, protected: true }, // TODO: Add mode="staff"
+  { path: '/room-management/:hotelIdentifier/room/:roomNumber', element: <RoomDetails />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
+  { path: '/rooms/:roomNumber/add-guest', element: <AssignGuestForm />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
 
   // Room services (staff management views)
-  { path: '/room_services/:hotelIdentifier/orders', element: <RoomServiceOrders />, protected: true }, // TODO: Add mode="staff" requiredSlug="room_service"
-  { path: '/room_services/:hotelIdentifier/orders-summary', element: <OrdersSummary />, protected: true }, // TODO: Add mode="staff"
-  { path: '/room_services/:hotelIdentifier/orders-management', element: <RoomServiceOrdersManagement />, protected: true }, // TODO: Add mode="staff"
-  { path: '/room_services/:hotelIdentifier/breakfast-orders', element: <BreakfastRoomService />, protected: true }, // TODO: Add mode="staff"
-  { path: '/menus_management/:hotelSlug', element: <MenusManagement />, protected: true }, // TODO: Add mode="staff"
+  { path: '/room_services/:hotelIdentifier/orders', element: <RoomServiceOrders />, protected: true, mode: 'staff', requiredSlug: 'room_service' },
+  { path: '/room_services/:hotelIdentifier/orders-summary', element: <OrdersSummary />, protected: true, mode: 'staff', requiredSlug: 'room_service' },
+  { path: '/room_services/:hotelIdentifier/orders-management', element: <RoomServiceOrdersManagement />, protected: true, mode: 'staff', requiredSlug: 'room_service' },
+  { path: '/room_services/:hotelIdentifier/breakfast-orders', element: <BreakfastRoomService />, protected: true, mode: 'staff', requiredSlug: 'breakfast' },
+  { path: '/menus_management/:hotelSlug', element: <MenusManagement />, protected: true, mode: 'staff', requiredSlug: 'menus_management' },
 
   // Guests
-  { path: '/:hotelIdentifier/guests', element: <GuestList />, protected: true }, // TODO: Add mode="staff" requiredSlug="guests"
-  { path: '/:hotelIdentifier/guests/:guestId/edit', element: <GuestEdit />, protected: true }, // TODO: Add mode="staff"
+  { path: '/:hotelIdentifier/guests', element: <GuestList />, protected: true, mode: 'staff', requiredSlug: 'guests' },
+  { path: '/:hotelIdentifier/guests/:guestId/edit', element: <GuestEdit />, protected: true, mode: 'staff', requiredSlug: 'guests' },
 
   // Bookings
-  { path: '/bookings', element: <Bookings />, protected: true }, // TODO: Add mode="staff" requiredSlug="bookings"
-  { path: '/staff/hotel/:hotelSlug/room-bookings', element: <BookingManagementPage />, protected: true }, // TODO: Add mode="staff"
-  { path: '/staff/hotel/:hotelSlug/booking-management', element: <BookingManagementDashboard />, protected: true }, // TODO: Add mode="staff"
+  { path: '/bookings', element: <Bookings />, protected: true, mode: 'staff', requiredSlug: 'bookings' },
+  { path: '/staff/hotel/:hotelSlug/room-bookings', element: <BookingManagementPage />, protected: true, mode: 'staff', requiredSlug: 'room_bookings' },
+  { path: '/staff/hotel/:hotelSlug/booking-management', element: <BookingManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'room_bookings' },
 
   // Housekeeping
-  { path: '/staff/hotel/:hotelSlug/housekeeping', element: <HousekeepingRooms />, protected: true }, // TODO: Add mode="staff" requiredSlug="housekeeping"
-  { path: '/staff/hotel/:hotelSlug/housekeeping/rooms/:roomNumber', element: <HousekeepingRoomDetails />, protected: true }, // TODO: Add mode="staff"
+  { path: '/staff/hotel/:hotelSlug/housekeeping', element: <HousekeepingRooms />, protected: true, mode: 'staff', requiredSlug: 'housekeeping' },
+  { path: '/staff/hotel/:hotelSlug/housekeeping/rooms/:roomNumber', element: <HousekeepingRoomDetails />, protected: true, mode: 'staff', requiredSlug: 'housekeeping' },
 
   // Hotel Info
-  { path: '/hotel_info/:hotel_slug', element: <HotelInfo />, protected: true }, // TODO: Add mode="staff" requiredSlug="hotel_info"
-  { path: '/hotel_info/:hotel_slug/:category', element: <HotelInfo />, protected: true }, // TODO: Add mode="staff"
-  { path: '/good_to_know_console/:hotel_slug', element: <GoodToKnowConsole />, protected: true }, // TODO: Add mode="staff"
+  { path: '/hotel_info/:hotel_slug', element: <HotelInfo />, protected: true, mode: 'staff', requiredSlug: 'hotel_info' },
+  { path: '/hotel_info/:hotel_slug/:category', element: <HotelInfo />, protected: true, mode: 'staff', requiredSlug: 'hotel_info' },
+  { path: '/good_to_know_console/:hotel_slug', element: <GoodToKnowConsole />, protected: true, mode: 'staff', requiredSlug: 'good_to_know' },
 
   // Stock Tracker
   { path: '/stock_tracker/:hotel_slug', element: <StockDashboard />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
@@ -157,7 +159,7 @@ const staffRoutes = [
   { path: '/stock_tracker/:hotel_slug/cocktails', element: <CocktailsPage />, protected: true, mode: 'staff' },
 
   // Chat (staff view)
-  { path: '/hotel/:hotelSlug/chat', element: 'CHAT_HOME_PAGE', protected: true }, // Needs props — handled in route builder
+  { path: '/hotel/:hotelSlug/chat', element: 'CHAT_HOME_PAGE', protected: true, mode: 'staff', requiredSlug: 'chat' },
 ];
 
 export default staffRoutes;

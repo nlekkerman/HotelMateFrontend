@@ -30,7 +30,7 @@ const PATH_TO_NAV_MAPPING = [
   },
   {
     match: (pathname) => pathname.includes("/room-bookings") || pathname.includes("/booking-management"),
-    slug: "room-bookings",
+    slug: "room_bookings",
     description: "Hotel room bookings and management"
   },
   { 
@@ -62,6 +62,11 @@ const PATH_TO_NAV_MAPPING = [
     match: (pathname) => pathname.startsWith("/staff/"), 
     slug: "home", // Staff dashboard/feed uses "home" slug
     description: "Staff dashboard and main feed"
+  },
+  {
+    match: (pathname) => /\/[^/]+\/staff(?:\/|$)/.test(pathname) && !pathname.startsWith("/staff/"),
+    slug: "staff_management",
+    description: "Staff list, creation, and detail views"
   },
   {
     match: (pathname) => pathname.includes("/guests"),
@@ -104,11 +109,6 @@ const PATH_TO_NAV_MAPPING = [
     description: "Management analytics and reports"
   },
   {
-    match: (pathname) => pathname.includes("/room-bookings"),
-    slug: "room_bookings", // Backend uses underscore
-    description: "Room booking management"
-  },
-  {
     match: (pathname) => pathname.includes("/chat"),
     slug: "chat",
     description: "Staff and guest chat systems"
@@ -135,9 +135,10 @@ const ADMIN_ONLY_ROUTES = [
  * @param {Object} params - Access check parameters
  * @param {string} params.pathname - The pathname to check
  * @param {Object} params.user - User object from localStorage
+ * @param {string} [params.requiredSlug] - Explicit nav slug from route config (takes precedence over auto-mapping)
  * @returns {Object} Access result with allowed, redirectTo, and reason
  */
-export function canAccessStaffPath({ pathname, user }) {
+export function canAccessStaffPath({ pathname, user, requiredSlug }) {
   // No user or not staff -> DENY
   if (!user || !user.is_staff) {
     return {
@@ -168,8 +169,8 @@ export function canAccessStaffPath({ pathname, user }) {
     }
   }
 
-  // Find required navigation slug for this pathname
-  const requiredNavSlug = findRequiredNavSlug(pathname);
+  // Prefer explicit requiredSlug from route config over pathname auto-mapping
+  const requiredNavSlug = requiredSlug || findRequiredNavSlug(pathname);
   
   if (!requiredNavSlug) {
     // DENY BY DEFAULT for unmapped routes (security-first approach)

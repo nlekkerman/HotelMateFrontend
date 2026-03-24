@@ -54,7 +54,13 @@ const guestRoutes = [
   },
   { path: '/chat/:hotelSlug/conversations/:conversationId/messages', element: <ChatWindow /> },
 
-  // Face clock-in (public, no staff auth required)
+  // Face clock-in — INTENTIONALLY PUBLIC (no ProtectedRoute wrapper).
+  // Business reason: These are kiosk/tablet-facing pages where staff authenticate
+  // via facial recognition, not via login credentials. The face recognition itself
+  // serves as the identity verification mechanism. Protecting these routes with
+  // staff login would defeat the purpose of contactless clock-in.
+  // Security note: The backend validates face data server-side; the frontend page
+  // only captures and submits the image. No sensitive data is exposed on load.
   { path: '/face/:hotelSlug/clock-in', element: <FaceClockInPage /> },
   { path: '/camera-clock-in/:hotelSlug', element: <FaceClockInPage /> },
 

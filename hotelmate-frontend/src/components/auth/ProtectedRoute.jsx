@@ -36,6 +36,7 @@ const ProtectedRoute = ({
     const result = canAccessStaffPath({
       pathname: location.pathname,
       user,
+      requiredSlug,
     });
 
     if (!result.allowed) {
