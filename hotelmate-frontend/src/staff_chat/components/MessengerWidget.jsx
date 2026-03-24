@@ -367,42 +367,11 @@ const MessengerWidget = ({
               </h3>
               {/* Unread Count Badge */}
               {totalUnreadCount > 0 && (
-                <div className="mx-2"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    backgroundColor: "#2b2b2b", // PARENT BACKGROUND (3rd)
-                    borderRadius: "12px",
-                    padding: "3px 8px",
-                    gap: "6px",
-                  }}
-                >
-                  {/* LEFT TEXT */}
-                  <span
-                    style={{
-                      color: "#ffffff", // TEXT COLOR (1st)
-                      fontWeight: "600",
-                      fontSize: "12px",
-                    }}
-                  >
+                <div className="mx-2 messenger-widget__unread-pill">
+                  <span className="messenger-widget__unread-label">
                     Unread Conversations
                   </span>
-
-                  {/* NUMBER BADGE */}
-                  <span
-                    style={{
-                      backgroundColor: "#dc3545", // BADGE BACKGROUND (2nd)
-                      color: "#ffe680", // NUMBER COLOR
-                      borderRadius: "8px",
-                      padding: "2px 6px",
-                      fontWeight: "700",
-                      fontSize: "12px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      minWidth: "20px",
-                    }}
-                  >
+                  <span className="messenger-widget__unread-count">
                     {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
                   </span>
                 </div>

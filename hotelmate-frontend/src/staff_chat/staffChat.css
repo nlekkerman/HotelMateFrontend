@@ -2,6 +2,24 @@
    STAFF CHAT STYLES
    ============================================ */
 
+/* ── Theme-variable bridge ──
+   ThemeContext sets --primary-color, --secondary-color, --accent-color,
+   --text-color, --background-color, --border-color on :root.
+   Staff chat CSS references --bg-primary, --text-primary, etc.
+   This block bridges the gap so theme colours flow through.           */
+:root {
+  --bg-primary: var(--background-color, #ffffff);
+  --bg-secondary: color-mix(in srgb, var(--background-color, #f8f9fa) 95%, #000);
+  --bg-hover: color-mix(in srgb, var(--background-color, #f0f0f0) 90%, #000);
+  --bg-active: color-mix(in srgb, var(--background-color, #e8e9ea) 85%, #000);
+  --text-primary: var(--text-color, #1a1a1a);
+  --text-secondary: color-mix(in srgb, var(--text-color, #666666) 60%, transparent);
+  --text-tertiary: color-mix(in srgb, var(--text-color, #999999) 40%, transparent);
+  --primary-color-dark: color-mix(in srgb, var(--primary-color, #007bff) 80%, #000);
+  --primary-color-light: color-mix(in srgb, var(--primary-color, #007bff) 50%, #fff);
+  --avatar-bg: color-mix(in srgb, var(--background-color, #e0e0e0) 85%, #000);
+}
+
 /* Staff Chat Container */
 .staff-chat-container {
   width: 100%;
@@ -429,7 +447,7 @@
 .staff-chat-list__footer {
   padding: 12px 24px;
   border-top: 1px solid var(--border-color, #e0e0e0);
- background: linear-gradient(135deg, #15009c 0%, #7f7acb 100%);
+  background: linear-gradient(135deg, var(--primary-color-dark, #15009c) 0%, var(--primary-color-light, #7f7acb) 100%);
 
   text-align: center;
 }
@@ -860,7 +878,7 @@
  
   max-width: 30%;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 900;
+  z-index: 1050;
 }
 
 /* Position Variants */
@@ -924,7 +942,7 @@
   padding: 10px 5px;
   border-top-left-radius: 20px;
   color: white;
-   background-color: goldenrod;
+  background-color: var(--primary-color, goldenrod);
   border-bottom: 1px solid var(--bs-border-color, rgba(255, 255, 255, 0.1));
 
 }
@@ -952,6 +970,35 @@
 
 .messenger-widget__toggle:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* Unread Conversations Pill */
+.messenger-widget__unread-pill {
+  display: flex;
+  align-items: center;
+  background-color: var(--primary-color-dark, #2b2b2b);
+  border-radius: 12px;
+  padding: 3px 8px;
+  gap: 6px;
+}
+
+.messenger-widget__unread-label {
+  color: #fff;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.messenger-widget__unread-count {
+  background-color: var(--accent-color, #dc3545);
+  color: #fff;
+  border-radius: 8px;
+  padding: 2px 6px;
+  font-weight: 700;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
 }
 
 /* Dropdown Styling in Widget Header */
@@ -1042,7 +1089,7 @@
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  z-index: 998;
+  z-index: 1048;
   transition: height 0.3s ease;
 }
 
@@ -1482,7 +1529,7 @@
   display: flex;
   gap: 8px;
   padding: 12px 5px;
-  background: linear-gradient(135deg, #7f7acb 0%, #15009c 100%);
+  background: linear-gradient(135deg, var(--primary-color-light, #7f7acb) 0%, var(--primary-color-dark, #15009c) 100%);
   border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -1575,7 +1622,7 @@
   right: 388px; /* Start after messenger widget */
   display: flex;
   gap: 20px;
-  z-index: 998;
+  z-index: 1048;
   pointer-events: none; /* Allow clicks to pass through container */
 }
 
@@ -1590,7 +1637,7 @@
   right: 388px;
   display: flex;
   gap: 8px;
-  z-index: 999;
+  z-index: 1049;
   opacity: 0;
   visibility: hidden;
   transition: all 0.3s ease;
@@ -3975,7 +4022,7 @@
 }
 
 .chat-window-popup__header {
-  background: linear-gradient(135deg, #15009c 0%, #7f7acb 100%);
+  background: linear-gradient(135deg, var(--primary-color-dark, #15009c) 0%, var(--primary-color-light, #7f7acb) 100%);
   padding: 14px 16px;
   border-radius: 16px 16px 0 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
