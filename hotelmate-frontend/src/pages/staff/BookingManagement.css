@@ -47,6 +47,8 @@
 .modern-bucket-bar .btn.btn-outline-primary {
   border-color: #3498db;
   color: #3498db;
+}
+
 /* Search Input Styling */
 .booking-search-container .input-group {
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
