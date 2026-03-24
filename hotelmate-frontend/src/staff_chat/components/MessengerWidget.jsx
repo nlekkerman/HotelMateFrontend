@@ -24,21 +24,6 @@ const MessengerWidget = ({
 
   const { user, isStaff } = useAuth();
 
-  // 🚫 HIDE WIDGET FOR NON-AUTHENTICATED STAFF USERS
-  if (!user || !isStaff) {
-    console.log(
-      "🚫 [MessengerWidget] Hidden - user not authenticated as staff:",
-      {
-        hasUser: !!user,
-        isStaff: !!isStaff,
-        userId: user?.id,
-      }
-    );
-    return null;
-  }
-
- 
-
   // ✅ SIMPLIFIED: Get hotel slug - everyone in same hotel has same slug!
   const getHotelSlug = () => {
     // 1) Auth context (primary)
@@ -336,6 +321,12 @@ const MessengerWidget = ({
   // console.log('🎨 MessengerWidget render - openChats:', openChats);
   // console.log('🎨 Number of open chats:', openChats.length);
   // console.log('🎨 Visible chats:', visibleChats.length);
+
+  // 🚫 HIDE WIDGET FOR NON-AUTHENTICATED STAFF USERS
+  // (moved below all hooks to comply with React Rules of Hooks)
+  if (!user || !isStaff) {
+    return null;
+  }
 
   return (
     <>
