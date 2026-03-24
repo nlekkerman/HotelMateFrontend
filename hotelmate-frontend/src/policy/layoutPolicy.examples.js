@@ -14,10 +14,7 @@ export const LAYOUT_MODE_EXAMPLES = [
   ["/reset-password/abc123", "auth"],
   ["/staff/login", "auth"],
 
-  // GUEST routes (PIN-based)
-  ["/hotel-killarney/room/101/validate-pin", "guest"],
-  ["/chat/hotel-x/messages/room/101/validate-chat-pin", "guest"],
-  ["/guest-booking/hotel-x/restaurant/main/room/101/validate-dinner-pin", "guest"],
+  // GUEST routes
   ["/room_services/hotel-x/room/101/menu", "guest"],
   ["/room_services/hotel-x/room/101/breakfast", "guest"],
   ["/chat/hotel-x/conversations/123/messages", "guest"],

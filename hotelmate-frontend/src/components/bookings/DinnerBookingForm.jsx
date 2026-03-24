@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import api from "@/services/api";
+import { guestBaseAPI } from "@/services/api";
 import HotelLogo from "@/components/layout/HotelLogo";
 import SuccessModal from "@/components/modals/SuccessModal";
 
@@ -108,7 +108,7 @@ export default function DinnerBookingForm() {
     };
 
     try {
-      await api.post(
+      await guestBaseAPI.post(
         `/bookings/guest-booking/${hotelSlug}/restaurant/${restaurantSlug}/room/${roomNumber}/`,
         payload
       );

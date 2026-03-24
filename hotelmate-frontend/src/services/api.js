@@ -1,6 +1,7 @@
 import axios from "axios";
 import { Capacitor } from "@capacitor/core";
 import { getAuthUser } from "@/lib/authStore";
+import { getGuestToken } from "@/utils/guestToken";
 
 // Detect if we're in a native Capacitor runtime (Android/iOS)
 // Detect if we're in a native Capacitor runtime (Android/iOS)
@@ -109,9 +110,31 @@ export const staffAuthAPI = axios.create({
 
 /** GUEST API (guest zone, no auth headers) */
 export const guestAPI = axios.create({
-  baseURL: `${baseURL.replace(/\/$/, "")}/guest`, // /api
+  baseURL: `${baseURL.replace(/\/$/, "")}/guest`, // /api/guest
   timeout: 30000,
 });
+
+// Auto-inject guest token as query param when not already provided
+guestAPI.interceptors.request.use((config) => {
+  if (!config.params?.token) {
+    const token = getGuestToken();
+    if (token) {
+      config.params = { ...config.params, token };
+    }
+  }
+  return config;
+});
+
+/**
+ * Guest base API — same base URL as `api` but NO auth interceptors.
+ * Use for guest endpoints that live outside /api/guest/ or /api/public/
+ * (e.g. /api/room_services/…, /api/bookings/guest-booking/…, /api/chat/…).
+ */
+export const guestBaseAPI = axios.create({
+  baseURL: `${baseURL.replace(/\/$/, "")}`,
+  timeout: 30000,
+});
+
 /**
  * Helper function to build staff API URLs with new pattern
  * /api/staff/hotel/<hotel_slug>/<app>/

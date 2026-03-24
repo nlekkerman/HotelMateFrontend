@@ -3,7 +3,7 @@ import { Modal, Button } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { subscribeToGuestChatBooking } from '@/realtime/channelRegistry';
 import { useGuestChatStore } from '@/realtime/stores/guestChatStore';
-import { guestAPI } from '@/services/api';
+import { guestAPI, publicAPI } from '@/services/api';
 
 /**
  * Front Office Chat Modal - Opens a conversation window with front office team
@@ -115,7 +115,8 @@ const FrontOfficeChatModal = ({
 
       try {
         const response = await guestAPI.get(
-          `/hotel/${hotelSlug}/chat/context?token=${encodeURIComponent(token)}`
+          `/hotel/${hotelSlug}/chat/context`,
+          { params: { token } }
         );
 
         console.log('📞 [FrontOfficeChatModal] Context API response:', {
@@ -215,7 +216,8 @@ const FrontOfficeChatModal = ({
     const poll = async () => {
       try {
         const response = await publicAPI.get(
-          `/guest/hotel/${hotelSlug}/chat/messages?token=${encodeURIComponent(token)}&conversation_id=${conversationId}`
+          `/guest/hotel/${hotelSlug}/chat/messages`,
+          { params: { token, conversation_id: conversationId } }
         );
 
         if (response.data?.success && response.data.data?.messages) {
@@ -243,12 +245,13 @@ const FrontOfficeChatModal = ({
       setSending(true);
       
       const response = await publicAPI.post(
-        `/guest/hotel/${hotelSlug}/chat/messages?token=${encodeURIComponent(token)}`,
+        `/guest/hotel/${hotelSlug}/chat/messages`,
         {
           message: message.trim(),
           conversation_id: conversationId,
           sender_type: 'guest'
-        }
+        },
+        { params: { token } }
       );
 
       if (response.data?.success) {

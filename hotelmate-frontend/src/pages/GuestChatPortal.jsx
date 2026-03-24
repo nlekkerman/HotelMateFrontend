@@ -13,12 +13,16 @@
 import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { GuestChatWidget } from '../components/guest/GuestChatWidget';
+import { persistGuestToken } from '@/utils/guestToken';
 import './GuestChatPortal.css'; // Create if styling needed
 
 const GuestChatPortal = () => {
   const [searchParams] = useSearchParams();
   const hotelSlug = searchParams.get('hotel_slug');
   const token = searchParams.get('token');
+
+  // Persist token so it survives page reloads
+  if (token) persistGuestToken(token);
   
   // Validation
   useEffect(() => {

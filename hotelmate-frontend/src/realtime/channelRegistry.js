@@ -3,6 +3,7 @@ import { getPusherClient } from './realtimeClient';
 import { getGuestPusherClient } from './guestRealtimeClient';
 import { handleIncomingRealtimeEvent } from './eventBus';
 import { getPusherAuthEndpoint } from '../services/guestChatAPI.js';
+import { guestBaseAPI } from '../services/api.js';
 
 let subscriptionsActive = false;
 let currentChannels = [];
@@ -251,21 +252,9 @@ export async function markConversationRead(conversationId, conversationType = "g
       await markConversationAsRead(hotelSlug, conversationId);
       console.log(`✅ Marked staff conversation ${conversationId} as read`);
     } else {
-      // Guest chat API call
-      const endpoint = `/api/guest_chat/${hotelSlug}/conversations/${conversationId}/mark_read/`;
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Auth headers will be added by interceptors
-        }
-      });
-
-      if (response.ok) {
-        console.log(`✅ Marked guest conversation ${conversationId} as read`);
-      } else {
-        console.error('❌ Failed to mark guest conversation as read:', response.status);
-      }
+      // Guest chat API call — use guestBaseAPI (no staff auth headers)
+      await guestBaseAPI.post(`/guest_chat/${hotelSlug}/conversations/${conversationId}/mark_read/`);
+      console.log(`✅ Marked guest conversation ${conversationId} as read`);
     }
   } catch (error) {
     console.error('❌ Error marking conversation as read:', error);

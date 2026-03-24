@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
-import api from "@/services/api";
+import { guestBaseAPI } from "@/services/api";
 import ViewOrders from "@/components/rooms/ViewOrders";
 import { useRoomServiceState } from "@/realtime/stores/roomServiceStore.jsx";
 import "./Breakfast.css";
@@ -84,7 +84,7 @@ const Breakfast = ({
 
   // Fetch breakfast items
   useEffect(() => {
-    api
+    guestBaseAPI
       .get(`room_services/${hotelIdentifier}/room/${roomNumber}/breakfast/`)
       .then((res) => {
         const formatted = res.data.map((item) => ({ ...item, quantity: 1 }));
@@ -230,7 +230,7 @@ const Breakfast = ({
     };
 
     try {
-      const response = await api.post(
+      const response = await guestBaseAPI.post(
         `/room_services/${hotelIdentifier}/breakfast-orders/`,
         payload
       );
@@ -273,7 +273,7 @@ const Breakfast = ({
   const fetchOrders = async () => {
     setLoadingOrders(true);
     try {
-      const response = await api.get(
+      const response = await guestBaseAPI.get(
         `/room_services/${hotelIdentifier}/breakfast-orders/`,
         { params: { room_number: roomNumber } }
       );

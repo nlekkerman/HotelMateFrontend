@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { Container, Row, Col, Card, Form, Button, Spinner, Alert } from 'react-bootstrap';
 import { useSurveyData } from '@/hooks/useSurveyData';
 import { useSurveyForm } from '@/hooks/useSurveyForm';
+import { persistGuestToken } from '@/utils/guestToken';
 
 /**
  * GuestSurveyPage Component
@@ -15,6 +16,9 @@ const GuestSurveyPage = () => {
   const { hotelSlug } = useParams();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
+
+  // Persist token so it survives page reloads
+  if (token) persistGuestToken(token);
 
   // Data loading hook
   const {

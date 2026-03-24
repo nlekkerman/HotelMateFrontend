@@ -1,11 +1,5 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import PinAuth from '@/components/auth/PinAuth';
-import DinnerPinAuth from '@/components/auth/DinnerPinAuth';
-import ChatPinAuth from '@/components/auth/ChatPinAuth';
-import RequirePin from '@/components/auth/RequirePin';
-import RequireChatPin from '@/components/auth/RequireChatPin';
-import RequireDinnerPin from '@/components/auth/RequireDinnerPin';
 import RoomService from '@/components/rooms/RoomService';
 import Breakfast from '@/components/rooms/Breakfast';
 import DinnerBookingForm from '@/components/bookings/DinnerBookingForm';
@@ -22,23 +16,18 @@ import BookingStatusPage from '@/pages/bookings/BookingStatusPage';
 import FaceClockInPage from '@/features/faceAttendance/pages/FaceClockInPage';
 
 /**
- * Guest route configs — PIN-based auth, booking flows, guest chat, etc.
+ * Guest route configs — booking flows, guest chat, etc.
  * None of these use ProtectedRoute (they have their own auth mechanisms).
  */
 const guestRoutes = [
-  // PIN validation
-  { path: '/:hotelIdentifier/room/:roomNumber/validate-pin', element: <PinAuth /> },
-  { path: '/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin', element: <DinnerPinAuth /> },
-  { path: '/chat/:hotelSlug/messages/room/:room_number/validate-chat-pin', element: <ChatPinAuth /> },
-
-  // PIN-protected guest services
+  // Guest services
   {
     path: '/room_services/:hotelIdentifier/room/:roomNumber/menu',
-    element: <RequirePin><RoomService /></RequirePin>,
+    element: <RoomService />,
   },
   {
     path: '/room_services/:hotelIdentifier/room/:roomNumber/breakfast/',
-    element: <RequirePin><Breakfast /></RequirePin>,
+    element: <Breakfast />,
   },
   {
     path: '/guest-booking/:hotelSlug/restaurant/:restaurantSlug/',
@@ -46,11 +35,11 @@ const guestRoutes = [
   },
   {
     path: '/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/',
-    element: <RequireDinnerPin><DinnerBookingForm /></RequireDinnerPin>,
+    element: <DinnerBookingForm />,
   },
   {
     path: '/chat/:hotelSlug/conversations/:conversationId/messages/send',
-    element: <RequireChatPin><ChatWindow /></RequireChatPin>,
+    element: <ChatWindow />,
   },
   { path: '/chat/:hotelSlug/conversations/:conversationId/messages', element: <ChatWindow /> },
 

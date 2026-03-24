@@ -11,6 +11,7 @@
  */
 
 import { guestAPI } from './api';
+import { requireGuestToken } from '@/utils/guestToken';
 
 /**
  * Fetch chat context including Pusher connection info
@@ -19,8 +20,12 @@ import { guestAPI } from './api';
  * @returns {Promise<Object>} Context with hotel, booking, conversation, pusher info
  */
 export const getContext = async (hotelSlug, token) => {
+  const resolvedToken = token || requireGuestToken('guestChatAPI.getContext');
+  if (!resolvedToken) {
+    throw new Error('[GuestChatAPI] Cannot fetch context: guest token is missing');
+  }
   const response = await guestAPI.get(`/hotel/${hotelSlug}/chat/context`, {
-    params: { token }
+    params: { token: resolvedToken }
   });
   
   console.log('[GuestChatAPI] Context response:', response.data);
@@ -37,9 +42,13 @@ export const getContext = async (hotelSlug, token) => {
  * @returns {Promise<Array>} Array of messages
  */
 export const getMessages = async (hotelSlug, token, options = {}) => {
+  const resolvedToken = token || requireGuestToken('guestChatAPI.getMessages');
+  if (!resolvedToken) {
+    throw new Error('[GuestChatAPI] Cannot fetch messages: guest token is missing');
+  }
   const { limit = 50, before } = options;
   
-  const params = { token, limit };
+  const params = { token: resolvedToken, limit };
   if (before) {
     params.before = before;
   }
@@ -83,6 +92,10 @@ export const getMessages = async (hotelSlug, token, options = {}) => {
  * @returns {Promise<Object>} Server response with message data
  */
 export const sendMessage = async (hotelSlug, token, messageData) => {
+  const resolvedToken = token || requireGuestToken('guestChatAPI.sendMessage');
+  if (!resolvedToken) {
+    throw new Error('[GuestChatAPI] Cannot send message: guest token is missing');
+  }
   const { message, client_message_id, reply_to } = messageData;
   
   const payload = { 
@@ -104,7 +117,7 @@ export const sendMessage = async (hotelSlug, token, messageData) => {
   const response = await guestAPI.post(
     `/hotel/${hotelSlug}/chat/messages`, 
     payload,
-    { params: { token } }
+    { params: { token: resolvedToken } }
   );
   
   console.log('[GuestChatAPI] Message sent successfully:', response.data);
@@ -118,6 +131,11 @@ export const sendMessage = async (hotelSlug, token, messageData) => {
  * @returns {string} Auth endpoint URL
  */
 export const getPusherAuthEndpoint = (hotelSlug, token) => {
+  const resolvedToken = token || requireGuestToken('guestChatAPI.getPusherAuthEndpoint');
+  if (!resolvedToken) {
+    console.error('[GuestChatAPI] Cannot build Pusher auth endpoint: guest token is missing');
+    return null;
+  }
   // Get base URL - same logic as main API service
   const getApiBaseUrl = () => {
     if (import.meta.env.VITE_API_URL) {
@@ -135,7 +153,7 @@ export const getPusherAuthEndpoint = (hotelSlug, token) => {
   };
   
   const baseUrl = getApiBaseUrl().replace(/\/$/, ''); // Remove trailing slash
-  return `${baseUrl}/guest/hotel/${hotelSlug}/chat/pusher/auth?token=${token}`;
+  return `${baseUrl}/guest/hotel/${hotelSlug}/chat/pusher/auth?token=${encodeURIComponent(resolvedToken)}`;
 };
 
 export default {

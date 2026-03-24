@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import api from "@/services/api";
+import { guestAPI } from "@/services/api";
 import { toast } from "react-toastify";
 import DeletionModal from "@/components/modals/DeletionModal";
 import { useRoomServiceState, useRoomServiceDispatch } from "@/realtime/stores/roomServiceStore.jsx";
@@ -334,8 +334,8 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
     });
     
     // Fetch menu
-    api
-      .get(`/guest/hotels/${hotelIdentifier}/room/${roomNumber}/menu/`)
+    guestAPI
+      .get(`/hotels/${hotelIdentifier}/room/${roomNumber}/menu/`)
       .then((res) => {
         console.log('✅ RoomService: Menu fetched successfully', {
           itemCount: res.data?.length || 0,
@@ -362,8 +362,8 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
       });
 
     // Fetch previous orders (hotel-scoped)
-    api
-      .get(`/api/guest/hotels/${hotelIdentifier}/orders/`, {
+    guestAPI
+      .get(`/hotels/${hotelIdentifier}/orders/`, {
         params: { room_number: roomNumber },
       })
 
@@ -464,8 +464,8 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
 
     try {
       // POST to hotel-scoped orders endpoint
-      const orderResp = await api.post(
-        `/guest/hotels/${hotelIdentifier}/room-services/orders/`,
+      const orderResp = await guestAPI.post(
+        `/hotels/${hotelIdentifier}/room-services/orders/`,
         payload
       );
 

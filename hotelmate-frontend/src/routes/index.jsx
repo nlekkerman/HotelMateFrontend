@@ -20,7 +20,7 @@ import ChatHomePage from '@/pages/chat/ChatHomePage';
  *   1. Auth routes (specific paths — /login, /register, etc.)
  *   2. Public routes early (/ , /hotel/:slug, etc.)
  *   3. Staff routes (all ProtectedRoute-wrapped)
- *   4. Guest routes (PIN-protected and booking flows)
+ *   4. Guest routes (booking flows, guest services)
  *   5. Game routes (ProtectedRoute-wrapped)
  *   6. Public routes late (/:hotelSlug catch-all, * not-found)
  *

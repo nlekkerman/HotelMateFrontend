@@ -15,10 +15,9 @@ import { useRoomBookingState } from '@/realtime/stores/roomBookingStore';
 import RoomService from "@/components/rooms/RoomService";
 import Breakfast from "@/components/rooms/Breakfast";
 import { 
-  resolveGuestBookingToken, 
-  writeGuestBookingToken, 
-  clearGuestBookingToken 
+  resolveGuestBookingToken
 } from '@/utils/guestBookingTokens';
+import { persistGuestToken } from '@/utils/guestToken';
 
 /**
  * BookingStatusPage - Token-based booking management page
@@ -29,6 +28,9 @@ const BookingStatusPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
+
+  // Persist token so it survives page reloads
+  if (token) persistGuestToken(token);
 
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(null);
@@ -364,88 +366,15 @@ const BookingStatusPage = () => {
       setHotel(data.hotel);
       setCancellationPolicy(data.cancellation_policy);
       
-      // Extract guest token for chat/room service operations - DETAILED INSPECTION
-      console.log('🔍 [BookingStatusPage] DETAILED GUEST TOKEN INSPECTION:');
-      console.log('Raw response structure:', JSON.stringify(data, null, 2));
-      
-      console.log('🔍 [BookingStatusPage] All top-level keys:', Object.keys(data));
-      console.log('🔍 [BookingStatusPage] Guest token field check:', {
-        'data.guest_token': data.guest_token,
-        'data["guest_token"]': data["guest_token"],
-        'typeof guest_token': typeof data.guest_token,
-        'guest_token length': data.guest_token?.length,
-        'guest_token exists': 'guest_token' in data,
-        'guest_token truthy': !!data.guest_token
-      });
+      // Guest token for chat/room service comes from the URL query token,
+      // NOT from the public booking detail response (backend hardening).
+      // The query string ?token=... is the intended guest-token source.
 
-      // Check if it's nested in booking object
-      if (data.booking) {
-        console.log('🔍 [BookingStatusPage] Nested booking object found:', {
-          'data.booking.guest_token': data.booking.guest_token,
-          'booking keys': Object.keys(data.booking)
-        });
-      }
-
-      // Check checked-in status
-      console.log('🔍 [BookingStatusPage] Check-in status inspection:', {
-        'data.checked_in_at': data.checked_in_at,
-        'data.checked_out_at': data.checked_out_at,
-        'data.status': data.status,
-        'data.assigned_room_number': data.assigned_room_number,
-        'should_have_guest_token': !!(data.checked_in_at && !data.checked_out_at)
-      });
-
-      // Guest object inspection
-      if (data.guest) {
-        console.log('🔍 [BookingStatusPage] Guest object detailed inspection:', {
-          guest: data.guest,
-          guestKeys: Object.keys(data.guest),
-          guestStringified: JSON.stringify(data.guest, null, 2)
-        });
-      }
-      
-      // Persist guest token with booking-scoped storage
-      if (data.guest_token) {
-        writeGuestBookingToken(hotelSlug, data.id || bookingId, data.guest_token);
-        console.log('🎫 [BookingStatusPage] ✅ Guest token persisted successfully:', {
-          booking_id: data.id || bookingId,
-          token_preview: data.guest_token.substring(0, 10) + '...',
-          token_length: data.guest_token.length
-        });
-      } else {
-        console.log('❌ [BookingStatusPage] NO GUEST TOKEN FOUND in response');
-        console.log('🔍 [BookingStatusPage] Expected conditions for guest token:');
-        console.log('- Booking must be checked in: ', !!data.checked_in_at);
-        console.log('- Booking must not be checked out: ', !data.checked_out_at);
-        console.log('- Backend should include guest_token field for checked-in guests');
-        // Clear any stored token for this booking if no token in response
-        clearGuestBookingToken(data.id || bookingId);
-      }
-
-      // COMPREHENSIVE GUEST TOKEN DEBUGGING
-      console.log('🔍🔍🔍 COMPLETE BOOKING RESPONSE ANALYSIS 🔍🔍🔍');
-      console.log('Raw API response data:', data);
-      console.log('All response keys:', Object.keys(data));
-      console.log('Guest token investigation:', {
-        'data.guest_token': data.guest_token,
-        'guest_token_type': typeof data.guest_token,
-        'guest_token_length': data.guest_token?.length,
-        'guest_token_exists': 'guest_token' in data,
-        'guest_token_value': data.guest_token
-      });
-      
-      // Debug initial booking data structure and guest token availability
+      // Debug initial booking data structure
       console.log("📥 Initial booking data loaded:", {
         status: data.status,
         checked_in_at: data.checked_in_at,
         assigned_room_number: data.assigned_room_number,
-        room: data.room,
-        hotel: data.hotel,
-        guest: data.guest,
-        dates: data.dates,
-        guests: data.guests,
-        guest_token: data.guest_token, // Debug token presence
-        all_keys: Object.keys(data), // See all available fields
       });
 
       // Determine if cancellation should be allowed
@@ -513,10 +442,9 @@ const BookingStatusPage = () => {
       return;
     }
 
-    // Resolve token using booking-scoped logic
+    // Resolve token using query-string token (intended source)
     const resolvedToken = resolveGuestBookingToken({
       bookingId: booking.id || bookingId,
-      bookingToken: booking.guest_token,
       queryToken: token
     });
 
@@ -707,7 +635,6 @@ const BookingStatusPage = () => {
       // Resolve current token for this booking
       const currentToken = resolveGuestBookingToken({
         bookingId: booking.id || bookingId,
-        bookingToken: booking.guest_token,
         queryToken: token
       });
       
@@ -915,7 +842,6 @@ const BookingStatusPage = () => {
                   // Resolve token using booking-scoped logic only
                   const chatToken = resolveGuestBookingToken({
                     bookingId: booking?.id || bookingId,
-                    bookingToken: booking?.guest_token,
                     queryToken: token
                   });
                   

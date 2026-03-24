@@ -76,8 +76,6 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('viewMode');
     localStorage.removeItem('selectedHotel');
     localStorage.removeItem('fcm_token');
-    localStorage.removeItem('hotelmate_guest_chat_session');
-    localStorage.removeItem('guest_fcm_token_saved');
     
     // Clear game-related tokens if they exist (optional cleanup)
     localStorage.removeItem('tournament_player_token');

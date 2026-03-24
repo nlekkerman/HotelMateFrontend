@@ -50,7 +50,8 @@ export const useSurveyData = (hotelSlug, token) => {
         setSurveyState('loading');
         
         const response = await publicAPI.get(
-          `/hotel/${hotelSlug}/survey/?token=${encodeURIComponent(token)}`
+          `/hotel/${hotelSlug}/survey/`,
+          { params: { token } }
         );
         
         const data = unwrap(response);

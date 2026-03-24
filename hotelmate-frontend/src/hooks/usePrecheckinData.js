@@ -72,7 +72,8 @@ export const usePrecheckinData = (hotelSlug, token) => {
         setError(null);
         
         const response = await publicAPI.get(
-          `/hotel/${hotelSlug}/precheckin/?token=${encodeURIComponent(token)}`
+          `/hotel/${hotelSlug}/precheckin/`,
+          { params: { token } }
         );
         
         const data = unwrap(response);

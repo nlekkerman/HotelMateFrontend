@@ -17,19 +17,11 @@ import api from "@/services/api";
  * @param {Object} guestSession - Optional guest session for authentication
  * @returns {Promise<Object>} - The response data from backend
  */
-export const deleteMessage = async (messageId, guestSession = null) => {
+export const deleteMessage = async (messageId) => {
   try {
     console.log('🗑️ Soft deleting message:', messageId);
-    console.log('🗑️ Guest session provided:', !!guestSession);
     
-    // Build URL with session token for guests
-    let url = `/chat/messages/${messageId}/delete/`;
-    
-    if (guestSession) {
-      const sessionToken = guestSession.getToken();
-      url += `?session_token=${sessionToken}`;
-      console.log('🗑️ Using guest session token for deletion');
-    }
+    const url = `/chat/messages/${messageId}/delete/`;
     
     // Call backend DELETE API - soft delete (default)
     const response = await api.delete(url);
@@ -86,11 +78,10 @@ export const handleMessageDeletion = async (
   setMessages,
   setMessageStatuses,
   onSuccess,
-  onError,
-  guestSession = null
+  onError
 ) => {
   try {
-    const result = await deleteMessage(messageId, guestSession);
+    const result = await deleteMessage(messageId);
     
     // Update message in local state
     if (result?.message) {

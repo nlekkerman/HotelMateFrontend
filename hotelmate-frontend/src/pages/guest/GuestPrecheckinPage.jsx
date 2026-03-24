@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { Container, Row, Col, Form, Card, Spinner } from 'react-bootstrap';
 import { publicAPI } from '@/services/api';
 import { toast } from 'react-toastify';
+import { persistGuestToken } from '@/utils/guestToken';
 
 import PrecheckinHeader from '@/components/guest/PrecheckinHeader';
 import BookingContactCard from '@/components/guest/BookingContactCard';
@@ -20,6 +21,9 @@ const GuestPrecheckinPage = () => {
   const { hotelSlug } = useParams();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
+
+  // Persist token so it survives page reloads
+  if (token) persistGuestToken(token);
 
   // Helper to safely unwrap API responses
   const unwrap = (res) => res?.data?.data ?? res?.data;
@@ -200,7 +204,8 @@ const GuestPrecheckinPage = () => {
         setError(null);
         
         const response = await publicAPI.get(
-          `/hotel/${hotelSlug}/precheckin/?token=${encodeURIComponent(token)}`
+          `/hotel/${hotelSlug}/precheckin/`,
+          { params: { token } }
         );
         
         const data = unwrap(response);
@@ -459,8 +464,9 @@ const GuestPrecheckinPage = () => {
       console.log('🚀 Submitting payload:', JSON.stringify(payload, null, 2));
       
       await publicAPI.post(
-        `/hotel/${hotelSlug}/precheckin/submit/?token=${encodeURIComponent(token)}`,
-        payload
+        `/hotel/${hotelSlug}/precheckin/submit/`,
+        payload,
+        { params: { token } }
       );
       
       setSuccess(true);

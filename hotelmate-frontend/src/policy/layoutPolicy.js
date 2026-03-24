@@ -1,13 +1,8 @@
 import { matchPath } from "react-router-dom";
 
-// Guest route patterns from App.jsx - PIN-based authentication
+// Guest route patterns from App.jsx
 const GUEST_ROUTE_PATTERNS = [
-  // PIN Validation Routes
-  "/:hotelIdentifier/room/:roomNumber/validate-pin",
-  "/chat/:hotelSlug/messages/room/:room_number/validate-chat-pin",
-  "/guest-booking/:hotelSlug/restaurant/:restaurantSlug/room/:roomNumber/validate-dinner-pin",
-
-  // Protected Guest Routes (use RequirePin/RequireChatPin/RequireDinnerPin)
+  // Guest Service Routes
   "/room_services/:hotelIdentifier/room/:roomNumber/menu",
   "/room_services/:hotelIdentifier/room/:roomNumber/breakfast",
   "/chat/:hotelSlug/conversations/:conversationId/messages/send",
@@ -52,7 +47,7 @@ export function getLayoutMode(pathname) {
     return "auth";
   }
 
-  // GUEST: PIN-based authentication routes (room service, guest chat, etc.)
+  // GUEST: Guest authentication routes (room service, guest chat, etc.)
   if (isGuestRoute(pathname)) {
     return "guest";
   }

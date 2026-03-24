@@ -6,7 +6,6 @@ import { FaPaperPlane, FaTimes, FaArrowLeft, FaAngleDoubleDown, FaCheck, FaCheck
 import { useChat } from "@/context/ChatContext";
 import useHotelLogo from "@/hooks/useHotelLogo";
 import EmojiPicker from "emoji-picker-react";
-import { GuestChatSession } from "@/utils/guestChatSession";
 
 import { messaging } from "@/firebase";
 import { onMessage } from "firebase/messaging";
@@ -103,20 +102,6 @@ const ChatWindow = ({
     // Try multiple sources in order of priority
     let initialRoomNumber = propRoomNumber || location.state?.room_number;
     
-    // If no room number but this is a guest, try to get it from stored session
-    if (!initialRoomNumber && isGuest) {
-      try {
-        const storedSession = localStorage.getItem('hotelmate_guest_chat_session');
-        if (storedSession) {
-          const session = JSON.parse(storedSession);
-          initialRoomNumber = session.room_number;
-          console.log('🔍 Retrieved room number from stored session:', initialRoomNumber);
-        }
-      } catch (err) {
-        console.error('Failed to parse stored session:', err);
-      }
-    }
-    
     // If still no room number, try conversation data prop
     if (!initialRoomNumber && isGuest && propConversationData?.room_number) {
       initialRoomNumber = propConversationData.room_number;
@@ -148,8 +133,6 @@ const ChatWindow = ({
   const markGuestConversationReadForStaff = contextMarkGuestConversationReadForStaff || (() => {});
   const markGuestConversationReadForGuest = contextMarkGuestConversationReadForGuest || (() => {});
 
-  // Guest session management
-  const [guestSession, setGuestSession] = useState(null);
   const [currentStaff, setCurrentStaff] = useState(null);
   
   // Guest chat channels now managed by centralized RealtimeProvider
@@ -182,18 +165,6 @@ const ChatWindow = ({
               ...response.data,
               room_number: response.data.room_number
             }));
-            
-            // Also save to localStorage for future use
-            try {
-              const storedSession = localStorage.getItem('hotelmate_guest_chat_session');
-              if (storedSession) {
-                const session = JSON.parse(storedSession);
-                session.room_number = response.data.room_number;
-                localStorage.setItem('hotelmate_guest_chat_session', JSON.stringify(session));
-              }
-            } catch (err) {
-              console.error('Failed to update stored session:', err);
-            }
           }
         } catch (error) {
           console.error('❌ [ROOM NUMBER] Failed to fetch conversation details:', error);
@@ -468,28 +439,6 @@ const ChatWindow = ({
       }
     };
 
-    // Initialize guest session if this is a guest
-    if (isGuest && hotelSlug && roomNumber) {
-      console.log('🔧 Initializing guest session:', { hotelSlug, roomNumber });
-      const session = new GuestChatSession(hotelSlug, roomNumber);
-      setGuestSession(session);
-      
-      // Log complete session data for debugging
-      console.log('📊 Guest Session Data:', {
-        session_id: session.getSessionId(),
-        room_number: session.getRoomNumber(),
-        hotel_slug: session.getHotelSlug(),
-        conversation_id: session.getConversationId(),
-        pusher_channel: session.getPusherChannel(),
-        guest_name: session.getGuestName(),
-        has_token: !!session.getToken()
-      });
-      
-      // Don't load saved staff handler - wait for staff to actively pick up the conversation
-      // Staff will be set via Pusher 'staff-assigned' event when they select the conversation
-      console.log('📡 Guest Pusher channel will be:', `${hotelSlug}-room-${roomNumber}-chat`);
-    }
-
     // Initialize chatStore conversation for staff viewing guest chat
     if (!isGuest && chatDispatch && conversationId) {
       console.log('🔄 [UNIFIED] Initializing chatStore conversation for guest-to-staff:', conversationId);
@@ -630,7 +579,6 @@ const ChatWindow = ({
     // Update current staff handler
     if (data.staff_info) {
       setCurrentStaff(data.staff_info);
-      guestSession?.saveToLocalStorage({ current_staff_handler: data.staff_info });
     }
     
     // Show notification if tab not focused using Service Worker
@@ -659,7 +607,7 @@ const ChatWindow = ({
     setTimeout(() => {
       scrollToBottom();
     }, 50);
-  }, [guestSession]); // Only recreate if guestSession changes
+  }, []); // Stable callback
 
   const handleNewMessage = useCallback((data) => {
     console.log('💬 New message received by guest (general event):', data);
@@ -706,9 +654,6 @@ const ChatWindow = ({
     // Update current staff handler
     setCurrentStaff(newStaffInfo);
     
-    // Save to guest session
-    guestSession?.saveToLocalStorage({ current_staff_handler: newStaffInfo });
-    
     // Only add system message if this is a new staff member joining
     if (isNewStaff) {
       const systemMessage = {
@@ -727,7 +672,7 @@ const ChatWindow = ({
     }
     
     console.log('✅ Updated staff handler to:', data.staff_name);
-  }, [currentStaff, guestSession]);
+  }, [currentStaff]);
 
   // Handle messages read by staff (for guest view)
   const handleMessagesReadByStaff = useCallback((data) => {
@@ -907,129 +852,6 @@ const ChatWindow = ({
   }, [conversationId, userId]);
   // Removed seenMessages from deps to prevent re-subscription
 
-  // Auto-mark messages as read when viewing conversation - ONLY FOR GUESTS
-  // Staff must click input to mark as read
-  useEffect(() => {
-    if (!conversationId || userId) return; // Skip if staff (userId exists)
-    
-    // Only run for guests
-    if (!guestSession) return;
-
-    const markAsRead = async () => {
-      try {
-        console.log('📝 [AUTO-READ] Guest auto-marking staff messages as read...');
-        const response = await api.post(buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/mark-read/`), {
-          session_token: guestSession.getToken()
-        });
-        console.log('✅ [AUTO-READ] Guest marked conversation as read:', response.data);
-        
-        // Update local UI immediately
-        setMessages(prevMessages => 
-          prevMessages.map(msg => 
-            msg.sender_type === 'staff'
-              ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_guest: true }
-              : msg
-          )
-        );
-      } catch (error) {
-        console.error('❌ [AUTO-READ] Failed to mark conversation as read:', error);
-      }
-    };
-
-    // Wait 1 second to ensure guest is actually viewing
-    const timer = setTimeout(markAsRead, 1000);
-
-    return () => clearTimeout(timer);
-  }, [conversationId, userId, guestSession]);
-
-  // Auto-mark new staff messages as read when they arrive - ONLY FOR GUESTS
-  useEffect(() => {
-    if (!conversationId || messages.length === 0 || userId) return; // Skip if staff
-    if (!guestSession) return;
-    
-    // Count unread staff messages
-    let unreadCount = 0;
-    const unreadMessageIds = [];
-    
-    messages.forEach(msg => {
-      if (msg.sender_type === 'staff' && !msg.is_read_by_recipient && msg.status !== 'read') {
-        unreadCount++;
-        unreadMessageIds.push(msg.id);
-      }
-    });
-
-    if (unreadCount === 0) return;
-
-    const markNewMessagesAsRead = async () => {
-      try {
-        console.log(`📝 [NEW-MSG-READ] Guest auto-marking ${unreadCount} staff messages as read:`, unreadMessageIds);
-        const response = await api.post(buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/mark-read/`), {
-          session_token: guestSession.getToken()
-        });
-        console.log('✅ [NEW-MSG-READ] Response:', response.data);
-        
-        // Update local UI
-        setMessages(prevMessages => 
-          prevMessages.map(msg => 
-            msg.sender_type === 'staff' && unreadMessageIds.includes(msg.id)
-              ? { ...msg, status: 'read', is_read_by_recipient: true, read_by_guest: true }
-              : msg
-          )
-        );
-      } catch (error) {
-        console.error('❌ [NEW-MSG-READ] Failed:', error);
-      }
-    };
-
-    // Mark as read after a short delay
-    const timer = setTimeout(markNewMessagesAsRead, 500);
-
-    return () => clearTimeout(timer);
-  }, [messages.length, conversationId, userId, guestSession]);
-
-  // Ensure FCM token is saved for guest on chat open (even if already authenticated)
-  useEffect(() => {
-    if (!isGuest || !guestSession || !conversationId) return;
-
-    const ensureFCMToken = async () => {
-      try {
-        // Check if we already have FCM token saved in session
-        const hasTokenSaved = localStorage.getItem('guest_fcm_token_saved');
-        if (hasTokenSaved === 'true') {
-          console.log('✅ FCM token already saved for guest session');
-          return;
-        }
-
-        console.log('🔔 Ensuring FCM token is saved for guest...');
-        
-        // Request FCM permission (will return existing token if already granted)
-        const { requestFCMPermission } = await import('@/utils/fcm');
-        const fcmToken = await requestFCMPermission();
-        
-        if (fcmToken) {
-          // Save FCM token to backend via session endpoint
-          await api.post(
-            buildStaffURL(hotelSlug, 'chat', `messages/room/${roomNumber}/save-fcm-token/`),
-            {
-              session_token: guestSession.getToken(),
-              fcm_token: fcmToken
-            }
-          );
-          console.log('✅ FCM token saved for guest session');
-          localStorage.setItem('guest_fcm_token_saved', 'true');
-        } else {
-          console.warn('⚠️ Could not obtain FCM token for guest');
-        }
-      } catch (error) {
-        console.error('❌ Failed to ensure FCM token for guest:', error);
-      }
-    };
-
-    // Run after a short delay to not block initial render
-    const timer = setTimeout(ensureFCMToken, 2000);
-    return () => clearTimeout(timer);
-  }, [isGuest, guestSession, conversationId, hotelSlug, roomNumber]);
-
   // Infinite scroll
   const handleScroll = () => {
     const container = messagesContainerRef.current;
@@ -1108,8 +930,8 @@ const ChatWindow = ({
       message: messageToSend || (filesToSend.length > 0 ? `📎 ${filesToSend.length} file(s)` : ''),
       sender_type: userId ? 'staff' : 'guest',
       staff: userId || null,
-      guest_id: isGuest ? (guestSession?.getSessionId() || null) : null,
-      guest_name: isGuest ? (guestSession?.getGuestName() || 'You') : null,
+      guest_id: null,
+      guest_name: isGuest ? 'You' : null,
       staff_name: userId ? 'You' : null,
       timestamp: new Date().toISOString(),
       created_at: new Date().toISOString(),
@@ -1165,18 +987,9 @@ const ChatWindow = ({
           // Staff - add staff_id to FormData (same as text messages)
           formData.append('staff_id', userId);
           console.log('👤 Staff upload with staff_id:', userId);
-        } else if (guestSession) {
-          // Guest - add session token (same as text messages)
-          const sessionToken = guestSession.getToken();
-          formData.append('session_token', sessionToken);
-          console.log('👤 Guest upload with session token:', sessionToken);
-          console.log('👤 Guest session data:', {
-            session_id: guestSession.getSessionId(),
-            room_number: guestSession.getRoomNumber(),
-            has_token: !!sessionToken
-          });
         } else {
-          console.error('❌ No userId or guestSession - cannot upload file!');
+          // Guest upload - no PIN session auth
+          console.log('👤 Guest upload without session auth');
         }
 
         console.log('📤 Uploading to Cloudinary via backend:', {
@@ -1190,7 +1003,7 @@ const ChatWindow = ({
           cloudinaryBase: CLOUDINARY_BASE
         });
 
-        // Build headers object - ONLY for staff (guests authenticate via session_token in FormData)
+        // Build headers object for staff authentication
         const headers = {};
         
         if (userId) {
@@ -1215,8 +1028,8 @@ const ChatWindow = ({
             hotelSlug: headers['X-Hotel-Slug']
           });
         } else {
-          // Guest authentication - NO headers, session_token is in FormData
-          console.log('📤 Guest upload - no auth headers (session_token in FormData)');
+          // Guest upload - no auth headers
+          console.log('📤 Guest upload - no auth headers');
         }
         // DON'T set Content-Type - browser sets it with boundary
 
@@ -1279,17 +1092,9 @@ const ChatWindow = ({
         if (userId) {
           payload.message = messageToSend;
           payload.staff_id = userId;
-        } else if (guestSession) {
-          payload.message = messageToSend;
-          payload.session_token = guestSession.getToken();
         } else {
-          console.error('❌ Cannot send message: No userId or guestSession');
-          setMessageStatuses(prev => new Map(prev).set(tempId, 'failed'));
-          setMessages(prev => 
-            prev.map(msg => msg.id === tempId ? { ...msg, status: 'failed' } : msg)
-          );
-          setUploading(false);
-          return;
+          // Guest without PIN session - send message without session auth
+          payload.message = messageToSend;
         }
         
         // Add reply reference if replying (using utility)
@@ -1307,7 +1112,7 @@ const ChatWindow = ({
           hasMessage: !!payload.message,
           hasReply: !!payload.reply_to,
           staff_id: payload.staff_id,
-          hasSessionToken: !!payload.session_token
+          isGuest: !userId
         });
 
         response = await api.post(
@@ -1346,7 +1151,6 @@ const ChatWindow = ({
       // Update staff handler if changed (for guests)
       if (!userId && messageData?.staff_info) {
         setCurrentStaff(messageData.staff_info);
-        guestSession?.saveToLocalStorage({ current_staff_handler: messageData.staff_info });
       }
 
       // Replace temp message with real message from backend
@@ -1443,7 +1247,7 @@ const ChatWindow = ({
       (errorMsg) => {
         alert(errorMsg);
       },
-      isGuest ? guestSession : null // Pass guest session for authentication
+      null // Guest session auth removed (PIN-based auth deleted)
     );
     
     setShowDeleteConfirm(false);
@@ -1623,7 +1427,6 @@ const ChatWindow = ({
           const isMine = userId 
             ? (msg.sender_type === "staff" && msg.staff === userId) // Staff view: only THIS staff's messages are "mine"
             : (msg.sender_type === "guest" && (
-                msg.guest_id === guestSession?.getSessionId() || 
                 msg.id?.toString().startsWith('temp-') || 
                 msg.id?.toString().startsWith('local:') ||
                 msg.__optimistic === true
@@ -2271,8 +2074,8 @@ const ChatWindow = ({
                 markConversationRead(conversationId);
                 console.log('✅ [INPUT FOCUS] Conversation marked as read in sidebar');
               } 
-              // For guests: use session token and mark staff messages as read
-              else if (guestSession) {
+              // For guests: mark staff messages as read (no session auth needed)
+              else if (isGuest) {
                 console.log('📝 [INPUT FOCUS] Guest marking staff messages as read');
                 
                 // Collect staff message IDs from current state
@@ -2304,9 +2107,7 @@ const ChatWindow = ({
                 }
                 
                 // Then call backend to mark as read (will trigger Pusher event for staff)
-                const response = await api.post(buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/mark-read/`), {
-                  session_token: guestSession.getToken()
-                });
+                const response = await api.post(buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/mark-read/`));
                 console.log('✅ [INPUT FOCUS] Guest marked conversation as read:', response.data);
               }
             } catch (error) {
