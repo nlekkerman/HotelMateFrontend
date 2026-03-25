@@ -1,6 +1,7 @@
 // src/realtime/stores/roomBookingStore.jsx
 import React, { createContext, useContext, useReducer } from 'react';
 import queryClient from '@/lib/queryClient';
+import { logRealtimeDispatch, logRealtimeInvalidation, logRealtimeRouting } from '../debug/debugLogger.js';
 
 // Global event deduplication to prevent duplicate processing
 const globalProcessedEventIds = new Set();
@@ -168,11 +169,13 @@ export const roomBookingActions = {
   _lastInvalidationTime: 0, // Debounce React Query invalidation
 
   // Bridge booking realtime events to React Query so staff UI refreshes
-  _invalidateBookingQueries(bookingId) {
+  _invalidateBookingQueries(bookingId, _dbgId) {
     // Debounce: skip if last invalidation was less than 500ms ago
     const now = Date.now();
     if (now - this._lastInvalidationTime < 500) return;
     this._lastInvalidationTime = now;
+
+    const invalidated = ['staff-room-bookings'];
 
     // Invalidate all staff booking list queries (filter-based keys)
     queryClient.invalidateQueries({
@@ -183,6 +186,7 @@ export const roomBookingActions = {
 
     // Invalidate matching booking detail query if bookingId is known
     if (bookingId) {
+      invalidated.push('staff-room-booking:' + bookingId);
       queryClient.invalidateQueries({
         predicate: (query) =>
           Array.isArray(query.queryKey) &&
@@ -190,6 +194,9 @@ export const roomBookingActions = {
           query.queryKey[2] === bookingId,
       });
     }
+
+    // 🔧 DEBUG PANEL: log invalidation
+    logRealtimeInvalidation(_dbgId, invalidated);
   },
 
   // Main event handler called from eventBus
@@ -339,17 +346,22 @@ export const roomBookingActions = {
       case "party_healed":
       case "guests_healed":
         console.debug(`[roomBookingStore] Healing event received (ignored): ${eventType}`, event);
+        logRealtimeRouting(event.meta?._dbgId, { normalizedCategory: 'room_booking', normalizedType: eventType, ignored: true });
         return; // Return early — no React Query invalidation needed
 
       default:
         if (import.meta.env && !import.meta.env.PROD) {
           console.log("[roomBookingStore] Ignoring eventType:", eventType, event);
         }
+        logRealtimeRouting(event.meta?._dbgId, { normalizedCategory: 'room_booking', normalizedType: eventType, ignored: true });
         return; // Return early — unknown event, no invalidation
     }
 
+    // 🔧 DEBUG PANEL: log that dispatch happened
+    logRealtimeDispatch(event.meta?._dbgId, { bookingId });
+
     // Bridge: invalidate React Query caches so staff UI refreshes
-    this._invalidateBookingQueries(bookingId);
+    this._invalidateBookingQueries(bookingId, event.meta?._dbgId);
   },
 
   // Emit overstay refresh signal for BookingDetailsModal

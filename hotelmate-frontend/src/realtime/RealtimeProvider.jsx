@@ -11,6 +11,7 @@ import { ServiceBookingProvider } from './stores/serviceBookingStore.jsx';
 import { RoomBookingProvider } from './stores/roomBookingStore.jsx';
 import { RoomsProvider } from './stores/roomsStore.jsx';
 import { HousekeepingProvider } from './stores/housekeepingStore.jsx';
+import RealtimeDebugPanel from './debug/RealtimeDebugPanel.jsx';
 
 /**
  * RealtimeProvider - Manages centralized realtime subscriptions
@@ -90,6 +91,7 @@ export function RealtimeProvider({ children }) {
                     <RoomsProvider>
                       <RealtimeManager>
                         {children}
+                        <RealtimeDebugPanel />
                       </RealtimeManager>
                     </RoomsProvider>
                   </RoomBookingProvider>

@@ -4,6 +4,7 @@ import { getGuestPusherClient } from './guestRealtimeClient';
 import { handleIncomingRealtimeEvent } from './eventBus';
 import { getPusherAuthEndpoint } from '../services/guestChatAPI.js';
 import { guestBaseAPI } from '../services/api.js';
+import { logRealtimeSubscription, logRealtimeUnsubscription, logRealtimeSetHotelSlug, logRealtimeError } from './debug/debugLogger.js';
 
 let subscriptionsActive = false;
 let currentChannels = [];
@@ -29,6 +30,7 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
   const pusher = getPusherClient();
   const channels = [];
   console.log('🔗 Subscribing to base hotel channels:', { hotelSlug, staffId });
+  logRealtimeSetHotelSlug(hotelSlug);
 
   try {
     console.log('🔥 [channelRegistry] Base hotel channels - hotelSlug:', hotelSlug);
@@ -117,6 +119,7 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
       });
 
       console.log(`✅ Subscribed to channel: ${channel.name}`);
+      logRealtimeSubscription(channel.name);
     });
 
     subscriptionsActive = true;
@@ -131,8 +134,10 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
           channel.unbind_all();
           channel.unsubscribe();
           console.log(`🗑️ Unsubscribed from: ${channel.name}`);
+          logRealtimeUnsubscription(channel.name);
         } catch (error) {
           console.error('❌ Error unsubscribing from channel:', channel.name, error);
+          logRealtimeError('Channel unsubscribe failed', { channel: channel.name, error: String(error) });
         }
       });
 

@@ -8,6 +8,7 @@ import { serviceBookingActions } from './stores/serviceBookingStore.jsx';
 import { roomBookingActions } from './stores/roomBookingStore.jsx';
 import { roomsActions } from './stores/roomsStore.jsx';
 import { showGuestMessageNotification } from '../utils/guestNotifications.jsx';
+import { logRealtimeEvent, logRealtimeRouting, logRealtimeError } from './debug/debugLogger.js';
 
 // Global event deduplication using meta.event_id
 const globalProcessedEventIds = new Set();
@@ -163,6 +164,9 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
       return; // ⬅️ nothing else, no warning, no routing
     }
 
+    // 🔧 DEBUG PANEL: log incoming event (booking/room channels only)
+    const _dbgId = logRealtimeEvent(channel, eventName, payload);
+
     // Accept normalized OR direct-message payloads
     if (payload?.category && payload?.type) {
       // 🔥 For staff_chat, prefer the Pusher eventName (realtime_staff_chat_*)
@@ -182,7 +186,7 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
         category: payload.category,
         type: effectiveType, // 👈 FIXED: Use the effectiveType we calculated
         payload: payload.payload ?? payload.data ?? {},
-        meta: payload.meta || { channel, eventName },
+        meta: { ...(payload.meta || { channel, eventName }), _dbgId },
         source,
         timestamp: payload.meta?.ts || new Date().toISOString(),
       };
@@ -345,7 +349,8 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           channel, 
           eventName, 
           event_id: payload?.event_id || payload?.id || `room-status-${Date.now()}`,
-          scope: { room_number: payload?.room_number }
+          scope: { room_number: payload?.room_number },
+          _dbgId
         },
         source,
         timestamp: new Date().toISOString()
@@ -366,7 +371,8 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           channel, 
           eventName, 
           event_id: payload?.event_id || payload?.id || `room-occupancy-${Date.now()}`,
-          scope: { room_number: payload?.room_number }
+          scope: { room_number: payload?.room_number },
+          _dbgId
         },
         source,
         timestamp: new Date().toISOString()
@@ -387,7 +393,8 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           channel,
           eventName,
           event_id: payload?.event_id || payload?.id || `room-updated-${Date.now()}`,
-          scope: { room_number: payload?.room_number }
+          scope: { room_number: payload?.room_number },
+          _dbgId
         },
         source,
         timestamp: new Date().toISOString()
@@ -409,7 +416,8 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           channel,
           eventName,
           event_id: payload?.event_id || payload?.meta?.event_id || payload?.id || `staff-${Date.now()}`,
-          scope: { booking_id: payload?.booking_id || payload?.id }
+          scope: { booking_id: payload?.booking_id || payload?.id },
+          _dbgId
         },
         source,
         timestamp: payload?.meta?.ts || new Date().toISOString()
@@ -494,6 +502,7 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
     });
   } catch (error) {
     console.error('❌ Error handling realtime event:', error, { source, channel, eventName, payload });
+    logRealtimeError('Error handling realtime event: ' + String(error), { channel, eventName });
   }
 }
 
@@ -568,12 +577,14 @@ function routeToDomainStores(event) {
           console.log('Timestamp:', event.meta?.ts);
           console.groupEnd();
         }
+        logRealtimeRouting(event.meta?._dbgId, { normalizedCategory: 'room_booking', normalizedType: event.type, routed: true });
         roomBookingActions.handleEvent(event);
         break;
       case "booking":
         serviceBookingActions.handleEvent(event);
         break;
       case "rooms":
+        logRealtimeRouting(event.meta?._dbgId, { normalizedCategory: 'rooms', normalizedType: event.type, routed: true });
         roomsActions.handleEvent(event);
         break;
       case "staff_notification":
