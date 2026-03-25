@@ -61,6 +61,7 @@ const guestRoutes = [
   { path: '/booking/:hotelSlug', element: <GuestRoomBookingPage /> },
   { path: '/booking/confirmation/:bookingId', element: <BookingConfirmation /> },
   { path: '/booking/status/:hotelSlug/:bookingId', element: <BookingStatusPage /> },
+  { path: '/hotel/:hotelSlug/booking/:bookingId', element: <BookingStatusPage /> },
   { path: '/booking/:hotelSlug/payment/success', element: <BookingPaymentSuccess /> },
   { path: '/booking/:hotelSlug/payment/cancel', element: <BookingPaymentCancel /> },
   // Legacy routes without hotel slug
