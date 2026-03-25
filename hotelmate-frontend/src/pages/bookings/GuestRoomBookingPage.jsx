@@ -495,10 +495,12 @@ const GuestRoomBookingPage = () => {
       setLoading(true);
       setError(null);
       
+      const guestEmail = bookingData.primary_email || primaryGuest.email || booker.email;
+      const emailParam = guestEmail ? `&email=${encodeURIComponent(guestEmail)}` : '';
       const response = await publicAPI.post(
   `/hotel/${hotelSlug}/room-bookings/${bookingData.booking_id}/payment/session/`,
   {
-    success_url: `${window.location.origin}/booking/${hotelSlug}/payment/success?booking_id=${bookingData.booking_id}`,
+    success_url: `${window.location.origin}/booking/${hotelSlug}/payment/success?booking_id=${bookingData.booking_id}${emailParam}`,
     cancel_url: `${window.location.origin}/booking/${hotelSlug}/payment/cancel?booking_id=${bookingData.booking_id}`,
   }
 );
@@ -508,7 +510,9 @@ const GuestRoomBookingPage = () => {
       if (data.status === "paid") {
         // Already paid — clear hold and go straight to success
         clearHold(hotelSlug);
-        navigate(`/booking/payment/success?booking_id=${bookingData.booking_id}`);
+        const guestEmailForNav = bookingData.primary_email || primaryGuest.email || booker.email;
+        const emailParamForNav = guestEmailForNav ? `&email=${encodeURIComponent(guestEmailForNav)}` : '';
+        navigate(`/booking/payment/success?booking_id=${bookingData.booking_id}${emailParamForNav}`);
         return;
       }
 

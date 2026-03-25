@@ -15,6 +15,7 @@ const BookingPaymentSuccess = () => {
   const { hotelSlug } = useParams();
   const bookingId = searchParams.get('booking_id');
   const sessionId = searchParams.get('session_id');
+  const email = searchParams.get('email');
   
   // Fallback: extract hotel slug from URL path if not in params (for legacy routes)
   const pathParts = window.location.pathname.split('/');
@@ -106,10 +107,12 @@ const BookingPaymentSuccess = () => {
     
     const canonicalUrl = `/hotel/${finalHotelSlug}/room-bookings/${bookingId}/`;
     console.log(`[PAYMENT_SUCCESS] Polling: GET ${canonicalUrl} (via publicAPI: ${publicAPI.defaults.baseURL})`);
-    const response = await publicAPI.get(canonicalUrl);
+    const response = await publicAPI.get(canonicalUrl, {
+      params: { ...(email ? { email } : {}) }
+    });
     debugBookingStatus(response.data, 'POLL_RESPONSE');
     return response.data;
-  }, [finalHotelSlug, bookingId]);
+  }, [finalHotelSlug, bookingId, email]);
 
   // Stop polling
   const stopPolling = React.useCallback(() => {
@@ -197,6 +200,12 @@ const BookingPaymentSuccess = () => {
       return;
     }
 
+    if (!email) {
+      setError('Missing email verification parameter. Please check your booking confirmation email for the correct link.');
+      setLoading(false);
+      return;
+    }
+
     didVerifyRef.current = true;
 
     (async () => {
@@ -212,7 +221,9 @@ const BookingPaymentSuccess = () => {
         );
         
         // Fetch booking details
-        const bookingResponse = await publicAPI.get(`/hotel/${finalHotelSlug}/room-bookings/${bookingId}/`);
+        const bookingResponse = await publicAPI.get(`/hotel/${finalHotelSlug}/room-bookings/${bookingId}/`, {
+          params: { ...(email ? { email } : {}) }
+        });
         
         // Check for expired bookings before proceeding
         if (expiredHandler.handleExpired(bookingResponse.data)) {
