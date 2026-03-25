@@ -2,8 +2,8 @@
 // Disposable floating debug panel for booking/room realtime events.
 // Mount once. Delete src/realtime/debug/ folder to remove entirely.
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { subscribe, clearDebugState, getDebugState } from './realtimeDebugStore';
+import React, { useState, useSyncExternalStore, useCallback } from 'react';
+import { subscribe, getSnapshot, clearDebugState, setCollapsed } from './realtimeDebugStore';
 
 const PANEL_STYLE = {
   position: 'fixed',
@@ -133,12 +133,7 @@ function EventCard({ evt }) {
 }
 
 export default function RealtimeDebugPanel() {
-  const [state, setState] = useState(getDebugState);
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    return subscribe(setState);
-  }, []);
+  const state = useSyncExternalStore(subscribe, getSnapshot);
 
   const handleClear = useCallback((e) => {
     e.stopPropagation();
@@ -147,7 +142,7 @@ export default function RealtimeDebugPanel() {
 
   const c = state.counters;
 
-  if (collapsed) {
+  if (state.collapsed) {
     return (
       <div
         style={{

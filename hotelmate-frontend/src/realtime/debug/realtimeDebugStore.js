@@ -1,5 +1,6 @@
 // src/realtime/debug/realtimeDebugStore.js
 // Disposable realtime debug store — delete this folder to remove all debug UI
+// Module-level singleton: survives React lifecycle, route changes, provider remounts.
 
 const MAX_EVENTS = 50;
 
@@ -16,13 +17,18 @@ let _state = {
     ignoredCount: 0,
     errorCount: 0,
   },
+  collapsed: false,       // UI state — persisted here so it survives remounts
 };
+
+// Cached snapshot for useSyncExternalStore (same reference until _notify)
+let _snapshot = { ..._state };
 
 let _listeners = new Set();
 
 function _notify() {
+  _snapshot = { ..._state };
   _listeners.forEach(fn => {
-    try { fn({ ..._state }); } catch (_) { /* no-op */ }
+    try { fn(); } catch (_) { /* no-op */ }
   });
 }
 
@@ -30,14 +36,23 @@ let _eventIdCounter = 0;
 
 // ─── Public API ───
 
+/**
+ * Subscribe to store changes.
+ * Compatible with React useSyncExternalStore(subscribe, getSnapshot).
+ * @param {Function} listener - called with no args on every state change
+ * @returns {Function} unsubscribe
+ */
 export function subscribe(listener) {
   _listeners.add(listener);
-  listener({ ..._state });
   return () => _listeners.delete(listener);
 }
 
-export function getDebugState() {
-  return { ..._state };
+/**
+ * Return a stable snapshot reference (only changes on _notify).
+ * Use as the getSnapshot arg for useSyncExternalStore.
+ */
+export function getSnapshot() {
+  return _snapshot;
 }
 
 export function clearDebugState() {
@@ -60,6 +75,11 @@ export function clearDebugState() {
 
 export function setHotelSlug(slug) {
   _state.hotelSlug = slug;
+  _notify();
+}
+
+export function setCollapsed(collapsed) {
+  _state.collapsed = !!collapsed;
   _notify();
 }
 

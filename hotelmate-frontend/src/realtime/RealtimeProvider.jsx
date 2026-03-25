@@ -80,28 +80,30 @@ function RealtimeManager({ children }) {
 export function RealtimeProvider({ children }) {
   console.log('[RealtimeProvider] HousekeepingProvider mounted via RealtimeProvider');
   return (
-    <NotificationsProviderWithCallback>
-      <AttendanceProvider>
-        <ChatProvider>
-          <GuestChatProvider>
-            <RoomServiceProvider>
-              <ServiceBookingProvider>
-                <HousekeepingProvider>
-                  <RoomBookingProvider>
-                    <RoomsProvider>
-                      <RealtimeManager>
-                        {children}
-                        <RealtimeDebugPanel />
-                      </RealtimeManager>
-                    </RoomsProvider>
-                  </RoomBookingProvider>
-                </HousekeepingProvider>
-              </ServiceBookingProvider>
-            </RoomServiceProvider>
-          </GuestChatProvider>
-        </ChatProvider>
-      </AttendanceProvider>
-    </NotificationsProviderWithCallback>
+    <>
+      <NotificationsProviderWithCallback>
+        <AttendanceProvider>
+          <ChatProvider>
+            <GuestChatProvider>
+              <RoomServiceProvider>
+                <ServiceBookingProvider>
+                  <HousekeepingProvider>
+                    <RoomBookingProvider>
+                      <RoomsProvider>
+                        <RealtimeManager>
+                          {children}
+                        </RealtimeManager>
+                      </RoomsProvider>
+                    </RoomBookingProvider>
+                  </HousekeepingProvider>
+                </ServiceBookingProvider>
+              </RoomServiceProvider>
+            </GuestChatProvider>
+          </ChatProvider>
+        </AttendanceProvider>
+      </NotificationsProviderWithCallback>
+      <RealtimeDebugPanel />
+    </>
   );
 }
 
