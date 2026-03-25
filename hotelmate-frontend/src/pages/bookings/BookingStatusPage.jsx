@@ -28,6 +28,7 @@ const BookingStatusPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
+  const email = searchParams.get("email");
 
   // Persist token so it survives page reloads
   if (token) persistGuestToken(token);
@@ -313,6 +314,15 @@ const BookingStatusPage = () => {
       return;
     }
 
+    if (!email) {
+      console.warn("Missing email for booking detail request");
+      setError(
+        "Email address is required. Please use the link from your booking confirmation email."
+      );
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -330,8 +340,8 @@ const BookingStatusPage = () => {
         publicAPIBaseURL: publicAPI.defaults.baseURL
       });
 
-      // Call the existing hotel-specific booking endpoint with token
-      const response = await publicAPI.get(endpointUrl, { params: { token } });
+      // Call the existing hotel-specific booking endpoint with token + email
+      const response = await publicAPI.get(endpointUrl, { params: { token, email } });
 
       console.log('📡 [BookingStatusPage] Full API Response:', {
         status: response.status,
