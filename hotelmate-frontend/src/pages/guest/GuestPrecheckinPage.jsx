@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { Container, Row, Col, Form, Card, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Form, Card, Spinner, Button } from 'react-bootstrap';
 import { publicAPI } from '@/services/api';
 import { toast } from 'react-toastify';
 import { persistGuestToken } from '@/utils/guestToken';
@@ -20,7 +20,7 @@ import SubmitBar from '@/components/guest/SubmitBar';
 const GuestPrecheckinPage = () => {
   const { hotelSlug } = useParams();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams.get('token')?.trim() || null;
 
   // Persist token so it survives page reloads
   if (token) persistGuestToken(token);
@@ -155,9 +155,51 @@ const GuestPrecheckinPage = () => {
     };
   };
   
+  // Error-state mapping for backend precheckin validation errors
+  const PRECHECKIN_ERROR_MAP = {
+    missing_token: {
+      title: 'Missing Token',
+      message: 'No pre-check-in token was provided. Please use the link from your email.',
+      icon: 'bi-link-45deg',
+      color: 'warning',
+    },
+    invalid_token: {
+      title: 'Invalid Link',
+      message: 'This pre-check-in link is invalid or has expired. Please contact the hotel for a new link.',
+      icon: 'bi-x-circle',
+      color: 'danger',
+    },
+    token_used: {
+      title: 'Already Completed',
+      message: 'This pre-check-in link has already been used. If you need to make changes, please contact the hotel.',
+      icon: 'bi-check2-circle',
+      color: 'info',
+    },
+    token_revoked: {
+      title: 'Link Revoked',
+      message: 'This pre-check-in link is no longer valid. Please contact the hotel for assistance.',
+      icon: 'bi-slash-circle',
+      color: 'danger',
+    },
+    token_expired: {
+      title: 'Link Expired',
+      message: 'This pre-check-in link has expired. Please request a new one from the hotel.',
+      icon: 'bi-clock-history',
+      color: 'warning',
+    },
+    network_error: {
+      title: 'Connection Issue',
+      message: 'Could not reach the server. Please check your internet connection and try again.',
+      icon: 'bi-wifi-off',
+      color: 'warning',
+      retryable: true,
+    },
+  };
+
   // State management
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [errorCode, setErrorCode] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   
@@ -190,76 +232,143 @@ const GuestPrecheckinPage = () => {
     return '#0d6efd'; // Bootstrap primary fallback
   };
 
-  // Fetch precheckin configuration on mount
-  useEffect(() => {
-    const loadPrecheckinData = async () => {
-      if (!token) {
-        setError('Missing precheckin token. Please use the link provided in your email.');
-        setLoading(false);
-        return;
+  // Retryable fetch — extracted so error UI can offer "Try Again"
+  const loadPrecheckinData = async () => {
+    if (!token) {
+      setErrorCode('missing_token');
+      setError(PRECHECKIN_ERROR_MAP.missing_token.message);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      setErrorCode(null);
+
+      // Check sessionStorage cache first (survives refresh, no extra request)
+      const cacheKey = `precheckin_${hotelSlug}_${token}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      let data;
+
+      if (cached) {
+        try {
+          data = JSON.parse(cached);
+          console.log('[Precheckin] Loaded from sessionStorage cache');
+        } catch {
+          sessionStorage.removeItem(cacheKey);
+        }
       }
 
-      try {
-        setLoading(true);
-        setError(null);
-        
+      if (!data) {
         const response = await publicAPI.get(
           `/hotel/${hotelSlug}/precheckin/`,
           { params: { token } }
         );
-        
-        const data = unwrap(response);
-        console.log('Precheckin API response data:', data);
-        console.log('🏗️ Field registry (old format):', data.precheckin_field_registry);
-        console.log('🏗️ Precheckin fields (new format):', data.precheckin_fields);
-        console.log('📋 Config enabled:', data.precheckin_config?.enabled);
-        console.log('📋 Config required:', data.precheckin_config?.required);
-        
-        // Detailed field configurations
-        if (data.precheckin_field_registry) {
-          console.log('🔍 ETA field config:', data.precheckin_field_registry.eta);
-          console.log('🔍 Nationality field config:', data.precheckin_field_registry.nationality);
-          console.log('🔍 Consent checkbox config:', data.precheckin_field_registry.consent_checkbox);
-          console.log('🔍 Special requests config:', data.precheckin_field_registry.special_requests);
-          
-          // Show nationality choices
-          if (data.precheckin_field_registry.nationality?.choices) {
-            console.log('🌍 Available nationality choices:', data.precheckin_field_registry.nationality.choices);
-          }
-        }
-        
-        // Use new normalize function - trusts booker_type, no heuristics
-        const normalized = normalizePrecheckinData(data);
-        
-        setNormalizedData(normalized);
-        setPartyPrimary(normalized.primary);
-        setCompanionSlots(normalized.companionSlots);
-        
-        // Initialize extras with existing data from booking.extras
-        if (data.booking?.extras) {
-          console.log('🎯 Initializing extras with existing data:', data.booking.extras);
-          setExtrasValues(data.booking.extras);
-        }
-        
-        // Set theme from hotel data
-        const hotelData = data.hotel;
-        if (hotelData) {
-          const hotelPreset = hotelData.preset || hotelData.public_settings?.preset || hotelData.global_style_variant || 1;
-          setPreset(hotelPreset);
-        }
-        
-      } catch (err) {
-        console.error('Failed to load precheckin data:', err);
-        if (err.response?.status === 401) {
-          setError('Invalid or expired precheckin link. Please contact the hotel for a new link.');
-        } else {
-          setError('Failed to load precheckin information. Please try again later.');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
+        data = unwrap(response);
 
+        // Cache for refresh resilience
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify(data));
+        } catch {
+          // sessionStorage full or unavailable — non-critical
+        }
+      }
+
+      console.log('Precheckin API response data:', data);
+      console.log('🏗️ Field registry (old format):', data.precheckin_field_registry);
+      console.log('🏗️ Precheckin fields (new format):', data.precheckin_fields);
+      console.log('📋 Config enabled:', data.precheckin_config?.enabled);
+      console.log('📋 Config required:', data.precheckin_config?.required);
+
+      // Detailed field configurations
+      if (data.precheckin_field_registry) {
+        console.log('🔍 ETA field config:', data.precheckin_field_registry.eta);
+        console.log('🔍 Nationality field config:', data.precheckin_field_registry.nationality);
+        console.log('🔍 Consent checkbox config:', data.precheckin_field_registry.consent_checkbox);
+        console.log('🔍 Special requests config:', data.precheckin_field_registry.special_requests);
+
+        // Show nationality choices
+        if (data.precheckin_field_registry.nationality?.choices) {
+          console.log('🌍 Available nationality choices:', data.precheckin_field_registry.nationality.choices);
+        }
+      }
+
+      // Use new normalize function - trusts booker_type, no heuristics
+      const normalized = normalizePrecheckinData(data);
+
+      setNormalizedData(normalized);
+      setPartyPrimary(normalized.primary);
+      setCompanionSlots(normalized.companionSlots);
+
+      // Initialize extras with existing data from booking.extras
+      if (data.booking?.extras) {
+        console.log('🎯 Initializing extras with existing data:', data.booking.extras);
+        setExtrasValues(data.booking.extras);
+      }
+
+      // Set theme from hotel data
+      const hotelData = data.hotel;
+      if (hotelData) {
+        const hotelPreset = hotelData.preset || hotelData.public_settings?.preset || hotelData.global_style_variant || 1;
+        setPreset(hotelPreset);
+      }
+
+    } catch (err) {
+      // Evict cache on any error so retry hits backend fresh
+      try { sessionStorage.removeItem(`precheckin_${hotelSlug}_${token}`); } catch { /* noop */ }
+
+      // 1. Network / no-response at all (offline, CORS, DNS, Heroku cold-start timeout)
+      if (!err.response) {
+        console.error('[Precheckin Error] No response received:', {
+          message: err.message,
+          code: err.code,
+          url: window.location.href,
+        });
+        setErrorCode('network_error');
+        setError(PRECHECKIN_ERROR_MAP.network_error.message);
+        return;
+      }
+
+      // 2. Non-JSON response (HTML error page, 502 proxy, etc.)
+      const respData = err.response?.data;
+      const isJsonBody = respData && typeof respData === 'object';
+
+      if (!isJsonBody) {
+        console.error('[Precheckin Error] Non-JSON response:', {
+          status: err.response?.status,
+          contentType: err.response?.headers?.['content-type'],
+          url: window.location.href,
+        });
+        setErrorCode('network_error');
+        setError(PRECHECKIN_ERROR_MAP.network_error.message);
+        return;
+      }
+
+      // 3. Known backend error code
+      const backendErrorCode = respData.error || 'unknown';
+
+      if (PRECHECKIN_ERROR_MAP[backendErrorCode]) {
+        setErrorCode(backendErrorCode);
+        setError(PRECHECKIN_ERROR_MAP[backendErrorCode].message);
+      } else {
+        // 4. Unknown structured error — log everything for debugging
+        console.error('[Precheckin Error] Unrecognised backend error:', {
+          status: err.response?.status,
+          error: backendErrorCode,
+          data: respData,
+          url: window.location.href,
+        });
+        setErrorCode(null);
+        setError('Something went wrong loading your pre-check-in. Please try again later.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch precheckin configuration on mount
+  useEffect(() => {
     if (hotelSlug) {
       loadPrecheckinData();
     }
@@ -465,8 +574,7 @@ const GuestPrecheckinPage = () => {
       
       await publicAPI.post(
         `/hotel/${hotelSlug}/precheckin/submit/`,
-        payload,
-        { params: { token } }
+        payload
       );
       
       setSuccess(true);
@@ -518,6 +626,10 @@ const GuestPrecheckinPage = () => {
 
   // Error state
   if (error) {
+    const errMeta = errorCode && PRECHECKIN_ERROR_MAP[errorCode]
+      ? PRECHECKIN_ERROR_MAP[errorCode]
+      : { title: 'Unable to Load Pre-Check-In', icon: 'bi-exclamation-triangle', color: 'danger' };
+
     return (
       <div className={`hotel-public-page page-style-${preset}`} style={{ minHeight: '100vh' }}>
         <Container className="py-5">
@@ -525,11 +637,20 @@ const GuestPrecheckinPage = () => {
             <Col md={6}>
               <Card className="shadow-sm">
                 <Card.Body className="text-center py-5">
-                  <div className="text-danger mb-3">
-                    <i className="bi bi-exclamation-triangle" style={{ fontSize: '3rem' }}></i>
+                  <div className={`text-${errMeta.color} mb-3`}>
+                    <i className={`bi ${errMeta.icon}`} style={{ fontSize: '3rem' }}></i>
                   </div>
-                  <h4 className="text-danger mb-3">Unable to Load Pre-Check-In</h4>
+                  <h4 className={`text-${errMeta.color} mb-3`}>{errMeta.title}</h4>
                   <p className="text-muted">{error}</p>
+                  {(errMeta.retryable || !errorCode) && (
+                    <Button
+                      variant="outline-primary"
+                      className="mt-3"
+                      onClick={loadPrecheckinData}
+                    >
+                      Try Again
+                    </Button>
+                  )}
                 </Card.Body>
               </Card>
             </Col>
