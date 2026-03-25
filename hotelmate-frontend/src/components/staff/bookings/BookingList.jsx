@@ -58,27 +58,25 @@ const BookingList = ({ hotelSlug }) => {
     },
     onSuccess: (result, bookingId) => {
       // Mark the booking as seen to remove NEW badge
-      queryClient.setQueryData(['staff-room-bookings', hotelSlug], (oldData) => {
-        if (!oldData?.results) return oldData;
-        
-        return {
-          ...oldData,
-          results: oldData.results.map(booking => 
-            booking.booking_id === bookingId || booking.id === bookingId
-              ? {
-                  ...booking,
-                  staff_seen_at: new Date().toISOString(),
-                  is_new_for_staff: false,
-                  status: 'CONFIRMED' // Update status optimistically
-                }
-              : booking
-          )
-        };
-      });
-      
-      queryClient.invalidateQueries({
-        queryKey: ['staff-room-bookings', hotelSlug]
-      });
+      queryClient.setQueriesData(
+        { predicate: (query) => Array.isArray(query.queryKey) && query.queryKey[0] === 'staff-room-bookings' },
+        (oldData) => {
+          if (!oldData?.results) return oldData;
+          return {
+            ...oldData,
+            results: oldData.results.map(booking => 
+              booking.booking_id === bookingId || booking.id === bookingId
+                ? {
+                    ...booking,
+                    staff_seen_at: new Date().toISOString(),
+                    is_new_for_staff: false,
+                    status: 'CONFIRMED'
+                  }
+                : booking
+            )
+          };
+        }
+      );
       toast.success('Booking approved, payment captured.');
     },
     onError: (error) => {
@@ -101,27 +99,25 @@ const BookingList = ({ hotelSlug }) => {
     },
     onSuccess: (result, bookingId) => {
       // Mark the booking as seen to remove NEW badge
-      queryClient.setQueryData(['staff-room-bookings', hotelSlug], (oldData) => {
-        if (!oldData?.results) return oldData;
-        
-        return {
-          ...oldData,
-          results: oldData.results.map(booking => 
-            booking.booking_id === bookingId || booking.id === bookingId
-              ? {
-                  ...booking,
-                  staff_seen_at: new Date().toISOString(),
-                  is_new_for_staff: false,
-                  status: 'CANCELLED' // Update status optimistically
-                }
-              : booking
-          )
-        };
-      });
-      
-      queryClient.invalidateQueries({
-        queryKey: ['staff-room-bookings', hotelSlug]
-      });
+      queryClient.setQueriesData(
+        { predicate: (query) => Array.isArray(query.queryKey) && query.queryKey[0] === 'staff-room-bookings' },
+        (oldData) => {
+          if (!oldData?.results) return oldData;
+          return {
+            ...oldData,
+            results: oldData.results.map(booking => 
+              booking.booking_id === bookingId || booking.id === bookingId
+                ? {
+                    ...booking,
+                    staff_seen_at: new Date().toISOString(),
+                    is_new_for_staff: false,
+                    status: 'CANCELLED'
+                  }
+                : booking
+            )
+          };
+        }
+      );
       toast.success('Booking declined, authorization released.');
     },
     onError: (error) => {
@@ -132,22 +128,24 @@ const BookingList = ({ hotelSlug }) => {
   const handleSendPrecheckin = async (bookingId) => {
     try {
       // Mark the booking as seen first
-      queryClient.setQueryData(['staff-room-bookings', hotelSlug], (oldData) => {
-        if (!oldData?.results) return oldData;
-        
-        return {
-          ...oldData,
-          results: oldData.results.map(booking => 
-            booking.booking_id === bookingId || booking.id === bookingId
-              ? {
-                  ...booking,
-                  staff_seen_at: new Date().toISOString(),
-                  is_new_for_staff: false
-                }
-              : booking
-          )
-        };
-      });
+      queryClient.setQueriesData(
+        { predicate: (query) => Array.isArray(query.queryKey) && query.queryKey[0] === 'staff-room-bookings' },
+        (oldData) => {
+          if (!oldData?.results) return oldData;
+          return {
+            ...oldData,
+            results: oldData.results.map(booking => 
+              booking.booking_id === bookingId || booking.id === bookingId
+                ? {
+                    ...booking,
+                    staff_seen_at: new Date().toISOString(),
+                    is_new_for_staff: false
+                  }
+                : booking
+            )
+          };
+        }
+      );
       
       const result = await sendPrecheckinMutation.mutateAsync(bookingId);
       const sentTo = result.sent_to || 'guest';

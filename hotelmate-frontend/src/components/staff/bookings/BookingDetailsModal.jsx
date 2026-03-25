@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Spinner, Alert, Card, Badge, Form, OverlayTrigger, Tooltip, Row, Col } from 'react-bootstrap';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   useRoomBookingDetail, 
   useAvailableRooms, 
@@ -31,6 +32,7 @@ import { useRoomBookingState } from '@/realtime/stores/roomBookingStore';
  * Features room assignment, check-in, and flags-driven actions
  */
 const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile }) => {
+  const queryClient = useQueryClient();
   const [selectedRoomId, setSelectedRoomId] = useState('');
   const [assignmentNotes, setAssignmentNotes] = useState('');
   const [showRoomAssignment, setShowRoomAssignment] = useState(false);
@@ -347,6 +349,19 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
       
       // Immediate refresh after success
       await refreshOverstayStatus();
+      
+      // Invalidate booking detail and list queries so UI shows updated dates/status
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          Array.isArray(query.queryKey) &&
+          query.queryKey[0] === 'staff-room-booking' &&
+          query.queryKey[2] === booking.booking_id,
+      });
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          Array.isArray(query.queryKey) &&
+          query.queryKey[0] === 'staff-room-bookings',
+      });
     } catch (error) {
       console.error('[BookingDetailsModal] Extend error:', error);
       console.error('[BookingDetailsModal] Error response data:', error.response?.data);

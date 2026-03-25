@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import BookingActions from './BookingActions';
 import BookingDetailsModal from './BookingDetailsModal';
 import BookingStatusBadges from './BookingStatusBadges';
 import BookingTimeWarningBadges from './BookingTimeWarningBadges';
-import { useRoomBookingDispatch } from '@/realtime/stores/roomBookingStore';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/services/api';
 
@@ -24,7 +24,7 @@ const BookingTable = ({
   const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [staffProfile, setStaffProfile] = useState(null);
-  const dispatch = useRoomBookingDispatch();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   
   // Fetch staff profile for proper name display
@@ -102,14 +102,21 @@ const BookingTable = ({
         is_new_for_staff: false, // Explicitly set to false to remove NEW badge
       };
       
-      // Update in store immediately via dispatch
-      dispatch({
-        type: 'ROOM_BOOKING_UPDATED',
-        payload: { 
-          booking: optimisticUpdate, 
-          bookingId: booking.booking_id 
+      // Optimistically patch all React Query booking list caches
+      queryClient.setQueriesData(
+        { predicate: (query) => Array.isArray(query.queryKey) && query.queryKey[0] === 'staff-room-bookings' },
+        (oldData) => {
+          if (!oldData?.results) return oldData;
+          return {
+            ...oldData,
+            results: oldData.results.map(b =>
+              (b.booking_id === booking.booking_id || b.id === booking.booking_id)
+                ? { ...b, staff_seen_at: optimisticUpdate.staff_seen_at, staff_seen_by: optimisticUpdate.staff_seen_by, is_new_for_staff: false }
+                : b
+            ),
+          };
         }
-      });
+      );
       
       // 🔒 Persist in backend (async, no waiting)
       try {

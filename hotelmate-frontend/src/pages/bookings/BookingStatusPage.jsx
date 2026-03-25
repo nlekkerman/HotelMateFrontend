@@ -11,7 +11,6 @@ import {
 } from "react-bootstrap";
 import { publicAPI } from '@/services/api';
 
-import { useRoomBookingState } from '@/realtime/stores/roomBookingStore';
 import RoomService from "@/components/rooms/RoomService";
 import Breakfast from "@/components/rooms/Breakfast";
 import { 
@@ -70,65 +69,6 @@ const BookingStatusPage = () => {
     hotelTime: null,
     hotelTimezone: null,
   });
-
-  // Get canonical store state for realtime updates
-  const roomBookingState = useRoomBookingState();
-
-  // Use canonical store for realtime booking updates (no direct Pusher)
-  useEffect(() => {
-    if (!bookingId || !roomBookingState?.byBookingId) return;
-    
-    const storeBooking = roomBookingState.byBookingId[bookingId];
-    if (storeBooking) {
-      console.log("📡 [BookingStatusPage] Store booking updated:", storeBooking);
-      
-      // Check for status changes and show appropriate toasts
-      if (booking && storeBooking.checked_in_at && !booking.checked_in_at) {
-        import("react-toastify")
-          .then(({ toast }) => {
-            toast.success(
-              `🎉 Welcome to ${
-                storeBooking.hotel?.name || "the hotel"
-              }! You're checked in to Room ${
-                storeBooking.assigned_room_number
-              }`
-            );
-          })
-          .catch(() => {
-            console.log("✅ Checked in to room", storeBooking.assigned_room_number);
-          });
-      }
-      
-      if (booking && storeBooking.checked_out_at && !booking.checked_out_at) {
-        import("react-toastify")
-          .then(({ toast }) => {
-            toast.info("👋 You have been checked out. Safe travels!");
-          })
-          .catch(() => {
-            console.log("📝 Checked out");
-          });
-      }
-      
-      // 🔄 REALTIME UPDATE: Merge store data with current booking state
-      setBooking(prevBooking => {
-        if (!prevBooking) return storeBooking;
-        
-        const updatedBooking = { ...prevBooking, ...storeBooking };
-        console.log("🔄 [BookingStatusPage] Booking state updated from realtime store:", {
-          prevRoomNumber: prevBooking.assigned_room_number,
-          newRoomNumber: updatedBooking.assigned_room_number,
-          prevCheckedIn: prevBooking.checked_in_at,
-          newCheckedIn: updatedBooking.checked_in_at,
-          prevStatus: prevBooking.status,
-          newStatus: updatedBooking.status
-        });
-        
-        return updatedBooking;
-      });
-    }
-  }, [bookingId, roomBookingState?.byBookingId]);
-
-  // Booking state is now updated directly from canonical store above
 
   // Check-in window calculator
   useEffect(() => {
@@ -631,6 +571,29 @@ const BookingStatusPage = () => {
     console.log('🚀 [BookingStatusPage] Component mounted - fetching booking status');
     fetchBookingStatus();
   }, []);
+
+  // Poll for booking status updates every 30 seconds (replaces dead realtime path)
+  useEffect(() => {
+    if (!hotelSlug || !bookingId || !token || !email) return;
+
+    const intervalId = setInterval(() => {
+      if (!loading) {
+        fetchBookingStatus();
+      }
+    }, 30000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !loading) {
+        fetchBookingStatus();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [hotelSlug, bookingId, token, email, loading]);
   
   // Fetch guest context when booking becomes available (dependency fix to prevent retry storms)
   useEffect(() => {

@@ -1,5 +1,6 @@
 // src/realtime/stores/roomBookingStore.jsx
 import React, { createContext, useContext, useReducer } from 'react';
+import queryClient from '@/lib/queryClient';
 
 // Global event deduplication to prevent duplicate processing
 const globalProcessedEventIds = new Set();
@@ -164,6 +165,32 @@ export const useRoomBookingDispatch = () => {
 export const roomBookingActions = {
   _processedEventIds: new Set(), // Event ID-based deduplication
   _lastToastTime: 0, // Rate limiting for toasts
+  _lastInvalidationTime: 0, // Debounce React Query invalidation
+
+  // Bridge booking realtime events to React Query so staff UI refreshes
+  _invalidateBookingQueries(bookingId) {
+    // Debounce: skip if last invalidation was less than 500ms ago
+    const now = Date.now();
+    if (now - this._lastInvalidationTime < 500) return;
+    this._lastInvalidationTime = now;
+
+    // Invalidate all staff booking list queries (filter-based keys)
+    queryClient.invalidateQueries({
+      predicate: (query) =>
+        Array.isArray(query.queryKey) &&
+        query.queryKey[0] === 'staff-room-bookings',
+    });
+
+    // Invalidate matching booking detail query if bookingId is known
+    if (bookingId) {
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          Array.isArray(query.queryKey) &&
+          query.queryKey[0] === 'staff-room-booking' &&
+          query.queryKey[2] === bookingId,
+      });
+    }
+  },
 
   // Main event handler called from eventBus
   handleEvent(event) {
@@ -312,14 +339,17 @@ export const roomBookingActions = {
       case "party_healed":
       case "guests_healed":
         console.debug(`[roomBookingStore] Healing event received (ignored): ${eventType}`, event);
-        break;
+        return; // Return early — no React Query invalidation needed
 
       default:
         if (import.meta.env && !import.meta.env.PROD) {
           console.log("[roomBookingStore] Ignoring eventType:", eventType, event);
         }
-        break;
+        return; // Return early — unknown event, no invalidation
     }
+
+    // Bridge: invalidate React Query caches so staff UI refreshes
+    this._invalidateBookingQueries(bookingId);
   },
 
   // Emit overstay refresh signal for BookingDetailsModal

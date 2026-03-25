@@ -1,5 +1,5 @@
 import React from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -14,8 +14,7 @@ import { ChartPreferencesProvider } from '@/context/ChartPreferencesContext';
 import { StaffChatProvider } from '@/staff_chat/context/StaffChatContext';
 import { BookingNotificationProvider } from '@/context/BookingNotificationContext';
 import { RoomServiceNotificationProvider } from '@/context/RoomServiceNotificationContext';
-
-const queryClient = new QueryClient();
+import queryClient from '@/lib/queryClient';
 
 /**
  * AppProviders — single composed provider tree.
