@@ -10,6 +10,8 @@ import {
   Form,
 } from "react-bootstrap";
 import { publicAPI } from '@/services/api';
+import { logQueryRefetchStart, logQueryRefetchSuccess } from '@/realtime/debug/debugLogger.js';
+import { useDebugRender } from '@/realtime/debug/useDebugRender.js';
 
 import RoomService from "@/components/rooms/RoomService";
 import Breakfast from "@/components/rooms/Breakfast";
@@ -78,6 +80,13 @@ const BookingStatusPage = () => {
     hotelTime: null,
     hotelTimezone: null,
   });
+
+  // Debug render tracking — logs when guest-visible booking fields change
+  useDebugRender(
+    'BookingStatusPage',
+    booking ? `${booking.booking_id}|${booking.status}|${booking.assigned_room_number || ''}|${booking.checked_in_at || ''}` : null,
+    { bookingId: booking?.booking_id, roomId: booking?.assigned_room_number, summary: booking ? `BookingStatusPage: ${booking.booking_id} status=${booking.status} room=${booking.assigned_room_number || '-'}` : undefined }
+  );
 
   // Check-in window calculator
   useEffect(() => {
@@ -277,6 +286,7 @@ const BookingStatusPage = () => {
       setError(null);
 
       // Debug API call details
+      logQueryRefetchStart('guest-booking-status', { bookingId });
       const endpointUrl = `/hotel/${hotelSlug}/room-bookings/${bookingId}/`;
       const fullUrl = `${publicAPI.defaults.baseURL}${endpointUrl}`;
       
@@ -322,6 +332,10 @@ const BookingStatusPage = () => {
       
       // The API returns booking data directly with can_cancel and cancellation_preview
       setBooking(data);
+      logQueryRefetchSuccess('guest-booking-status', {
+        bookingId: data.booking_id || bookingId,
+        summary: `${data.booking_id || bookingId} status=${data.status} room=${data.assigned_room_number || '-'}`,
+      });
       setHotel(data.hotel);
       setCancellationPolicy(data.cancellation_policy);
       

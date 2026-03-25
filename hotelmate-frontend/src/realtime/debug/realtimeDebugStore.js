@@ -2,7 +2,7 @@
 // Disposable realtime debug store — delete this folder to remove all debug UI
 // Module-level singleton: survives React lifecycle, route changes, provider remounts.
 
-const MAX_EVENTS = 50;
+const MAX_EVENTS = 100;
 
 let _state = {
   hotelSlug: null,
@@ -16,6 +16,10 @@ let _state = {
     invalidatedCount: 0,
     ignoredCount: 0,
     errorCount: 0,
+    queryStartCount: 0,
+    querySuccessCount: 0,
+    cacheUpdateCount: 0,
+    uiRenderCount: 0,
   },
   collapsed: false,       // UI state — persisted here so it survives remounts
 };
@@ -59,6 +63,7 @@ export function clearDebugState() {
   _state = {
     hotelSlug: _state.hotelSlug,
     subscribedChannels: _state.subscribedChannels,
+    collapsed: _state.collapsed,
     events: [],
     errors: [],
     counters: {
@@ -68,6 +73,10 @@ export function clearDebugState() {
       invalidatedCount: 0,
       ignoredCount: 0,
       errorCount: 0,
+      queryStartCount: 0,
+      querySuccessCount: 0,
+      cacheUpdateCount: 0,
+      uiRenderCount: 0,
     },
   };
   _notify();
@@ -138,5 +147,38 @@ export function pushError(errorMsg, context) {
     ..._state.errors,
   ].slice(0, 30);
   _state.counters.errorCount += 1;
+  _notify();
+}
+
+// ─── Pipeline debug records (query, cache, UI render) ───
+
+const COUNTER_MAP = {
+  'query-refetch-start': 'queryStartCount',
+  'query-refetch-success': 'querySuccessCount',
+  'cache-updated': 'cacheUpdateCount',
+  'ui-rendered': 'uiRenderCount',
+};
+
+/**
+ * Push a pipeline debug record into the shared event log.
+ * @param {Object} record
+ * @param {string} record.type - 'query-refetch-start' | 'query-refetch-success' | 'cache-updated' | 'ui-rendered'
+ * @param {string} [record.queryFamily] - e.g. 'staff-room-bookings'
+ * @param {string} [record.component] - e.g. 'BookingList'
+ * @param {string} [record.bookingId]
+ * @param {number|string} [record.roomId]
+ * @param {string} [record.summary] - one-line readable summary
+ */
+export function pushDebugRecord(record) {
+  _eventIdCounter += 1;
+  const entry = {
+    id: _eventIdCounter,
+    timestamp: new Date().toISOString(),
+    _debugRecord: true,  // distinguishes from realtime events
+    ...record,
+  };
+  _state.events = [entry, ..._state.events].slice(0, MAX_EVENTS);
+  const counterKey = COUNTER_MAP[record.type];
+  if (counterKey) _state.counters[counterKey] = (_state.counters[counterKey] || 0) + 1;
   _notify();
 }

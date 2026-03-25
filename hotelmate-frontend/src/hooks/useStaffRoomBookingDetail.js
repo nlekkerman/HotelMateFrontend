@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api, { buildStaffURL } from '@/services/api';
 import { toast } from 'react-toastify';
 import { moveRoom } from '@/services/roomOperations.js';
+import { logQueryRefetchStart, logQueryRefetchSuccess } from '@/realtime/debug/debugLogger.js';
 
 const queryKeys = {
   staffRoomBooking: (hotelSlug, bookingId) => ['staff-room-booking', hotelSlug, bookingId],
@@ -15,6 +16,7 @@ export const useRoomBookingDetail = (hotelSlug, bookingId) => {
     queryKey: queryKeys.staffRoomBooking(hotelSlug, bookingId),
     queryFn: async () => {
       if (!bookingId) return null;
+      logQueryRefetchStart('staff-room-booking', { bookingId });
       const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/`);
       // Survey data is automatically included when it exists
       const response = await api.get(url);
@@ -34,6 +36,11 @@ export const useRoomBookingDetail = (hotelSlug, bookingId) => {
       
       console.log('Mapped booking:', mappedBooking);
       
+      logQueryRefetchSuccess('staff-room-booking', {
+        bookingId: mappedBooking.booking_id || bookingId,
+        summary: `${mappedBooking.booking_id || bookingId} status=${mappedBooking.status} room=${mappedBooking.room_number || mappedBooking.assigned_room_number || '-'}`,
+      });
+
       return mappedBooking;
     },
     enabled: !!bookingId && !!hotelSlug,

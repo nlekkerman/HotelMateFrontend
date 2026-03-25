@@ -136,3 +136,72 @@ export function logRealtimeError(errorMsg, context = {}) {
     store?.pushError(errorMsg, context);
   } catch (_) { /* no-op */ }
 }
+
+// ─── Pipeline debug helpers (query, cache, UI) ───
+
+/**
+ * Log that a query refetch started.
+ * @param {string} queryFamily - e.g. 'staff-room-bookings'
+ * @param {{ bookingId?: string, summary?: string }} [info]
+ */
+export function logQueryRefetchStart(queryFamily, info = {}) {
+  try {
+    store?.pushDebugRecord({
+      type: 'query-refetch-start',
+      queryFamily,
+      bookingId: info.bookingId || null,
+      summary: info.summary || `${queryFamily} fetch started`,
+    });
+  } catch (_) { /* no-op */ }
+}
+
+/**
+ * Log that a query refetch succeeded.
+ * @param {string} queryFamily - e.g. 'staff-room-bookings'
+ * @param {{ bookingId?: string, count?: number, summary?: string }} [info]
+ */
+export function logQueryRefetchSuccess(queryFamily, info = {}) {
+  try {
+    store?.pushDebugRecord({
+      type: 'query-refetch-success',
+      queryFamily,
+      bookingId: info.bookingId || null,
+      summary: info.summary || (info.count != null
+        ? `${queryFamily}: ${info.count} items`
+        : `${queryFamily} fetch success`),
+    });
+  } catch (_) { /* no-op */ }
+}
+
+/**
+ * Log a cache update (setQueryData / optimistic patch).
+ * @param {string} queryFamily
+ * @param {{ bookingId?: string, summary?: string }} [info]
+ */
+export function logCacheUpdated(queryFamily, info = {}) {
+  try {
+    store?.pushDebugRecord({
+      type: 'cache-updated',
+      queryFamily,
+      bookingId: info.bookingId || null,
+      summary: info.summary || `${queryFamily} cache updated`,
+    });
+  } catch (_) { /* no-op */ }
+}
+
+/**
+ * Log that a UI component rendered with updated booking data.
+ * @param {string} component - e.g. 'BookingList'
+ * @param {{ bookingId?: string, summary?: string, roomId?: number|string }} [info]
+ */
+export function logUIRender(component, info = {}) {
+  try {
+    store?.pushDebugRecord({
+      type: 'ui-rendered',
+      component,
+      bookingId: info.bookingId || null,
+      roomId: info.roomId || null,
+      summary: info.summary || `${component} rendered`,
+    });
+  } catch (_) { /* no-op */ }
+}

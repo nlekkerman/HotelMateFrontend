@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api, { buildStaffURL } from '@/services/api';
+import { logQueryRefetchStart, logQueryRefetchSuccess } from '@/realtime/debug/debugLogger.js';
 import { 
   buildBookingListSearchParams, 
   parseBookingListFiltersFromSearchParams, 
@@ -45,6 +46,7 @@ export const useStaffRoomBookings = (hotelSlug) => {
   } = useQuery({
     queryKey,
     queryFn: async () => {
+      logQueryRefetchStart('staff-room-bookings');
       const params = buildBookingListSearchParams(filters, page);
       const url = buildStaffURL(hotelSlug, 'room-bookings', `/?${params.toString()}`);
       
@@ -91,6 +93,8 @@ export const useStaffRoomBookings = (hotelSlug) => {
         total_amount: parseFloat(booking.total_amount) || 0,
         currency: booking.currency || 'EUR'
       }));
+
+      logQueryRefetchSuccess('staff-room-bookings', { count: processedBookings.length, summary: `staff-room-bookings: ${processedBookings.length} items` });
 
       return {
         results: processedBookings,

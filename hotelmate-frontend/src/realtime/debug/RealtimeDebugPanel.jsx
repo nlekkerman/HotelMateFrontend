@@ -65,6 +65,54 @@ function ts(iso) {
   } catch { return iso; }
 }
 
+// ─── Badge colors for pipeline record types ───
+const RECORD_TYPE_COLORS = {
+  'query-refetch-start': '#0277bd',
+  'query-refetch-success': '#00838f',
+  'cache-updated': '#e65100',
+  'ui-rendered': '#7b1fa2',
+};
+const RECORD_TYPE_LABELS = {
+  'query-refetch-start': 'QUERY_START',
+  'query-refetch-success': 'QUERY_OK',
+  'cache-updated': 'CACHE',
+  'ui-rendered': 'UI',
+};
+
+function DebugRecordCard({ evt }) {
+  const color = RECORD_TYPE_COLORS[evt.type] || '#555';
+  const label = RECORD_TYPE_LABELS[evt.type] || evt.type;
+  return (
+    <div style={{
+      padding: '4px 8px',
+      borderBottom: '1px solid #333',
+      background: evt.type === 'ui-rendered' ? '#1a0a2e' : 'transparent',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 4 }}>
+        <span style={{ color: '#8ab4f8' }}>{ts(evt.timestamp)}</span>
+        <span style={BADGE(color)}>{label}</span>
+      </div>
+      {evt.queryFamily && (
+        <div style={{ marginTop: 2, color: '#aaa', fontSize: 10 }}>
+          query: <strong style={{ color: '#e0e0e0' }}>{evt.queryFamily}</strong>
+        </div>
+      )}
+      {evt.component && (
+        <div style={{ marginTop: 2, color: '#ce93d8', fontSize: 10 }}>
+          component: <strong>{evt.component}</strong>
+        </div>
+      )}
+      <div style={{ marginTop: 2 }}>
+        {evt.bookingId && <span style={{ color: '#81c784', marginRight: 6, fontSize: 10 }}>B:{evt.bookingId}</span>}
+        {evt.roomId && <span style={{ color: '#64b5f6', marginRight: 6, fontSize: 10 }}>R:{evt.roomId}</span>}
+      </div>
+      {evt.summary && (
+        <div style={{ marginTop: 2, color: '#bbb', fontSize: 10, wordBreak: 'break-all' }}>{evt.summary}</div>
+      )}
+    </div>
+  );
+}
+
 function EventCard({ evt }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -153,7 +201,7 @@ export default function RealtimeDebugPanel() {
         }}
         onClick={() => setCollapsed(false)}
       >
-        RT Debug ({c.receivedCount})
+        RT Debug ({c.receivedCount}/{(c.querySuccessCount || 0)}/{(c.uiRenderCount || 0)})
       </div>
     );
   }
@@ -198,6 +246,10 @@ export default function RealtimeDebugPanel() {
           <span>routed:<strong>{c.routedCount}</strong></span>
           <span>dispatched:<strong>{c.dispatchedCount}</strong></span>
           <span>invalidated:<strong>{c.invalidatedCount}</strong></span>
+          <span style={{ color: c.queryStartCount ? '#0277bd' : undefined }}>qStart:<strong>{c.queryStartCount || 0}</strong></span>
+          <span style={{ color: c.querySuccessCount ? '#00838f' : undefined }}>qOk:<strong>{c.querySuccessCount || 0}</strong></span>
+          <span style={{ color: c.cacheUpdateCount ? '#e65100' : undefined }}>cache:<strong>{c.cacheUpdateCount || 0}</strong></span>
+          <span style={{ color: c.uiRenderCount ? '#7b1fa2' : undefined }}>ui:<strong>{c.uiRenderCount || 0}</strong></span>
           <span style={{ color: c.ignoredCount ? '#ffa726' : undefined }}>ignored:<strong>{c.ignoredCount}</strong></span>
           <span style={{ color: c.errorCount ? '#ef5350' : undefined }}>errors:<strong>{c.errorCount}</strong></span>
         </div>
@@ -209,9 +261,11 @@ export default function RealtimeDebugPanel() {
               Waiting for booking/room events...
             </div>
           )}
-          {state.events.map(evt => (
-            <EventCard key={evt.id} evt={evt} />
-          ))}
+          {state.events.map(evt =>
+            evt._debugRecord
+              ? <DebugRecordCard key={evt.id} evt={evt} />
+              : <EventCard key={evt.id} evt={evt} />
+          )}
         </div>
 
         {/* Errors */}
