@@ -69,6 +69,16 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
     const roomsChannel = pusher.subscribe(roomsChannelName);
     channels.push(roomsChannel);
 
+    // Staff Bookings (booking lifecycle events for staff - hotel-wide)
+    const staffBookingsChannelName = `${hotelSlug}-staff-bookings`;
+    const staffBookingsChannel = pusher.subscribe(staffBookingsChannelName);
+    channels.push(staffBookingsChannel);
+
+    // Staff Overstays (overstay events for staff - hotel-wide)
+    const staffOverstaysChannelName = `${hotelSlug}-staff-overstays`;
+    const staffOverstaysChannel = pusher.subscribe(staffOverstaysChannelName);
+    channels.push(staffOverstaysChannel);
+
     // Guest Messages (hotel-wide notifications when any guest sends message)
     const guestMessagesChannelName = `${hotelSlug}-guest-messages`;
     const guestMessagesChannel = pusher.subscribe(guestMessagesChannelName);

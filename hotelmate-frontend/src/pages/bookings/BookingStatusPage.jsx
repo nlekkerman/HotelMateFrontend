@@ -21,6 +21,15 @@ import { persistGuestToken } from '@/utils/guestToken';
 /**
  * BookingStatusPage - Token-based booking management page
  * Allows guests to view and manage bookings using secure tokens from email
+ *
+ * TODO: Backend supports realtime guest booking lifecycle events on
+ * `private-guest-booking.{booking_id}` (events: booking_confirmed, booking_cancelled,
+ * booking_checked_in, booking_checked_out, booking_payment_required, etc.).
+ * Frontend currently uses API fetch on mount instead of realtime because the guest
+ * Pusher auth endpoint (`/guest/hotel/{slug}/chat/pusher/auth`) is scoped to
+ * guest-chat channels only and does not authorize `private-guest-booking.*`.
+ * To enable guest booking realtime: add backend auth support for that channel
+ * pattern, then subscribe here using guestRealtimeClient with the booking token.
  */
 const BookingStatusPage = () => {
   const { hotelSlug, bookingId } = useParams();

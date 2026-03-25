@@ -334,8 +334,9 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
     }
     
     // 4️⃣ RAW ROOM STATUS EVENTS NORMALIZATION
-    if (channel?.includes('.rooms') && eventName === 'room-status-changed') {
-      console.log('🏠 [EventBus] Normalizing room-status-changed event:', { channel, eventName, payload });
+    // Support both hyphenated (legacy) and underscored (backend contract) event names
+    if (channel?.includes('.rooms') && (eventName === 'room-status-changed' || eventName === 'room_status_changed')) {
+      console.log('🏠 [EventBus] Normalizing room status event:', { channel, eventName, payload });
       const normalized = {
         category: "rooms",
         type: "room_status_changed",
@@ -349,17 +350,17 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
         source,
         timestamp: new Date().toISOString()
       };
-      console.log('🏠 [EventBus] Normalized room-status-changed:', normalized);
       routeToDomainStores(normalized);
       return;
     }
 
     // 4b️⃣ ROOM OCCUPANCY EVENTS NORMALIZATION
-    if (channel?.includes('.rooms') && eventName === 'room-occupancy-updated') {
-      console.log('🏠 [EventBus] Normalizing room-occupancy-updated event:', { channel, eventName, payload });
+    // Support both hyphenated (legacy) and underscored (backend contract) event names
+    if (channel?.includes('.rooms') && (eventName === 'room-occupancy-updated' || eventName === 'room_occupancy_updated')) {
+      console.log('🏠 [EventBus] Normalizing room occupancy event:', { channel, eventName, payload });
       const normalized = {
         category: "rooms",
-        type: "room_updated", // Map to existing room_updated handler
+        type: "room_updated", // Map to existing room_updated handler in roomsStore
         payload: payload,
         meta: { 
           channel, 
@@ -370,8 +371,51 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
         source,
         timestamp: new Date().toISOString()
       };
-      console.log('🏠 [EventBus] Normalized room-occupancy-updated:', normalized);
       routeToDomainStores(normalized);
+      return;
+    }
+
+    // 4c️⃣ RAW room_updated EVENT NORMALIZATION
+    // Backend may emit raw room_updated without category/type envelope
+    if (channel?.includes('.rooms') && eventName === 'room_updated') {
+      console.log('🏠 [EventBus] Normalizing raw room_updated event:', { channel, eventName, payload });
+      const normalized = {
+        category: "rooms",
+        type: "room_updated",
+        payload: payload,
+        meta: {
+          channel,
+          eventName,
+          event_id: payload?.event_id || payload?.id || `room-updated-${Date.now()}`,
+          scope: { room_number: payload?.room_number }
+        },
+        source,
+        timestamp: new Date().toISOString()
+      };
+      routeToDomainStores(normalized);
+      return;
+    }
+
+    // 4d️⃣ RAW BOOKING EVENTS ON STAFF CHANNELS
+    // Events arriving on {hotelSlug}-staff-bookings or {hotelSlug}-staff-overstays
+    // without normalized category/type envelope
+    if ((channel?.endsWith('-staff-bookings') || channel?.endsWith('-staff-overstays')) && !eventName?.startsWith('pusher:')) {
+      console.log('🏨 [EventBus] Normalizing raw staff booking/overstay event:', { channel, eventName, payload });
+      const normalized = {
+        category: "room_booking",
+        type: eventName, // e.g. booking_created, booking_overstay_flagged, etc.
+        payload: payload,
+        meta: {
+          channel,
+          eventName,
+          event_id: payload?.event_id || payload?.meta?.event_id || payload?.id || `staff-${Date.now()}`,
+          scope: { booking_id: payload?.booking_id || payload?.id }
+        },
+        source,
+        timestamp: payload?.meta?.ts || new Date().toISOString()
+      };
+      routeToDomainStores(normalized);
+      maybeAddToNotificationCenter(normalized);
       return;
     }
 
