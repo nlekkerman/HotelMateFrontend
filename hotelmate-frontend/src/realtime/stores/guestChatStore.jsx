@@ -395,11 +395,6 @@ export const guestChatActions = {
       return;
     }
 
-    // ⚠️ Frontend dev warning: Catch conversation_id regressions
-    if (globalGuestChatStateRef?.current?.context?.booking_id && conversationId !== globalGuestChatStateRef.current.context.booking_id) {
-      console.warn('⚠️ Guest chat event with non-booking conversation_id', event);
-    }
-
     // ✅ Event deduplication - require event_id for deterministic behavior
     if (!eventId) {
       console.warn('[guestChatStore] Missing event_id, skipping event:', event);

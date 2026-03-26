@@ -145,9 +145,7 @@ const FrontOfficeChatModal = ({
           setContext({
             allowed_actions: ['chat', 'room_service'],
             guest_id: hotelSlug + '_guest',
-            booking_id: 'temp_booking',
             conversation_id: 'temp_conversation',
-            room_number: 'TBD',
             temp_workaround: true,
             message: 'Chat enabled for checked-in guest via modal'
           });
@@ -177,8 +175,7 @@ const FrontOfficeChatModal = ({
       
       const unsubscribe = subscribeToGuestChatBooking({
         hotelSlug,
-        bookingId: context.booking_id,
-        conversationId: context.conversation_id,
+        channelName: context.pusher?.channel,
         guestToken: token,
         onMessage: (message) => {
           console.log('📨 [FrontOfficeChatModal] Realtime message:', message);

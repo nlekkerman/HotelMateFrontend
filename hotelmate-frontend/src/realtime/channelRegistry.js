@@ -403,22 +403,20 @@ export function subscribeStaffToGuestChatBooking({ hotelSlug, bookingId, eventNa
 }
 
 /**
- * Subscribe to guest chat booking channel for token-based authentication
+ * Subscribe to guest chat channel for token-based authentication
  * @param {Object} params - Subscription parameters
  * @param {string} params.hotelSlug - Hotel slug
- * @param {string} params.bookingId - Booking ID for scoped channel
  * @param {string} params.guestToken - Guest authentication token
+ * @param {string} [params.channelName] - Channel name from context (preferred)
  * @param {string} [params.eventName='realtime_event'] - Event name to bind to
  * @returns {Function} Cleanup function
  */
-export function subscribeToGuestChatBooking({ hotelSlug, bookingId, guestToken, eventName = 'realtime_event' }) {
-  if (!hotelSlug || !bookingId || !guestToken) {
-    console.warn('⚠️ [GuestChat] Missing parameters for guest chat booking subscription');
+export function subscribeToGuestChatBooking({ hotelSlug, channelName, guestToken, eventName = 'realtime_event' }) {
+  if (!hotelSlug || !guestToken || !channelName) {
+    console.warn('⚠️ [GuestChat] Missing parameters for guest chat subscription');
     return () => {};
   }
 
-  // Booking-scoped private channel for guest chat
-  const channelName = `private-hotel-${hotelSlug}-guest-chat-booking-${bookingId}`;
   const subscriptionKey = `${guestToken}:${channelName}`;
 
   // Subscription deduplication guard
@@ -429,7 +427,6 @@ export function subscribeToGuestChatBooking({ hotelSlug, bookingId, guestToken, 
 
   console.log('🔗 [GuestChat] SUBSCRIBE:', channelName, {
     hotelSlug,
-    bookingId,
     eventName,
     hasToken: !!guestToken,
     tokenPreview: guestToken ? guestToken.substring(0, 10) + '...' : 'N/A'
@@ -473,7 +470,6 @@ export function subscribeToGuestChatBooking({ hotelSlug, bookingId, guestToken, 
       console.error('❌ [GuestChat] Subscription error for channel:', channelName, {
         error,
         hotelSlug,
-        bookingId,
         channelName
       });
       console.log('🔍 [GuestChat] Debug info:', {
@@ -485,9 +481,8 @@ export function subscribeToGuestChatBooking({ hotelSlug, bookingId, guestToken, 
     });
 
     channel.bind('pusher:subscription_succeeded', () => {
-      console.log('✅ [GuestChat] Successfully subscribed to booking channel:', channelName, {
+      console.log('✅ [GuestChat] Successfully subscribed to channel:', channelName, {
         hotelSlug,
-        bookingId,
         eventName,
         pusherSocketId: pusher.connection?.socket_id
       });

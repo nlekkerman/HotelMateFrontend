@@ -1,48 +1,37 @@
 /**
- * Guest Chat Portal - CANONICAL ENDPOINTS ONLY
+ * Guest Chat Portal - CANONICAL SINGLE-TOKEN CONTRACT
  * 
- * Updated to use the new canonical guest chat system:
- * - Single Pusher client policy (reuses existing infrastructure)
- * - Optimistic send + dedupe with client_message_id
- * - Reconnection sync on subscription success
- * - NO references to /api/public/chat/ endpoints
+ * Uses only hotel_slug + token for all guest chat operations.
+ * Token is the single auth credential from the booking email.
  * 
- * Route: /guest/chat?hotel_slug=...&token=...&booking_id=...&email=...
+ * Route: /guest/chat?hotel_slug=...&token=...
  * 
  * Query parameters:
  * - hotel_slug (required) - Hotel identifier
  * - token (required) - Guest authentication token
- * - booking_id (required) - Booking reference for identity context
- * - email (optional) - Guest email for identity context
- * - room_number (optional) - For display only, not used for auth
  */
 
 import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { GuestChatWidget } from '../components/guest/GuestChatWidget';
 import { persistGuestToken } from '@/utils/guestToken';
-import './GuestChatPortal.css'; // Create if styling needed
+import './GuestChatPortal.css';
 
 const GuestChatPortal = () => {
   const [searchParams] = useSearchParams();
   const hotelSlug = searchParams.get('hotel_slug');
   const token = searchParams.get('token');
-  const bookingId = searchParams.get('booking_id');
-  const email = searchParams.get('email');
 
   // Persist token so it survives page reloads
   if (token) persistGuestToken(token);
   
-  // Validation
   useEffect(() => {
     console.log('[GuestChatPortal] Initialized with params:', {
       hotelSlug,
-      bookingId,
       hasToken: !!token,
-      hasEmail: !!email,
       url: window.location.href
     });
-  }, [hotelSlug, token, bookingId, email]);
+  }, [hotelSlug, token]);
   
   // Show error if missing required parameters
   if (!hotelSlug || !token) {
@@ -81,8 +70,6 @@ const GuestChatPortal = () => {
           <GuestChatWidget
             hotelSlug={hotelSlug}
             token={token}
-            bookingId={bookingId}
-            email={email}
             className="shadow-lg"
             style={{
               width: '100%',

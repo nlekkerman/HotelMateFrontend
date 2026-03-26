@@ -1,13 +1,14 @@
 /**
- * Guest Chat API Service - CANONICAL ENDPOINTS ONLY
+ * Guest Chat API Service - CANONICAL SINGLE-TOKEN CONTRACT
  * 
- * Provides all guest chat API operations using the canonical guest endpoints.
- * No references to /api/public/chat/ allowed.
+ * All guest chat API operations use only hotel_slug + token.
+ * No booking_id, email, or room_number params.
  * 
  * Endpoints:
- * - GET /api/guest/hotel/{hotelSlug}/chat/context?token={guestToken}
- * - GET /api/guest/hotel/{hotelSlug}/chat/messages?token={guestToken}&limit=50&before=<message_id>
- * - POST /api/guest/hotel/{hotelSlug}/chat/messages?token={guestToken}
+ * - GET /api/guest/hotel/{hotelSlug}/chat/context?token={token}
+ * - GET /api/guest/hotel/{hotelSlug}/chat/messages?token={token}&limit=50&before=<message_id>
+ * - POST /api/guest/hotel/{hotelSlug}/chat/messages?token={token}
+ * - POST /api/guest/hotel/{hotelSlug}/chat/pusher/auth?token={token}
  */
 
 import { guestAPI } from './api';
@@ -17,19 +18,14 @@ import { requireGuestToken } from '@/utils/guestToken';
  * Fetch chat context including Pusher connection info
  * @param {string} hotelSlug - Hotel slug
  * @param {string} token - Guest token
- * @param {Object} [identity] - Additional identity context
- * @param {string} [identity.bookingId] - Booking ID
- * @param {string} [identity.email] - Guest email
  * @returns {Promise<Object>} Context with hotel, booking, conversation, pusher info
  */
-export const getContext = async (hotelSlug, token, { bookingId, email } = {}) => {
+export const getContext = async (hotelSlug, token) => {
   const resolvedToken = token || requireGuestToken('guestChatAPI.getContext');
   if (!resolvedToken) {
     throw new Error('[GuestChatAPI] Cannot fetch context: guest token is missing');
   }
   const params = { token: resolvedToken };
-  if (bookingId) params.booking_id = bookingId;
-  if (email) params.email = email;
   const response = await guestAPI.get(`/hotel/${hotelSlug}/chat/context`, {
     params
   });
@@ -45,8 +41,6 @@ export const getContext = async (hotelSlug, token, { bookingId, email } = {}) =>
  * @param {Object} options - Query options
  * @param {number} [options.limit=50] - Number of messages to fetch
  * @param {string} [options.before] - Message ID for pagination cursor
- * @param {string} [options.bookingId] - Booking ID for identity context
- * @param {string} [options.email] - Guest email for identity context
  * @returns {Promise<Array>} Array of messages
  */
 export const getMessages = async (hotelSlug, token, options = {}) => {
@@ -54,12 +48,10 @@ export const getMessages = async (hotelSlug, token, options = {}) => {
   if (!resolvedToken) {
     throw new Error('[GuestChatAPI] Cannot fetch messages: guest token is missing');
   }
-  const { limit = 50, before, bookingId, email } = options;
+  const { limit = 50, before } = options;
   
   const params = { token: resolvedToken, limit };
   if (before) params.before = before;
-  if (bookingId) params.booking_id = bookingId;
-  if (email) params.email = email;
   
   const response = await guestAPI.get(`/hotel/${hotelSlug}/chat/messages`, { 
     params 
@@ -104,7 +96,7 @@ export const sendMessage = async (hotelSlug, token, messageData) => {
   if (!resolvedToken) {
     throw new Error('[GuestChatAPI] Cannot send message: guest token is missing');
   }
-  const { message, client_message_id, reply_to, booking_id, email } = messageData;
+  const { message, client_message_id, reply_to } = messageData;
   
   const payload = { 
     message, 
@@ -116,8 +108,6 @@ export const sendMessage = async (hotelSlug, token, messageData) => {
   }
   
   const params = { token: resolvedToken };
-  if (booking_id) params.booking_id = booking_id;
-  if (email) params.email = email;
   
   console.log('[GuestChatAPI] Sending message:', {
     hotelSlug,

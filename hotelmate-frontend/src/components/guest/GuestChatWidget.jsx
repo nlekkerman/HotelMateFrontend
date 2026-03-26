@@ -393,16 +393,12 @@ const MessagesList = ({ messages, sendingMessages = [], context, onLoadOlder, on
  * @param {Object} props - Component props
  * @param {string} props.hotelSlug - Hotel slug
  * @param {string} props.token - Guest authentication token
- * @param {string} [props.bookingId] - Booking ID for identity context
- * @param {string} [props.email] - Guest email for identity context
  * @param {string} [props.className] - Additional CSS class
  * @param {Object} [props.style] - Inline styles
  */
 export const GuestChatWidget = ({ 
   hotelSlug, 
   token, 
-  bookingId,
-  email,
   className = '',
   style = {}
 }) => {
@@ -419,7 +415,7 @@ export const GuestChatWidget = ({
     isSending,
     isDisabled,
     disabledReason
-  } = useGuestChat({ hotelSlug, token, bookingId, email });
+  } = useGuestChat({ hotelSlug, token });
   
   // Loading state
   if (loading) {

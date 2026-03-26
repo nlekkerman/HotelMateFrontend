@@ -49,11 +49,9 @@ const createOptimisticMessage = (message, clientMessageId, replyTo = null) => ({
  * @param {Object} params - Hook parameters
  * @param {string} params.hotelSlug - Hotel slug
  * @param {string} params.token - Guest authentication token
- * @param {string} [params.bookingId] - Booking ID for identity context
- * @param {string} [params.email] - Guest email for identity context
  * @returns {Object} Chat state and actions
  */
-export const useGuestChat = ({ hotelSlug, token, bookingId, email }) => {
+export const useGuestChat = ({ hotelSlug, token }) => {
   const queryClient = useQueryClient();
   
   // Guest chat store integration
@@ -76,8 +74,8 @@ export const useGuestChat = ({ hotelSlug, token, bookingId, email }) => {
     error: contextError,
     refetch: refetchContext
   } = useQuery({
-    queryKey: ['guestChatContext', hotelSlug, token, bookingId, email],
-    queryFn: () => guestChatAPI.getContext(hotelSlug, token, { bookingId, email }),
+    queryKey: ['guestChatContext', hotelSlug, token],
+    queryFn: () => guestChatAPI.getContext(hotelSlug, token),
     enabled: !!(hotelSlug && token),
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 3
@@ -113,8 +111,8 @@ export const useGuestChat = ({ hotelSlug, token, bookingId, email }) => {
     error: messagesError,
     refetch: refetchMessages
   } = useQuery({
-    queryKey: ['guestChatMessages', hotelSlug, token, bookingId],
-    queryFn: () => guestChatAPI.getMessages(hotelSlug, token, { limit: 50, bookingId, email }),
+    queryKey: ['guestChatMessages', hotelSlug, token],
+    queryFn: () => guestChatAPI.getMessages(hotelSlug, token, { limit: 50 }),
     enabled: !!(context && hotelSlug && token),
     staleTime: 30 * 1000, // 30 seconds
   });
@@ -357,7 +355,7 @@ export const useGuestChat = ({ hotelSlug, token, bookingId, email }) => {
     
     try {
       console.log('[useGuestChat] Syncing messages after reconnection');
-      const latestMessages = await guestChatAPI.getMessages(hotelSlug, token, { limit: 50, bookingId, email });
+      const latestMessages = await guestChatAPI.getMessages(hotelSlug, token, { limit: 50 });
       
       setMessages(prevMessages => {
         // Ensure latestMessages is an array
@@ -437,8 +435,6 @@ export const useGuestChat = ({ hotelSlug, token, bookingId, email }) => {
         message,
         client_message_id: clientMessageId,
         reply_to: replyTo,
-        booking_id: bookingId,
-        email
       });
       
       return { response, clientMessageId };
@@ -471,8 +467,6 @@ export const useGuestChat = ({ hotelSlug, token, bookingId, email }) => {
       const olderMessages = await guestChatAPI.getMessages(hotelSlug, token, { 
         limit: 50, 
         before: beforeMessageId,
-        bookingId,
-        email
       });
       
       // Ensure olderMessages is an array
