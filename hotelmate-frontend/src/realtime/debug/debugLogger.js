@@ -76,14 +76,19 @@ export function logRealtimeUnsubscription(channelName) {
 export function logRealtimeEvent(channel, rawEventName, rawPayload) {
   try {
     if (!isRelevant(channel, rawEventName)) return null;
-    const bookingId = rawPayload?.booking_id || rawPayload?.id || rawPayload?.payload?.booking_id || null;
-    const roomId = rawPayload?.room_number || rawPayload?.room_id || rawPayload?.payload?.room_number || null;
+    const inner = rawPayload?.payload ?? rawPayload;
+    const bookingId = inner?.booking_id || rawPayload?.booking_id || rawPayload?.id || null;
+    const roomId = inner?.room_id || rawPayload?.room_id || inner?.assigned_room_id || rawPayload?.assigned_room_id || inner?.room_number || rawPayload?.room_number || null;
+    const status = inner?.status || rawPayload?.status || null;
+    const roomNumber = inner?.assigned_room_number || rawPayload?.assigned_room_number || inner?.room_number || rawPayload?.room_number || null;
     return store?.pushEvent({
       channel,
       rawEventName,
       rawPayload,
       bookingId,
       roomId,
+      status,
+      roomNumber,
     }) ?? null;
   } catch (_) { return null; }
 }
@@ -118,12 +123,16 @@ export function logRealtimeDispatch(debugEventId, info = {}) {
 
 /**
  * Log that React Query invalidation happened.
+ * @param {string|number|null} debugEventId
+ * @param {string[]} queryFamilies
+ * @param {string} [source] - the event type that triggered this invalidation
  */
-export function logRealtimeInvalidation(debugEventId, queryFamilies = []) {
+export function logRealtimeInvalidation(debugEventId, queryFamilies = [], source) {
   try {
     if (debugEventId == null) return;
     store?.updateEvent(debugEventId, {
       invalidatedQueries: queryFamilies,
+      invalidationSource: source || null,
     });
   } catch (_) { /* no-op */ }
 }
@@ -176,7 +185,7 @@ export function logQueryRefetchSuccess(queryFamily, info = {}) {
 /**
  * Log a cache update (setQueryData / optimistic patch).
  * @param {string} queryFamily
- * @param {{ bookingId?: string, summary?: string }} [info]
+ * @param {{ bookingId?: string, roomId?: string|number, summary?: string, diffs?: Array<{field:string, from:any, to:any}> }} [info]
  */
 export function logCacheUpdated(queryFamily, info = {}) {
   try {
@@ -184,6 +193,8 @@ export function logCacheUpdated(queryFamily, info = {}) {
       type: 'cache-updated',
       queryFamily,
       bookingId: info.bookingId || null,
+      roomId: info.roomId || null,
+      diffs: info.diffs || null,
       summary: info.summary || `${queryFamily} cache updated`,
     });
   } catch (_) { /* no-op */ }

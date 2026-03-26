@@ -79,14 +79,40 @@ const RECORD_TYPE_LABELS = {
   'ui-rendered': 'UI',
 };
 
+function CorrelationBadge({ bookingId, roomId }) {
+  if (!bookingId && !roomId) return null;
+  return (
+    <div style={{ marginTop: 2, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+      {bookingId && (
+        <span style={{
+          display: 'inline-block', padding: '1px 5px', borderRadius: 3,
+          fontSize: 9, fontWeight: 700, background: '#1b5e20', color: '#a5d6a7',
+          fontFamily: 'monospace', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>B:{bookingId}</span>
+      )}
+      {bookingId && roomId && (
+        <span style={{ color: '#888', fontSize: 9 }}>→</span>
+      )}
+      {roomId && (
+        <span style={{
+          display: 'inline-block', padding: '1px 5px', borderRadius: 3,
+          fontSize: 9, fontWeight: 700, background: '#0d47a1', color: '#90caf9',
+          fontFamily: 'monospace',
+        }}>R:{roomId}</span>
+      )}
+    </div>
+  );
+}
+
 function DebugRecordCard({ evt }) {
   const color = RECORD_TYPE_COLORS[evt.type] || '#555';
   const label = RECORD_TYPE_LABELS[evt.type] || evt.type;
+  const hasDiffs = evt.diffs && evt.diffs.length > 0;
   return (
     <div style={{
       padding: '4px 8px',
       borderBottom: '1px solid #333',
-      background: evt.type === 'ui-rendered' ? '#1a0a2e' : 'transparent',
+      background: evt.type === 'cache-updated' ? '#1a150a' : evt.type === 'ui-rendered' ? '#1a0a2e' : 'transparent',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 4 }}>
         <span style={{ color: '#8ab4f8' }}>{ts(evt.timestamp)}</span>
@@ -102,11 +128,20 @@ function DebugRecordCard({ evt }) {
           component: <strong>{evt.component}</strong>
         </div>
       )}
-      <div style={{ marginTop: 2 }}>
-        {evt.bookingId && <span style={{ color: '#81c784', marginRight: 6, fontSize: 10 }}>B:{evt.bookingId}</span>}
-        {evt.roomId && <span style={{ color: '#64b5f6', marginRight: 6, fontSize: 10 }}>R:{evt.roomId}</span>}
-      </div>
-      {evt.summary && (
+      <CorrelationBadge bookingId={evt.bookingId} roomId={evt.roomId} />
+      {hasDiffs && (
+        <div style={{ marginTop: 3 }}>
+          {evt.diffs.map((d, i) => (
+            <div key={i} style={{ fontSize: 10, color: '#ffcc80', fontFamily: 'monospace' }}>
+              <span style={{ color: '#aaa' }}>{d.field}:</span>{' '}
+              <span style={{ color: '#ef9a9a' }}>{d.from ?? 'null'}</span>
+              <span style={{ color: '#888' }}> \u2192 </span>
+              <span style={{ color: '#a5d6a7' }}>{d.to ?? 'null'}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {!hasDiffs && evt.summary && (
         <div style={{ marginTop: 2, color: '#bbb', fontSize: 10, wordBreak: 'break-all' }}>{evt.summary}</div>
       )}
     </div>
@@ -132,11 +167,16 @@ function EventCard({ evt }) {
           <span style={{ color: '#888', marginLeft: 6 }}>→ {evt.normalizedType}</span>
         )}
       </div>
-      <div style={{ marginTop: 2 }}>
-        {evt.bookingId && <span style={{ color: '#81c784', marginRight: 6 }}>B:{evt.bookingId}</span>}
-        {evt.roomId && <span style={{ color: '#64b5f6', marginRight: 6 }}>R:{evt.roomId}</span>}
-        {evt.normalizedCategory && <span style={{ color: '#ce93d8', marginRight: 6 }}>cat:{evt.normalizedCategory}</span>}
-      </div>
+      {/* Booking-room correlation line */}
+      {(evt.bookingId || evt.status) && (
+        <div style={{ marginTop: 2, fontSize: 10, color: '#e0e0e0', fontFamily: 'monospace', background: '#0d1117', padding: '2px 4px', borderRadius: 2 }}>
+          {evt.bookingId && <span>{evt.bookingId}</span>}
+          {evt.status && <span style={{ color: '#f0c674' }}> status={evt.status}</span>}
+          {evt.roomId && <span style={{ color: '#64b5f6' }}> room_id={evt.roomId}</span>}
+          {evt.roomNumber && <span style={{ color: '#81c784' }}> room_number={evt.roomNumber}</span>}
+        </div>
+      )}
+      <CorrelationBadge bookingId={evt.bookingId} roomId={evt.roomId || evt.roomNumber} />
       <div style={{ marginTop: 3 }}>
         <span style={BADGE('#2e7d32')}>rcv</span>
         {evt.routed && <span style={BADGE('#1565c0')}>routed</span>}
@@ -147,7 +187,10 @@ function EventCard({ evt }) {
       </div>
       {evt.invalidatedQueries?.length > 0 && (
         <div style={{ color: '#ffab40', fontSize: 10, marginTop: 2 }}>
-          queries: {evt.invalidatedQueries.join(', ')}
+          {evt.invalidationSource && (
+            <span style={{ color: '#ce93d8' }}>{evt.invalidationSource} → </span>
+          )}
+          invalidated {evt.invalidatedQueries.join(', ')}
         </div>
       )}
       {evt.error && (

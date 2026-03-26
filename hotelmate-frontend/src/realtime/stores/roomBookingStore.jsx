@@ -169,7 +169,7 @@ export const roomBookingActions = {
   _lastInvalidationTime: 0, // Debounce React Query invalidation
 
   // Bridge booking realtime events to React Query so staff UI refreshes
-  _invalidateBookingQueries(bookingId, _dbgId) {
+  _invalidateBookingQueries(bookingId, _dbgId, eventType) {
     // Debounce: skip if last invalidation was less than 500ms ago
     const now = Date.now();
     if (now - this._lastInvalidationTime < 500) return;
@@ -195,8 +195,8 @@ export const roomBookingActions = {
       });
     }
 
-    // 🔧 DEBUG PANEL: log invalidation
-    logRealtimeInvalidation(_dbgId, invalidated);
+    // 🔧 DEBUG PANEL: log invalidation with source event type
+    logRealtimeInvalidation(_dbgId, invalidated, eventType);
   },
 
   // Main event handler called from eventBus
@@ -361,7 +361,7 @@ export const roomBookingActions = {
     logRealtimeDispatch(event.meta?._dbgId, { bookingId });
 
     // Bridge: invalidate React Query caches so staff UI refreshes
-    this._invalidateBookingQueries(bookingId, event.meta?._dbgId);
+    this._invalidateBookingQueries(bookingId, event.meta?._dbgId, eventType);
   },
 
   // Emit overstay refresh signal for BookingDetailsModal

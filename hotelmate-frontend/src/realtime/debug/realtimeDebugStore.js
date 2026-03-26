@@ -119,8 +119,11 @@ export function pushEvent(record) {
     routed: false,
     dispatchedToStore: false,
     invalidatedQueries: [],
+    invalidationSource: null,
     ignored: false,
     error: null,
+    status: null,
+    roomNumber: null,
     ...record,
   };
   _state.events = [entry, ..._state.events].slice(0, MAX_EVENTS);
@@ -139,6 +142,13 @@ export function updateEvent(id, patch) {
   if (patch.invalidatedQueries?.length) _state.counters.invalidatedCount += 1;
   if (patch.error) _state.counters.errorCount += 1;
   _notify();
+}
+
+/**
+ * Find the last event matching a bookingId (for linking cache diffs to their source).
+ */
+export function findEventByBookingId(bookingId) {
+  return _state.events.find(e => !e._debugRecord && e.bookingId === bookingId);
 }
 
 export function pushError(errorMsg, context) {
