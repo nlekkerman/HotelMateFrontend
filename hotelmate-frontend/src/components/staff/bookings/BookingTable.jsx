@@ -204,7 +204,19 @@ const BookingTable = ({
       if (isTerminal) return 3; // OK rank — lowest urgency
 
       const approvalRank = getApprovalRank(booking.approval_risk_level);
-      const overstayRank = getOverstayRank(booking.overstay_risk_level);
+
+      // Time-aware overstay rank: only elevate urgency if checkout deadline has passed
+      let overstayRank = 3; // default OK
+      const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
+      if (isInHouse && booking.overstay_risk_level && booking.overstay_risk_level !== 'OK') {
+        const deadline = booking.checkout_deadline_at ? new Date(booking.checkout_deadline_at) : null;
+        const now = new Date();
+        // Only use overstay risk for ranking if deadline has actually passed
+        if (!deadline || now >= deadline) {
+          overstayRank = getOverstayRank(booking.overstay_risk_level);
+        }
+      }
+
       // Use the worst of the two (min rank = highest urgency)
       return Math.min(approvalRank, overstayRank);
     };

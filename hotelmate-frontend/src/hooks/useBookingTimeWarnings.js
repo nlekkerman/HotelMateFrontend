@@ -96,6 +96,12 @@ function computeApprovalWarning(booking, now) {
 
 /**
  * Compute overstay warning details
+ *
+ * Canonical rules:
+ * - Terminal / non-in-house bookings → null (no warning)
+ * - Risk level OK → null (nothing to warn about)
+ * - Checkout deadline still in the future → null (not yet overdue)
+ * - Unknown/missing risk when deadline is future → null (neutral)
  */
 function computeOverstayWarning(booking, now) {
   // Terminal bookings never show overstay warnings
@@ -108,6 +114,13 @@ function computeOverstayWarning(booking, now) {
   // Use backend fields if available
   const riskLevel = booking.overstay_risk_level || 'OK';
   const minutesOverdue = booking.overstay_minutes || 0;
+
+  // No warning when risk is OK — guest is not overstaying
+  if (riskLevel === 'OK') return null;
+
+  // Frontend time guard: override stale backend risk if deadline is still in the future
+  const deadline = booking.checkout_deadline_at ? new Date(booking.checkout_deadline_at) : null;
+  if (deadline && now < deadline) return null;
 
   return {
     riskLevel,
@@ -227,7 +240,7 @@ function getRiskVariant(riskLevel) {
 function getActiveWarning(booking, approvalWarning, overstayWarning) {
   // Priority 1: CHECKOUT OVERSTAY (only if checked in and overdue checkout)
   const isCheckedIn = !!booking?.checked_in_at && !booking?.checked_out_at;
-  if (isCheckedIn && overstayWarning) {
+  if (isCheckedIn && overstayWarning && overstayWarning.riskLevel !== 'OK') {
     // Map overstay risk levels to severity
     const severityMap = {
       'CRITICAL': 'CRITICAL',
@@ -237,7 +250,7 @@ function getActiveWarning(booking, approvalWarning, overstayWarning) {
     
     return {
       type: 'checkout_overstay',
-      severity: severityMap[overstayWarning.riskLevel] || 'OVERDUE',
+      severity: severityMap[overstayWarning.riskLevel] || 'GRACE',
       displayText: `Checkout · ${getDisplaySeverity(overstayWarning.riskLevel)}`,
       variant: overstayWarning.variant,
       data: overstayWarning
@@ -279,8 +292,10 @@ function getDisplaySeverity(riskLevel) {
       return 'Due Soon';
     case 'GRACE':
       return 'Grace Period';
+    case 'OK':
+      return null;
     default:
-      return 'Unknown';
+      return null;
   }
 }
 
@@ -294,7 +309,7 @@ export const getActiveListWarning = (booking, warnings, overstayStatus) => {
 
   // Priority 1: Checkout overstay (checked_in_at && !checked_out_at && checkout overdue)
   const isCheckedIn = !!booking?.checked_in_at && !booking?.checked_out_at;
-  if (isCheckedIn && warnings?.overstay) {
+  if (isCheckedIn && warnings?.overstay && warnings.overstay.riskLevel !== 'OK') {
     // Check if acknowledged
     const incident = overstayStatus?.overstay;
     if (incident?.status === 'ACKED') {
@@ -305,10 +320,14 @@ export const getActiveListWarning = (booking, warnings, overstayStatus) => {
       };
     }
     
-    // Map overstay severity
+    // Map overstay severity — explicit mapping, no fallthrough to wrong label
     const riskLevel = warnings.overstay.riskLevel;
     const severityText = riskLevel === 'CRITICAL' ? 'CRITICAL' : 
-                        riskLevel === 'GRACE' ? 'Grace Period' : 'Overdue';
+                        riskLevel === 'OVERDUE' ? 'Overdue' :
+                        riskLevel === 'GRACE' ? 'Grace Period' : null;
+    
+    // Safety: if risk level didn't map, don't show a misleading badge
+    if (!severityText) return null;
     
     return {
       type: 'checkout_overstay',
