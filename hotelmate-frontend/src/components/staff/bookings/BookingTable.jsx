@@ -275,7 +275,7 @@ const BookingTable = ({
         checked_in_at: booking.checked_in_at,
         checked_out_at: booking.checked_out_at,
         updated_at: booking.updated_at,
-        room_number: booking.room?.room_number,
+        assigned_room_number: booking.assigned_room_number,
         room_type_name_root: booking.room_type_name,
         room_type_name_room: booking.room?.room_type_name,
         party_primary: booking.party?.primary?.full_name,

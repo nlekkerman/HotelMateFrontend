@@ -600,7 +600,7 @@ const BookingStatusPage = () => {
     fetchBookingStatus();
   }, []);
 
-  // Poll for booking status updates every 30 seconds (replaces dead realtime path)
+  // Poll for booking status updates every 60 seconds (replaces dead realtime path)
   useEffect(() => {
     if (!hotelSlug || !bookingId || !token || !email) return;
 
@@ -608,7 +608,7 @@ const BookingStatusPage = () => {
       if (!loading) {
         fetchBookingStatus();
       }
-    }, 30000);
+    }, 60000);
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && !loading) {
