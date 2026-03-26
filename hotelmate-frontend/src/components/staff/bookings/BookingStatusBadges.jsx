@@ -1,5 +1,6 @@
 import React from 'react';
 import { Badge } from 'react-bootstrap';
+import { getAssignedRoomNumber } from '@/utils/bookingDisplayHelpers';
 
 // TASK D: Helper functions for in-house logic using checked_in_at/checked_out_at instead of status
 const isInHouse = (booking) => !!booking?.checked_in_at && !booking?.checked_out_at;
@@ -17,12 +18,7 @@ const BookingStatusBadges = ({ booking }) => {
   const checkedInAt = booking.checked_in_at;
   const checkedOutAt = booking.checked_out_at;
 
-  const roomNumber =
-    booking.assigned_room_number ??
-    booking.room_number ??
-    booking.assigned_room?.room_number ??
-    booking.room?.room_number ??
-    null;
+  const roomNumber = getAssignedRoomNumber(booking);
 
   // TASK D: Use helper functions instead of direct boolean logic
   const isGuestInHouse = isInHouse(booking);

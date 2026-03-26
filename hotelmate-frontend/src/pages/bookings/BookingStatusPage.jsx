@@ -19,6 +19,7 @@ import {
   resolveGuestBookingToken
 } from '@/utils/guestBookingTokens';
 import { persistGuestToken } from '@/utils/guestToken';
+import { getAssignedRoomNumber } from '@/utils/bookingDisplayHelpers';
 
 /**
  * BookingStatusPage - Token-based booking management page
@@ -44,6 +45,7 @@ const BookingStatusPage = () => {
   if (token) persistGuestToken(token);
 
   const [loading, setLoading] = useState(true);
+  const hasLoadedRef = useRef(false);
   const [booking, setBooking] = useState(null);
   const [hotel, setHotel] = useState(null);
   const [cancellationPolicy, setCancellationPolicy] = useState(null);
@@ -282,7 +284,8 @@ const BookingStatusPage = () => {
     }
 
     try {
-      setLoading(true);
+      // Only show loading spinner on initial fetch, not during background polls
+      if (!hasLoadedRef.current) setLoading(true);
       setError(null);
 
       // Debug API call details
@@ -363,7 +366,8 @@ const BookingStatusPage = () => {
           : cancellableStatuses.includes(data.status?.toUpperCase()) &&
             !data.cancelled_at;
 
-      setCanCancel(shouldAllowCancel);
+      // Override: never allow cancel once checked in or checked out
+      setCanCancel(shouldAllowCancel && !data.checked_in_at && !data.checked_out_at);
       setCancellationPreview(data.cancellation_preview);
 
       // Set hotel preset if available
@@ -389,6 +393,7 @@ const BookingStatusPage = () => {
         setError(errorMessage);
       }
     } finally {
+      hasLoadedRef.current = true;
       setLoading(false);
     }
   };
@@ -715,14 +720,20 @@ const BookingStatusPage = () => {
     );
   }
 
-  const statusInfo = getStatusDisplay(booking.status);
+  // Derive lifecycle state from timestamps (source of truth)
+  const isCheckedOut = !!booking?.checked_out_at;
+  const isCheckedIn = !!booking?.checked_in_at && !isCheckedOut;
+  const roomNumber = getAssignedRoomNumber(booking);
+  const hasRoomAssigned = !!roomNumber && !isCheckedIn && !isCheckedOut;
 
-  // Check booking state
-  const isCheckedOut = booking?.checked_out_at;
-  const isCheckedIn =
-    booking?.checked_in_at && booking?.assigned_room_number && !isCheckedOut;
-  const hasRoomAssigned =
-    booking?.assigned_room_number && !isCheckedIn && !isCheckedOut;
+  // Use lifecycle-aware status for display
+  // (checked_in_at/checked_out_at may be set while status field still says CONFIRMED)
+  const effectiveStatus = isCheckedOut
+    ? 'checked_out'
+    : isCheckedIn
+    ? 'checked_in'
+    : booking.status;
+  const statusInfo = getStatusDisplay(effectiveStatus);
 
   // Debug current booking state
   console.log("🔍 Current booking state:", {
@@ -853,7 +864,7 @@ const BookingStatusPage = () => {
                     token_preview: chatToken.substring(0, 10) + '...'
                   });
                   
-                  navigate(`/guest/chat?hotel_slug=${hotelSlug}&token=${encodeURIComponent(chatToken)}&room_number=${booking?.assigned_room_number || ''}`);
+                  navigate(`/guest/chat?hotel_slug=${hotelSlug}&token=${encodeURIComponent(chatToken)}&room_number=${roomNumber || ''}`);
                 }}
                 disabled={!canChat && !contextLoading}
                 title={
@@ -874,19 +885,19 @@ const BookingStatusPage = () => {
       )}
 
       {/* Service Components - Load directly under buttons */}
-      {booking?.assigned_room_number && activeService && (
+      {roomNumber && activeService && (
         <Container className="py-4">
           {activeService === "room_service" && canRoomService && (
             <RoomService
               isAdmin={false}
-              roomNumber={booking.assigned_room_number}
+              roomNumber={roomNumber}
               hotelIdentifier={hotelSlug}
             />
           )}
           {activeService === "breakfast" && canBreakfast && (
             <Breakfast
               isAdmin={false}
-              roomNumber={booking.assigned_room_number}
+              roomNumber={roomNumber}
               hotelIdentifier={hotelSlug}
             />
           )}
@@ -940,7 +951,7 @@ const BookingStatusPage = () => {
                         Room
                       </div>
                       <div className="fw-bold fs-5 text-dark mb-1">
-                        {booking.assigned_room_number || "Unassigned"}
+                        {roomNumber || "Unassigned"}
                       </div>
                       <div className="small text-dark">
                         {booking.room?.type}
@@ -1010,9 +1021,9 @@ const BookingStatusPage = () => {
                 {isCheckedOut
                   ? "Stay Completed"
                   : isCheckedIn
-                  ? `Room ${booking.assigned_room_number}`
+                  ? roomNumber ? `Room ${roomNumber}` : "Checked In"
                   : hasRoomAssigned
-                  ? `Room ${booking.assigned_room_number} Ready`
+                  ? `Room ${roomNumber} Ready`
                   : statusInfo.text}
               </h1>
               <div
@@ -1153,8 +1164,8 @@ const BookingStatusPage = () => {
           </Alert>
         )}
 
-        {/* Cancellation Section - Only show if not checked in */}
-        {canCancel && !isCheckedIn && (
+        {/* Cancellation Section - Hidden once checked in or checked out */}
+        {canCancel && !isCheckedIn && !isCheckedOut && (
           <div className="card border-0 shadow-sm mb-4">
             <div className="card-body p-4">
               <h5 className="card-title text-warning mb-3">

@@ -27,6 +27,7 @@ import StaffConfirmationModal from '../modals/StaffConfirmationModal';
 import AcknowledgeOverstayForm from '../modals/AcknowledgeOverstayForm';
 import { useRoomBookingState } from '@/realtime/stores/roomBookingStore';
 import { useDebugRender } from '@/realtime/debug/useDebugRender.js';
+import { getAssignedRoomNumber } from '@/utils/bookingDisplayHelpers';
 
 /**
  * Canonical Booking Details Modal Component
@@ -67,8 +68,8 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
   // Debug render tracking — logs when booking detail fields change
   useDebugRender(
     'BookingDetailsModal',
-    booking ? `${booking.booking_id}|${booking.status}|${booking.room_number || booking.assigned_room_number || ''}|${booking.check_out || ''}|${booking.overstay_flagged || ''}` : null,
-    { bookingId: booking?.booking_id, roomId: booking?.room_number || booking?.assigned_room_number, summary: booking ? `BookingDetailsModal: ${booking.booking_id} status=${booking.status} room=${booking.room_number || booking.assigned_room_number || '-'} checkout=${booking.check_out || '-'}` : undefined }
+    booking ? `${booking.booking_id}|${booking.status}|${getAssignedRoomNumber(booking) || ''}|${booking.check_out || ''}|${booking.overstay_flagged || ''}` : null,
+    { bookingId: booking?.booking_id, roomId: getAssignedRoomNumber(booking), summary: booking ? `BookingDetailsModal: ${booking.booking_id} status=${booking.status} room=${getAssignedRoomNumber(booking) || '-'} checkout=${booking.check_out || '-'}` : undefined }
   );
 
   // Fetch available rooms (only when needed)

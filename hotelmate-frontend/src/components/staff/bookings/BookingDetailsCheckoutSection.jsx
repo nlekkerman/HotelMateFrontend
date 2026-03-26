@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, Button } from 'react-bootstrap';
+import { getAssignedRoomNumber } from '@/utils/bookingDisplayHelpers';
 
 const BookingDetailsCheckoutSection = ({ 
   booking,
@@ -18,7 +19,7 @@ const BookingDetailsCheckoutSection = ({
       </Card.Header>
       <Card.Body>
         <div>
-          <p className="text-info mb-3">✅ Guest is checked in to Room {booking?.assigned_room_number || booking?.assigned_room?.room_number}</p>
+          <p className="text-info mb-3">✅ Guest is checked in to Room {getAssignedRoomNumber(booking) || '—'}</p>
           <Button
             variant="warning"
             onClick={onCheckOut}

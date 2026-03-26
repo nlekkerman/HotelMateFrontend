@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, Button, Form, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { format } from 'date-fns';
+import { getAssignedRoomNumber } from '@/utils/bookingDisplayHelpers';
 
 const BookingDetailsRoomAssignmentSection = ({ 
   booking, 
@@ -38,12 +39,13 @@ const BookingDetailsRoomAssignmentSection = ({
     allBookingKeys: booking ? Object.keys(booking) : null
   });
   
-  if (booking?.assigned_room || booking?.room) {
+  if (booking?.assigned_room || booking?.room || booking?.assigned_room_number) {
     // Room is assigned
     const assignedRoom = booking?.assigned_room || booking?.room;
+    const displayRoomNumber = getAssignedRoomNumber(booking);
     console.log('🔧 Rendering assigned room section:', {
       showRoomAssignment,
-      assignedRoomNumber: assignedRoom?.room_number,
+      assignedRoomNumber: displayRoomNumber,
       booking: booking?.booking_id
     });
     
@@ -56,7 +58,7 @@ const BookingDetailsRoomAssignmentSection = ({
           {!showRoomAssignment ? (
             <div className="d-flex justify-content-between align-items-center">
               <div>
-                <strong>Room {assignedRoom?.room_number}</strong>
+                <strong>Room {displayRoomNumber}</strong>
                 <br />
                 {booking?.room_assigned_at && (
                   <small className="text-muted">
