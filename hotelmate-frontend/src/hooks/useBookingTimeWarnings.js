@@ -1,6 +1,24 @@
 import { useState, useEffect, useMemo } from 'react';
 
 /**
+ * Returns true if booking is in a terminal/resolved lifecycle state
+ * where no approval or overstay warnings should surface.
+ */
+export function isTerminalBooking(booking) {
+  if (!booking) return true;
+  if (booking.checked_out_at) return true;
+  if (booking.status === 'CANCELLED' || booking.status === 'EXPIRED') return true;
+  return false;
+}
+
+/**
+ * Returns true if booking is currently in-house (checked in but not out).
+ */
+export function isInHouseBooking(booking) {
+  return !!booking?.checked_in_at && !booking?.checked_out_at;
+}
+
+/**
  * Hook for managing booking time warnings with local ticking updates
  * Handles approval and overstay warnings without making API calls
  * Updates display text every 30-60 seconds for smooth UI
@@ -47,13 +65,16 @@ export const useBookingTimeWarnings = (booking) => {
  * Compute approval warning details
  */
 function computeApprovalWarning(booking, now) {
-  // Only show approval warnings for guests who are NOT checked in yet
-  // Once checked in, overstay logic takes over
-  const isCheckedIn = !!booking.checked_in_at && !booking.checked_out_at;
-  const shouldShow = !isCheckedIn && (
+  // Terminal bookings never show approval warnings
+  if (isTerminalBooking(booking)) return null;
+
+  // In-house bookings: approval is no longer relevant once checked in
+  if (isInHouseBooking(booking)) return null;
+
+  // Only show for genuinely approval-actionable bookings
+  const shouldShow = 
     booking.status === 'PENDING_APPROVAL' || 
-    (booking.approval_risk_level && booking.approval_risk_level !== 'OK')
-  );
+    (booking.approval_risk_level && booking.approval_risk_level !== 'OK');
   
   if (!shouldShow) return null;
 
@@ -77,12 +98,12 @@ function computeApprovalWarning(booking, now) {
  * Compute overstay warning details
  */
 function computeOverstayWarning(booking, now) {
-  // Only show for IN_HOUSE bookings or if risk level is not OK
-  const isInHouse = !!booking.checked_in_at && !booking.checked_out_at;
-  const shouldShow = isInHouse || 
-                    (booking.overstay_risk_level && booking.overstay_risk_level !== 'OK');
-  
-  if (!shouldShow) return null;
+  // Terminal bookings never show overstay warnings
+  if (isTerminalBooking(booking)) return null;
+
+  // Only show for currently in-house bookings
+  const isInHouse = isInHouseBooking(booking);
+  if (!isInHouse) return null;
 
   // Use backend fields if available
   const riskLevel = booking.overstay_risk_level || 'OK';
@@ -268,8 +289,8 @@ function getDisplaySeverity(riskLevel) {
  * MANDATORY: EXPIRED bookings show NO warnings (logic gate)
  */
 export const getActiveListWarning = (booking, warnings, overstayStatus) => {
-  // MANDATORY GATE: EXPIRED bookings have no warnings
-  if (booking?.status === 'EXPIRED') return null;
+  // MANDATORY GATE: Terminal/resolved bookings have no warnings
+  if (isTerminalBooking(booking)) return null;
 
   // Priority 1: Checkout overstay (checked_in_at && !checked_out_at && checkout overdue)
   const isCheckedIn = !!booking?.checked_in_at && !booking?.checked_out_at;

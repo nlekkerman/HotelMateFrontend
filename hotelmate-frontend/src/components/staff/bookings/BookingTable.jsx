@@ -196,6 +196,13 @@ const BookingTable = ({
     };
 
     const getUrgencyRank = (booking) => {
+      // Terminal bookings (checked out, cancelled, expired) get lowest urgency
+      // so stale risk fields don't pull them to the top
+      const isTerminal = !!booking.checked_out_at ||
+                         booking.status === 'CANCELLED' ||
+                         booking.status === 'EXPIRED';
+      if (isTerminal) return 3; // OK rank — lowest urgency
+
       const approvalRank = getApprovalRank(booking.approval_risk_level);
       const overstayRank = getOverstayRank(booking.overstay_risk_level);
       // Use the worst of the two (min rank = highest urgency)
