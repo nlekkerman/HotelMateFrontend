@@ -7,7 +7,14 @@
  * - Reconnection sync on subscription success
  * - NO references to /api/public/chat/ endpoints
  * 
- * Route: /guest/chat?hotel_slug=...&token=...
+ * Route: /guest/chat?hotel_slug=...&token=...&booking_id=...&email=...
+ * 
+ * Query parameters:
+ * - hotel_slug (required) - Hotel identifier
+ * - token (required) - Guest authentication token
+ * - booking_id (required) - Booking reference for identity context
+ * - email (optional) - Guest email for identity context
+ * - room_number (optional) - For display only, not used for auth
  */
 
 import React, { useEffect } from 'react';
@@ -20,6 +27,8 @@ const GuestChatPortal = () => {
   const [searchParams] = useSearchParams();
   const hotelSlug = searchParams.get('hotel_slug');
   const token = searchParams.get('token');
+  const bookingId = searchParams.get('booking_id');
+  const email = searchParams.get('email');
 
   // Persist token so it survives page reloads
   if (token) persistGuestToken(token);
@@ -28,10 +37,12 @@ const GuestChatPortal = () => {
   useEffect(() => {
     console.log('[GuestChatPortal] Initialized with params:', {
       hotelSlug,
+      bookingId,
       hasToken: !!token,
+      hasEmail: !!email,
       url: window.location.href
     });
-  }, [hotelSlug, token]);
+  }, [hotelSlug, token, bookingId, email]);
   
   // Show error if missing required parameters
   if (!hotelSlug || !token) {
@@ -70,6 +81,8 @@ const GuestChatPortal = () => {
           <GuestChatWidget
             hotelSlug={hotelSlug}
             token={token}
+            bookingId={bookingId}
+            email={email}
             className="shadow-lg"
             style={{
               width: '100%',

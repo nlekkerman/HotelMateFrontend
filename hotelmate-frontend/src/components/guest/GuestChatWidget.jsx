@@ -393,12 +393,16 @@ const MessagesList = ({ messages, sendingMessages = [], context, onLoadOlder, on
  * @param {Object} props - Component props
  * @param {string} props.hotelSlug - Hotel slug
  * @param {string} props.token - Guest authentication token
+ * @param {string} [props.bookingId] - Booking ID for identity context
+ * @param {string} [props.email] - Guest email for identity context
  * @param {string} [props.className] - Additional CSS class
  * @param {Object} [props.style] - Inline styles
  */
 export const GuestChatWidget = ({ 
   hotelSlug, 
   token, 
+  bookingId,
+  email,
   className = '',
   style = {}
 }) => {
@@ -415,7 +419,7 @@ export const GuestChatWidget = ({
     isSending,
     isDisabled,
     disabledReason
-  } = useGuestChat({ hotelSlug, token });
+  } = useGuestChat({ hotelSlug, token, bookingId, email });
   
   // Loading state
   if (loading) {
@@ -437,6 +441,19 @@ export const GuestChatWidget = ({
   
   // Error state
   if (error) {
+    // Derive user-friendly message from error details
+    const status = error?.response?.status || error?.status;
+    const serverDetail = error?.response?.data?.detail || error?.response?.data?.error;
+    let friendlyMessage;
+    if (status === 401 || status === 403) {
+      friendlyMessage = 'Your chat session has expired. Please return to your booking page and try again.';
+    } else if (status === 404) {
+      friendlyMessage = serverDetail || 'Chat could not be found for this booking. Please check your booking link.';
+    } else if (status >= 500) {
+      friendlyMessage = 'The hotel chat service is temporarily unavailable. Please try again in a few minutes.';
+    } else {
+      friendlyMessage = serverDetail || error.message || 'Failed to load chat';
+    }
     return (
       <div className={`guest-chat-widget error ${className}`} style={style}>
         <div className="chat-header">
@@ -447,7 +464,7 @@ export const GuestChatWidget = ({
           <div className="error-container">
             <div className="alert alert-danger">
               <i className="bi bi-exclamation-triangle me-2"></i>
-              <strong>Chat Error:</strong> {error.message || 'Failed to load chat'}
+              {friendlyMessage}
             </div>
           </div>
         </div>

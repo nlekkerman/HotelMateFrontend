@@ -857,14 +857,25 @@ const BookingStatusPage = () => {
                     return;
                   }
                   
+                  const chatBookingId = booking?.booking_id || booking?.id || bookingId;
+                  const chatEmail = email || booking?.guest_email || '';
+                  
                   console.log('[BookingStatusPage] Chat navigation:', {
                     hotelSlug,
-                    booking_id: booking?.id || bookingId,
+                    booking_id: chatBookingId,
+                    email: chatEmail,
                     room_number: booking?.assigned_room_number,
                     token_preview: chatToken.substring(0, 10) + '...'
                   });
                   
-                  navigate(`/guest/chat?hotel_slug=${hotelSlug}&token=${encodeURIComponent(chatToken)}&room_number=${roomNumber || ''}`);
+                  const chatParams = new URLSearchParams({
+                    hotel_slug: hotelSlug,
+                    token: chatToken,
+                    booking_id: chatBookingId,
+                    ...(chatEmail && { email: chatEmail }),
+                    ...(roomNumber && { room_number: roomNumber })
+                  });
+                  navigate(`/guest/chat?${chatParams.toString()}`);
                 }}
                 disabled={!canChat && !contextLoading}
                 title={
