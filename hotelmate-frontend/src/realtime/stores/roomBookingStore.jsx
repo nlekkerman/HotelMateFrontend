@@ -322,22 +322,22 @@ export const roomBookingActions = {
         this.maybeShowToast('warning', `Booking ${bookingId} expired due to timeout`, event);
         break;
 
-      // Overstay event handlers - trigger refresh instead of direct booking updates
+      // Overstay event handlers - trigger refresh + force React Query invalidation
       case "booking_overstay_flagged":
-        // Emit refresh signal for BookingDetailsModal if open for this booking
         this.emitOverstayRefresh(bookingId);
+        this._lastInvalidationTime = 0; // Bypass debounce — overstay must always invalidate
         this.maybeShowToast('warning', `Overstay incident flagged for booking ${bookingId}`, event);
         break;
 
       case "booking_overstay_acknowledged":
-        // Emit refresh signal for BookingDetailsModal if open for this booking
         this.emitOverstayRefresh(bookingId);
+        this._lastInvalidationTime = 0; // Bypass debounce — overstay must always invalidate
         this.maybeShowToast('info', `Overstay acknowledged for booking ${bookingId}`, event);
         break;
 
       case "booking_overstay_extended":
-        // Emit refresh signal for BookingDetailsModal if open for this booking
         this.emitOverstayRefresh(bookingId);
+        this._lastInvalidationTime = 0; // Bypass debounce — overstay must always invalidate
         this.maybeShowToast('success', `Stay extended for booking ${bookingId}`, event);
         break;
 
