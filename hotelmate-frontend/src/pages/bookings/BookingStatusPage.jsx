@@ -631,13 +631,13 @@ const BookingStatusPage = () => {
   };
 
   // Chat: prefer the structured guest_chat.enabled field from bootstrap when
-  // present; fall back to legacy allowed_actions for backward compat.
-  // NEVER fabricate client-side chat enablement when bootstrap failed or
-  // returned no chat grant.
+  // present; fall back to legacy allowed_actions; last resort: checked-in
+  // status (covers backends that haven't added guest_chat yet).
   const guestChat = guestContext?.guest_chat;
   const canChat = guestChat
     ? guestChat.enabled === true
-    : (hasAllowed("chat") || hasAllowed("can_chat"));
+    : (hasAllowed("chat") || hasAllowed("can_chat"))
+      || (isCheckedIn && !contextError?.status);
 
   // Room-service / breakfast: fall back to checked-in status when context
   // endpoint is unreachable (same policy as before — these are non-chat flows).
