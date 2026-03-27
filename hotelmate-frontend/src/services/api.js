@@ -114,15 +114,16 @@ export const guestAPI = axios.create({
   timeout: 30000,
 });
 
-// Auto-inject guest token as query param when not already provided
-// Skip injection if a chat session header is present (session-based auth)
+// Auto-inject guest token as query param when not already provided.
+// Skip injection if:
+//   - A chat session header is present (session-based auth)
+//   - The request already includes a token param (e.g. chat bootstrap)
 guestAPI.interceptors.request.use((config) => {
   if (config.headers?.['X-Guest-Chat-Session']) return config;
-  if (!config.params?.token) {
-    const token = getGuestToken();
-    if (token) {
-      config.params = { ...config.params, token };
-    }
+  if (config.params?.token) return config;
+  const token = getGuestToken();
+  if (token) {
+    config.params = { ...config.params, token };
   }
   return config;
 });

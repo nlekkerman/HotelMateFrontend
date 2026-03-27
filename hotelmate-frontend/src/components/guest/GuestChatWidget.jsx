@@ -1,139 +1,68 @@
 /**
- * Guest Chat Widget Component
- * 
- * REQUIREMENTS:
- * - Disabled states based on context.disabled_reason
- * - Sorting contract: messages sorted by created_at then id
- * - Pagination cursor using before=oldest_message_id
- * - Connection status indicators
- * - System message rendering (centered)
- * - Optimistic sending with retry functionality
+ * Guest Chat Widget Component — LOCKED BACKEND CONTRACT
+ *
+ * Renders messages, input, connection status, and a chat-focused debug panel.
+ * All business logic lives in useGuestChat; this file is rendering only.
  */
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useGuestChat } from '../../hooks/useGuestChat';
-import './GuestChatWidget.css'; // We'll need to create this
+import './GuestChatWidget.css';
 
-/**
- * Message Bubble Component
- * @param {Object} props - Component props
- * @param {Object} props.message - Message object
- * @param {Function} props.onRetry - Retry callback for failed messages
- */
-/**
- * Message Bubble Component
- * @param {Object} props - Component props
- * @param {Object} props.message - Message object
- * @param {Object} props.context - Guest chat context with current guest info
- * @param {Function} props.onRetry - Retry callback for failed messages
- */
-const MessageBubble = ({ message, context, onRetry }) => {
-  // Debug: log message properties to understand the structure
-  console.log('[MessageBubble] Message debug:', {
-    id: message.id,
-    sender_type: message.sender_type,
-    sender_role: message.sender_role,
-    staff: message.staff,
-    guest_id: message.guest_id,
-    staff_id: message.staff_id,
-    staff_display_name: message.staff_display_name,
-    message: message.message,
-    allFields: Object.keys(message)
-  });
-
-  // Improved guest identification logic using multiple methods
+// ── MessageBubble ──────────────────────────────────────────────────────
+const MessageBubble = ({ message, contract, onRetry }) => {
   let isGuest = false;
-  
-  // Method 1: Check sender_type/sender_role fields
   if (message.sender_type === 'guest' || message.sender_role === 'guest') {
     isGuest = true;
-  }
-  // Method 2: If we have guest context, check if the message guest_id matches current guest
-  else if (context?.guest_id && message.guest_id) {
-    isGuest = message.guest_id === context.guest_id;
-  }
-  // Method 3: If message has guest_id but no staff_id, it's likely from a guest
-  else if (message.guest_id && !message.staff_id && !message.staff) {
+  } else if (contract?.guest_id && message.guest_id) {
+    isGuest = message.guest_id === contract.guest_id;
+  } else if (message.guest_id && !message.staff_id && !message.staff) {
     isGuest = true;
-  }
-  // Method 4: If message has staff_id or staff field, it's from staff
-  else if (message.staff_id || message.staff || message.staff_display_name) {
+  } else if (message.staff_id || message.staff || message.staff_display_name) {
     isGuest = false;
-  }
-  // Method 5: Default fallback - if no clear indicators, assume based on sender_type
-  else {
+  } else {
     isGuest = message.sender_type === 'guest';
   }
 
   const isSystem = message.sender_type === 'system';
-  const isPending = message.status === 'pending';
   const isFailed = message.status === 'failed';
   const isSending = message.status === 'sending';
-  
-  console.log('[MessageBubble] Classification result:', {
-    isGuest,
-    isSystem,
-    messageId: message.id,
-    appliedClass: isGuest ? 'guest-message' : 'staff-message',
-    contextGuestId: context?.guest_id,
-    messageGuestId: message.guest_id
-  });
-  
-  // System messages: centered small text
+
   if (isSystem) {
     return (
       <div className="message-bubble system-message">
-        <div className="system-message-content">
-          {message.message}
-        </div>
+        <div className="system-message-content">{message.message}</div>
         <div className="message-timestamp">
-          {new Date(message.timestamp || message.created_at).toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          })}
+          {new Date(message.timestamp || message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
     );
   }
-  
+
   return (
     <div className={`message-bubble ${isGuest ? 'guest-message' : 'staff-message'}`}>
       <div className="message-content">
         <div className="message-text">
           {message.message}
-          {isPending && (
-            <span className="message-status pending">
-              <i className="bi bi-clock" title="Sending..."></i>
-            </span>
+          {message.status === 'pending' && (
+            <span className="message-status pending"><i className="bi bi-clock" title="Sending..."></i></span>
           )}
           {isFailed && (
             <span className="message-status failed">
               <i className="bi bi-exclamation-triangle" title="Failed to send"></i>
-              <button 
-                className="retry-button"
-                onClick={() => onRetry(message)}
-                title="Retry sending"
-              >
+              <button className="retry-button" onClick={() => onRetry(message)} title="Retry sending">
                 <i className="bi bi-arrow-clockwise"></i>
               </button>
             </span>
           )}
         </div>
-        
         <div className="message-info">
-          {!isGuest && message.staff_display_name && (
-            <span className="sender-name">{message.staff_display_name}</span>
-          )}
+          {!isGuest && message.staff_display_name && <span className="sender-name">{message.staff_display_name}</span>}
           <span className="message-timestamp">
-            {new Date(message.timestamp || message.created_at).toLocaleTimeString([], { 
-              hour: '2-digit', 
-              minute: '2-digit' 
-            })}
+            {new Date(message.timestamp || message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
         </div>
       </div>
-      
-      {/* Sending indicator - appears below message bubble */}
       {isSending && (
         <div className="sending-indicator">
           <span className="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -144,145 +73,65 @@ const MessageBubble = ({ message, context, onRetry }) => {
   );
 };
 
-/**
- * Connection Status Indicator
- * @param {Object} props - Component props
- * @param {string} props.connectionState - Current connection state
- */
+// ── ConnectionStatus ───────────────────────────────────────────────────
 const ConnectionStatus = ({ connectionState }) => {
-  const getStatusConfig = () => {
-    switch (connectionState) {
-      case 'connected':
-        return {
-          className: 'status-connected',
-          icon: 'bi-wifi',
-          text: 'Connected',
-          color: '#28a745'
-        };
-      case 'connecting':
-        return {
-          className: 'status-connecting',
-          icon: 'bi-arrow-repeat',
-          text: 'Connecting...',
-          color: '#ffc107'
-        };
-      case 'disconnected':
-        return {
-          className: 'status-disconnected',
-          icon: 'bi-wifi-off',
-          text: 'Reconnecting...',
-          color: '#dc3545'
-        };
-      case 'failed':
-        return {
-          className: 'status-failed',
-          icon: 'bi-exclamation-triangle',
-          text: 'Connection failed',
-          color: '#dc3545'
-        };
-      default:
-        return {
-          className: 'status-unknown',
-          icon: 'bi-question-circle',
-          text: 'Unknown',
-          color: '#6c757d'
-        };
-    }
+  const cfg = {
+    connected:    { className: 'status-connected',    icon: 'bi-wifi',                  text: 'Connected',         color: '#28a745' },
+    connecting:   { className: 'status-connecting',   icon: 'bi-arrow-repeat',          text: 'Connecting...',     color: '#ffc107' },
+    disconnected: { className: 'status-disconnected', icon: 'bi-wifi-off',              text: 'Reconnecting...',   color: '#dc3545' },
+    failed:       { className: 'status-failed',       icon: 'bi-exclamation-triangle',  text: 'Connection failed', color: '#dc3545' },
   };
-  
-  const status = getStatusConfig();
-  
+  const s = cfg[connectionState] || { className: 'status-unknown', icon: 'bi-question-circle', text: 'Unknown', color: '#6c757d' };
+
   return (
-    <div className={`connection-status ${status.className}`}>
-      <i 
-        className={`bi ${status.icon}`} 
-        style={{ color: status.color }}
-        title={status.text}
-      ></i>
-      <span style={{ color: status.color }}>{status.text}</span>
+    <div className={`connection-status ${s.className}`}>
+      <i className={`bi ${s.icon}`} style={{ color: s.color }} title={s.text}></i>
+      <span style={{ color: s.color }}>{s.text}</span>
     </div>
   );
 };
 
-/**
- * Message Input Component
- * @param {Object} props - Component props
- * @param {Function} props.onSend - Send message callback
- * @param {boolean} props.disabled - Whether input is disabled
- * @param {string} props.disabledReason - Reason for being disabled
- * @param {boolean} props.isSending - Whether currently sending
- */
+// ── MessageInput ───────────────────────────────────────────────────────
 const MessageInput = ({ onSend, disabled, disabledReason, isSending }) => {
   const [message, setMessage] = useState('');
   const textareaRef = useRef(null);
-  
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    
     if (!message.trim() || disabled || isSending) return;
-    
     onSend(message.trim());
     setMessage('');
-    
-    // Reset textarea height
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
   };
-  
+
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(e); }
   };
-  
-  const handleTextareaResize = (e) => {
-    const textarea = e.target;
-    textarea.style.height = 'auto';
-    textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
-  };
-  
+
   return (
     <div className="message-input-container">
       {disabled && disabledReason && (
-        <div className="disabled-message">
-          <i className="bi bi-info-circle"></i>
-          <span>{disabledReason}</span>
-        </div>
+        <div className="disabled-message"><i className="bi bi-info-circle"></i><span>{disabledReason}</span></div>
       )}
-      
       <form onSubmit={handleSubmit} className="message-input-form d-flex vw-100">
-        <div className="input-group ">
+        <div className="input-group">
           <textarea
             ref={textareaRef}
             className="form-control message-textarea"
-            placeholder={disabled ? "Chat is disabled" : "Type your message..."}
+            placeholder={disabled ? 'Chat is disabled' : 'Type your message...'}
             value={message}
             onChange={(e) => {
               setMessage(e.target.value);
-              handleTextareaResize(e);
+              e.target.style.height = 'auto';
+              e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
             }}
             onKeyPress={handleKeyPress}
             disabled={disabled || isSending}
             rows="1"
-            style={{ 
-              resize: 'none',
-              minHeight: '40px',
-              maxHeight: '150px'
-            }}
+            style={{ resize: 'none', minHeight: '40px', maxHeight: '150px' }}
           />
-          <button
-            type="submit"
-            className="btn btn-primary send-button"
-            disabled={disabled || isSending || !message.trim()}
-            title="Send message"
-          >
-            {isSending ? (
-              <span className="spinner-border spinner-border-sm" role="status"></span>
-            ) : (
-              <i className="bi bi-send"></i>
-            )}
+          <button type="submit" className="btn btn-primary send-button" disabled={disabled || isSending || !message.trim()} title="Send message">
+            {isSending ? <span className="spinner-border spinner-border-sm" role="status"></span> : <i className="bi bi-send"></i>}
           </button>
         </div>
       </form>
@@ -290,120 +139,155 @@ const MessageInput = ({ onSend, disabled, disabledReason, isSending }) => {
   );
 };
 
-/**
- * Messages List Component with Pagination
- * @param {Object} props - Component props
- * @param {Array} props.messages - Messages array
- * @param {Array} props.sendingMessages - Currently sending messages array
- * @param {Object} props.context - Guest chat context for message classification
- * @param {Function} props.onLoadOlder - Load older messages callback
- * @param {Function} props.onRetry - Retry failed message callback
- */
-const MessagesList = ({ messages, sendingMessages = [], context, onLoadOlder, onRetry }) => {
+// ── MessagesList ───────────────────────────────────────────────────────
+const MessagesList = ({ messages, sendingMessages = [], contract, onLoadOlder, onRetry }) => {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(true);
-  
-  // Combine regular messages with sending messages
+
   const allMessages = [...messages, ...sendingMessages].sort((a, b) => {
-    const timeA = new Date(a.timestamp || a.created_at).getTime();
-    const timeB = new Date(b.timestamp || b.created_at).getTime();
-    return timeA !== timeB ? timeA - timeB : ((a.id || 0) - (b.id || 0));
+    const tA = new Date(a.timestamp || a.created_at).getTime();
+    const tB = new Date(b.timestamp || b.created_at).getTime();
+    return tA !== tB ? tA - tB : (a.id || 0) - (b.id || 0);
   });
-  
-  // Auto-scroll to bottom for new messages (including sending messages)
+
   useEffect(() => {
     if (hasScrolledToBottom && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [allMessages, hasScrolledToBottom]);
-  
+
   const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
-    setHasScrolledToBottom(isAtBottom);
+    setHasScrolledToBottom(scrollHeight - scrollTop - clientHeight < 50);
   };
-  
+
   const handleLoadOlder = async () => {
     if (isLoadingOlder || messages.length === 0) return;
-    
-    // Use oldest message ID as pagination cursor
-    const oldestMessage = messages[0];
-    if (!oldestMessage?.id || oldestMessage.id.startsWith('local:')) return;
-    
+    const oldest = messages[0];
+    if (!oldest?.id || String(oldest.id).startsWith('local:')) return;
     setIsLoadingOlder(true);
-    
-    try {
-      const loadedCount = await onLoadOlder(oldestMessage.id);
-      console.log('[GuestChatWidget] Loaded older messages:', loadedCount);
-    } catch (error) {
-      console.error('[GuestChatWidget] Failed to load older messages:', error);
-    } finally {
-      setIsLoadingOlder(false);
-    }
+    try { await onLoadOlder(oldest.id); } catch (err) { console.error('[GuestChatWidget] Load older error:', err); } finally { setIsLoadingOlder(false); }
   };
-  
+
   return (
-    <div 
-      className="messages-list"
-      ref={messagesContainerRef}
-      onScroll={handleScroll}
-    >
+    <div className="messages-list" ref={messagesContainerRef} onScroll={handleScroll}>
       {messages.length > 0 && (
         <div className="load-older-container">
-          <button
-            className="btn btn-outline-secondary btn-sm load-older-button"
-            onClick={handleLoadOlder}
-            disabled={isLoadingOlder}
-          >
-            {isLoadingOlder ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                Loading...
-              </>
-            ) : (
-              <>
-                <i className="bi bi-arrow-up me-2"></i>
-                Load older messages
-              </>
-            )}
+          <button className="btn btn-outline-secondary btn-sm load-older-button" onClick={handleLoadOlder} disabled={isLoadingOlder}>
+            {isLoadingOlder
+              ? <><span className="spinner-border spinner-border-sm me-2" role="status"></span>Loading...</>
+              : <><i className="bi bi-arrow-up me-2"></i>Load older messages</>}
           </button>
         </div>
       )}
-      
       <div className="messages-container">
-        {allMessages.map((message, index) => (
-          <MessageBubble
-            key={message.id || `temp-${index}`}
-            message={message}
-            context={context}
-            onRetry={onRetry}
-          />
+        {allMessages.map((msg, i) => (
+          <MessageBubble key={msg.id || `temp-${i}`} message={msg} contract={contract} onRetry={onRetry} />
         ))}
       </div>
-      
       <div ref={messagesEndRef} />
     </div>
   );
 };
 
-/**
- * Main Guest Chat Widget Component
- * @param {Object} props - Component props
- * @param {string} props.hotelSlug - Hotel slug
- * @param {string} props.token - Guest authentication token
- * @param {string} [props.className] - Additional CSS class
- * @param {Object} [props.style] - Inline styles
- */
-export const GuestChatWidget = ({ 
-  hotelSlug, 
-  token, 
-  className = '',
-  style = {}
+// ── Chat Debug Panel ───────────────────────────────────────────────────
+const ChatDebugPanel = ({
+  hotelSlug,
+  contract,
+  chatSession,
+  channelName,
+  events,
+  pusherConfig,
+  connectionState,
+  messages,
+  sendingMessages,
+  realtimeDiag,
 }) => {
+  const [open, setOpen] = useState(false);
+
+  // Contract validation
+  const requiredFields = [
+    ['conversation_id', contract?.conversation_id],
+    ['chat_session',    contract?.chat_session],
+    ['channel_name',    contract?.channel_name],
+    ['events.message_created',  contract?.events?.message_created],
+    ['events.message_read',     contract?.events?.message_read],
+    ['pusher.key',              contract?.pusher?.key],
+    ['pusher.cluster',          contract?.pusher?.cluster],
+    ['pusher.auth_endpoint',    contract?.pusher?.auth_endpoint],
+  ];
+  const missingFields = requiredFields.filter(([, v]) => v == null).map(([k]) => k);
+  const contractValid = contract != null && missingFields.length === 0;
+
+  return (
+    <div className="chat-debug-panel" style={{ fontSize: '11px', borderTop: '1px solid #dee2e6', background: '#f8f9fa' }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="btn btn-sm btn-outline-secondary w-100"
+        style={{ fontSize: '10px', borderRadius: 0 }}
+      >
+        {open ? 'Hide' : 'Show'} Chat Debug
+      </button>
+      {open && (
+        <div style={{ padding: '8px', maxHeight: '280px', overflowY: 'auto', fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+          {/* ── Bootstrap / Contract ── */}
+          <div><strong>── Bootstrap / Contract ──</strong></div>
+          <div>hotelSlug: {hotelSlug || '—'}</div>
+          <div>bootstrap endpoint: /api/guest/hotel/{hotelSlug}/chat/context</div>
+          <div>bootstrap loaded: {contract ? 'yes' : 'no'}</div>
+          <div>conversationId: {contract?.conversation_id || '—'}</div>
+          <div>chatSession present: {chatSession ? 'yes' : 'no'}</div>
+          <div>channelName: {channelName || '—'}</div>
+          <div>eventMessageCreated: {events?.message_created || '—'}</div>
+          <div>eventMessageRead: {events?.message_read || '—'}</div>
+          <div>pusherKey present: {pusherConfig?.key ? 'yes' : 'no'}</div>
+          <div>pusherCluster: {pusherConfig?.cluster || '—'}</div>
+          <div>pusherAuthEndpoint: {pusherConfig?.auth_endpoint || '—'}</div>
+
+          {/* ── Connection / Subscription ── */}
+          <div style={{ marginTop: 6 }}><strong>── Connection / Subscription ──</strong></div>
+          <div>pusher client initialized: {realtimeDiag?.subscribedChannel != null || connectionState !== 'disconnected' ? 'yes' : 'no'}</div>
+          <div>pusher connection state: {connectionState}</div>
+          <div>subscribed: {realtimeDiag?.subscribedChannel ? 'yes' : 'no'}</div>
+          <div>subscribed channel: {realtimeDiag?.subscribedChannel || '—'}</div>
+          <div>bound events: {realtimeDiag?.boundEvents?.join(', ') || '—'}</div>
+          <div>last subscription error: {realtimeDiag?.lastSubscriptionError || 'none'}</div>
+          <div>last auth error: {realtimeDiag?.lastAuthError || 'none'}</div>
+
+          {/* ── Message / Realtime Diagnostics ── */}
+          <div style={{ marginTop: 6 }}><strong>── Message / Realtime ──</strong></div>
+          <div>messages count: {messages?.length ?? 0}</div>
+          <div>pending sends count: {sendingMessages?.length ?? 0}</div>
+          <div>last received event name: {realtimeDiag?.lastReceivedEventName || '—'}</div>
+          <div>last received message id: {realtimeDiag?.lastReceivedMessageId || '—'}</div>
+          <div>last read update id: {realtimeDiag?.lastReadUpdateId || '—'}</div>
+          <div>duplicate events ignored: {realtimeDiag?.duplicateEventsIgnored ?? 0}</div>
+
+          {/* ── Contract Validation ── */}
+          <div style={{ marginTop: 6 }}><strong>── Contract Validation ──</strong></div>
+          <div style={{ color: contractValid ? '#28a745' : '#dc3545' }}>
+            contract valid: {contractValid ? 'yes' : 'no'}
+          </div>
+          {!contractValid && missingFields.length > 0 && (
+            <div style={{ color: '#dc3545' }}>missing: {missingFields.join(', ')}</div>
+          )}
+          {!contract && <div style={{ color: '#dc3545' }}>contract not loaded</div>}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Main Widget ────────────────────────────────────────────────────────
+export const GuestChatWidget = ({ hotelSlug, token, className = '', style = {} }) => {
   const {
-    context,
+    contract,
+    chatSession,
+    channelName,
+    events,
+    pusherConfig,
     messages,
     sendingMessages,
     loading,
@@ -414,17 +298,15 @@ export const GuestChatWidget = ({
     retryMessage,
     isSending,
     isDisabled,
-    disabledReason
+    disabledReason,
+    realtimeDiag,
   } = useGuestChat({ hotelSlug, token });
-  
-  // Loading state
+
+  // Loading
   if (loading) {
     return (
       <div className={`guest-chat-widget loading ${className}`} style={style}>
-        <div className="chat-header">
-          <h5>Chat</h5>
-          <ConnectionStatus connectionState="connecting" />
-        </div>
+        <div className="chat-header"><h5>Chat</h5><ConnectionStatus connectionState="connecting" /></div>
         <div className="chat-body">
           <div className="loading-container">
             <div className="spinner-border text-primary" role="status"></div>
@@ -434,10 +316,9 @@ export const GuestChatWidget = ({
       </div>
     );
   }
-  
-  // Error state
+
+  // Error
   if (error) {
-    // Derive user-friendly message from error details
     const status = error?.response?.status || error?.status;
     const serverDetail = error?.response?.data?.detail || error?.response?.data?.error;
     let friendlyMessage;
@@ -450,67 +331,61 @@ export const GuestChatWidget = ({
     } else {
       friendlyMessage = serverDetail || error.message || 'Failed to load chat';
     }
+
     return (
       <div className={`guest-chat-widget error ${className}`} style={style}>
-        <div className="chat-header">
-          <h5>Chat</h5>
-          <ConnectionStatus connectionState="failed" />
-        </div>
+        <div className="chat-header"><h5>Chat</h5><ConnectionStatus connectionState="failed" /></div>
         <div className="chat-body">
           <div className="error-container">
-            <div className="alert alert-danger">
-              <i className="bi bi-exclamation-triangle me-2"></i>
-              {friendlyMessage}
-            </div>
+            <div className="alert alert-danger"><i className="bi bi-exclamation-triangle me-2"></i>{friendlyMessage}</div>
           </div>
         </div>
       </div>
     );
   }
-  
+
   return (
     <div className={`guest-chat-widget ${className}`} style={style}>
       <div className="chat-header">
         <div className="chat-title">
-          <h5>Chat with {context?.hotel?.name || 'Hotel'}</h5>
-          {context?.booking && (
-            <small className="text-muted">
-              Booking: {context.booking.booking_reference || context.booking.id}
-            </small>
-          )}
+          <h5>Chat with Hotel</h5>
         </div>
         <ConnectionStatus connectionState={connectionState} />
       </div>
-      
+
       <div className="chat-body">
         {messages.length === 0 && sendingMessages.length === 0 ? (
           <div className="empty-chat">
-            <div className="empty-chat-icon">
-              <i className="bi bi-chat-dots"></i>
-            </div>
-            <div className="empty-chat-message">
-              <p>Welcome! Send a message to start the conversation.</p>
-            </div>
+            <div className="empty-chat-icon"><i className="bi bi-chat-dots"></i></div>
+            <div className="empty-chat-message"><p>Welcome! Send a message to start the conversation.</p></div>
           </div>
         ) : (
-          <MessagesList 
+          <MessagesList
             messages={messages}
             sendingMessages={sendingMessages}
-            context={context}
+            contract={contract}
             onLoadOlder={loadOlder}
             onRetry={retryMessage}
           />
         )}
       </div>
-      
+
       <div className="chat-footer">
-        <MessageInput
-          onSend={sendMessage}
-          disabled={isDisabled}
-          disabledReason={disabledReason}
-          isSending={isSending}
-        />
+        <MessageInput onSend={sendMessage} disabled={isDisabled} disabledReason={disabledReason} isSending={isSending} />
       </div>
+
+      <ChatDebugPanel
+        hotelSlug={hotelSlug}
+        contract={contract}
+        chatSession={chatSession}
+        channelName={channelName}
+        events={events}
+        pusherConfig={pusherConfig}
+        connectionState={connectionState}
+        messages={messages}
+        sendingMessages={sendingMessages}
+        realtimeDiag={realtimeDiag}
+      />
     </div>
   );
 };

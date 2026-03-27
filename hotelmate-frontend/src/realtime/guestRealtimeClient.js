@@ -1,142 +1,100 @@
 // src/realtime/guestRealtimeClient.js
-// Guest-only Pusher client for session/grant-based authentication
-// DO NOT use this for staff realtime - use realtimeClient.js instead
+// Guest-only Pusher client — LOCKED BACKEND CONTRACT
+//
+// All config (key, cluster, authEndpoint) comes from the bootstrap response.
+// DO NOT use env vars as source of truth for guest chat realtime.
+// DO NOT use this for staff realtime — use realtimeClient.js instead.
 
 import Pusher from 'pusher-js';
-
-// Configuration
-const PUSHER_KEY = import.meta.env.VITE_PUSHER_KEY;
-const PUSHER_CLUSTER = import.meta.env.VITE_PUSHER_CLUSTER;
-
-if (!PUSHER_KEY) {
-  console.error('⚠️ [GuestRealtime] VITE_PUSHER_KEY not found in environment');
-}
-
-if (!PUSHER_CLUSTER) {
-  console.error('⚠️ [GuestRealtime] VITE_PUSHER_CLUSTER not found in environment');
-}
 
 // Memoization: one Pusher instance per chat session
 const pusherInstances = new Map();
 
 /**
- * Get or create a Pusher client instance for a specific guest chat session
- * @param {string} chatSession - Chat session/grant returned by getContext bootstrap
- * @param {Object} options - Additional options
- * @param {string} [options.authEndpoint] - Custom auth endpoint for private channels
+ * Create or retrieve a Pusher client using backend-provided config.
+ *
+ * @param {Object} config
+ * @param {string} config.key          - Pusher app key from bootstrap pusher.key
+ * @param {string} config.cluster      - Pusher cluster from bootstrap pusher.cluster
+ * @param {string} config.authEndpoint - Full auth URL from bootstrap pusher.auth_endpoint
+ * @param {string} config.chatSession  - chat_session from bootstrap (for X-Guest-Chat-Session header)
  * @returns {Pusher} Pusher client instance
  */
-export function getGuestPusherClient(chatSession, options = {}) {
+export function createGuestPusherClient({ key, cluster, authEndpoint, chatSession }) {
   if (!chatSession) {
-    console.warn('[GuestRealtime] No chat session provided for guest Pusher client');
-    return null;
+    throw new Error('[GuestRealtime] Cannot create Pusher client: chatSession is missing');
+  }
+  if (!key) {
+    throw new Error('[GuestRealtime] Cannot create Pusher client: pusher.key is missing');
+  }
+  if (!cluster) {
+    throw new Error('[GuestRealtime] Cannot create Pusher client: pusher.cluster is missing');
+  }
+  if (!authEndpoint) {
+    throw new Error('[GuestRealtime] Cannot create Pusher client: pusher.auth_endpoint is missing');
   }
 
-  // Create cache key including auth endpoint to support different configurations
-  const cacheKey = options.authEndpoint ? `${chatSession}:${options.authEndpoint}` : chatSession;
+  // Cache key: session + auth endpoint
+  const cacheKey = `${chatSession}:${authEndpoint}`;
 
-  // Return existing instance if already created for this session and auth config
   if (pusherInstances.has(cacheKey)) {
     return pusherInstances.get(cacheKey);
   }
 
-  console.log('🔌 [GuestRealtime] Creating new Pusher instance for guest chat session', {
-    hasAuthEndpoint: !!options.authEndpoint,
-    authEndpoint: options.authEndpoint,
-    sessionPreview: chatSession ? chatSession.substring(0, 10) + '...' : 'No session',
-    pusherKey: PUSHER_KEY ? 'Set' : 'Missing',
-    pusherCluster: PUSHER_CLUSTER ? PUSHER_CLUSTER : 'Missing'
+  console.log('[GuestRealtime] Creating Pusher instance from backend config', {
+    cluster,
+    authEndpoint,
+    sessionPreview: chatSession.substring(0, 10) + '...',
   });
 
-  // Create Pusher configuration
-  const pusherConfig = {
-    cluster: PUSHER_CLUSTER,
+  const pusher = new Pusher(key, {
+    cluster,
     encrypted: true,
     forceTLS: true,
-  };
-
-  // Add auth configuration for private channels if authEndpoint provided
-  if (options.authEndpoint) {
-    pusherConfig.authEndpoint = options.authEndpoint;
-    pusherConfig.auth = {
-      headers: { 'X-Guest-Chat-Session': chatSession }
-    };
-    console.log('[GuestRealtime] Private channel auth configured:', {
-      authEndpoint: options.authEndpoint,
-      hasSession: !!chatSession,
-      sessionLength: chatSession ? chatSession.length : 0
-    });
-  } else {
-    console.warn('⚠️ [GuestRealtime] No auth endpoint provided - private channels will fail');
-  }
-
-  // Create new Pusher instance for guest
-  const pusher = new Pusher(PUSHER_KEY, pusherConfig);
-
-  // Error handling
-  pusher.connection.bind('error', function(err) {
-    console.error('❌ [GuestRealtime] Pusher connection error:', {
-      error: err,
-      errorType: err?.type,
-      errorMessage: err?.error?.message,
-      data: err?.data
-    });
+    authEndpoint,
+    auth: {
+      headers: { 'X-Guest-Chat-Session': chatSession },
+    },
   });
 
-  pusher.connection.bind('connected', function() {
-    console.log('✅ [GuestRealtime] Guest Pusher connected successfully', {
+  pusher.connection.bind('error', (err) => {
+    console.error('[GuestRealtime] Pusher connection error:', err);
+  });
+
+  pusher.connection.bind('connected', () => {
+    console.log('[GuestRealtime] Pusher connected', {
       socketId: pusher.connection.socket_id,
-      state: pusher.connection.state
     });
   });
 
-  pusher.connection.bind('disconnected', function() {
-    console.log('🔌 [GuestRealtime] Guest Pusher disconnected', {
-      previousSocketId: pusher.connection.socket_id
-    });
+  pusher.connection.bind('disconnected', () => {
+    console.log('[GuestRealtime] Pusher disconnected');
   });
 
-  // Store instance for reuse with the cache key
   pusherInstances.set(cacheKey, pusher);
-
   return pusher;
 }
 
 /**
- * Get guest realtime client with support for private channels
- * Main function to be used by the guest chat hook
- * @param {string} chatSession - Chat session/grant from bootstrap
- * @param {Object} options - Configuration options
- * @param {string} [options.authEndpoint] - Auth endpoint for private channels
- * @returns {Promise<Pusher>} Configured Pusher client
- */
-export async function getGuestRealtimeClient(chatSession, options = {}) {
-  return getGuestPusherClient(chatSession, options);
-}
-
-/**
- * Cleanup a guest Pusher instance when no longer needed
- * @param {string} chatSession - Chat session used for cache key
- * @param {string} [authEndpoint] - Auth endpoint used for cache key
+ * Cleanup a guest Pusher instance when no longer needed.
+ * @param {string} chatSession
+ * @param {string} authEndpoint
  */
 export function disconnectGuestPusher(chatSession, authEndpoint) {
-  const cacheKey = authEndpoint ? `${chatSession}:${authEndpoint}` : chatSession;
-  
+  const cacheKey = `${chatSession}:${authEndpoint}`;
+
   if (pusherInstances.has(cacheKey)) {
-    const pusher = pusherInstances.get(cacheKey);
-    pusher.disconnect();
+    pusherInstances.get(cacheKey).disconnect();
     pusherInstances.delete(cacheKey);
-    console.log('🔌 [GuestRealtime] Guest Pusher instance cleaned up for session');
+    console.log('[GuestRealtime] Guest Pusher instance cleaned up');
   }
 }
 
 /**
- * Cleanup all guest Pusher instances
+ * Cleanup ALL guest Pusher instances.
  */
 export function disconnectAllGuestPushers() {
-  pusherInstances.forEach((pusher) => {
-    pusher.disconnect();
-  });
+  pusherInstances.forEach((pusher) => pusher.disconnect());
   pusherInstances.clear();
-  console.log('🔌 [GuestRealtime] All guest Pusher instances cleaned up');
+  console.log('[GuestRealtime] All guest Pusher instances cleaned up');
 }

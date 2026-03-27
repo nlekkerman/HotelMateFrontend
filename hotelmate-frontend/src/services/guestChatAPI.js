@@ -1,29 +1,28 @@
 /**
- * Guest Chat API Service - SESSION/GRANT FLOW
+ * Guest Chat API Service — LOCKED BACKEND CONTRACT
  *
- * Bootstrap: GET /api/guest/context/?token={token}
- *   → returns full guest context including guest_chat.session
+ * Bootstrap: GET /api/guest/hotel/{slug}/chat/context?token=RAW_TOKEN
+ *   → returns flat contract: { conversation_id, chat_session, channel_name, events, pusher, permissions }
  *
- * All subsequent chat operations use the returned guest_chat.session grant
- * via the X-Guest-Chat-Session header.
+ * All subsequent chat operations use the returned chat_session
+ * via the X-Guest-Chat-Session header. Raw token is NEVER used after bootstrap.
  *
  * Endpoints:
- * - GET  /api/guest/context/?token={token}                              ← bootstrap (raw token)
- * - GET  /api/guest/hotel/{hotelSlug}/chat/context  [X-Guest-Chat-Session]  ← chat context
- * - GET  /api/guest/hotel/{hotelSlug}/chat/messages  [X-Guest-Chat-Session]
- * - POST /api/guest/hotel/{hotelSlug}/chat/messages  [X-Guest-Chat-Session]
- * - POST /api/guest/hotel/{hotelSlug}/chat/pusher/auth [X-Guest-Chat-Session]
+ * - GET  /api/guest/hotel/{slug}/chat/context?token=RAW_TOKEN               ← bootstrap (raw token)
+ * - GET  /api/guest/hotel/{slug}/chat/messages       [X-Guest-Chat-Session]
+ * - POST /api/guest/hotel/{slug}/chat/messages       [X-Guest-Chat-Session]
+ * - POST /api/guest/hotel/{slug}/chat/conversations/{id}/mark_read [X-Guest-Chat-Session]
+ * - POST /api/guest/hotel/{slug}/chat/pusher/auth    [X-Guest-Chat-Session]
  */
 
 import { guestAPI } from './api';
-import { getGuestToken } from '@/utils/guestToken';
 
 /** Header name used for session-based auth on post-bootstrap calls */
 export const SESSION_HEADER = 'X-Guest-Chat-Session';
 
 /**
  * Build common Axios config for session-authenticated requests.
- * @param {string} chatSession - Chat session/grant returned by getContext
+ * @param {string} chatSession - Chat session from bootstrap
  * @returns {Object} Axios request config fragment
  */
 const sessionConfig = (chatSession) => ({
@@ -31,71 +30,96 @@ const sessionConfig = (chatSession) => ({
 });
 
 // ---------------------------------------------------------------------------
-// BOOTSTRAP — uses raw guest token to get session grant
-// GET /api/guest/context/?token={token}
+// BOOTSTRAP — GET /api/guest/hotel/{slug}/chat/context?token=RAW_TOKEN
+// This is the ONLY call that uses a raw guest token.
 // ---------------------------------------------------------------------------
 
+/** Required top-level fields in the bootstrap response */
+const REQUIRED_BOOTSTRAP_FIELDS = [
+  'conversation_id',
+  'chat_session',
+  'channel_name',
+];
+
+/** Required nested fields checked separately */
+const REQUIRED_NESTED_PATHS = [
+  { path: ['events', 'message_created'], label: 'events.message_created' },
+  { path: ['events', 'message_read'],    label: 'events.message_read' },
+  { path: ['pusher', 'key'],             label: 'pusher.key' },
+  { path: ['pusher', 'cluster'],         label: 'pusher.cluster' },
+  { path: ['pusher', 'auth_endpoint'],   label: 'pusher.auth_endpoint' },
+];
+
 /**
- * Bootstrap: fetch the full guest context (permissions, chat grant, etc.)
- * This is the ONLY call that accepts a raw guest token.
- *
- * The chat session lives at response.guest_chat.session.
- *
- * @param {string} token - Raw guest token (from email link / localStorage)
- * @returns {Promise<Object>} Full guest context including guest_chat.session
+ * Validate the bootstrap response against the locked backend contract.
+ * Throws on the FIRST missing field.
+ * @param {Object} data - Unwrapped bootstrap response
  */
-export const getBootstrap = async (token) => {
-  const resolvedToken = token || getGuestToken();
-  if (!resolvedToken) {
+function validateBootstrapContract(data) {
+  for (const field of REQUIRED_BOOTSTRAP_FIELDS) {
+    if (data[field] == null) {
+      throw new Error(`Guest chat bootstrap contract invalid: missing ${field}`);
+    }
+  }
+  for (const { path, label } of REQUIRED_NESTED_PATHS) {
+    let cursor = data;
+    for (const segment of path) {
+      cursor = cursor?.[segment];
+    }
+    if (cursor == null) {
+      throw new Error(`Guest chat bootstrap contract invalid: missing ${label}`);
+    }
+  }
+}
+
+/**
+ * Bootstrap: fetch the chat context using a raw guest token.
+ * This is the ONLY call that accepts a raw guest token.
+ * The response is validated against the locked backend contract.
+ *
+ * @param {string} hotelSlug - Hotel slug
+ * @param {string} token - Raw guest token (from email link)
+ * @returns {Promise<Object>} Validated chat bootstrap contract
+ */
+export const getChatBootstrap = async (hotelSlug, token) => {
+  if (!hotelSlug) {
+    throw new Error('[GuestChatAPI] Cannot bootstrap: hotelSlug is missing');
+  }
+  if (!token) {
     throw new Error('[GuestChatAPI] Cannot bootstrap: guest token is missing');
   }
-  const response = await guestAPI.get('/context/', {
-    params: { token: resolvedToken }
+
+  const response = await guestAPI.get(`/hotel/${hotelSlug}/chat/context`, {
+    params: { token }
   });
 
   // Unwrap envelope if backend returns { success, data: {...} }
-  const ctx = response.data?.success && response.data?.data
+  const data = response.data?.success && response.data?.data
     ? response.data.data
     : response.data;
 
-  console.log('[GuestChatAPI] Bootstrap response:', ctx);
-  return ctx;
-};
+  validateBootstrapContract(data);
 
-/** @deprecated Use getBootstrap — kept as alias for existing imports */
-export const getContext = getBootstrap;
+  console.log('[GuestChatAPI] Bootstrap validated:', {
+    conversation_id: data.conversation_id,
+    channel_name: data.channel_name,
+    events: data.events,
+    pusherCluster: data.pusher.cluster,
+    hasAuthEndpoint: !!data.pusher.auth_endpoint,
+    permissions: data.permissions,
+  });
 
-/**
- * Fetch chat-specific context (conversation, pusher info, etc.)
- * This is a SESSION-authenticated call — NOT the bootstrap.
- *
- * @param {string} hotelSlug - Hotel slug
- * @param {string} chatSession - Chat session grant from bootstrap
- * @returns {Promise<Object>} Chat context (conversation, pusher, etc.)
- */
-export const getChatContext = async (hotelSlug, chatSession) => {
-  if (!chatSession) {
-    throw new Error('[GuestChatAPI] Cannot fetch chat context: chat session is missing');
-  }
-  const response = await guestAPI.get(
-    `/hotel/${hotelSlug}/chat/context`,
-    sessionConfig(chatSession)
-  );
-  const ctx = response.data?.success && response.data?.data
-    ? response.data.data
-    : response.data;
-  console.log('[GuestChatAPI] Chat context response:', ctx);
-  return ctx;
+  return data;
 };
 
 // ---------------------------------------------------------------------------
-// SESSION-AUTHENTICATED CALLS — use chat_session from getContext response
+// SESSION-AUTHENTICATED CALLS — use chat_session from bootstrap response
 // ---------------------------------------------------------------------------
 
 /**
  * Fetch message history with pagination support
  * @param {string} hotelSlug - Hotel slug
- * @param {string} chatSession - Chat session/grant from bootstrap
+ * @param {string} chatSession - chat_session from bootstrap
  * @param {Object} options - Query options
  * @param {number} [options.limit=50] - Number of messages to fetch
  * @param {string} [options.before] - Message ID for pagination cursor
@@ -103,34 +127,27 @@ export const getChatContext = async (hotelSlug, chatSession) => {
  */
 export const getMessages = async (hotelSlug, chatSession, options = {}) => {
   if (!chatSession) {
-    throw new Error('[GuestChatAPI] Cannot fetch messages: chat session is missing');
+    throw new Error('[GuestChatAPI] Cannot fetch messages: chat_session is missing');
   }
   const { limit = 50, before } = options;
-  
+
   const params = { limit };
   if (before) params.before = before;
-  
-  const response = await guestAPI.get(`/hotel/${hotelSlug}/chat/messages`, { 
+
+  const response = await guestAPI.get(`/hotel/${hotelSlug}/chat/messages`, {
     params,
     ...sessionConfig(chatSession)
   });
-  
-  console.log('[GuestChatAPI] Messages response:', {
-    messageCount: response.data?.messages?.length || 0,
-    before,
-    limit,
-    hasMessagesProperty: !!response.data?.messages
-  });
-  
+
   // Canonical response format: { messages: [...], conversation_id, count, has_more }
   return response.data?.messages ?? [];
 };
 
 /**
- * Send a new message with optimistic update support
+ * Send a new message
  * @param {string} hotelSlug - Hotel slug
- * @param {string} chatSession - Chat session/grant from bootstrap
- * @param {Object} messageData - Message data
+ * @param {string} chatSession - chat_session from bootstrap
+ * @param {Object} messageData - Message payload
  * @param {string} messageData.message - Message content
  * @param {string} messageData.client_message_id - UUID for deduplication
  * @param {string} [messageData.reply_to] - Optional reply message ID
@@ -138,75 +155,32 @@ export const getMessages = async (hotelSlug, chatSession, options = {}) => {
  */
 export const sendMessage = async (hotelSlug, chatSession, messageData) => {
   if (!chatSession) {
-    throw new Error('[GuestChatAPI] Cannot send message: chat session is missing');
+    throw new Error('[GuestChatAPI] Cannot send message: chat_session is missing');
   }
   const { message, client_message_id, reply_to } = messageData;
-  
-  const payload = { 
-    message, 
-    client_message_id 
-  };
-  
-  if (reply_to) {
-    payload.reply_to = reply_to;
-  }
-  
-  console.log('[GuestChatAPI] Sending message:', {
-    hotelSlug,
-    client_message_id,
-    messageLength: message?.length || 0,
-    hasReplyTo: !!reply_to
-  });
-  
+
+  const payload = { message, client_message_id };
+  if (reply_to) payload.reply_to = reply_to;
+
   const response = await guestAPI.post(
-    `/hotel/${hotelSlug}/chat/messages`, 
+    `/hotel/${hotelSlug}/chat/messages`,
     payload,
     sessionConfig(chatSession)
   );
-  
-  console.log('[GuestChatAPI] Message sent successfully:', response.data);
-  return response.data;
-};
 
-/**
- * Get auth endpoint URL for Pusher private channel authentication.
- * No longer embeds a raw token in the URL — the Pusher client sends
- * the chat session via the X-Guest-Chat-Session header instead.
- *
- * @param {string} hotelSlug - Hotel slug
- * @returns {string} Auth endpoint URL (without credentials in the query string)
- */
-export const getPusherAuthEndpoint = (hotelSlug) => {
-  // Get base URL - same logic as main API service
-  const getApiBaseUrl = () => {
-    if (import.meta.env.VITE_API_URL) {
-      return import.meta.env.VITE_API_URL;
-    }
-    
-    const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-    const isDev = import.meta.env.DEV;
-    
-    if (isLocal && isDev) {
-      return "http://localhost:8000/api/";
-    }
-    
-    return "https://hotel-porter-d25ad83b12cf.herokuapp.com/api";
-  };
-  
-  const baseUrl = getApiBaseUrl().replace(/\/$/, ''); // Remove trailing slash
-  return `${baseUrl}/guest/hotel/${hotelSlug}/chat/pusher/auth`;
+  return response.data;
 };
 
 /**
  * Mark a conversation as read by the guest.
  * @param {string} hotelSlug - Hotel slug
+ * @param {string} chatSession - chat_session from bootstrap
  * @param {string} conversationId - Conversation to mark
- * @param {string} chatSession - Chat session/grant from bootstrap
  * @returns {Promise<void>}
  */
-export const markRead = async (hotelSlug, conversationId, chatSession) => {
+export const markRead = async (hotelSlug, chatSession, conversationId) => {
   if (!chatSession) {
-    throw new Error('[GuestChatAPI] Cannot mark read: chat session is missing');
+    throw new Error('[GuestChatAPI] Cannot mark read: chat_session is missing');
   }
   await guestAPI.post(
     `/hotel/${hotelSlug}/chat/conversations/${conversationId}/mark_read/`,
@@ -216,11 +190,8 @@ export const markRead = async (hotelSlug, conversationId, chatSession) => {
 };
 
 export default {
-  getBootstrap,
-  getContext,
-  getChatContext,
+  getChatBootstrap,
   getMessages,
   sendMessage,
-  getPusherAuthEndpoint,
-  markRead
+  markRead,
 };

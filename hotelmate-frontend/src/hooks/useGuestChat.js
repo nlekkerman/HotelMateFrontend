@@ -1,573 +1,447 @@
 /**
- * Guest Chat Hook - Session/Grant Flow
- * 
- * Bootstrap: GET /api/guest/context/?token=... → returns guest_chat.session
- * All subsequent chat calls use guest_chat.session via X-Guest-Chat-Session header.
+ * Guest Chat Hook — LOCKED BACKEND CONTRACT
  *
- * Core features:
- * - Single Pusher client policy (no new instances)
- * - Optimistic send with client_message_id deduplication
- * - Reconnection sync on subscription success
- * - Canonical guest endpoints ONLY
+ * Bootstrap: GET /api/guest/hotel/{slug}/chat/context?token=RAW_TOKEN
+ *   → returns flat contract with chat_session, channel_name, events, pusher config
+ *
+ * All post-bootstrap calls use chat_session via X-Guest-Chat-Session header.
+ * Raw token is NEVER used after bootstrap.
+ *
+ * Realtime:
+ * - Pusher key/cluster/authEndpoint from bootstrap pusher.* fields
+ * - Channel from bootstrap channel_name
+ * - Binds BOTH events.message_created AND events.message_read
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
-import { getGuestRealtimeClient } from '../realtime/guestRealtimeClient';
+import { createGuestPusherClient, disconnectGuestPusher } from '../realtime/guestRealtimeClient';
 import * as guestChatAPI from '../services/guestChatAPI';
 import { useGuestChatDispatch, guestChatActions } from '../realtime/stores/guestChatStore';
 
-// Debug flag for realtime events
 const DEBUG_REALTIME = true;
 
-/**
- * Generate client message ID for optimistic updates and deduplication
- * @returns {string} UUID for client message identification
- */
 const generateClientMessageId = () => uuidv4();
 
-/**
- * Create optimistic message object for immediate UI display
- * @param {string} message - Message content
- * @param {string} clientMessageId - Generated UUID
- * @param {string} [replyTo] - Optional reply message ID
- * @returns {Object} Optimistic message object
- */
-const createOptimisticMessage = (message, clientMessageId, replyTo = null) => ({
-  id: `local:${clientMessageId}`,
-  client_message_id: clientMessageId,
-  message,
-  sender_type: 'guest',
-  status: 'pending',
-  timestamp: new Date().toISOString(), // Use 'timestamp' to match API format
-  created_at: new Date().toISOString(), // Also include for compatibility
-  reply_to: replyTo,
-  // Mark as optimistic for UI identification
-  __optimistic: true
-});
+/** Sort helper used in multiple places */
+const sortMessages = (msgs) =>
+  [...msgs].sort((a, b) => {
+    const tA = new Date(a.timestamp || a.created_at).getTime();
+    const tB = new Date(b.timestamp || b.created_at).getTime();
+    return tA !== tB ? tA - tB : (a.id || 0) - (b.id || 0);
+  });
 
 /**
  * Main Guest Chat Hook
- * @param {Object} params - Hook parameters
+ * @param {Object} params
  * @param {string} params.hotelSlug - Hotel slug
- * @param {string} params.token - Guest authentication token
- * @returns {Object} Chat state and actions
+ * @param {string} params.token     - Raw guest token (bootstrap-only)
  */
 export const useGuestChat = ({ hotelSlug, token }) => {
-  const queryClient = useQueryClient();
-  
-  // Guest chat store integration
   const guestChatDispatch = useGuestChatDispatch();
-  
-  // Local state for real-time operations
+
+  // ── Local state ──────────────────────────────────────────────────────
   const [messages, setMessages] = useState([]);
+  const [sendingMessages, setSendingMessages] = useState([]);
   const [connectionState, setConnectionState] = useState('disconnected');
-  const [pusherClient, setPusherClient] = useState(null);
-  const [currentChannel, setCurrentChannel] = useState(null);
-  
-  // Track processed event IDs for deduplication
+
+  // Deduplication sets
   const processedEventIds = useRef(new Set());
   const processedMessageIds = useRef(new Set());
-  
-  // STEP 1: Bootstrap — GET /api/guest/context/?token=... (the only call using raw token)
-  const { 
-    data: context, 
-    isLoading: contextLoading, 
-    error: contextError,
-    refetch: refetchContext
-  } = useQuery({
-    queryKey: ['guestBootstrap', token],
-    queryFn: () => guestChatAPI.getBootstrap(token),
-    enabled: !!(hotelSlug && token),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 3
+
+  // Realtime diagnostics exposed to debug panel
+  const realtimeDiag = useRef({
+    lastReceivedEventName: null,
+    lastReceivedMessageId: null,
+    lastReadUpdateId: null,
+    duplicateEventsIgnored: 0,
+    lastSubscriptionError: null,
+    lastAuthError: null,
+    boundEvents: [],
+    subscribedChannel: null,
   });
 
-  // Derive the chat session/grant from bootstrap response
-  const chatSession = context?.guest_chat?.session ?? null;
+  // Stable ref for realtime handler so effect deps don't cause resubscribe
+  const handleMessageCreatedRef = useRef(null);
+  const handleMessageReadRef = useRef(null);
 
-  // Store context in guest chat store and debug log
+  // Keep a ref to the Pusher client + channel for cleanup
+  const pusherRef = useRef(null);
+  const channelRef = useRef(null);
+
+  // ── STEP 1: Bootstrap ────────────────────────────────────────────────
+  // GET /api/guest/hotel/{slug}/chat/context?token=RAW_TOKEN
+  const {
+    data: contract,
+    isLoading: bootstrapLoading,
+    error: bootstrapError,
+  } = useQuery({
+    queryKey: ['guestChatBootstrap', hotelSlug, token],
+    queryFn: () => guestChatAPI.getChatBootstrap(hotelSlug, token),
+    enabled: !!(hotelSlug && token),
+    staleTime: 5 * 60 * 1000,
+    retry: 3,
+  });
+
+  // Derive fields from validated contract (getChatBootstrap already validated)
+  const chatSession   = contract?.chat_session   ?? null;
+  const conversationId = contract?.conversation_id ?? null;
+  const channelName   = contract?.channel_name    ?? null;
+  const events        = contract?.events          ?? null;
+  const pusherConfig  = contract?.pusher          ?? null;
+  const permissions   = contract?.permissions     ?? null;
+
+  // Push contract into guestChatStore
   useEffect(() => {
-    if (context) {
-      console.log('🔧 [useGuestChat] Context loaded:', {
-        hasContext: !!context,
-        conversationId: context.conversation_id,
-        disabled_reason: context.disabled_reason,
-        isDisabled: !!context?.disabled_reason,
-        contextKeys: Object.keys(context)
-      });
-      
-      // Store context in guest chat store so ChatContext can access it
-      console.log('📦 [useGuestChat] Storing context in guest chat store...');
-      guestChatActions.setContext(context, guestChatDispatch);
-      
-      // If we have messages and conversation_id, also store messages
-      if (context.conversation_id && messages.length > 0) {
-        console.log('[useGuestChat] Storing existing messages in guest chat store for conversation:', context.conversation_id);
-        guestChatActions.initMessagesForConversation(context.conversation_id, messages, guestChatDispatch);
-      }
+    if (contract) {
+      guestChatActions.setContext(contract, guestChatDispatch);
     }
-  }, [context, guestChatDispatch, messages]);
-  
-  // STEP 2: Fetch Messages — uses chat session, NOT raw token
-  const { 
-    data: initialMessages, 
+  }, [contract, guestChatDispatch]);
+
+  // ── STEP 2: Fetch Messages ───────────────────────────────────────────
+  const {
+    data: initialMessages,
     isLoading: messagesLoading,
     error: messagesError,
-    refetch: refetchMessages
   } = useQuery({
     queryKey: ['guestChatMessages', hotelSlug, chatSession],
     queryFn: () => guestChatAPI.getMessages(hotelSlug, chatSession, { limit: 50 }),
-    enabled: !!(context && chatSession && hotelSlug),
-    staleTime: 30 * 1000, // 30 seconds
+    enabled: !!(chatSession && hotelSlug),
+    staleTime: 30 * 1000,
   });
-  
-  // Update local messages when initial data loads
-  useEffect(() => {
-    if (initialMessages && Array.isArray(initialMessages)) {
-      console.log('[useGuestChat] Setting initial messages:', initialMessages.length);
-      
-      // Sort messages by timestamp (API format) or created_at (fallback), then by id for consistency
-      const sortedMessages = [...initialMessages].sort((a, b) => {
-        const timeA = new Date(a.timestamp || a.created_at).getTime();
-        const timeB = new Date(b.timestamp || b.created_at).getTime();
-        return timeA !== timeB ? timeA - timeB : (a.id - b.id);
-      });
-      
-      setMessages(sortedMessages);
-      
-      // Also store messages in guest chat store if we have context with conversation_id
-      if (context?.conversation_id) {
-        console.log('[useGuestChat] Storing messages in guest chat store for conversation:', context.conversation_id);
-        guestChatActions.initMessagesForConversation(context.conversation_id, sortedMessages, guestChatDispatch);
-      }
-      
-      // Track message IDs for deduplication
-      sortedMessages.forEach(msg => {
-        if (msg.id) processedMessageIds.current.add(msg.id);
-      });
-    }
-  }, [initialMessages, context?.conversation_id, guestChatDispatch]);
 
-  /**
-   * Handle real-time message events with canonical envelope format ONLY
-   * @param {Object} evt - Canonical event: {category, type, payload, meta}
-   */
-  const handleRealtimeMessage = useCallback((evt) => {
-    console.log('[useGuestChat] 📨 Real-time event received:', evt);
-    
-    // REQUIREMENT: Only accept canonical envelope format
-    if (!evt.category || !evt.type || !evt.payload) {
-      console.warn('[useGuestChat] ⚠️  Non-canonical event shape ignored. Expected {category, type, payload, meta}:', evt);
-      return;
-    }
-    
-    // REQUIREMENT: Only process guest_chat category
-    if (evt.category !== 'guest_chat') {
-      console.log('[useGuestChat] 🔄 Non guest_chat event ignored:', evt.category);
-      return;
-    }
-    
-    // REQUIREMENT: Event deduplication using event_id
-    const eventId = evt.meta?.event_id;
-    if (eventId && processedEventIds.current.has(eventId)) {
-      console.log('[useGuestChat] 🔄 Duplicate event ignored:', eventId);
-      return;
-    }
-    
-    if (eventId) {
-      processedEventIds.current.add(eventId);
-    }
-    
-    // REQUIREMENT: Message extraction from evt.payload (NOT evt.payload.message)
-    const incomingMessage = evt.payload;
-    
-    // REQUIREMENT: Inject conversation_id if missing
-    if (!incomingMessage.conversation_id && context?.conversation_id) {
-      console.log('[useGuestChat] 🔧 Injecting conversation_id from context:', context.conversation_id);
-      incomingMessage.conversation_id = context.conversation_id;
-    }
-    
-    // REQUIREMENT: Message deduplication by message ID
-    if (incomingMessage.id && processedMessageIds.current.has(incomingMessage.id)) {
-      console.log('[useGuestChat] 🔄 Duplicate message ID ignored:', incomingMessage.id);
-      return;
-    }
-    
-    if (incomingMessage.id) {
-      processedMessageIds.current.add(incomingMessage.id);
-    }
-    
-    // REQUIREMENT: Update local React state
-    setMessages(prevMessages => {
-      console.log('[useGuestChat] 🔍 Processing realtime message for local state:', {
-        incomingMessageId: incomingMessage.id,
-        clientMessageId: incomingMessage.client_message_id,
-        currentMessagesCount: prevMessages.length,
-        senderType: incomingMessage.sender_type || incomingMessage.sender_role
-      });
-      
-      // For guest messages, remove from sending messages if client_message_id matches
-      if ((incomingMessage.sender_role === 'guest' || incomingMessage.sender_type === 'guest') && 
-          incomingMessage.client_message_id) {
-        setSendingMessages(prevSending => {
-          const filtered = prevSending.filter(msg => msg.client_message_id !== incomingMessage.client_message_id);
-          if (filtered.length !== prevSending.length) {
-            console.log('[useGuestChat] 🔄 Removed sending message after server confirmation:', incomingMessage.client_message_id);
-          }
-          return filtered;
-        });
-      }
-      
-      // Check for duplicate by ID
-      const existingById = prevMessages.find(msg => msg.id === incomingMessage.id);
-      if (existingById) {
-        console.log('[useGuestChat] 🔄 Duplicate message ID ignored:', incomingMessage.id);
-        return prevMessages;
-      }
-      
-      // Add new message
-      console.log('[useGuestChat] ➕ Adding new realtime message:', incomingMessage.id);
-      const newMessages = [...prevMessages, { ...incomingMessage, status: 'delivered' }];
-      
-      // REQUIREMENT: Sort by timestamp/created_at then id
-      const sortedMessages = newMessages.sort((a, b) => {
-        const timeA = new Date(a.timestamp || a.created_at).getTime();
-        const timeB = new Date(b.timestamp || b.created_at).getTime();
-        return timeA !== timeB ? timeA - timeB : ((a.id || 0) - (b.id || 0));
-      });
-      
-      console.log('[useGuestChat] ✅ Messages updated via realtime:', {
-        previousCount: prevMessages.length,
-        newCount: sortedMessages.length,
-        lastMessageId: sortedMessages[sortedMessages.length - 1]?.id
-      });
-      
-      return sortedMessages;
-    });
-    
-    // REQUIREMENT: Route to guestChatStore with canonical event
-    console.log('[useGuestChat] 📦 Routing canonical event to guestChatStore');
-    guestChatActions.handleEvent(evt, guestChatDispatch);
-  }, [context?.conversation_id, guestChatDispatch]);
-  
-  // STEP 3: Setup Pusher Connection — uses chat session for auth
+  // Hydrate local state from initial fetch
   useEffect(() => {
-    if (!context?.pusher || !chatSession) return;
-    
-    const setupPusher = async () => {
-      try {
-        console.log('[useGuestChat] Setting up Pusher connection:', {
-          channel: context.pusher.channel,
-          event: context.pusher.event
-        });
-        
-        // Get guest realtime client with session-based private channel auth
-        const client = await getGuestRealtimeClient(chatSession, {
-          authEndpoint: guestChatAPI.getPusherAuthEndpoint(hotelSlug)
-        });
-        
-        if (!client) {
-          console.error('[useGuestChat] Failed to get Pusher client');
-          setConnectionState('failed');
+    if (!initialMessages || !Array.isArray(initialMessages)) return;
+    const sorted = sortMessages(initialMessages);
+    setMessages(sorted);
+
+    if (conversationId) {
+      guestChatActions.initMessagesForConversation(conversationId, sorted, guestChatDispatch);
+    }
+    sorted.forEach((m) => { if (m.id) processedMessageIds.current.add(m.id); });
+  }, [initialMessages, conversationId, guestChatDispatch]);
+
+  // ── Realtime handler: message_created ────────────────────────────────
+  const handleMessageCreated = useCallback(
+    (evt) => {
+      realtimeDiag.current.lastReceivedEventName = events?.message_created;
+
+      if (DEBUG_REALTIME) console.log('[useGuestChat] message_created event:', evt);
+
+      // Accept canonical envelope OR raw payload
+      const payload = evt?.payload ?? evt;
+      const eventId = evt?.meta?.event_id;
+
+      if (eventId) {
+        if (processedEventIds.current.has(eventId)) {
+          realtimeDiag.current.duplicateEventsIgnored++;
           return;
         }
-        
-        setPusherClient(client);
+        processedEventIds.current.add(eventId);
+      }
+
+      const msg = { ...payload };
+      if (!msg.conversation_id && conversationId) msg.conversation_id = conversationId;
+
+      realtimeDiag.current.lastReceivedMessageId = msg.id;
+
+      if (msg.id && processedMessageIds.current.has(msg.id)) {
+        realtimeDiag.current.duplicateEventsIgnored++;
+        return;
+      }
+      if (msg.id) processedMessageIds.current.add(msg.id);
+
+      // Clear matching sending message
+      if (
+        (msg.sender_type === 'guest' || msg.sender_role === 'guest') &&
+        msg.client_message_id
+      ) {
+        setSendingMessages((prev) =>
+          prev.filter((s) => s.client_message_id !== msg.client_message_id)
+        );
+      }
+
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return sortMessages([...prev, { ...msg, status: 'delivered' }]);
+      });
+
+      // Route to guestChatStore
+      const storeEvent = evt?.category
+        ? evt
+        : { category: 'guest_chat', type: 'message_created', payload: msg, meta: evt?.meta };
+      guestChatActions.handleEvent(storeEvent, guestChatDispatch);
+    },
+    [conversationId, events?.message_created, guestChatDispatch]
+  );
+
+  // ── Realtime handler: message_read ───────────────────────────────────
+  const handleMessageRead = useCallback(
+    (evt) => {
+      realtimeDiag.current.lastReceivedEventName = events?.message_read;
+
+      if (DEBUG_REALTIME) console.log('[useGuestChat] message_read event:', evt);
+
+      const payload = evt?.payload ?? evt;
+      const eventId = evt?.meta?.event_id;
+
+      if (eventId) {
+        if (processedEventIds.current.has(eventId)) {
+          realtimeDiag.current.duplicateEventsIgnored++;
+          return;
+        }
+        processedEventIds.current.add(eventId);
+      }
+
+      realtimeDiag.current.lastReadUpdateId =
+        payload.message_id || payload.id || eventId || new Date().toISOString();
+
+      // Route to guestChatStore — it already handles MESSAGE_READ_UPDATE
+      const storeEvent = evt?.category
+        ? evt
+        : {
+            category: 'guest_chat',
+            type: 'message_read',
+            payload: { ...payload, conversation_id: payload.conversation_id || conversationId },
+            meta: evt?.meta,
+          };
+      guestChatActions.handleEvent(storeEvent, guestChatDispatch);
+    },
+    [conversationId, events?.message_read, guestChatDispatch]
+  );
+
+  // Keep refs current (avoids stale closures in Pusher bindings)
+  handleMessageCreatedRef.current = handleMessageCreated;
+  handleMessageReadRef.current = handleMessageRead;
+
+  // ── STEP 3: Pusher Setup ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!chatSession || !channelName || !events || !pusherConfig) return;
+
+    let client;
+    let channel;
+
+    const setup = () => {
+      try {
+        client = createGuestPusherClient({
+          key: pusherConfig.key,
+          cluster: pusherConfig.cluster,
+          authEndpoint: pusherConfig.auth_endpoint,
+          chatSession,
+        });
+
+        pusherRef.current = client;
         setConnectionState('connecting');
-        
-        // Subscribe to private channel from context
-        const channel = client.subscribe(context.pusher.channel);
-        setCurrentChannel(channel);
-        
-        // Handle connection state changes
-        client.connection.bind('connected', () => {
-          console.log('[useGuestChat] Pusher connected');
-          setConnectionState('connected');
-        });
-        
-        client.connection.bind('disconnected', () => {
-          console.log('[useGuestChat] Pusher disconnected');
-          setConnectionState('disconnected');
-        });
-        
+
+        channel = client.subscribe(channelName);
+        channelRef.current = channel;
+
+        realtimeDiag.current.subscribedChannel = channelName;
+
+        // Connection state bindings
+        client.connection.bind('connected', () => setConnectionState('connected'));
+        client.connection.bind('disconnected', () => setConnectionState('disconnected'));
         client.connection.bind('error', (err) => {
           console.error('[useGuestChat] Pusher error:', err);
+          realtimeDiag.current.lastAuthError = err?.error?.message || String(err);
           setConnectionState('failed');
         });
-        
-        // Add global event debugging if enabled
+
+        // Debug: global event log
         if (DEBUG_REALTIME) {
           channel.bind_global((eventName, data) => {
-            console.log('[useGuestChat] 🔄 Global event received:', {
-              eventName,
-              data,
-              channel: context.pusher.channel,
-              isRealtimeEvent: eventName === context.pusher.event
-            });
+            console.log('[useGuestChat] global event:', { eventName, data, channel: channelName });
           });
         }
-        
-        // REQUIREMENT: Reconnection sync trigger
+
+        // Subscription lifecycle
         channel.bind('pusher:subscription_succeeded', () => {
-          console.log('[useGuestChat] ✅ Subscription successful - triggering sync');
           setConnectionState('connected');
-          // Sync missed messages on reconnection
           syncMessages();
         });
-        
+
         channel.bind('pusher:subscription_error', (err) => {
-          console.error('[useGuestChat] ❌ Subscription error:', err);
+          console.error('[useGuestChat] Subscription error:', err);
+          realtimeDiag.current.lastSubscriptionError = String(err);
           setConnectionState('failed');
         });
-        
-        // Listen for real-time message events (canonical format only)
-        channel.bind(context.pusher.event, handleRealtimeMessage);
-        
-      } catch (error) {
-        console.error('[useGuestChat] Pusher setup error:', error);
+
+        // ── Bind BOTH contract events ──────────────────────────────────
+        const wrappedCreated = (evt) => handleMessageCreatedRef.current(evt);
+        const wrappedRead    = (evt) => handleMessageReadRef.current(evt);
+
+        channel.bind(events.message_created, wrappedCreated);
+        channel.bind(events.message_read, wrappedRead);
+
+        realtimeDiag.current.boundEvents = [events.message_created, events.message_read];
+      } catch (err) {
+        console.error('[useGuestChat] Pusher setup error:', err);
         setConnectionState('failed');
       }
     };
-    
-    setupPusher();
-    
+
+    setup();
+
     return () => {
-      console.log('[useGuestChat] 🧹 Cleaning up Pusher connection');
-      if (currentChannel) {
-        // Unbind global events first
-        if (DEBUG_REALTIME) {
-          currentChannel.unbind_global();
-        }
-        // Unbind specific event
-        currentChannel.unbind(context.pusher.event, handleRealtimeMessage);
-        // Unbind all remaining events
-        currentChannel.unbind_all();
-        
-        if (pusherClient) {
-          pusherClient.unsubscribe(context.pusher.channel);
-        }
+      if (channel) {
+        channel.unbind_all();
+        if (client) client.unsubscribe(channelName);
       }
+      channelRef.current = null;
+      realtimeDiag.current.subscribedChannel = null;
+      realtimeDiag.current.boundEvents = [];
     };
-  }, [context?.pusher, chatSession, hotelSlug, handleRealtimeMessage]);
-  
-  /**
-   * REQUIREMENT: Sync messages on reconnection
-   * Fetches latest messages and merges with deduplication
-   */
+    // Stable deps: primitives + config objects that only change on new bootstrap
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatSession, channelName, events?.message_created, events?.message_read, pusherConfig?.key]);
+
+  // ── Sync on reconnection ─────────────────────────────────────────────
   const syncMessages = useCallback(async () => {
     if (!hotelSlug || !chatSession) return;
-    
     try {
-      console.log('[useGuestChat] Syncing messages after reconnection');
-      const latestMessages = await guestChatAPI.getMessages(hotelSlug, chatSession, { limit: 50 });
-      
-      setMessages(prevMessages => {
-        // Ensure latestMessages is an array
-        const messagesArray = Array.isArray(latestMessages) ? latestMessages : [];
-        
-        // Merge with deduplication
-        const messageMap = new Map();
-        
-        // Add existing messages
-        prevMessages.forEach(msg => {
-          if (msg.id && !msg.__optimistic) {
-            messageMap.set(msg.id, msg);
-          }
+      const latest = await guestChatAPI.getMessages(hotelSlug, chatSession, { limit: 50 });
+      setMessages((prev) => {
+        const map = new Map();
+        prev.forEach((m) => { if (m.id && !m.__optimistic) map.set(m.id, m); });
+        (Array.isArray(latest) ? latest : []).forEach((m) => {
+          if (m.id) { map.set(m.id, { ...m, status: 'delivered' }); processedMessageIds.current.add(m.id); }
         });
-        
-        // Add/update with latest messages
-        messagesArray.forEach(msg => {
-          if (msg.id) {
-            messageMap.set(msg.id, { ...msg, status: 'delivered' });
-            processedMessageIds.current.add(msg.id);
-          }
-        });
-        
-        const mergedMessages = Array.from(messageMap.values());
-        
-        // Re-add optimistic messages that haven't been replaced
-        const optimisticMessages = prevMessages.filter(msg => 
-          msg.__optimistic && !mergedMessages.find(m => m.client_message_id === msg.client_message_id)
+        const merged = Array.from(map.values());
+        const optimistic = prev.filter(
+          (m) => m.__optimistic && !merged.find((x) => x.client_message_id === m.client_message_id)
         );
-        
-        const finalMessages = [...mergedMessages, ...optimisticMessages];
-        
-        // REQUIREMENT: Sort by timestamp/created_at then id
-        const sortedMessages = finalMessages.sort((a, b) => {
-          const timeA = new Date(a.timestamp || a.created_at).getTime();
-          const timeB = new Date(b.timestamp || b.created_at).getTime();
-          return timeA !== timeB ? timeA - timeB : ((a.id || 0) - (b.id || 0));
-        });
-        
-        // Also sync with guest chat store if we have context
-        if (context?.conversation_id) {
-          console.log('[useGuestChat] Sync - updating guest chat store for conversation:', context.conversation_id);
-          guestChatActions.initMessagesForConversation(context.conversation_id, sortedMessages, guestChatDispatch);
+        const result = sortMessages([...merged, ...optimistic]);
+        if (conversationId) {
+          guestChatActions.initMessagesForConversation(conversationId, result, guestChatDispatch);
         }
-        
-        return sortedMessages;
+        return result;
       });
-    } catch (error) {
-      console.error('[useGuestChat] Sync error:', error);
+    } catch (err) {
+      console.error('[useGuestChat] Sync error:', err);
     }
-  }, [hotelSlug, chatSession]);
-  
-  // Track sending messages with their content and client ID
-  const [sendingMessages, setSendingMessages] = useState([]);
+  }, [hotelSlug, chatSession, conversationId, guestChatDispatch]);
 
-  // Send message mutation without optimistic updates
+  // ── Send message mutation ────────────────────────────────────────────
   const sendMessageMutation = useMutation({
     mutationFn: async ({ message, replyTo }) => {
       const clientMessageId = generateClientMessageId();
-      
-      // Add to sending messages list for UI indicator
-      const sendingMessage = {
-        id: `sending-${clientMessageId}`,
-        client_message_id: clientMessageId,
-        message,
-        sender_type: 'guest',
-        status: 'sending',
-        timestamp: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        reply_to: replyTo
-      };
-      
-      setSendingMessages(prev => [...prev, sendingMessage]);
-      
-      // Send to server — uses chat session, NOT raw token
+      setSendingMessages((prev) => [
+        ...prev,
+        {
+          id: `sending-${clientMessageId}`,
+          client_message_id: clientMessageId,
+          message,
+          sender_type: 'guest',
+          status: 'sending',
+          timestamp: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          reply_to: replyTo,
+        },
+      ]);
       const response = await guestChatAPI.sendMessage(hotelSlug, chatSession, {
         message,
         client_message_id: clientMessageId,
         reply_to: replyTo,
       });
-      
       return { response, clientMessageId };
     },
-    onSuccess: (data, variables) => {
-      // Remove from sending messages when successfully sent
-      setSendingMessages(prev => prev.filter(msg => msg.client_message_id !== data.clientMessageId));
+    onSuccess: (data) => {
+      setSendingMessages((prev) => prev.filter((m) => m.client_message_id !== data.clientMessageId));
     },
-    onError: (error, variables, context) => {
-      console.error('[useGuestChat] Send message error:', error);
-      
-      // Update sending message to failed state
-      setSendingMessages(prev => prev.map(msg => 
-        msg.client_message_id === context?.clientMessageId
-          ? { ...msg, status: 'failed' }
-          : msg
-      ));
-    }
+    onError: (error, _vars, ctx) => {
+      console.error('[useGuestChat] Send error:', error);
+      setSendingMessages((prev) =>
+        prev.map((m) =>
+          m.client_message_id === ctx?.clientMessageId ? { ...m, status: 'failed' } : m
+        )
+      );
+    },
   });
-  
-  /**
-   * Load older messages using pagination cursor
-   * @param {string} beforeMessageId - Message ID to paginate from
-   */
-  const loadOlderMessages = useCallback(async (beforeMessageId) => {
-    if (!hotelSlug || !chatSession) return;
-    
-    try {
-      console.log('[useGuestChat] Loading older messages before:', beforeMessageId);
-      const olderMessages = await guestChatAPI.getMessages(hotelSlug, chatSession, { 
-        limit: 50, 
+
+  // ── Load older (pagination) ──────────────────────────────────────────
+  const loadOlderMessages = useCallback(
+    async (beforeMessageId) => {
+      if (!hotelSlug || !chatSession) return 0;
+      const older = await guestChatAPI.getMessages(hotelSlug, chatSession, {
+        limit: 50,
         before: beforeMessageId,
       });
-      
-      // Ensure olderMessages is an array
-      const messagesArray = Array.isArray(olderMessages) ? olderMessages : [];
-      
-      if (messagesArray.length > 0) {
-        setMessages(prev => {
-          const combined = [...messagesArray, ...prev];
-          
-          // Deduplicate by ID
-          const messageMap = new Map();
-          combined.forEach(msg => {
-            if (msg.id) messageMap.set(msg.id, msg);
-          });
-          
-          const dedupedMessages = Array.from(messageMap.values());
-          
-          // Sort and return
-          const sortedMessages = dedupedMessages.sort((a, b) => {
-            const timeA = new Date(a.timestamp || a.created_at).getTime();
-            const timeB = new Date(b.timestamp || b.created_at).getTime();
-            return timeA !== timeB ? timeA - timeB : ((a.id || 0) - (b.id || 0));
-          });
-          
-          // Also update guest chat store with all messages if we have context
-          if (context?.conversation_id) {
-            console.log('[useGuestChat] Load older - updating guest chat store with all messages for conversation:', context.conversation_id);
-            guestChatActions.initMessagesForConversation(context.conversation_id, sortedMessages, guestChatDispatch);
+      const arr = Array.isArray(older) ? older : [];
+      if (arr.length > 0) {
+        setMessages((prev) => {
+          const map = new Map();
+          [...arr, ...prev].forEach((m) => { if (m.id) map.set(m.id, m); });
+          const sorted = sortMessages(Array.from(map.values()));
+          if (conversationId) {
+            guestChatActions.initMessagesForConversation(conversationId, sorted, guestChatDispatch);
           }
-          
-          return sortedMessages;
+          return sorted;
         });
       }
-      
-      return olderMessages.length;
-    } catch (error) {
-      console.error('[useGuestChat] Load older messages error:', error);
-      throw error;
-    }
-  }, [hotelSlug, chatSession]);
-  
-  /**
-   * Retry failed sending message
-   * @param {Object} failedMessage - The failed sending message to retry
-   */
-  const retryMessage = useCallback((failedMessage) => {
-    if (failedMessage.status !== 'failed') return;
-    
-    // Remove from sending messages and retry
-    setSendingMessages(prev => prev.filter(msg => msg.id !== failedMessage.id));
-    sendMessageMutation.mutate({
-      message: failedMessage.message,
-      replyTo: failedMessage.reply_to
-    });
-  }, [sendMessageMutation]);
+      return arr.length;
+    },
+    [hotelSlug, chatSession, conversationId, guestChatDispatch]
+  );
 
-  /**
-   * Mark the current conversation as read by the guest.
-   * Uses session-based auth, not raw token.
-   */
+  // ── Retry failed message ─────────────────────────────────────────────
+  const retryMessage = useCallback(
+    (failedMessage) => {
+      if (failedMessage.status !== 'failed') return;
+      setSendingMessages((prev) => prev.filter((m) => m.id !== failedMessage.id));
+      sendMessageMutation.mutate({ message: failedMessage.message, replyTo: failedMessage.reply_to });
+    },
+    [sendMessageMutation]
+  );
+
+  // ── Mark read ────────────────────────────────────────────────────────
   const markRead = useCallback(async () => {
-    const conversationId = context?.conversation_id;
     if (!hotelSlug || !chatSession || !conversationId) return;
     try {
-      await guestChatAPI.markRead(hotelSlug, conversationId, chatSession);
+      await guestChatAPI.markRead(hotelSlug, chatSession, conversationId);
       guestChatActions.markConversationReadForGuest(conversationId, guestChatDispatch);
-    } catch (error) {
-      console.error('[useGuestChat] Mark read error:', error);
+    } catch (err) {
+      console.error('[useGuestChat] Mark read error:', err);
     }
-  }, [hotelSlug, chatSession, context?.conversation_id, guestChatDispatch]);
-  
-  // Public API
+  }, [hotelSlug, chatSession, conversationId, guestChatDispatch]);
+
+  // ── Public API ───────────────────────────────────────────────────────
   return {
-    // State
-    context,
+    // Contract fields (flat, from bootstrap)
+    contract,
     chatSession,
+    conversationId,
+    channelName,
+    events,
+    pusherConfig,
+    permissions,
+
+    // Message state
     messages,
     sendingMessages,
-    loading: contextLoading || messagesLoading,
-    error: contextError || messagesError,
+
+    // Loading / error
+    loading: bootstrapLoading || messagesLoading,
+    error: bootstrapError || messagesError,
     connectionState,
-    
+
     // Actions
     sendMessage: (message, replyTo) => sendMessageMutation.mutate({ message, replyTo }),
     loadOlder: loadOlderMessages,
     retryMessage,
     syncMessages,
     markRead,
-    
-    // Loading states
+
+    // Sending state
     isSending: sendMessageMutation.isPending,
     sendError: sendMessageMutation.error,
-    
-    // Utility
-    isDisabled: !!context?.disabled_reason,
-    disabledReason: context?.disabled_reason
+
+    // Permissions / disabled
+    isDisabled: permissions ? !permissions.can_send : false,
+    disabledReason: permissions?.can_send === false ? 'Sending is not allowed for this session' : null,
+
+    // Diagnostics for debug panel
+    realtimeDiag: realtimeDiag.current,
   };
 };
