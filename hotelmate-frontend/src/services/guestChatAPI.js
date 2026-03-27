@@ -30,8 +30,13 @@ export const getContext = async (hotelSlug, token) => {
     params
   });
   
-  console.log('[GuestChatAPI] Context response:', response.data);
-  return response.data;
+  // Unwrap envelope if backend returns { success, data: {...} }
+  const ctx = response.data?.success && response.data?.data
+    ? response.data.data
+    : response.data;
+  
+  console.log('[GuestChatAPI] Context response:', ctx);
+  return ctx;
 };
 
 /**

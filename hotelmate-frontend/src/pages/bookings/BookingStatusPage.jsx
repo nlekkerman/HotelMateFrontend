@@ -630,8 +630,10 @@ const BookingStatusPage = () => {
     return allowed[key] === true; // supports {can_chat:true} style
   };
 
-  // Server is source of truth for permissions - no fallbacks to isCheckedIn
-  const canChat = hasAllowed("chat") || hasAllowed("can_chat");
+  // Server is source of truth for permissions; fall back to checked-in status
+  // when the context endpoint is unreachable (same policy as room service / breakfast)
+  const canChat = hasAllowed("chat") || hasAllowed("can_chat")
+    || (isCheckedIn && !contextError?.status);
   const canRoomService =
     hasAllowed("room_service") ||
     hasAllowed("can_order_room_service") ||
