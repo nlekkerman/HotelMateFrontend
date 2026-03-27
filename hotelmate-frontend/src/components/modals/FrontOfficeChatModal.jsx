@@ -99,15 +99,15 @@ const FrontOfficeChatModal = ({
   };
 
   /**
-   * Fetch guest chat context using canonical endpoint
+   * Fetch guest context using bootstrap endpoint
    */
   const fetchGuestContext = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Canonical: GET /api/guest/hotel/{slug}/chat/context?token={token}
-      const ctx = await guestChatAPI.getContext(hotelSlug, token);
+      // Bootstrap: GET /api/guest/context/?token={token}
+      const ctx = await guestChatAPI.getBootstrap(token);
       setContext(ctx);
       console.log('[FrontOfficeChatModal] Context loaded:', ctx);
     } catch (err) {
@@ -130,7 +130,7 @@ const FrontOfficeChatModal = ({
       const unsubscribe = subscribeToGuestChatBooking({
         hotelSlug,
         channelName: context.pusher?.channel,
-        chatSession: context.chat_session,
+        chatSession: context.guest_chat?.session,
         onMessage: (message) => {
           console.log('[FrontOfficeChatModal] Realtime message:', message);
         },
@@ -162,10 +162,10 @@ const FrontOfficeChatModal = ({
   const startPolling = () => {
     stopPolling();
     
-    // Capture chat_session at subscription time — if missing, skip polling
-    const session = context?.chat_session;
+    // Capture guest_chat.session at subscription time — if missing, skip polling
+    const session = context?.guest_chat?.session;
     if (!session) {
-      console.warn('[FrontOfficeChatModal] No chat_session for polling — skipping');
+      console.warn('[FrontOfficeChatModal] No guest_chat.session for polling — skipping');
       return;
     }
 
@@ -189,7 +189,7 @@ const FrontOfficeChatModal = ({
     e.preventDefault();
     if (!message.trim() || sending) return;
 
-    const session = context?.chat_session;
+    const session = context?.guest_chat?.session;
     if (!session) {
       toast.error('Chat session not available — please reopen chat');
       return;

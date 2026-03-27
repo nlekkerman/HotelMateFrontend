@@ -10,7 +10,7 @@ import {
   Form,
 } from "react-bootstrap";
 import { publicAPI } from '@/services/api';
-import { getContext as getGuestChatContext } from '@/services/guestChatAPI';
+import { getBootstrap as getGuestBootstrap } from '@/services/guestChatAPI';
 import { logQueryRefetchStart, logQueryRefetchSuccess } from '@/realtime/debug/debugLogger.js';
 import { useDebugRender } from '@/realtime/debug/useDebugRender.js';
 
@@ -399,7 +399,7 @@ const BookingStatusPage = () => {
     }
   };
 
-  // Fetch guest context for token-scoped permissions using canonical endpoint
+  // Fetch guest context for token-scoped permissions using bootstrap endpoint
   const fetchGuestContext = async (retryCount = 0) => {
     // Retry storm prevention
     if (retryCount > 1) {
@@ -435,8 +435,8 @@ const BookingStatusPage = () => {
       setContextLoading(true);
       setContextError(null);
 
-      // Canonical endpoint: GET /api/guest/hotel/{slug}/chat/context?token={token}
-      const ctx = await getGuestChatContext(hotelSlug, resolvedToken);
+      // Bootstrap: GET /api/guest/context/?token={token}
+      const ctx = await getGuestBootstrap(resolvedToken);
       console.log('[BookingStatusPage] Guest context loaded:', ctx);
       setGuestContext(ctx);
     } catch (err) {

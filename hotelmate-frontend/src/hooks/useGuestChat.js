@@ -1,8 +1,8 @@
 /**
  * Guest Chat Hook - Session/Grant Flow
  * 
- * Bootstrap: getContext(hotelSlug, rawToken) → returns context with chat_session
- * All subsequent calls use context.chat_session instead of the raw token.
+ * Bootstrap: GET /api/guest/context/?token=... → returns guest_chat.session
+ * All subsequent chat calls use guest_chat.session via X-Guest-Chat-Session header.
  *
  * Core features:
  * - Single Pusher client policy (no new instances)
@@ -70,22 +70,22 @@ export const useGuestChat = ({ hotelSlug, token }) => {
   const processedEventIds = useRef(new Set());
   const processedMessageIds = useRef(new Set());
   
-  // STEP 1: Bootstrap — fetch context using raw token (the only call that takes a raw token)
+  // STEP 1: Bootstrap — GET /api/guest/context/?token=... (the only call using raw token)
   const { 
     data: context, 
     isLoading: contextLoading, 
     error: contextError,
     refetch: refetchContext
   } = useQuery({
-    queryKey: ['guestChatContext', hotelSlug, token],
-    queryFn: () => guestChatAPI.getContext(hotelSlug, token),
+    queryKey: ['guestBootstrap', token],
+    queryFn: () => guestChatAPI.getBootstrap(token),
     enabled: !!(hotelSlug && token),
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 3
   });
 
-  // Derive the chat session/grant returned by the bootstrap call
-  const chatSession = context?.chat_session ?? null;
+  // Derive the chat session/grant from bootstrap response
+  const chatSession = context?.guest_chat?.session ?? null;
 
   // Store context in guest chat store and debug log
   useEffect(() => {

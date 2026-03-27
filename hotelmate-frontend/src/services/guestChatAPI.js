@@ -1,13 +1,17 @@
 /**
  * Guest Chat API Service - SESSION/GRANT FLOW
- * 
- * Bootstrap (getContext) uses hotel_slug + raw guest token to resolve the booking.
- * All subsequent chat operations use the returned chat_session grant.
- * 
+ *
+ * Bootstrap: GET /api/guest/context/?token={token}
+ *   → returns full guest context including guest_chat.session
+ *
+ * All subsequent chat operations use the returned guest_chat.session grant
+ * via the X-Guest-Chat-Session header.
+ *
  * Endpoints:
- * - GET  /api/guest/hotel/{hotelSlug}/chat/context?token={token}         ← bootstrap (raw token)
- * - GET  /api/guest/hotel/{hotelSlug}/chat/messages   [X-Guest-Chat-Session]
- * - POST /api/guest/hotel/{hotelSlug}/chat/messages   [X-Guest-Chat-Session]
+ * - GET  /api/guest/context/?token={token}                              ← bootstrap (raw token)
+ * - GET  /api/guest/hotel/{hotelSlug}/chat/context  [X-Guest-Chat-Session]  ← chat context
+ * - GET  /api/guest/hotel/{hotelSlug}/chat/messages  [X-Guest-Chat-Session]
+ * - POST /api/guest/hotel/{hotelSlug}/chat/messages  [X-Guest-Chat-Session]
  * - POST /api/guest/hotel/{hotelSlug}/chat/pusher/auth [X-Guest-Chat-Session]
  */
 
@@ -27,36 +31,60 @@ const sessionConfig = (chatSession) => ({
 });
 
 // ---------------------------------------------------------------------------
-// BOOTSTRAP — still uses the raw guest token
+// BOOTSTRAP — uses raw guest token to get session grant
+// GET /api/guest/context/?token={token}
 // ---------------------------------------------------------------------------
 
 /**
- * Fetch chat context including Pusher connection info.
- * This is the bootstrap call — the only one that accepts a raw guest token.
+ * Bootstrap: fetch the full guest context (permissions, chat grant, etc.)
+ * This is the ONLY call that accepts a raw guest token.
  *
- * The response is expected to contain a `chat_session` field that all
- * subsequent calls must use instead of the raw token.
+ * The chat session lives at response.guest_chat.session.
  *
- * @param {string} hotelSlug - Hotel slug
  * @param {string} token - Raw guest token (from email link / localStorage)
- * @returns {Promise<Object>} Context with hotel, booking, conversation, pusher, chat_session
+ * @returns {Promise<Object>} Full guest context including guest_chat.session
  */
-export const getContext = async (hotelSlug, token) => {
+export const getBootstrap = async (token) => {
   const resolvedToken = token || getGuestToken();
   if (!resolvedToken) {
-    throw new Error('[GuestChatAPI] Cannot fetch context: guest token is missing');
+    throw new Error('[GuestChatAPI] Cannot bootstrap: guest token is missing');
   }
-  const params = { token: resolvedToken };
-  const response = await guestAPI.get(`/hotel/${hotelSlug}/chat/context`, {
-    params
+  const response = await guestAPI.get('/context/', {
+    params: { token: resolvedToken }
   });
-  
+
   // Unwrap envelope if backend returns { success, data: {...} }
   const ctx = response.data?.success && response.data?.data
     ? response.data.data
     : response.data;
-  
-  console.log('[GuestChatAPI] Context response:', ctx);
+
+  console.log('[GuestChatAPI] Bootstrap response:', ctx);
+  return ctx;
+};
+
+/** @deprecated Use getBootstrap — kept as alias for existing imports */
+export const getContext = getBootstrap;
+
+/**
+ * Fetch chat-specific context (conversation, pusher info, etc.)
+ * This is a SESSION-authenticated call — NOT the bootstrap.
+ *
+ * @param {string} hotelSlug - Hotel slug
+ * @param {string} chatSession - Chat session grant from bootstrap
+ * @returns {Promise<Object>} Chat context (conversation, pusher, etc.)
+ */
+export const getChatContext = async (hotelSlug, chatSession) => {
+  if (!chatSession) {
+    throw new Error('[GuestChatAPI] Cannot fetch chat context: chat session is missing');
+  }
+  const response = await guestAPI.get(
+    `/hotel/${hotelSlug}/chat/context`,
+    sessionConfig(chatSession)
+  );
+  const ctx = response.data?.success && response.data?.data
+    ? response.data.data
+    : response.data;
+  console.log('[GuestChatAPI] Chat context response:', ctx);
   return ctx;
 };
 
@@ -188,7 +216,9 @@ export const markRead = async (hotelSlug, conversationId, chatSession) => {
 };
 
 export default {
+  getBootstrap,
   getContext,
+  getChatContext,
   getMessages,
   sendMessage,
   getPusherAuthEndpoint,
