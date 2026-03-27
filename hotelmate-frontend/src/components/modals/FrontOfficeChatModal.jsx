@@ -3,7 +3,7 @@ import { Modal, Button } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { subscribeToGuestChatBooking } from '@/realtime/channelRegistry';
 import { useGuestChatStore } from '@/realtime/stores/guestChatStore';
-import { guestAPI, publicAPI } from '@/services/api';
+import * as guestChatAPI from '@/services/guestChatAPI';
 
 /**
  * Front Office Chat Modal - Opens a conversation window with front office team
@@ -99,67 +99,23 @@ const FrontOfficeChatModal = ({
   };
 
   /**
-   * Fetch guest chat context
+   * Fetch guest chat context using canonical endpoint
    */
   const fetchGuestContext = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      console.log('🏨 [FrontOfficeChatModal] Fetching context:', {
-        hotelSlug,
-        token: token?.substring(0, 10) + '...',
-        url: `/guest/hotel/${hotelSlug}/chat/context?token=${encodeURIComponent(token)}`,
-        fullURL: `/public/guest/hotel/${hotelSlug}/chat/context?token=${encodeURIComponent(token)}`
-      });
-
-      try {
-        const response = await guestAPI.get(
-          `/hotel/${hotelSlug}/chat/context`,
-          { params: { token } }
-        );
-
-        console.log('📞 [FrontOfficeChatModal] Context API response:', {
-          url: `/guest/hotel/${hotelSlug}/chat/context`,
-          fullURL: `/public/guest/hotel/${hotelSlug}/chat/context`,
-          status: response.status,
-          headers: response.headers,
-          fullResponse: response,
-          data: response.data,
-          success: response.data?.success,
-          contextData: response.data?.data
-        });
-
-        if (response.data?.success) {
-          setContext(response.data.data);
-          console.log('📞 [FrontOfficeChatModal] Context loaded:', response.data.data);
-        } else {
-          throw new Error('Context API did not return success');
-        }
-      } catch (apiError) {
-        console.log('❌ [FrontOfficeChatModal] API failed, using direct enablement for checked-in guests');
-        
-        // DIRECT ENABLEMENT: If we have a valid token, assume guest is checked in and enable chat
-        if (token && token.length > 20) {
-          console.log('🔧 [FrontOfficeChatModal] Token appears valid, enabling chat with temporary context');
-          setContext({
-            allowed_actions: ['chat', 'room_service'],
-            guest_id: hotelSlug + '_guest',
-            conversation_id: 'temp_conversation',
-            temp_workaround: true,
-            message: 'Chat enabled for checked-in guest via modal'
-          });
-          console.log('✅ [FrontOfficeChatModal] Direct chat enablement successful');
-        } else {
-          throw apiError;
-        }
-      }
+      // Canonical: GET /api/guest/hotel/{slug}/chat/context?token={token}
+      const ctx = await guestChatAPI.getContext(hotelSlug, token);
+      setContext(ctx);
+      console.log('[FrontOfficeChatModal] Context loaded:', ctx);
     } catch (err) {
-      console.error('❌ [FrontOfficeChatModal] Context error:', err);
+      console.error('[FrontOfficeChatModal] Context error:', err);
       if (err.response?.status === 404) {
-        setError('The new guest chat system is currently being set up. Please contact the front desk for assistance.');
+        setError('The guest chat system is currently being set up. Please contact the front desk for assistance.');
       } else {
-        setError(err.response?.data?.message || 'Unable to connect to chat service');
+        setError(err.response?.data?.message || err.response?.data?.detail || 'Unable to connect to chat service');
       }
     } finally {
       setLoading(false);
@@ -171,18 +127,15 @@ const FrontOfficeChatModal = ({
    */
   const attemptRealtimeSubscription = () => {
     try {
-      console.log('🔗 [FrontOfficeChatModal] Attempting realtime subscription...');
-      
       const unsubscribe = subscribeToGuestChatBooking({
         hotelSlug,
         channelName: context.pusher?.channel,
         guestToken: token,
         onMessage: (message) => {
-          console.log('📨 [FrontOfficeChatModal] Realtime message:', message);
-          // Message handling is done by the store
+          console.log('[FrontOfficeChatModal] Realtime message:', message);
         },
         onError: (error) => {
-          console.warn('⚠️ [FrontOfficeChatModal] Realtime error:', error);
+          console.warn('[FrontOfficeChatModal] Realtime error:', error);
           setRealtimeConnected(false);
           startPolling();
         }
@@ -192,47 +145,38 @@ const FrontOfficeChatModal = ({
         unsubscribeRef.current = unsubscribe;
         setRealtimeConnected(true);
         stopPolling();
-        console.log('✅ [FrontOfficeChatModal] Realtime connected');
       } else {
         throw new Error('Failed to establish realtime connection');
       }
 
     } catch (error) {
-      console.warn('⚠️ [FrontOfficeChatModal] Realtime failed, falling back to polling:', error);
+      console.warn('[FrontOfficeChatModal] Realtime failed, falling back to polling:', error);
       setRealtimeConnected(false);
       startPolling();
     }
   };
 
   /**
-   * Start polling for new messages
+   * Start polling for new messages using canonical endpoint
    */
   const startPolling = () => {
     stopPolling();
     
     const poll = async () => {
       try {
-        const response = await publicAPI.get(
-          `/guest/hotel/${hotelSlug}/chat/messages`,
-          { params: { token, conversation_id: conversationId } }
-        );
-
-        if (response.data?.success && response.data.data?.messages) {
-          // Update messages in store would happen here
-          console.log('🔄 [FrontOfficeChatModal] Polling update:', response.data.data.messages.length);
-        }
+        const messages = await guestChatAPI.getMessages(hotelSlug, token);
+        console.log('[FrontOfficeChatModal] Polling update:', messages.length);
       } catch (error) {
-        console.warn('⚠️ [FrontOfficeChatModal] Polling error:', error);
+        console.warn('[FrontOfficeChatModal] Polling error:', error);
       }
     };
 
     // Poll every 10 seconds
     pollTimerRef.current = setInterval(poll, 10000);
-    console.log('🔄 [FrontOfficeChatModal] Polling started');
   };
 
   /**
-   * Send a message
+   * Send a message using canonical endpoint
    */
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -241,31 +185,23 @@ const FrontOfficeChatModal = ({
     try {
       setSending(true);
       
-      const response = await publicAPI.post(
-        `/guest/hotel/${hotelSlug}/chat/messages`,
-        {
-          message: message.trim(),
-          conversation_id: conversationId,
-          sender_type: 'guest'
-        },
-        { params: { token } }
-      );
+      const clientMessageId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      
+      const result = await guestChatAPI.sendMessage(hotelSlug, token, {
+        message: message.trim(),
+        client_message_id: clientMessageId
+      });
 
-      if (response.data?.success) {
-        setMessage('');
-        console.log('✅ [FrontOfficeChatModal] Message sent:', response.data);
-        
-        // If not realtime, poll immediately for updates
-        if (!realtimeConnected && pollTimerRef.current) {
-          // Trigger immediate poll
-          clearInterval(pollTimerRef.current);
-          startPolling();
-        }
-      } else {
-        toast.error('Failed to send message');
+      setMessage('');
+      console.log('[FrontOfficeChatModal] Message sent:', result);
+      
+      // If not realtime, poll immediately for updates
+      if (!realtimeConnected && pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        startPolling();
       }
     } catch (error) {
-      console.error('❌ [FrontOfficeChatModal] Send error:', error);
+      console.error('[FrontOfficeChatModal] Send error:', error);
       toast.error('Failed to send message');
     } finally {
       setSending(false);

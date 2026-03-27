@@ -3,7 +3,7 @@ import { getPusherClient } from './realtimeClient';
 import { getGuestPusherClient } from './guestRealtimeClient';
 import { handleIncomingRealtimeEvent } from './eventBus';
 import { getPusherAuthEndpoint } from '../services/guestChatAPI.js';
-import { guestBaseAPI } from '../services/api.js';
+import { guestAPI } from '../services/api.js';
 import { logRealtimeSubscription, logRealtimeUnsubscription, logRealtimeSetHotelSlug, logRealtimeError } from './debug/debugLogger.js';
 
 let subscriptionsActive = false;
@@ -267,8 +267,8 @@ export async function markConversationRead(conversationId, conversationType = "g
       await markConversationAsRead(hotelSlug, conversationId);
       console.log(`✅ Marked staff conversation ${conversationId} as read`);
     } else {
-      // Guest chat API call — use guestBaseAPI (no staff auth headers)
-      await guestBaseAPI.post(`/guest_chat/${hotelSlug}/conversations/${conversationId}/mark_read/`);
+      // Guest chat — canonical endpoint via guestAPI (baseURL: /api/guest)
+      await guestAPI.post(`/hotel/${hotelSlug}/chat/conversations/${conversationId}/mark_read/`);
       console.log(`✅ Marked guest conversation ${conversationId} as read`);
     }
   } catch (error) {

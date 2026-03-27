@@ -10,6 +10,7 @@ import {
   Form,
 } from "react-bootstrap";
 import { publicAPI } from '@/services/api';
+import { getContext as getGuestChatContext } from '@/services/guestChatAPI';
 import { logQueryRefetchStart, logQueryRefetchSuccess } from '@/realtime/debug/debugLogger.js';
 import { useDebugRender } from '@/realtime/debug/useDebugRender.js';
 
@@ -398,11 +399,11 @@ const BookingStatusPage = () => {
     }
   };
 
-  // Fetch guest context for token-scoped permissions
+  // Fetch guest context for token-scoped permissions using canonical endpoint
   const fetchGuestContext = async (retryCount = 0) => {
-    // 🚨 RETRY STORM PREVENTION 🚨
+    // Retry storm prevention
     if (retryCount > 1) {
-      console.error('🛑 [RETRY STORM BLOCKED] Maximum retries exceeded for guest context');
+      console.error('[BookingStatusPage] Maximum retries exceeded for guest context');
       setContextError({
         status: 429,
         message: "Too many retry attempts - please refresh page",
@@ -413,21 +414,15 @@ const BookingStatusPage = () => {
     }
 
     if (!hotelSlug || !booking) {
-      console.log('🔍 [BookingStatusPage] Skipping guest context - missing requirements:', {
-        hotelSlug: !!hotelSlug,
-        hasBooking: !!booking
-      });
       return;
     }
 
-    // Resolve token using query-string token (intended source)
     const resolvedToken = resolveGuestBookingToken({
       bookingId: booking.id || bookingId,
       queryToken: token
     });
 
     if (!resolvedToken) {
-      console.log('🔍 [BookingStatusPage] No token available for guest context');
       setContextError({
         status: 401,
         message: "No authentication token available",
@@ -440,81 +435,25 @@ const BookingStatusPage = () => {
       setContextLoading(true);
       setContextError(null);
 
-
-      
-      console.log('�🚨🚨 GUEST CONTEXT API DEBUGGING 🚨🚨🚨');
-      // 🚨 COMPREHENSIVE TOKEN/HOTEL DEBUG LOGGING 🚨
-      console.log('[GuestChatContext] 🔍 EXACT REQUEST PARAMETERS:');
-      console.log('[GuestChatContext] hotelSlug=', hotelSlug);
-      console.log('[GuestChatContext] bookingId=', bookingId); 
-      console.log('[GuestChatContext] token=', resolvedToken);
-      console.log('[GuestChatContext] endpoint=', `/chat/${hotelSlug}/guest/chat/context/`);
-      
-      console.log('🔧 publicAPI configuration:', {
-        baseURL: publicAPI.defaults.baseURL,
-        headers: publicAPI.defaults.headers,
-        timeout: publicAPI.defaults.timeout
-      });
-      
-      // Use correct chat context endpoint with guest token
-      const res = await publicAPI.get(`/chat/${hotelSlug}/guest/chat/context/`, {
-        params: { token: resolvedToken },
-      });
-
-      const ctx = unwrap(res);
-      console.log("✅ [BookingStatusPage] Guest context SUCCESS:", {
-        statusCode: res.status,
-        responseHeaders: res.headers,
-        responseKeys: ctx ? Object.keys(ctx) : 'null',
-        allowedActions: ctx?.allowed_actions,
-        fullContext: ctx
-      });
+      // Canonical endpoint: GET /api/guest/hotel/{slug}/chat/context?token={token}
+      const ctx = await getGuestChatContext(hotelSlug, resolvedToken);
+      console.log('[BookingStatusPage] Guest context loaded:', ctx);
       setGuestContext(ctx);
     } catch (err) {
-      // 🚨 COMPREHENSIVE TOKEN/HOTEL DEBUG LOGGING 🚨
-      console.log('[GuestChatContext] 🔍 EXACT REQUEST PARAMETERS:');
-      console.log('[GuestChatContext] hotelSlug=', hotelSlug);
-      console.log('[GuestChatContext] bookingId=', bookingId); 
-      console.log('[GuestChatContext] token=', resolvedToken);
-      console.log('[GuestChatContext] endpoint=', `/chat/${hotelSlug}/guest/chat/context/`);
-      
-      console.log('[GuestChatContext] 🔍 TOKEN SOURCE ANALYSIS:');
-      console.log('- booking.guest_token=', booking.guest_token ? booking.guest_token.substring(0, 10) + '...' : 'NULL');
-      console.log('- queryToken=', token ? token.substring(0, 10) + '...' : 'NULL');
-      console.log('- resolvedToken=', resolvedToken.substring(0, 10) + '...');
-      console.log('- booking.id=', booking.id);
-      console.log('- booking.hotel_slug=', booking.hotel_slug);
-      console.log('- retryCount=', retryCount);
-
-      console.error("❌ [BookingStatusPage] Guest context FAILED:", {
-        errorMessage: err.message,
+      console.error('[BookingStatusPage] Guest context failed:', {
         status: err.response?.status,
-        statusText: err.response?.statusText,
-        responseData: err.response?.data,
-        requestURL: err.config?.url,
-        retryCount
+        detail: err.response?.data?.detail || err.message
       });
 
-      // 🛑 404 INVALID TOKEN GUARD - STOP RETRY STORMS 🛑
+      // 404 Invalid token — no retry
       if (err.response?.status === 404 && err.response?.data?.detail?.includes('Invalid or expired token')) {
-        console.error('🛑 [RETRY STORM BLOCKED] 404 Invalid or expired token - NO AUTO RETRY');
-        console.log('[GuestChatContext] 🔍 TOKEN VALIDATION FAILED:', {
-          status: err.response.status,
-          detail: err.response.data?.detail,
-          hotelSlug: hotelSlug,
-          bookingId: bookingId,
-          tokenUsed: resolvedToken ? resolvedToken.substring(0, 10) + '...' : 'NULL',
-          retryCount: retryCount
-        });
-        
         setContextError({
           status: 404,
           message: "Authentication token is invalid or expired",
-          disabled_reason: "invalid_token",
-          action_required: "refresh_page"
+          disabled_reason: "invalid_token"
         });
         setContextLoading(false);
-        return; // NO RETRY ON INVALID TOKEN
+        return;
       }
 
       setContextError({
@@ -524,28 +463,7 @@ const BookingStatusPage = () => {
           err.response?.data?.error ||
           "Unable to validate permissions",
       });
-      setContextLoading(false);
-
-      // Enable chat for checked-in guests when token issues occur
-      if (booking?.checked_in_at && !booking?.checked_out_at) {
-        console.log('🔧 Enabling chat for checked-in guest despite token issues');
-        setGuestContext({
-          allowed_actions: ['chat', 'room_service', 'breakfast'],
-          guest_id: booking.booking_id,
-          message: 'Chat enabled for checked-in guest'
-        });
-      } else {
-        setGuestContext(null);
-      }
-
-      // Keep status page usable; just disable chat + services
-      setContextError({
-        status: err.response?.status || 0,
-        message:
-          err.response?.data?.detail ||
-          err.response?.data?.error ||
-          "Unable to validate permissions",
-      });
+      setGuestContext(null);
     } finally {
       setContextLoading(false);
     }
@@ -628,51 +546,7 @@ const BookingStatusPage = () => {
     if (booking && hotelSlug) {
       fetchGuestContext();
     }
-  }, [booking?.id, hotelSlug]); // REMOVED booking?.guest_token to prevent retry storms
-
-  // 🚀 DIRECT CHAT ENABLEMENT: Enable chat for checked-in guests (bypassing token requirements)
-  useEffect(() => {
-    if (booking) {
-      // Resolve current token for this booking
-      const currentToken = resolveGuestBookingToken({
-        bookingId: booking.id || bookingId,
-        queryToken: token
-      });
-      
-      // If guest is checked in, enable chat directly regardless of guest token
-      if (booking.checked_in_at && !booking.checked_out_at) {
-        console.log('🔧 DIRECT CHAT ENABLEMENT: Enabling chat for checked-in guest');
-        console.log('🔧 Checked-in guest detected:', {
-          checked_in_at: booking.checked_in_at,
-          checked_out_at: booking.checked_out_at,
-          assigned_room_number: booking.assigned_room_number,
-          has_resolved_token: !!currentToken,
-          status: booking.status
-        });
-        setGuestContext({
-          allowed_actions: ['chat', 'room_service', 'breakfast'],
-          guest_id: booking.booking_id,
-          temp_workaround: true,
-          message: 'Chat enabled for checked-in guest',
-          room_number: booking.assigned_room_number
-        });
-        setContextLoading(false);
-        setContextError(null);
-        console.log('✅ CHAT ENABLED for checked-in guest');
-      } else {
-        console.log('🔧 Guest not checked in, chat disabled:', {
-          checked_in_at: !!booking?.checked_in_at,
-          checked_out_at: !!booking?.checked_out_at,
-          has_resolved_token: !!currentToken,
-          status: booking.status
-        });
-        // Only disable if not previously enabled by guest token
-        if (!currentToken) {
-          setGuestContext(null);
-        }
-      }
-    }
-  }, [booking?.guest_token, booking?.checked_in_at, booking?.checked_out_at, bookingId, token]);
+  }, [booking?.id, hotelSlug]);
 
   if (loading) {
     return (
