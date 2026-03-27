@@ -1,7 +1,10 @@
 /**
- * Guest Chat Hook - React Query Integration with Canonical Endpoints
+ * Guest Chat Hook - Session/Grant Flow
  * 
- * Core guest chat functionality using:
+ * Bootstrap: getContext(hotelSlug, rawToken) → returns context with chat_session
+ * All subsequent calls use context.chat_session instead of the raw token.
+ *
+ * Core features:
  * - Single Pusher client policy (no new instances)
  * - Optimistic send with client_message_id deduplication
  * - Reconnection sync on subscription success
@@ -67,7 +70,7 @@ export const useGuestChat = ({ hotelSlug, token }) => {
   const processedEventIds = useRef(new Set());
   const processedMessageIds = useRef(new Set());
   
-  // STEP 1: Fetch Context (required first)
+  // STEP 1: Bootstrap — fetch context using raw token (the only call that takes a raw token)
   const { 
     data: context, 
     isLoading: contextLoading, 
@@ -80,6 +83,9 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 3
   });
+
+  // Derive the chat session/grant returned by the bootstrap call
+  const chatSession = context?.chat_session ?? null;
 
   // Store context in guest chat store and debug log
   useEffect(() => {
@@ -104,16 +110,16 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     }
   }, [context, guestChatDispatch, messages]);
   
-  // STEP 2: Fetch Messages (after context is available)
+  // STEP 2: Fetch Messages — uses chat session, NOT raw token
   const { 
     data: initialMessages, 
     isLoading: messagesLoading,
     error: messagesError,
     refetch: refetchMessages
   } = useQuery({
-    queryKey: ['guestChatMessages', hotelSlug, token],
-    queryFn: () => guestChatAPI.getMessages(hotelSlug, token, { limit: 50 }),
-    enabled: !!(context && hotelSlug && token),
+    queryKey: ['guestChatMessages', hotelSlug, chatSession],
+    queryFn: () => guestChatAPI.getMessages(hotelSlug, chatSession, { limit: 50 }),
+    enabled: !!(context && chatSession && hotelSlug),
     staleTime: 30 * 1000, // 30 seconds
   });
   
@@ -246,9 +252,9 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     guestChatActions.handleEvent(evt, guestChatDispatch);
   }, [context?.conversation_id, guestChatDispatch]);
   
-  // STEP 3: Setup Pusher Connection (with private channel auth)
+  // STEP 3: Setup Pusher Connection — uses chat session for auth
   useEffect(() => {
-    if (!context?.pusher || !token) return;
+    if (!context?.pusher || !chatSession) return;
     
     const setupPusher = async () => {
       try {
@@ -257,9 +263,9 @@ export const useGuestChat = ({ hotelSlug, token }) => {
           event: context.pusher.event
         });
         
-        // Get guest realtime client with private channel support
-        const client = await getGuestRealtimeClient(token, {
-          authEndpoint: guestChatAPI.getPusherAuthEndpoint(hotelSlug, token)
+        // Get guest realtime client with session-based private channel auth
+        const client = await getGuestRealtimeClient(chatSession, {
+          authEndpoint: guestChatAPI.getPusherAuthEndpoint(hotelSlug)
         });
         
         if (!client) {
@@ -344,18 +350,18 @@ export const useGuestChat = ({ hotelSlug, token }) => {
         }
       }
     };
-  }, [context?.pusher, token, hotelSlug, handleRealtimeMessage]);
+  }, [context?.pusher, chatSession, hotelSlug, handleRealtimeMessage]);
   
   /**
    * REQUIREMENT: Sync messages on reconnection
    * Fetches latest messages and merges with deduplication
    */
   const syncMessages = useCallback(async () => {
-    if (!hotelSlug || !token) return;
+    if (!hotelSlug || !chatSession) return;
     
     try {
       console.log('[useGuestChat] Syncing messages after reconnection');
-      const latestMessages = await guestChatAPI.getMessages(hotelSlug, token, { limit: 50 });
+      const latestMessages = await guestChatAPI.getMessages(hotelSlug, chatSession, { limit: 50 });
       
       setMessages(prevMessages => {
         // Ensure latestMessages is an array
@@ -406,7 +412,7 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     } catch (error) {
       console.error('[useGuestChat] Sync error:', error);
     }
-  }, [hotelSlug, token]);
+  }, [hotelSlug, chatSession]);
   
   // Track sending messages with their content and client ID
   const [sendingMessages, setSendingMessages] = useState([]);
@@ -430,8 +436,8 @@ export const useGuestChat = ({ hotelSlug, token }) => {
       
       setSendingMessages(prev => [...prev, sendingMessage]);
       
-      // Send to server
-      const response = await guestChatAPI.sendMessage(hotelSlug, token, {
+      // Send to server — uses chat session, NOT raw token
+      const response = await guestChatAPI.sendMessage(hotelSlug, chatSession, {
         message,
         client_message_id: clientMessageId,
         reply_to: replyTo,
@@ -460,11 +466,11 @@ export const useGuestChat = ({ hotelSlug, token }) => {
    * @param {string} beforeMessageId - Message ID to paginate from
    */
   const loadOlderMessages = useCallback(async (beforeMessageId) => {
-    if (!hotelSlug || !token) return;
+    if (!hotelSlug || !chatSession) return;
     
     try {
       console.log('[useGuestChat] Loading older messages before:', beforeMessageId);
-      const olderMessages = await guestChatAPI.getMessages(hotelSlug, token, { 
+      const olderMessages = await guestChatAPI.getMessages(hotelSlug, chatSession, { 
         limit: 50, 
         before: beforeMessageId,
       });
@@ -506,7 +512,7 @@ export const useGuestChat = ({ hotelSlug, token }) => {
       console.error('[useGuestChat] Load older messages error:', error);
       throw error;
     }
-  }, [hotelSlug, token]);
+  }, [hotelSlug, chatSession]);
   
   /**
    * Retry failed sending message

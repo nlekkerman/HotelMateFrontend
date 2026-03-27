@@ -130,7 +130,7 @@ const FrontOfficeChatModal = ({
       const unsubscribe = subscribeToGuestChatBooking({
         hotelSlug,
         channelName: context.pusher?.channel,
-        guestToken: token,
+        chatSession: context.chat_session,
         onMessage: (message) => {
           console.log('[FrontOfficeChatModal] Realtime message:', message);
         },
@@ -164,7 +164,7 @@ const FrontOfficeChatModal = ({
     
     const poll = async () => {
       try {
-        const messages = await guestChatAPI.getMessages(hotelSlug, token);
+        const messages = await guestChatAPI.getMessages(hotelSlug, context?.chat_session);
         console.log('[FrontOfficeChatModal] Polling update:', messages.length);
       } catch (error) {
         console.warn('[FrontOfficeChatModal] Polling error:', error);
@@ -187,7 +187,7 @@ const FrontOfficeChatModal = ({
       
       const clientMessageId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       
-      const result = await guestChatAPI.sendMessage(hotelSlug, token, {
+      const result = await guestChatAPI.sendMessage(hotelSlug, context?.chat_session, {
         message: message.trim(),
         client_message_id: clientMessageId
       });

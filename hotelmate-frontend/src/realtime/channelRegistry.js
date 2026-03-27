@@ -403,21 +403,21 @@ export function subscribeStaffToGuestChatBooking({ hotelSlug, bookingId, eventNa
 }
 
 /**
- * Subscribe to guest chat channel for token-based authentication
+ * Subscribe to guest chat channel using session/grant-based authentication
  * @param {Object} params - Subscription parameters
  * @param {string} params.hotelSlug - Hotel slug
- * @param {string} params.guestToken - Guest authentication token
+ * @param {string} params.chatSession - Chat session/grant from bootstrap
  * @param {string} [params.channelName] - Channel name from context (preferred)
  * @param {string} [params.eventName='realtime_event'] - Event name to bind to
  * @returns {Function} Cleanup function
  */
-export function subscribeToGuestChatBooking({ hotelSlug, channelName, guestToken, eventName = 'realtime_event' }) {
-  if (!hotelSlug || !guestToken || !channelName) {
+export function subscribeToGuestChatBooking({ hotelSlug, channelName, chatSession, eventName = 'realtime_event' }) {
+  if (!hotelSlug || !chatSession || !channelName) {
     console.warn('⚠️ [GuestChat] Missing parameters for guest chat subscription');
     return () => {};
   }
 
-  const subscriptionKey = `${guestToken}:${channelName}`;
+  const subscriptionKey = `${chatSession}:${channelName}`;
 
   // Subscription deduplication guard
   if (activeGuestSubscriptions.has(subscriptionKey)) {
@@ -428,14 +428,14 @@ export function subscribeToGuestChatBooking({ hotelSlug, channelName, guestToken
   console.log('🔗 [GuestChat] SUBSCRIBE:', channelName, {
     hotelSlug,
     eventName,
-    hasToken: !!guestToken,
-    tokenPreview: guestToken ? guestToken.substring(0, 10) + '...' : 'N/A'
+    hasSession: !!chatSession,
+    sessionPreview: chatSession ? chatSession.substring(0, 10) + '...' : 'N/A'
   });
 
   try {
-    const authEndpoint = getPusherAuthEndpoint(hotelSlug, guestToken);
+    const authEndpoint = getPusherAuthEndpoint(hotelSlug);
     
-    const pusher = getGuestPusherClient(guestToken, { authEndpoint });
+    const pusher = getGuestPusherClient(chatSession, { authEndpoint });
     if (!pusher) {
       console.error('❌ [GuestChat] Failed to get guest Pusher client');
       return () => {};
@@ -475,7 +475,7 @@ export function subscribeToGuestChatBooking({ hotelSlug, channelName, guestToken
       console.log('🔍 [GuestChat] Debug info:', {
         pusherConnectionState: pusher.connection?.state,
         pusherSocketId: pusher.connection?.socket_id,
-        hasToken: !!guestToken
+        hasSession: !!chatSession
       });
       activeGuestSubscriptions.delete(subscriptionKey);
     });

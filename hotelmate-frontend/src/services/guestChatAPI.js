@@ -1,24 +1,45 @@
 /**
- * Guest Chat API Service - CANONICAL SINGLE-TOKEN CONTRACT
+ * Guest Chat API Service - SESSION/GRANT FLOW
  * 
- * All guest chat API operations use only hotel_slug + token.
- * No booking_id, email, or room_number params.
+ * Bootstrap (getContext) uses hotel_slug + raw guest token to resolve the booking.
+ * All subsequent chat operations use the returned chat_session grant.
  * 
  * Endpoints:
- * - GET /api/guest/hotel/{hotelSlug}/chat/context?token={token}
- * - GET /api/guest/hotel/{hotelSlug}/chat/messages?token={token}&limit=50&before=<message_id>
- * - POST /api/guest/hotel/{hotelSlug}/chat/messages?token={token}
- * - POST /api/guest/hotel/{hotelSlug}/chat/pusher/auth?token={token}
+ * - GET  /api/guest/hotel/{hotelSlug}/chat/context?token={token}         ← bootstrap (raw token)
+ * - GET  /api/guest/hotel/{hotelSlug}/chat/messages   [X-Guest-Chat-Session]
+ * - POST /api/guest/hotel/{hotelSlug}/chat/messages   [X-Guest-Chat-Session]
+ * - POST /api/guest/hotel/{hotelSlug}/chat/pusher/auth [X-Guest-Chat-Session]
  */
 
 import { guestAPI } from './api';
 import { requireGuestToken } from '@/utils/guestToken';
 
+/** Header name used for session-based auth on post-bootstrap calls */
+const SESSION_HEADER = 'X-Guest-Chat-Session';
+
 /**
- * Fetch chat context including Pusher connection info
+ * Build common Axios config for session-authenticated requests.
+ * @param {string} chatSession - Chat session/grant returned by getContext
+ * @returns {Object} Axios request config fragment
+ */
+const sessionConfig = (chatSession) => ({
+  headers: { [SESSION_HEADER]: chatSession }
+});
+
+// ---------------------------------------------------------------------------
+// BOOTSTRAP — still uses the raw guest token
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch chat context including Pusher connection info.
+ * This is the bootstrap call — the only one that accepts a raw guest token.
+ *
+ * The response is expected to contain a `chat_session` field that all
+ * subsequent calls must use instead of the raw token.
+ *
  * @param {string} hotelSlug - Hotel slug
- * @param {string} token - Guest token
- * @returns {Promise<Object>} Context with hotel, booking, conversation, pusher info
+ * @param {string} token - Raw guest token (from email link / localStorage)
+ * @returns {Promise<Object>} Context with hotel, booking, conversation, pusher, chat_session
  */
 export const getContext = async (hotelSlug, token) => {
   const resolvedToken = token || requireGuestToken('guestChatAPI.getContext');
@@ -39,27 +60,31 @@ export const getContext = async (hotelSlug, token) => {
   return ctx;
 };
 
+// ---------------------------------------------------------------------------
+// SESSION-AUTHENTICATED CALLS — use chat_session from getContext response
+// ---------------------------------------------------------------------------
+
 /**
  * Fetch message history with pagination support
  * @param {string} hotelSlug - Hotel slug
- * @param {string} token - Guest token
+ * @param {string} chatSession - Chat session/grant from bootstrap
  * @param {Object} options - Query options
  * @param {number} [options.limit=50] - Number of messages to fetch
  * @param {string} [options.before] - Message ID for pagination cursor
  * @returns {Promise<Array>} Array of messages
  */
-export const getMessages = async (hotelSlug, token, options = {}) => {
-  const resolvedToken = token || requireGuestToken('guestChatAPI.getMessages');
-  if (!resolvedToken) {
-    throw new Error('[GuestChatAPI] Cannot fetch messages: guest token is missing');
+export const getMessages = async (hotelSlug, chatSession, options = {}) => {
+  if (!chatSession) {
+    throw new Error('[GuestChatAPI] Cannot fetch messages: chat session is missing');
   }
   const { limit = 50, before } = options;
   
-  const params = { token: resolvedToken, limit };
+  const params = { limit };
   if (before) params.before = before;
   
   const response = await guestAPI.get(`/hotel/${hotelSlug}/chat/messages`, { 
-    params 
+    params,
+    ...sessionConfig(chatSession)
   });
   
   console.log('[GuestChatAPI] Messages response:', {
@@ -76,17 +101,16 @@ export const getMessages = async (hotelSlug, token, options = {}) => {
 /**
  * Send a new message with optimistic update support
  * @param {string} hotelSlug - Hotel slug
- * @param {string} token - Guest token
+ * @param {string} chatSession - Chat session/grant from bootstrap
  * @param {Object} messageData - Message data
  * @param {string} messageData.message - Message content
  * @param {string} messageData.client_message_id - UUID for deduplication
  * @param {string} [messageData.reply_to] - Optional reply message ID
  * @returns {Promise<Object>} Server response with message data
  */
-export const sendMessage = async (hotelSlug, token, messageData) => {
-  const resolvedToken = token || requireGuestToken('guestChatAPI.sendMessage');
-  if (!resolvedToken) {
-    throw new Error('[GuestChatAPI] Cannot send message: guest token is missing');
+export const sendMessage = async (hotelSlug, chatSession, messageData) => {
+  if (!chatSession) {
+    throw new Error('[GuestChatAPI] Cannot send message: chat session is missing');
   }
   const { message, client_message_id, reply_to } = messageData;
   
@@ -99,8 +123,6 @@ export const sendMessage = async (hotelSlug, token, messageData) => {
     payload.reply_to = reply_to;
   }
   
-  const params = { token: resolvedToken };
-  
   console.log('[GuestChatAPI] Sending message:', {
     hotelSlug,
     client_message_id,
@@ -111,7 +133,7 @@ export const sendMessage = async (hotelSlug, token, messageData) => {
   const response = await guestAPI.post(
     `/hotel/${hotelSlug}/chat/messages`, 
     payload,
-    { params }
+    sessionConfig(chatSession)
   );
   
   console.log('[GuestChatAPI] Message sent successfully:', response.data);
@@ -119,17 +141,14 @@ export const sendMessage = async (hotelSlug, token, messageData) => {
 };
 
 /**
- * Get auth endpoint for Pusher private channel authentication
+ * Get auth endpoint URL for Pusher private channel authentication.
+ * No longer embeds a raw token in the URL — the Pusher client sends
+ * the chat session via the X-Guest-Chat-Session header instead.
+ *
  * @param {string} hotelSlug - Hotel slug
- * @param {string} token - Guest token
- * @returns {string} Auth endpoint URL
+ * @returns {string} Auth endpoint URL (without credentials in the query string)
  */
-export const getPusherAuthEndpoint = (hotelSlug, token) => {
-  const resolvedToken = token || requireGuestToken('guestChatAPI.getPusherAuthEndpoint');
-  if (!resolvedToken) {
-    console.error('[GuestChatAPI] Cannot build Pusher auth endpoint: guest token is missing');
-    return null;
-  }
+export const getPusherAuthEndpoint = (hotelSlug) => {
   // Get base URL - same logic as main API service
   const getApiBaseUrl = () => {
     if (import.meta.env.VITE_API_URL) {
@@ -147,7 +166,7 @@ export const getPusherAuthEndpoint = (hotelSlug, token) => {
   };
   
   const baseUrl = getApiBaseUrl().replace(/\/$/, ''); // Remove trailing slash
-  return `${baseUrl}/guest/hotel/${hotelSlug}/chat/pusher/auth?token=${encodeURIComponent(resolvedToken)}`;
+  return `${baseUrl}/guest/hotel/${hotelSlug}/chat/pusher/auth`;
 };
 
 export default {
