@@ -157,17 +157,24 @@ const FrontOfficeChatModal = ({
   };
 
   /**
-   * Start polling for new messages using canonical endpoint
+   * Start polling for new messages using session-authenticated endpoint
    */
   const startPolling = () => {
     stopPolling();
     
+    // Capture chat_session at subscription time — if missing, skip polling
+    const session = context?.chat_session;
+    if (!session) {
+      console.warn('[FrontOfficeChatModal] No chat_session for polling — skipping');
+      return;
+    }
+
     const poll = async () => {
       try {
-        const messages = await guestChatAPI.getMessages(hotelSlug, context?.chat_session);
-        console.log('[FrontOfficeChatModal] Polling update:', messages.length);
-      } catch (error) {
-        console.warn('[FrontOfficeChatModal] Polling error:', error);
+        const msgs = await guestChatAPI.getMessages(hotelSlug, session);
+        console.log('[FrontOfficeChatModal] Polling update:', msgs.length);
+      } catch (err) {
+        console.warn('[FrontOfficeChatModal] Polling error:', err);
       }
     };
 
@@ -176,18 +183,24 @@ const FrontOfficeChatModal = ({
   };
 
   /**
-   * Send a message using canonical endpoint
+   * Send a message using session-authenticated endpoint
    */
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!message.trim() || sending) return;
+
+    const session = context?.chat_session;
+    if (!session) {
+      toast.error('Chat session not available — please reopen chat');
+      return;
+    }
 
     try {
       setSending(true);
       
       const clientMessageId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       
-      const result = await guestChatAPI.sendMessage(hotelSlug, context?.chat_session, {
+      const result = await guestChatAPI.sendMessage(hotelSlug, session, {
         message: message.trim(),
         client_message_id: clientMessageId
       });

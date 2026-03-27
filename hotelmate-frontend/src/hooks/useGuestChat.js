@@ -528,11 +528,27 @@ export const useGuestChat = ({ hotelSlug, token }) => {
       replyTo: failedMessage.reply_to
     });
   }, [sendMessageMutation]);
+
+  /**
+   * Mark the current conversation as read by the guest.
+   * Uses session-based auth, not raw token.
+   */
+  const markRead = useCallback(async () => {
+    const conversationId = context?.conversation_id;
+    if (!hotelSlug || !chatSession || !conversationId) return;
+    try {
+      await guestChatAPI.markRead(hotelSlug, conversationId, chatSession);
+      guestChatActions.markConversationReadForGuest(conversationId, guestChatDispatch);
+    } catch (error) {
+      console.error('[useGuestChat] Mark read error:', error);
+    }
+  }, [hotelSlug, chatSession, context?.conversation_id, guestChatDispatch]);
   
   // Public API
   return {
     // State
     context,
+    chatSession,
     messages,
     sendingMessages,
     loading: contextLoading || messagesLoading,
@@ -544,6 +560,7 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     loadOlder: loadOlderMessages,
     retryMessage,
     syncMessages,
+    markRead,
     
     // Loading states
     isSending: sendMessageMutation.isPending,

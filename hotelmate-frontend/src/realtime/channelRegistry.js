@@ -2,7 +2,7 @@
 import { getPusherClient } from './realtimeClient';
 import { getGuestPusherClient } from './guestRealtimeClient';
 import { handleIncomingRealtimeEvent } from './eventBus';
-import { getPusherAuthEndpoint } from '../services/guestChatAPI.js';
+import { getPusherAuthEndpoint, SESSION_HEADER } from '../services/guestChatAPI.js';
 import { guestAPI } from '../services/api.js';
 import { logRealtimeSubscription, logRealtimeUnsubscription, logRealtimeSetHotelSlug, logRealtimeError } from './debug/debugLogger.js';
 
@@ -238,13 +238,13 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
 
 /**
  * Mark conversation as read - calls API and updates store
- * ✅ CRITICAL: Only call when conversation_id exists and user is active
  * @param {string|number} conversationId - Must be valid conversation ID
  * @param {string} conversationType - "guest" | "staff"
  * @param {boolean} isWindowActive - Only mark read if window is active
  * @param {string} hotelSlug - Hotel slug for API endpoint
+ * @param {string} [chatSession] - Guest chat session (required for guest type)
  */
-export async function markConversationRead(conversationId, conversationType = "guest", isWindowActive = true, hotelSlug = null) {
+export async function markConversationRead(conversationId, conversationType = "guest", isWindowActive = true, hotelSlug = null, chatSession = null) {
   if (!conversationId) {
     console.warn("⚠️ markConversationRead called with undefined conversationId");
     return;
@@ -267,8 +267,16 @@ export async function markConversationRead(conversationId, conversationType = "g
       await markConversationAsRead(hotelSlug, conversationId);
       console.log(`✅ Marked staff conversation ${conversationId} as read`);
     } else {
-      // Guest chat — canonical endpoint via guestAPI (baseURL: /api/guest)
-      await guestAPI.post(`/hotel/${hotelSlug}/chat/conversations/${conversationId}/mark_read/`);
+      // Guest chat — session-based auth
+      if (!chatSession) {
+        console.warn("⚠️ markConversationRead(guest) called without chatSession — skipping");
+        return;
+      }
+      await guestAPI.post(
+        `/hotel/${hotelSlug}/chat/conversations/${conversationId}/mark_read/`,
+        {},
+        { headers: { [SESSION_HEADER]: chatSession } }
+      );
       console.log(`✅ Marked guest conversation ${conversationId} as read`);
     }
   } catch (error) {

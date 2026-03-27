@@ -12,10 +12,10 @@
  */
 
 import { guestAPI } from './api';
-import { requireGuestToken } from '@/utils/guestToken';
+import { getGuestToken } from '@/utils/guestToken';
 
 /** Header name used for session-based auth on post-bootstrap calls */
-const SESSION_HEADER = 'X-Guest-Chat-Session';
+export const SESSION_HEADER = 'X-Guest-Chat-Session';
 
 /**
  * Build common Axios config for session-authenticated requests.
@@ -42,7 +42,7 @@ const sessionConfig = (chatSession) => ({
  * @returns {Promise<Object>} Context with hotel, booking, conversation, pusher, chat_session
  */
 export const getContext = async (hotelSlug, token) => {
-  const resolvedToken = token || requireGuestToken('guestChatAPI.getContext');
+  const resolvedToken = token || getGuestToken();
   if (!resolvedToken) {
     throw new Error('[GuestChatAPI] Cannot fetch context: guest token is missing');
   }
@@ -169,9 +169,28 @@ export const getPusherAuthEndpoint = (hotelSlug) => {
   return `${baseUrl}/guest/hotel/${hotelSlug}/chat/pusher/auth`;
 };
 
+/**
+ * Mark a conversation as read by the guest.
+ * @param {string} hotelSlug - Hotel slug
+ * @param {string} conversationId - Conversation to mark
+ * @param {string} chatSession - Chat session/grant from bootstrap
+ * @returns {Promise<void>}
+ */
+export const markRead = async (hotelSlug, conversationId, chatSession) => {
+  if (!chatSession) {
+    throw new Error('[GuestChatAPI] Cannot mark read: chat session is missing');
+  }
+  await guestAPI.post(
+    `/hotel/${hotelSlug}/chat/conversations/${conversationId}/mark_read/`,
+    {},
+    sessionConfig(chatSession)
+  );
+};
+
 export default {
   getContext,
   getMessages,
   sendMessage,
-  getPusherAuthEndpoint
+  getPusherAuthEndpoint,
+  markRead
 };

@@ -630,10 +630,17 @@ const BookingStatusPage = () => {
     return allowed[key] === true; // supports {can_chat:true} style
   };
 
-  // Server is source of truth for permissions; fall back to checked-in status
-  // when the context endpoint is unreachable (same policy as room service / breakfast)
-  const canChat = hasAllowed("chat") || hasAllowed("can_chat")
-    || (isCheckedIn && !contextError?.status);
+  // Chat: prefer the structured guest_chat.enabled field from bootstrap when
+  // present; fall back to legacy allowed_actions for backward compat.
+  // NEVER fabricate client-side chat enablement when bootstrap failed or
+  // returned no chat grant.
+  const guestChat = guestContext?.guest_chat;
+  const canChat = guestChat
+    ? guestChat.enabled === true
+    : (hasAllowed("chat") || hasAllowed("can_chat"));
+
+  // Room-service / breakfast: fall back to checked-in status when context
+  // endpoint is unreachable (same policy as before — these are non-chat flows).
   const canRoomService =
     hasAllowed("room_service") ||
     hasAllowed("can_order_room_service") ||
@@ -657,8 +664,10 @@ const BookingStatusPage = () => {
 
   const chatDisabledReason = !token
     ? "Missing booking token"
+    : guestChat?.disabled_reason
+    ? guestChat.disabled_reason
     : !canChat
-    ? "Chat not enabled for this link"
+    ? (contextError?.disabled_reason || "Chat not enabled for this booking")
     : null;
 
   const chatEnabled = !!canChat && !chatDisabledReason;
