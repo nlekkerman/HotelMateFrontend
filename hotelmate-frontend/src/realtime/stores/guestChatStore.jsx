@@ -406,10 +406,16 @@ export const guestChatActions = {
       return;
     }
 
-    // ✅ Event deduplication - require event_id for deterministic behavior
+    // ✅ Event deduplication — fallback to message ID if event_id missing
     if (!eventId) {
-      console.warn('[guestChatStore] Missing event_id, skipping event:', event);
-      return;
+      // Generate a fallback dedup key from message content so we don't drop the event
+      const msgId = payload?.id || payload?.message_id;
+      if (msgId) {
+        eventId = `fallback-msg-${msgId}`;
+      } else {
+        eventId = `fallback-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      }
+      console.warn('[guestChatStore] Missing event_id — using fallback:', eventId, event);
     }
 
     if (guestChatActions._processedEventIds.has(eventId)) {

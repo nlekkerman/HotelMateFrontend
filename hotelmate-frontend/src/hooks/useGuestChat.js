@@ -338,8 +338,16 @@ export const useGuestChat = ({ hotelSlug, token }) => {
 
   // ── Send message mutation ────────────────────────────────────────────
   const sendMessageMutation = useMutation({
-    mutationFn: async ({ message, replyTo }) => {
-      const clientMessageId = generateClientMessageId();
+    mutationFn: async ({ message, replyTo, clientMessageId }) => {
+      const response = await guestChatAPI.sendMessage(hotelSlug, chatSession, {
+        message,
+        client_message_id: clientMessageId,
+        reply_to: replyTo,
+      });
+      return { response, clientMessageId };
+    },
+    onMutate: async ({ message, replyTo, clientMessageId }) => {
+      // Optimistic: add to sendingMessages BEFORE the API call
       setSendingMessages((prev) => [
         ...prev,
         {
@@ -353,15 +361,26 @@ export const useGuestChat = ({ hotelSlug, token }) => {
           reply_to: replyTo,
         },
       ]);
-      const response = await guestChatAPI.sendMessage(hotelSlug, chatSession, {
-        message,
-        client_message_id: clientMessageId,
-        reply_to: replyTo,
-      });
-      return { response, clientMessageId };
+      // Return context so onError can access clientMessageId
+      return { clientMessageId };
     },
     onSuccess: (data) => {
-      setSendingMessages((prev) => prev.filter((m) => m.client_message_id !== data.clientMessageId));
+      const { response, clientMessageId } = data;
+      // Extract the confirmed message from the API response
+      const confirmedMsg = response?.message || response?.data?.message || response;
+
+      if (confirmedMsg?.id) {
+        // Add confirmed message to messages[] so there's no gap
+        // between removing the optimistic entry and the Pusher echo arriving
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === confirmedMsg.id)) return prev;
+          return sortMessages([...prev, { ...confirmedMsg, status: 'delivered' }]);
+        });
+        if (confirmedMsg.id) processedMessageIds.current.add(confirmedMsg.id);
+      }
+
+      // Now safe to remove from sendingMessages
+      setSendingMessages((prev) => prev.filter((m) => m.client_message_id !== clientMessageId));
     },
     onError: (error, _vars, ctx) => {
       console.error('[useGuestChat] Send error:', error);
@@ -403,7 +422,11 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     (failedMessage) => {
       if (failedMessage.status !== 'failed') return;
       setSendingMessages((prev) => prev.filter((m) => m.id !== failedMessage.id));
-      sendMessageMutation.mutate({ message: failedMessage.message, replyTo: failedMessage.reply_to });
+      sendMessageMutation.mutate({
+        message: failedMessage.message,
+        replyTo: failedMessage.reply_to,
+        clientMessageId: generateClientMessageId(),
+      });
     },
     [sendMessageMutation]
   );
@@ -440,7 +463,11 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     connectionState,
 
     // Actions
-    sendMessage: (message, replyTo) => sendMessageMutation.mutate({ message, replyTo }),
+    sendMessage: (message, replyTo) => sendMessageMutation.mutate({
+      message,
+      replyTo,
+      clientMessageId: generateClientMessageId(),
+    }),
     loadOlder: loadOlderMessages,
     retryMessage,
     syncMessages,
