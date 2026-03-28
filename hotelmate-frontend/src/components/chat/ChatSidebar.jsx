@@ -112,9 +112,12 @@ const ChatSidebar = ({
                     const lastMsg = conv.last_message || conv.lastMessage;
                     if (!lastMsg) return <em>No messages yet</em>;
                     
-                    // Handle case where last_message is an object with body property
-                    if (typeof lastMsg === 'object' && lastMsg.body) {
-                      return lastMsg.body;
+                    // Handle case where last_message is an object
+                    if (typeof lastMsg === 'object') {
+                      const text = lastMsg.body || lastMsg.message || lastMsg.content;
+                      if (text) return text;
+                      if (lastMsg.has_attachments) return '📎 Attachment';
+                      return <em>No messages yet</em>;
                     }
                     
                     // Handle case where last_message is a string
