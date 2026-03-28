@@ -755,12 +755,20 @@ export const chatActions = {
             file_size: att.file_size || att.size
           }));
 
+          // Look up conversation to get guest_name when missing from payload
+          const currentState = globalChatGetState ? globalChatGetState() : null;
+          const existingConv = currentState?.conversationsById?.[numericConversationId];
+          const resolvedGuestName = payload.guest_name || payload.sender_name || existingConv?.guest_name || existingConv?.guestName || null;
+
           const mappedMessage = {
             id: payload.id,
             message: text,
             sender: payload.sender_id ?? payload.sender ?? (isGuestMessage ? 'guest' : null),
             sender_type: payload.sender_type || payload.sender_role || (isGuestMessage ? 'guest' : 'staff'),
-            sender_name: payload.sender_name ?? payload.sender_info?.name,
+            sender_name: isGuestMessage
+              ? (resolvedGuestName || payload.sender_info?.name || 'Guest')
+              : (payload.sender_name ?? payload.sender_info?.name),
+            guest_name: isGuestMessage ? resolvedGuestName : null,
             sender_avatar: payload.sender_avatar,
             timestamp: payload.timestamp,
             conversation: numericConversationId,
