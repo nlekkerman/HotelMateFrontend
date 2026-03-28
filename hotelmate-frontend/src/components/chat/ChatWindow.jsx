@@ -362,6 +362,14 @@ const ChatWindow = ({
         setMessages(messagesWithMarkers);
         setLoading(false);
         
+        // Hydrate chatStore with fetched messages so realtime updates merge correctly
+        if (!isGuest && chatDispatch && conversationId) {
+          chatDispatch({
+            type: CHAT_ACTIONS.INIT_MESSAGES_FOR_CONVERSATION,
+            payload: { conversationId: parseInt(conversationId), messages: newMessages }
+          });
+        }
+        
         // Scroll to bottom after DOM renders
         setTimeout(() => {
           scrollToBottom();
@@ -495,53 +503,47 @@ const ChatWindow = ({
   useEffect(() => {
     if (isGuest || !conversationId) return;
     
-    console.log('🔄 [UNIFIED] ChatStore sync effect triggered:', {
-      conversationId,
-      storeMessagesCount: storeMessages.length,
-      conversationExists: !!conversation,
-      storeMessages: storeMessages.map(m => ({
-        id: m.id,
-        message: m.message?.substring(0, 30),
-        sender: m.sender,
-        timestamp: m.timestamp || m.created_at
-      }))
-    });
-    
     if (storeMessages.length > 0) {
-      console.log('🔄 [UNIFIED] Syncing', storeMessages.length, 'messages from chatStore to ChatWindow');
-      
       setMessages(prevMessages => {
-        console.log('🔄 [UNIFIED] Current local messages:', prevMessages.length, 'Store messages:', storeMessages.length);
+        // Keep local-only messages (optimistic/temp) that aren't in the store yet
+        const optimisticMessages = prevMessages.filter(
+          m => m.__optimistic || (typeof m.id === 'string' && m.id.startsWith('temp-'))
+        );
         
-        // Merge store messages with local messages, avoiding duplicates
-        const localMessageIds = new Set(prevMessages.map(m => m.id));
-        const newMessagesFromStore = storeMessages.filter(m => !localMessageIds.has(m.id));
+        // Keep system messages (staff joined markers) from local state
+        const systemMessages = prevMessages.filter(
+          m => m.is_system_message || m.sender_type === 'system'
+        );
         
-        if (newMessagesFromStore.length > 0) {
-          console.log('✅ [UNIFIED] Adding', newMessagesFromStore.length, 'new messages from chatStore:', newMessagesFromStore.map(m => ({ id: m.id, text: m.message?.substring(0, 30) })));
-          const combined = [...prevMessages, ...newMessagesFromStore];
-          // Sort by timestamp to maintain order
-          const sorted = combined.sort((a, b) => new Date(a.created_at || a.timestamp) - new Date(b.created_at || b.timestamp));
-          
-          // Scroll to bottom when new messages are added
-          setTimeout(() => scrollToBottom(), 100);
-          
-          return sorted;
-        } else {
-          console.log('ℹ️ [UNIFIED] No new messages from chatStore to add');
+        // Merge: store messages are source of truth, plus local optimistic + system messages
+        const storeMessageIds = new Set(storeMessages.map(m => m.id));
+        const localOnlyMessages = [...optimisticMessages, ...systemMessages].filter(
+          m => !storeMessageIds.has(m.id)
+        );
+        
+        const combined = [...storeMessages, ...localOnlyMessages];
+        const sorted = combined.sort((a, b) => new Date(a.created_at || a.timestamp) - new Date(b.created_at || b.timestamp));
+        
+        // Only update if the messages actually changed
+        const prevIds = prevMessages.map(m => m.id).join(',');
+        const newIds = sorted.map(m => m.id).join(',');
+        if (prevIds === newIds && prevMessages.length === sorted.length) {
+          return prevMessages;
         }
         
-        return prevMessages;
+        // Scroll to bottom when new messages arrive
+        if (sorted.length > prevMessages.length) {
+          setTimeout(() => scrollToBottom(), 100);
+        }
+        
+        return addStaffJoinedMarkers(sorted);
       });
-    } else {
-      console.log('ℹ️ [UNIFIED] No messages in chatStore for conversation', conversationId);
     }
   }, [
     conversationId, 
     isGuest,
-    storeMessages?.length, // Use length to detect changes
-    // Create deep dependency on message IDs and content to detect real changes
-    storeMessages?.map(m => `${m.id}-${m.message}-${m.created_at || m.timestamp}`).join(',')
+    storeMessages?.length,
+    storeMessages?.map(m => `${m.id}-${m.is_deleted}`).join(',')
   ]);
 
   // Guest Pusher setup - use useCallback to create stable event handlers

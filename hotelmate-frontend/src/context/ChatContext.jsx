@@ -1,11 +1,12 @@
 // src/context/ChatContext.jsx
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import api from "@/services/api";
 import { fetchRoomConversations, fetchRoomConversationsUnreadCount, markRoomConversationRead, fetchRoomConversationMessages } from "@/services/roomConversationsAPI";
 import { useAuth } from "@/context/AuthContext";
 import { useGuestChatState, useGuestChatDispatch, guestChatActions } from "@/realtime/stores/guestChatStore";
-import { useChatState } from "@/realtime/stores/chatStore.jsx";
+import { useChatState, useChatDispatch } from "@/realtime/stores/chatStore.jsx";
+import { CHAT_ACTIONS } from "@/realtime/stores/chatActions.js";
 
 const ChatContext = createContext(undefined);
 
@@ -19,11 +20,31 @@ export const ChatProvider = ({ children }) => {
   const guestChatState = useGuestChatState();
   const guestChatDispatch = useGuestChatDispatch();
   
-  // Use chatStore (same store as StaffChatContext) for fallback
+  // Use chatStore as single source of truth for staff-side conversations
   const chatStore = useChatState();
+  const chatDispatch = useChatDispatch();
+  
+  // Derive conversations from chatStore (single source of truth)
+  const conversations = useMemo(() => {
+    if (!chatStore?.conversationsById) return [];
+    return Object.values(chatStore.conversationsById).map(c => ({
+      ...c,
+      conversation_id: c.conversation_id || c.id,
+      id: c.id || c.conversation_id,
+      room_number: c.room_number || c.roomNumber,
+      roomNumber: c.room_number || c.roomNumber,
+      guest_name: c.guest_name || c.guestName,
+      guestName: c.guest_name || c.guestName,
+      last_message: c.last_message || c.lastMessage,
+      lastMessage: c.last_message || c.lastMessage,
+      last_message_time: c.last_message_time || c.updatedAt,
+      updatedAt: c.last_message_time || c.updatedAt,
+      unread_count: c.unread_count || 0,
+      unreadCountForGuest: c.unread_count || 0,
+    }));
+  }, [chatStore?.conversationsById]);
   
   // Local state for staff-specific functionality
-  const [conversations, setConversations] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
 
   // Debug searchParams
@@ -84,7 +105,11 @@ export const ChatProvider = ({ children }) => {
           };
           
           console.log('[ChatContext] Created guest conversation:', guestConversation);
-          setConversations([guestConversation]);
+          // Hydrate chatStore with guest conversation
+          chatDispatch({
+            type: CHAT_ACTIONS.INIT_CONVERSATIONS_FROM_API,
+            payload: { conversations: [guestConversation] }
+          });
           
           // Also initialize guestChatStore with the conversation
           guestChatActions.initFromAPI([guestConversation], guestChatDispatch);
@@ -141,37 +166,21 @@ export const ChatProvider = ({ children }) => {
         }
       }));
 
-      setConversations(convs);
+      // Hydrate chatStore as single source of truth
+      chatDispatch({
+        type: CHAT_ACTIONS.INIT_CONVERSATIONS_FROM_API,
+        payload: { conversations: convs }
+      });
       
       // Also initialize guestChatStore with fetched conversations
       guestChatActions.initFromAPI(convs, guestChatDispatch);
       
-      console.log('[ChatContext] Room conversations processed and stored:', convs.length);
+      console.log('[ChatContext] Room conversations processed and dispatched to chatStore:', convs.length);
     } catch (err) {
       console.error("[ChatContext] Failed to fetch room conversations:", err);
       
-      // 🔄 FALLBACK: Try to use chatStore conversations when API fails
-      console.log("🔄 [ChatContext] Trying chatStore fallback...");
-      if (chatStore?.conversationsById && Object.keys(chatStore.conversationsById).length > 0) {
-        const storeConversations = Object.values(chatStore.conversationsById);
-        console.log("✅ [ChatContext] Using chatStore conversations as fallback:", storeConversations.length);
-        
-        // Convert chatStore format to ChatContext format
-        const fallbackConvs = storeConversations.map((c) => ({
-          ...c,
-          conversation_id: c.id || c.conversation_id,
-          unread_count: c.unread_count || 0,
-          last_message: c.last_message || "",
-          room_number: c.room_number || "Unknown"
-        }));
-        
-        setConversations(fallbackConvs);
-        
-        // Also initialize guestChatStore with fallback conversations
-        guestChatActions.initFromAPI(fallbackConvs, guestChatDispatch);
-      } else {
-        console.log("❌ [ChatContext] No chatStore conversations available for fallback");
-      }
+      // chatStore already has any realtime data as fallback — no manual fallback needed
+      console.log("ℹ️ [ChatContext] chatStore retains any existing conversations as fallback");
     }
   }, [user?.hotel_slug, hotelSlug]); // Removed problematic dependencies that cause excessive re-renders
 
@@ -215,7 +224,11 @@ export const ChatProvider = ({ children }) => {
             }
           };
           
-          setConversations([guestConversation]);
+          // Hydrate chatStore with guest conversation
+          chatDispatch({
+            type: CHAT_ACTIONS.INIT_CONVERSATIONS_FROM_API,
+            payload: { conversations: [guestConversation] }
+          });
           guestChatActions.initFromAPI([guestConversation], guestChatDispatch);
           guestChatActions.setActiveConversation(guestChatState.context.conversation_id, guestChatDispatch);
         }
@@ -225,130 +238,10 @@ export const ChatProvider = ({ children }) => {
     }
   }, [guestChatState?.context?.conversation_id, user?.hotel_slug]); // More specific dependencies
 
-  // Sync conversations from chatStore (staff chat store) for real-time updates
-  useEffect(() => {
-    if (!chatStore?.conversationsById) return;
-
-    console.log('🔄 [ChatContext] Syncing with chatStore real-time updates:', Object.keys(chatStore.conversationsById).length);
-    
-    const storeConversations = Object.values(chatStore.conversationsById);
-    
-    if (storeConversations.length > 0) {
-      console.log('🔄 [ChatContext] ChatStore conversations data:', storeConversations.map(c => ({
-        id: c.id,
-        lastMessage: c.lastMessage || c.last_message,
-        updatedAt: c.updatedAt
-      })));
-      
-      // Merge store conversations with existing conversations, preserving other data
-      setConversations(prevConversations => {
-        const updatedConversations = [...prevConversations];
-        
-        storeConversations.forEach(storeConv => {
-          const existingIndex = updatedConversations.findIndex(c => 
-            (c.conversation_id || c.id) === (storeConv.conversation_id || storeConv.id)
-          );
-          
-          const normalizedStoreConv = {
-            conversation_id: storeConv.conversation_id || storeConv.id,
-            id: storeConv.conversation_id || storeConv.id,
-            room_number: storeConv.room_number || storeConv.roomNumber,
-            roomNumber: storeConv.room_number || storeConv.roomNumber,
-            guest_name: storeConv.guest_name || storeConv.guestName,
-            guestName: storeConv.guest_name || storeConv.guestName,
-            guest_id: storeConv.guest_id || storeConv.guestId,
-            guestId: storeConv.guest_id || storeConv.guestId,
-            last_message: storeConv.last_message || storeConv.lastMessage,
-            lastMessage: storeConv.last_message || storeConv.lastMessage,
-            last_message_time: storeConv.last_message_time || storeConv.updatedAt,
-            updatedAt: storeConv.last_message_time || storeConv.updatedAt,
-            unread_count: storeConv.unread_count || 0,
-            unreadCount: storeConv.unread_count || 0,
-          };
-          
-          if (existingIndex >= 0) {
-            // Update existing conversation, preserving other fields
-            updatedConversations[existingIndex] = {
-              ...updatedConversations[existingIndex],
-              ...normalizedStoreConv
-            };
-          } else {
-            // Add new conversation with room data
-            updatedConversations.push({
-              ...normalizedStoreConv,
-              room: {
-                number: storeConv.room_number || storeConv.roomNumber,
-                guest_name: storeConv.guest_name || storeConv.guestName
-              }
-            });
-          }
-        });
-        
-        console.log('✅ [ChatContext] Conversations updated from chatStore:', updatedConversations.length);
-        return updatedConversations;
-      });
-    }
-  }, [JSON.stringify(chatStore?.conversationsById)]);
+  // conversations is now derived from chatStore via useMemo — no sync needed
 
 
-  // Sync conversations from guestChatStore realtime updates
-  useEffect(() => {
-    // Get hotel slug from either authenticated user, URL params, or query params
-    const currentHotelSlug = user?.hotel_slug || hotelSlug;
-    if (!guestChatState || !currentHotelSlug) return;
-
-    // Sync conversations with store data and show notifications for new messages
-    const storeConversations = Object.values(guestChatState.conversationsById || {});
-    
-    if (storeConversations.length > 0) {
-      // Simple notification logic without dependency on conversations state
-      storeConversations.forEach(storeConv => {
-        if (
-          storeConv.last_message &&
-          storeConv.conversation_id !== currentConversationId &&
-          canShowNotifications()
-        ) {
-          showNotification(`New Message from Room ${storeConv.room_number}`, {
-            body: storeConv.last_message,
-            icon: "/favicons/favicon.svg",
-            tag: `chat-${storeConv.conversation_id}`,
-          }).then(notification => {
-            if (notification && notification.onclick !== undefined) {
-              notification.onclick = () => {
-                window.focus();
-                window.location.href = `/${currentHotelSlug}/chat`;
-              };
-            }
-          }).catch(console.error);
-        }
-      });
-      
-      // Update local conversations with store data
-      setConversations(storeConversations);
-    }
-  }, [guestChatState?.conversationsById, currentConversationId]); // More specific dependencies
-
-  // Handle realtime message updates from guestChatStore
-  useEffect(() => {
-    if (!guestChatState) return;
-
-    // Update conversations when store has new messages
-    const storeConversations = Object.values(guestChatState.conversationsById || {});
-    
-    storeConversations.forEach((storeConv) => {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.conversation_id === storeConv.conversation_id
-            ? {
-                ...c,
-                last_message: storeConv.last_message || c.last_message,
-                unread_count: storeConv.unread_count !== undefined ? storeConv.unread_count : c.unread_count,
-              }
-            : c
-        )
-      );
-    });
-  }, [guestChatState?.conversationsById]); // More specific dependency
+  // Guest chat store updates flow through chatStore via eventBus — no additional sync needed
 
   const markConversationRead = useCallback(async (conversationId) => {
     if (!conversationId) {
@@ -363,20 +256,17 @@ export const ChatProvider = ({ children }) => {
       const currentHotelSlug = user?.hotel_slug || hotelSlug;
       await markRoomConversationRead(currentHotelSlug, conversationId);
       
-      setConversations((prev) =>
-        prev.map((c) =>
-          (c.conversation_id || c.id) === conversationId
-            ? { ...c, unread_count: 0 }
-            : c
-        )
-      );
+      // Dispatch to chatStore (single source of truth)
+      chatDispatch({
+        type: CHAT_ACTIONS.MARK_CONVERSATION_READ,
+        payload: { conversationId: parseInt(conversationId) }
+      });
       
       console.log('[ChatContext] Room conversation marked as read successfully:', conversationId);
     } catch (err) {
       console.error("[ChatContext] Failed to mark room conversation as read:", err);
-      // Don't show toast for this - it's not critical if it fails
     }
-  }, [user?.hotel_slug, hotelSlug]);
+  }, [user?.hotel_slug, hotelSlug, chatDispatch]);
 
   const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
 

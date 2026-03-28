@@ -27,18 +27,28 @@ function chatReducer(state, action) {
       let computedTotalUnread = 0;
 
       conversations.forEach(conv => {
-        const existing = conversationsById[conv.id] || {};
+        const convId = conv.id || conv.conversation_id;
+        const existing = conversationsById[convId] || {};
         const unreadCount = conv.unread_count ?? existing.unread_count ?? 0;
         computedTotalUnread += unreadCount;
 
-        conversationsById[conv.id] = {
-          id: conv.id,
+        conversationsById[convId] = {
+          id: convId,
+          conversation_id: convId,
           title: conv.title || existing.title || '',
           participants: conv.participants || existing.participants || [],
           messages: existing.messages || [],                        // keep existing messages
           unread_count: unreadCount,
           lastMessage: conv.last_message || existing.lastMessage || null,
+          last_message: conv.last_message || existing.last_message || null,
           updatedAt: conv.updated_at || existing.updatedAt || new Date().toISOString(),
+          last_message_time: conv.last_message_time || conv.updated_at || existing.last_message_time || null,
+          // Room conversation fields for guest↔staff chat
+          guest_name: conv.guest_name || existing.guest_name || null,
+          guestName: conv.guest_name || conv.guestName || existing.guestName || null,
+          room_number: conv.room_number || existing.room_number || null,
+          roomNumber: conv.room_number || conv.roomNumber || existing.roomNumber || null,
+          room: conv.room || existing.room || null,
         };
       });
 
@@ -138,12 +148,17 @@ function chatReducer(state, action) {
         console.log('💬 Creating stub conversation for incoming message:', { conversationId, message });
         conversation = {
           id: conversationId,
+          conversation_id: conversationId,
           title: message.conversation_title || message.title || '',
           participants: message.participants || [],
           messages: [],
           unread_count: 0,
           lastMessage: null,
           updatedAt: message.timestamp || new Date().toISOString(),
+          guest_name: message.guest_name || message.sender_name || null,
+          guestName: message.guest_name || message.sender_name || null,
+          room_number: message.room_number || null,
+          roomNumber: message.room_number || null,
         };
       } else {
         console.log('🎯 [REDUCER] Found existing conversation, current message count:', conversation.messages?.length || 0);
