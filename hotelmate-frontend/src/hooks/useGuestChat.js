@@ -21,7 +21,7 @@ import * as guestChatAPI from '../services/guestChatAPI';
 import { useGuestChatDispatch, guestChatActions } from '../realtime/stores/guestChatStore';
 import * as chatDbg from '../realtime/debug/chatDebugLogger';
 
-const DEBUG_REALTIME = true;
+const DEBUG_REALTIME = import.meta.env.DEV;
 
 const generateClientMessageId = () => uuidv4();
 
@@ -97,8 +97,11 @@ export const useGuestChat = ({ hotelSlug, token }) => {
   useEffect(() => {
     if (contract) {
       guestChatActions.setContext(contract, guestChatDispatch);
+      if (conversationId) {
+        guestChatActions.setActiveConversation(conversationId, guestChatDispatch);
+      }
     }
-  }, [contract, guestChatDispatch]);
+  }, [contract, conversationId, guestChatDispatch]);
 
   // ── STEP 2: Fetch Messages ───────────────────────────────────────────
   const {
@@ -343,6 +346,13 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     // Stable deps: primitives + config objects that only change on new bootstrap
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatSession, channelName, events?.message_created, events?.message_read, pusherConfig?.key]);
+
+  // ── Mark read when messages are visible ──────────────────────────────
+  useEffect(() => {
+    if (messages.length) {
+      markRead();
+    }
+  }, [messages.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Sync on reconnection ─────────────────────────────────────────────
   const syncMessages = useCallback(async () => {

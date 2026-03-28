@@ -104,7 +104,7 @@ function guestChatReducer(state, action) {
       
       const formattedMessages = messages.map(msg => ({
         id: msg.id,
-        senderType: msg.sender_type || msg.senderType,
+        senderType: msg.sender_type || msg.sender_role || msg.senderType,
         senderName: msg.sender_name || msg.senderName,
         body: msg.body || msg.message,
         attachments: msg.attachments || [],
@@ -152,7 +152,7 @@ function guestChatReducer(state, action) {
 
       const formattedMessage = {
         id: message.id,
-        senderType: message.sender_type || message.senderType,
+        senderType: message.sender_type || message.sender_role || message.senderType,
         senderName: message.sender_name || message.senderName,
         body: message.body || message.message,
         attachments: message.attachments || [],
@@ -461,7 +461,7 @@ export const guestChatActions = {
 
       case 'message_created':
         // Legacy fallback - determine sender type from payload
-        const actionType = payload.sender_type === 'guest' 
+        const actionType = (payload.sender_type || payload.sender_role) === 'guest' 
           ? GUEST_CHAT_ACTIONS.GUEST_MESSAGE_RECEIVED 
           : GUEST_CHAT_ACTIONS.STAFF_MESSAGE_SENT;
         

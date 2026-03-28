@@ -374,18 +374,20 @@ export const GuestChatWidget = ({ hotelSlug, token, className = '', style = {} }
         <MessageInput onSend={sendMessage} disabled={isDisabled} disabledReason={disabledReason} isSending={isSending} />
       </div>
 
-      <ChatDebugPanel
-        hotelSlug={hotelSlug}
-        contract={contract}
-        chatSession={chatSession}
-        channelName={channelName}
-        events={events}
-        pusherConfig={pusherConfig}
-        connectionState={connectionState}
-        messages={messages}
-        sendingMessages={sendingMessages}
-        realtimeDiag={realtimeDiag}
-      />
+      {import.meta.env.DEV && (
+        <ChatDebugPanel
+          hotelSlug={hotelSlug}
+          contract={contract}
+          chatSession={chatSession}
+          channelName={channelName}
+          events={events}
+          pusherConfig={pusherConfig}
+          connectionState={connectionState}
+          messages={messages}
+          sendingMessages={sendingMessages}
+          realtimeDiag={realtimeDiag}
+        />
+      )}
     </div>
   );
 };
