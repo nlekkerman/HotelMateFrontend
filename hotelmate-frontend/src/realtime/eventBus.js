@@ -9,6 +9,7 @@ import { roomBookingActions } from './stores/roomBookingStore.jsx';
 import { roomsActions } from './stores/roomsStore.jsx';
 import { showGuestMessageNotification } from '../utils/guestNotifications.jsx';
 import { logRealtimeEvent, logRealtimeRouting, logRealtimeError } from './debug/debugLogger.js';
+import * as chatDbg from './debug/chatDebugLogger.js';
 
 // Global event deduplication using meta.event_id
 const globalProcessedEventIds = new Set();
@@ -166,6 +167,8 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
 
     // 🔧 DEBUG PANEL: log incoming event (booking/room channels only)
     const _dbgId = logRealtimeEvent(channel, eventName, payload);
+    // 🔧 CHAT DEBUG PANEL: log incoming chat event
+    const _chatDbgId = chatDbg.logChatEventReceived(channel, eventName, payload);
 
     // Accept normalized OR direct-message payloads
     if (payload?.category && payload?.type) {
@@ -186,7 +189,7 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
         category: payload.category,
         type: effectiveType, // 👈 FIXED: Use the effectiveType we calculated
         payload: payload.payload ?? payload.data ?? {},
-        meta: { ...(payload.meta || { channel, eventName }), _dbgId },
+        meta: { ...(payload.meta || { channel, eventName }), _dbgId, _chatDbgId },
         source,
         timestamp: payload.meta?.ts || new Date().toISOString(),
       };
@@ -214,7 +217,7 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           category: "staff_chat",
           type: eventName,
           payload: payload,           // <---- PAYLOAD IS THE MESSAGE
-          meta: { channel, eventName, event_id: payload?.event_id },
+          meta: { channel, eventName, event_id: payload?.event_id, _chatDbgId },
           source,
           timestamp: new Date().toISOString()
         };
@@ -260,7 +263,7 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           category: "staff_chat",
           type: eventName,
           payload: payload,
-          meta: { channel, eventName, event_id: payload?.event_id || payload?.id },
+          meta: { channel, eventName, event_id: payload?.event_id || payload?.id, _chatDbgId },
           source,
           timestamp: new Date().toISOString()
         };
@@ -531,7 +534,9 @@ function routeToDomainStores(event) {
         } else {
           console.log('🚀 [EventBus] Routing staff_chat event to chatActions.handleEvent');
           console.log('🚀 [EventBus] Event being routed:', { category: event.category, type: event.type, hasPayload: !!event.payload });
+          chatDbg.logChatEventRouted(event.meta?._chatDbgId, { normalizedCategory: 'staff_chat', normalizedType: event.type });
           chatActions.handleEvent(event);
+          chatDbg.logChatEventDispatched(event.meta?._chatDbgId, 'chatStore');
         }
         break;
       case "guest_chat":
@@ -543,7 +548,9 @@ function routeToDomainStores(event) {
         });
         
         console.log('🚀 [GUEST-CHAT-DEBUG] About to call guestChatActions.handleEvent with event:', event);
+        chatDbg.logChatEventRouted(event.meta?._chatDbgId, { normalizedCategory: 'guest_chat', normalizedType: event.type });
         guestChatActions.handleEvent(event);
+        chatDbg.logChatEventDispatched(event.meta?._chatDbgId, 'guestChatStore');
         console.log('✅ [GUEST-CHAT-DEBUG] guestChatActions.handleEvent completed');
 
         // 🔄 CROSS-DOMAIN UPDATE: Also update staff conversation list when guests send messages

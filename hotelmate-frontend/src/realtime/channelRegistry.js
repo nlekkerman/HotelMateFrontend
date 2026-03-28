@@ -5,6 +5,7 @@ import { handleIncomingRealtimeEvent } from './eventBus';
 import { getPusherAuthEndpoint, SESSION_HEADER } from '../services/guestChatAPI.js';
 import { guestAPI } from '../services/api.js';
 import { logRealtimeSubscription, logRealtimeUnsubscription, logRealtimeSetHotelSlug, logRealtimeError } from './debug/debugLogger.js';
+import * as chatDbg from './debug/chatDebugLogger.js';
 
 let subscriptionsActive = false;
 let currentChannels = [];
@@ -85,6 +86,7 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
     const guestMessagesChannelName = `${hotelSlug}-guest-messages`;
     const guestMessagesChannel = pusher.subscribe(guestMessagesChannelName);
     channels.push(guestMessagesChannel);
+    chatDbg.logChatSubscription(guestMessagesChannelName, 'realtimeClient');
     
     // Enhanced guest messages event binding for debugging
     guestMessagesChannel.bind_global((eventName, data) => {
@@ -179,16 +181,19 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
   const channelName = `${hotelSlug}.staff-chat.${conversationId}`;
   try {
     const channel = pusher.subscribe(channelName);
+    chatDbg.logChatSubscription(channelName, 'realtimeClient');
     
     // Add subscription error handlers
     channel.bind('pusher:subscription_error', (error) => {
       console.error('❌ [channelRegistry] Subscription error for channel:', channelName, error);
+      chatDbg.logChatSubscriptionError(channelName, error);
     });
     
     channel.bind('pusher:subscription_succeeded', () => {
       if (!import.meta.env.PROD) {
         console.log('✅ [channelRegistry] Successfully subscribed to staff chat channel:', channelName);
       }
+      chatDbg.logChatSubscriptionSucceeded(channelName);
     });
     
     channel.bind_global((eventName, payload) => {
@@ -224,6 +229,7 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
         if (index > -1) {
           currentChannels.splice(index, 1);
         }
+        chatDbg.logChatUnsubscription(channelName);
 
         console.log(`🗑️ Unsubscribed from staff chat: ${channelName}`);
       } catch (error) {

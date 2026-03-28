@@ -12,6 +12,7 @@ import { RoomBookingProvider } from './stores/roomBookingStore.jsx';
 import { RoomsProvider } from './stores/roomsStore.jsx';
 import { HousekeepingProvider } from './stores/housekeepingStore.jsx';
 import RealtimeDebugPanel from './debug/RealtimeDebugPanel.jsx';
+import ChatRealtimeDebugPanel from './debug/ChatRealtimeDebugPanel.jsx';
 
 /**
  * RealtimeProvider - Manages centralized realtime subscriptions
@@ -103,6 +104,7 @@ export function RealtimeProvider({ children }) {
         </AttendanceProvider>
       </NotificationsProviderWithCallback>
       <RealtimeDebugPanel />
+      {import.meta.env.DEV && <ChatRealtimeDebugPanel />}
     </>
   );
 }
