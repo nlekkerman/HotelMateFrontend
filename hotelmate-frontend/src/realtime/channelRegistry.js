@@ -1,6 +1,6 @@
 // src/realtime/channelRegistry.js
 import { getPusherClient } from './realtimeClient';
-import { getGuestPusherClient } from './guestRealtimeClient';
+import { createGuestPusherClient } from './guestRealtimeClient';
 import { handleIncomingRealtimeEvent } from './eventBus';
 import { SESSION_HEADER } from '../services/guestChatAPI.js';
 import { guestAPI } from '../services/api.js';
@@ -449,7 +449,7 @@ export function subscribeToGuestChatBooking({ hotelSlug, channelName, chatSessio
   try {
     const authEndpoint = getPusherAuthEndpoint(hotelSlug);
     
-    const pusher = getGuestPusherClient(chatSession, { authEndpoint });
+    const pusher = createGuestPusherClient(chatSession, { authEndpoint });
     if (!pusher) {
       console.error('❌ [GuestChat] Failed to get guest Pusher client');
       return () => {};
