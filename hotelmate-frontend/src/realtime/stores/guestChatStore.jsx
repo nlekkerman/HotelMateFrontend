@@ -93,6 +93,13 @@ function guestChatReducer(state, action) {
 
     case GUEST_CHAT_ACTIONS.INIT_MESSAGES_FOR_CONVERSATION: {
       const { conversationId, messages } = action.payload;
+      const existingMessages = state.messagesByConversationId[conversationId] || [];
+      
+      // Merge: keep existing messages (including realtime arrivals), layer API data on top
+      const messageMap = new Map();
+      existingMessages.forEach(msg => {
+        if (msg.id) messageMap.set(msg.id, msg);
+      });
       
       const formattedMessages = messages.map(msg => ({
         id: msg.id,
@@ -104,12 +111,16 @@ function guestChatReducer(state, action) {
         readByStaff: msg.read_by_staff || msg.readByStaff || false,
         readByGuest: msg.read_by_guest || msg.readByGuest || false
       }));
+      
+      formattedMessages.forEach(msg => {
+        if (msg.id) messageMap.set(msg.id, msg);
+      });
 
       return {
         ...state,
         messagesByConversationId: {
           ...state.messagesByConversationId,
-          [conversationId]: sortMessagesByTime(formattedMessages)
+          [conversationId]: sortMessagesByTime(Array.from(messageMap.values()))
         }
       };
     }

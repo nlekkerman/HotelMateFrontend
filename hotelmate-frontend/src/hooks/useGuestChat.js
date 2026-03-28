@@ -111,16 +111,29 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     staleTime: 30 * 1000,
   });
 
-  // Hydrate local state from initial fetch
+  // Hydrate local state from initial fetch — merge, don't replace,
+  // so realtime messages received between fetches are preserved.
   useEffect(() => {
     if (!initialMessages || !Array.isArray(initialMessages)) return;
-    const sorted = sortMessages(initialMessages);
-    setMessages(sorted);
-
-    if (conversationId) {
-      guestChatActions.initMessagesForConversation(conversationId, sorted, guestChatDispatch);
-    }
-    sorted.forEach((m) => { if (m.id) processedMessageIds.current.add(m.id); });
+    setMessages((prev) => {
+      const map = new Map();
+      // Keep existing messages (including realtime arrivals), skip optimistic
+      prev.forEach((m) => { if (m.id && !m.__optimistic) map.set(m.id, m); });
+      // Layer fetched messages on top
+      (Array.isArray(initialMessages) ? initialMessages : []).forEach((m) => {
+        if (m.id) { map.set(m.id, { ...m, status: 'delivered' }); processedMessageIds.current.add(m.id); }
+      });
+      const merged = Array.from(map.values());
+      // Preserve unresolved optimistic messages
+      const optimistic = prev.filter(
+        (m) => m.__optimistic && !merged.find((x) => x.client_message_id === m.client_message_id)
+      );
+      const result = sortMessages([...merged, ...optimistic]);
+      if (conversationId) {
+        guestChatActions.initMessagesForConversation(conversationId, result, guestChatDispatch);
+      }
+      return result;
+    });
   }, [initialMessages, conversationId, guestChatDispatch]);
 
   // ── Realtime handler: message_created ────────────────────────────────
