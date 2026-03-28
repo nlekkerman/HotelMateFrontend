@@ -1012,53 +1012,9 @@ export const chatActions = {
         break;
       }
 
-      // 🔄 GUEST CHAT EVENTS: Update staff conversation list when guests send messages
-      case 'guest_message_created': {
-        console.log('🔄 [GUEST-TO-STAFF] Processing guest_message_created for staff conversation list update:', { 
-          conversationId: numericConversationId, 
-          payload 
-        });
-
-        if (numericConversationId && payload.id && payload.message) {
-          // Only update conversation metadata, not actual messages (handled by guestChatStore)
-          const lastMessage = {
-            id: payload.id,
-            message: payload.message || payload.text,
-            sender: payload.sender_id || payload.sender,
-            sender_name: payload.sender_name,
-            sender_role: payload.sender_role || 'guest',
-            timestamp: payload.timestamp || new Date().toISOString(),
-            conversation: numericConversationId,
-            is_read: false  // New guest message is unread by staff
-          };
-
-          console.log('🔄 [GUEST-TO-STAFF] Updating staff conversation metadata:', { 
-            conversationId: numericConversationId, 
-            lastMessage
-          });
-
-          globalChatDispatch({
-            type: CHAT_ACTIONS.UPDATE_CONVERSATION_METADATA,
-            payload: {
-              conversationId: numericConversationId,
-              metadata: {
-                lastMessage: lastMessage,
-                last_message: lastMessage  // Ensure both formats
-              }
-            }
-          });
-
-          console.log('✅ [GUEST-TO-STAFF] Staff conversation list updated with guest message');
-        } else {
-          console.warn('⚠️ [GUEST-TO-STAFF] Missing required fields for guest message:', {
-            hasConversationId: !!numericConversationId,
-            hasMessageId: !!payload.id,
-            hasMessage: !!(payload.message || payload.text)
-          });
-        }
-        
-        break;
-      }
+      // NOTE: guest_message_created was removed — the -notifications channel now
+      // routes new-guest-message directly as staff_chat/realtime_staff_chat_message_created,
+      // which is handled by the case above (RECEIVE_MESSAGE updates lastMessage + unread).
 
       default:
         // Filter out Pusher system events (pusher:subscription_succeeded, etc.)

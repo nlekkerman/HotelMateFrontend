@@ -449,9 +449,24 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatSession, channelName, events?.message_created, events?.message_read, pusherConfig?.key]);
 
-  // ── Mark read when messages are visible ──────────────────────────────
+  // ── Mark read when NEW staff/system messages arrive ───────────────
+  // Only POST mark_read when the latest message was NOT sent by the guest
+  // (the guest already "read" their own messages). Track the last length
+  // to avoid re-posting on every render.
+  const lastMarkedLengthRef = useRef(0);
+
   useEffect(() => {
-    if (messages.length) {
+    if (!messages.length || messages.length <= lastMarkedLengthRef.current) return;
+
+    // Check if any of the NEW messages (since last mark) are from staff/system
+    const newMessages = messages.slice(lastMarkedLengthRef.current);
+    const hasUnreadFromOthers = newMessages.some(
+      (m) => m.sender_type !== 'guest' && m.sender_role !== 'guest'
+    );
+
+    lastMarkedLengthRef.current = messages.length;
+
+    if (hasUnreadFromOthers) {
       markRead();
     }
   }, [messages.length]); // eslint-disable-line react-hooks/exhaustive-deps

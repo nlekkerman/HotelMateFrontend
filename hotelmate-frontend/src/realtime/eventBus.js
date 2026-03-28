@@ -431,68 +431,45 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
     }
 
     // 5️⃣ GUEST MESSAGE REAL-TIME UPDATE FOR STAFF
+    // This is a staff-side notification — the guest's own Pusher client receives
+    // message_created directly on the private booking channel via useGuestChat.
+    // Route ONLY to staff_chat so chatStore can update the staff conversation list.
     if (channel?.endsWith('-notifications') && eventName === 'new-guest-message' && !eventName?.startsWith('pusher:')) {
-      console.log('🔔 [EventBus] New guest message - creating real-time chat update:', { channel, eventName, payload });
-      
-      // Create BOTH guest_chat AND staff_chat events to ensure message appears in open staff chat window
-      const basePayload = {
+      if (!import.meta.env.PROD) {
+        console.log('🔔 [EventBus] Staff notification: new-guest-message → staff_chat only', { channel, payload });
+      }
+
+      const staffPayload = {
         id: payload?.message_id || payload?.id || `msg-${Date.now()}`,
         message: payload?.guest_message || payload?.message || 'New message',
-        sender_id: payload?.guest_id || payload?.sender_id || payload?.guestId || `guest-${Date.now()}`, // Multiple fallbacks
-        sender: payload?.guest_id || payload?.sender_id || payload?.guestId || `guest-${Date.now()}`, // For staff_chat compatibility
+        sender_id: payload?.guest_id || payload?.sender_id || payload?.guestId || `guest-${Date.now()}`,
+        sender: payload?.guest_id || payload?.sender_id || payload?.guestId || `guest-${Date.now()}`,
         sender_name: payload?.sender_name || payload?.guest_name || 'Guest',
         sender_role: 'guest',
-        sender_type: 'guest', // For staff_chat compatibility
+        sender_type: 'guest',
         conversation_id: payload?.conversation_id,
-        conversation: payload?.conversation_id, // For staff_chat compatibility
+        conversation: payload?.conversation_id,
         booking_id: payload?.booking_id,
         room_number: payload?.room_number,
         timestamp: payload?.timestamp || new Date().toISOString(),
         created_at: payload?.timestamp || new Date().toISOString()
       };
 
-      console.log('🔍 [EventBus] Debug guest message payload mapping:', {
-        originalPayload: payload,
-        mappedSenderId: basePayload.sender_id,
-        availableFields: Object.keys(payload || {})
-      });
-
-      // 1. Create guest_chat event for guest-specific handling
-      const guestChatEvent = {
-        category: 'guest_chat',
-        type: 'guest_message_created',
-        payload: basePayload,
-        meta: {
-          channel,
-          eventName,
-          event_id: payload?.event_id || `guest-msg-${Date.now()}`,
-          conversation_id: payload?.conversation_id
-        },
-        source,
-        timestamp: payload?.timestamp || new Date().toISOString()
-      };
-      
-      console.log('🚀 [EventBus] Routing guest message as guest_chat event:', guestChatEvent);
-      routeToDomainStores(guestChatEvent);
-
-      // 2. ALSO create staff_chat event to ensure message appears in open staff chat window
       const staffChatEvent = {
         category: 'staff_chat',
         type: 'realtime_staff_chat_message_created',
-        payload: basePayload,
+        payload: staffPayload,
         meta: {
           channel,
-          eventName: 'realtime_staff_chat_message_created', // Override to match expected event name
+          eventName: 'realtime_staff_chat_message_created',
           event_id: payload?.event_id || `guest-to-staff-${Date.now()}`,
           conversation_id: payload?.conversation_id
         },
         source,
         timestamp: payload?.timestamp || new Date().toISOString()
       };
-      
-      console.log('🚀 [EventBus] ALSO routing guest message as staff_chat event for open chat window:', staffChatEvent);
+
       routeToDomainStores(staffChatEvent);
-      
       return;
     }
 
@@ -540,24 +517,14 @@ function routeToDomainStores(event) {
         }
         break;
       case "guest_chat":
-        console.log('🔍 [GUEST-CHAT-DEBUG] Processing guest_chat event:', {
-          type: event.type,
-          payload: event.payload,
-          eventName: event.meta?.eventName,
-          channel: event.meta?.channel
-        });
-        
-        console.log('🚀 [GUEST-CHAT-DEBUG] About to call guestChatActions.handleEvent with event:', event);
+        if (!import.meta.env.PROD) {
+          console.log('🔍 [EventBus] Routing guest_chat event to guestChatStore:', event.type);
+        }
         chatDbg.logChatEventRouted(event.meta?._chatDbgId, { normalizedCategory: 'guest_chat', normalizedType: event.type });
         guestChatActions.handleEvent(event);
         chatDbg.logChatEventDispatched(event.meta?._chatDbgId, 'guestChatStore');
-        console.log('✅ [GUEST-CHAT-DEBUG] guestChatActions.handleEvent completed');
-
-        // 🔄 CROSS-DOMAIN UPDATE: Also update staff conversation list when guests send messages
-        // This ensures staff conversation sidebar shows latest guest messages
-        console.log('🔄 [GUEST-TO-STAFF] Also routing guest_chat event to chatActions for staff conversation list update');
-        chatActions.handleEvent(event);
-        console.log('✅ [GUEST-TO-STAFF] Staff conversation list update completed');
+        // NOTE: Staff conversation list is updated via the separate staff_chat event
+        // from the -notifications channel. No cross-domain routing needed here.
         break;
       case "room_service":
         console.log('🍽️ [EventBus] Processing room service event:', {
@@ -702,8 +669,7 @@ function generateNotificationMessage(category, eventType, payload) {
       if (eventType === 'realtime_staff_chat_unread_updated') return 'Unread messages updated';
       return `Staff chat ${eventType.replace('realtime_staff_chat_', '').replace('_', ' ')}`;
     case 'guest_chat':
-      return eventType === 'guest_message_created' ? 'New guest message' : 
-             eventType === 'staff_message_created' ? 'Staff reply sent' :
+      return eventType === 'message_created' ? 'New guest message' : 
              `Guest chat ${eventType.replace('_', ' ')}`;
     case 'room_service':
       return eventType === 'order_created' ? 'New order received' : 
