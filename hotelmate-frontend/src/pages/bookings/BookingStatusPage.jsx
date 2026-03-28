@@ -10,7 +10,7 @@ import {
   Form,
 } from "react-bootstrap";
 import { publicAPI } from '@/services/api';
-import { getBootstrap as getGuestBootstrap } from '@/services/guestChatAPI';
+import { getChatBootstrap as getGuestBootstrap } from '@/services/guestChatAPI';
 import { logQueryRefetchStart, logQueryRefetchSuccess } from '@/realtime/debug/debugLogger.js';
 import { useDebugRender } from '@/realtime/debug/useDebugRender.js';
 
@@ -436,7 +436,7 @@ const BookingStatusPage = () => {
       setContextError(null);
 
       // Bootstrap: GET /api/guest/context/?token={token}
-      const ctx = await getGuestBootstrap(resolvedToken);
+      const ctx = await getGuestBootstrap(hotelSlug, resolvedToken);
       console.log('[BookingStatusPage] Guest context loaded:', ctx);
       setGuestContext(ctx);
     } catch (err) {

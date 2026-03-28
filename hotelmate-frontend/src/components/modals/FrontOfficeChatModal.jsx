@@ -107,7 +107,7 @@ const FrontOfficeChatModal = ({
       setError(null);
 
       // Bootstrap: GET /api/guest/context/?token={token}
-      const ctx = await guestChatAPI.getBootstrap(token);
+      const ctx = await guestChatAPI.getChatBootstrap(hotelSlug, token);
       setContext(ctx);
       console.log('[FrontOfficeChatModal] Context loaded:', ctx);
     } catch (err) {
