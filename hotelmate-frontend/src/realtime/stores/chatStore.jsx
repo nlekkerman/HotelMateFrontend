@@ -143,23 +143,12 @@ function chatReducer(state, action) {
       
       let conversation = state.conversationsById[conversationId];
       
-      // If conversation doesn't exist, create a stub conversation from message data
+      // If conversation doesn't exist in the store, skip — the API hydration
+      // will bring it in with full data (guest_name, room_number, etc.).
+      // Creating stubs here caused ghost conversations with missing fields.
       if (!conversation) {
-        console.log('💬 Creating stub conversation for incoming message:', { conversationId, message });
-        conversation = {
-          id: conversationId,
-          conversation_id: conversationId,
-          title: message.conversation_title || message.title || '',
-          participants: message.participants || [],
-          messages: [],
-          unread_count: 0,
-          lastMessage: null,
-          updatedAt: message.timestamp || new Date().toISOString(),
-          guest_name: message.guest_name || message.sender_name || null,
-          guestName: message.guest_name || message.sender_name || null,
-          room_number: message.room_number || null,
-          roomNumber: message.room_number || null,
-        };
+        console.log('💬 [RECEIVE_MESSAGE] Conversation not in store yet, skipping:', conversationId);
+        return state;
       } else {
         console.log('🎯 [REDUCER] Found existing conversation, current message count:', conversation.messages?.length || 0);
       }
