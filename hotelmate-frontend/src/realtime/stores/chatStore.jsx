@@ -426,23 +426,17 @@ function chatReducer(state, action) {
       if (!conversationId) return state;
 
       const existing = state.conversationsById[conversationId];
-      const previousUnread = existing?.unread_count || 0;
+      if (!existing) {
+        console.log('📊 [chatReducer] UPDATE_CONVERSATION_UNREAD skipped — conversation not in store:', conversationId);
+        return state;
+      }
+      const previousUnread = existing.unread_count || 0;
       console.log('📊 [chatReducer] Previous unread:', previousUnread, '-> New unread:', unreadCount);
-      const updatedConversation = existing
-        ? {
-            ...existing,
-            unread_count: unreadCount,
-            updatedAt: metadata.updatedAt || existing.updatedAt,
-          }
-        : {
-            id: conversationId,
-            title: metadata.title || '',
-            participants: metadata.participants || [],
-            messages: [],
-            unread_count: unreadCount,
-            lastMessage: metadata.lastMessage || null,
-            updatedAt: metadata.updatedAt || new Date().toISOString(),
-          };
+      const updatedConversation = {
+        ...existing,
+        unread_count: unreadCount,
+        updatedAt: metadata.updatedAt || existing.updatedAt,
+      };
 
       const adjustedTotal =
         typeof state.totalUnreadOverride === 'number'
@@ -527,21 +521,19 @@ function chatReducer(state, action) {
         normalizedTotalUnread
       });
 
-      const updatedConversation = existingConversation
-        ? {
-            ...existingConversation,
-            unread_count: nextUnread,
-            updatedAt: timestamp || existingConversation.updatedAt,
-          }
-        : {
-            id: numericConversationId,
-            title: '',
-            participants: [],
-            messages: [],
-            unread_count: nextUnread,
-            lastMessage: null,
-            updatedAt: timestamp || new Date().toISOString(),
-          };
+      if (!existingConversation) {
+        console.log('📊 [chatReducer] UPDATE_UNREAD_COUNTS skipped — conversation not in store:', numericConversationId);
+        return {
+          ...state,
+          totalUnreadOverride: normalizedTotalUnread,
+        };
+      }
+
+      const updatedConversation = {
+        ...existingConversation,
+        unread_count: nextUnread,
+        updatedAt: timestamp || existingConversation.updatedAt,
+      };
 
       return {
         ...state,
