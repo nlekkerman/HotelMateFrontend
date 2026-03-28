@@ -11,20 +11,9 @@ import './GuestChatWidget.css';
 
 // ── MessageBubble ──────────────────────────────────────────────────────
 const MessageBubble = ({ message, contract, onRetry }) => {
-  let isGuest = false;
-  if (message.sender_type === 'guest' || message.sender_role === 'guest') {
-    isGuest = true;
-  } else if (contract?.guest_id && message.guest_id) {
-    isGuest = message.guest_id === contract.guest_id;
-  } else if (message.guest_id && !message.staff_id && !message.staff) {
-    isGuest = true;
-  } else if (message.staff_id || message.staff || message.staff_display_name) {
-    isGuest = false;
-  } else {
-    isGuest = message.sender_type === 'guest';
-  }
-
-  const isSystem = message.sender_type === 'system';
+  const senderType = message.sender_type || message.sender_role;
+  const isGuest = senderType === 'guest';
+  const isSystem = senderType === 'system';
   const isFailed = message.status === 'failed';
   const isSending = message.status === 'sending';
 
@@ -57,10 +46,20 @@ const MessageBubble = ({ message, contract, onRetry }) => {
           )}
         </div>
         <div className="message-info">
-          {!isGuest && message.staff_display_name && <span className="sender-name">{message.staff_display_name}</span>}
+          {!isGuest && (message.staff_display_name || message.sender_name) && (
+            <span className="sender-name">{message.staff_display_name || message.sender_name}</span>
+          )}
+          {message.is_edited && <span className="edited-indicator" title="Edited"><i className="bi bi-pencil"></i></span>}
           <span className="message-timestamp">
             {new Date(message.timestamp || message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
+          {isGuest && message.status === 'delivered' && (
+            <span className="read-receipt" title={message.read_by_staff ? 'Seen' : 'Delivered'}>
+              {message.read_by_staff
+                ? <i className="bi bi-check2-all" style={{ color: '#0d6efd' }}></i>
+                : <i className="bi bi-check2"></i>}
+            </span>
+          )}
         </div>
       </div>
       {isSending && (

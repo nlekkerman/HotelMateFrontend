@@ -437,34 +437,14 @@ export const guestChatActions = {
 
     console.log("[guestChatStore] Processing event:", eventType, conversationId, payload);
 
-    // ✅ Handle events from the guide
+    // ✅ Handle events — canonical event names only
     switch (eventType) {
-      case 'guest_message_created':
-        dispatch({
-          type: GUEST_CHAT_ACTIONS.GUEST_MESSAGE_RECEIVED,
-          payload: {
-            message: payload,
-            conversationId
-          }
-        });
-        break;
-
-      case 'staff_message_created':
-        dispatch({
-          type: GUEST_CHAT_ACTIONS.STAFF_MESSAGE_SENT,
-          payload: {
-            message: payload,
-            conversationId
-          }
-        });
-        break;
-
-      case 'message_created':
-        // Legacy fallback - determine sender type from payload
-        const actionType = (payload.sender_type || payload.sender_role) === 'guest' 
-          ? GUEST_CHAT_ACTIONS.GUEST_MESSAGE_RECEIVED 
+      case 'message_created': {
+        const senderType = payload.sender_type || payload.sender_role;
+        const actionType = senderType === 'guest'
+          ? GUEST_CHAT_ACTIONS.GUEST_MESSAGE_RECEIVED
           : GUEST_CHAT_ACTIONS.STAFF_MESSAGE_SENT;
-        
+
         dispatch({
           type: actionType,
           payload: {
@@ -473,6 +453,7 @@ export const guestChatActions = {
           }
         });
         break;
+      }
 
       case 'unread_updated':
         dispatch({

@@ -10,7 +10,8 @@
  * Realtime:
  * - Pusher key/cluster/authEndpoint from bootstrap pusher.* fields
  * - Channel from bootstrap channel_name
- * - Binds BOTH events.message_created AND events.message_read
+ * - Binds all contract events: message_created, message_read,
+ *   message_deleted, message_edited, unread_updated
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -24,6 +25,28 @@ import * as chatDbg from '../realtime/debug/chatDebugLogger';
 const DEBUG_REALTIME = import.meta.env.DEV;
 
 const generateClientMessageId = () => uuidv4();
+
+/** Normalize a raw realtime payload into a deterministic message shape */
+function normalizeRealtimeMessage(payload, fallbackConversationId) {
+  return {
+    id: payload.id,
+    conversation_id: payload.conversation_id || fallbackConversationId,
+    booking_id: payload.booking_id,
+    sender_type: payload.sender_type || payload.sender_role,
+    sender_name: payload.sender_name,
+    message: payload.message,
+    timestamp: payload.timestamp,
+    attachments: payload.attachments || [],
+    has_attachments: payload.has_attachments || false,
+    read_by_staff: payload.read_by_staff ?? false,
+    read_by_guest: payload.read_by_guest ?? false,
+    is_edited: payload.is_edited ?? false,
+    is_deleted: payload.is_deleted ?? false,
+    status: payload.status || 'delivered',
+    reply_to: payload.reply_to || null,
+    client_message_id: payload.client_message_id || null,
+  };
+}
 
 /** Sort helper used in multiple places */
 const sortMessages = (msgs) =>
@@ -66,6 +89,9 @@ export const useGuestChat = ({ hotelSlug, token }) => {
   // Stable ref for realtime handler so effect deps don't cause resubscribe
   const handleMessageCreatedRef = useRef(null);
   const handleMessageReadRef = useRef(null);
+  const handleMessageDeletedRef = useRef(null);
+  const handleMessageEditedRef = useRef(null);
+  const handleUnreadUpdatedRef = useRef(null);
 
   // Keep a ref to the Pusher client + channel for cleanup
   const pusherRef = useRef(null);
@@ -164,8 +190,7 @@ export const useGuestChat = ({ hotelSlug, token }) => {
         processedEventIds.current.add(eventId);
       }
 
-      const msg = { ...payload };
-      if (!msg.conversation_id && conversationId) msg.conversation_id = conversationId;
+      const msg = normalizeRealtimeMessage(payload, conversationId);
 
       realtimeDiag.current.lastReceivedMessageId = msg.id;
 
@@ -177,10 +202,7 @@ export const useGuestChat = ({ hotelSlug, token }) => {
       if (msg.id) processedMessageIds.current.add(msg.id);
 
       // Clear matching sending message
-      if (
-        (msg.sender_type === 'guest' || msg.sender_role === 'guest') &&
-        msg.client_message_id
-      ) {
+      if (msg.sender_type === 'guest' && msg.client_message_id) {
         setSendingMessages((prev) =>
           prev.filter((s) => s.client_message_id !== msg.client_message_id)
         );
@@ -189,7 +211,7 @@ export const useGuestChat = ({ hotelSlug, token }) => {
       setMessages((prev) => {
         if (prev.some((m) => m.id === msg.id)) return prev;
         chatDbg.logUiAdd(msg.id, 'guest-realtime');
-        return sortMessages([...prev, { ...msg, status: 'delivered' }]);
+        return sortMessages([...prev, msg]);
       });
 
       // Chat debug: mark routed/dispatched
@@ -244,9 +266,71 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     [conversationId, events?.message_read, guestChatDispatch]
   );
 
+  // ── Realtime handler: message_deleted ─────────────────────────────────
+  const handleMessageDeleted = useCallback(
+    (evt) => {
+      if (DEBUG_REALTIME) console.log('[useGuestChat] message_deleted event:', evt);
+
+      const payload = evt?.payload ?? evt;
+      const messageId = payload.message_id || payload.id;
+
+      if (!messageId) return;
+
+      // Remove from local display state
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+
+      // Route to store
+      const storeEvent = { category: 'guest_chat', type: 'message_deleted', payload: { ...payload, conversation_id: payload.conversation_id || conversationId }, meta: evt?.meta };
+      guestChatActions.handleEvent(storeEvent, guestChatDispatch);
+    },
+    [conversationId, guestChatDispatch]
+  );
+
+  // ── Realtime handler: message_edited ──────────────────────────────────
+  const handleMessageEdited = useCallback(
+    (evt) => {
+      if (DEBUG_REALTIME) console.log('[useGuestChat] message_edited event:', evt);
+
+      const payload = evt?.payload ?? evt;
+      const messageId = payload.message_id || payload.id;
+
+      if (!messageId) return;
+
+      // Update in local display state
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? { ...m, message: payload.message || payload.message_text || m.message, is_edited: true }
+            : m
+        )
+      );
+
+      // Route to store
+      const storeEvent = { category: 'guest_chat', type: 'message_edited', payload: { ...payload, conversation_id: payload.conversation_id || conversationId }, meta: evt?.meta };
+      guestChatActions.handleEvent(storeEvent, guestChatDispatch);
+    },
+    [conversationId, guestChatDispatch]
+  );
+
+  // ── Realtime handler: unread_updated ──────────────────────────────────
+  const handleUnreadUpdated = useCallback(
+    (evt) => {
+      if (DEBUG_REALTIME) console.log('[useGuestChat] unread_updated event:', evt);
+
+      const payload = evt?.payload ?? evt;
+
+      const storeEvent = { category: 'guest_chat', type: 'unread_updated', payload: { ...payload, conversation_id: payload.conversation_id || conversationId }, meta: evt?.meta };
+      guestChatActions.handleEvent(storeEvent, guestChatDispatch);
+    },
+    [conversationId, guestChatDispatch]
+  );
+
   // Keep refs current (avoids stale closures in Pusher bindings)
   handleMessageCreatedRef.current = handleMessageCreated;
   handleMessageReadRef.current = handleMessageRead;
+  handleMessageDeletedRef.current = handleMessageDeleted;
+  handleMessageEditedRef.current = handleMessageEdited;
+  handleUnreadUpdatedRef.current = handleUnreadUpdated;
 
   // ── STEP 3: Pusher Setup ─────────────────────────────────────────────
   useEffect(() => {
@@ -305,14 +389,32 @@ export const useGuestChat = ({ hotelSlug, token }) => {
           setConnectionState('failed');
         });
 
-        // ── Bind BOTH contract events ──────────────────────────────────
+        // ── Bind ALL contract events ───────────────────────────────────
         const wrappedCreated = (evt) => handleMessageCreatedRef.current(evt);
         const wrappedRead    = (evt) => handleMessageReadRef.current(evt);
+        const wrappedDeleted = (evt) => handleMessageDeletedRef.current(evt);
+        const wrappedEdited  = (evt) => handleMessageEditedRef.current(evt);
+        const wrappedUnread  = (evt) => handleUnreadUpdatedRef.current(evt);
 
         channel.bind(events.message_created, wrappedCreated);
         channel.bind(events.message_read, wrappedRead);
 
-        realtimeDiag.current.boundEvents = [events.message_created, events.message_read];
+        const boundEvents = [events.message_created, events.message_read];
+
+        if (events.message_deleted) {
+          channel.bind(events.message_deleted, wrappedDeleted);
+          boundEvents.push(events.message_deleted);
+        }
+        if (events.message_edited) {
+          channel.bind(events.message_edited, wrappedEdited);
+          boundEvents.push(events.message_edited);
+        }
+        if (events.unread_updated) {
+          channel.bind(events.unread_updated, wrappedUnread);
+          boundEvents.push(events.unread_updated);
+        }
+
+        realtimeDiag.current.boundEvents = boundEvents;
 
         // Chat debug: update snapshot
         chatDbg.updateSnapshot({
