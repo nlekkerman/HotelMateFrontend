@@ -2,7 +2,7 @@
 import { getPusherClient } from './realtimeClient';
 import { getGuestPusherClient } from './guestRealtimeClient';
 import { handleIncomingRealtimeEvent } from './eventBus';
-import { getPusherAuthEndpoint, SESSION_HEADER } from '../services/guestChatAPI.js';
+import { SESSION_HEADER } from '../services/guestChatAPI.js';
 import { guestAPI } from '../services/api.js';
 import { logRealtimeSubscription, logRealtimeUnsubscription, logRealtimeSetHotelSlug, logRealtimeError } from './debug/debugLogger.js';
 import * as chatDbg from './debug/chatDebugLogger.js';
