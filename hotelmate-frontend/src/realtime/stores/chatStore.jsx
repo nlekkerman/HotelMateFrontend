@@ -49,6 +49,8 @@ function chatReducer(state, action) {
           room_number: conv.room_number || existing.room_number || null,
           roomNumber: conv.room_number || conv.roomNumber || existing.roomNumber || null,
           room: conv.room || existing.room || null,
+          // Source tag for filtering (staff_chat vs room_chat)
+          _source: conv._source || existing._source || null,
         };
       });
 

@@ -31,10 +31,22 @@ export const StaffChatProvider = ({ children }) => {
       const res = await fetchConversations(hotelSlug);
       const convs = res?.results || res || [];
       
+      // Filter out room/guest conversations — they belong to ChatContext.
+      // Tag remaining as staff_chat so the store can distinguish sources.
+      const staffOnlyConvs = convs
+        .filter(c => !c.room && !c.room_number && !c.guest_name)
+        .map(c => ({ ...c, _source: 'staff_chat' }));
+
+      console.log('[StaffChatContext] Filtered conversations:', {
+        total: convs.length,
+        staffOnly: staffOnlyConvs.length,
+        filteredOut: convs.length - staffOnlyConvs.length,
+      });
+
       // Load conversations into chatStore
       chatDispatch({
         type: CHAT_ACTIONS.INIT_CONVERSATIONS_FROM_API,
-        payload: { conversations: convs }
+        payload: { conversations: staffOnlyConvs }
       });
     } catch (err) {
       console.error("Failed to fetch staff conversations:", err);
@@ -108,9 +120,11 @@ export const StaffChatProvider = ({ children }) => {
     });
   }, [chatDispatch]);
 
-  // Derived values from chatStore
+  // Derived values from chatStore — only staff-type conversations
   const conversations = useMemo(
-    () => Object.values(chatState.conversationsById),
+    () => Object.values(chatState.conversationsById).filter(
+      c => c._source === 'staff_chat' || (!c.room_number && !c.guest_name && !c.room)
+    ),
     [chatState.conversationsById]
   );
   const activeConversation = chatState.activeConversationId 

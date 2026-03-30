@@ -25,9 +25,12 @@ export const ChatProvider = ({ children }) => {
   const chatDispatch = useChatDispatch();
   
   // Derive conversations from chatStore (single source of truth)
+  // Only include room-type conversations (those with room/guest data)
   const conversations = useMemo(() => {
     if (!chatStore?.conversationsById) return [];
-    return Object.values(chatStore.conversationsById).map(c => ({
+    return Object.values(chatStore.conversationsById)
+      .filter(c => c._source === 'room_chat' || c.room_number || c.guest_name || c.room)
+      .map(c => ({
       ...c,
       conversation_id: c.conversation_id || c.id,
       id: c.id || c.conversation_id,
@@ -98,6 +101,7 @@ export const ChatProvider = ({ children }) => {
             updated_at: new Date().toISOString(),
             unreadCountForGuest: 0,
             unread_count: 0,
+            _source: 'room_chat',
             room: {
               number: guestChatState.context.room_number,
               guest_name: guestChatState.context.guest_name || `Room ${guestChatState.context.room_number}`
@@ -150,6 +154,7 @@ export const ChatProvider = ({ children }) => {
         unread_count: c.unread_count || c.unread_count_for_staff || 0,
         last_message: c.last_message || "",
         last_message_time: c.updated_at || c.last_message_time,
+        _source: 'room_chat',
         
         // Legacy/alternative field names for compatibility
         id: c.id || c.conversation_id,
@@ -218,6 +223,7 @@ export const ChatProvider = ({ children }) => {
             updated_at: new Date().toISOString(),
             unreadCountForGuest: 0,
             unread_count: 0,
+            _source: 'room_chat',
             room: {
               number: guestChatState.context.room_number,
               guest_name: guestChatState.context.guest_name || `Room ${guestChatState.context.room_number}`

@@ -180,7 +180,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
       chatDispatch({
         type: 'INIT_CONVERSATIONS_FROM_API',
         payload: {
-          conversations: [conversation]
+          conversations: [{ ...conversation, _source: 'staff_chat' }]
         }
       });
     }
