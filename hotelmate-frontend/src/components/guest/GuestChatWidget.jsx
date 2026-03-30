@@ -5,12 +5,65 @@
  * All business logic lives in useGuestChat; this file is rendering only.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useGuestChat } from '../../hooks/useGuestChat';
 import './GuestChatWidget.css';
 
+// ── Grouping helpers ───────────────────────────────────────────────────
+const TIME_GAP_MS = 5 * 60 * 1000; // 5 minutes
+
+/** Build the metadata label for a message */
+function buildMetaLabel(message, roomNumber) {
+  const senderType = message.sender_type || message.sender_role;
+  if (senderType === 'guest') {
+    return roomNumber ? `You · Room ${roomNumber}` : 'You';
+  }
+  if (senderType === 'staff') {
+    const name = message.staff_display_name || message.sender_name || 'Staff';
+    const role = message.staff_role_name
+      || message.staff_info?.role
+      || null;
+    return role ? `${name} · ${role}` : name;
+  }
+  return null; // system messages don't get metadata
+}
+
+/**
+ * Determine which messages should show a metadata row above the bubble.
+ * Returns a Set of message indices that need the label.
+ */
+function computeShowMetaIndices(messages) {
+  const indices = new Set();
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+    const senderType = msg.sender_type || msg.sender_role;
+    if (senderType === 'system') continue;
+
+    if (i === 0) { indices.add(i); continue; }
+
+    const prev = messages[i - 1];
+    const prevSenderType = prev.sender_type || prev.sender_role;
+
+    // Sender changed
+    if (senderType !== prevSenderType) { indices.add(i); continue; }
+
+    // Same sender but different staff member
+    if (senderType === 'staff') {
+      const curName = msg.staff_display_name || msg.sender_name;
+      const prevName = prev.staff_display_name || prev.sender_name;
+      if (curName !== prevName) { indices.add(i); continue; }
+    }
+
+    // Time gap > 5 minutes
+    const tCur = new Date(msg.timestamp || msg.created_at).getTime();
+    const tPrev = new Date(prev.timestamp || prev.created_at).getTime();
+    if (tCur - tPrev > TIME_GAP_MS) { indices.add(i); }
+  }
+  return indices;
+}
+
 // ── MessageBubble ──────────────────────────────────────────────────────
-const MessageBubble = ({ message, contract, onRetry }) => {
+const MessageBubble = ({ message, contract, onRetry, showMeta, metaLabel, isFirstInGroup }) => {
   const senderType = message.sender_type || message.sender_role;
   const isGuest = senderType === 'guest';
   const isSystem = senderType === 'system';
@@ -29,45 +82,49 @@ const MessageBubble = ({ message, contract, onRetry }) => {
   }
 
   return (
-    <div className={`message-bubble ${isGuest ? 'guest-message' : 'staff-message'}`}>
-      <div className="message-content">
-        <div className="message-text">
-          {message.message}
-          {message.status === 'pending' && (
-            <span className="message-status pending"><i className="bi bi-clock" title="Sending..."></i></span>
-          )}
-          {isFailed && (
-            <span className="message-status failed">
-              <i className="bi bi-exclamation-triangle" title="Failed to send"></i>
-              <button className="retry-button" onClick={() => onRetry(message)} title="Retry sending">
-                <i className="bi bi-arrow-clockwise"></i>
-              </button>
-            </span>
-          )}
-        </div>
-        <div className="message-info">
-          {!isGuest && (message.staff_display_name || message.sender_name) && (
-            <span className="sender-name">{message.staff_display_name || message.sender_name}</span>
-          )}
-          {message.is_edited && <span className="edited-indicator" title="Edited"><i className="bi bi-pencil"></i></span>}
-          <span className="message-timestamp">
-            {new Date(message.timestamp || message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
-          {isGuest && message.status === 'delivered' && (
-            <span className="read-receipt" title={message.read_by_staff ? 'Seen' : 'Delivered'}>
-              {message.read_by_staff
-                ? <i className="bi bi-check2-all" style={{ color: '#0d6efd' }}></i>
-                : <i className="bi bi-check2"></i>}
-            </span>
-          )}
-        </div>
-      </div>
-      {isSending && (
-        <div className="sending-indicator">
-          <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-          <small className="text-muted">Sending message...</small>
+    <div className={`message-wrapper ${isGuest ? 'guest-side' : 'staff-side'}${isFirstInGroup ? ' group-start' : ''}`}>
+      {showMeta && metaLabel && (
+        <div className={`message-meta ${isGuest ? 'meta-guest' : 'meta-staff'}`}>
+          {metaLabel}
         </div>
       )}
+      <div className={`message-bubble ${isGuest ? 'guest-message' : 'staff-message'}`}>
+        <div className="message-content">
+          <div className="message-text">
+            {message.message}
+            {message.status === 'pending' && (
+              <span className="message-status pending"><i className="bi bi-clock" title="Sending..."></i></span>
+            )}
+            {isFailed && (
+              <span className="message-status failed">
+                <i className="bi bi-exclamation-triangle" title="Failed to send"></i>
+                <button className="retry-button" onClick={() => onRetry(message)} title="Retry sending">
+                  <i className="bi bi-arrow-clockwise"></i>
+                </button>
+              </span>
+            )}
+          </div>
+          <div className="message-info">
+            {message.is_edited && <span className="edited-indicator" title="Edited"><i className="bi bi-pencil"></i></span>}
+            <span className="message-timestamp">
+              {new Date(message.timestamp || message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+            {isGuest && message.status === 'delivered' && (
+              <span className="read-receipt" title={message.read_by_staff ? 'Seen' : 'Delivered'}>
+                {message.read_by_staff
+                  ? <i className="bi bi-check2-all" style={{ color: '#0d6efd' }}></i>
+                  : <i className="bi bi-check2"></i>}
+              </span>
+            )}
+          </div>
+        </div>
+        {isSending && (
+          <div className="sending-indicator">
+            <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+            <small className="text-muted">Sending message...</small>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -145,11 +202,16 @@ const MessagesList = ({ messages, sendingMessages = [], contract, onLoadOlder, o
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(true);
 
-  const allMessages = [...messages, ...sendingMessages].sort((a, b) => {
-    const tA = new Date(a.timestamp || a.created_at).getTime();
-    const tB = new Date(b.timestamp || b.created_at).getTime();
-    return tA !== tB ? tA - tB : (a.id || 0) - (b.id || 0);
-  });
+  const roomNumber = contract?.room_number || null;
+
+  const allMessages = useMemo(() =>
+    [...messages, ...sendingMessages].sort((a, b) => {
+      const tA = new Date(a.timestamp || a.created_at).getTime();
+      const tB = new Date(b.timestamp || b.created_at).getTime();
+      return tA !== tB ? tA - tB : (a.id || 0) - (b.id || 0);
+    }), [messages, sendingMessages]);
+
+  const showMetaIndices = useMemo(() => computeShowMetaIndices(allMessages), [allMessages]);
 
   useEffect(() => {
     if (hasScrolledToBottom && messagesEndRef.current) {
@@ -182,9 +244,21 @@ const MessagesList = ({ messages, sendingMessages = [], contract, onLoadOlder, o
         </div>
       )}
       <div className="messages-container">
-        {allMessages.map((msg, i) => (
-          <MessageBubble key={msg.id || `temp-${i}`} message={msg} contract={contract} onRetry={onRetry} />
-        ))}
+        {allMessages.map((msg, i) => {
+          const showMeta = showMetaIndices.has(i);
+          const metaLabel = showMeta ? buildMetaLabel(msg, roomNumber) : null;
+          return (
+            <MessageBubble
+              key={msg.id || `temp-${i}`}
+              message={msg}
+              contract={contract}
+              onRetry={onRetry}
+              showMeta={showMeta}
+              metaLabel={metaLabel}
+              isFirstInGroup={showMeta}
+            />
+          );
+        })}
       </div>
       <div ref={messagesEndRef} />
     </div>
