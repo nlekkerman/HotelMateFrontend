@@ -21,7 +21,7 @@ let _state = {
     cacheUpdateCount: 0,
     uiRenderCount: 0,
   },
-  collapsed: false,       // UI state — persisted here so it survives remounts
+  collapsed: true,        // UI state — persisted here so it survives remounts
 };
 
 // Cached snapshot for useSyncExternalStore (same reference until _notify)
