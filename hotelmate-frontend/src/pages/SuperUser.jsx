@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Container, Row, Col, Card, Button, Form, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Form, Alert, ListGroup, Badge } from 'react-bootstrap';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '@/services/api';
+import { provisionHotel } from '@/services/hotelProvisioningApi';
 
 const SuperUser = () => {
   const { user } = useAuth();
@@ -10,8 +11,10 @@ const SuperUser = () => {
   const [showCreateHotel, setShowCreateHotel] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [provisionResult, setProvisionResult] = useState(null);
 
-  const [hotelData, setHotelData] = useState({
+  const initialHotelData = {
     name: '',
     slug: '',
     subdomain: '',
@@ -29,8 +32,19 @@ const SuperUser = () => {
     latitude: '',
     longitude: '',
     is_active: true,
-    sort_order: 0
-  });
+    sort_order: 0,
+    timezone: '',
+  };
+
+  const initialAdminData = {
+    first_name: '',
+    last_name: '',
+    email: '',
+  };
+
+  const [hotelData, setHotelData] = useState(initialHotelData);
+  const [adminData, setAdminData] = useState(initialAdminData);
+  const [generateCount, setGenerateCount] = useState(0);
 
   // Redirect if not super user
   if (!user?.is_superuser) {
@@ -75,138 +89,74 @@ const SuperUser = () => {
   };
 
   // Validation function
-  const validateHotelData = (data) => {
+  const validateProvisionData = (hotel, admin, pkgCount) => {
     const errors = {};
 
-    // Required fields
-    if (!data.name?.trim()) {
-      errors.name = 'Hotel name is required';
+    // Required hotel fields
+    if (!hotel.name?.trim()) {
+      errors['hotel.name'] = 'Hotel name is required';
     }
 
-    if (!data.slug?.trim()) {
-      errors.slug = 'URL slug is required';
-    } else if (!/^[a-z0-9-]+$/.test(data.slug)) {
-      errors.slug = 'Slug can only contain lowercase letters, numbers, and hyphens';
+    if (!hotel.slug?.trim()) {
+      errors['hotel.slug'] = 'URL slug is required';
+    } else if (!/^[a-z0-9-]+$/.test(hotel.slug)) {
+      errors['hotel.slug'] = 'Slug can only contain lowercase letters, numbers, and hyphens';
     }
 
-    if (!data.subdomain?.trim()) {
-      errors.subdomain = 'Subdomain is required';
-    } else if (!/^[a-z0-9-]+$/.test(data.subdomain)) {
-      errors.subdomain = 'Subdomain can only contain lowercase letters, numbers, and hyphens';
+    if (!hotel.subdomain?.trim()) {
+      errors['hotel.subdomain'] = 'Subdomain is required';
+    } else if (!/^[a-z0-9-]+$/.test(hotel.subdomain)) {
+      errors['hotel.subdomain'] = 'Subdomain can only contain lowercase letters, numbers, and hyphens';
     }
 
-    // Optional field validation
-    if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-      errors.email = 'Please enter a valid email address';
+    // Required admin fields
+    if (!admin.first_name?.trim()) {
+      errors['admin.first_name'] = 'Primary admin first name is required';
     }
 
-    if (data.website && !/^https?:\/\/.+/.test(data.website)) {
-      errors.website = 'Website must be a valid URL starting with http:// or https://';
+    if (!admin.last_name?.trim()) {
+      errors['admin.last_name'] = 'Primary admin last name is required';
     }
 
-    if (data.phone && !/^[\+]?[0-9\s\-\(\)]+$/.test(data.phone)) {
-      errors.phone = 'Please enter a valid phone number';
+    if (!admin.email?.trim()) {
+      errors['admin.email'] = 'Primary admin email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(admin.email)) {
+      errors['admin.email'] = 'Please enter a valid email address';
     }
 
-    if (data.latitude && (isNaN(data.latitude) || data.latitude < -90 || data.latitude > 90)) {
-      errors.latitude = 'Latitude must be a number between -90 and 90';
+    // Optional hotel field validation
+    if (hotel.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(hotel.email)) {
+      errors['hotel.email'] = 'Please enter a valid hotel email address';
     }
 
-    if (data.longitude && (isNaN(data.longitude) || data.longitude < -180 || data.longitude > 180)) {
-      errors.longitude = 'Longitude must be a number between -180 and 180';
+    if (hotel.website && !/^https?:\/\/.+/.test(hotel.website)) {
+      errors['hotel.website'] = 'Website must be a valid URL starting with http:// or https://';
+    }
+
+    if (hotel.phone && !/^[\+]?[0-9\s\-\(\)]+$/.test(hotel.phone)) {
+      errors['hotel.phone'] = 'Please enter a valid phone number';
+    }
+
+    if (hotel.latitude && (isNaN(hotel.latitude) || hotel.latitude < -90 || hotel.latitude > 90)) {
+      errors['hotel.latitude'] = 'Latitude must be between -90 and 90';
+    }
+
+    if (hotel.longitude && (isNaN(hotel.longitude) || hotel.longitude < -180 || hotel.longitude > 180)) {
+      errors['hotel.longitude'] = 'Longitude must be between -180 and 180';
+    }
+
+    // Registration packages validation
+    if (pkgCount !== '' && pkgCount !== undefined) {
+      const count = Number(pkgCount);
+      if (!Number.isInteger(count) || count < 0 || count > 10) {
+        errors['generate_count'] = 'Registration package count must be an integer between 0 and 10';
+      }
     }
 
     return errors;
   };
 
-  // Post-creation setup functions
-  const bootstrapHotelPage = async (hotelSlug) => {
-    try {
-      // Try the public page bootstrap endpoint
-      await api.post(`/public/hotel/${hotelSlug}/bootstrap/`);
-    } catch (error) {
-      console.warn('Public bootstrap failed, trying staff endpoint:', error);
-      try {
-        // Fallback to staff endpoint
-        await api.post(`/staff/hotel/${hotelSlug}/public-page-bootstrap/`);
-      } catch (staffError) {
-        console.error('Both bootstrap methods failed:', staffError);
-        throw new Error('Failed to create public page');
-      }
-    }
-  };
-
-  const createDefaultRoomTypes = async (hotelSlug) => {
-    const defaultRoomTypes = [
-      {
-        name: 'Standard Single',
-        code: 'STD_SGL',
-        capacity: 1,
-        base_price: '75.00',
-      },
-      {
-        name: 'Standard Double',
-        code: 'STD_DBL',
-        capacity: 2,
-        base_price: '120.00',
-      },
-      {
-        name: 'Superior Room',
-        code: 'SUP_ROOM',
-        capacity: 2,
-        base_price: '160.00',
-      },
-    ];
-
-    for (const roomType of defaultRoomTypes) {
-      try {
-        await api.post(`/staff/hotel/${hotelSlug}/room-types/`, roomType);
-      } catch (error) {
-        console.error('Failed to create room type:', roomType.name, error);
-      }
-    }
-  };
-
-  const createDefaultNavigationItems = async (hotelSlug) => {
-    const defaultNavItems = [
-      { name: 'Home', slug: 'home', path: `/staff/${hotelSlug}/feed`, icon: 'house', sort_order: 1, is_active: true },
-      { name: 'Chat', slug: 'chat', path: `/hotel/${hotelSlug}/chat`, icon: 'chat-dots', sort_order: 2, is_active: true },
-      { name: 'Reception', slug: 'reception', path: '/reception', icon: 'bell', sort_order: 3, is_active: true },
-      { name: 'Rooms', slug: 'rooms', path: '/rooms', icon: 'door-closed', sort_order: 4, is_active: true },
-      { name: 'Housekeeping', slug: 'housekeeping', path: `/staff/hotel/${hotelSlug}/housekeeping`, icon: 'house-gear', sort_order: 5, is_active: true },
-      { name: 'Room Bookings', slug: 'room-bookings', path: `/staff/hotel/${hotelSlug}/room-bookings`, icon: 'calendar-check', sort_order: 6, is_active: true },
-      { name: 'Staff', slug: 'staff', path: `/${hotelSlug}/staff`, icon: 'people', sort_order: 7, is_active: true },
-      { name: 'Room Service', slug: 'room_service', path: `/room_service/${hotelSlug}`, icon: 'cart3', sort_order: 8, is_active: true },
-      { name: 'Breakfast', slug: 'breakfast', path: `/breakfast/${hotelSlug}`, icon: 'cup-hot', sort_order: 9, is_active: true },
-      { name: 'Menus', slug: 'menus', path: `/menus/${hotelSlug}`, icon: 'menu-button-wide', sort_order: 10, is_active: true },
-      { name: 'Bookings', slug: 'bookings', path: `/staff/hotel/${hotelSlug}/bookings`, icon: 'calendar3', sort_order: 11, is_active: true },
-      { name: 'Guests', slug: 'guests', path: `/${hotelSlug}/guests`, icon: 'person-check', sort_order: 12, is_active: true },
-      { name: 'Stock Tracker', slug: 'stock_tracker', path: `/stock_tracker/${hotelSlug}`, icon: 'boxes', sort_order: 13, is_active: true },
-      { name: 'Attendance', slug: 'attendance', path: `/staff/hotel/${hotelSlug}/attendance`, icon: 'clock-history', sort_order: 14, is_active: true },
-      { name: 'Settings', slug: 'settings', path: `/staff/${hotelSlug}/settings`, icon: 'gear', sort_order: 15, is_active: true },
-    ];
-
-    let createdCount = 0;
-    for (const navItem of defaultNavItems) {
-      try {
-        await api.post(`/staff/hotel/${hotelSlug}/navigation-items/`, navItem);
-        createdCount++;
-      } catch (error) {
-        console.error('Failed to create navigation item:', navItem.name, error);
-        // Try alternative endpoint
-        try {
-          await api.post(`/staff/navigation-items/`, { ...navItem, hotel_slug: hotelSlug });
-          createdCount++;
-        } catch (altError) {
-          console.error('Alternative navigation endpoint also failed:', navItem.name, altError);
-        }
-      }
-    }
-    console.log(`Created ${createdCount} navigation items for ${hotelSlug}`);
-    return createdCount;
-  };
-
-  // Manual bootstrap function for existing hotels
+  // Manual bootstrap function for existing hotels (maintenance tool only)
   const handleManualBootstrap = async (hotelSlug) => {
     if (!hotelSlug) {
       setMessage({ type: 'danger', text: 'Please enter a hotel slug to bootstrap' });
@@ -215,22 +165,31 @@ const SuperUser = () => {
 
     setLoading(true);
     try {
-      await bootstrapHotelPage(hotelSlug);
+      await api.post(`/public/hotel/${hotelSlug}/bootstrap/`);
       setMessage({ 
         type: 'success', 
         text: `Successfully bootstrapped public page for hotel: ${hotelSlug}` 
       });
     } catch (error) {
-      setMessage({ 
-        type: 'danger', 
-        text: `Failed to bootstrap public page for ${hotelSlug}: ${error.message}` 
-      });
+      // Fallback to staff endpoint
+      try {
+        await api.post(`/staff/hotel/${hotelSlug}/public-page-bootstrap/`);
+        setMessage({ 
+          type: 'success', 
+          text: `Successfully bootstrapped public page for hotel: ${hotelSlug}` 
+        });
+      } catch (fallbackError) {
+        setMessage({ 
+          type: 'danger', 
+          text: `Failed to bootstrap public page for ${hotelSlug}: ${fallbackError.message}` 
+        });
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Manual navigation setup for existing hotels
+  // Manual navigation setup for existing hotels (maintenance tool only)
   const handleNavigationSetup = async (hotelSlug) => {
     if (!hotelSlug) {
       setMessage({ type: 'danger', text: 'Please enter a hotel slug to setup navigation' });
@@ -239,7 +198,38 @@ const SuperUser = () => {
 
     setLoading(true);
     try {
-      const createdCount = await createDefaultNavigationItems(hotelSlug);
+      const defaultNavItems = [
+        { name: 'Home', slug: 'home', path: `/staff/${hotelSlug}/feed`, icon: 'house', sort_order: 1, is_active: true },
+        { name: 'Chat', slug: 'chat', path: `/hotel/${hotelSlug}/chat`, icon: 'chat-dots', sort_order: 2, is_active: true },
+        { name: 'Reception', slug: 'reception', path: '/reception', icon: 'bell', sort_order: 3, is_active: true },
+        { name: 'Rooms', slug: 'rooms', path: '/rooms', icon: 'door-closed', sort_order: 4, is_active: true },
+        { name: 'Housekeeping', slug: 'housekeeping', path: `/staff/hotel/${hotelSlug}/housekeeping`, icon: 'house-gear', sort_order: 5, is_active: true },
+        { name: 'Room Bookings', slug: 'room-bookings', path: `/staff/hotel/${hotelSlug}/room-bookings`, icon: 'calendar-check', sort_order: 6, is_active: true },
+        { name: 'Staff', slug: 'staff', path: `/${hotelSlug}/staff`, icon: 'people', sort_order: 7, is_active: true },
+        { name: 'Room Service', slug: 'room_service', path: `/room_service/${hotelSlug}`, icon: 'cart3', sort_order: 8, is_active: true },
+        { name: 'Breakfast', slug: 'breakfast', path: `/breakfast/${hotelSlug}`, icon: 'cup-hot', sort_order: 9, is_active: true },
+        { name: 'Menus', slug: 'menus', path: `/menus/${hotelSlug}`, icon: 'menu-button-wide', sort_order: 10, is_active: true },
+        { name: 'Bookings', slug: 'bookings', path: `/staff/hotel/${hotelSlug}/bookings`, icon: 'calendar3', sort_order: 11, is_active: true },
+        { name: 'Guests', slug: 'guests', path: `/${hotelSlug}/guests`, icon: 'person-check', sort_order: 12, is_active: true },
+        { name: 'Stock Tracker', slug: 'stock_tracker', path: `/stock_tracker/${hotelSlug}`, icon: 'boxes', sort_order: 13, is_active: true },
+        { name: 'Attendance', slug: 'attendance', path: `/staff/hotel/${hotelSlug}/attendance`, icon: 'clock-history', sort_order: 14, is_active: true },
+        { name: 'Settings', slug: 'settings', path: `/staff/${hotelSlug}/settings`, icon: 'gear', sort_order: 15, is_active: true },
+      ];
+
+      let createdCount = 0;
+      for (const navItem of defaultNavItems) {
+        try {
+          await api.post(`/staff/hotel/${hotelSlug}/navigation-items/`, navItem);
+          createdCount++;
+        } catch {
+          try {
+            await api.post(`/staff/navigation-items/`, { ...navItem, hotel_slug: hotelSlug });
+            createdCount++;
+          } catch {
+            // skip individual failures
+          }
+        }
+      }
       setMessage({ 
         type: 'success', 
         text: `Successfully created ${createdCount} navigation items for hotel: ${hotelSlug}` 
@@ -254,14 +244,22 @@ const SuperUser = () => {
     }
   };
 
-  const handleCreateHotel = async (e) => {
+  const handleAdminInputChange = (e) => {
+    const { name, value } = e.target;
+    setAdminData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleProvisionHotel = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage({ type: '', text: '' });
+    setFieldErrors({});
+    setProvisionResult(null);
 
-    // Validate form data
-    const validationErrors = validateHotelData(hotelData);
+    // Client-side validation
+    const validationErrors = validateProvisionData(hotelData, adminData, generateCount);
     if (Object.keys(validationErrors).length > 0) {
+      setFieldErrors(validationErrors);
       setMessage({ 
         type: 'danger', 
         text: 'Please fix the validation errors below.' 
@@ -271,8 +269,8 @@ const SuperUser = () => {
     }
 
     try {
-      // Prepare data for API (remove empty strings for optional fields)
-      const cleanedData = Object.entries(hotelData).reduce((acc, [key, value]) => {
+      // Build hotel payload — strip empty optional fields
+      const cleanedHotel = Object.entries(hotelData).reduce((acc, [key, value]) => {
         if (value !== '' || ['name', 'slug', 'subdomain'].includes(key)) {
           acc[key] = value;
         }
@@ -280,74 +278,101 @@ const SuperUser = () => {
       }, {});
 
       // Convert numeric fields
-      if (cleanedData.latitude) cleanedData.latitude = parseFloat(cleanedData.latitude);
-      if (cleanedData.longitude) cleanedData.longitude = parseFloat(cleanedData.longitude);
-      cleanedData.sort_order = parseInt(cleanedData.sort_order) || 0;
+      if (cleanedHotel.latitude) cleanedHotel.latitude = parseFloat(cleanedHotel.latitude);
+      if (cleanedHotel.longitude) cleanedHotel.longitude = parseFloat(cleanedHotel.longitude);
+      cleanedHotel.sort_order = parseInt(cleanedHotel.sort_order) || 0;
 
-      const response = await api.post('/hotel/hotels/', cleanedData);
-      
+      const payload = {
+        hotel: cleanedHotel,
+        primary_admin: {
+          first_name: adminData.first_name.trim(),
+          last_name: adminData.last_name.trim(),
+          email: adminData.email.trim(),
+        },
+        registration_packages: {
+          generate_count: parseInt(generateCount) || 0,
+        },
+      };
+
+      const result = await provisionHotel(payload);
+      setProvisionResult(result);
+
       setMessage({ 
         type: 'success', 
-        text: `Hotel "${response.data.name}" created successfully! Setting up defaults...` 
+        text: `Hotel "${result.hotel?.name || hotelData.name}" provisioned successfully!` 
       });
-
-      // Post-creation setup
-      try {
-        await Promise.all([
-          bootstrapHotelPage(response.data.slug),
-          createDefaultRoomTypes(response.data.slug),
-          createDefaultNavigationItems(response.data.slug)
-        ]);
-        
-        setMessage({ 
-          type: 'success', 
-          text: `Hotel "${response.data.name}" created and configured successfully with all navigation items!` 
-        });
-      } catch (setupError) {
-        setMessage({ 
-          type: 'warning', 
-          text: `Hotel created successfully, but some default setup failed. You may need to configure navigation manually.` 
-        });
-      }
 
       // Reset form
-      setHotelData({
-        name: '',
-        slug: '',
-        subdomain: '',
-        city: '',
-        country: '',
-        short_description: '',
-        tagline: '',
-        long_description: '',
-        address_line_1: '',
-        address_line_2: '',
-        postal_code: '',
-        phone: '',
-        email: '',
-        website: '',
-        latitude: '',
-        longitude: '',
-        is_active: true,
-        sort_order: 0
-      });
+      setHotelData({ ...initialHotelData });
+      setAdminData({ ...initialAdminData });
+      setGenerateCount(0);
       setShowCreateHotel(false);
 
-      // Scroll to top to show success message
+      // Scroll to top to show success
       window.scrollTo(0, 0);
 
     } catch (error) {
-      console.error('Hotel creation error:', error);
-      const errorMessage = error.response?.data?.detail || 
-                          error.response?.data?.message || 
-                          'Failed to create hotel. Please try again.';
-      setMessage({ 
-        type: 'danger', 
-        text: errorMessage
-      });
+      console.error('Hotel provisioning error:', error);
+
+      const status = error.response?.status;
+      const data = error.response?.data;
+
+      // Handle 405 — stale code hitting wrong endpoint
+      if (status === 405) {
+        setMessage({
+          type: 'danger',
+          text: 'Hotel creation is only available through the provisioning endpoint. Please refresh the page.',
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Handle 409 — duplicate / uniqueness conflicts
+      if (status === 409) {
+        setMessage({
+          type: 'danger',
+          text: data?.detail || 'A hotel or admin with these details already exists.',
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Handle 400 — field-level validation errors from backend
+      if (status === 400 && data && typeof data === 'object') {
+        const backendFieldErrors = {};
+        const flattenErrors = (obj, prefix = '') => {
+          for (const [key, val] of Object.entries(obj)) {
+            const fieldKey = prefix ? `${prefix}.${key}` : key;
+            if (Array.isArray(val)) {
+              backendFieldErrors[fieldKey] = val.join(' ');
+            } else if (typeof val === 'object' && val !== null) {
+              flattenErrors(val, fieldKey);
+            } else {
+              backendFieldErrors[fieldKey] = String(val);
+            }
+          }
+        };
+        flattenErrors(data);
+        setFieldErrors(backendFieldErrors);
+        setMessage({
+          type: 'danger',
+          text: data.detail || 'Please fix the validation errors below.',
+        });
+        setLoading(false);
+        return;
+      }
+
+      const errorMessage = data?.detail || data?.message || 'Failed to provision hotel. Please try again.';
+      setMessage({ type: 'danger', text: errorMessage });
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper to display field error inline
+  const FieldError = ({ field }) => {
+    const err = fieldErrors[field];
+    return err ? <Form.Text className="text-danger">{err}</Form.Text> : null;
   };
 
   return (
@@ -377,16 +402,91 @@ const SuperUser = () => {
             </Alert>
           )}
 
+          {/* Provisioning Success Summary */}
+          {provisionResult && (
+            <Card className="shadow-sm mb-4 border-success">
+              <Card.Body>
+                <h5 className="text-success mb-3">
+                  <i className="bi bi-check-circle-fill me-2"></i>
+                  Hotel Provisioned Successfully
+                </h5>
+
+                <Row>
+                  <Col md={6}>
+                    <h6>Hotel Summary</h6>
+                    <ListGroup variant="flush" className="mb-3">
+                      <ListGroup.Item><strong>Name:</strong> {provisionResult.hotel?.name}</ListGroup.Item>
+                      <ListGroup.Item><strong>Slug:</strong> {provisionResult.hotel?.slug}</ListGroup.Item>
+                      <ListGroup.Item><strong>Subdomain:</strong> {provisionResult.hotel?.subdomain}</ListGroup.Item>
+                      {provisionResult.hotel?.city && (
+                        <ListGroup.Item><strong>City:</strong> {provisionResult.hotel.city}</ListGroup.Item>
+                      )}
+                      {provisionResult.hotel?.country && (
+                        <ListGroup.Item><strong>Country:</strong> {provisionResult.hotel.country}</ListGroup.Item>
+                      )}
+                    </ListGroup>
+                  </Col>
+                  <Col md={6}>
+                    <h6>Primary Admin</h6>
+                    <ListGroup variant="flush" className="mb-3">
+                      <ListGroup.Item>
+                        <strong>Name:</strong>{' '}
+                        {provisionResult.primary_admin?.first_name} {provisionResult.primary_admin?.last_name}
+                      </ListGroup.Item>
+                      <ListGroup.Item>
+                        <strong>Email:</strong> {provisionResult.primary_admin?.email}
+                      </ListGroup.Item>
+                    </ListGroup>
+                  </Col>
+                </Row>
+
+                {provisionResult.registration_packages?.length > 0 && (
+                  <div className="mb-3">
+                    <h6>Registration Packages</h6>
+                    <ListGroup variant="flush">
+                      {provisionResult.registration_packages.map((pkg, idx) => (
+                        <ListGroup.Item key={idx}>
+                          <Badge bg="info" className="me-2">Package {idx + 1}</Badge>
+                          {pkg.code || pkg.id || JSON.stringify(pkg)}
+                        </ListGroup.Item>
+                      ))}
+                    </ListGroup>
+                  </div>
+                )}
+
+                {provisionResult.warnings?.length > 0 && (
+                  <Alert variant="warning" className="mt-3 mb-0">
+                    <strong>Warnings:</strong>
+                    <ul className="mb-0 mt-1">
+                      {provisionResult.warnings.map((w, idx) => (
+                        <li key={idx}>{w}</li>
+                      ))}
+                    </ul>
+                  </Alert>
+                )}
+
+                <Button
+                  variant="outline-success"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => setProvisionResult(null)}
+                >
+                  Dismiss
+                </Button>
+              </Card.Body>
+            </Card>
+          )}
+
           <Row>
             <Col md={12} className="mb-4">
               <Card className="shadow-sm">
                 <Card.Body>
                   <div className="d-flex align-items-center mb-3">
                     <i className="bi bi-building text-primary me-2" style={{ fontSize: '1.5rem' }}></i>
-                    <h5 className="mb-0">Hotel Management</h5>
+                    <h5 className="mb-0">Provision New Hotel</h5>
                   </div>
                   <p className="text-muted mb-3">
-                    Create and manage hotels in the system
+                    Create a new hotel with its primary admin in a single step via <code>/api/hotels/provision/</code>
                   </p>
                   
                   {!showCreateHotel ? (
@@ -396,11 +496,68 @@ const SuperUser = () => {
                       className="w-100"
                     >
                       <i className="bi bi-plus-circle me-2"></i>
-                      Create New Hotel
+                      Provision New Hotel
                     </Button>
                   ) : (
                     <div>
-                      <Form onSubmit={handleCreateHotel}>
+                      <Form onSubmit={handleProvisionHotel}>
+
+                        {/* Primary Admin Information */}
+                        <div className="mb-4 p-3 bg-light rounded border border-primary">
+                          <h6 className="text-primary mb-3">
+                            <i className="bi bi-person-badge me-2"></i>
+                            Primary Admin *
+                          </h6>
+                          
+                          <Row>
+                            <Col md={4}>
+                              <Form.Group className="mb-3">
+                                <Form.Label>First Name *</Form.Label>
+                                <Form.Control
+                                  type="text"
+                                  name="first_name"
+                                  value={adminData.first_name}
+                                  onChange={handleAdminInputChange}
+                                  placeholder="First name"
+                                  isInvalid={!!fieldErrors['admin.first_name']}
+                                  required
+                                />
+                                <FieldError field="admin.first_name" />
+                              </Form.Group>
+                            </Col>
+                            <Col md={4}>
+                              <Form.Group className="mb-3">
+                                <Form.Label>Last Name *</Form.Label>
+                                <Form.Control
+                                  type="text"
+                                  name="last_name"
+                                  value={adminData.last_name}
+                                  onChange={handleAdminInputChange}
+                                  placeholder="Last name"
+                                  isInvalid={!!fieldErrors['admin.last_name']}
+                                  required
+                                />
+                                <FieldError field="admin.last_name" />
+                              </Form.Group>
+                            </Col>
+                            <Col md={4}>
+                              <Form.Group className="mb-3">
+                                <Form.Label>Email *</Form.Label>
+                                <Form.Control
+                                  type="email"
+                                  name="email"
+                                  value={adminData.email}
+                                  onChange={handleAdminInputChange}
+                                  placeholder="admin@hotel.com"
+                                  isInvalid={!!fieldErrors['admin.email']}
+                                  required
+                                />
+                                <FieldError field="admin.email" />
+                              </Form.Group>
+                            </Col>
+                          </Row>
+                        </div>
+
                         {/* Basic Information */}
                         <div className="mb-4 p-3 bg-light rounded">
                           <h6 className="text-primary mb-3">
@@ -418,8 +575,10 @@ const SuperUser = () => {
                                   value={hotelData.name}
                                   onChange={(e) => handleNameChange(e.target.value)}
                                   placeholder="Enter hotel name"
+                                  isInvalid={!!fieldErrors['hotel.name']}
                                   required
                                 />
+                                <FieldError field="hotel.name" />
                               </Form.Group>
                             </Col>
                             <Col md={6}>
@@ -433,17 +592,19 @@ const SuperUser = () => {
                                   placeholder="hotel-slug"
                                   pattern="^[a-z0-9-]+$"
                                   title="Only lowercase letters, numbers, and hyphens allowed"
+                                  isInvalid={!!fieldErrors['hotel.slug']}
                                   required
                                 />
                                 <Form.Text className="text-muted">
                                   Used in URLs: /hotels/{hotelData.slug}
                                 </Form.Text>
+                                <FieldError field="hotel.slug" />
                               </Form.Group>
                             </Col>
                           </Row>
 
                           <Row>
-                            <Col md={6}>
+                            <Col md={4}>
                               <Form.Group className="mb-3">
                                 <Form.Label>Subdomain *</Form.Label>
                                 <Form.Control
@@ -454,14 +615,28 @@ const SuperUser = () => {
                                   placeholder="hotel-subdomain"
                                   pattern="^[a-z0-9-]+$"
                                   title="Only lowercase letters, numbers, and hyphens allowed"
+                                  isInvalid={!!fieldErrors['hotel.subdomain']}
                                   required
                                 />
                                 <Form.Text className="text-muted">
                                   Subdomain: {hotelData.subdomain || 'hotel'}.hotelmate.com
                                 </Form.Text>
+                                <FieldError field="hotel.subdomain" />
                               </Form.Group>
                             </Col>
-                            <Col md={6}>
+                            <Col md={4}>
+                              <Form.Group className="mb-3">
+                                <Form.Label>Timezone</Form.Label>
+                                <Form.Control
+                                  type="text"
+                                  name="timezone"
+                                  value={hotelData.timezone}
+                                  onChange={handleInputChange}
+                                  placeholder="e.g., Europe/Dublin"
+                                />
+                              </Form.Group>
+                            </Col>
+                            <Col md={4}>
                               <Form.Group className="mb-3">
                                 <Form.Label>Sort Order</Form.Label>
                                 <Form.Control
@@ -574,7 +749,9 @@ const SuperUser = () => {
                                   placeholder="e.g., 53.3498"
                                   min="-90"
                                   max="90"
+                                  isInvalid={!!fieldErrors['hotel.latitude']}
                                 />
+                                <FieldError field="hotel.latitude" />
                               </Form.Group>
                             </Col>
                             <Col md={6}>
@@ -589,7 +766,9 @@ const SuperUser = () => {
                                   placeholder="e.g., -6.2603"
                                   min="-180"
                                   max="180"
+                                  isInvalid={!!fieldErrors['hotel.longitude']}
                                 />
+                                <FieldError field="hotel.longitude" />
                               </Form.Group>
                             </Col>
                           </Row>
@@ -612,19 +791,23 @@ const SuperUser = () => {
                                   value={hotelData.phone}
                                   onChange={handleInputChange}
                                   placeholder="e.g., +353 1 234 5678"
+                                  isInvalid={!!fieldErrors['hotel.phone']}
                                 />
+                                <FieldError field="hotel.phone" />
                               </Form.Group>
                             </Col>
                             <Col md={6}>
                               <Form.Group className="mb-3">
-                                <Form.Label>Email</Form.Label>
+                                <Form.Label>Hotel Email</Form.Label>
                                 <Form.Control
                                   type="email"
                                   name="email"
                                   value={hotelData.email}
                                   onChange={handleInputChange}
                                   placeholder="info@hotel.com"
+                                  isInvalid={!!fieldErrors['hotel.email']}
                                 />
+                                <FieldError field="hotel.email" />
                               </Form.Group>
                             </Col>
                           </Row>
@@ -637,7 +820,9 @@ const SuperUser = () => {
                               value={hotelData.website}
                               onChange={handleInputChange}
                               placeholder="https://www.hotel.com"
+                              isInvalid={!!fieldErrors['hotel.website']}
                             />
+                            <FieldError field="hotel.website" />
                           </Form.Group>
                         </div>
 
@@ -685,6 +870,31 @@ const SuperUser = () => {
                           </Form.Group>
                         </div>
 
+                        {/* Registration Packages */}
+                        <div className="mb-4 p-3 bg-light rounded">
+                          <h6 className="text-primary mb-3">
+                            <i className="bi bi-box-seam me-2"></i>
+                            Registration Packages
+                          </h6>
+                          
+                          <Form.Group className="mb-3">
+                            <Form.Label>Generate Package Count</Form.Label>
+                            <Form.Control
+                              type="number"
+                              value={generateCount}
+                              onChange={(e) => setGenerateCount(e.target.value)}
+                              min="0"
+                              max="10"
+                              step="1"
+                              isInvalid={!!fieldErrors['generate_count']}
+                            />
+                            <Form.Text className="text-muted">
+                              Number of registration packages to generate (0-10)
+                            </Form.Text>
+                            <FieldError field="generate_count" />
+                          </Form.Group>
+                        </div>
+
                         <div className="d-flex gap-2">
                           <Button 
                             type="submit" 
@@ -696,12 +906,12 @@ const SuperUser = () => {
                                 <div className="spinner-border spinner-border-sm me-2" role="status">
                                   <span className="visually-hidden">Loading...</span>
                                 </div>
-                                Creating Hotel...
+                                Provisioning Hotel...
                               </>
                             ) : (
                               <>
                                 <i className="bi bi-check-circle me-2"></i>
-                                Create Hotel
+                                Provision Hotel
                               </>
                             )}
                           </Button>
@@ -710,26 +920,10 @@ const SuperUser = () => {
                             variant="outline-secondary" 
                             onClick={() => {
                               setShowCreateHotel(false);
-                              setHotelData({
-                                name: '',
-                                slug: '',
-                                subdomain: '',
-                                city: '',
-                                country: '',
-                                short_description: '',
-                                tagline: '',
-                                long_description: '',
-                                address_line_1: '',
-                                address_line_2: '',
-                                postal_code: '',
-                                phone: '',
-                                email: '',
-                                website: '',
-                                latitude: '',
-                                longitude: '',
-                                is_active: true,
-                                sort_order: 0
-                              });
+                              setHotelData({ ...initialHotelData });
+                              setAdminData({ ...initialAdminData });
+                              setGenerateCount(0);
+                              setFieldErrors({});
                             }}
                             disabled={loading}
                           >
