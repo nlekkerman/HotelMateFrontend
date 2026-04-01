@@ -1,11 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "@/services/api";
+import { usePermissions } from "@/hooks/usePermissions";
 import StaffByDepartment from "./StaffByDepartment";
 import ClockedInTicker from "@/components/analytics/ClockedInTicker.jsx";
+import RegistrationPackagesPanel from "./RegistrationPackagesPanel";
 
 export default function Staff() {
   const { hotelSlug } = useParams();
+  const [searchParams] = useSearchParams();
+  const { canAccess, isSuperUser } = usePermissions();
+  const isAdmin = isSuperUser || canAccess(['staff_admin', 'super_staff_admin']);
+
+  const initialTab = searchParams.get('tab') === 'packages' && isAdmin ? 'packages' : 'directory';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [staffList, setStaffList] = useState([]);
   const [clockedInLogs, setClockedInLogs] = useState([]);
   const [error, setError] = useState(null);
@@ -91,6 +99,36 @@ export default function Staff() {
 
   return (
     <div className="container my-4">
+      {/* Tab Navigation */}
+      <ul className="nav nav-tabs mb-4">
+        <li className="nav-item">
+          <button
+            className={`nav-link ${activeTab === "directory" ? "active" : ""}`}
+            onClick={() => setActiveTab("directory")}
+          >
+            <i className="bi bi-people me-1"></i> Staff
+          </button>
+        </li>
+        {isAdmin && (
+          <li className="nav-item">
+            <button
+              className={`nav-link ${activeTab === "packages" ? "active" : ""}`}
+              onClick={() => setActiveTab("packages")}
+            >
+              <i className="bi bi-qr-code me-1"></i> Registration Packages
+            </button>
+          </li>
+        )}
+      </ul>
+
+      {/* Registration Packages Tab */}
+      {activeTab === "packages" && isAdmin && (
+        <RegistrationPackagesPanel />
+      )}
+
+      {/* Staff Directory Tab */}
+      {activeTab === "directory" && (
+      <>
       <div className="text-center mb-4">
         <h2 className="fw-bold mb-3">
           {showClockedIn ? "Currently Clocked In Staff" : "Staff Directory"}
@@ -215,6 +253,8 @@ export default function Staff() {
 
       {!showClockedIn && !loadingStaff && !error && staffList.length === 0 && (
         <p className="text-center text-muted">No staff available.</p>
+      )}
+      </>
       )}
     </div>
   );

@@ -1,18 +1,18 @@
 // src/components/utils/Settings.jsx
 import React from "react";
-import { Container, Row, Col, Alert } from "react-bootstrap";
-import { useParams } from "react-router-dom";
+import { Container, Row, Col, Alert, Card, Button } from "react-bootstrap";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 
 // Import section components - STAFF ONLY
-import SectionStaffRegistration from "./settings-sections/SectionStaffRegistration";
 import SectionThemeSettings from "./settings-sections/SectionThemeSettings";
 
 export default function Settings() {
   const { user } = useAuth();
   const { hotelSlug } = useParams();
   const { canAccess, isSuperUser } = usePermissions();
+  const navigate = useNavigate();
   
   // Basic permission check - must be staff of this hotel
   if (!user || !user.is_staff || user.hotel_slug !== hotelSlug) {
@@ -62,9 +62,28 @@ export default function Settings() {
           {/* Theme Settings */}
           <SectionThemeSettings />
           
-          {/* Staff Registration Packages */}
-          <SectionStaffRegistration />
-          
+          {/* Registration Packages shortcut — full manager lives in Staff page */}
+          <Card className="shadow-sm mb-4">
+            <Card.Body className="p-4 d-flex align-items-center justify-content-between">
+              <div>
+                <h5 className="mb-1">
+                  <i className="bi bi-qr-code me-2"></i>
+                  Staff Registration Packages
+                </h5>
+                <p className="text-muted mb-0">
+                  Generate, email, and print registration packages for new staff members.
+                </p>
+              </div>
+              <Button
+                variant="primary"
+                onClick={() => navigate(`/${hotelSlug}/staff?tab=packages`)}
+              >
+                <i className="bi bi-box-arrow-up-right me-1"></i>
+                Open Manager
+              </Button>
+            </Card.Body>
+          </Card>
+
           {/* Future staff-only settings can be added here */}
           <Alert variant="info" className="mt-4">
             <i className="bi bi-info-circle me-2"></i>
