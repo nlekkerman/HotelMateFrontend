@@ -168,7 +168,7 @@ export default function RegistrationPackagesPanel() {
 
       {/* Package grid */}
       {!loading && packages.length > 0 && (
-        <Row xs={1} sm={2} lg={3} className="g-3">
+        <Row xs={1} sm={2} lg={4} className="g-3 justify-content-center">
           {packages.map((pkg) => (
             <Col key={pkg.id}>
               <RegistrationPackageCard
