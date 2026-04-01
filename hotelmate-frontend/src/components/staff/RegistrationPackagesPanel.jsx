@@ -66,11 +66,12 @@ export default function RegistrationPackagesPanel() {
     setError(null);
     try {
       const res = await generateRegistrationPackages(slug, genCount);
-      const newPkgs = Array.isArray(res.data)
-        ? res.data
-        : Array.isArray(res.data?.packages)
-        ? res.data.packages
-        : [res.data];
+      const payload = res.data;
+      const newPkgs = Array.isArray(payload?.packages)
+        ? payload.packages
+        : payload
+          ? [payload]
+          : [];
       setPackages((prev) => [...newPkgs, ...prev]);
       setGenSuccess(`${newPkgs.length} package(s) generated successfully.`);
       setTimeout(() => setGenSuccess(null), 4000);
