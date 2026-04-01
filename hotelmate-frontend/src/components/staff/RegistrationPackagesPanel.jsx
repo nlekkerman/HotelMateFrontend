@@ -36,11 +36,10 @@ export default function RegistrationPackagesPanel() {
   const [emailPkg, setEmailPkg] = useState(null);
 
   const fetchPackages = useCallback(async () => {
-    if (!slug) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await listRegistrationPackages(slug);
+      const res = await listRegistrationPackages();
       const data = res.data;
       setPackages(
         Array.isArray(data) ? data : Array.isArray(data.results) ? data.results : []
@@ -54,7 +53,7 @@ export default function RegistrationPackagesPanel() {
     } finally {
       setLoading(false);
     }
-  }, [slug]);
+  }, []);
 
   useEffect(() => {
     fetchPackages();
@@ -186,7 +185,6 @@ export default function RegistrationPackagesPanel() {
           show={!!emailPkg}
           onHide={() => setEmailPkg(null)}
           pkg={emailPkg}
-          hotelSlug={slug}
         />
       )}
     </div>

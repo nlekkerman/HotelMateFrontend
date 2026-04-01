@@ -6,7 +6,6 @@ export default function EmailRegistrationPackageModal({
   show,
   onHide,
   pkg,
-  hotelSlug,
 }) {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -20,7 +19,7 @@ export default function EmailRegistrationPackageModal({
     setError(null);
 
     try {
-      await emailRegistrationPackage(hotelSlug, pkg.id, {
+      await emailRegistrationPackage(pkg.id, {
         recipient_email: email,
         message: message || undefined,
       });
