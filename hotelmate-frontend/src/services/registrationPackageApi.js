@@ -5,8 +5,8 @@ import api from './api';
  * Canonical endpoints for managing staff registration packages.
  */
 
-export function listRegistrationPackages() {
-  return api.get('/staff/registration-package/');
+export function listRegistrationPackages(hotelSlug) {
+  return api.get(`/staff/registration-package/?hotel_slug=${hotelSlug}`);
 }
 
 export function generateRegistrationPackages(hotelSlug, count = 1) {

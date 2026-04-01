@@ -36,14 +36,15 @@ export default function RegistrationPackagesPanel() {
   const [emailPkg, setEmailPkg] = useState(null);
 
   const fetchPackages = useCallback(async () => {
+    if (!slug) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await listRegistrationPackages();
-      const data = res.data;
-      setPackages(
-        Array.isArray(data) ? data : Array.isArray(data.results) ? data.results : []
-      );
+      const res = await listRegistrationPackages(slug);
+      const packages = Array.isArray(res.data?.packages)
+        ? res.data.packages
+        : [];
+      setPackages(packages);
     } catch (err) {
       setError(
         err.response?.data?.error ||
@@ -53,7 +54,7 @@ export default function RegistrationPackagesPanel() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [slug]);
 
   useEffect(() => {
     fetchPackages();
