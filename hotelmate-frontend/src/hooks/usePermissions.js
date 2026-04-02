@@ -29,9 +29,12 @@ export function usePermissions() {
   };
 
   const canAccess = (allowedRoles = []) => {
-    if (!user || !role) return false;
+    if (!user) return false;
     if (isSuperUser) return true;
-    return allowedRoles.map(r => r.toLowerCase()).includes(role);
+    const normalized = allowedRoles.map(r => r.toLowerCase());
+    if (role && normalized.includes(role)) return true;
+    if (accessLevel && normalized.includes(accessLevel.toLowerCase())) return true;
+    return false;
   };
 
   return {

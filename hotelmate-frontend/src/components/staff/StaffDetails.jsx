@@ -9,6 +9,7 @@ import { useFaceAdminApi } from "@/features/faceAttendance/hooks/useFaceAdminApi
 import { useHotelFaceConfig } from "@/features/faceAttendance/hooks/useHotelFaceConfig";
 import NavigationPermissionManager from "./NavigationPermissionManager";
 import StaffRosterAnalytics from "./StaffRosterAnalytics";
+import useStaffMetadata from "@/hooks/useStaffMetadata";
 
 function StaffDetails() {
   const navigate = useNavigate();
@@ -17,9 +18,13 @@ function StaffDetails() {
   const [showPermissions, setShowPermissions] = useState(false);
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
   const [revokeReason, setRevokeReason] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({});
+  const [saving, setSaving] = useState(false);
   const { hotelSlug, id } = useParams();
   const { canAccess } = usePermissions();
   const queryClient = useQueryClient();
+  const { departments, roles, accessLevels } = useStaffMetadata(hotelSlug);
   
   // Face admin operations
   const { loading: revokeLoading, error: revokeError, revokeFace, clearError } = useFaceAdminApi();
@@ -85,6 +90,50 @@ function StaffDetails() {
     navigate(`/face/${hotelSlug}/register?staffId=${id}`);
   };
 
+  const isAdmin = canAccess(['staff_admin', 'super_staff_admin']);
+
+  const startEditing = () => {
+    setEditData({
+      first_name: staff.first_name || '',
+      last_name: staff.last_name || '',
+      department: staff.department_detail?.id || staff.department || '',
+      role: staff.role_detail?.id || staff.role || '',
+      access_level: staff.access_level || 'regular_staff',
+      is_active: staff.is_active,
+    });
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditData({});
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const payload = {
+        first_name: editData.first_name,
+        last_name: editData.last_name,
+        department: editData.department || null,
+        role: editData.role || null,
+        access_level: editData.access_level,
+        is_active: editData.is_active,
+      };
+      await api.patch(`staff/${hotelSlug}/${id}/`, payload);
+      const response = await api.get(`staff/${hotelSlug}/${id}/`);
+      setStaff(response.data);
+      setIsEditing(false);
+      toast.success('Staff profile updated successfully');
+      queryClient.invalidateQueries({ queryKey: ["staffMe", hotelSlug] });
+    } catch (err) {
+      console.error('Failed to update staff:', err);
+      toast.error(err.response?.data?.detail || 'Failed to update staff profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const formatDepartment = (dept) => {
     console.log("[StaffDetails] Formatting department:", dept);
     if (!dept) return "N/A";
@@ -107,13 +156,30 @@ function StaffDetails() {
     <div className="container mt-4 mb-5 p-4 bg-white rounded shadow-sm">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="mb-0 text-primary">👤 Staff Details</h2>
-        <button
-          onClick={() => navigate(`/${hotelSlug}/staff`)}
-          className="btn btn-outline-secondary"
-        >
-          <i className="bi bi-arrow-left me-2"></i>
-          Back to Staff List
-        </button>
+        <div className="d-flex gap-2">
+          {isAdmin && !isEditing && (
+            <button onClick={startEditing} className="btn btn-outline-primary">
+              <i className="bi bi-pencil me-2"></i>Edit Profile
+            </button>
+          )}
+          {isEditing && (
+            <>
+              <button onClick={cancelEditing} className="btn btn-outline-secondary" disabled={saving}>
+                Cancel
+              </button>
+              <button onClick={handleSave} className="btn btn-success" disabled={saving}>
+                {saving ? <><span className="spinner-border spinner-border-sm me-2"></span>Saving...</> : <><i className="bi bi-check-lg me-2"></i>Save</>}
+              </button>
+            </>
+          )}
+          <button
+            onClick={() => navigate(`/${hotelSlug}/staff`)}
+            className="btn btn-outline-secondary"
+          >
+            <i className="bi bi-arrow-left me-2"></i>
+            Back to Staff List
+          </button>
+        </div>
       </div>
 
       <div
@@ -152,34 +218,96 @@ function StaffDetails() {
           <p>
             <strong>Email:</strong> {staff.user?.email || "N/A"}
           </p>
-          <p>
-            <strong>First Name:</strong> {staff.first_name}
-          </p>
-          <p>
-            <strong>Last Name:</strong> {staff.last_name}
-          </p>
+          {isEditing ? (
+            <>
+              <div className="mb-3">
+                <label className="form-label fw-bold">First Name</label>
+                <input type="text" className="form-control" value={editData.first_name}
+                  onChange={(e) => setEditData(prev => ({ ...prev, first_name: e.target.value }))} />
+              </div>
+              <div className="mb-3">
+                <label className="form-label fw-bold">Last Name</label>
+                <input type="text" className="form-control" value={editData.last_name}
+                  onChange={(e) => setEditData(prev => ({ ...prev, last_name: e.target.value }))} />
+              </div>
+            </>
+          ) : (
+            <>
+              <p><strong>First Name:</strong> {staff.first_name}</p>
+              <p><strong>Last Name:</strong> {staff.last_name}</p>
+            </>
+          )}
           <p>
             <strong>Phone Number:</strong> {staff.phone_number || "—"}
           </p>
         </div>
         <div className="col-md-6">
-          <p>
-            <strong>Department:</strong>{" "}
-            {formatDepartment(staff.department_detail || staff.department)}
-          </p>
-          <p>
-            <strong>Role:</strong> {staff.role_detail?.name || "—"}
-          </p>
-          <p>
-            <strong>Active:</strong>
-            <span
-              className={`ms-2 badge ${
-                staff.is_active ? "bg-success" : "bg-secondary"
-              }`}
-            >
-              {staff.is_active ? "Yes" : "No"}
-            </span>
-          </p>
+          {isEditing ? (
+            <>
+              <div className="mb-3">
+                <label className="form-label fw-bold">Department</label>
+                <select className="form-select" value={editData.department}
+                  onChange={(e) => setEditData(prev => ({ ...prev, department: e.target.value }))}>
+                  <option value="">-- No Department --</option>
+                  {departments.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="mb-3">
+                <label className="form-label fw-bold">Role</label>
+                <select className="form-select" value={editData.role}
+                  onChange={(e) => setEditData(prev => ({ ...prev, role: e.target.value }))}>
+                  <option value="">-- No Role --</option>
+                  {roles.map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="mb-3">
+                <label className="form-label fw-bold">Access Level</label>
+                <select className="form-select" value={editData.access_level}
+                  onChange={(e) => setEditData(prev => ({ ...prev, access_level: e.target.value }))}>
+                  {accessLevels.length > 0 ? accessLevels.map(al => (
+                    <option key={al.value || al} value={al.value || al}>{al.label || al}</option>
+                  )) : (
+                    <>
+                      <option value="regular_staff">Regular Staff</option>
+                      <option value="staff_admin">Staff Admin</option>
+                      <option value="super_staff_admin">Super Staff Admin</option>
+                    </>
+                  )}
+                </select>
+              </div>
+              <div className="mb-3 form-check">
+                <input type="checkbox" className="form-check-input" id="isActiveCheck" checked={editData.is_active}
+                  onChange={(e) => setEditData(prev => ({ ...prev, is_active: e.target.checked }))} />
+                <label className="form-check-label fw-bold" htmlFor="isActiveCheck">Active</label>
+              </div>
+            </>
+          ) : (
+            <>
+              <p>
+                <strong>Department:</strong>{" "}
+                {formatDepartment(staff.department_detail || staff.department)}
+              </p>
+              <p>
+                <strong>Role:</strong> {staff.role_detail?.name || "—"}
+              </p>
+              <p>
+                <strong>Access Level:</strong>{" "}
+                <span className={`badge ${staff.access_level === 'super_staff_admin' ? 'bg-danger' : staff.access_level === 'staff_admin' ? 'bg-warning text-dark' : 'bg-secondary'}`}>
+                  {staff.access_level?.replace(/_/g, ' ') || "—"}
+                </span>
+              </p>
+              <p>
+                <strong>Active:</strong>
+                <span className={`ms-2 badge ${staff.is_active ? "bg-success" : "bg-secondary"}`}>
+                  {staff.is_active ? "Yes" : "No"}
+                </span>
+              </p>
+            </>
+          )}
           <p>
             <strong>Face Registration:</strong>
             <span
