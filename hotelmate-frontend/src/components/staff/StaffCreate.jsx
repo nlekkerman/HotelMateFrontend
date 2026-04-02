@@ -260,10 +260,10 @@ const StaffCreate = () => {
     // Navigate to the new staff member's profile
     const newStaffId = response.data.staff?.id;
     if (newStaffId) {
-      navigate(`/staff/${newStaffId}`);
+      navigate(`/${hotelSlug}/staff/${newStaffId}`);
     } else {
-      // Refresh the page to update the pending list
-      window.location.reload();
+      // Go back to staff list
+      navigate(`/${hotelSlug}/staff`);
     }
   } catch (err) {
     setError(err.response?.data?.error || "Failed to create staff");
