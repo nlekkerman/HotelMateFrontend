@@ -156,6 +156,14 @@ export function canAccessStaffPath({ pathname, user, requiredSlug }) {
     };
   }
 
+  // super_staff_admin bypass -> ALLOW ALL (hotel-level admin)
+  if (user.access_level === 'super_staff_admin') {
+    return {
+      allowed: true,
+      reason: "Super staff admin access granted"
+    };
+  }
+
   // Check admin-level gates first
   for (const adminRoute of ADMIN_ONLY_ROUTES) {
     if (adminRoute.match(pathname)) {

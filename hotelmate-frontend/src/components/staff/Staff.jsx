@@ -46,11 +46,13 @@ export default function Staff() {
         // Update URL to include hotelSlug in the path
         const response = await api.get(`staff/${hotelSlug}/`);
         const data = response.data;
+        console.log('[Staff] API response for', hotelSlug, ':', data);
         const list = Array.isArray(data)
           ? data
           : Array.isArray(data.results)
             ? data.results
             : [];
+        console.log('[Staff] Parsed staff list:', list.length, 'members');
         setStaffList(list);
         setError(null);
       } catch (err) {
