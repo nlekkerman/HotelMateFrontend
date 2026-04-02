@@ -1,5 +1,5 @@
 import { useState } from "react";
-import api, { publicAPI } from "@/services/api"; // Centralized API services
+import api, { publicAPI, staffAuthAPI } from "@/services/api"; // Centralized API services
 
 function useAxiosPost(endpoint) {
   const [data, setData] = useState(null);
@@ -11,8 +11,12 @@ function useAxiosPost(endpoint) {
     setError(null);
 
     try {
-      // Use publicAPI for unauthenticated endpoints (login/register), otherwise use api
-      const client = (endpoint === "staff/login/" || endpoint === "/staff/register/") ? publicAPI : api;
+      // Use publicAPI for unauthenticated login, staffAuthAPI for register (not under /public), otherwise use api
+      const client = (endpoint === "staff/login/")
+        ? publicAPI
+        : (endpoint === "/staff/register/")
+          ? staffAuthAPI
+          : api;
       
       // Ensure endpoint starts with / for proper API routing
       const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
