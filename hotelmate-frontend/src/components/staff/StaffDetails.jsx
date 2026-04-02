@@ -117,7 +117,7 @@ function StaffDetails() {
     if (!newDeptName.trim()) return;
     setCreatingDept(true);
     try {
-      await api.post(`/staff/${hotelSlug}/departments/`, { name: newDeptName.trim() });
+      await api.post(`/staff/${hotelSlug}/departments/`, { name: newDeptName.trim(), slug: newDeptName.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') });
       toast.success(`Department "${newDeptName.trim()}" created`);
       setNewDeptName('');
       await refetchMetadata();
@@ -132,7 +132,7 @@ function StaffDetails() {
     if (!newRoleName.trim()) return;
     setCreatingRole(true);
     try {
-      await api.post(`/staff/${hotelSlug}/roles/`, { name: newRoleName.trim() });
+      await api.post(`/staff/${hotelSlug}/roles/`, { name: newRoleName.trim(), slug: newRoleName.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') });
       toast.success(`Role "${newRoleName.trim()}" created`);
       setNewRoleName('');
       await refetchMetadata();

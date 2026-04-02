@@ -36,7 +36,7 @@ export default function SectionDepartmentsRoles() {
     if (!newDept.trim()) return;
     setSavingDept(true);
     try {
-      await api.post(`/staff/${hotelSlug}/departments/`, { name: newDept.trim() });
+      await api.post(`/staff/${hotelSlug}/departments/`, { name: newDept.trim(), slug: newDept.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') });
       toast.success(`Department "${newDept.trim()}" created`);
       setNewDept("");
       await fetchMetadata();
@@ -52,7 +52,7 @@ export default function SectionDepartmentsRoles() {
     if (!newRole.trim()) return;
     setSavingRole(true);
     try {
-      await api.post(`/staff/${hotelSlug}/roles/`, { name: newRole.trim() });
+      await api.post(`/staff/${hotelSlug}/roles/`, { name: newRole.trim(), slug: newRole.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') });
       toast.success(`Role "${newRole.trim()}" created`);
       setNewRole("");
       await fetchMetadata();
