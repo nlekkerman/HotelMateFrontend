@@ -12,6 +12,7 @@ export default function Staff() {
   const { canAccess, isSuperUser } = usePermissions();
   const isAdmin =
     isSuperUser || canAccess(["staff_admin", "super_staff_admin"]);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const initialTab =
     searchParams.get("tab") === "packages" && isAdmin
@@ -65,6 +66,21 @@ export default function Staff() {
     };
     fetchStaff();
   }, [hotelSlug]);
+
+  // Fetch pending registration count
+  useEffect(() => {
+    if (!hotelSlug || !isAdmin) return;
+    const fetchPendingCount = async () => {
+      try {
+        const response = await api.get(`staff/${hotelSlug}/pending-registrations/`);
+        const pending = response.data.pending_users || [];
+        setPendingCount(pending.length);
+      } catch (err) {
+        console.error("Failed to fetch pending registrations count", err);
+      }
+    };
+    fetchPendingCount();
+  }, [hotelSlug, isAdmin]);
 
   useEffect(() => {
     if (!showClockedIn) {
@@ -121,6 +137,23 @@ export default function Staff() {
               onClick={() => setActiveTab("packages")}
             >
               <i className="bi bi-qr-code me-1"></i> Registration Packages
+            </button>
+          </li>
+        )}
+
+        {isAdmin && (
+          <li className="nav-item">
+            <button
+              className="nav-link fw-semibold"
+              style={pendingCount > 0
+                ? { backgroundColor: '#dc3545', color: '#fff', borderColor: '#dc3545' }
+                : {}}
+              onClick={() => navigate(`/${hotelSlug}/staff/create`)}
+            >
+              <i className="bi bi-person-plus me-1"></i> Pending Staff Requests
+              {pendingCount > 0 && (
+                <span className="badge bg-light text-danger ms-2">{pendingCount}</span>
+              )}
             </button>
           </li>
         )}
