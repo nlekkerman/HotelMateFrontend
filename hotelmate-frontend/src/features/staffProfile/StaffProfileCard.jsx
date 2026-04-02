@@ -94,8 +94,8 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
 
     const fetchMetadata = async () => {
       try {
-        const deptList = await fetchAllPaginated("staff/departments/?page_size=100");
-        const roleList = await fetchAllPaginated("staff/roles/?page_size=100");
+        const deptList = await fetchAllPaginated(`staff/${hotelSlug}/departments/?page_size=100`);
+        const roleList = await fetchAllPaginated(`staff/${hotelSlug}/roles/?page_size=100`);
         setDepartments(deptList);
         setRoles(roleList);
       } catch (err) {
@@ -210,7 +210,7 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
             icon={<FaBuilding />}
             label="Department"
             fieldKey="department"
-            valueDisplay={staff.department_detail?.name}
+            valueDisplay={staff.department_detail?.name || departments.find(d => d.id === staff.department)?.name}
             type="select"
             options={departmentOptions}
             canEdit={isOwnProfile}
@@ -221,7 +221,7 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
             icon={<FaBriefcase />}
             label="Role"
             fieldKey="role"
-            valueDisplay={staff.role_detail?.name}
+            valueDisplay={staff.role_detail?.name || roles.find(r => r.id === staff.role)?.name}
             type="select"
             options={roleOptions}
             canEdit={isOwnProfile}
