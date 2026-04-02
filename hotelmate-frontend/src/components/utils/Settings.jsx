@@ -7,6 +7,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 
 // Import section components - STAFF ONLY
 import SectionThemeSettings from "./settings-sections/SectionThemeSettings";
+import SectionDepartmentsRoles from "./settings-sections/SectionDepartmentsRoles";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -59,6 +60,9 @@ export default function Settings() {
       {/* Staff-Only Sections */}
       <Row>
         <Col>
+          {/* Departments & Roles */}
+          <SectionDepartmentsRoles />
+
           {/* Theme Settings */}
           <SectionThemeSettings />
           
