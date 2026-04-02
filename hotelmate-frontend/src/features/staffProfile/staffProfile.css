@@ -42,11 +42,12 @@
    ======================================== */
 
 .staff-profile-card {
-  background: var(--staff-card-bg) !important;
+  background: #ffffff !important;
   border-radius: var(--staff-border-radius) !important;
-  border: 1px solid var(--staff-border-color) !important;
+  border: 1px solid #dee2e6 !important;
   box-shadow: var(--staff-shadow-card) !important;
   transition: box-shadow 0.3s ease;
+  color: #212529 !important;
 }
 
 .staff-profile-card:hover {
@@ -54,10 +55,10 @@
 }
 
 .staff-profile-card .card-header {
-  background: rgba(255, 255, 255, 0.02) !important;
+  background: #0d6efd !important;
   border-radius: var(--staff-border-radius) var(--staff-border-radius) 0 0 !important;
-  border-bottom: 1px solid var(--staff-border-color) !important;
-  color: var(--staff-text-primary) !important;
+  border-bottom: 1px solid #dee2e6 !important;
+  color: #ffffff !important;
 }
 
 .staff-profile-card .card-body {
@@ -108,15 +109,15 @@
 
 .staff-field-row {
   background: transparent !important;
-  border-color: var(--staff-border-color) !important;
+  border-color: #dee2e6 !important;
   font-size: 0.9rem;
   padding: 0.75rem 1.25rem;
-  color: var(--staff-text-primary);
+  color: #212529;
   transition: background-color 0.2s ease;
 }
 
 .staff-field-row:hover {
-  background: rgba(255, 255, 255, 0.02) !important;
+  background: #f8f9fa !important;
 }
 
 .staff-field-row:first-child {
@@ -129,7 +130,7 @@
 }
 
 .staff-field-icon {
-  color: var(--staff-text-muted);
+  color: #6c757d;
   width: 16px;
   display: inline-flex;
   align-items: center;
@@ -137,38 +138,67 @@
 }
 
 .staff-field-label {
-  color: var(--staff-text-secondary);
+  color: #495057;
   font-weight: 500;
 }
 
 .staff-field-value {
-  color: var(--staff-text-primary);
+  color: #212529;
 }
 
 .staff-field-value .form-control,
 .staff-field-value .form-select {
   min-width: 160px;
-  background: var(--staff-card-bg);
-  border-color: var(--staff-border-color);
-  color: var(--staff-text-primary);
+  background: #ffffff;
+  border-color: #dee2e6;
+  color: #212529;
   font-size: 0.875rem;
 }
 
 .staff-field-value .form-control:focus,
 .staff-field-value .form-select:focus {
-  border-color: var(--staff-border-hover);
-  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.1);
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
 }
 
 .staff-field-value .btn-link {
-  color: var(--staff-text-muted);
+  color: #0d6efd !important;
   font-size: 0.75rem;
   text-decoration: none;
   padding: 0.25rem 0.5rem;
+  background: transparent !important;
 }
 
 .staff-field-value .btn-link:hover {
-  color: var(--staff-text-secondary);
+  color: #0a58ca !important;
+}
+
+/* Edit/Save/Cancel buttons inside profile card */
+.staff-profile-card .hm-btn-confirm {
+  background-color: #0d6efd !important;
+  color: #ffffff !important;
+}
+
+.staff-profile-card .hm-btn-outline {
+  background-color: transparent !important;
+  border: 1px solid #6c757d !important;
+  color: #0d6efd !important;
+}
+
+.staff-profile-card .hm-btn-outline:hover {
+  background-color: #0d6efd !important;
+  color: #ffffff !important;
+}
+
+.staff-profile-card .btn,
+.staff-profile-card .hm-btn {
+  color: #212529;
+}
+
+.staff-profile-card .btn-link,
+.staff-profile-card .btn-link.btn-sm {
+  color: #0d6efd !important;
+  background: transparent !important;
 }
 
 /* Status badges */
@@ -186,7 +216,7 @@
   border-radius: 999px !important;
   font-weight: 500;
   padding: 0.75rem 1.5rem;
-  margin: 1.5rem 1.25rem 1.25rem 1.25rem;
+
   transition: all 0.3s ease;
 }
 
