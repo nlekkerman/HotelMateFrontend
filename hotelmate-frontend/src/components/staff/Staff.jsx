@@ -5,6 +5,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import StaffByDepartment from "./StaffByDepartment";
 import ClockedInTicker from "@/components/analytics/ClockedInTicker.jsx";
 import RegistrationPackagesPanel from "./RegistrationPackagesPanel";
+import SectionDepartmentsRoles from "@/components/utils/settings-sections/SectionDepartmentsRoles";
 
 export default function Staff() {
   const { hotelSlug } = useParams();
@@ -159,10 +160,24 @@ export default function Staff() {
             </button>
           </li>
         )}
+
+        {isAdmin && (
+          <li className="nav-item">
+            <button
+              className={`nav-link text-dark ${activeTab === "departments" ? "active fw-semibold" : ""}`}
+              onClick={() => setActiveTab("departments")}
+            >
+              <i className="bi bi-diagram-3 me-1"></i> Departments & Roles
+            </button>
+          </li>
+        )}
       </ul>
 
       {/* Registration Packages Tab */}
       {activeTab === "packages" && isAdmin && <RegistrationPackagesPanel />}
+
+      {/* Departments & Roles Tab */}
+      {activeTab === "departments" && isAdmin && <SectionDepartmentsRoles />}
 
       {/* Staff Directory Tab */}
       {activeTab === "directory" && (

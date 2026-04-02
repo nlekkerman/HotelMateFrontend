@@ -24,7 +24,11 @@ function StaffDetails() {
   const { hotelSlug, id } = useParams();
   const { canAccess } = usePermissions();
   const queryClient = useQueryClient();
-  const { departments, roles, accessLevels } = useStaffMetadata(hotelSlug);
+  const { departments, roles, accessLevels, refetch: refetchMetadata } = useStaffMetadata(hotelSlug);
+  const [newDeptName, setNewDeptName] = useState('');
+  const [newRoleName, setNewRoleName] = useState('');
+  const [creatingDept, setCreatingDept] = useState(false);
+  const [creatingRole, setCreatingRole] = useState(false);
   
   // Face admin operations
   const { loading: revokeLoading, error: revokeError, revokeFace, clearError } = useFaceAdminApi();
@@ -107,6 +111,36 @@ function StaffDetails() {
   const cancelEditing = () => {
     setIsEditing(false);
     setEditData({});
+  };
+
+  const handleCreateDept = async () => {
+    if (!newDeptName.trim()) return;
+    setCreatingDept(true);
+    try {
+      await api.post(`/staff/${hotelSlug}/departments/`, { name: newDeptName.trim() });
+      toast.success(`Department "${newDeptName.trim()}" created`);
+      setNewDeptName('');
+      await refetchMetadata();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || err.response?.data?.name?.[0] || 'Failed to create department');
+    } finally {
+      setCreatingDept(false);
+    }
+  };
+
+  const handleCreateRole = async () => {
+    if (!newRoleName.trim()) return;
+    setCreatingRole(true);
+    try {
+      await api.post(`/staff/${hotelSlug}/roles/`, { name: newRoleName.trim() });
+      toast.success(`Role "${newRoleName.trim()}" created`);
+      setNewRoleName('');
+      await refetchMetadata();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || err.response?.data?.name?.[0] || 'Failed to create role');
+    } finally {
+      setCreatingRole(false);
+    }
   };
 
   const handleSave = async () => {
@@ -253,6 +287,19 @@ function StaffDetails() {
                     <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
                 </select>
+                {departments.length === 0 && (
+                  <div className="mt-2">
+                    <div className="input-group input-group-sm">
+                      <input type="text" className="form-control" placeholder="New department name"
+                        value={newDeptName} onChange={(e) => setNewDeptName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCreateDept()} />
+                      <button className="btn btn-outline-success" type="button" onClick={handleCreateDept} disabled={creatingDept || !newDeptName.trim()}>
+                        {creatingDept ? <span className="spinner-border spinner-border-sm"></span> : <><i className="bi bi-plus"></i> Add</>}
+                      </button>
+                    </div>
+                    <small className="text-muted">No departments exist. Create one first.</small>
+                  </div>
+                )}
               </div>
               <div className="mb-3">
                 <label className="form-label fw-bold">Role</label>
@@ -263,6 +310,19 @@ function StaffDetails() {
                     <option key={r.id} value={r.id}>{r.name}</option>
                   ))}
                 </select>
+                {roles.length === 0 && (
+                  <div className="mt-2">
+                    <div className="input-group input-group-sm">
+                      <input type="text" className="form-control" placeholder="New role name"
+                        value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCreateRole()} />
+                      <button className="btn btn-outline-success" type="button" onClick={handleCreateRole} disabled={creatingRole || !newRoleName.trim()}>
+                        {creatingRole ? <span className="spinner-border spinner-border-sm"></span> : <><i className="bi bi-plus"></i> Add</>}
+                      </button>
+                    </div>
+                    <small className="text-muted">No roles exist. Create one first.</small>
+                  </div>
+                )}
               </div>
               <div className="mb-3">
                 <label className="form-label fw-bold">Access Level</label>

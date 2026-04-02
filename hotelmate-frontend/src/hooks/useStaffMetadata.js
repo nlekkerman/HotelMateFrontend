@@ -9,7 +9,7 @@ const fetchStaffMetadata = async (hotelSlug) => {
 };
 
 export default function useStaffMetadata(hotelSlug) {
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["staffMetadata", hotelSlug],
     queryFn: () => fetchStaffMetadata(hotelSlug),
     enabled: Boolean(hotelSlug),
@@ -23,5 +23,6 @@ export default function useStaffMetadata(hotelSlug) {
     isLoading,
     isError,
     error,
+    refetch,
   };
 }
