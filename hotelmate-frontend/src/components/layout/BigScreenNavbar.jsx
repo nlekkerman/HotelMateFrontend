@@ -983,13 +983,13 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
       {showLogoutConfirm && (
         <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
+            <div className="modal-content" style={{ color: '#212529', backgroundColor: '#fff' }}>
               <div className="modal-header">
-                <h5 className="modal-title">Confirm Logout</h5>
+                <h5 className="modal-title" style={{ color: '#212529' }}>Confirm Logout</h5>
                 <button type="button" className="btn-close" onClick={() => setShowLogoutConfirm(false)}></button>
               </div>
               <div className="modal-body">
-                <p>Are you sure you want to logout?</p>
+                <p style={{ color: '#212529' }}>Are you sure you want to logout?</p>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowLogoutConfirm(false)}>
@@ -1008,10 +1008,10 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
       {showLogoutSuccess && (
         <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
+            <div className="modal-content" style={{ color: '#212529', backgroundColor: '#fff' }}>
               <div className="modal-body text-center py-4">
                 <i className="bi bi-check-circle text-success" style={{ fontSize: '3rem' }}></i>
-                <h5 className="mt-3">Logged Out Successfully</h5>
+                <h5 className="mt-3" style={{ color: '#212529' }}>Logged Out Successfully</h5>
                 <p className="text-muted">Redirecting to login page...</p>
               </div>
             </div>
