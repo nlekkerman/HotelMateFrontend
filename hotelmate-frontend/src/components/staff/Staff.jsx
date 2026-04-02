@@ -147,7 +147,7 @@ export default function Staff() {
         {isAdmin && (
           <li className="nav-item">
             <button
-              className="nav-link fw-semibold"
+              className={`nav-link ${pendingCount > 0 ? "fw-semibold" : "text-dark"}`}
               style={pendingCount > 0
                 ? { backgroundColor: '#dc3545', color: '#fff', borderColor: '#dc3545' }
                 : {}}
