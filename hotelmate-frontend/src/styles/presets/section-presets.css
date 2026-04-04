@@ -538,6 +538,7 @@
   left: 70%;
   top: 70%;
   transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.6);
   text-align: center;
   z-index: 5;
   color: white;
@@ -595,7 +596,7 @@
   font-family: var(--font-elegant-heading);
   font-weight: 700;
   letter-spacing: 0.03em;
-  color: #8b7136 !important;
+  color: #ffffff !important;
   text-shadow: none;
 }
 
