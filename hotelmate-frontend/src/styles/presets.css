@@ -95,7 +95,9 @@
 .font-preset-1-heading {
   font-family: var(--font-clean-heading);
   font-weight: 700;
-  color: rgb(0, 8, 144) !important;
+  color: rgb(255, 255, 255) !important;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.3);
 }
 
 .font-preset-1-subtitle {
