@@ -750,7 +750,7 @@ const GuestRoomBookingPage = () => {
                     {/* Badges */}
                     <div className="position-absolute top-0 end-0 m-2 d-flex flex-column align-items-end gap-1">
                       {isPreselected && (
-                        <span className="badge  fs-6 px-3 py-2">
+                        <span className="badge preselected-badge fs-6 px-3 py-2">
                           <i className="bi bi-check-circle me-1"></i>
                           Preselected
                         </span>
@@ -769,7 +769,7 @@ const GuestRoomBookingPage = () => {
                       </Card.Title>
                       
                       {/* Guest Capacity */}
-                      <p className="text-muted mb-3">
+                      <p className="mb-3">
                         <i className="bi bi-people me-2"></i>
                         <span>Up to {room.max_occupancy} guests
                         {room.bed_setup && (
@@ -793,7 +793,7 @@ const GuestRoomBookingPage = () => {
                       {/* Pricing Section */}
                       <div className="mb-3 p-3 border rounded">
                         <div className="d-flex justify-content-between align-items-center">
-                          <span className="text-muted">Price per night</span>
+                          <span >Price per night</span>
                           <div className="text-end">
                             <div className="h4 mb-0 text-primary fw-bold">
                               €{parseFloat(roomPrice).toFixed(0)}

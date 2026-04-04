@@ -2398,35 +2398,295 @@
   color: rgba(255, 255, 255, 0.8) !important;
 }
 
-/* Selected/Preselected room styling */
+/* ========================================
+   PRESELECTED ROOM CARD — PER-PRESET OVERRIDES
+   Covers: card bg/border, badge, btn-success, text-success,
+   text-muted, text-primary, price, hover, .border.rounded (price box)
+   These MUST out-specifiy the generic .booking-step .card rules.
+   ======================================== */
+
 .booking-step .card.border-primary {
   position: relative;
 }
 
+/* ---------- Preset 1 — Light Blue / Cyan ---------- */
 .booking-page.page-style-1 .booking-step .card.border-primary {
-  border: 2px solid #1565c0 !important;
-  background: rgba(159, 206, 242, 0.05) !important;
+  border: 3px solid #0d47a1 !important;
+  background: #e3f2fd !important;
+  box-shadow: 0 6px 20px rgba(21, 101, 192, 0.35) !important;
 }
-
-.booking-page.page-style-2 .booking-step .card.border-primary {
-  border: 2px solid #8b7136 !important;
-  background: linear-gradient(135deg, #382900, #705401) !important;
+.booking-page.page-style-1 .booking-step .card.border-primary:hover {
+  background: #d0e8fc !important;
+  border-color: #0d47a1 !important;
+  box-shadow: 0 10px 30px rgba(21, 101, 192, 0.45) !important;
+  transform: translateY(-5px);
+}
+.booking-page.page-style-1 .booking-step .card.border-primary .badge {
+  background: #0d47a1 !important;
   color: #ffffff !important;
 }
+.booking-page.page-style-1 .booking-step .card.border-primary .btn-success {
+  background: #0d47a1 !important;
+  border-color: #0d47a1 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(13, 71, 161, 0.4);
+}
+.booking-page.page-style-1 .booking-step .card.border-primary .btn-success:hover {
+  background: #0a3a85 !important;
+  box-shadow: 0 6px 18px rgba(13, 71, 161, 0.55) !important;
+  transform: translateY(-2px);
+}
+.booking-page.page-style-1 .booking-step .card.border-primary .text-success {
+  color: #0d47a1 !important;
+}
+.booking-page.page-style-1 .booking-step .card.border-primary .text-primary {
+  color: #0d47a1 !important;
+}
+.booking-page.page-style-1 .booking-step .card.border-primary .text-muted {
+  color: #37474f !important;
+}
+.booking-page.page-style-1 .booking-step .card.border-primary .card-title {
+  color: #0d47a1 !important;
+}
+.booking-page.page-style-1 .booking-step .card.border-primary .border.rounded {
+  border-color: rgba(13, 71, 161, 0.25) !important;
+  background: rgba(255, 255, 255, 0.7) !important;
+}
+.booking-page.page-style-1 .booking-step .card.border-primary .border.rounded * {
+  color: #0d47a1 !important;
+}
+.booking-page.page-style-1 .booking-step .card.border-primary .border.rounded .text-muted {
+  color: #37474f !important;
+}
 
+/* ---------- Preset 2 — Gold / Dark Luxury ---------- */
+.booking-page.page-style-2 .booking-step .card.border-primary {
+  border: 3px solid #d4a838 !important;
+  background: linear-gradient(135deg, #1a1000, #382900) !important;
+  box-shadow: 0 6px 20px rgba(212, 168, 56, 0.4) !important;
+}
+.booking-page.page-style-2 .booking-step .card.border-primary:hover {
+  background: linear-gradient(135deg, #2a1c00, #4a3800) !important;
+  border-color: #f2c94c !important;
+  box-shadow: 0 10px 30px rgba(242, 201, 76, 0.5) !important;
+  transform: translateY(-5px);
+}
+.booking-page.page-style-2 .booking-step .card.border-primary .badge {
+  background: linear-gradient(135deg, #d4a838, #f2c94c) !important;
+  color: #1a1000 !important;
+}
+.booking-page.page-style-2 .booking-step .card.border-primary .btn-success {
+  background: linear-gradient(135deg, #d4a838, #f2c94c) !important;
+  border-color: transparent !important;
+  color: #1a1000 !important;
+  box-shadow: 0 4px 14px rgba(242, 201, 76, 0.5);
+  font-weight: 600;
+}
+.booking-page.page-style-2 .booking-step .card.border-primary .btn-success:hover {
+  background: linear-gradient(135deg, #e6c15c, #f7d96a) !important;
+  box-shadow: 0 6px 20px rgba(242, 201, 76, 0.65) !important;
+  transform: translateY(-2px);
+}
+.booking-page.page-style-2 .booking-step .card.border-primary .text-success {
+  color: #f2c94c !important;
+}
+.booking-page.page-style-2 .booking-step .card.border-primary .text-primary {
+  color: #f2c94c !important;
+}
+.booking-page.page-style-2 .booking-step .card.border-primary .text-muted {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+.booking-page.page-style-2 .booking-step .card.border-primary .card-title {
+  color: #ffffff !important;
+}
+.booking-page.page-style-2 .booking-step .card.border-primary .border.rounded {
+  border-color: rgba(212, 168, 56, 0.35) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+.booking-page.page-style-2 .booking-step .card.border-primary .border.rounded * {
+  color: #f2c94c !important;
+}
+.booking-page.page-style-2 .booking-step .card.border-primary .border.rounded .text-muted {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* ---------- Preset 3 — Monochrome Minimal ---------- */
 .booking-page.page-style-3 .booking-step .card.border-primary {
-  border: 2px solid #2c2c2c !important;
-  background: rgba(0, 0, 0, 0.02) !important;
+  border: 3px solid #000000 !important;
+  background: #ffffff !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2) !important;
+}
+.booking-page.page-style-3 .booking-step .card.border-primary:hover {
+  background: #f5f5f5 !important;
+  border-color: #000000 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25) !important;
+  transform: translateY(-3px);
+}
+.booking-page.page-style-3 .booking-step .card.border-primary .badge {
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+.booking-page.page-style-3 .booking-step .card.border-primary .btn-success {
+  background: #000000 !important;
+  border-color: #000000 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  font-weight: 600;
+}
+.booking-page.page-style-3 .booking-step .card.border-primary .btn-success:hover {
+  background: #222222 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+  transform: translateY(-2px);
+}
+.booking-page.page-style-3 .booking-step .card.border-primary .text-success {
+  color: #1a1a1a !important;
+}
+.booking-page.page-style-3 .booking-step .card.border-primary .text-primary {
+  color: #000000 !important;
+}
+.booking-page.page-style-3 .booking-step .card.border-primary .text-muted {
+  color: #555555 !important;
+}
+.booking-page.page-style-3 .booking-step .card.border-primary .card-title {
+  color: #000000 !important;
+}
+.booking-page.page-style-3 .booking-step .card.border-primary .border.rounded {
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  background: #f9f9f9 !important;
+}
+.booking-page.page-style-3 .booking-step .card.border-primary .border.rounded * {
+  color: #000000 !important;
+}
+.booking-page.page-style-3 .booking-step .card.border-primary .border.rounded .text-muted {
+  color: #555555 !important;
 }
 
+/* ---------- Preset 4 — Pink / Magenta Vibrant ---------- */
 .booking-page.page-style-4 .booking-step .card.border-primary {
-  border: 2px solid #c2185b !important;
-  background: rgba(169, 3, 3, 0.3) !important;
+  border: 3px solid #ffffff !important;
+  background: linear-gradient(135deg, #8e0038, #c2185b) !important;
+  box-shadow: 0 6px 20px rgba(194, 24, 91, 0.45) !important;
+}
+.booking-page.page-style-4 .booking-step .card.border-primary:hover {
+  background: linear-gradient(135deg, #a10040, #d81b60) !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 10px 30px rgba(194, 24, 91, 0.55) !important;
+  transform: translateY(-5px);
+}
+.booking-page.page-style-4 .booking-step .card.border-primary .badge {
+  background: #ffffff !important;
+  color: #8e0038 !important;
+  font-weight: 700;
+}
+.booking-page.page-style-4 .booking-step .card.border-primary .btn-success {
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+  color: #8e0038 !important;
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.35);
+  font-weight: 700;
+}
+.booking-page.page-style-4 .booking-step .card.border-primary .btn-success:hover {
+  background: #fce4ec !important;
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.5) !important;
+  transform: translateY(-2px);
+}
+.booking-page.page-style-4 .booking-step .card.border-primary .text-success {
+  color: #fce4ec !important;
+}
+.booking-page.page-style-4 .booking-step .card.border-primary .text-primary {
+  color: #ffffff !important;
+}
+.booking-page.page-style-4 .booking-step .card.border-primary .text-muted {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+.booking-page.page-style-4 .booking-step .card.border-primary .card-title {
+  color: #ffffff !important;
+}
+.booking-page.page-style-4 .booking-step .card.border-primary .border.rounded {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+.booking-page.page-style-4 .booking-step .card.border-primary .border.rounded * {
+  color: #ffffff !important;
+}
+.booking-page.page-style-4 .booking-step .card.border-primary .border.rounded .text-muted {
+  color: rgba(255, 255, 255, 0.7) !important;
 }
 
+/* ---------- Preset 5 — Green Nature ---------- */
 .booking-page.page-style-5 .booking-step .card.border-primary {
-  border: 2px solid #2e7d32 !important;
-  background: rgba(81, 2, 2, 1) !important;
+  border: 3px solid #ffffff !important;
+  background: linear-gradient(135deg, #145a1e, #1b7a28) !important;
+  box-shadow: 0 6px 20px rgba(46, 125, 50, 0.45) !important;
+}
+.booking-page.page-style-5 .booking-step .card.border-primary:hover {
+  background: linear-gradient(135deg, #1b6e24, #27ae60) !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 10px 30px rgba(46, 204, 113, 0.5) !important;
+  transform: translateY(-5px);
+}
+.booking-page.page-style-5 .booking-step .card.border-primary .badge {
+  background: #ffffff !important;
+  color: #145a1e !important;
+  font-weight: 700;
+}
+.booking-page.page-style-5 .booking-step .card.border-primary .btn-success {
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+  color: #145a1e !important;
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.35);
+  font-weight: 700;
+}
+.booking-page.page-style-5 .booking-step .card.border-primary .btn-success:hover {
+  background: #e8f5e9 !important;
+  box-shadow: 0 6px 18px rgba(255, 255, 255, 0.5) !important;
+  transform: translateY(-2px);
+}
+.booking-page.page-style-5 .booking-step .card.border-primary .text-success {
+  color: #c8e6c9 !important;
+}
+.booking-page.page-style-5 .booking-step .card.border-primary .text-primary {
+  color: #ffffff !important;
+}
+.booking-page.page-style-5 .booking-step .card.border-primary .text-muted {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+.booking-page.page-style-5 .booking-step .card.border-primary .card-title {
+  color: #ffffff !important;
+}
+.booking-page.page-style-5 .booking-step .card.border-primary .border.rounded {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+.booking-page.page-style-5 .booking-step .card.border-primary .border.rounded * {
+  color: #ffffff !important;
+}
+.booking-page.page-style-5 .booking-step .card.border-primary .border.rounded .text-muted {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* ---------- All Presets: icon color inheritance inside preselected cards ---------- */
+/* Badges and buttons contain <i> icons — force them to inherit the parent color
+   so the global .card * color rules don't override the preset-specific colors. */
+.booking-page.page-style-1 .booking-step .card.border-primary .badge *,
+.booking-page.page-style-1 .booking-step .card.border-primary .btn-success * {
+  color: inherit !important;
+}
+.booking-page.page-style-2 .booking-step .card.border-primary .badge *,
+.booking-page.page-style-2 .booking-step .card.border-primary .btn-success * {
+  color: inherit !important;
+}
+.booking-page.page-style-3 .booking-step .card.border-primary .badge *,
+.booking-page.page-style-3 .booking-step .card.border-primary .btn-success * {
+  color: inherit !important;
+}
+.booking-page.page-style-4 .booking-step .card.border-primary .badge *,
+.booking-page.page-style-4 .booking-step .card.border-primary .btn-success * {
+  color: inherit !important;
+}
+.booking-page.page-style-5 .booking-step .card.border-primary .badge *,
+.booking-page.page-style-5 .booking-step .card.border-primary .btn-success * {
+  color: inherit !important;
 }
 
 /* ========================================
