@@ -1592,7 +1592,10 @@
   color: #ffffff !important;
   font-weight: 500;
 }
-
+.page-style-3 h4 {
+  color: #ffffff !important;
+  font-weight: 600;
+}
 /* Calendar icon for date inputs in preset 3 */
 .booking-page.page-style-3
   input[type="date"]::-webkit-calendar-picker-indicator {
