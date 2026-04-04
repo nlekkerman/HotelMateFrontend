@@ -1585,10 +1585,11 @@
 .booking-page.page-style-3 .form-select:focus {
   border-color: #1a1a1a !important;
   box-shadow: 0 0 0 0.2rem rgba(0, 0, 0, 0.1) !important;
+  color: #1a1a1a !important;
 }
 
 .booking-page.page-style-3 .form-label {
-  color: #1a1a1a !important;
+  color: #ffffff !important;
   font-weight: 500;
 }
 

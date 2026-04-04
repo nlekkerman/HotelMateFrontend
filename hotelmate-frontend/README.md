@@ -1,502 +1,97 @@
-# 🏨 HotelMate Frontend
+# HotelMate Frontend
 
-> **Modern Hotel Management System Frontend** - A comprehensive React-based hotel management platform with entertainment features, staff management, inventory tracking, and real-time communication.
+React frontend for a multi-tenant hotel operations platform, covering public hotel pages, guest flows, staff dashboards, and realtime operational UI.
 
-![React](https://img.shields.io/badge/React-19.1.0-61DAFB?style=for-the-badge&logo=react)
-![Vite](https://img.shields.io/badge/Vite-6.3.5-646CFF?style=for-the-badge&logo=vite)
-![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3.7-7952B3?style=for-the-badge&logo=bootstrap)
-![Pusher](https://img.shields.io/badge/Pusher-8.4.0-300D4F?style=for-the-badge&logo=pusher)
+## Overview
 
----
+HotelMate is a hotel-scoped React SPA that serves two audiences: **guests** (room booking, room service ordering, pre-check-in, chat, surveys) and **hotel staff** (reception, housekeeping, rooms, bookings, attendance, stock management, restaurant operations). Every route, realtime channel, and theme is resolved per hotel slug. The frontend consumes a Django REST API and receives live operational updates through Pusher.
 
-## 📋 Table of Contents
+## Core Responsibilities
 
-- [🌟 Features](#-features)
-- [🏗️ Architecture](#️-architecture)
-- [🚀 Quick Start](#-quick-start)
-- [📁 Project Structure](#-project-structure)
-- [🎮 Entertainment System](#-entertainment-system)
-- [🔧 Configuration](#-configuration)
-- [🌐 API Integration](#-api-integration)
-- [📱 Responsive Design](#-responsive-design)
-- [🔒 Security](#-security)
-- [🧪 Testing](#-testing)
-- [🚀 Deployment](#-deployment)
-- [🤝 Contributing](#-contributing)
+- **Public hotel pages** — filterable hotel listing, per-hotel public pages built from backend-managed sections, restaurant menus, and "Good to Know" guest info
+- **Guest flows** — room booking with confirmation/payment/status tracking, room service and breakfast ordering, restaurant booking, pre-check-in forms, post-stay surveys, and a session-based guest chat portal
+- **Staff operations** — permission-gated dashboards for reception, rooms, guests, housekeeping, maintenance, bookings (service + room), room service orders, restaurant management, menus, hotel info, and staff-to-guest chat
+- **Stock tracker** — inventory items, movements, stocktakes, period snapshots with comparison, cocktail recipes, sales entry, and sales analytics with chart-based reporting
+- **Attendance & HR** — attendance dashboards, department rosters, analytics, face-recognition clock-in (webcam + face-api.js), staff management, and registration package distribution
+- **Realtime UI** — live updates across attendance, room service, bookings, room status, housekeeping, and chat via Pusher channels and Firebase Cloud Messaging, routed through a centralized event bus into domain-specific stores
+- **Games** — Whack-a-Mole, Memory Match (tournaments, leaderboards), and Quiz Game behind auth; an AR shooting game (A-Frame/Three.js) on a public route
+- **Settings & admin** — per-hotel theming, section-based public page editor, hotel provisioning, and super user management
 
----
+## Frontend Architecture
 
-## 🌟 Features
+- **Route config + two-layer protection** — routes are declared as config objects across five files (`authRoutes`, `publicRoutes`, `guestRoutes`, `staffRoutes`, `gameRoutes`) and assembled by `buildRoutes()`. `ProtectedRoute` enforces authentication (Layer 1) and optionally validates the user's `allowed_navs` against a path-to-slug policy (Layer 2), gated by a feature flag
+- **Hotel-scoped everything** — staff routes carry `:hotelSlug` params; auth context resolves the active hotel; Axios interceptors inject `X-Hotel-ID` and `X-Hotel-Slug` headers on every request; theming and realtime channels are all per-hotel
+- **Token-aware guest flows** — guest pages skip login entirely; identity comes from URL query tokens (`?token=...`) persisted to localStorage, with booking-scoped tokens to prevent cross-hotel reuse
+- **Dual Pusher realtime** — `realtimeClient.js` (staff: singleton, env-var config, token auth) and `guestRealtimeClient.js` (guest: per-session, backend-provided config, session-header auth). A `channelRegistry` subscribes hotel channels and a centralized `eventBus` dispatches events to nine domain stores (attendance, chat, guest chat, room service, service bookings, room bookings, rooms, housekeeping, notifications)
+- **Service layer** — Axios instances for authenticated (`api`), public (`publicAPI`), and guest (`guestAPI`) requests, with a module-level `authStore` bridge so interceptors and Pusher auth work outside the React tree
+- **Provider composition** — `AppProviders` nests Router → React Query → Auth → RealtimeProvider (all domain stores) → Chat → Messenger → Theme → Chart Preferences → Staff Chat → Notification providers
+- **Backend-authoritative permissions** — `usePermissions` reads `allowed_navs` from the user payload; `staffAccessPolicy.js` maps URL paths to nav slugs; navigation categories (Front Office, F&B, Staff, Guest Relations) filter the sidebar accordingly
 
-### 🏨 **Core Hotel Management**
-- **Staff Management** - Complete staff roster, scheduling, and clock-in/out system
-- **Room Management** - Room status tracking, housekeeping, and maintenance
-- **Guest Services** - Guest check-in/out, requests, and communication
-- **Inventory Tracking** - Stock management with low-stock alerts and analytics
-- **Restaurant Management** - Menu management, orders, and kitchen workflows
-- **Maintenance System** - Work orders, scheduling, and equipment tracking
+## Main UI Areas
 
-### 🎮 **Entertainment Platform**
-- **Memory Match Game** - Tournament-ready brain training game with:
-  - Multiple difficulty levels (Easy 4x4, Intermediate 6x6, Hard 8x8)
-  - Tournament registration and leaderboards
-  - Real-time scoring and statistics
-  - Offline support with automatic sync
-- **Whack-a-Mole Game** - Fast-paced arcade game
-- **Games Dashboard** - Centralized entertainment management
+**Public** — Hotel listing with filters, section-based hotel pages, restaurant views, Good-to-Know pages.
 
-### 💬 **Communication**
-- **Real-time Chat** - Department-based messaging with Pusher integration
-- **Notifications** - Browser-based instant alerts for important updates
-- **File Sharing** - Document and image sharing capabilities
+**Guest** — Room service / breakfast ordering by room number, restaurant booking, room booking (confirm → payment → status), pre-check-in, surveys, and a guest chat portal. All token-authenticated, no login required.
 
-### 📊 **Analytics & Reporting**
-- **Staff Analytics** - Attendance, performance, and roster insights
-- **Stock Analytics** - Inventory trends and consumption reports
-- **Game Statistics** - Player performance and tournament data
-- **PDF Export** - Comprehensive reporting system
+**Staff** — Reception, room list/detail, guest management, housekeeping with status workflows, maintenance, room service order management, restaurant dashboard, menu editor, booking dashboards (service + room), hotel info editor, Good-to-Know console, staff chat, and a persistent staff messenger overlay.
 
-### 🔧 **Advanced Features**
-- **Offline Support** - Works without internet, syncs when online
-- **Multi-theme Support** - Customizable UI themes per hotel
-- **Face Recognition** - AI-powered staff clock-in system
-- **QR Code Integration** - Tournament registration and quick access
-- **Responsive Design** - Perfect on desktop, tablet, and mobile
+**Stock & Analytics** — Stock dashboard, items with profitability, movements, stocktakes, period snapshots/comparison, cocktails, sales entry/list/analysis, and configurable chart views.
 
----
+**Attendance & HR** — Attendance and roster dashboards, enhanced analytics, face registration and face clock-in kiosk pages (public for tablet use), staff CRUD, profile self-service.
 
-## 🏗️ Architecture
+**Games** — Whack-a-Mole, Memory Match (practice + tournaments + leaderboards), Quiz Game (play + results + tournaments), and ShootAR.
 
-### **Frontend Stack**
-- **React 19.1.0** - Modern React with hooks and context
-- **Vite 6.3.5** - Lightning-fast build tool and dev server
-- **Bootstrap 5.3.7** - Responsive UI framework
-- **React Router 7.6.0** - Client-side routing
-- **Axios** - HTTP client for API communication
+**Admin** — Hotel settings (admin-gated), section editor for public pages, hotel provisioning, super user view.
 
-### **State Management**
-- **React Context** - Global state for auth, themes, and UI
-- **React Query** - Server state management and caching
-- **Local Storage** - Offline data persistence
+## Tech Stack
 
-### **Real-time Features**
-- **Pusher** - WebSocket connections for live chat and real-time updates
-- **Browser Notifications** - Native notification API for instant alerts
+| Category | Technology |
+|---|---|
+| Framework | React 19, Vite 6 |
+| Routing | React Router DOM 7 |
+| Styling | Bootstrap 5, React Bootstrap, custom CSS, Framer Motion |
+| State / Data Fetching | React Context, TanStack React Query 5, Axios |
+| Realtime | Pusher (pusher-js) — dual client architecture (staff + guest) |
+| Push Notifications | Firebase Cloud Messaging (firebase) |
+| Charts & Visualization | Recharts, Chart.js (react-chartjs-2), ECharts (echarts-for-react), Victory |
+| PDF Generation | jsPDF, jspdf-autotable, html2canvas |
+| Date Handling | date-fns, Day.js |
+| Drag & Drop | @hello-pangea/dnd |
+| Face Recognition | face-api.js, react-webcam |
+| AR / 3D | A-Frame, AR.js, Three.js |
+| QR Codes | qrcode |
+| Icons | Lucide React, React Icons, Bootstrap Icons |
+| Animations | Framer Motion, Lottie (lottie-react), canvas-confetti |
+| Toasts | react-toastify |
+| Mobile | Capacitor (Android target) |
+| Deployment | Netlify (SPA redirect, Node 18) |
 
-### **Development Tools**
-- **ESLint** - Code linting and quality checks
-- **Vite HMR** - Hot module replacement for fast development
-- **Path Aliases** - Clean import paths with `@/` prefix
-
----
-
-## 🚀 Quick Start
-
-### **Prerequisites**
-- Node.js 18+ and npm/yarn
-- Backend API running (HotelMate Backend)
-- Modern web browser
-
-### **Installation**
+## Local Development
 
 ```bash
-# Clone the repository
-git clone https://github.com/nlekkerman/HotelMateFrontend.git
-cd HotelMateFrontend/hotelmate-frontend
+# Navigate to the frontend directory
+cd hotelmate-frontend
 
 # Install dependencies
 npm install
 
-# Create environment file
-cp .env.example .env.local
-
-# Configure environment variables
-# See Configuration section below
-
-# Start development server
+# Start the dev server (runs on port 5173)
 npm run dev
-```
 
-### **Development Server**
-```bash
-npm run dev          # Start dev server at http://localhost:5173
-npm run build        # Build for production
-npm run preview      # Preview production build
-npm run lint         # Run ESLint
-```
-
----
-
-## 📁 Project Structure
-
-```
-hotelmate-frontend/
-├── public/                      # Static assets
-│   ├── models/                  # Face recognition models
-│   └── ...
-├── src/
-│   ├── components/              # Reusable UI components
-│   │   ├── analytics/           # Analytics components
-│   │   ├── attendance/          # Staff attendance
-│   │   ├── auth/               # Authentication
-│   │   ├── bookings/           # Hotel bookings
-│   │   ├── chat/               # Real-time messaging
-│   │   ├── guests/             # Guest management
-│   │   ├── layout/             # Layout components
-│   │   ├── maintenance/        # Maintenance system
-│   │   ├── restaurants/        # Restaurant management
-│   │   ├── rooms/              # Room management
-│   │   ├── staff/              # Staff management
-│   │   └── stock_tracker/      # Inventory tracking
-│   ├── context/                # React Context providers
-│   │   ├── AuthContext.jsx     # Authentication state
-│   │   ├── ChatContext.jsx     # Chat state
-│   │   ├── ThemeContext.jsx    # Theme management
-│   │   └── UIContext.jsx       # UI state
-│   ├── games/                  # Entertainment platform
-│   │   ├── memory-match/       # Memory Match Game
-│   │   │   ├── components/     # Game components
-│   │   │   ├── pages/          # Game pages
-│   │   │   └── assets/         # Game assets
-│   │   ├── whack-a-mole/       # Whack-a-Mole Game
-│   │   └── GamesDashboard.jsx  # Games hub
-│   ├── hooks/                  # Custom React hooks
-│   ├── pages/                  # Main application pages
-│   ├── services/               # API services
-│   │   ├── api.js              # Main API client
-│   │   ├── memoryGameAPI.js    # Game API service
-│   │   └── ...
-│   ├── styles/                 # Global styles
-│   ├── utils/                  # Utility functions
-│   ├── App.jsx                 # Main App component
-│   └── main.jsx                # Application entry point
-├── .env.example                # Environment template
-├── vite.config.js              # Vite configuration
-└── package.json                # Dependencies and scripts
-```
-
----
-
-## 🎮 Entertainment System
-
-### **Memory Match Game**
-Tournament-ready brain training game with comprehensive features:
-
-```jsx
-// Game Features
-- Multiple Difficulty Levels (4x4, 6x6, 8x8)
-- Tournament Registration & Management
-- Real-time Leaderboards (Global & Tournament)
-- Comprehensive Statistics Dashboard
-- Offline Support with Auto-sync
-- Personal Best Tracking
-- Achievement System
-```
-
-### **Game Integration**
-```javascript
-// API Integration
-import { memoryGameAPI } from '@/services/memoryGameAPI';
-
-// Save game score
-const gameSession = await memoryGameAPI.saveGameSession({
-  difficulty: 'easy',
-  time_seconds: 120,
-  moves_count: 24,
-  completed: true
-});
-
-// Get user statistics
-const stats = await memoryGameAPI.getUserStats();
-
-// Tournament registration
-await memoryGameAPI.registerForTournament(tournamentId, {
-  participant_name: 'John Doe',
-  participant_age: 25
-});
-```
-
-### **Scoring System**
-```javascript
-Score = (Difficulty Multiplier × 1000) - (Time × 2) - (Extra Moves × 5)
-
-Multipliers:
-- Easy (4x4): 1.0×    → Max 1000 points
-- Intermediate (6x6): 1.5× → Max 1500 points  
-- Hard (8x8): 2.0×    → Max 2000 points
-```
-
----
-
-## 🔧 Configuration
-
-### **Environment Variables**
-Create `.env.local` file in the project root:
-
-```env
-# API Configuration
-VITE_API_BASE_URL=https://your-api-domain.com/api
-VITE_WEBSOCKET_URL=wss://your-websocket-domain.com
-
-# Pusher Configuration (Chat)
-VITE_PUSHER_APP_KEY=your_pusher_key
-VITE_PUSHER_CLUSTER=your_cluster
-
-# Development
-VITE_DEBUG_MODE=true
-VITE_ENABLE_LOGGING=true
-```
-
-### **Pusher Setup**
-1. Create account at https://pusher.com
-2. Create new app
-3. Get app credentials
-4. Configure channels for chat functionality
-
----
-
-## 🌐 API Integration
-
-### **Main API Client**
-```javascript
-// src/services/api.js
-import axios from 'axios';
-
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-  timeout: 10000,
-});
-
-// Request interceptor for auth
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('authToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-export default api;
-```
-
-### **API Services**
-- **Authentication** - Login, logout, user management
-- **Staff Management** - CRUD operations, scheduling
-- **Inventory** - Stock tracking, analytics, alerts
-- **Games** - Score saving, tournaments, leaderboards
-- **Chat** - Message history, file uploads
-- **Analytics** - Reports, statistics, exports
-
-### **Error Handling**
-```javascript
-// Global error handling
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Handle authentication errors
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
-```
-
----
-
-## 📱 Responsive Design
-
-### **Breakpoint Strategy**
-```css
-/* Mobile First Approach */
-/* Mobile: < 576px */
-/* Tablet: 576px - 992px */
-/* Desktop: > 992px */
-
-/* Bootstrap Classes Used */
-.col-12.col-md-6.col-lg-4    /* Responsive grid */
-.d-none.d-md-block           /* Hide on mobile */
-.order-1.order-md-2          /* Reorder elements */
-```
-
-### **Mobile Optimizations**
-- Touch-friendly interfaces
-- Optimized game controls
-- Collapsible navigation
-- Swipe gestures support
-- Reduced data usage in offline mode
-
-### **Performance**
-- Lazy loading for components
-- Image optimization
-- Code splitting by routes
-- Service worker for caching
-- Bundle size optimization
-
----
-
-## 🔒 Security
-
-### **Authentication**
-- JWT token-based authentication
-- Automatic token refresh
-- Secure token storage
-- Session timeout handling
-
-### **Authorization**
-```javascript
-// Role-based access control
-const usePermissions = () => {
-  const { user } = useAuth();
-  
-  return {
-    canManageStaff: user?.role === 'admin',
-    canViewAnalytics: ['admin', 'manager'].includes(user?.role),
-    canClockIn: user?.role === 'staff'
-  };
-};
-```
-
-### **Data Protection**
-- Input validation and sanitization
-- XSS protection
-- CSRF protection via backend
-- Secure API communication (HTTPS)
-- No sensitive data in localStorage
-
----
-
-## 🧪 Testing
-
-### **Testing Strategy**
-```bash
-# Unit Tests (Coming Soon)
-npm run test
-
-# E2E Tests (Coming Soon)  
-npm run test:e2e
-
-# Component Testing
-npm run test:components
-```
-
-### **Testing Guidelines**
-- Test critical user flows
-- Mock API responses
-- Test responsive behavior
-- Validate accessibility
-- Performance testing
-
----
-
-## 🚀 Deployment
-
-### **Production Build**
-```bash
 # Build for production
 npm run build
 
 # Preview production build
 npm run preview
 
-# Analyze bundle size
-npm run build -- --analyze
+# Run linting
+npm run lint
 ```
 
-### **Deployment Options**
+The dev server proxies `/api` requests to `http://localhost:8000` (the Django backend). Set `VITE_API_URL` in a `.env` file to override the backend URL. Pusher requires `VITE_PUSHER_KEY` and `VITE_PUSHER_CLUSTER` environment variables. Firebase push notifications require `VITE_FIREBASE_VAPID_KEY`. The `VITE_API_BASE_URL` variable is used for the Pusher auth endpoint.
 
-#### **Netlify (Recommended)**
-```bash
-# Install Netlify CLI
-npm install -g netlify-cli
+## Notes
 
-# Deploy to Netlify
-netlify deploy --prod --dir=dist
-```
+This frontend is one layer of a larger hotel operations platform. The Django backend is the authoritative source for permissions (`allowed_navs`), hotel scoping, booking state, and realtime event dispatch. The frontend does not grant permissions client-side — it reads them from the authenticated user payload and enforces route access accordingly.
 
-#### **Vercel**
-```bash
-# Install Vercel CLI
-npm install -g vercel
-
-# Deploy to Vercel
-vercel --prod
-```
-
-#### **Traditional Hosting**
-1. Run `npm run build`
-2. Upload `dist/` folder to web server
-3. Configure web server for SPA routing
-4. Set up SSL certificate
-
-### **Environment Configuration**
-- Production API URLs
-- Pusher production configuration
-- Error tracking (Sentry)
-- Analytics (Google Analytics)
-
----
-
-## 🤝 Contributing
-
-### **Development Workflow**
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
-
-### **Code Standards**
-- Use ESLint configuration
-- Follow React best practices
-- Write descriptive commit messages
-- Add comments for complex logic
-- Maintain responsive design
-
-### **Pull Request Guidelines**
-- Update documentation
-- Add tests for new features
-- Ensure all tests pass
-- Maintain backwards compatibility
-- Follow semantic versioning
-
----
-
-## 📞 Support & Documentation
-
-### **Resources**
-- **API Documentation** - Backend API reference
-- **Component Library** - UI component documentation
-- **Deployment Guide** - Step-by-step deployment
-- **Troubleshooting** - Common issues and solutions
-
-### **Support Channels**
-- GitHub Issues - Bug reports and feature requests
-- Discussions - General questions and ideas
-- Wiki - Detailed documentation and guides
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🏆 Acknowledgments
-
-- **React Team** - For the amazing framework
-- **Vite Team** - For the blazing fast build tool
-- **Bootstrap Team** - For the responsive UI framework
-- **Pusher Team** - For real-time communication features
-- **Open Source Community** - For countless helpful libraries
-
----
-
-<div align="center">
-
-**Built with ❤️ for the hospitality industry**
-
-[🌟 Star this project](https://github.com/nlekkerman/HotelMateFrontend) | [🐛 Report Bug](https://github.com/nlekkerman/HotelMateFrontend/issues) | [💡 Request Feature](https://github.com/nlekkerman/HotelMateFrontend/issues)
-
-</div>
+Realtime updates flow from the backend through Pusher channels into domain-specific stores via a centralized event bus. Guest authentication is token-based and sessionless — tokens are issued by the backend, resolved from URLs, and persisted locally per booking. The system is designed for multi-hotel operation where each hotel has its own slug, theme, staff, rooms, and operational data.
