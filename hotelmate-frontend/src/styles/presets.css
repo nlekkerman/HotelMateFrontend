@@ -115,6 +115,9 @@
   font-family: var(--font-elegant-heading);
   font-weight: 700;
   letter-spacing: 0.03em;
+  color: rgb(255, 255, 255) !important;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.3);
 }
 
 .font-preset-2-subtitle {

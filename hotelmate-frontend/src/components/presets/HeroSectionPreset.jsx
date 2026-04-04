@@ -91,7 +91,7 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
           <div className="hero__text-overlay">
             <h1 className={`hero__title font-preset-${variant}-heading`}>{heroData.hero_title || 'Welcome'}</h1>
             <p className={`hero__text font-preset-${variant}-body`}>{heroData.hero_text || 'Your perfect getaway awaits'}</p>
-            <button className="btn btn-hm btn-hero mt-3" onClick={() => window.location.href = `/${hotel?.slug}/book`}>
+            <button className={`btn custom-button font-preset-${variant}-body`} onClick={() => window.location.href = `/${hotel?.slug}/book`}>
               <i className="bi bi-calendar-check me-2"></i>
               Book Your Stay
             </button>
@@ -102,7 +102,7 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
         <>
           <h1 className={`hero__title font-preset-${variant}-heading`}>{heroData.hero_title || 'Welcome'}</h1>
           <p className={`hero__text font-preset-${variant}-body`}>{heroData.hero_text || 'Your perfect getaway awaits'}</p>
-          <button className="btn btn-hm btn-hero mt-3" onClick={() => window.location.href = `/${hotel?.slug}/book`}>
+          <button className={`btn custom-button font-preset-${variant}-body`} onClick={() => window.location.href = `/${hotel?.slug}/book`}>
             <i className="bi bi-calendar-check me-2"></i>
             Book Your Stay
           </button>
@@ -120,7 +120,7 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
             <div className="text-end mb-3">
               <button 
                 onClick={() => setShowModal(true)}
-                className="hero-edit"
+                className={`hero-edit font-preset-${variant}-body`}
                 style={{
                   opacity: 0.5,
                   transition: 'opacity 0.3s ease'
@@ -148,7 +148,7 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
             <div className="text-end mb-3">
               <button 
                 onClick={() => setShowModal(true)}
-                className="hero-edit"
+                className={`hero-edit font-preset-${variant}-body`}   
                 style={{
                   opacity: 0.5,
                   transition: 'opacity 0.3s ease'
@@ -176,7 +176,7 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
             <div className="text-end mb-3">
               <button 
                 onClick={() => setShowModal(true)}
-                className="hero-edit"
+                className={`hero-edit font-preset-${variant}-body`}
                 style={{
                   opacity: 0.5,
                   transition: 'opacity 0.3s ease'
@@ -204,7 +204,7 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
             <div className="text-end mb-3">
               <button 
                 onClick={() => setShowModal(true)}
-                className="hero-edit"
+                className={`hero-edit font-preset-${variant}-body`}
                 style={{
                   opacity: 0.5,
                   transition: 'opacity 0.3s ease'
@@ -232,7 +232,7 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
             <div className="text-end mb-3">
               <button 
                 onClick={() => setShowModal(true)}
-                className="hero-edit"
+                className={`hero-edit font-preset-${variant}-body`}
                 style={{
                   opacity: 0.5,
                   transition: 'opacity 0.3s ease'
@@ -259,7 +259,7 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
           <div className="text-end mb-3">
             <button 
               onClick={() => setShowModal(true)}
-              className="hero-edit"
+              className={`hero-edit font-preset-${variant}-body`}
               style={{
                 opacity: 0.5,
                 transition: 'opacity 0.3s ease'
@@ -348,10 +348,10 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <button className="hero-modal-cancel" onClick={() => setShowModal(false)}>
+          <button className={`hero-modal-cancel font-preset-${variant}-body`} onClick={() => setShowModal(false)}>
             Cancel
           </button>
-          <button className="hero-modal-save" onClick={handleSave} disabled={saving}>
+          <button className={`hero-modal-save font-preset-${variant}-body`} onClick={handleSave} disabled={saving}>
             {saving ? <><Spinner animation="border" size="sm" className="me-2" /> Saving...</> : 'Save Changes'}
           </button>
         </Modal.Footer>
