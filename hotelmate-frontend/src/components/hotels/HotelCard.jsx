@@ -8,7 +8,6 @@ import { motion } from 'framer-motion';
  * @param {Object} hotel - Hotel object with id, name, slug, hero_image/hero_image_url, logo/logo_url, city, country, short_description
  */
 const HotelCard = ({ hotel }) => {
-  const logoUrl = hotel.logo_url || hotel.logo;
   const heroImage = hotel.hero_image_url || hotel.hero_image;
   const hotelInitials = hotel.name
     .split(' ')
@@ -51,18 +50,6 @@ const HotelCard = ({ hotel }) => {
             >
               {hotelInitials}
             </div>
-          )}
-
-          {/* Logo Overlay */}
-          {logoUrl && heroImage && (
-            <img
-              src={logoUrl}
-              alt={`${hotel.name} logo`}
-              className="modern-hotel-logo-overlay"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
           )}
 
           {/* Location Badge */}
