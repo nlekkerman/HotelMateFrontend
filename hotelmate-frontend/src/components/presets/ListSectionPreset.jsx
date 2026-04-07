@@ -1,9 +1,9 @@
 import React from 'react';
 import { Row, Col, Button, Modal, Form, Spinner } from 'react-bootstrap';
-import { useAuth } from '@/context/AuthContext';
 import { useParams } from 'react-router-dom';
 import { useListSectionActions } from '@/hooks/useListSectionActions';
 import CardRenderer from './CardRenderer';
+import { usePublicPagePermissions } from '@/hooks/usePublicPagePermissions';
 
 /**
  * ListSectionPreset - Renders list/cards section based on numeric style_variant (1-5)
@@ -15,8 +15,8 @@ import CardRenderer from './CardRenderer';
  * Preset 5: Featured grid - large + small (Professional & Structured)
  */
 const ListSectionPreset = ({ section, onUpdate }) => {
-  const { isStaff } = useAuth();
   const { slug } = useParams();
+  const { canEditPublicPage } = usePublicPagePermissions(slug);
   const variant = section.style_variant ?? 1; // Default to Preset 1
   const lists = section.lists || [];
   
@@ -49,13 +49,13 @@ const ListSectionPreset = ({ section, onUpdate }) => {
   } = useListSectionActions(slug, section, onUpdate);
 
   // Only hide empty sections from public users, staff should always see sections to populate them
-  if (lists.length === 0 && !isStaff) {
+  if (lists.length === 0 && !canEditPublicPage) {
     return null;
   }
 
   const hasCards = lists.some(l => l.cards && l.cards.length > 0);
 
-  if (!hasCards && !isStaff) {
+  if (!hasCards && !canEditPublicPage) {
     return null;
   }
 
@@ -70,7 +70,7 @@ const ListSectionPreset = ({ section, onUpdate }) => {
         <div className={`section-header section-header--preset-${variant}`}>
           <div className="section-header__content">
             <h2 className={`section-header__title font-preset-${variant}-heading`}>{section.name}</h2>
-            {isStaff && (
+            {canEditPublicPage && (
               <button
                 className="list-section-add-list me-4 btn btn-hm"
                 onClick={() => setShowAddList(true)}
@@ -85,7 +85,7 @@ const ListSectionPreset = ({ section, onUpdate }) => {
           <div key={list.id} className="list-section__container mb-5 ">
             {list.title && <h3 className={`list-section__subtitle mb-4 font-preset-${variant}-subtitle`}>{list.title}</h3>}
             <Row className="g-2 d-flex justify-content-center">
-              {isStaff && (
+              {canEditPublicPage && (
                 <Col xs={12} sm={6} md={4}>
                   <button className="list-section-add-card" onClick={() => openAddCard(list)}>
                     <i className="bi bi-plus-circle"></i>
@@ -98,7 +98,7 @@ const ListSectionPreset = ({ section, onUpdate }) => {
                   <CardRenderer 
                     card={card} 
                     variant={variant}
-                    onEdit={isStaff ? () => openEditCard(card, list) : undefined}
+                    onEdit={canEditPublicPage ? () => openEditCard(card, list) : undefined}
                   />
                 </Col>
               ))}

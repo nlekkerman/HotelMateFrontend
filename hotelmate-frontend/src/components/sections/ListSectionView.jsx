@@ -1,16 +1,16 @@
 import React from 'react';
 import { Container, Row, Col, Card, Alert, Modal, Form, Button, Spinner } from 'react-bootstrap';
-import { useAuth } from '@/context/AuthContext';
 import { useParams } from 'react-router-dom';
 import { useListSectionActions } from '@/hooks/useListSectionActions';
+import { usePublicPagePermissions } from '@/hooks/usePublicPagePermissions';
 import '@/styles/sections.css';
 
 /**
  * ListSectionView - Public view for list/cards section with inline editing
  */
 const ListSectionView = ({ section, onUpdate }) => {
-  const { isStaff } = useAuth();
   const { slug } = useParams();
+  const { canEditPublicPage } = usePublicPagePermissions(slug);
   const lists = section.lists || [];
   
   const {
@@ -28,7 +28,7 @@ const ListSectionView = ({ section, onUpdate }) => {
 
   console.log('ListSectionView - showAddCard:', showAddCard);
   console.log('ListSectionView - selectedList:', selectedList);
-  console.log('ListSectionView - isStaff:', isStaff);
+  console.log('ListSectionView - canEditPublicPage:', canEditPublicPage);
   console.log('ListSectionView - lists:', lists);
 
   if (lists.length === 0) {
@@ -43,8 +43,8 @@ const ListSectionView = ({ section, onUpdate }) => {
       <Container>
         <h2 className="text-center mb-5">{section.name}</h2>
         
-        {/* Empty state for staff */}
-        {isStaff && !hasCards && (
+        {/* Empty state for own-hotel editors */}
+        {canEditPublicPage && !hasCards && (
           <Alert variant="info" className="text-center" style={{ maxWidth: '600px', margin: '0 auto' }}>
             <i className="bi bi-card-list fs-1 d-block mb-3"></i>
             <h5>No Cards Yet</h5>
@@ -57,8 +57,8 @@ const ListSectionView = ({ section, onUpdate }) => {
             <h3 className="mb-4">{list.title}</h3>
             
             <Row>
-              {/* Add Card Placeholder - For Staff */}
-              {isStaff && (
+              {/* Add Card Placeholder - For own-hotel editors */}
+              {canEditPublicPage && (
                 <Col xs={12} md={6} lg={4} className="mb-4">
                   <div className="placeholder-add-card" onClick={() => {
                     console.log('Placeholder clicked, list:', list);

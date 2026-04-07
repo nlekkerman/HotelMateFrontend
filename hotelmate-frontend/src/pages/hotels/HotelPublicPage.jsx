@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Container, Spinner, Alert } from 'react-bootstrap';
 import { getPublicHotelPage, listSections, updatePageStyle } from '@/services/sectionEditorApi';
 import { useAuth } from '@/context/AuthContext';
+import { usePublicPagePermissions } from '@/hooks/usePublicPagePermissions';
 import HeroSectionPreset from '@/components/presets/HeroSectionPreset';
 import GallerySectionPreset from '@/components/presets/GallerySectionPreset';
 import ListSectionPreset from '@/components/presets/ListSectionPreset';
@@ -22,7 +23,8 @@ import '@/styles/hotelPublicPage.css';
  */
 const HotelPublicPage = () => {
   const { slug } = useParams();
-  const { user, isStaff } = useAuth();
+  const { user } = useAuth();
+  const { canEditPublicPage } = usePublicPagePermissions(slug);
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -141,7 +143,7 @@ const HotelPublicPage = () => {
 
     fetchPageData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug, isStaff]); // Re-run when slug or staff status changes
+  }, [slug, canEditPublicPage]); // Re-run when slug or edit permission changes
 
   // Debug: Check DOM attribute after render
   useEffect(() => {
@@ -291,8 +293,8 @@ const HotelPublicPage = () => {
             const correctedSection = { ...section, section_type: section.element.element_type };
             return renderSection(correctedSection);
           }
-          // If we can't determine the type, show a debug info card for staff
-          return isStaff ? (
+          // If we can't determine the type, show a debug info card for own-hotel staff editors
+          return canEditPublicPage ? (
             <div key={section.id} className="alert alert-info m-3">
               <i className="bi bi-info-circle me-2"></i>
               <strong>Unknown Section (ID: {section.id})</strong>
@@ -375,8 +377,8 @@ const HotelPublicPage = () => {
   // Empty sections - show empty canvas with builder for staff
   const isEmpty = !pageData.sections || !Array.isArray(pageData.sections) || pageData.sections.length === 0;
   
-  if (isEmpty && !isStaff) {
-    // For non-staff - show simple message
+  if (isEmpty && !canEditPublicPage) {
+    // Non-editors see "Coming Soon" for empty pages
     console.log('[HotelPublicPage] RENDERING: Empty sections (non-staff)');
     return (
       <Container className="min-vh-100 d-flex align-items-center justify-content-center">
@@ -406,11 +408,11 @@ const HotelPublicPage = () => {
   
   return (
     <div 
-      className={`hotel-public-page page-style-${currentPreset} ${isStaff && user ? 'has-preset-selector' : ''}`}
+      className={`hotel-public-page page-style-${currentPreset} ${canEditPublicPage ? 'has-preset-selector' : ''}`}
       data-preset={presetValue}
     >
-      {/* Preset Selector with Inline Builder - Only for authenticated staff on public page */}
-      {isStaff && user && (
+      {/* Preset Selector — own-hotel admin staff only */}
+      {canEditPublicPage && (
         <PresetSelector 
           currentVariant={getCurrentVariant()}
           onVariantChange={handleStyleChange}

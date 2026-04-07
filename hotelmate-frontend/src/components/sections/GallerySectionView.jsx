@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { Container, Modal, Button, Form, Spinner } from 'react-bootstrap';
-import { useAuth } from '@/context/AuthContext';
 import { useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { createGalleryContainer, bulkUploadGalleryImages } from '@/services/sectionEditorApi';
+import { usePublicPagePermissions } from '@/hooks/usePublicPagePermissions';
 
 /**
  * GallerySectionView - Public view for gallery section with inline editing
  */
 const GallerySectionView = ({ section, onUpdate }) => {
-  const { isStaff } = useAuth();
   const { slug } = useParams();
+  const { canEditPublicPage } = usePublicPagePermissions(slug);
   const galleries = section.galleries || [];
   const [selectedImage, setSelectedImage] = useState(null);
   const [showHover, setShowHover] = useState(false);
@@ -24,8 +24,8 @@ const GallerySectionView = ({ section, onUpdate }) => {
   );
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Show empty state for staff if no galleries yet
-  if (galleries.length === 0 && isStaff) {
+  // Show empty state for own-hotel editors if no galleries yet
+  if (galleries.length === 0 && canEditPublicPage) {
     return (
       <section 
         className="gallery-section-view" 
@@ -100,7 +100,7 @@ const GallerySectionView = ({ section, onUpdate }) => {
     : (selectedGallery?.images || []);
 
   // Calculate total items (images + add button for staff in single gallery view)
-  const totalItems = activeView !== 'all' && isStaff 
+  const totalItems = activeView !== 'all' && canEditPublicPage 
     ? displayImages.length + 1 
     : displayImages.length;
 
@@ -175,7 +175,7 @@ const GallerySectionView = ({ section, onUpdate }) => {
       onMouseLeave={() => setShowHover(false)}
     >
       {/* Create Gallery Button - Top Right Corner on Hover */}
-      {isStaff && showHover && (
+      {canEditPublicPage && showHover && (
         <div 
           className="position-absolute" 
           style={{ 
@@ -225,7 +225,7 @@ const GallerySectionView = ({ section, onUpdate }) => {
 
         {/* Display Images with Arrow Navigation */}
         {totalItems === 0 ? (
-          isStaff && activeView !== 'all' && selectedGallery ? (
+          canEditPublicPage && activeView !== 'all' && selectedGallery ? (
             <div className="text-center py-5">
               <input
                 type="file"
@@ -310,7 +310,7 @@ const GallerySectionView = ({ section, onUpdate }) => {
                 }}
               >
                 {/* Add Images Button/Placeholder - Only for single gallery view */}
-                {activeView !== 'all' && isStaff && (
+                {activeView !== 'all' && canEditPublicPage && (
                   <div style={{ flexShrink: 0, width: `calc(${100 / imagesPerView}% - 1rem)`, minWidth: '250px' }}>
                     <input
                       type="file"

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Container, Row, Col, Alert } from 'react-bootstrap';
-import { useAuth } from '@/context/AuthContext';
+import { useParams } from 'react-router-dom';
+import { usePublicPagePermissions } from '@/hooks/usePublicPagePermissions';
 import { usePreset } from '@/hooks/usePreset';
 import SectionHeader from './SectionHeader';
 import RoomCard from './RoomCard';
@@ -12,7 +13,8 @@ import '@/styles/sections.css';
  * Follows the API guide structure from /api/public/hotel/{slug}/page/
  */
 const RoomsSectionView = ({ section }) => {
-  const { isStaff } = useAuth();
+  const { slug } = useParams();
+  const { canEditPublicPage } = usePublicPagePermissions(slug);
   
   // Get presets for section layout, header, and cards
   const sectionPreset = usePreset(
@@ -224,7 +226,7 @@ const RoomsSectionView = ({ section }) => {
     console.log('[RoomsSectionView] 📭 No valid room types found');
     
     // Hide section for public users
-    if (!isStaff) {
+    if (!canEditPublicPage) {
       return null;
     }
     

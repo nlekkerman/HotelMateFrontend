@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { Row, Col, Button, ButtonGroup, Modal, Form } from 'react-bootstrap';
-import { useAuth } from '@/context/AuthContext';
 import { useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import GalleryImageRenderer from './GalleryImageRenderer';
 import { useGalleryScroll } from './useGalleryScroll';
 import { bulkUploadGalleryImages, createGalleryContainer } from '@/services/sectionEditorApi';
+import { usePublicPagePermissions } from '@/hooks/usePublicPagePermissions';
 
 /**
  * GallerySectionPreset - Renders gallery section based on numeric style_variant (1-5)
@@ -18,8 +18,8 @@ import { bulkUploadGalleryImages, createGalleryContainer } from '@/services/sect
  * - Maintains preset styling (1-5)
  */
 const GallerySectionPreset = ({ section, onUpdate }) => {
-  const { isStaff } = useAuth();
   const { slug } = useParams();
+  const { canEditPublicPage } = usePublicPagePermissions(slug);
   const variant = section.style_variant ?? 1; // Default to Preset 1
   const galleries = section.galleries || [];
   const [selectedGalleryId, setSelectedGalleryId] = useState('all'); // 'all' or specific gallery id
@@ -171,7 +171,7 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
         <div className={`section-header section-header--preset-${variant}`}>
           <div className="section-header__content">
             <h2 className={`section-header__title font-preset-${variant}-heading`}>{section.name}</h2>
-            {isStaff && (
+            {canEditPublicPage && (
               <button
                 className="btn btn-hm btn-gallery gallery-add-gallery me-4"
                 onClick={() => setShowAddGallery(true)}
@@ -245,7 +245,7 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
             `}</style>
             
             {/* Add Image Placeholder - First */}
-            {isStaff && selectedGalleryId !== 'all' && (
+            {canEditPublicPage && selectedGalleryId !== 'all' && (
               <>
                 <input
                   type="file"

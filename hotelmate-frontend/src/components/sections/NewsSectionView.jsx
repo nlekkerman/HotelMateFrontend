@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Modal, Button, Form } from 'react-bootstrap';
-import { useAuth } from '@/context/AuthContext';
 import { useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { updateContentBlock, uploadContentBlockImage, deleteContentBlock, createContentBlock, updateNewsItem } from '@/services/sectionEditorApi';
+import { usePublicPagePermissions } from '@/hooks/usePublicPagePermissions';
 
 const NewsSectionView = ({ section, onUpdate }) => {
-  const { isStaff } = useAuth();
   const { slug } = useParams();
+  const { canEditPublicPage } = usePublicPagePermissions(slug);
   const newsItems = section.news_items || [];
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(null);
@@ -142,7 +142,7 @@ const NewsSectionView = ({ section, onUpdate }) => {
         onMouseEnter={() => setShowButtons(prev => ({ ...prev, [block.id]: true }))}
         onMouseLeave={() => setShowButtons(prev => ({ ...prev, [block.id]: false }))}
       >
-        {isStaff && (
+        {canEditPublicPage && (
           <input
             type="file"
             accept="image/*"
@@ -159,7 +159,7 @@ const NewsSectionView = ({ section, onUpdate }) => {
               alt={block.image_caption || 'News image'}
               style={{ width: '100%', height: '400px', objectFit: 'cover', borderRadius: '8px' }}
             />
-            {isStaff && showButtons[block.id] && (
+            {canEditPublicPage && showButtons[block.id] && (
               <>
                 <Button
                   size="sm"
@@ -192,7 +192,7 @@ const NewsSectionView = ({ section, onUpdate }) => {
               </>
             )}
           </div>
-        ) : isStaff ? (
+        ) : canEditPublicPage ? (
           <div
             className="rounded bg-light border border-2 border-dashed d-flex flex-column align-items-center justify-content-center p-4"
             style={{
@@ -231,7 +231,7 @@ const NewsSectionView = ({ section, onUpdate }) => {
         onMouseEnter={() => setShowButtons(prev => ({ ...prev, [block.id]: true }))}
         onMouseLeave={() => setShowButtons(prev => ({ ...prev, [block.id]: false }))}
       >
-        {isStaff && (
+        {canEditPublicPage && (
           <input
             type="file"
             accept="image/*"
@@ -257,7 +257,7 @@ const NewsSectionView = ({ section, onUpdate }) => {
                 marginBottom: '1rem'
               }}
             />
-            {isStaff && showButtons[block.id] && (
+            {canEditPublicPage && showButtons[block.id] && (
               <>
                 <Button
                   size="sm"
@@ -282,7 +282,7 @@ const NewsSectionView = ({ section, onUpdate }) => {
               </>
             )}
           </div>
-        ) : isStaff ? (
+        ) : canEditPublicPage ? (
           <div
             className="rounded bg-light border border-2 border-dashed d-flex flex-column align-items-center justify-content-center p-3"
             style={{
@@ -310,7 +310,7 @@ const NewsSectionView = ({ section, onUpdate }) => {
               onMouseEnter={() => setShowButtons(prev => ({ ...prev, [block.id]: true }))}
               onMouseLeave={() => setShowButtons(prev => ({ ...prev, [block.id]: false }))}
             >
-              {isStaff && (
+              {canEditPublicPage && (
                 <input
                   type="file"
                   accept="image/*"
@@ -327,7 +327,7 @@ const NewsSectionView = ({ section, onUpdate }) => {
                     alt={block.image_caption || 'Gallery image'}
                     style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '8px' }}
                   />
-                  {isStaff && showButtons[block.id] && (
+                  {canEditPublicPage && showButtons[block.id] && (
                     <>
                       <Button
                         size="sm"
@@ -352,7 +352,7 @@ const NewsSectionView = ({ section, onUpdate }) => {
                     </>
                   )}
                 </div>
-              ) : isStaff ? (
+              ) : canEditPublicPage ? (
                 <div
                   className="rounded bg-light border border-2 border-dashed d-flex flex-column align-items-center justify-content-center p-3"
                   style={{
@@ -382,10 +382,10 @@ const NewsSectionView = ({ section, onUpdate }) => {
         onMouseLeave={() => setShowButtons(prev => ({ ...prev, [block.id]: false }))}
       >
         <div
-          onClick={() => isStaff && handleEditBlock(block)}
+          onClick={() => canEditPublicPage && handleEditBlock(block)}
           style={{
-            cursor: isStaff ? 'pointer' : 'default',
-            padding: isStaff ? '0.5rem' : '0',
+            cursor: canEditPublicPage ? 'pointer' : 'default',
+            padding: canEditPublicPage ? '0.5rem' : '0',
             borderRadius: '4px',
           }}
         >
@@ -393,7 +393,7 @@ const NewsSectionView = ({ section, onUpdate }) => {
             {block.body}
           </p>
         </div>
-        {isStaff && showButtons[block.id] && (
+        {canEditPublicPage && showButtons[block.id] && (
           <Button
             size="sm"
             variant="outline-danger"
@@ -454,10 +454,10 @@ const NewsSectionView = ({ section, onUpdate }) => {
                     <div className="d-flex justify-content-between align-items-start mb-3">
                       <div 
                         className="flex-grow-1"
-                        onClick={() => isStaff && handleEditNews(news)}
+                        onClick={() => canEditPublicPage && handleEditNews(news)}
                         style={{
-                          cursor: isStaff ? 'pointer' : 'default',
-                          padding: isStaff ? '0.5rem' : '0',
+                          cursor: canEditPublicPage ? 'pointer' : 'default',
+                          padding: canEditPublicPage ? '0.5rem' : '0',
                           borderRadius: '4px',
                         }}
                       >
@@ -484,7 +484,7 @@ const NewsSectionView = ({ section, onUpdate }) => {
                       {imageRow.length > 0 && renderImageRow(imageRow)}
                     </div>
 
-                    {isStaff && (
+                    {canEditPublicPage && (
                       <div className="d-flex gap-2 mt-4 pt-3 border-top">
                         <Button
                           size="sm"

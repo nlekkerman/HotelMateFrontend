@@ -1,8 +1,9 @@
 import React from 'react';
 import { Row, Col } from 'react-bootstrap';
-import { useAuth } from '@/context/AuthContext';
+import { useParams } from 'react-router-dom';
 import NewsBlockRenderer from './NewsBlockRenderer';
 import NewsArticleStructured from './NewsArticleStructured';
+import { usePublicPagePermissions } from '@/hooks/usePublicPagePermissions';
 
 /**
  * NewsSectionPreset - Renders news section based on numeric style_variant (1-5)
@@ -14,7 +15,8 @@ import NewsArticleStructured from './NewsArticleStructured';
  * Preset 5: Grid layout (Professional & Structured)
  */
 const NewsSectionPreset = ({ section, onUpdate }) => {
-  const { isStaff } = useAuth();
+  const { slug } = useParams();
+  const { canEditPublicPage } = usePublicPagePermissions(slug);
   const variant = section.style_variant ?? 1; // Default to Preset 1
   const newsItems = section.news_items || [];
 
@@ -35,7 +37,7 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
           <div className={`section-header section-header--preset-${variant}`}>
             <div className="section-header__content">
               <h2 className={`section-header__title font-preset-${variant}-heading`}>{section.name}</h2>
-              {isStaff && (
+              {canEditPublicPage && (
                 <button className="news-section-add-article" onClick={handleAddArticle}>
                   <i className="bi bi-plus-circle me-2"></i>
                   Add Article
@@ -59,7 +61,7 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
           <div className={`section-header section-header--preset-${variant}`}>
             <div className="section-header__content">
               <h2 className={`section-header__title font-preset-${variant}-heading`}>{section.name}</h2>
-              {isStaff && (
+              {canEditPublicPage && (
                 <button className="news-section-add-article" onClick={handleAddArticle}>
                   <i className="bi bi-plus-circle me-2"></i>
                   Add Article

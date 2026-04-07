@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
 import { useParams } from 'react-router-dom';
 import { Button, Modal, Form } from 'react-bootstrap';
 import { toast } from 'react-toastify';
 import { updateContentBlock, uploadContentBlockImage, updateNewsItem } from '@/services/sectionEditorApi';
+import { usePublicPagePermissions } from '@/hooks/usePublicPagePermissions';
 
 /**
  * NewsArticleStructured - Renders news article in 3 parts
@@ -13,8 +13,8 @@ import { updateContentBlock, uploadContentBlockImage, updateNewsItem } from '@/s
  * Part 3 (BOTTOM): Full-width text + Full-width image (100% vw, no crop)
  */
 const NewsArticleStructured = ({ newsItem, onUpdate }) => {
-  const { isStaff } = useAuth();
   const { slug } = useParams();
+  const { canEditPublicPage } = usePublicPagePermissions(slug);
   const [hoveredPart, setHoveredPart] = useState(null);
   const [editingPart, setEditingPart] = useState(null);
   const [newsTitle, setNewsTitle] = useState('');
@@ -137,10 +137,10 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
           position: 'relative',
           transition: 'box-shadow 0.3s ease'
         }}
-        onMouseEnter={() => isStaff && setHoveredPart('top')}
-        onMouseLeave={() => isStaff && setHoveredPart(null)}
+        onMouseEnter={() => canEditPublicPage && setHoveredPart('top')}
+        onMouseLeave={() => canEditPublicPage && setHoveredPart(null)}
       >
-        {isStaff && hoveredPart === 'top' && (
+        {canEditPublicPage && hoveredPart === 'top' && (
           <button
             className="btn btn-hm btn-hm-editor"
             style={{
@@ -189,10 +189,10 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
           position: 'relative',
           transition: 'box-shadow 0.3s ease'
         }}
-        onMouseEnter={() => isStaff && setHoveredPart('middle')}
-        onMouseLeave={() => isStaff && setHoveredPart(null)}
+        onMouseEnter={() => canEditPublicPage && setHoveredPart('middle')}
+        onMouseLeave={() => canEditPublicPage && setHoveredPart(null)}
       >
-        {isStaff && hoveredPart === 'middle' && (
+        {canEditPublicPage && hoveredPart === 'middle' && (
           <button
             className="btn btn-hm btn-hm-editor"
             style={{
@@ -238,10 +238,10 @@ const NewsArticleStructured = ({ newsItem, onUpdate }) => {
           marginRight: '-50vw',
           transition: 'box-shadow 0.3s ease'
         }}
-        onMouseEnter={() => isStaff && setHoveredPart('bottom')}
-        onMouseLeave={() => isStaff && setHoveredPart(null)}
+        onMouseEnter={() => canEditPublicPage && setHoveredPart('bottom')}
+        onMouseLeave={() => canEditPublicPage && setHoveredPart(null)}
       >
-        {isStaff && hoveredPart === 'bottom' && (
+        {canEditPublicPage && hoveredPart === 'bottom' && (
           <button
             className="btn btn-hm btn-hm-editor"
             style={{

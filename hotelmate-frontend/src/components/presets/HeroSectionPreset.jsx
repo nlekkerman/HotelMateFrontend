@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Button, Modal, Form, Spinner } from 'react-bootstrap';
-import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-toastify';
 import { updateHeroSection, uploadHeroImage, uploadHeroLogo } from '@/services/sectionEditorApi';
+import { usePublicPagePermissions } from '@/hooks/usePublicPagePermissions';
 
 /**
  * HeroSectionPreset - Renders hero section based on numeric style_variant (1-5)
@@ -14,7 +14,7 @@ import { updateHeroSection, uploadHeroImage, uploadHeroLogo } from '@/services/s
  * Preset 5: Split left/right professional (Professional & Structured)
  */
 const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
-  const { isStaff } = useAuth();
+  const { canEditPublicPage } = usePublicPagePermissions(hotel?.slug);
   const heroData = section.hero_data || {};
   const variant = section.style_variant ?? 1; // Default to Preset 1
   
@@ -116,7 +116,7 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
     return (
       <section className={`hero hero--preset-1 ${section.is_active === false ? 'section-inactive' : ''}`}>
         <div className="section-container hero__container">
-          {isStaff && hotel && (
+          {canEditPublicPage && hotel && (
             <div className="text-end mb-3">
               <button 
                 onClick={() => setShowModal(true)}
@@ -144,7 +144,7 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
     return (
       <section className={`hero hero--preset-2 ${section.is_active === false ? 'section-inactive' : ''}`}>
         <div className="section-container hero__container">
-          {isStaff && hotel && (
+          {canEditPublicPage && hotel && (
             <div className="text-end mb-3">
               <button 
                 onClick={() => setShowModal(true)}
@@ -172,7 +172,7 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
     return (
       <section className={`hero hero--preset-3 ${section.is_active === false ? 'section-inactive' : ''}`}>
         <div className="section-container hero__container">
-          {isStaff && hotel && (
+          {canEditPublicPage && hotel && (
             <div className="text-end mb-3">
               <button 
                 onClick={() => setShowModal(true)}
@@ -200,7 +200,7 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
     return (
       <section className={`hero hero--preset-4 ${section.is_active === false ? 'section-inactive' : ''}`}>
         <div className="section-container hero__container">
-          {isStaff && hotel && (
+          {canEditPublicPage && hotel && (
             <div className="text-end mb-3">
               <button 
                 onClick={() => setShowModal(true)}
@@ -228,7 +228,7 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
     return (
       <section className={`hero hero--preset-5 ${section.is_active === false ? 'section-inactive' : ''}`}>
         <div className="section-container hero__container">
-          {isStaff && hotel && (
+          {canEditPublicPage && hotel && (
             <div className="text-end mb-3">
               <button 
                 onClick={() => setShowModal(true)}
@@ -255,7 +255,7 @@ const HeroSectionPreset = ({ section, hotel, onUpdate }) => {
   return (
     <section className={`hero hero--preset-1 ${section.is_active === false ? 'section-inactive' : ''}`}>
       <div className="section-container hero__container">
-        {isStaff && hotel && (
+        {canEditPublicPage && hotel && (
           <div className="text-end mb-3">
             <button 
               onClick={() => setShowModal(true)}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Container, Spinner, Alert, Button } from 'react-bootstrap';
 import { useAuth } from '@/context/AuthContext';
+import { usePublicPagePermissions } from '@/hooks/usePublicPagePermissions';
 import HeroSectionView from '@/components/sections/HeroSectionView';
 import GallerySectionView from '@/components/sections/GallerySectionView';
 import ListSectionView from '@/components/sections/ListSectionView';
@@ -15,7 +16,8 @@ import '@/styles/sections.css';
  */
 const SectionBasedPublicPage = () => {
   const { slug } = useParams();
-  const { user, isStaff } = useAuth();
+  const { user } = useAuth();
+  const { canEditPublicPage } = usePublicPagePermissions(slug);
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -114,7 +116,7 @@ const SectionBasedPublicPage = () => {
 
   const isEmpty = !pageData.sections || pageData.sections.length === 0;
 
-  if (isEmpty && !isStaff) {
+  if (isEmpty && !canEditPublicPage) {
     return (
       <Container className="min-vh-100 d-flex align-items-center justify-content-center">
         <Alert variant="info" className="text-center">
@@ -145,7 +147,7 @@ const SectionBasedPublicPage = () => {
               <small className="text-muted">{pageData.hotel.tagline}</small>
             )}
           </div>
-          {isStaff && (
+          {canEditPublicPage && (
             <Link 
               to={`/staff/${pageData.hotel.slug}/section-editor`}
               className="btn btn-primary btn-sm"
@@ -157,8 +159,8 @@ const SectionBasedPublicPage = () => {
         </Container>
       </nav>
 
-      {/* Empty State for Staff */}
-      {isEmpty && isStaff && (
+      {/* Empty State for Staff - own-hotel admin editors only */}
+      {isEmpty && canEditPublicPage && (
         <Container className="py-5">
           <Alert variant="info" className="text-center">
             <i className="bi bi-pencil-square me-2" style={{ fontSize: '2rem' }}></i>

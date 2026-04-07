@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { Container, Button, Modal, Form, Spinner } from 'react-bootstrap';
-import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-toastify';
 import { updateHeroSection, uploadHeroImage, uploadHeroLogo } from '@/services/sectionEditorApi';
+import { usePublicPagePermissions } from '@/hooks/usePublicPagePermissions';
 import '@/styles/sections.css';
 
 /**
  * HeroSectionView - Public view for hero section with inline editing
  */
 const HeroSectionView = ({ section, hotel, onUpdate }) => {
-  const { isStaff } = useAuth();
+  const { canEditPublicPage } = usePublicPagePermissions(hotel?.slug);
   const heroData = section.hero_data || {};
   
   const [showModal, setShowModal] = useState(false);
@@ -101,8 +101,8 @@ const HeroSectionView = ({ section, hotel, onUpdate }) => {
       )}
       
       <Container className="position-relative" style={{ zIndex: 1 }}>
-        {/* Staff Edit Button */}
-        {isStaff && hotel && (
+        {/* Staff Edit Button — own-hotel admin editors only */}
+        {canEditPublicPage && hotel && (
           <div className="text-end mb-3">
             <Button
               variant="primary"
