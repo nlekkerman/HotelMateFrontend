@@ -8,9 +8,10 @@ import { useAuth } from '@/context/AuthContext';
 const fetchStaffShifts = async ({ hotelSlug, staffId, start, end }) => {
   const { data } = await api.get(`/staff/hotel/${hotelSlug}/attendance/shifts/`, {
     params: {
-      staff: staffId, // our endpoint accepts staff_id or staff
-      start,
-      end,
+      staff: staffId,
+      staff_id: staffId,
+      start_date: start,
+      end_date: end,
     },
   });
 
@@ -60,8 +61,14 @@ export default function StaffWeeklyRoster({
       }),
   });
 
-  // Normalized array
-  const shifts = Array.isArray(data) ? data : [];
+  // Normalized array — ensure shift_date is always populated
+  const shifts = useMemo(() => {
+    const raw = Array.isArray(data) ? data : [];
+    return raw.map(s => ({
+      ...s,
+      shift_date: s.shift_date || s.date,
+    }));
+  }, [data]);
 
   const dayShifts = useMemo(() => {
     const map = {};
@@ -74,9 +81,11 @@ export default function StaffWeeklyRoster({
 
   const totalHours = shifts.reduce((acc, s) => {
     if (s.expected_hours != null) return acc + parseFloat(s.expected_hours);
-    if (s.shift_start && s.shift_end) {
-      const st = new Date(`${s.shift_date}T${s.shift_start}`);
-      const en = new Date(`${s.shift_date}T${s.shift_end}`);
+    const sStart = s.shift_start || s.start_time;
+    const sEnd = s.shift_end || s.end_time;
+    if (sStart && sEnd) {
+      const st = new Date(`${s.shift_date}T${sStart}`);
+      const en = new Date(`${s.shift_date}T${sEnd}`);
       acc += differenceInMinutes(en, st) / 60;
     }
     return acc;
