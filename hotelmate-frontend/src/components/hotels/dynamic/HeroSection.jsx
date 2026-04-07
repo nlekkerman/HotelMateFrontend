@@ -46,6 +46,7 @@ const HeroSection = ({ element, hotel }) => {
                 }}
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
               />
+              <span className="modern-hero-subtitle" style={{ display: 'block', marginTop: '0.5rem', textShadow: '1px 1px 3px rgba(0,0,0,0.5)' }}>HotelMates</span>
             </div>
           )}
 

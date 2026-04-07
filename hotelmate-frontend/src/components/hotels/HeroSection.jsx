@@ -103,7 +103,7 @@ const HeroSection = ({ hotel, settings }) => {
                     e.currentTarget.style.display = 'none';
                   }}
                 />
-                <span className="modern-hero-subtitle">HotelMates</span>
+                <span className="modern-hero-subtitle">{name}</span>
               </motion.div>
             )}
 
