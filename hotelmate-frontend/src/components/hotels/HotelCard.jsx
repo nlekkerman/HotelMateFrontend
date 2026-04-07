@@ -5,11 +5,11 @@ import { motion } from 'framer-motion';
 /**
  * HotelCard - Modern magazine-style card for hotel listings
  * Uses theme colors from staff settings
- * @param {Object} hotel - Hotel object with id, name, slug, hero_image_url, logo_url, city, country, short_description
+ * @param {Object} hotel - Hotel object with id, name, slug, hero_image/hero_image_url, logo/logo_url, city, country, short_description
  */
 const HotelCard = ({ hotel }) => {
   const logoUrl = hotel.logo_url || hotel.logo;
-  const heroImage = hotel.hero_image_url;
+  const heroImage = hotel.hero_image_url || hotel.hero_image;
   const hotelInitials = hotel.name
     .split(' ')
     .map(word => word.charAt(0))
