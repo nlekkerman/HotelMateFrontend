@@ -17,7 +17,6 @@
 }
 
 .staff-profile-shell {
-  background: var(--staff-main-bg);
   border-radius: var(--staff-border-radius);
   padding: 1.5rem;
   box-shadow: var(--staff-shadow-card);

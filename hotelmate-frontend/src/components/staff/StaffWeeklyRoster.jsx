@@ -61,14 +61,18 @@ export default function StaffWeeklyRoster({
       }),
   });
 
-  // Normalized array — ensure shift_date is always populated
+  // Normalized array — ensure shift_date is always populated, filter to this week only
   const shifts = useMemo(() => {
     const raw = Array.isArray(data) ? data : [];
-    return raw.map(s => ({
-      ...s,
-      shift_date: s.shift_date || s.date,
-    }));
-  }, [data]);
+    const weekStart = format(start, "yyyy-MM-dd");
+    const weekEnd = format(end, "yyyy-MM-dd");
+    return raw
+      .map(s => ({
+        ...s,
+        shift_date: s.shift_date || s.date,
+      }))
+      .filter(s => s.shift_date >= weekStart && s.shift_date <= weekEnd);
+  }, [data, start, end]);
 
   const dayShifts = useMemo(() => {
     const map = {};

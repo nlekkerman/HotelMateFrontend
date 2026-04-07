@@ -88,18 +88,23 @@ const HeroSection = ({ hotel, settings }) => {
           <div className="text-center">
             {/* Animated Logo */}
             {logo_url && (
-              <motion.img
-                src={logo_url}
-                alt={`${name} logo`}
-                className="modern-hero-logo"
+              <motion.div
+                className="modern-hero-logo-wrapper"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
-                onError={(e) => {
-                  console.error('Logo failed to load:', logo_url);
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
+              >
+                <img
+                  src={logo_url}
+                  alt={`${name} logo`}
+                  className="modern-hero-logo"
+                  onError={(e) => {
+                    console.error('Logo failed to load:', logo_url);
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+                <span className="modern-hero-subtitle">HotelMates</span>
+              </motion.div>
             )}
 
             {/* Animated Hotel Name */}
