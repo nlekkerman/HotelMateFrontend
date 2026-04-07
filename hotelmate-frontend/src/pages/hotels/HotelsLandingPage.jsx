@@ -95,6 +95,15 @@ const HotelsLandingPage = () => {
       // Extract hotels from response (backend handles filtering and sorting)
       const hotelsData = response.results || response;
       
+      console.log('[HotelsLanding] Raw API response:', response);
+      console.log('[HotelsLanding] First hotel data:', hotelsData?.[0]);
+      console.log('[HotelsLanding] Image fields:', hotelsData?.[0] && {
+        hero_image_url: hotelsData[0].hero_image_url,
+        hero_image: hotelsData[0].hero_image,
+        logo_url: hotelsData[0].logo_url,
+        logo: hotelsData[0].logo,
+      });
+      
       // Set hotels directly - backend does all the filtering and sorting
       const activeHotels = Array.isArray(hotelsData) 
         ? hotelsData.filter(hotel => hotel.is_active !== false)
