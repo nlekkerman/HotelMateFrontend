@@ -11,15 +11,11 @@
  * - token (required) - Guest authentication token
  */
 
-import React, { useEffect, lazy, Suspense } from 'react';
+import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { GuestChatWidget } from '../components/guest/GuestChatWidget';
 import { persistGuestToken } from '@/utils/guestToken';
 import './GuestChatPortal.css';
-
-const ChatRealtimeDebugPanel = import.meta.env.DEV
-  ? lazy(() => import('../realtime/debug/ChatRealtimeDebugPanel.jsx'))
-  : null;
 
 const GuestChatPortal = () => {
   const [searchParams] = useSearchParams();
@@ -84,11 +80,6 @@ const GuestChatPortal = () => {
           />
         </div>
       </div>
-      {ChatRealtimeDebugPanel && (
-        <Suspense fallback={null}>
-          <ChatRealtimeDebugPanel />
-        </Suspense>
-      )}
     </div>
   );
 };

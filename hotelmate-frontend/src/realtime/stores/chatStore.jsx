@@ -2,7 +2,6 @@
 import React, { createContext, useContext, useReducer } from 'react';
 import { CHAT_ACTIONS } from './chatActions.js';
 import { getAuthUser } from '@/lib/authStore';
-import * as chatDbg from '../debug/chatDebugLogger.js';
 
 // Re-export for backward compatibility
 export { CHAT_ACTIONS };
@@ -671,7 +670,6 @@ export const chatActions = {
 
     if (chatActions._processedEventIds.has(deduplicationKey)) {
       console.log("💬 Chat store duplicate event detected, skipping:", deduplicationKey);
-      chatDbg.logChatEventDeduped(event.meta?.channel, eventType, event, `processedEventIds (chatStore): ${deduplicationKey}`);
       return;
     }
 

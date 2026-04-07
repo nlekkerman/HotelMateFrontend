@@ -265,94 +265,6 @@ const MessagesList = ({ messages, sendingMessages = [], contract, onLoadOlder, o
   );
 };
 
-// ── Chat Debug Panel ───────────────────────────────────────────────────
-const ChatDebugPanel = ({
-  hotelSlug,
-  contract,
-  chatSession,
-  channelName,
-  events,
-  pusherConfig,
-  connectionState,
-  messages,
-  sendingMessages,
-  realtimeDiag,
-}) => {
-  const [open, setOpen] = useState(false);
-
-  // Contract validation
-  const requiredFields = [
-    ['conversation_id', contract?.conversation_id],
-    ['chat_session',    contract?.chat_session],
-    ['channel_name',    contract?.channel_name],
-    ['events.message_created',  contract?.events?.message_created],
-    ['events.message_read',     contract?.events?.message_read],
-    ['pusher.key',              contract?.pusher?.key],
-    ['pusher.cluster',          contract?.pusher?.cluster],
-    ['pusher.auth_endpoint',    contract?.pusher?.auth_endpoint],
-  ];
-  const missingFields = requiredFields.filter(([, v]) => v == null).map(([k]) => k);
-  const contractValid = contract != null && missingFields.length === 0;
-
-  return (
-    <div className="chat-debug-panel" style={{ fontSize: '11px', borderTop: '1px solid #dee2e6', background: '#f8f9fa' }}>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="btn btn-sm btn-outline-secondary w-100"
-        style={{ fontSize: '10px', borderRadius: 0 }}
-      >
-        {open ? 'Hide' : 'Show'} Chat Debug
-      </button>
-      {open && (
-        <div style={{ padding: '8px', maxHeight: '280px', overflowY: 'auto', fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-          {/* ── Bootstrap / Contract ── */}
-          <div><strong>── Bootstrap / Contract ──</strong></div>
-          <div>hotelSlug: {hotelSlug || '—'}</div>
-          <div>bootstrap endpoint: /api/guest/hotel/{hotelSlug}/chat/context</div>
-          <div>bootstrap loaded: {contract ? 'yes' : 'no'}</div>
-          <div>conversationId: {contract?.conversation_id || '—'}</div>
-          <div>chatSession present: {chatSession ? 'yes' : 'no'}</div>
-          <div>channelName: {channelName || '—'}</div>
-          <div>eventMessageCreated: {events?.message_created || '—'}</div>
-          <div>eventMessageRead: {events?.message_read || '—'}</div>
-          <div>pusherKey present: {pusherConfig?.key ? 'yes' : 'no'}</div>
-          <div>pusherCluster: {pusherConfig?.cluster || '—'}</div>
-          <div>pusherAuthEndpoint: {pusherConfig?.auth_endpoint || '—'}</div>
-
-          {/* ── Connection / Subscription ── */}
-          <div style={{ marginTop: 6 }}><strong>── Connection / Subscription ──</strong></div>
-          <div>pusher client initialized: {realtimeDiag?.subscribedChannel != null || connectionState !== 'disconnected' ? 'yes' : 'no'}</div>
-          <div>pusher connection state: {connectionState}</div>
-          <div>subscribed: {realtimeDiag?.subscribedChannel ? 'yes' : 'no'}</div>
-          <div>subscribed channel: {realtimeDiag?.subscribedChannel || '—'}</div>
-          <div>bound events: {realtimeDiag?.boundEvents?.join(', ') || '—'}</div>
-          <div>last subscription error: {realtimeDiag?.lastSubscriptionError || 'none'}</div>
-          <div>last auth error: {realtimeDiag?.lastAuthError || 'none'}</div>
-
-          {/* ── Message / Realtime Diagnostics ── */}
-          <div style={{ marginTop: 6 }}><strong>── Message / Realtime ──</strong></div>
-          <div>messages count: {messages?.length ?? 0}</div>
-          <div>pending sends count: {sendingMessages?.length ?? 0}</div>
-          <div>last received event name: {realtimeDiag?.lastReceivedEventName || '—'}</div>
-          <div>last received message id: {realtimeDiag?.lastReceivedMessageId || '—'}</div>
-          <div>last read update id: {realtimeDiag?.lastReadUpdateId || '—'}</div>
-          <div>duplicate events ignored: {realtimeDiag?.duplicateEventsIgnored ?? 0}</div>
-
-          {/* ── Contract Validation ── */}
-          <div style={{ marginTop: 6 }}><strong>── Contract Validation ──</strong></div>
-          <div style={{ color: contractValid ? '#28a745' : '#dc3545' }}>
-            contract valid: {contractValid ? 'yes' : 'no'}
-          </div>
-          {!contractValid && missingFields.length > 0 && (
-            <div style={{ color: '#dc3545' }}>missing: {missingFields.join(', ')}</div>
-          )}
-          {!contract && <div style={{ color: '#dc3545' }}>contract not loaded</div>}
-        </div>
-      )}
-    </div>
-  );
-};
-
 // ── Main Widget ────────────────────────────────────────────────────────
 export const GuestChatWidget = ({ hotelSlug, token, className = '', style = {} }) => {
   const {
@@ -446,21 +358,6 @@ export const GuestChatWidget = ({ hotelSlug, token, className = '', style = {} }
       <div className="chat-footer">
         <MessageInput onSend={sendMessage} disabled={isDisabled} disabledReason={disabledReason} isSending={isSending} />
       </div>
-
-      {import.meta.env.DEV && (
-        <ChatDebugPanel
-          hotelSlug={hotelSlug}
-          contract={contract}
-          chatSession={chatSession}
-          channelName={channelName}
-          events={events}
-          pusherConfig={pusherConfig}
-          connectionState={connectionState}
-          messages={messages}
-          sendingMessages={sendingMessages}
-          realtimeDiag={realtimeDiag}
-        />
-      )}
     </div>
   );
 };

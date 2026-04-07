@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api, { buildStaffURL } from '@/services/api';
 import { toast } from 'react-toastify';
 import { moveRoom } from '@/services/roomOperations.js';
-import { logQueryRefetchStart, logQueryRefetchSuccess, logCacheUpdated } from '@/realtime/debug/debugLogger.js';
 
 const queryKeys = {
   staffRoomBooking: (hotelSlug, bookingId) => ['staff-room-booking', hotelSlug, bookingId],
@@ -19,7 +18,6 @@ export const useRoomBookingDetail = (hotelSlug, bookingId) => {
       if (!bookingId) return null;
       // Snapshot current cache for diff tracking
       const prevBooking = queryClient.getQueryData(queryKeys.staffRoomBooking(hotelSlug, bookingId));
-      logQueryRefetchStart('staff-room-booking', { bookingId });
       const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/`);
       // Survey data is automatically included when it exists
       const response = await api.get(url);
@@ -38,11 +36,6 @@ export const useRoomBookingDetail = (hotelSlug, bookingId) => {
       };
       
       console.log('Mapped booking:', mappedBooking);
-      
-      logQueryRefetchSuccess('staff-room-booking', {
-        bookingId: mappedBooking.booking_id || bookingId,
-        summary: `${mappedBooking.booking_id || bookingId} status=${mappedBooking.status} room=${mappedBooking.room_number || mappedBooking.assigned_room_number || '-'}`,
-      });
 
       // Diff against previous and log changes
       if (prevBooking) {
@@ -53,13 +46,7 @@ export const useRoomBookingDetail = (hotelSlug, bookingId) => {
           if (String(ov) !== String(nv)) diffs.push({ field: f, from: ov, to: nv });
         }
         if (diffs.length) {
-          const bid = mappedBooking.booking_id || bookingId;
-          logCacheUpdated('staff-room-booking', {
-            bookingId: bid,
-            roomId: mappedBooking.assigned_room_number || mappedBooking.room_number || null,
-            diffs,
-            summary: diffs.map(d => `${bid} ${d.field}: ${d.from ?? 'null'} \u2192 ${d.to ?? 'null'}`).join(', '),
-          });
+          console.debug('[staff-room-booking] cache diff:', mappedBooking.booking_id || bookingId, diffs);
         }
       }
 

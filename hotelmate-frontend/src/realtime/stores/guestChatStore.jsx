@@ -1,6 +1,5 @@
 // src/realtime/stores/guestChatStore.jsx
 import React, { createContext, useContext, useReducer } from 'react';
-import * as chatDbg from '../debug/chatDebugLogger.js';
 
 // State contexts
 const GuestChatStateContext = createContext(null);
@@ -421,7 +420,6 @@ export const guestChatActions = {
 
     if (guestChatActions._processedEventIds.has(eventId)) {
       console.log("[guestChatStore] Duplicate event detected, skipping:", eventId);
-      chatDbg.logChatEventDeduped(event.meta?.channel, eventType, event, 'processedEventIds (guestChatStore)');
       return;
     }
 

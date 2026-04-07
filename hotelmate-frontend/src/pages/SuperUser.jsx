@@ -295,11 +295,38 @@ const SuperUser = () => {
       };
 
       const result = await provisionHotel(payload);
-      setProvisionResult(result);
+
+      // Normalize: if backend returns hotel data at root level instead of nested under 'hotel'
+      const normalized = { ...result };
+      if (!normalized.hotel) {
+        // Backend may return { name, slug, subdomain, ... } at root instead of { hotel: {...} }
+        const { primary_admin, registration_packages, warnings, ...hotelFields } = result;
+        if (hotelFields.name || hotelFields.slug) {
+          normalized.hotel = hotelFields;
+        } else {
+          // Ultimate fallback: use the submitted form data
+          normalized.hotel = { name: hotelData.name, slug: hotelData.slug, subdomain: hotelData.subdomain };
+        }
+        if (!normalized.primary_admin && (primary_admin || adminData)) {
+          normalized.primary_admin = primary_admin || adminData;
+        }
+        if (!normalized.registration_packages) {
+          normalized.registration_packages = registration_packages;
+        }
+        if (!normalized.warnings) {
+          normalized.warnings = warnings;
+        }
+      }
+      // Ensure primary_admin fallback
+      if (!normalized.primary_admin) {
+        normalized.primary_admin = result.admin || result.user || adminData;
+      }
+
+      setProvisionResult(normalized);
 
       setMessage({ 
         type: 'success', 
-        text: `Hotel "${result.hotel?.name || hotelData.name}" provisioned successfully!` 
+        text: `Hotel "${normalized.hotel?.name || hotelData.name}" provisioned successfully!` 
       });
 
       // Reset form

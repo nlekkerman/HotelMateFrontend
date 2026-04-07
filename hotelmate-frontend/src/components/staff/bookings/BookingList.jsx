@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Container, Row, Col } from 'react-bootstrap';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
@@ -9,8 +9,6 @@ import StaffSuccessModal from '@/components/staff/modals/StaffSuccessModal';
 import { useStaffRoomBookings } from '@/hooks/useStaffRoomBookings';
 import { staffBookingService } from '@/services/api';
 import { BUCKET_OPTIONS } from '@/types/bookingFilters';
-import { logCacheUpdated } from '@/realtime/debug/debugLogger.js';
-import { useDebugRender } from '@/realtime/debug/useDebugRender.js';
 
 /**
  * Modern Booking List Component
@@ -40,15 +38,6 @@ const BookingList = ({ hotelSlug }) => {
     isEmpty,
     isFiltered
   } = useStaffRoomBookings(hotelSlug);
-
-  // Debug render tracking — logs when visible booking rows change meaningfully
-  const listFingerprint = useMemo(() => {
-    if (!bookings?.length) return '0';
-    return `${bookings.length}|${bookings.slice(0, 5).map(b => `${b.booking_id}:${b.status}:${b.is_new_for_staff}`).join(',')}`;
-  }, [bookings]);
-  useDebugRender('BookingList', listFingerprint, {
-    summary: `BookingList: ${bookings?.length || 0} rows${bookings?.length ? ', first=' + bookings[0]?.booking_id : ''}`,
-  });
 
   // Send pre-check-in link mutation
   const sendPrecheckinMutation = useMutation({

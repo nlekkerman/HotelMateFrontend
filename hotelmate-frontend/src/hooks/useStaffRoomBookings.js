@@ -2,7 +2,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api, { buildStaffURL } from '@/services/api';
-import { logQueryRefetchStart, logQueryRefetchSuccess, logCacheUpdated } from '@/realtime/debug/debugLogger.js';
 import { 
   buildBookingListSearchParams, 
   parseBookingListFiltersFromSearchParams, 
@@ -53,7 +52,6 @@ export const useStaffRoomBookings = (hotelSlug) => {
       if (prevData?.results) {
         prevSnapshotRef.current = new Map(prevData.results.map(b => [b.id, b]));
       }
-      logQueryRefetchStart('staff-room-bookings');
       const params = buildBookingListSearchParams(filters, page);
       const url = buildStaffURL(hotelSlug, 'room-bookings', `/?${params.toString()}`);
       
@@ -101,8 +99,6 @@ export const useStaffRoomBookings = (hotelSlug) => {
         currency: booking.currency || 'EUR'
       }));
 
-      logQueryRefetchSuccess('staff-room-bookings', { count: processedBookings.length, summary: `staff-room-bookings: ${processedBookings.length} items` });
-
       // Diff against previous snapshot and log changes
       const DIFF_FIELDS = ['status', 'assigned_room_number', 'assigned_room_id', 'room_number', 'guest_name', 'checked_in_at', 'checked_out_at'];
       if (prevSnapshotRef.current) {
@@ -115,12 +111,7 @@ export const useStaffRoomBookings = (hotelSlug) => {
             if (String(ov) !== String(nv)) diffs.push({ field: f, from: ov, to: nv });
           }
           if (diffs.length) {
-            logCacheUpdated('staff-room-bookings', {
-              bookingId: b.id,
-              roomId: b.assigned_room_number || b.room_number || null,
-              diffs,
-              summary: diffs.map(d => `${b.id} ${d.field}: ${d.from ?? 'null'} → ${d.to ?? 'null'}`).join(', '),
-            });
+            console.debug('[staff-room-bookings] cache diff:', b.id, diffs);
           }
         }
         prevSnapshotRef.current = null;

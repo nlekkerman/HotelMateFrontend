@@ -26,7 +26,6 @@ import StaffConfirmationModal from '../modals/StaffConfirmationModal';
 
 import AcknowledgeOverstayForm from '../modals/AcknowledgeOverstayForm';
 import { useRoomBookingState } from '@/realtime/stores/roomBookingStore';
-import { useDebugRender } from '@/realtime/debug/useDebugRender.js';
 import { getAssignedRoomNumber } from '@/utils/bookingDisplayHelpers';
 
 /**
@@ -64,13 +63,6 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
     isLoading: isLoadingBooking, 
     error: bookingError 
   } = useRoomBookingDetail(hotelSlug, bookingId);
-
-  // Debug render tracking — logs when booking detail fields change
-  useDebugRender(
-    'BookingDetailsModal',
-    booking ? `${booking.booking_id}|${booking.status}|${getAssignedRoomNumber(booking) || ''}|${booking.check_out || ''}|${booking.overstay_flagged || ''}` : null,
-    { bookingId: booking?.booking_id, roomId: getAssignedRoomNumber(booking), summary: booking ? `BookingDetailsModal: ${booking.booking_id} status=${booking.status} room=${getAssignedRoomNumber(booking) || '-'} checkout=${booking.check_out || '-'}` : undefined }
-  );
 
   // Fetch available rooms (only when needed)
   const { 

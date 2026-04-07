@@ -20,7 +20,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { createGuestPusherClient, disconnectGuestPusher } from '../realtime/guestRealtimeClient';
 import * as guestChatAPI from '../services/guestChatAPI';
 import { useGuestChatDispatch, guestChatActions } from '../realtime/stores/guestChatStore';
-import * as chatDbg from '../realtime/debug/chatDebugLogger';
 
 const DEBUG_REALTIME = import.meta.env.DEV;
 
@@ -180,14 +179,9 @@ export const useGuestChat = ({ hotelSlug, token }) => {
       const payload = evt?.payload ?? evt;
       const eventId = evt?.meta?.event_id;
 
-      // Chat debug: log incoming event
-      const _cdId = chatDbg.logChatEventReceived(channelName, events?.message_created, evt);
-      if (!eventId) chatDbg.checkMissingEventId(channelName, events?.message_created);
-
       if (eventId) {
         if (processedEventIds.current.has(eventId)) {
           realtimeDiag.current.duplicateEventsIgnored++;
-          chatDbg.logChatEventDeduped(channelName, events?.message_created, evt, 'processedEventIds (useGuestChat)');
           return;
         }
         processedEventIds.current.add(eventId);
@@ -199,7 +193,6 @@ export const useGuestChat = ({ hotelSlug, token }) => {
 
       if (msg.id && processedMessageIds.current.has(msg.id)) {
         realtimeDiag.current.duplicateEventsIgnored++;
-        chatDbg.logChatEventDeduped(channelName, events?.message_created, evt, 'processedMessageIds (useGuestChat)');
         return;
       }
       if (msg.id) processedMessageIds.current.add(msg.id);
@@ -213,13 +206,8 @@ export const useGuestChat = ({ hotelSlug, token }) => {
 
       setMessages((prev) => {
         if (prev.some((m) => m.id === msg.id)) return prev;
-        chatDbg.logUiAdd(msg.id, 'guest-realtime');
         return sortMessages([...prev, msg]);
       });
-
-      // Chat debug: mark routed/dispatched
-      chatDbg.logChatEventRouted(_cdId, { normalizedCategory: 'guest_chat', normalizedType: 'message_created' });
-      chatDbg.logChatEventDispatched(_cdId, 'guestChatStore');
 
       // Route to guestChatStore
       const storeEvent = evt?.category
@@ -241,12 +229,10 @@ export const useGuestChat = ({ hotelSlug, token }) => {
       const eventId = evt?.meta?.event_id;
 
       // Chat debug
-      chatDbg.logChatEventReceived(channelName, events?.message_read, evt);
 
       if (eventId) {
         if (processedEventIds.current.has(eventId)) {
           realtimeDiag.current.duplicateEventsIgnored++;
-          chatDbg.logChatEventDeduped(channelName, events?.message_read, evt, 'processedEventIds');
           return;
         }
         processedEventIds.current.add(eventId);
@@ -358,17 +344,14 @@ export const useGuestChat = ({ hotelSlug, token }) => {
         channelRef.current = channel;
 
         realtimeDiag.current.subscribedChannel = channelName;
-        chatDbg.logChatSubscription(channelName, 'guestRealtimeClient');
 
         // Connection state bindings
-        client.connection.bind('connected', () => { setConnectionState('connected'); chatDbg.updateSnapshot({ connectionState: 'connected' }); });
-        client.connection.bind('disconnected', () => { setConnectionState('disconnected'); chatDbg.updateSnapshot({ connectionState: 'disconnected' }); });
+        client.connection.bind('connected', () => { setConnectionState('connected'); });
+        client.connection.bind('disconnected', () => { setConnectionState('disconnected'); });
         client.connection.bind('error', (err) => {
           console.error('[useGuestChat] Pusher error:', err);
           realtimeDiag.current.lastAuthError = err?.error?.message || String(err);
           setConnectionState('failed');
-          chatDbg.updateSnapshot({ connectionState: 'failed' });
-          chatDbg.logChatError('Pusher connection error', { error: String(err) });
         });
 
         // Debug: global event log
@@ -381,14 +364,12 @@ export const useGuestChat = ({ hotelSlug, token }) => {
         // Subscription lifecycle
         channel.bind('pusher:subscription_succeeded', () => {
           setConnectionState('connected');
-          chatDbg.logChatSubscriptionSucceeded(channelName);
           syncMessages();
         });
 
         channel.bind('pusher:subscription_error', (err) => {
           console.error('[useGuestChat] Subscription error:', err);
           realtimeDiag.current.lastSubscriptionError = String(err);
-          chatDbg.logChatSubscriptionError(channelName, err);
           setConnectionState('failed');
         });
 
@@ -418,18 +399,6 @@ export const useGuestChat = ({ hotelSlug, token }) => {
         }
 
         realtimeDiag.current.boundEvents = boundEvents;
-
-        // Chat debug: update snapshot
-        chatDbg.updateSnapshot({
-          conversationId,
-          bookingId: contract?.booking_id || null,
-          channelName,
-          boundMessageCreated: events.message_created,
-          boundMessageRead: events.message_read,
-          connectionState: 'connecting',
-          uiMode: 'guest',
-          dataSource: 'hook',
-        });
       } catch (err) {
         console.error('[useGuestChat] Pusher setup error:', err);
         setConnectionState('failed');
@@ -446,7 +415,6 @@ export const useGuestChat = ({ hotelSlug, token }) => {
       channelRef.current = null;
       realtimeDiag.current.subscribedChannel = null;
       realtimeDiag.current.boundEvents = [];
-      chatDbg.logChatUnsubscription(channelName);
     };
     // Stable deps: primitives + config objects that only change on new bootstrap
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -477,7 +445,6 @@ export const useGuestChat = ({ hotelSlug, token }) => {
   // ── Sync on reconnection ─────────────────────────────────────────────
   const syncMessages = useCallback(async () => {
     if (!hotelSlug || !chatSession) return;
-    chatDbg.logSyncStart('guest');
     try {
       const latest = await guestChatAPI.getMessages(hotelSlug, chatSession, { limit: 50 });
       setMessages((prev) => {
@@ -491,8 +458,6 @@ export const useGuestChat = ({ hotelSlug, token }) => {
           (m) => m.__optimistic && !merged.find((x) => x.client_message_id === m.client_message_id)
         );
         const result = sortMessages([...merged, ...optimistic]);
-        chatDbg.logSyncSuccess('guest', result.length);
-        chatDbg.updateSnapshot({ confirmedCount: merged.length, optimisticCount: optimistic.length });
         if (conversationId) {
           guestChatActions.initMessagesForConversation(conversationId, result, guestChatDispatch);
         }

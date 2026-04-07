@@ -11,8 +11,6 @@ import {
 } from "react-bootstrap";
 import { publicAPI } from '@/services/api';
 import { getChatBootstrap as getGuestBootstrap } from '@/services/guestChatAPI';
-import { logQueryRefetchStart, logQueryRefetchSuccess } from '@/realtime/debug/debugLogger.js';
-import { useDebugRender } from '@/realtime/debug/useDebugRender.js';
 
 import RoomService from "@/components/rooms/RoomService";
 import Breakfast from "@/components/rooms/Breakfast";
@@ -83,13 +81,6 @@ const BookingStatusPage = () => {
     hotelTime: null,
     hotelTimezone: null,
   });
-
-  // Debug render tracking — logs when guest-visible booking fields change
-  useDebugRender(
-    'BookingStatusPage',
-    booking ? `${booking.booking_id}|${booking.status}|${booking.assigned_room_number || ''}|${booking.checked_in_at || ''}` : null,
-    { bookingId: booking?.booking_id, roomId: booking?.assigned_room_number, summary: booking ? `BookingStatusPage: ${booking.booking_id} status=${booking.status} room=${booking.assigned_room_number || '-'}` : undefined }
-  );
 
   // Check-in window calculator
   useEffect(() => {

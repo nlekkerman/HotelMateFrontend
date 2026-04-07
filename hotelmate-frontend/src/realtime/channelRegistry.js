@@ -4,8 +4,6 @@ import { createGuestPusherClient } from './guestRealtimeClient';
 import { handleIncomingRealtimeEvent } from './eventBus';
 import { SESSION_HEADER } from '../services/guestChatAPI.js';
 import { guestAPI } from '../services/api.js';
-import { logRealtimeSubscription, logRealtimeUnsubscription, logRealtimeSetHotelSlug, logRealtimeError } from './debug/debugLogger.js';
-import * as chatDbg from './debug/chatDebugLogger.js';
 
 let subscriptionsActive = false;
 let currentChannels = [];
@@ -31,7 +29,6 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
   const pusher = getPusherClient();
   const channels = [];
   console.log('🔗 Subscribing to base hotel channels:', { hotelSlug, staffId });
-  logRealtimeSetHotelSlug(hotelSlug);
 
   try {
     console.log('🔥 [channelRegistry] Base hotel channels - hotelSlug:', hotelSlug);
@@ -86,7 +83,6 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
     const guestMessagesChannelName = `${hotelSlug}-guest-messages`;
     const guestMessagesChannel = pusher.subscribe(guestMessagesChannelName);
     channels.push(guestMessagesChannel);
-    chatDbg.logChatSubscription(guestMessagesChannelName, 'realtimeClient');
     
     // Enhanced guest messages event binding for debugging
     guestMessagesChannel.bind_global((eventName, data) => {
@@ -121,7 +117,6 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
       });
 
       console.log(`✅ Subscribed to channel: ${channel.name}`);
-      logRealtimeSubscription(channel.name);
     });
 
     subscriptionsActive = true;
@@ -136,10 +131,8 @@ export function subscribeBaseHotelChannels({ hotelSlug, staffId }) {
           channel.unbind_all();
           channel.unsubscribe();
           console.log(`🗑️ Unsubscribed from: ${channel.name}`);
-          logRealtimeUnsubscription(channel.name);
         } catch (error) {
           console.error('❌ Error unsubscribing from channel:', channel.name, error);
-          logRealtimeError('Channel unsubscribe failed', { channel: channel.name, error: String(error) });
         }
       });
 
@@ -181,19 +174,16 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
   const channelName = `${hotelSlug}.staff-chat.${conversationId}`;
   try {
     const channel = pusher.subscribe(channelName);
-    chatDbg.logChatSubscription(channelName, 'realtimeClient');
     
     // Add subscription error handlers
     channel.bind('pusher:subscription_error', (error) => {
       console.error('❌ [channelRegistry] Subscription error for channel:', channelName, error);
-      chatDbg.logChatSubscriptionError(channelName, error);
     });
     
     channel.bind('pusher:subscription_succeeded', () => {
       if (!import.meta.env.PROD) {
         console.log('✅ [channelRegistry] Successfully subscribed to staff chat channel:', channelName);
       }
-      chatDbg.logChatSubscriptionSucceeded(channelName);
     });
     
     channel.bind_global((eventName, payload) => {
@@ -229,7 +219,6 @@ export function subscribeToStaffChatConversation(hotelSlug, conversationId) {
         if (index > -1) {
           currentChannels.splice(index, 1);
         }
-        chatDbg.logChatUnsubscription(channelName);
 
         console.log(`🗑️ Unsubscribed from staff chat: ${channelName}`);
       } catch (error) {

@@ -1,7 +1,6 @@
 // src/realtime/stores/roomBookingStore.jsx
 import React, { createContext, useContext, useReducer } from 'react';
 import queryClient from '@/lib/queryClient';
-import { logRealtimeDispatch, logRealtimeInvalidation, logRealtimeRouting } from '../debug/debugLogger.js';
 
 // Global event deduplication to prevent duplicate processing
 const globalProcessedEventIds = new Set();
@@ -169,7 +168,7 @@ export const roomBookingActions = {
   _lastInvalidationTime: 0, // Debounce React Query invalidation
 
   // Bridge booking realtime events to React Query so staff UI refreshes
-  _invalidateBookingQueries(bookingId, _dbgId, eventType) {
+  _invalidateBookingQueries(bookingId, _unused, eventType) {
     // Debounce: skip if last invalidation was less than 500ms ago
     const now = Date.now();
     if (now - this._lastInvalidationTime < 500) return;
@@ -195,8 +194,6 @@ export const roomBookingActions = {
       });
     }
 
-    // 🔧 DEBUG PANEL: log invalidation with source event type
-    logRealtimeInvalidation(_dbgId, invalidated, eventType);
   },
 
   // Main event handler called from eventBus
@@ -346,22 +343,17 @@ export const roomBookingActions = {
       case "party_healed":
       case "guests_healed":
         console.debug(`[roomBookingStore] Healing event received (ignored): ${eventType}`, event);
-        logRealtimeRouting(event.meta?._dbgId, { normalizedCategory: 'room_booking', normalizedType: eventType, ignored: true });
         return; // Return early — no React Query invalidation needed
 
       default:
         if (import.meta.env && !import.meta.env.PROD) {
           console.log("[roomBookingStore] Ignoring eventType:", eventType, event);
         }
-        logRealtimeRouting(event.meta?._dbgId, { normalizedCategory: 'room_booking', normalizedType: eventType, ignored: true });
         return; // Return early — unknown event, no invalidation
     }
 
-    // 🔧 DEBUG PANEL: log that dispatch happened
-    logRealtimeDispatch(event.meta?._dbgId, { bookingId });
-
     // Bridge: invalidate React Query caches so staff UI refreshes
-    this._invalidateBookingQueries(bookingId, event.meta?._dbgId, eventType);
+    this._invalidateBookingQueries(bookingId, null, eventType);
   },
 
   // Emit overstay refresh signal for BookingDetailsModal

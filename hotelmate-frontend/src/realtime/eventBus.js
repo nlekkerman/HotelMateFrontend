@@ -8,8 +8,6 @@ import { serviceBookingActions } from './stores/serviceBookingStore.jsx';
 import { roomBookingActions } from './stores/roomBookingStore.jsx';
 import { roomsActions } from './stores/roomsStore.jsx';
 import { showGuestMessageNotification } from '../utils/guestNotifications.jsx';
-import { logRealtimeEvent, logRealtimeRouting, logRealtimeError } from './debug/debugLogger.js';
-import * as chatDbg from './debug/chatDebugLogger.js';
 
 // Global event deduplication using meta.event_id
 const globalProcessedEventIds = new Set();
@@ -165,11 +163,6 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
       return; // ⬅️ nothing else, no warning, no routing
     }
 
-    // 🔧 DEBUG PANEL: log incoming event (booking/room channels only)
-    const _dbgId = logRealtimeEvent(channel, eventName, payload);
-    // 🔧 CHAT DEBUG PANEL: log incoming chat event
-    const _chatDbgId = chatDbg.logChatEventReceived(channel, eventName, payload);
-
     // Accept normalized OR direct-message payloads
     if (payload?.category && payload?.type) {
       // 🔥 For staff_chat, prefer the Pusher eventName (realtime_staff_chat_*)
@@ -189,7 +182,7 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
         category: payload.category,
         type: effectiveType, // 👈 FIXED: Use the effectiveType we calculated
         payload: payload.payload ?? payload.data ?? {},
-        meta: { ...(payload.meta || { channel, eventName }), _dbgId, _chatDbgId },
+        meta: { ...(payload.meta || { channel, eventName }) },
         source,
         timestamp: payload.meta?.ts || new Date().toISOString(),
       };
@@ -482,7 +475,6 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
     });
   } catch (error) {
     console.error('❌ Error handling realtime event:', error, { source, channel, eventName, payload });
-    logRealtimeError('Error handling realtime event: ' + String(error), { channel, eventName });
   }
 }
 
@@ -511,18 +503,14 @@ function routeToDomainStores(event) {
         } else {
           console.log('🚀 [EventBus] Routing staff_chat event to chatActions.handleEvent');
           console.log('🚀 [EventBus] Event being routed:', { category: event.category, type: event.type, hasPayload: !!event.payload });
-          chatDbg.logChatEventRouted(event.meta?._chatDbgId, { normalizedCategory: 'staff_chat', normalizedType: event.type });
           chatActions.handleEvent(event);
-          chatDbg.logChatEventDispatched(event.meta?._chatDbgId, 'chatStore');
         }
         break;
       case "guest_chat":
         if (!import.meta.env.PROD) {
           console.log('🔍 [EventBus] Routing guest_chat event to guestChatStore:', event.type);
         }
-        chatDbg.logChatEventRouted(event.meta?._chatDbgId, { normalizedCategory: 'guest_chat', normalizedType: event.type });
         guestChatActions.handleEvent(event);
-        chatDbg.logChatEventDispatched(event.meta?._chatDbgId, 'guestChatStore');
         // NOTE: Staff conversation list is updated via the separate staff_chat event
         // from the -notifications channel. No cross-domain routing needed here.
         break;
@@ -551,14 +539,12 @@ function routeToDomainStores(event) {
           console.log('Timestamp:', event.meta?.ts);
           console.groupEnd();
         }
-        logRealtimeRouting(event.meta?._dbgId, { normalizedCategory: 'room_booking', normalizedType: event.type, routed: true });
         roomBookingActions.handleEvent(event);
         break;
       case "booking":
         serviceBookingActions.handleEvent(event);
         break;
       case "rooms":
-        logRealtimeRouting(event.meta?._dbgId, { normalizedCategory: 'rooms', normalizedType: event.type, routed: true });
         roomsActions.handleEvent(event);
         break;
       case "staff_notification":
