@@ -59,12 +59,18 @@ function RoomList() {
   const apiRooms = allRooms;
   const totalPages = Math.ceil(allRooms.length / 10); // Remove pagination since we have all data
 
-  // Prefer rooms from store when available, fallback to API
+  // Prefer API rooms (complete list), enrich with realtime store data when available
   const rooms = React.useMemo(() => {
-    return roomsState.list.length > 0 
-      ? roomsState.list.map(n => roomsState.byRoomNumber[String(n)]).filter(Boolean) // Convert to string for consistent lookup
-      : apiRooms;
-  }, [roomsState.list, roomsState.byRoomNumber, apiRooms]);
+    if (apiRooms.length > 0) {
+      // Merge: use store version of each room if available (has realtime updates), else API version
+      return apiRooms.map(apiRoom => {
+        const storeRoom = roomsState.byRoomNumber[String(apiRoom.room_number)];
+        return storeRoom || apiRoom;
+      });
+    }
+    // Fallback to store-only data while API is still loading
+    return roomsState.list.map(n => roomsState.byRoomNumber[String(n)]).filter(Boolean);
+  }, [apiRooms, roomsState.list, roomsState.byRoomNumber]);
 
   // Keep local reactive state for UI interactions
   useEffect(() => {
