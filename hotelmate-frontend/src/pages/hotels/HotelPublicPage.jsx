@@ -439,8 +439,8 @@ const HotelPublicPage = () => {
         </Link>
       </div>
 
-      {/* Empty state message */}
-      {isEmpty && (
+      {/* Empty state message - own-hotel admin editors only */}
+      {isEmpty && canEditPublicPage && (
         <Container className="min-vh-100 d-flex align-items-center justify-content-center">
           <Alert variant="info" className="text-center" style={{ maxWidth: '600px' }}>
             <i className="bi bi-pencil-square me-2" style={{ fontSize: '3rem' }}></i>
