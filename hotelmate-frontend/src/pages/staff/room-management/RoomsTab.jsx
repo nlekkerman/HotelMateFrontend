@@ -43,14 +43,20 @@ const RoomsTab = ({ hotelSlug }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
 
-  // Fetch rooms
-  const { data: roomsData = [], isLoading, isError, error } = useQuery({
+  // Fetch rooms (turnover endpoint returns categorical data)
+  const { data: roomsData = {}, isLoading, isError, error } = useQuery({
     queryKey: ['roomManagement', 'rooms', hotelSlug],
     queryFn: () => fetchRooms(hotelSlug),
     enabled: !!hotelSlug,
   });
 
-  const rooms = Array.isArray(roomsData) ? roomsData : roomsData.results || [];
+  // Flatten categorical response: { status: { rooms: [...] } } → flat array
+  const rooms = React.useMemo(() => {
+    if (!roomsData || typeof roomsData !== 'object') return [];
+    if (Array.isArray(roomsData)) return roomsData;
+    if (roomsData.results) return roomsData.results;
+    return Object.values(roomsData).flatMap(cat => cat.rooms || []);
+  }, [roomsData]);
 
   // Fetch room types for dropdown
   const { data: roomTypesData = [] } = useQuery({
