@@ -4,10 +4,10 @@
  * Single canonical API module — do not scatter direct calls elsewhere.
  *
  * Backend endpoints:
- *   Room types:  /staff/hotel/{slug}/room-types/          (ViewSet on staff_hotel_router)
- *   Rooms list:  /staff/hotel/{slug}/turnover/rooms/      (read-only operational list)
- *   Room CRUD:   NOT YET AVAILABLE — bulk-create, single create, update, delete
- *                pending backend inventory endpoints.
+ *   Room types:       /api/staff/hotel/{slug}/room-types/
+ *   Room management:  /api/staff/hotel/{slug}/room-management/
+ *   Room images:      /api/staff/hotel/{slug}/room-images/
+ *   Bulk create:      /api/staff/hotel/{slug}/room-types/{id}/rooms/bulk-create/
  */
 
 import api, { buildStaffURL } from './api';
@@ -40,53 +40,55 @@ export const deleteRoomType = async (hotelSlug, roomTypeId) => {
   return response.data;
 };
 
+// ==========================================
+// ROOM IMAGES  —  /staff/hotel/{slug}/room-images/
+// ==========================================
+
 export const uploadRoomTypePhoto = async (hotelSlug, roomTypeId, imageFile) => {
   const formData = new FormData();
-  formData.append('photo', imageFile);
-  const url = buildStaffURL(hotelSlug, '', `room-types/${roomTypeId}/`);
-  const response = await api.patch(url, formData, {
+  formData.append('image', imageFile);
+  formData.append('room_type', roomTypeId);
+  const url = buildStaffURL(hotelSlug, '', 'room-images/');
+  const response = await api.post(url, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return response.data;
 };
 
 // ==========================================
-// ROOMS  —  read via turnover/rooms/, write endpoints pending
+// ROOMS  —  /staff/hotel/{slug}/room-management/
 // ==========================================
 
-/**
- * Fetch all rooms (uses operational turnover endpoint).
- * Returns categorical data: { status: { rooms: [...] } }
- */
 export const fetchRooms = async (hotelSlug) => {
-  const url = buildStaffURL(hotelSlug, '', 'turnover/rooms/');
+  const url = buildStaffURL(hotelSlug, '', 'room-management/');
   const response = await api.get(url);
   return response.data;
 };
 
-// ---- Write endpoints below require backend inventory routes ----
-// Kept as stubs so the UI compiles; they will 404 until backend ships.
-
 export const createRoom = async (hotelSlug, data) => {
-  const url = buildStaffURL(hotelSlug, '', 'rooms/');
-  const response = await api.post(url, data);
-  return response.data;
-};
-
-export const bulkCreateRooms = async (hotelSlug, data) => {
-  const url = buildStaffURL(hotelSlug, '', 'rooms/bulk-create/');
+  const url = buildStaffURL(hotelSlug, '', 'room-management/');
   const response = await api.post(url, data);
   return response.data;
 };
 
 export const updateRoom = async (hotelSlug, roomId, data) => {
-  const url = buildStaffURL(hotelSlug, '', `rooms/${roomId}/`);
+  const url = buildStaffURL(hotelSlug, '', `room-management/${roomId}/`);
   const response = await api.patch(url, data);
   return response.data;
 };
 
 export const deleteRoom = async (hotelSlug, roomId) => {
-  const url = buildStaffURL(hotelSlug, '', `rooms/${roomId}/`);
+  const url = buildStaffURL(hotelSlug, '', `room-management/${roomId}/`);
   const response = await api.delete(url);
+  return response.data;
+};
+
+// ==========================================
+// BULK CREATE  —  /staff/hotel/{slug}/room-types/{id}/rooms/bulk-create/
+// ==========================================
+
+export const bulkCreateRooms = async (hotelSlug, roomTypeId, data) => {
+  const url = buildStaffURL(hotelSlug, '', `room-types/${roomTypeId}/rooms/bulk-create/`);
+  const response = await api.post(url, data);
   return response.data;
 };

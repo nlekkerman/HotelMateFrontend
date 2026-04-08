@@ -43,19 +43,18 @@ const RoomsTab = ({ hotelSlug }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
 
-  // Fetch rooms (turnover endpoint returns categorical data)
-  const { data: roomsData = {}, isLoading, isError, error } = useQuery({
+  // Fetch rooms from room-management endpoint
+  const { data: roomsData = [], isLoading, isError, error } = useQuery({
     queryKey: ['roomManagement', 'rooms', hotelSlug],
     queryFn: () => fetchRooms(hotelSlug),
     enabled: !!hotelSlug,
   });
 
-  // Flatten categorical response: { status: { rooms: [...] } } → flat array
+  // Normalize: support flat array or paginated { results: [] }
   const rooms = React.useMemo(() => {
-    if (!roomsData || typeof roomsData !== 'object') return [];
     if (Array.isArray(roomsData)) return roomsData;
-    if (roomsData.results) return roomsData.results;
-    return Object.values(roomsData).flatMap(cat => cat.rooms || []);
+    if (roomsData?.results) return roomsData.results;
+    return [];
   }, [roomsData]);
 
   // Fetch room types for dropdown
@@ -93,7 +92,7 @@ const RoomsTab = ({ hotelSlug }) => {
   });
 
   const bulkMutation = useMutation({
-    mutationFn: (payload) => bulkCreateRooms(hotelSlug, payload),
+    mutationFn: ({ room_type_id, ...payload }) => bulkCreateRooms(hotelSlug, room_type_id, payload),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['roomManagement', 'rooms', hotelSlug] });
       const count = data?.created_count || data?.length || 'Multiple';
@@ -191,7 +190,12 @@ const RoomsTab = ({ hotelSlug }) => {
       toast.error('Please fix the highlighted fields');
       return;
     }
-    bulkMutation.mutate(bulkForm);
+    bulkMutation.mutate({
+      room_type_id: bulkForm.room_type_id,
+      range_from: bulkForm.range_from,
+      range_to: bulkForm.range_to,
+      floor: bulkForm.floor,
+    });
   };
 
   const handleDelete = (room) => {

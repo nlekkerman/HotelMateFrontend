@@ -214,8 +214,8 @@ const RoomTypesTab = ({ hotelSlug }) => {
           {list.map((rt) => (
             <div className="col-sm-6 col-lg-4 col-xl-3" key={rt.id}>
               <div className="room-type-card h-100 d-flex flex-column">
-                {rt.photo ? (
-                  <img src={rt.photo} alt={rt.name} className="room-type-card-img" />
+                {rt.photo_url ? (
+                  <img src={rt.photo_url} alt={rt.name} className="room-type-card-img" />
                 ) : (
                   <div className="room-type-card-placeholder">
                     <i className="bi bi-image"></i>
@@ -395,10 +395,10 @@ const RoomTypesTab = ({ hotelSlug }) => {
               <div className="col-12">
                 <Form.Group>
                   <Form.Label>Photo</Form.Label>
-                  {editing?.photo && !photoFile && (
+                  {editing?.photo_url && !photoFile && (
                     <div className="mb-2">
                       <img
-                        src={editing.photo}
+                        src={editing.photo_url}
                         alt="Current"
                         style={{ maxHeight: 100, borderRadius: 6 }}
                       />
