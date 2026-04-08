@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import api, { buildStaffURL } from "@/services/api";
 import RoomCard from "@/components/rooms/RoomCard";
 import { useRoomsState, useRoomsDispatch, roomsActions } from "@/realtime/stores/roomsStore.jsx";
@@ -171,6 +171,25 @@ function RoomList() {
         Rooms ({sortedRooms.length} found, Page {page} of {totalFilteredPages || 1}){" "}
         {isFetching && <small className="text-muted">(Updating...)</small>}
       </h2>
+
+      {sortedRooms.length === 0 && !isFetching && (
+        <div className="text-center py-5">
+          <i className="bi bi-door-open" style={{ fontSize: '3rem', color: '#adb5bd' }}></i>
+          <h5 className="mt-3">No rooms found</h5>
+          <p className="text-muted">
+            Add room types and rooms in Room Management to get started.
+          </p>
+          {userData?.hotel_slug && (
+            <Link
+              to={`/staff/hotel/${userData.hotel_slug}/room-management`}
+              className="btn btn-primary"
+            >
+              <i className="bi bi-gear me-1"></i>
+              Go to Room Management
+            </Link>
+          )}
+        </div>
+      )}
 
       <div className="row row-cols-1 row-cols-md-2 row-cols-lg-5 justify-content-center g-2">
         {paginatedRooms.map((room, index) => (

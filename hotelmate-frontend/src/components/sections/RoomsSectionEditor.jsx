@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Card, Form, Button, Spinner, Alert } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { updateSection } from '@/services/sectionEditorApi';
 
@@ -50,8 +51,11 @@ const RoomsSectionEditor = ({ section, hotelSlug, onUpdate }) => {
         {/* Info Alert */}
         <Alert variant="info" className="mb-4">
           <i className="bi bi-info-circle me-2"></i>
-          <strong>Auto-populated from PMS:</strong> This section automatically displays all active room types from your PMS system. 
-          To manage room types, prices, and availability, use the PMS settings. Manual card/list editing is disabled for this section type.
+          <strong>Rooms are managed centrally.</strong> This section automatically displays all active room types. 
+          To manage room types, prices, and availability, go to{' '}
+          <Link to={`/staff/hotel/${hotelSlug}/room-management`}>
+            Room Management
+          </Link>.
         </Alert>
 
         {/* Section Name */}
@@ -127,7 +131,8 @@ const RoomsSectionEditor = ({ section, hotelSlug, onUpdate }) => {
           </p>
           <p className="mb-0">
             <i className="bi bi-gear me-2"></i>
-            <strong>Room Management:</strong> Add, edit, or remove room types in the PMS section to update what appears here.
+            <strong>Room Management:</strong> Add, edit, or remove room types in{' '}
+            <Link to={`/staff/hotel/${hotelSlug}/room-management`}>Room Management</Link>.
           </p>
         </div>
       </Card.Body>

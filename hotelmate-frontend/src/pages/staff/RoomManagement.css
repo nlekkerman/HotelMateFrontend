@@ -1,0 +1,121 @@
+/* Room Management Page Styles */
+
+.room-management-page {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.room-management-header {
+  background: white;
+  border-bottom: 1px solid #dee2e6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.room-management-content {
+  padding: 1.5rem 0;
+}
+
+/* Tabs */
+.room-management-tabs .nav-link {
+  font-weight: 500;
+  color: #6c757d;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 0.75rem 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.room-management-tabs .nav-link.active {
+  color: var(--main-color, #0d6efd);
+  border-bottom-color: var(--main-color, #0d6efd);
+  background: transparent;
+}
+
+.room-management-tabs .nav-link:hover:not(.active) {
+  color: #495057;
+  border-bottom-color: #dee2e6;
+}
+
+/* Cards grid */
+.room-type-card {
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+  background: white;
+}
+
+.room-type-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.room-type-card-img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  background: #e9ecef;
+}
+
+.room-type-card-placeholder {
+  width: 100%;
+  height: 160px;
+  background: #e9ecef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #adb5bd;
+  font-size: 2rem;
+}
+
+/* Room inventory table */
+.room-inventory-table th {
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #6c757d;
+  border-bottom-width: 2px;
+}
+
+.room-inventory-table td {
+  vertical-align: middle;
+}
+
+/* Modal form */
+.rm-modal .form-label {
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+/* Bulk create row count */
+.bulk-range-inputs {
+  display: flex;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.bulk-range-inputs .form-group {
+  flex: 1;
+}
+
+/* Empty state */
+.rm-empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #6c757d;
+}
+
+.rm-empty-state i {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+/* Status badges */
+.badge-active {
+  background-color: #198754;
+}
+
+.badge-inactive {
+  background-color: #6c757d;
+}

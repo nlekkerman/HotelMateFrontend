@@ -23,6 +23,7 @@ import BookingManagementDashboard from '@/components/bookings/BookingManagementD
 
 import RoomList from '@/components/rooms/RoomList';
 import RoomDetails from '@/components/rooms/RoomDetails';
+import RoomManagementPage from '@/pages/staff/RoomManagementPage';
 import RoomServiceOrders from '@/components/room_service/RoomServiceOrders';
 import OrdersSummary from '@/components/room_service/OrdersSummary';
 import RoomServiceOrdersManagement from '@/components/room_service/RoomServiceOrdersManagement';
@@ -112,6 +113,9 @@ const staffRoutes = [
   { path: '/rooms', element: <RoomList />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
   { path: '/room-management/:hotelIdentifier/room/:roomNumber', element: <RoomDetails />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
   { path: '/rooms/:roomNumber/add-guest', element: <AssignGuestForm />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
+
+  // Room inventory management (canonical CRUD page)
+  { path: '/staff/hotel/:hotelSlug/room-management', element: <RoomManagementPage />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
 
   // Room services (staff management views)
   { path: '/room_services/:hotelIdentifier/orders', element: <RoomServiceOrders />, protected: true, mode: 'staff', requiredSlug: 'room_service' },
