@@ -11,7 +11,7 @@ import {
 } from '@/services/roomManagementApi';
 import { fetchRoomTypes } from '@/services/roomManagementApi';
 
-const EMPTY_ROOM = { room_number: '', room_type_id: '', floor: '', is_active: true };
+const EMPTY_ROOM = { room_number: '', room_type_id: '', is_active: true };
 
 function validateRoomForm(form) {
   const errors = {};
@@ -32,13 +32,23 @@ function validateBulkForm(form) {
   return errors;
 }
 
+const ROOM_STATUS_LABELS = {
+  READY_FOR_GUEST: { label: 'Ready', bg: 'success' },
+  OCCUPIED: { label: 'Occupied', bg: 'primary' },
+  CHECKOUT_DIRTY: { label: 'Dirty', bg: 'warning' },
+  CLEANING_IN_PROGRESS: { label: 'Cleaning', bg: 'info' },
+  CLEANED_UNINSPECTED: { label: 'Cleaned', bg: 'info' },
+  MAINTENANCE_REQUIRED: { label: 'Maintenance', bg: 'danger' },
+  OUT_OF_ORDER: { label: 'Out of Order', bg: 'dark' },
+};
+
 const RoomsTab = ({ hotelSlug }) => {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('single'); // 'single' | 'bulk' | 'edit'
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY_ROOM);
-  const [bulkForm, setBulkForm] = useState({ room_type_id: '', range_from: '', range_to: '', floor: '' });
+  const [bulkForm, setBulkForm] = useState({ room_type_id: '', range_from: '', range_to: '' });
   const [fieldErrors, setFieldErrors] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -50,12 +60,8 @@ const RoomsTab = ({ hotelSlug }) => {
     enabled: !!hotelSlug,
   });
 
-  // Normalize: support flat array or paginated { results: [] }
-  const rooms = React.useMemo(() => {
-    if (Array.isArray(roomsData)) return roomsData;
-    if (roomsData?.results) return roomsData.results;
-    return [];
-  }, [roomsData]);
+  // Normalize: fetchRooms now returns a flat array (auto-paginates)
+  const rooms = Array.isArray(roomsData) ? roomsData : [];
 
   // Fetch room types for dropdown
   const { data: roomTypesData = [] } = useQuery({
@@ -135,7 +141,7 @@ const RoomsTab = ({ hotelSlug }) => {
   const openBulk = () => {
     setEditing(null);
     setModalMode('bulk');
-    setBulkForm({ room_type_id: '', range_from: '', range_to: '', floor: '' });
+    setBulkForm({ room_type_id: '', range_from: '', range_to: '' });
     setFieldErrors({});
     setShowModal(true);
   };
@@ -145,8 +151,7 @@ const RoomsTab = ({ hotelSlug }) => {
     setModalMode('edit');
     setForm({
       room_number: room.room_number || '',
-      room_type_id: room.room_type_id || room.room_type?.id || '',
-      floor: room.floor || '',
+      room_type_id: room.room_type || '',
       is_active: room.is_active !== false,
     });
     setFieldErrors({});
@@ -194,7 +199,6 @@ const RoomsTab = ({ hotelSlug }) => {
       room_type_id: bulkForm.room_type_id,
       range_from: bulkForm.range_from,
       range_to: bulkForm.range_to,
-      floor: bulkForm.floor,
     });
   };
 
@@ -209,10 +213,10 @@ const RoomsTab = ({ hotelSlug }) => {
       const matchSearch =
         !searchQuery ||
         r.room_number?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (r.room_type_name || r.room_type?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+        (r.room_type_name || '').toLowerCase().includes(searchQuery.toLowerCase());
       const matchType =
         !typeFilter ||
-        String(r.room_type_id || r.room_type?.id) === typeFilter;
+        String(r.room_type) === typeFilter;
       return matchSearch && matchType;
     });
   }, [rooms, searchQuery, typeFilter]);
@@ -313,20 +317,30 @@ const RoomsTab = ({ hotelSlug }) => {
               <tr>
                 <th>Room #</th>
                 <th>Type</th>
-                <th>Floor</th>
                 <th>Status</th>
+                <th>Price</th>
+                <th>Active</th>
                 <th className="text-end">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {sorted.map((room) => (
+              {sorted.map((room) => {
+                const status = ROOM_STATUS_LABELS[room.room_status] || { label: room.room_status || '—', bg: 'secondary' };
+                return (
                 <tr key={room.id}>
                   <td className="fw-semibold">{room.room_number}</td>
-                  <td>{room.room_type_name || room.room_type?.name || '—'}</td>
-                  <td>{room.floor || '—'}</td>
+                  <td>{room.room_type_name || '—'}</td>
                   <td>
-                    <Badge bg={room.is_active !== false ? 'success' : 'secondary'}>
-                      {room.is_active !== false ? 'Active' : 'Inactive'}
+                    <Badge bg={status.bg}>{status.label}</Badge>
+                  </td>
+                  <td>
+                    {room.current_price
+                      ? `${room.current_price.currency} ${room.current_price.amount}`
+                      : '—'}
+                  </td>
+                  <td>
+                    <Badge bg={room.is_active ? 'success' : 'secondary'}>
+                      {room.is_active ? 'Yes' : 'No'}
                     </Badge>
                   </td>
                   <td className="text-end">
@@ -343,7 +357,8 @@ const RoomsTab = ({ hotelSlug }) => {
                     </Button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -402,16 +417,6 @@ const RoomsTab = ({ hotelSlug }) => {
                 </Form.Group>
               </div>
 
-              <Form.Group className="mb-3">
-                <Form.Label>Floor (optional)</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={bulkForm.floor}
-                  onChange={(e) => updateField('floor', e.target.value, true)}
-                  placeholder="e.g. 1"
-                />
-              </Form.Group>
-
               {bulkForm.range_from && bulkForm.range_to && Number(bulkForm.range_to) >= Number(bulkForm.range_from) && (
                 <Alert variant="info" className="mb-0">
                   This will create {Number(bulkForm.range_to) - Number(bulkForm.range_from) + 1} rooms
@@ -459,16 +464,6 @@ const RoomsTab = ({ hotelSlug }) => {
                   ))}
                 </Form.Select>
                 <Form.Control.Feedback type="invalid">{fieldErrors.room_type_id}</Form.Control.Feedback>
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label>Floor (optional)</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={form.floor}
-                  onChange={(e) => updateField('floor', e.target.value)}
-                  placeholder="e.g. 1"
-                />
               </Form.Group>
 
               {editing && (

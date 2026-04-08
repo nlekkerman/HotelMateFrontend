@@ -60,9 +60,26 @@ export const uploadRoomTypePhoto = async (hotelSlug, roomTypeId, imageFile) => {
 // ==========================================
 
 export const fetchRooms = async (hotelSlug) => {
-  const url = buildStaffURL(hotelSlug, '', 'room-management/');
-  const response = await api.get(url);
-  return response.data;
+  let allResults = [];
+  let nextUrl = buildStaffURL(hotelSlug, '', 'room-management/');
+
+  while (nextUrl) {
+    const response = await api.get(nextUrl);
+    const data = response.data;
+
+    if (Array.isArray(data)) {
+      // Non-paginated response — return as-is
+      return data;
+    }
+
+    if (Array.isArray(data?.results)) {
+      allResults = [...allResults, ...data.results];
+    }
+
+    nextUrl = data?.next ? data.next.replace(api.defaults.baseURL, '') : null;
+  }
+
+  return allResults;
 };
 
 export const createRoom = async (hotelSlug, data) => {
