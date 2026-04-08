@@ -1,9 +1,9 @@
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
-import { 
-  NAVIGATION_CATEGORIES, 
-  getCategoryForNavItem, 
-  getCategoryById 
+import {
+  NAVIGATION_CATEGORIES,
+  getCategoryForNavItem,
+  getCategoryById
 } from "@/config/navigationCategories";
 
 // Default navigation items (fallback if not in localStorage)
@@ -30,7 +30,8 @@ export const DEFAULT_NAV_ITEMS = [
   { slug: 'settings', name: 'Settings', path: '/staff/{hotelSlug}/settings', icon: 'gear', requiresHotelSlug: true },
   { slug: 'room_service', name: 'Room Service', path: '/room_services/{hotelSlug}/orders-management', icon: 'box' },
   { slug: 'breakfast', name: 'Breakfast', path: '/room_services/{hotelSlug}/breakfast-orders', icon: 'egg-fried' },
-  { slug: 'menus_management', name: 'Menus Management', path: '/menus_management/{hotelSlug}', icon: 'menu-button-wide', allowedRoles: ['staff_admin', 'super_staff_admin'] },
+  { slug: 'menus_management', name: 'Menus Management', path: '/menus_management/{hotelSlug}', icon: 'menu-button-wide', allowedRoles: ['super_staff_admin'] },
+  { slug: 'room_management', name: 'Room Management', path: '/staff/hotel/{hotelSlug}/room-management', icon: 'sliders', allowedRoles: ['super_staff_admin'] },
 ];
 
 
@@ -42,6 +43,12 @@ export const DEFAULT_NAV_ITEMS = [
 export function useNavigation() {
   const { user } = useAuth();
   const { canAccessNav, canAccess, isSuperUser, allowedNavs } = usePermissions();
+
+  // Client-side guard: filter items with allowedRoles (superuser bypasses via canAccess)
+  const passesRoleGate = (item) => {
+    if (!item.allowedRoles || item.allowedRoles.length === 0) return true;
+    return canAccess(item.allowedRoles);
+  };
   
   const hotelSlug = user?.hotel_slug || '';
 
@@ -71,7 +78,9 @@ export function useNavigation() {
   
   // Hide temporarily disabled nav items
   const HIDDEN_NAV_SLUGS = ['stock_tracker', 'stock_dashboard', 'housekeeping'];
-  const visibleNavItems = allNavItems.filter(item => !HIDDEN_NAV_SLUGS.includes(item.slug));
+  const visibleNavItems = allNavItems
+    .filter(item => !HIDDEN_NAV_SLUGS.includes(item.slug))
+    .filter(passesRoleGate);
 
   // 🎯 BACKEND AUTHORITATIVE: Trust allowed_navs from canonical resolver
   // Backend handles superuser bypass and M2M filtering correctly

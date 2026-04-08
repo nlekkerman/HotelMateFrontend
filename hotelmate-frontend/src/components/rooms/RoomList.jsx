@@ -6,6 +6,7 @@ import RoomCard from "@/components/rooms/RoomCard";
 import { useRoomsState, useRoomsDispatch, roomsActions } from "@/realtime/stores/roomsStore.jsx";
 import { getAuthUser } from '@/lib/authStore';
 import { useAuth } from '@/context/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const fetchRooms = async () => {
   const userData = getAuthUser();
@@ -49,6 +50,7 @@ function RoomList() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user: userData } = useAuth();
+  const { canAccess } = usePermissions();
 
   // Handle categorical response format - flatten all rooms
   const allRooms = React.useMemo(() => {
@@ -157,12 +159,22 @@ function RoomList() {
             <option value="OUT_OF_ORDER">Out of Order</option>
           </select>
         </div>
-        <div className="col-md-4 text-end">
+        <div className="col-md-4 text-end d-flex justify-content-end align-items-center gap-2">
           {roomsState.lastUpdatedAt && (
             <span className="badge bg-success">
               <i className="bi bi-broadcast-pin me-1" />
               Live
             </span>
+          )}
+          {canAccess(['super_staff_admin']) && userData?.hotel_slug && (
+            <Link
+              to={`/staff/hotel/${userData.hotel_slug}/room-management`}
+              className="btn btn-sm btn-outline-secondary"
+              title="Room Management"
+            >
+              <i className="bi bi-sliders me-1" />
+              Manage
+            </Link>
           )}
         </div>
       </div>

@@ -42,6 +42,7 @@ export const NAV_ITEM_CATEGORY_MAP = {
   // Front Office
   'reception': 'front-office',
   'rooms': 'front-office',
+  'room_management': 'front-office',
   'guests': 'front-office',
   'chat': 'front-office', // Guest Chat
   'room-bookings': 'front-office', // Room bookings/reservations
