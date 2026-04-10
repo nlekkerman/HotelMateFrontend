@@ -147,15 +147,12 @@ export default function Staff() {
         {isAdmin && (
           <li className="nav-item">
             <button
-              className={`nav-link ${pendingCount > 0 ? "fw-semibold" : "text-dark"}`}
-              style={pendingCount > 0
-                ? { backgroundColor: '#dc3545', color: '#fff', borderColor: '#dc3545' }
-                : {}}
-              onClick={() => navigate(`/${hotelSlug}/staff/create`)}
+              className={`nav-link text-dark ${activeTab === "pending" ? "active fw-semibold" : ""}`}
+              onClick={() => setActiveTab("pending")}
             >
               <i className="bi bi-person-plus me-1"></i> Pending Staff Requests
               {pendingCount > 0 && (
-                <span className="badge bg-light text-danger ms-2">{pendingCount}</span>
+                <span className="badge bg-danger text-white ms-2">{pendingCount}</span>
               )}
             </button>
           </li>
