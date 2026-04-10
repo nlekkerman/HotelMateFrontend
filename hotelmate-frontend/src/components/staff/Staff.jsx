@@ -6,6 +6,7 @@ import StaffByDepartment from "./StaffByDepartment";
 import ClockedInTicker from "@/components/analytics/ClockedInTicker.jsx";
 import RegistrationPackagesPanel from "./RegistrationPackagesPanel";
 import SectionDepartmentsRoles from "@/components/utils/settings-sections/SectionDepartmentsRoles";
+import StaffCreate from "./StaffCreate";
 
 export default function Staff() {
   const { hotelSlug } = useParams();
@@ -172,6 +173,9 @@ export default function Staff() {
 
       {/* Registration Packages Tab */}
       {activeTab === "packages" && isAdmin && <RegistrationPackagesPanel />}
+
+      {/* Pending Staff Requests Tab */}
+      {activeTab === "pending" && isAdmin && <StaffCreate />}
 
       {/* Departments & Roles Tab */}
       {activeTab === "departments" && isAdmin && <SectionDepartmentsRoles />}
