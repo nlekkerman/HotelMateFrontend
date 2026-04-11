@@ -7,31 +7,31 @@ const mockUsers = {
   superuser: {
     is_staff: true,
     is_superuser: true,
-    allowed_navs: [],
+    effective_navs: [],
     access_level: "super_staff_admin"
   },
   staffAdmin: {
     is_staff: true,
     is_superuser: false,
-    allowed_navs: ["home", "reception", "rooms", "stock_tracker"],
+    effective_navs: ["home", "rooms", "stock_tracker"],
     access_level: "staff_admin"
   },
   regularStaff: {
     is_staff: true,
     is_superuser: false,
-    allowed_navs: ["home", "reception"],
+    effective_navs: ["home", "rooms"],
     access_level: "regular_staff"
   },
   noPermissions: {
     is_staff: true,
     is_superuser: false,
-    allowed_navs: [],
+    effective_navs: [],
     access_level: "regular_staff"
   },
   nonStaff: {
     is_staff: false,
     is_superuser: false,
-    allowed_navs: [],
+    effective_navs: [],
     access_level: null
   }
 };
@@ -86,7 +86,7 @@ const accessTests = [
     user: mockUsers.staffAdmin,
     pathname: "/reception",
     expected: true, 
-    description: "Staff admin with reception permission"
+    description: "Staff admin with rooms permission (via /reception)"
   },
   {
     user: mockUsers.staffAdmin,
@@ -108,7 +108,7 @@ const accessTests = [
     user: mockUsers.regularStaff,
     pathname: "/reception",
     expected: true,
-    description: "Regular staff with reception permission"
+    description: "Regular staff with rooms permission (via /reception)"
   },
   {
     user: mockUsers.regularStaff,
@@ -205,9 +205,9 @@ export function runValidationTests() {
   const validationTests = [
     { user: mockUsers.superuser, expected: true, name: "Valid superuser" },
     { user: mockUsers.staffAdmin, expected: true, name: "Valid staff admin" },
-    { user: { is_staff: "true", allowed_navs: "not-array" }, expected: false, name: "Invalid data types" },
+    { user: { is_staff: "true", effective_navs: "not-array" }, expected: false, name: "Invalid data types" },
     { user: null, expected: false, name: "Null user" },
-    { user: { is_staff: true, allowed_navs: [], access_level: "invalid" }, expected: false, name: "Invalid access level" }
+    { user: { is_staff: true, effective_navs: [], access_level: "invalid" }, expected: false, name: "Invalid access level" }
   ];
   
   let passed = 0;

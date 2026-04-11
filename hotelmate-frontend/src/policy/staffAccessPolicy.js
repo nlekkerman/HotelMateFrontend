@@ -1,133 +1,65 @@
 /**
  * Staff Access Policy - Phase 2 of Unified Layout System
  * 
- * This policy enforces staff route access based on backend-derived allowed_navs.
+ * This policy enforces staff route access based on backend-derived effective_navs.
  * NO client-side permission grants - backend is the authoritative source.
+ * NO super_staff_admin bypass - backend populates effective_navs for all tiers.
  */
 
-// Route prefix to required navigation slug mapping
-// IMPORTANT: Slugs use underscores to match backend NavigationItem.slug format
+// Route prefix to required RBAC module slug mapping.
+// Slugs are the 13 canonical backend RBAC module slugs ONLY.
 const PATH_TO_NAV_MAPPING = [
-  { 
-    match: (pathname) => pathname === "/reception" || pathname.startsWith("/reception/"), 
-    slug: "reception",
-    description: "Reception desk operations"
-  },
-  { 
-    match: (pathname) => pathname.startsWith("/rooms"), 
-    slug: "rooms",
-    description: "Room management and housekeeping"
-  },
-  {
-    match: (pathname) => pathname.includes("/housekeeping"),
-    slug: "housekeeping",
-    description: "Housekeeping operations and room status"
-  },
-  { 
-    match: (pathname) => pathname.startsWith("/bookings"), 
-    slug: "bookings",
-    description: "Restaurant and event bookings"
-  },
-  {
-    match: (pathname) => pathname.includes("/room-bookings") || pathname.includes("/booking-management"),
-    slug: "room_bookings",
-    description: "Hotel room bookings and management"
-  },
-  { 
-    match: (pathname) => pathname.startsWith("/maintenance"), 
-    slug: "maintenance",
-    description: "Maintenance and facilities management"
-  },
-  { 
-    match: (pathname) => pathname.startsWith("/stock_tracker"), 
-    slug: "stock_tracker", // Backend uses underscores
-    description: "Inventory and stock management"
-  },
-  { 
-    match: (pathname) => pathname.startsWith("/hotel_info"), 
-    slug: "hotel_info", // Backend uses underscores
-    description: "Hotel information management"
-  },
-  { 
-    match: (pathname) => pathname.startsWith("/good_to_know_console"), 
-    slug: "good_to_know", 
-    description: "Guest information console"
-  },
-  { 
-    match: (pathname) => pathname.startsWith("/games"), 
-    slug: "games",
-    description: "Entertainment and gaming systems"
-  },
-  { 
-    match: (pathname) => pathname.startsWith("/staff/"), 
-    slug: "home", // Staff dashboard/feed uses "home" slug
-    description: "Staff dashboard and main feed"
-  },
-  {
-    match: (pathname) => /\/[^/]+\/staff(?:\/|$)/.test(pathname) && !pathname.startsWith("/staff/"),
-    slug: "staff_management",
-    description: "Staff list, creation, and detail views"
-  },
-  {
-    match: (pathname) => pathname.includes("/guests"),
-    slug: "guests",
-    description: "Guest management and services"
-  },
-  {
-    match: (pathname) => pathname.includes("/restaurants"),
-    slug: "restaurants", 
-    description: "Restaurant management"
-  },
-  {
-    match: (pathname) => pathname.includes("/room_services") && pathname.includes("/orders"),
-    slug: "room_service", // Backend uses underscore
-    description: "Room service orders management"
-  },
-  {
-    match: (pathname) => pathname.includes("/breakfast"),
-    slug: "breakfast",
-    description: "Breakfast service management" 
-  },
-  {
-    match: (pathname) => pathname.includes("/menus_management"),
-    slug: "menus_management", // Backend uses underscore
-    description: "Menu management system"
-  },
-  {
-    match: (pathname) => pathname.includes("/attendance"),
-    slug: "attendance",
-    description: "Staff attendance tracking"
-  },
-  {
-    match: (pathname) => pathname.includes("/department-roster"),
-    slug: "department_roster", // Backend uses underscore
-    description: "Department scheduling and roster"
-  },
-  {
-    match: (pathname) => pathname.includes("/enhanced-attendance"),
-    slug: "management_analytics", // Backend uses underscore
-    description: "Management analytics and reports"
-  },
-  {
-    match: (pathname) => pathname.includes("/chat"),
-    slug: "chat",
-    description: "Staff and guest chat systems"
-  },
-];
+  // Front Office
+  { match: (p) => p === "/reception" || p.startsWith("/reception/"), slug: "rooms" },
+  { match: (p) => p.startsWith("/rooms"), slug: "rooms" },
+  { match: (p) => p.includes("/room-management"), slug: "rooms" },
+  { match: (p) => p.includes("/guests"), slug: "rooms" },
 
-// Admin-only route prefixes requiring super_staff_admin access level
-const ADMIN_ONLY_ROUTES = [
-  {
-    match: (pathname) => pathname.includes("/settings") && pathname.includes("/staff/"),
-    requiredLevel: "super_staff_admin",
-    description: "Hotel settings and configuration"
-  },
-  {
-    match: (pathname) => pathname.includes("/permissions"),
-    requiredLevel: "super_staff_admin", 
-    description: "Staff permission management"
-  },
-  // TODO: Add more admin routes as they are identified
+  // Bookings
+  { match: (p) => p.startsWith("/bookings"), slug: "bookings" },
+  { match: (p) => p.includes("/room-bookings") || p.includes("/booking-management"), slug: "bookings" },
+
+  // Housekeeping
+  { match: (p) => p.includes("/housekeeping"), slug: "housekeeping" },
+
+  // Chat
+  { match: (p) => p.includes("/chat"), slug: "chat" },
+
+  // Staff Management
+  { match: (p) => /\/[^/]+\/staff(?:\/|$)/.test(p) && !p.startsWith("/staff/"), slug: "staff_management" },
+
+  // Attendance (all sub-modules)
+  { match: (p) => p.includes("/attendance"), slug: "attendance" },
+  { match: (p) => p.includes("/department-roster"), slug: "attendance" },
+  { match: (p) => p.includes("/enhanced-attendance"), slug: "attendance" },
+  { match: (p) => p.includes("/roster"), slug: "attendance" },
+
+  // Room Services (all F&B sub-modules)
+  { match: (p) => p.includes("/room_services"), slug: "room_services" },
+  { match: (p) => p.includes("/breakfast"), slug: "room_services" },
+  { match: (p) => p.includes("/menus_management"), slug: "room_services" },
+  { match: (p) => p.includes("/restaurants"), slug: "room_services" },
+
+  // Maintenance
+  { match: (p) => p.startsWith("/maintenance"), slug: "maintenance" },
+
+  // Stock Tracker
+  { match: (p) => p.startsWith("/stock_tracker"), slug: "stock_tracker" },
+
+  // Hotel Info (includes good_to_know)
+  { match: (p) => p.startsWith("/hotel_info"), slug: "hotel_info" },
+  { match: (p) => p.startsWith("/good_to_know_console"), slug: "hotel_info" },
+
+  // Entertainment
+  { match: (p) => p.startsWith("/games"), slug: "entertainment" },
+
+  // Admin Settings (must be before /staff/ catch-all)
+  { match: (p) => p.includes("/settings") && p.includes("/staff/"), slug: "admin_settings" },
+  { match: (p) => p.includes("/section-editor"), slug: "admin_settings" },
+  { match: (p) => p.includes("/permissions"), slug: "admin_settings" },
+
+  // Staff Home (catch-all for /staff/ prefix — MUST be last)
+  { match: (p) => p.startsWith("/staff/"), slug: "home" },
 ];
 
 /**
@@ -139,7 +71,7 @@ const ADMIN_ONLY_ROUTES = [
  * @returns {Object} Access result with allowed, redirectTo, and reason
  */
 export function canAccessStaffPath({ pathname, user, requiredSlug }) {
-  // No user or not staff -> DENY
+  // Case A: NOT authenticated → redirect to login
   if (!user || !user.is_staff) {
     return {
       allowed: false,
@@ -156,32 +88,11 @@ export function canAccessStaffPath({ pathname, user, requiredSlug }) {
     };
   }
 
-  // super_staff_admin bypass -> ALLOW ALL (hotel-level admin)
-  if (user.access_level === 'super_staff_admin') {
-    return {
-      allowed: true,
-      reason: "Super staff admin access granted"
-    };
-  }
-
-  // Check admin-level gates first
-  for (const adminRoute of ADMIN_ONLY_ROUTES) {
-    if (adminRoute.match(pathname)) {
-      if (user.access_level !== adminRoute.requiredLevel) {
-        return {
-          allowed: false,
-          redirectTo: "/reception", 
-          reason: `Admin access required: ${adminRoute.description} requires ${adminRoute.requiredLevel}`
-        };
-      }
-    }
-  }
-
   // Prefer explicit requiredSlug from route config over pathname auto-mapping
   const requiredNavSlug = requiredSlug || findRequiredNavSlug(pathname);
   
   if (!requiredNavSlug) {
-    // DENY BY DEFAULT for unmapped routes (security-first approach)
+    // Case B: Authenticated but unmapped route → redirect to staff entry point
     return {
       allowed: false,
       redirectTo: "/reception",
@@ -190,16 +101,17 @@ export function canAccessStaffPath({ pathname, user, requiredSlug }) {
   }
 
   // Check if user has the required navigation permission
-  const allowedNavs = user.allowed_navs || [];
-  if (!Array.isArray(allowedNavs)) {
+  const effectiveNavs = user.effective_navs || [];
+  if (!Array.isArray(effectiveNavs)) {
     return {
       allowed: false,
-      redirectTo: "/login",
-      reason: "Invalid permission data: allowed_navs must be an array from backend"
+      redirectTo: "/reception",
+      reason: "Invalid permission data: effective_navs must be an array from backend"
     };
   }
 
-  if (!allowedNavs.includes(requiredNavSlug)) {
+  // Case B: Authenticated but lacks permission → redirect to staff entry point
+  if (!effectiveNavs.includes(requiredNavSlug)) {
     return {
       allowed: false,
       redirectTo: "/reception",
@@ -260,8 +172,8 @@ export function validateUserPermissions(user) {
       issues.push("is_superuser should be boolean"); 
     }
     
-    if (!Array.isArray(user.allowed_navs)) {
-      issues.push("allowed_navs should be array of strings");
+    if (!Array.isArray(user.effective_navs)) {
+      issues.push("effective_navs should be array of strings");
     }
     
     if (user.access_level && !["regular_staff", "staff_admin", "super_staff_admin"].includes(user.access_level)) {

@@ -25,12 +25,8 @@ export const AuthProvider = ({ children }) => {
     return stored ? JSON.parse(stored) : null;
   });
 
-  // Derived: check if user is staff (with fallback logic)
-  const isStaff = user?.is_staff || 
-                  user?.is_superuser || 
-                  user?.access_level === 'staff_admin' || 
-                  user?.access_level === 'super_staff_admin' ||
-                  user?.staff_id;
+  // Derived: check if user is staff
+  const isStaff = user?.is_staff || user?.is_superuser;
 
   // Set view mode with validation (non-staff can only be 'guest')
   const setViewMode = (mode) => {
@@ -44,10 +40,7 @@ export const AuthProvider = ({ children }) => {
 
   // Login function (keep existing behavior)
   const login = (userData) => {
-    console.log('🔍 [AuthContext] Login called with userData:', userData);
-    console.log('🔍 [AuthContext] userData.is_superuser:', userData?.is_superuser);
-    console.log('🔍 [AuthContext] userData.allowed_navs:', userData?.allowed_navs);
-    
+
     setUser(userData);
     setAuthUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));

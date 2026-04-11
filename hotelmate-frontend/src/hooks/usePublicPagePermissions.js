@@ -17,17 +17,14 @@ import { usePermissions } from '@/hooks/usePermissions';
  */
 export function usePublicPagePermissions(pageHotelSlug) {
   const { user, isStaff } = useAuth();
-  const { canAccess, isSuperUser } = usePermissions();
+  const { isAdmin } = usePermissions();
 
   return useMemo(() => {
     const isOwnHotel = Boolean(
       user && pageHotelSlug && user.hotel_slug === pageHotelSlug,
     );
 
-    // Mirrors the access gate used by staff settings / section-editor pages:
-    // superuser OR access_level in [staff_admin, super_staff_admin].
-    const hasEditAccess =
-      isSuperUser || canAccess(['staff_admin', 'super_staff_admin']);
+    const hasEditAccess = isAdmin;
 
     const canEditPublicPage = Boolean(isStaff && isOwnHotel && hasEditAccess);
 
@@ -41,5 +38,5 @@ export function usePublicPagePermissions(pageHotelSlug) {
     });
 
     return { isOwnHotel, hasEditAccess, canEditPublicPage };
-  }, [user, pageHotelSlug, isStaff, isSuperUser, canAccess]);
+  }, [user, pageHotelSlug, isStaff, isAdmin]);
 }

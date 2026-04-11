@@ -50,7 +50,7 @@ function RoomList() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user: userData } = useAuth();
-  const { canAccess } = usePermissions();
+  const { isSuperStaffAdmin } = usePermissions();
 
   // Handle categorical response format - flatten all rooms
   const allRooms = React.useMemo(() => {
@@ -166,7 +166,7 @@ function RoomList() {
               Live
             </span>
           )}
-          {canAccess(['super_staff_admin']) && userData?.hotel_slug && (
+          {isSuperStaffAdmin && userData?.hotel_slug && (
             <Link
               to={`/staff/hotel/${userData.hotel_slug}/room-management`}
               className="btn btn-sm btn-outline-secondary"

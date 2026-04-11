@@ -28,20 +28,22 @@ export default function useLogin() {
 
       const userToSave = {
         id: data.staff_id,
-        staff_id: data.staff_id, // Ensure staff_id is present for profile edit logic
+        staff_id: data.staff_id,
         token: data.token,
         username: data.username,
         hotel_id: data.hotel_id,
         hotel_name: data.hotel_name,
         hotel_slug: data.hotel_slug,
-        is_staff: data.is_staff || data.is_superuser, // Fix: Superusers should always be staff
+        is_staff: data.is_staff || data.is_superuser,
         is_superuser: data.is_superuser,
+        // Canonical backend fields
+        tier: data.tier || data.access_level,
         access_level: data.access_level,
-        isAdmin: data.is_superuser || ["staff_admin", "super_staff_admin"].includes(data.access_level),
+        role_slug: data.role_slug || data.role,
+        effective_navs: data.effective_navs || data.allowed_navs || [],
+        navigation_items: data.navigation_items || [],
         department: data.department,
         role: data.role,
-        allowed_navs: data.allowed_navs || [],
-        navigation_items: data.navigation_items || [],
         profile_image_url: profileImageUrl,
         hotel: {
           id: data.hotel_id,
@@ -50,13 +52,6 @@ export default function useLogin() {
         },
       };
 
-      console.log('🔍 Login Debug Info:');
-      console.log('🔍 RAW BACKEND RESPONSE:', data);
-      console.log('Backend data.is_superuser:', data.is_superuser);
-      console.log('Backend data.allowed_navs:', data.allowed_navs);
-      console.log('Backend data.navigation_items:', data.navigation_items);
-      console.log('🔍 Final userToSave object:', userToSave);
-      console.log('🔍 userToSave.is_superuser:', userToSave.is_superuser);
 
       // ✅ Use the same object for both localStorage and AuthContext to avoid data loss
       login(userToSave);

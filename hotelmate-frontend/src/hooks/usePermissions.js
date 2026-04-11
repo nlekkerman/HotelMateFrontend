@@ -3,31 +3,32 @@ import { useAuth } from '@/context/AuthContext';
 export function usePermissions() {
   const { user } = useAuth();
 
-  const role = user?.role?.toLowerCase();
-  const isSuperUser = user?.is_superuser;
-  const allowedNavs = user?.allowed_navs || [];
-  const accessLevel = user?.access_level;
+  const role = user?.role_slug?.toLowerCase() || user?.role?.toLowerCase();
+  const isSuperUser = !!user?.is_superuser;
+  const accessLevel = user?.tier || user?.access_level;
+  const effectiveNavs = user?.effective_navs || [];
 
-  // Backend authoritative — if payload is missing, treat as denied
-  if (user && !Array.isArray(user?.allowed_navs)) {
-    console.warn('⚠️ Invalid allowed_navs from backend, treating as empty array');
-  }
+  // Identity booleans
+  const isSuperStaffAdmin = accessLevel === 'super_staff_admin';
+  const isStaffAdmin = accessLevel === 'staff_admin';
+  const isAdmin = isSuperUser || isSuperStaffAdmin || isStaffAdmin;
 
-  const canAccessNav = (slug) => {
-    if (!slug) {
-      console.warn('canAccessNav: Received undefined/null slug, returning false');
-      return false;
-    }
+  // Tier check — prefers user.tier, falls back to user.access_level
+  const hasTier = (t) => {
     if (!user) return false;
     if (isSuperUser) return true;
-
-    const hasAccess = allowedNavs.includes(slug);
-    if (!hasAccess) {
-      console.log(`canAccessNav(${slug}): DENIED (allowed: ${allowedNavs.join(', ')})`);
-    }
-    return hasAccess;
+    return accessLevel === t;
   };
 
+  // Nav/module access check
+  const hasNavAccess = (slug) => {
+    if (!slug) return false;
+    if (!user) return false;
+    if (isSuperUser) return true;
+    return effectiveNavs.includes(slug);
+  };
+
+  // Department-role check (for action gating within pages)
   const canAccess = (allowedRoles = []) => {
     if (!user) return false;
     if (isSuperUser) return true;
@@ -38,10 +39,14 @@ export function usePermissions() {
   };
 
   return {
-    canAccessNav,
-    canAccess,
-    allowedNavs,
-    accessLevel,
+    // Canonical exports
     isSuperUser,
+    isSuperStaffAdmin,
+    isStaffAdmin,
+    isAdmin,
+    hasTier,
+    hasNavAccess,
+    effectiveNavs,
+    canAccess,
   };
 }

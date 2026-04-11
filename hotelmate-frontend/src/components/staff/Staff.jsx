@@ -11,9 +11,7 @@ import StaffCreate from "./StaffCreate";
 export default function Staff() {
   const { hotelSlug } = useParams();
   const [searchParams] = useSearchParams();
-  const { canAccess, isSuperUser } = usePermissions();
-  const isAdmin =
-    isSuperUser || canAccess(["staff_admin", "super_staff_admin"]);
+  const { isAdmin } = usePermissions();
   const [pendingCount, setPendingCount] = useState(0);
 
   const initialTab =

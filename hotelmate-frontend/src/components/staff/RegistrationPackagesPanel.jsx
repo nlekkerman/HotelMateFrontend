@@ -14,14 +14,9 @@ import { printRegistrationPackage } from './PrintableRegistrationPackageView';
 export default function RegistrationPackagesPanel() {
   const { hotelSlug } = useParams();
   const { user } = useAuth();
-  const { canAccess, isSuperUser } = usePermissions();
+  const { isAdmin } = usePermissions();
 
   const slug = hotelSlug || user?.hotel_slug;
-
-  // Admin check
-  const isAdmin =
-    isSuperUser ||
-    canAccess(['staff_admin', 'super_staff_admin']);
 
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);

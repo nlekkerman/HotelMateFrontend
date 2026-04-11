@@ -22,7 +22,7 @@ function StaffDetails() {
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
   const { hotelSlug, id } = useParams();
-  const { canAccess } = usePermissions();
+  const { canAccess, isAdmin } = usePermissions();
   const queryClient = useQueryClient();
   const { departments, roles, accessLevels, refetch: refetchMetadata } = useStaffMetadata(hotelSlug);
   const [newDeptName, setNewDeptName] = useState('');
@@ -94,7 +94,7 @@ function StaffDetails() {
     navigate(`/face/${hotelSlug}/register?staffId=${id}`);
   };
 
-  const isAdmin = canAccess(['staff_admin', 'super_staff_admin']);
+  // isAdmin from usePermissions covers isSuperUser || isSuperStaffAdmin || isStaffAdmin
 
   const startEditing = () => {
     setEditData({

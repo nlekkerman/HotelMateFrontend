@@ -34,7 +34,7 @@ function RealtimeManager({ children }) {
     // Resolve staff ID (prefer dedicated staff_id, fallback to user id when flagged as staff)
     const staffId =
       user?.staff_id ??
-      (user?.is_staff || user?.role === 'staff' || user?.isStaff ? user?.id : null);
+      (user?.is_staff ? user?.id : null);
 
     console.log('🔄 RealtimeProvider effect:', { 
       hotelSlug, 
@@ -67,7 +67,7 @@ function RealtimeManager({ children }) {
         cleanupRef.current = null;
       }
     };
-  }, [selectedHotel?.slug, user?.hotel_slug, user?.staff_id, user?.id, user?.is_staff, user?.role, user?.isStaff]);
+  }, [selectedHotel?.slug, user?.hotel_slug, user?.staff_id, user?.id, user?.is_staff]);
 
   return children;
 }

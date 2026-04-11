@@ -24,6 +24,7 @@ import { AttendanceDashboardSkeleton, AttendanceTableSkeleton, PeriodSelectorSke
 import { deriveStatus } from "../utils/attendanceStatus";
 import useStaffMetadata from "@/hooks/useStaffMetadata";
 import { useAuth } from '@/context/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import "../components/AttendanceCards.css";
 import { handleRealTimeStatusUpdate, showStatusNotification } from "../utils/statusUpdates";
 import { safeStaffId, safeStaffName, safeTimeSlice, safeNumber } from "../utils/safeUtils";
@@ -114,6 +115,7 @@ function AttendanceDashboardComponent() {
   const { hotelSlug } = useParams();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
+  const { isSuperStaffAdmin } = usePermissions();
   
   console.log('[AttendanceDashboardComponent] Rendering with hotelSlug:', hotelSlug);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -634,10 +636,7 @@ function AttendanceDashboardComponent() {
             
             {/* Enhanced Dashboard & Kiosk Mode Toggle - Only for Super Staff/Admin */}
             {(() => {
-              const isSuperStaff = authUser?.is_super_staff || authUser?.role === 'admin' || authUser?.access_level === 'super_admin' || authUser?.is_staff;
               const isKioskMode = localStorage.getItem('kioskMode') === 'true';
-              
-              console.log('[AttendanceDashboard] Kiosk button check:', { user: authUser, isSuperStaff, isKioskMode });
               
               // For now, show to all staff users for testing
               return authUser?.is_staff ? (

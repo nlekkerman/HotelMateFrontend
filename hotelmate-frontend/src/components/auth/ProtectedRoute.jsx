@@ -2,14 +2,12 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { canAccessStaffPath } from '@/policy/staffAccessPolicy';
-import { ENABLE_ROUTE_PERMISSIONS } from '@/config/featureFlags';
 
 /**
  * ProtectedRoute — Two-layer route guard.
  *
  * Layer 1 (always): user must be authenticated.
- * Layer 2 (mode="staff"): user must also have the required permission
- *         (gated by ENABLE_ROUTE_PERMISSIONS feature flag).
+ * Layer 2 (mode="staff"): user must also have the required permission.
  *
  * @param {Object} props
  * @param {"auth"|"staff"} props.mode  - "auth" = login only, "staff" = login + permission. Default: "auth"
@@ -32,7 +30,7 @@ const ProtectedRoute = ({
   }
 
   // --- Layer 2: Authorization (staff mode only) ---
-  if (mode === 'staff' && ENABLE_ROUTE_PERMISSIONS) {
+  if (mode === 'staff') {
     const result = canAccessStaffPath({
       pathname: location.pathname,
       user,

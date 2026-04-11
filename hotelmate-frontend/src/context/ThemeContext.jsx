@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { getAuthUser } from "@/lib/authStore";
 
 const ThemeContext = createContext({
@@ -25,6 +26,7 @@ const ThemeContext = createContext({
 const ThemeProvider = ({ children }) => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { isSuperUser, isSuperStaffAdmin } = usePermissions();
   
   // Get hotel slug from logged-in user
   const hotelSlug = React.useMemo(() => {
@@ -209,9 +211,6 @@ useEffect(() => {
       
       // Check if user has permission to update theme settings
       // Only superusers or super staff admins can update themes
-      const isSuperUser = user?.is_superuser;
-      const isSuperStaffAdmin = user?.access_level === 'super_staff_admin';
-      
       if (!isSuperUser && !isSuperStaffAdmin) {
         return Promise.reject(new Error('Theme updates are only allowed for superusers and super staff admins'));
       }
@@ -247,9 +246,6 @@ useEffect(() => {
     }
     
     // Check if user has permission to update theme settings
-    const isSuperUser = user?.is_superuser;
-    const isSuperStaffAdmin = user?.access_level === 'super_staff_admin';
-    
     if (!isSuperUser && !isSuperStaffAdmin) {
       throw new Error('Theme updates are only allowed for superusers and super staff admins');
     }

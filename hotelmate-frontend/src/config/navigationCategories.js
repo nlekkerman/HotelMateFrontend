@@ -40,36 +40,27 @@ export const NAVIGATION_CATEGORIES = [
  */
 export const NAV_ITEM_CATEGORY_MAP = {
   // Front Office
-  'reception': 'front-office',
   'rooms': 'front-office',
-  'room_management': 'front-office',
-  'guests': 'front-office',
-  'chat': 'front-office', // Guest Chat
-  'room-bookings': 'front-office', // Room bookings/reservations
-  
-  // F&B
-  'restaurants': 'fnb',
-  'restaurant-bookings': 'fnb', // Restaurant bookings
-  'room_service': 'fnb',
-  'breakfast': 'fnb',
-  'menus_management': 'fnb',
-  
-  // Staff
-  'staff': 'staff',
+  'bookings': 'front-office',
+  'chat': 'front-office',
+  'housekeeping': 'front-office',
+
+  // F&B / Services
+  'room_services': 'fnb',
+
+  // Staff & Operations
+  'staff_management': 'staff',
   'attendance': 'staff',
-  'department_roster': 'staff',
-  'management_analytics': 'staff',
   'maintenance': 'staff',
-  'staff_chat': 'staff',
-  
+
   // Guest Relations
   'hotel_info': 'guest-relations',
-  'good_to_know': 'guest-relations',
-  'games': 'guest-relations', // Entertainment
-  
-  // Uncategorized/Special (Home, Settings)
+  'entertainment': 'guest-relations',
+  'stock_tracker': 'guest-relations',
+
+  // Uncategorized (rendered outside category groups)
   'home': null,
-  'settings': null,
+  'admin_settings': null,
 };
 
 /**
@@ -100,39 +91,21 @@ export const isInCategory = (slug, categoryId) => {
 export const SUBCATEGORIES = {
   'front-office': [
     { slug: 'rooms', name: 'Rooms', order: 1 },
-    { slug: 'guests', name: 'Guests', order: 2 },
+    { slug: 'bookings', name: 'Bookings', order: 2 },
     { slug: 'chat', name: 'Guest Chat', order: 3 },
-    { slug: 'arrivals', name: 'Arrivals', order: 4, parent: 'bookings' },
-    { slug: 'departures', name: 'Departures', order: 5, parent: 'bookings' },
-    { slug: 'in-house', name: 'In-House', order: 6, parent: 'bookings' },
-    { slug: 'reservations', name: 'Reservations', order: 7, parent: 'bookings' },
-    { slug: 'requests', name: 'Requests', order: 8 },
+    { slug: 'housekeeping', name: 'Housekeeping', order: 4 },
   ],
   'fnb': [
-    { slug: 'restaurants', name: 'Restaurants', order: 1 },
-    { slug: 'restaurant-bookings', name: 'Restaurant Bookings', order: 2 },
-    { slug: 'room_service', name: 'Room Service', order: 3 },
-    { slug: 'breakfast', name: 'Breakfast', order: 4 },
-    { slug: 'menus_management', name: 'Menus Management', order: 5 },
-    { slug: 'menus', name: 'Menus', order: 6 },
+    { slug: 'room_services', name: 'Room Services', order: 1 },
   ],
   'staff': [
-    { slug: 'staff', name: 'Staff', order: 1 },
-    { slug: 'clock', name: 'Clock', order: 2 },
-    { slug: 'maintenance', name: 'Maintenance', order: 4 },
-    { slug: 'staff_chat', name: 'Staff Chat', order: 5 },
-  ],
-  'stock': [
-    { slug: 'stock_dashboard', name: 'Stock Dashboard', order: 1 },
-    { slug: 'stocktakes', name: 'Stocktakes', order: 2 },
-    { slug: 'periods', name: 'Periods', order: 3 },
-    { slug: 'operations', name: 'Operations', order: 4 },
-    { slug: 'analytics', name: 'Analytics', order: 5 },
-    { slug: 'sales', name: 'Sales', order: 6 },
+    { slug: 'staff_management', name: 'Staff', order: 1 },
+    { slug: 'attendance', name: 'Attendance', order: 2 },
+    { slug: 'maintenance', name: 'Maintenance', order: 3 },
   ],
   'guest-relations': [
     { slug: 'hotel_info', name: 'Hotel Info', order: 1 },
-    { slug: 'games', name: 'Entertainment', order: 2 },
-    { slug: 'good_to_know', name: 'Good To Know', order: 3 },
+    { slug: 'entertainment', name: 'Entertainment', order: 2 },
+    { slug: 'stock_tracker', name: 'Stock Tracker', order: 3 },
   ],
 };

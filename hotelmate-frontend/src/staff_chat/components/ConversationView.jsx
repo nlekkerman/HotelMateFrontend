@@ -13,6 +13,7 @@ import ParticipantsModal from './ParticipantsModal';
 import useReadReceipts from '../hooks/useReadReceipts';
 import { useStaffChat } from '../context/StaffChatContext';
 import { useAuth } from '@/context/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 
 /**
  * ConversationView Component
@@ -155,8 +156,9 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     // console.log('🔔 ConversationView - replyTo state changed:', replyTo);
   }, [replyTo]);
   
-  // Check if user is manager/admin
-  const isManagerOrAdmin = currentUserData?.role === 'manager' || currentUserData?.role === 'admin';
+  // Check if user is manager/admin via centralized permissions
+  const { canAccess } = usePermissions();
+  const isManagerOrAdmin = canAccess(['manager', 'admin', 'super_staff_admin', 'staff_admin']);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

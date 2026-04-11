@@ -28,7 +28,7 @@ const MobileNavbar = () => {
   const [presetMenuOpen, setPresetMenuOpen] = useState(false);
 
   // Use usePermissions WITHOUT argument — it reads roles from localStorage inside
-  const { canAccess } = usePermissions();
+  const { canAccess, hasNavAccess } = usePermissions();
   const { visibleNavItems, categories, uncategorizedItems, hasNavigation } = useNavigation();
   const [expandedCategoryId, setExpandedCategoryId] = useState(null);
   const [roomBookingsExpanded, setRoomBookingsExpanded] = useState(false);
@@ -360,7 +360,7 @@ const MobileNavbar = () => {
                 })}
 
                 {/* Quick Access: Room Bookings */}
-                {canAccess('room-bookings') && (
+                {hasNavAccess('bookings') && (
                   <li className="nav-item">
                     <button
                       className={`nav-link ${
@@ -486,108 +486,6 @@ const MobileNavbar = () => {
                           {category.items.map((item) => {
                             const orderCount = getOrderCountForItem(item);
                             const showNewBadge = hasNewBadgeForItem(item);
-
-                            // Special handling for Room Bookings with sub-items
-                            if (item.slug === 'room-bookings') {
-                              return (
-                                <li key={item.slug} className="mb-2">
-                                  {/* Main Room Bookings Header */}
-                                  <div className="nav-link text-white py-2 px-3" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
-                                    <div className="d-flex justify-content-between align-items-center">
-                                      <div>
-                                        <i className={`bi bi-${item.icon} me-2`} />
-                                        {item.name}
-                                      </div>
-                                      {orderCount > 0 && (
-                                        <span className="badge bg-danger rounded-pill">
-                                          {orderCount}
-                                        </span>
-                                      )}
-                                      {showNewBadge && orderCount === 0 && (
-                                        <span className="badge bg-danger">NEW</span>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {/* Room Bookings Sub-items */}
-                                  <ul className="list-unstyled ps-4 mt-1">
-                                    <li className="mb-1">
-                                      <Link
-                                        className={`nav-link ${
-                                          location.pathname.includes('/room-bookings') && location.search.includes('filter=pending') ? "active" : ""
-                                        } text-white py-1 px-2 small`}
-                                        to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=pending`}
-                                        onClick={toggleNavbar}
-                                      >
-                                        <i className="bi bi-clock me-2" />
-                                        Pending Bookings
-                                      </Link>
-                                    </li>
-                                    <li className="mb-1">
-                                      <Link
-                                        className={`nav-link ${
-                                          location.pathname.includes('/room-bookings') && location.search.includes('filter=confirmed') ? "active" : ""
-                                        } text-white py-1 px-2 small`}
-                                        to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=confirmed`}
-                                        onClick={toggleNavbar}
-                                      >
-                                        <i className="bi bi-check-circle me-2" />
-                                        Confirmed Bookings
-                                      </Link>
-                                    </li>
-                                    <li className="mb-1">
-                                      <Link
-                                        className={`nav-link ${
-                                          location.pathname.includes('/room-bookings') && location.search.includes('filter=cancelled') ? "active" : ""
-                                        } text-white py-1 px-2 small`}
-                                        to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=cancelled`}
-                                        onClick={toggleNavbar}
-                                      >
-                                        <i className="bi bi-x-circle me-2" />
-                                        Cancelled Bookings
-                                      </Link>
-                                    </li>
-                                    <li className="mb-1">
-                                      <Link
-                                        className={`nav-link ${
-                                          location.pathname.includes('/room-bookings') && !location.search.includes('filter=') ? "active" : ""
-                                        } text-white py-1 px-2 small`}
-                                        to={`/staff/hotel/${hotelIdentifier}/room-bookings`}
-                                        onClick={toggleNavbar}
-                                      >
-                                        <i className="bi bi-calendar-event me-2" />
-                                        All Bookings
-                                      </Link>
-                                    </li>
-                                    <li className="mb-1">
-                                      <Link
-                                        className={`nav-link ${
-                                          location.pathname.includes('/room-bookings') && location.search.includes('filter=history') ? "active" : ""
-                                        } text-white py-1 px-2 small`}
-                                        to={`/staff/hotel/${hotelIdentifier}/room-bookings?filter=history`}
-                                        onClick={toggleNavbar}
-                                      >
-                                        <i className="bi bi-archive me-2" />
-                                        Booking History
-                                      </Link>
-                                    </li>
-                                    <li className="mb-1">
-                                      <Link
-                                        className={`nav-link ${
-                                          location.pathname.includes('/booking-management') ? "active" : ""
-                                        } text-white py-1 px-2 small`}
-                                        to={`/staff/hotel/${hotelIdentifier}/booking-management`}
-                                        onClick={toggleNavbar}
-                                      >
-                                        <i className="bi bi-gear me-2" />
-                                        Management Dashboard
-                                      </Link>
-                                    </li>
-                                  </ul>
-                                </li>
-                              );
-                            }
-
 
                             // Special handling for Stock Tracker with sub-items
                             if (item.slug === 'stock_tracker') {

@@ -11,7 +11,7 @@ import SectionThemeSettings from "./settings-sections/SectionThemeSettings";
 export default function Settings() {
   const { user } = useAuth();
   const { hotelSlug } = useParams();
-  const { canAccess, isSuperUser } = usePermissions();
+  const { isAdmin, isSuperUser } = usePermissions();
   const navigate = useNavigate();
   
   // Basic permission check - must be staff of this hotel
@@ -26,8 +26,8 @@ export default function Settings() {
     );
   }
 
-  // Additional permission check - must be superuser or super staff admin
-  const canAccessSettings = isSuperUser || canAccess(['super_staff_admin']);
+  // Additional permission check - must be superuser or admin
+  const canAccessSettings = isAdmin;
   if (!canAccessSettings) {
     return (
       <Container className="py-5">

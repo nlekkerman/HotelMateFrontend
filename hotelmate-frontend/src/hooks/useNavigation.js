@@ -1,37 +1,25 @@
 import { useAuth } from "@/context/AuthContext";
-import { usePermissions } from "@/hooks/usePermissions";
 import {
   NAVIGATION_CATEGORIES,
   getCategoryForNavItem,
   getCategoryById
 } from "@/config/navigationCategories";
 
-// Default navigation items (fallback if not in localStorage)
+/* @deprecated — remove when backend guarantees navigation_items on every login */
 export const DEFAULT_NAV_ITEMS = [
   { slug: 'home', name: 'Home', path: '/staff/{hotelSlug}/feed', icon: 'house' },
   { slug: 'chat', name: 'Chat', path: '/hotel/{hotelSlug}/chat', icon: 'chat-dots' },
-  // Removed 'staff-chat' - using MessengerWidget instead
-  { slug: 'reception', name: 'Reception', path: '/reception', icon: 'bell' },
   { slug: 'rooms', name: 'Rooms', path: '/rooms', icon: 'door-closed' },
   { slug: 'housekeeping', name: 'Housekeeping', path: '/staff/hotel/{hotelSlug}/housekeeping', icon: 'house-gear' },
-  { slug: 'guests', name: 'Guests', path: '/{hotelSlug}/guests', icon: 'people' },
-  { slug: 'staff', name: 'Staff', path: '/{hotelSlug}/staff', icon: 'person-badge' },
+  { slug: 'bookings', name: 'Bookings', path: '/staff/hotel/{hotelSlug}/room-bookings', icon: 'bed', hasDropdown: true },
+  { slug: 'staff_management', name: 'Staff', path: '/{hotelSlug}/staff', icon: 'person-badge' },
   { slug: 'attendance', name: 'Attendance', path: '/attendance/{hotelSlug}', icon: 'clock-history' },
-  { slug: 'department_roster', name: 'Department Roster', path: '/department-roster/{hotelSlug}', icon: 'calendar-week' },
-  { slug: 'management_analytics', name: 'Management Analytics', path: '/enhanced-attendance/{hotelSlug}', icon: 'bar-chart' },
-  { slug: 'restaurants', name: 'Restaurants', path: '/{hotelSlug}/restaurants', icon: 'shop-window' },
-  { slug: 'room-bookings', name: 'Room Bookings', path: '/staff/hotel/{hotelSlug}/room-bookings', icon: 'bed', hasDropdown: true },
-  { slug: 'restaurant-bookings', name: 'Restaurant Bookings', path: '/restaurant-bookings', icon: 'calendar-check' },
+  { slug: 'room_services', name: 'Room Service', path: '/room_services/{hotelSlug}/orders-management', icon: 'box' },
   { slug: 'maintenance', name: 'Maintenance', path: '/maintenance', icon: 'tools' },
   { slug: 'hotel_info', name: 'Hotel Info', path: '/hotel_info/{hotelSlug}', icon: 'info-circle' },
-  { slug: 'good_to_know', name: 'Good to Know', path: '/good_to_know_console/{hotelSlug}', icon: 'book' },
-  { slug: 'stock_tracker', name: 'Dashboard', path: '/stock_tracker/{hotelSlug}', icon: 'graph-up' },
-  { slug: 'games', name: 'Games', path: '/games/?hotel={hotelSlug}', icon: 'controller' },
-  { slug: 'settings', name: 'Settings', path: '/staff/{hotelSlug}/settings', icon: 'gear', requiresHotelSlug: true },
-  { slug: 'room_service', name: 'Room Service', path: '/room_services/{hotelSlug}/orders-management', icon: 'box' },
-  { slug: 'breakfast', name: 'Breakfast', path: '/room_services/{hotelSlug}/breakfast-orders', icon: 'egg-fried' },
-  { slug: 'menus_management', name: 'Menus Management', path: '/menus_management/{hotelSlug}', icon: 'menu-button-wide', allowedRoles: ['super_staff_admin'] },
-  { slug: 'room_management', name: 'Room Management', path: '/staff/hotel/{hotelSlug}/room-management', icon: 'sliders', allowedRoles: ['super_staff_admin'] },
+  { slug: 'stock_tracker', name: 'Stock Tracker', path: '/stock_tracker/{hotelSlug}', icon: 'graph-up' },
+  { slug: 'entertainment', name: 'Entertainment', path: '/games/?hotel={hotelSlug}', icon: 'controller' },
+  { slug: 'admin_settings', name: 'Settings', path: '/staff/{hotelSlug}/settings', icon: 'gear', requiresHotelSlug: true },
 ];
 
 
@@ -42,14 +30,6 @@ export const DEFAULT_NAV_ITEMS = [
  */
 export function useNavigation() {
   const { user } = useAuth();
-  const { canAccessNav, canAccess, isSuperUser, allowedNavs } = usePermissions();
-
-  // Client-side guard: filter items with allowedRoles (superuser bypasses via canAccess)
-  const passesRoleGate = (item) => {
-    if (!item.allowedRoles || item.allowedRoles.length === 0) return true;
-    return canAccess(item.allowedRoles);
-  };
-  
   const hotelSlug = user?.hotel_slug || '';
 
   // 🎯 BACKEND AUTHORITATIVE: Use navigation_items from canonical payload
@@ -76,16 +56,8 @@ export function useNavigation() {
 
 
   
-  // Hide temporarily disabled nav items
-  const HIDDEN_NAV_SLUGS = ['stock_tracker', 'stock_dashboard', 'housekeeping'];
-  const visibleNavItems = allNavItems
-    .filter(item => !HIDDEN_NAV_SLUGS.includes(item.slug))
-    .filter(passesRoleGate);
-
-  // 🎯 BACKEND AUTHORITATIVE: Trust allowed_navs from canonical resolver
-  // Backend handles superuser bypass and M2M filtering correctly
-  // If allowed_navs is empty, staff has no access by design (no frontend fallback)
-  const finalVisibleItems = visibleNavItems;
+  // Backend controls nav visibility via navigation_items and effective_navs
+  const finalVisibleItems = allNavItems;
 
   // Group navigation items by category
   const groupItemsByCategory = (items) => {
@@ -95,18 +67,7 @@ export function useNavigation() {
     items.forEach(item => {
       const categoryId = getCategoryForNavItem(item.slug);
       
-      // Special handling: room_bookings is always independent
-      if (item.slug === 'room_bookings') {
-        uncategorized.push(item);
-      } 
-      // Special handling: stock_tracker must be categorized under stock
-      else if (item.slug === 'stock_tracker') {
-        if (!categorized['stock']) {
-          categorized['stock'] = [];
-        }
-        categorized['stock'].push(item);
-      }
-      else if (categoryId) {
+      if (categoryId) {
         if (!categorized[categoryId]) {
           categorized[categoryId] = [];
         }

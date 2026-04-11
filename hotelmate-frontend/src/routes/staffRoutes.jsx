@@ -74,14 +74,13 @@ import ChatHomePage from '@/pages/chat/ChatHomePage';
 const staffRoutes = [
   // Staff dashboard / feed
   { path: '/staff/:hotelSlug/feed', element: <Home />, protected: true },
-  // TODO: Consider restricting section editing to admin-only if it should be limited
-  { path: '/staff/:hotelSlug/section-editor', element: <SectionEditorPage />, protected: true, mode: 'staff' },
+  { path: '/staff/:hotelSlug/section-editor', element: <SectionEditorPage />, protected: true, mode: 'staff', requiredSlug: 'admin_settings' },
 
   // Reception
-  { path: '/reception', element: <Reception />, protected: true, mode: 'staff', requiredSlug: 'reception' },
+  { path: '/reception', element: <Reception />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
 
-  // Settings (admin-gated via staffAccessPolicy ADMIN_ONLY_ROUTES)
-  { path: '/staff/:hotelSlug/settings', element: <Settings />, protected: true, mode: 'staff' },
+  // Settings
+  { path: '/staff/:hotelSlug/settings', element: <Settings />, protected: true, mode: 'staff', requiredSlug: 'admin_settings' },
 
   // Super User
   { path: '/super-user', element: <SuperUser />, protected: true, mode: 'staff' },
@@ -99,15 +98,15 @@ const staffRoutes = [
   // Attendance
   { path: '/attendance/:hotelSlug', element: <AttendanceDashboard />, protected: true, mode: 'staff', requiredSlug: 'attendance' },
   { path: '/roster/:hotelSlug', element: <AttendanceDashboard />, protected: true, mode: 'staff', requiredSlug: 'attendance' },
-  { path: '/department-roster/:hotelSlug', element: <DepartmentRosterDashboard />, protected: true, mode: 'staff', requiredSlug: 'department_roster' },
-  { path: '/enhanced-attendance/:hotelSlug', element: <EnhancedAttendanceDashboard />, protected: true, mode: 'staff', requiredSlug: 'management_analytics' },
+  { path: '/department-roster/:hotelSlug', element: <DepartmentRosterDashboard />, protected: true, mode: 'staff', requiredSlug: 'attendance' },
+  { path: '/enhanced-attendance/:hotelSlug', element: <EnhancedAttendanceDashboard />, protected: true, mode: 'staff', requiredSlug: 'attendance' },
 
   // Face attendance registration — staff-only setup, requires attendance permission
   { path: '/face/:hotelSlug/register', element: <FaceRegisterPage />, protected: true, mode: 'staff', requiredSlug: 'attendance' },
 
   // Restaurant management
-  { path: '/hotel-:hotelSlug/restaurants', element: <RestaurantManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'restaurants' },
-  { path: '/:hotelSlug/:restaurantSlug', element: <RestaurantManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'restaurants' },
+  { path: '/hotel-:hotelSlug/restaurants', element: <RestaurantManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'room_services' },
+  { path: '/:hotelSlug/:restaurantSlug', element: <RestaurantManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'room_services' },
 
   // Rooms
   { path: '/rooms', element: <RoomList />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
@@ -118,20 +117,20 @@ const staffRoutes = [
   { path: '/staff/hotel/:hotelSlug/room-management', element: <RoomManagementPage />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
 
   // Room services (staff management views)
-  { path: '/room_services/:hotelIdentifier/orders', element: <RoomServiceOrders />, protected: true, mode: 'staff', requiredSlug: 'room_service' },
-  { path: '/room_services/:hotelIdentifier/orders-summary', element: <OrdersSummary />, protected: true, mode: 'staff', requiredSlug: 'room_service' },
-  { path: '/room_services/:hotelIdentifier/orders-management', element: <RoomServiceOrdersManagement />, protected: true, mode: 'staff', requiredSlug: 'room_service' },
-  { path: '/room_services/:hotelIdentifier/breakfast-orders', element: <BreakfastRoomService />, protected: true, mode: 'staff', requiredSlug: 'breakfast' },
-  { path: '/menus_management/:hotelSlug', element: <MenusManagement />, protected: true, mode: 'staff', requiredSlug: 'menus_management' },
+  { path: '/room_services/:hotelIdentifier/orders', element: <RoomServiceOrders />, protected: true, mode: 'staff', requiredSlug: 'room_services' },
+  { path: '/room_services/:hotelIdentifier/orders-summary', element: <OrdersSummary />, protected: true, mode: 'staff', requiredSlug: 'room_services' },
+  { path: '/room_services/:hotelIdentifier/orders-management', element: <RoomServiceOrdersManagement />, protected: true, mode: 'staff', requiredSlug: 'room_services' },
+  { path: '/room_services/:hotelIdentifier/breakfast-orders', element: <BreakfastRoomService />, protected: true, mode: 'staff', requiredSlug: 'room_services' },
+  { path: '/menus_management/:hotelSlug', element: <MenusManagement />, protected: true, mode: 'staff', requiredSlug: 'room_services' },
 
   // Guests
-  { path: '/:hotelIdentifier/guests', element: <GuestList />, protected: true, mode: 'staff', requiredSlug: 'guests' },
-  { path: '/:hotelIdentifier/guests/:guestId/edit', element: <GuestEdit />, protected: true, mode: 'staff', requiredSlug: 'guests' },
+  { path: '/:hotelIdentifier/guests', element: <GuestList />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
+  { path: '/:hotelIdentifier/guests/:guestId/edit', element: <GuestEdit />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
 
   // Bookings
   { path: '/bookings', element: <Bookings />, protected: true, mode: 'staff', requiredSlug: 'bookings' },
-  { path: '/staff/hotel/:hotelSlug/room-bookings', element: <BookingManagementPage />, protected: true, mode: 'staff', requiredSlug: 'room_bookings' },
-  { path: '/staff/hotel/:hotelSlug/booking-management', element: <BookingManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'room_bookings' },
+  { path: '/staff/hotel/:hotelSlug/room-bookings', element: <BookingManagementPage />, protected: true, mode: 'staff', requiredSlug: 'bookings' },
+  { path: '/staff/hotel/:hotelSlug/booking-management', element: <BookingManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'bookings' },
 
   // Housekeeping
   { path: '/staff/hotel/:hotelSlug/housekeeping', element: <HousekeepingRooms />, protected: true, mode: 'staff', requiredSlug: 'housekeeping' },
@@ -140,27 +139,27 @@ const staffRoutes = [
   // Hotel Info
   { path: '/hotel_info/:hotel_slug', element: <HotelInfo />, protected: true, mode: 'staff', requiredSlug: 'hotel_info' },
   { path: '/hotel_info/:hotel_slug/:category', element: <HotelInfo />, protected: true, mode: 'staff', requiredSlug: 'hotel_info' },
-  { path: '/good_to_know_console/:hotel_slug', element: <GoodToKnowConsole />, protected: true, mode: 'staff', requiredSlug: 'good_to_know' },
+  { path: '/good_to_know_console/:hotel_slug', element: <GoodToKnowConsole />, protected: true, mode: 'staff', requiredSlug: 'hotel_info' },
 
   // Stock Tracker
   { path: '/stock_tracker/:hotel_slug', element: <StockDashboard />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
-  { path: '/stock_tracker/:hotel_slug/analytics', element: <Analytics />, protected: true, mode: 'staff' },
-  { path: '/stock_tracker/:hotel_slug/operations', element: <StockOperations />, protected: true, mode: 'staff' },
-  { path: '/stock_tracker/:hotel_slug/items', element: <StockItemsResponsive />, protected: true, mode: 'staff' },
-  { path: '/stock_tracker/:hotel_slug/profitability', element: <StockItemProfitability />, protected: true, mode: 'staff' },
-  { path: '/stock_tracker/:hotel_slug/movements', element: <MovementsList />, protected: true, mode: 'staff' },
-  { path: '/stock_tracker/:hotel_slug/stocktakes', element: <StocktakesList />, protected: true, mode: 'staff' },
-  { path: '/stock_tracker/:hotel_slug/stocktakes/:id', element: <StocktakeDetail />, protected: true, mode: 'staff' },
-  { path: '/stock_tracker/:hotel_slug/periods', element: <PeriodSnapshots />, protected: true, mode: 'staff' },
-  { path: '/stock_tracker/:hotel_slug/periods/:id', element: <PeriodSnapshotDetail />, protected: true, mode: 'staff' },
-  { path: '/stock_tracker/:hotel_slug/comparison', element: <PeriodsComparison />, protected: true, mode: 'staff' },
-  { path: '/stock_tracker/:hotel_slug/sales/analysis', element: <SalesReport />, protected: true, mode: 'staff' },
-  { path: '/stock_tracker/:hotel_slug/sales/list', element: <SalesListView />, protected: true, mode: 'staff' },
-  { path: '/stock_tracker/:hotel_slug/sales/entry', element: <SalesEntry />, protected: true, mode: 'staff' },
+  { path: '/stock_tracker/:hotel_slug/analytics', element: <Analytics />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
+  { path: '/stock_tracker/:hotel_slug/operations', element: <StockOperations />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
+  { path: '/stock_tracker/:hotel_slug/items', element: <StockItemsResponsive />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
+  { path: '/stock_tracker/:hotel_slug/profitability', element: <StockItemProfitability />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
+  { path: '/stock_tracker/:hotel_slug/movements', element: <MovementsList />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
+  { path: '/stock_tracker/:hotel_slug/stocktakes', element: <StocktakesList />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
+  { path: '/stock_tracker/:hotel_slug/stocktakes/:id', element: <StocktakeDetail />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
+  { path: '/stock_tracker/:hotel_slug/periods', element: <PeriodSnapshots />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
+  { path: '/stock_tracker/:hotel_slug/periods/:id', element: <PeriodSnapshotDetail />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
+  { path: '/stock_tracker/:hotel_slug/comparison', element: <PeriodsComparison />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
+  { path: '/stock_tracker/:hotel_slug/sales/analysis', element: <SalesReport />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
+  { path: '/stock_tracker/:hotel_slug/sales/list', element: <SalesListView />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
+  { path: '/stock_tracker/:hotel_slug/sales/entry', element: <SalesEntry />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
   // Legacy redirects (no protection needed — they redirect to protected routes)
   { path: '/stock_tracker/:hotel_slug/sales-report', element: <Navigate to="../sales/analysis" replace /> },
   { path: '/stock_tracker/:hotel_slug/sales', element: <Navigate to="./entry" replace /> },
-  { path: '/stock_tracker/:hotel_slug/cocktails', element: <CocktailsPage />, protected: true, mode: 'staff' },
+  { path: '/stock_tracker/:hotel_slug/cocktails', element: <CocktailsPage />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
 
   // Chat (staff view)
   { path: '/hotel/:hotelSlug/chat', element: 'CHAT_HOME_PAGE', protected: true, mode: 'staff', requiredSlug: 'chat' },

@@ -33,13 +33,13 @@ const GuestHotelHome = ({ hotel, settings, editorMode = 'view', canEdit = false,
   let isStaff = false;
   
   if (user) {
-    isStaff = user.is_staff || user.is_staff_member || user.role === 'staff' || user.staff_id;
+    isStaff = user.is_staff || user.is_superuser;
   } else {
     // Fallback to authStore bridge
     try {
       const bridgeUser = getAuthUser();
       if (bridgeUser) {
-        isStaff = bridgeUser.is_staff || bridgeUser.is_staff_member || bridgeUser.role === 'staff' || bridgeUser.staff_id;
+        isStaff = bridgeUser.is_staff || bridgeUser.is_superuser;
       }
     } catch (error) {
       console.error('[GuestHotelHome] Error reading user from authStore:', error);
