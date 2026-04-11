@@ -8,6 +8,40 @@ import { serviceBookingActions } from './stores/serviceBookingStore.jsx';
 import { roomBookingActions } from './stores/roomBookingStore.jsx';
 import { roomsActions } from './stores/roomsStore.jsx';
 import { showGuestMessageNotification } from '../utils/guestNotifications.jsx';
+import { overviewSignalsActions } from './stores/overviewSignalsStore.jsx';
+
+// ---------------------------------------------------------------------------
+// Overview signal mapping — maps (category, event.type) → overview module + reason
+// Only meaningful operational events are mapped; noise is excluded.
+// ---------------------------------------------------------------------------
+const OVERVIEW_EVENT_MAP = {
+  room_booking: {
+    booking_created:             (e) => ({ module: 'bookings', reason: `New booking – ${e.payload?.guest_name || 'Guest'}` }),
+    booking_confirmed:           (e) => ({ module: 'bookings', reason: `Booking confirmed – ${e.payload?.guest_name || 'Guest'}` }),
+    booking_updated:             (e) => ({ module: 'bookings', reason: `Booking updated – #${e.payload?.booking_id || ''}` }),
+    booking_checked_in:          (e) => ({ module: 'bookings', reason: `Check-in – ${e.payload?.guest_name || 'Guest'}` }),
+    booking_checked_out:         (e) => ({ module: 'bookings', reason: `Check-out – ${e.payload?.guest_name || 'Guest'}` }),
+    booking_overstay_flagged:    (e) => ({ module: 'bookings', reason: `Overstay flagged – Room ${e.payload?.room_number || ''}` }),
+    booking_payment_required:    (e) => ({ module: 'bookings', reason: `Payment required – ${e.payload?.guest_name || 'Guest'}` }),
+  },
+  room_service: {
+    order_created:        (e) => ({ module: 'room_services', reason: `New order – Room ${e.payload?.room_number || ''}` }),
+    order_status_changed: (e) => ({ module: 'room_services', reason: `Order ${e.payload?.status || 'updated'} – Room ${e.payload?.room_number || ''}` }),
+  },
+  booking: {
+    // restaurant / service bookings — not tracked in first version
+  },
+};
+
+/** Record an overview signal if the event is mapped. */
+function maybeRecordOverviewSignal(event) {
+  const catMap = OVERVIEW_EVENT_MAP[event.category];
+  if (!catMap) return;
+  const builder = catMap[event.type];
+  if (!builder) return;
+  const signal = builder(event);
+  if (signal) overviewSignalsActions.recordSignal(signal);
+}
 
 // Global event deduplication using meta.event_id
 const globalProcessedEventIds = new Set();
@@ -524,6 +558,7 @@ function routeToDomainStores(event) {
           status: event.payload?.status
         });
         roomServiceActions.handleEvent(event);
+        maybeRecordOverviewSignal(event);
         console.log('✅ [EventBus] Room service event sent to store');
         break;
       case "room_booking":
@@ -540,9 +575,11 @@ function routeToDomainStores(event) {
           console.groupEnd();
         }
         roomBookingActions.handleEvent(event);
+        maybeRecordOverviewSignal(event);
         break;
       case "booking":
         serviceBookingActions.handleEvent(event);
+        maybeRecordOverviewSignal(event);
         break;
       case "rooms":
         roomsActions.handleEvent(event);

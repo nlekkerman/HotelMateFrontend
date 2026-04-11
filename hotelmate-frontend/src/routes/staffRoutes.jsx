@@ -59,6 +59,7 @@ import SalesEntry from '@/pages/stock_tracker/SalesEntry';
 import SalesListView from '@/pages/stock_tracker/SalesListView';
 
 import ChatHomePage from '@/pages/chat/ChatHomePage';
+import OverviewPage from '@/pages/staff/OverviewPage';
 
 /**
  * Staff route configs — all require authentication.
@@ -74,6 +75,8 @@ import ChatHomePage from '@/pages/chat/ChatHomePage';
 const staffRoutes = [
   // Staff dashboard / feed
   { path: '/staff/:hotelSlug/feed', element: <Home />, protected: true },
+  // Operations overview — auth-only (RBAC filtering handled inside the page)
+  { path: '/staff/:hotelSlug/overview', element: <OverviewPage />, protected: true },
   { path: '/staff/:hotelSlug/section-editor', element: <SectionEditorPage />, protected: true, mode: 'staff', requiredSlug: 'admin_settings' },
 
   // Reception
