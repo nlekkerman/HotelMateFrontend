@@ -108,8 +108,8 @@ const staffRoutes = [
   { path: '/face/:hotelSlug/register', element: <FaceRegisterPage />, protected: true, mode: 'staff', requiredSlug: 'attendance' },
 
   // Restaurant management
-  { path: '/hotel-:hotelSlug/restaurants', element: <RestaurantManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'room_services' },
-  { path: '/:hotelSlug/:restaurantSlug', element: <RestaurantManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'room_services' },
+  { path: '/hotel-:hotelSlug/restaurants', element: <RestaurantManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'restaurant_bookings' },
+  { path: '/:hotelSlug/:restaurantSlug', element: <RestaurantManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'restaurant_bookings' },
 
   // Rooms
   { path: '/rooms', element: <RoomList />, protected: true, mode: 'staff', requiredSlug: 'rooms' },

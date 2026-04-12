@@ -38,7 +38,7 @@ const PATH_TO_NAV_MAPPING = [
   { match: (p) => p.includes("/room_services"), slug: "room_services" },
   { match: (p) => p.includes("/breakfast"), slug: "room_services" },
   { match: (p) => p.includes("/menus_management"), slug: "room_services" },
-  { match: (p) => p.includes("/restaurants"), slug: "room_services" },
+  { match: (p) => p.includes("/restaurants"), slug: "restaurant_bookings" },
 
   // Maintenance
   { match: (p) => p.startsWith("/maintenance"), slug: "maintenance" },
