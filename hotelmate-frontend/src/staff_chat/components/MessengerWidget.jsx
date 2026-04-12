@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
 import PropTypes from "prop-types";
-import { Dropdown } from "react-bootstrap";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useMessenger } from "../context/MessengerContext";
@@ -342,140 +341,38 @@ const MessengerWidget = ({
           <div
             className="messenger-widget__header"
             onClick={toggleWidget}
-            style={{ cursor: "pointer" }}
+            style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}
           >
-            <div
-              className="messenger-widget__title-row"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                position: "relative",
-              }}
-            >
-              <h3 className="messenger-widget__title" style={{ margin: 0 }}>
-               
-                Staff Chat
-              </h3>
-              {/* Unread Count Badge */}
-              {totalUnreadCount > 0 && (
-                <div className="mx-2 messenger-widget__unread-pill">
-                  <span className="messenger-widget__unread-label">
-                    Unread Conversations
-                  </span>
-                  <span className="messenger-widget__unread-count">
-                    {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              {/* Dropdown Menu - Only show when expanded */}
-              {isExpanded && (
-                <Dropdown onClick={(e) => e.stopPropagation()}>
-                  <Dropdown.Toggle
-                    variant="link"
-                    className="p-0 border-0 text-white"
-                    style={{
-                      boxShadow: "none",
-                      background: "transparent",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "28px",
-                      height: "28px",
-                      borderRadius: "50%",
-                      transition: "background 0.2s",
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background =
-                        "rgba(255, 255, 255, 0.2)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "transparent")
-                    }
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="5" r="2" fill="currentColor" />
-                      <circle cx="12" cy="12" r="2" fill="currentColor" />
-                      <circle cx="12" cy="19" r="2" fill="currentColor" />
-                    </svg>
-                  </Dropdown.Toggle>
-
-                  <Dropdown.Menu
-                    align="end"
-                    className="shadow-sm"
-                    style={{ minWidth: "180px" }}
-                  >
-                    <Dropdown.Item
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenGroupModal();
-                      }}
-                      className="d-flex align-items-center gap-2"
-                    >
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <path
-                          d="M17 11a1 1 0 0 1 0 2h-4v4a1 1 0 0 1-2 0v-4H7a1 1 0 0 1 0-2h4V7a1 1 0 0 1 2 0v4h4z"
-                          fill="currentColor"
-                        />
-                        <path
-                          d="M9 2C7.34315 2 6 3.34315 6 5C6 6.65685 7.34315 8 9 8C10.6569 8 12 6.65685 12 5C12 3.34315 10.6569 2 9 2Z"
-                          fill="currentColor"
-                        />
-                        <path
-                          d="M15 4C15 2.89543 15.8954 2 17 2C18.1046 2 19 2.89543 19 4C19 5.10457 18.1046 6 17 6C15.8954 6 15 5.10457 15 4Z"
-                          fill="currentColor"
-                        />
-                        <path
-                          d="M6 10.5C4.067 10.5 2.5 12.067 2.5 14V15.5C2.5 16.8807 3.61929 18 5 18H9.17071C8.42384 17.0534 8 15.8801 8 14.6V14C8 12.067 9.567 10.5 11.5 10.5H6Z"
-                          fill="currentColor"
-                        />
-                        <path
-                          d="M17.8293 18H22C23.3807 18 24.5 16.8807 24.5 15.5V14C24.5 12.067 22.933 10.5 21 10.5H15.5C14.5 10.5 13.6 10.9 13 11.5"
-                          fill="currentColor"
-                        />
-                      </svg>
-                      <span>Create Group</span>
-                    </Dropdown.Item>
-                  </Dropdown.Menu>
-                </Dropdown>
-              )}
-
-              {/* Toggle Button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleWidget();
+            {/* Chat Icon */}
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ color: "white" }}>
+              <path
+                d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z"
+                fill="currentColor"
+              />
+            </svg>
+            {/* Unread Count Badge */}
+            {totalUnreadCount > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: "4px",
+                  right: "4px",
+                  background: "#ff3b30",
+                  color: "white",
+                  borderRadius: "50%",
+                  width: "20px",
+                  height: "20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "11px",
+                  fontWeight: "bold",
+                  lineHeight: 1,
                 }}
-                className="messenger-widget__toggle"
-                aria-label={isExpanded ? "Close" : "Open"}
               >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  {isExpanded ? (
-                    <path
-                      d="M15 12L10 7L5 12"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  ) : (
-                    <path
-                      d="M5 8L10 13L15 8"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  )}
-                </svg>
-              </button>
-            </div>
+                {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
+              </span>
+            )}
           </div>
 
           {/* Conversations List - Only visible when expanded */}
