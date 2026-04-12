@@ -8,7 +8,7 @@ import React, { createContext, useContext, useReducer, useRef, useEffect } from 
 // Only these canonical RBAC slugs participate in the landing decision.
 // ---------------------------------------------------------------------------
 export const OVERVIEW_MODULES = [
-  'bookings',       // room bookings
+  'room_bookings',  // room bookings
   'room_services',  // room service orders
   'housekeeping',   // housekeeping tasks
 ];

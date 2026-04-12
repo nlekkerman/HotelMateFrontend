@@ -16,13 +16,13 @@ import { overviewSignalsActions } from './stores/overviewSignalsStore.jsx';
 // ---------------------------------------------------------------------------
 const OVERVIEW_EVENT_MAP = {
   room_booking: {
-    booking_created:             (e) => ({ module: 'bookings', reason: `New booking – ${e.payload?.guest_name || 'Guest'}` }),
-    booking_confirmed:           (e) => ({ module: 'bookings', reason: `Booking confirmed – ${e.payload?.guest_name || 'Guest'}` }),
-    booking_updated:             (e) => ({ module: 'bookings', reason: `Booking updated – #${e.payload?.booking_id || ''}` }),
-    booking_checked_in:          (e) => ({ module: 'bookings', reason: `Check-in – ${e.payload?.guest_name || 'Guest'}` }),
-    booking_checked_out:         (e) => ({ module: 'bookings', reason: `Check-out – ${e.payload?.guest_name || 'Guest'}` }),
-    booking_overstay_flagged:    (e) => ({ module: 'bookings', reason: `Overstay flagged – Room ${e.payload?.room_number || ''}` }),
-    booking_payment_required:    (e) => ({ module: 'bookings', reason: `Payment required – ${e.payload?.guest_name || 'Guest'}` }),
+    booking_created:             (e) => ({ module: 'room_bookings', reason: `New booking – ${e.payload?.guest_name || 'Guest'}` }),
+    booking_confirmed:           (e) => ({ module: 'room_bookings', reason: `Booking confirmed – ${e.payload?.guest_name || 'Guest'}` }),
+    booking_updated:             (e) => ({ module: 'room_bookings', reason: `Booking updated – #${e.payload?.booking_id || ''}` }),
+    booking_checked_in:          (e) => ({ module: 'room_bookings', reason: `Check-in – ${e.payload?.guest_name || 'Guest'}` }),
+    booking_checked_out:         (e) => ({ module: 'room_bookings', reason: `Check-out – ${e.payload?.guest_name || 'Guest'}` }),
+    booking_overstay_flagged:    (e) => ({ module: 'room_bookings', reason: `Overstay flagged – Room ${e.payload?.room_number || ''}` }),
+    booking_payment_required:    (e) => ({ module: 'room_bookings', reason: `Payment required – ${e.payload?.guest_name || 'Guest'}` }),
   },
   room_service: {
     order_created:        (e) => ({ module: 'room_services', reason: `New order – Room ${e.payload?.room_number || ''}` }),

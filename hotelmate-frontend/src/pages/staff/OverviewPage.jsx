@@ -18,7 +18,7 @@ import { useRoomServiceState } from '@/realtime/stores/roomServiceStore';
 // Module card config — maps RBAC slug → label, icon, path template, live data
 // ---------------------------------------------------------------------------
 const MODULE_CONFIG = {
-  bookings: {
+  room_bookings: {
     label: 'Room Bookings',
     icon: 'bi-bed',
     pathTemplate: '/staff/hotel/{hotelSlug}/room-bookings',
@@ -123,7 +123,7 @@ export default function OverviewPage() {
 
   // Build live counts per module from existing store state
   const liveCounts = useMemo(() => ({
-    bookings: roomBookingState?.list?.length ?? null,
+    room_bookings: roomBookingState?.list?.length ?? null,
     room_services: roomServiceState?.pendingOrders?.length ?? null,
     housekeeping: null, // housekeeping counts are UI-driven, not in realtime store
   }), [roomBookingState, roomServiceState]);
