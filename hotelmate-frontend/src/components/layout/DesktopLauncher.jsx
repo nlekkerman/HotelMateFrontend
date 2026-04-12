@@ -1,7 +1,7 @@
 // src/components/layout/DesktopLauncher.jsx
-// Compact desktop-only navigation launcher for staff area.
-// Closed: small fixed pill at top-left. Open: popover panel with RBAC-filtered items.
-// Does NOT render on mobile — NavbarWrapper handles display switching.
+// Desktop-only horizontal dock launcher for staff area.
+// Closed: small tab/bookmark at top-center. Open: wide horizontal dashboard bar.
+// Does NOT render on mobile.
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useDesktopNav } from '@/hooks/useDesktopNav';
@@ -11,8 +11,8 @@ import './DesktopLauncher.css';
 
 export default function DesktopLauncher() {
   const [open, setOpen] = useState(false);
-  const panelRef = useRef(null);
-  const triggerRef = useRef(null);
+  const barRef = useRef(null);
+  const tabRef = useRef(null);
   const location = useLocation();
   const { items } = useDesktopNav();
   const { mainColor } = useTheme();
@@ -23,8 +23,8 @@ export default function DesktopLauncher() {
     if (!open) return;
     function onClickOutside(e) {
       if (
-        panelRef.current && !panelRef.current.contains(e.target) &&
-        triggerRef.current && !triggerRef.current.contains(e.target)
+        barRef.current && !barRef.current.contains(e.target) &&
+        tabRef.current && !tabRef.current.contains(e.target)
       ) {
         setOpen(false);
       }
@@ -52,7 +52,6 @@ export default function DesktopLauncher() {
 
   const isActive = (path) => {
     if (path === '/') return location.pathname === '/';
-    // Strip query params from path for comparison
     const cleanPath = path.split('?')[0];
     return location.pathname.startsWith(cleanPath);
   };
@@ -61,60 +60,54 @@ export default function DesktopLauncher() {
 
   return (
     <div className="desktop-launcher-root d-none d-lg-block">
-      {/* Trigger pill */}
+      {/* Collapsed tab — like a folder bookmark */}
       <button
-        ref={triggerRef}
-        className={`desktop-launcher-trigger ${open ? 'open' : ''}`}
+        ref={tabRef}
+        className={`dl-tab ${open ? 'dl-tab--open' : ''}`}
         onClick={toggle}
         aria-expanded={open}
         aria-haspopup="true"
-        aria-label="Open navigation"
+        aria-label={open ? 'Close navigation' : 'Open navigation'}
         style={{ '--dl-accent': accentColor }}
       >
-        <i className={`bi ${open ? 'bi-x-lg' : 'bi-grid-3x3-gap'}`} />
-        <span className="dl-trigger-label">Menu</span>
+        <i className={`bi ${open ? 'bi-chevron-up' : 'bi-grid-3x3-gap-fill'}`} />
       </button>
 
-      {/* Panel */}
+      {/* Expanded horizontal dock */}
       {open && (
         <nav
-          ref={panelRef}
-          className="desktop-launcher-panel"
+          ref={barRef}
+          className="dl-dock"
           role="navigation"
           aria-label="Staff navigation"
           style={{ '--dl-accent': accentColor }}
         >
-          {/* User brief */}
-          {user && (
-            <div className="dl-user-brief">
-              <span className="dl-user-name">{user.username || 'Staff'}</span>
+          {/* Nav items — horizontal row */}
+          <div className="dl-dock-items">
+            {items.map((item) => (
+              <Link
+                key={item.slug}
+                to={item.path}
+                className={`dl-dock-item ${isActive(item.path) ? 'dl-dock-item--active' : ''}`}
+                title={item.name}
+              >
+                <i className={item.icon} />
+                <span className="dl-dock-label">{item.name}</span>
+              </Link>
+            ))}
+
+            {/* Logout */}
+            {user && (
               <button
-                className="dl-logout-btn"
+                className="dl-dock-item dl-dock-item--logout"
                 onClick={() => { setOpen(false); logout(); }}
                 title="Logout"
               >
                 <i className="bi bi-box-arrow-right" />
+                <span className="dl-dock-label">Logout</span>
               </button>
-            </div>
-          )}
-
-          <div className="dl-divider" />
-
-          {/* Nav items */}
-          <ul className="dl-items">
-            {items.map((item) => (
-              <li key={item.slug}>
-                <Link
-                  to={item.path}
-                  className={`dl-item ${isActive(item.path) ? 'active' : ''}`}
-                  title={item.name}
-                >
-                  <i className={item.icon} />
-                  <span className="dl-item-label">{item.name}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+            )}
+          </div>
 
           {items.length === 0 && (
             <p className="dl-empty">No modules available.</p>

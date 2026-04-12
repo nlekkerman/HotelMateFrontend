@@ -1,165 +1,187 @@
 /* src/components/layout/DesktopLauncher.css */
-/* Compact desktop-only launcher — pill trigger + popover panel. */
+/* Desktop-only horizontal dock — folder-tab trigger + wide bar with big icons. */
 
-/* ---- Root ---- */
+/* ================================================================
+   ROOT — anchors both the tab and the dock
+   ================================================================ */
 .desktop-launcher-root {
   position: fixed;
-  top: 12px;
-  left: 12px;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 1100;
   font-family: inherit;
 }
 
-/* ---- Trigger pill ---- */
-.desktop-launcher-trigger {
-  display: inline-flex;
+/* ================================================================
+   COLLAPSED TAB — small bookmark / folder-tab handle
+   ================================================================ */
+.dl-tab {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
+  justify-content: center;
+  width: 44px;
+  height: 28px;
+  margin: 0 auto;
   border: none;
-  border-radius: 20px;
+  border-radius: 0 0 10px 10px;
   background: var(--dl-accent, #0d6efd);
   color: #fff;
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: 1rem;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
-  white-space: nowrap;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  transition: height 0.15s, width 0.15s, background 0.15s, border-radius 0.15s;
 }
-.desktop-launcher-trigger:hover {
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-  transform: translateY(-1px);
+.dl-tab:hover {
+  height: 32px;
+  width: 52px;
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.3);
 }
-.desktop-launcher-trigger:focus-visible {
+.dl-tab:focus-visible {
   outline: 2px solid var(--dl-accent, #0d6efd);
   outline-offset: 2px;
 }
-.desktop-launcher-trigger.open {
-  background: rgba(0, 0, 0, 0.7);
+.dl-tab--open {
+  background: rgba(30, 30, 30, 0.95);
+  width: 52px;
+  height: 26px;
+  border-radius: 0 0 8px 8px;
 }
-.desktop-launcher-trigger i {
-  font-size: 1rem;
+.dl-tab--open:hover {
+  width: 56px;
+  height: 30px;
 }
 
-/* ---- Panel ---- */
-.desktop-launcher-panel {
+/* ================================================================
+   EXPANDED DOCK — horizontal bar, wider than tall
+   ================================================================ */
+.dl-dock {
   position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  width: 230px;
-  max-height: calc(100vh - 80px);
-  overflow-y: auto;
-  background: rgba(20, 20, 20, 0.96);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 10px 0;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-  animation: dlSlideIn 0.12s ease-out;
-}
-
-@keyframes dlSlideIn {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ---- User brief ---- */
-.dl-user-brief {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 14px;
-}
-.dl-user-name {
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 0.78rem;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  top: 28px;               /* just below tab */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(18, 18, 18, 0.97);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  padding: 14px 20px 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  animation: dlDrop 0.15s ease-out;
   white-space: nowrap;
+  max-width: calc(100vw - 40px);
 }
-.dl-logout-btn {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.5);
+
+@keyframes dlDrop {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ================================================================
+   DOCK ITEMS — horizontal flex row
+   ================================================================ */
+.dl-dock-items {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.dl-dock-items::-webkit-scrollbar {
+  display: none;
+}
+
+/* ================================================================
+   SINGLE DOCK ITEM — icon on top, label below, generous padding
+   ================================================================ */
+.dl-dock-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 68px;
+  padding: 10px 10px 8px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s, transform 0.1s;
   cursor: pointer;
-  padding: 2px 4px;
-  font-size: 0.85rem;
-  border-radius: 4px;
-  transition: color 0.15s, background 0.15s;
+  border: none;
+  background: transparent;
+  font-family: inherit;
 }
-.dl-logout-btn:hover {
-  color: #ef4444;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-/* ---- Divider ---- */
-.dl-divider {
-  height: 1px;
-  margin: 4px 12px 6px;
+.dl-dock-item:hover {
   background: rgba(255, 255, 255, 0.08);
-}
-
-/* ---- Items list ---- */
-.dl-items {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-/* ---- Single item ---- */
-.dl-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 14px;
-  color: rgba(255, 255, 255, 0.75);
-  text-decoration: none;
-  font-size: 0.82rem;
-  transition: background 0.12s, color 0.12s;
-  border-left: 3px solid transparent;
-}
-.dl-item:hover {
-  background: rgba(255, 255, 255, 0.06);
   color: #fff;
   text-decoration: none;
+  transform: translateY(-2px);
 }
-.dl-item.active {
+.dl-dock-item:focus-visible {
+  outline: 2px solid var(--dl-accent, #0d6efd);
+  outline-offset: -2px;
+  border-radius: 10px;
+}
+
+/* Active item */
+.dl-dock-item--active {
   color: #fff;
-  background: rgba(255, 255, 255, 0.08);
-  border-left-color: var(--dl-accent, #0d6efd);
+  background: rgba(255, 255, 255, 0.1);
 }
-.dl-item i {
-  font-size: 1rem;
-  width: 20px;
-  text-align: center;
-  flex-shrink: 0;
+.dl-dock-item--active::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--dl-accent, #0d6efd);
 }
-.dl-item-label {
+.dl-dock-item--active {
+  position: relative;
+}
+
+/* Icon */
+.dl-dock-item i {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+/* Label */
+.dl-dock-label {
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  max-width: 72px;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  text-align: center;
 }
 
-/* ---- Empty ---- */
+/* Logout variant — dimmer, right edge */
+.dl-dock-item--logout {
+  color: rgba(255, 255, 255, 0.35);
+  margin-left: 4px;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0 10px 10px 0;
+  padding-left: 14px;
+}
+.dl-dock-item--logout:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* ================================================================
+   EMPTY STATE
+   ================================================================ */
 .dl-empty {
-  padding: 16px 14px;
+  padding: 12px 20px;
   color: rgba(255, 255, 255, 0.35);
   font-size: 0.8rem;
   text-align: center;
   margin: 0;
-}
-
-/* ---- Scrollbar ---- */
-.desktop-launcher-panel::-webkit-scrollbar {
-  width: 4px;
-}
-.desktop-launcher-panel::-webkit-scrollbar-track {
-  background: transparent;
-}
-.desktop-launcher-panel::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
 }
