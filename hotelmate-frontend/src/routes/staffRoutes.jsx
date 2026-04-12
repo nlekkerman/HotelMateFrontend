@@ -109,7 +109,7 @@ const staffRoutes = [
 
   // Restaurant management
   { path: '/hotel-:hotelSlug/restaurants', element: <RestaurantManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'restaurant_bookings' },
-  { path: '/:hotelSlug/:restaurantSlug', element: <RestaurantManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'restaurant_bookings' },
+  { path: '/hotel-:hotelSlug/restaurants/:restaurantSlug', element: <RestaurantManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'restaurant_bookings' },
 
   // Rooms
   { path: '/rooms', element: <RoomList />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
