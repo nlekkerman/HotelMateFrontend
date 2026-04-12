@@ -7,8 +7,7 @@
 .desktop-launcher-root {
   position: fixed;
   top: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 24px;
   z-index: 1100;
   font-family: inherit;
 }
@@ -20,21 +19,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
+  gap: 6px;
+  width: 72px;
   height: 28px;
-  margin: 0 auto;
+  margin: 0 0 0 auto;
   border: none;
   border-radius: 0 0 10px 10px;
   background: var(--dl-accent, #0d6efd);
   color: #fff;
-  font-size: 1rem;
+  font-size: 0.95rem;
   cursor: pointer;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
   transition: height 0.15s, width 0.15s, background 0.15s, border-radius 0.15s;
 }
 .dl-tab:hover {
   height: 32px;
-  width: 52px;
+  width: 82px;
   box-shadow: 0 5px 16px rgba(0, 0, 0, 0.3);
 }
 .dl-tab:focus-visible {
@@ -43,12 +43,12 @@
 }
 .dl-tab--open {
   background: rgba(30, 30, 30, 0.95);
-  width: 52px;
+  width: 72px;
   height: 26px;
   border-radius: 0 0 8px 8px;
 }
 .dl-tab--open:hover {
-  width: 56px;
+  width: 82px;
   height: 30px;
 }
 
@@ -58,8 +58,7 @@
 .dl-dock {
   position: absolute;
   top: 28px;               /* just below tab */
-  left: 50%;
-  transform: translateX(-50%);
+  right: 0;
   background: rgba(18, 18, 18, 0.97);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -74,22 +73,17 @@
 }
 
 @keyframes dlDrop {
-  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ================================================================
    DOCK ITEMS — horizontal flex row
    ================================================================ */
 .dl-dock-items {
-  display: flex;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
   gap: 4px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.dl-dock-items::-webkit-scrollbar {
-  display: none;
 }
 
 /* ================================================================
