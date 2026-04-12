@@ -3,7 +3,7 @@
 // Closed: small tab/bookmark at top-center. Open: wide horizontal dashboard bar.
 // Does NOT render on mobile.
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDesktopNav } from '@/hooks/useDesktopNav';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
@@ -17,6 +17,8 @@ export default function DesktopLauncher() {
   const { items } = useDesktopNav();
   const { mainColor } = useTheme();
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const hotelIdentifier = user?.hotel_slug;
 
   // Close on outside click
   useEffect(() => {
@@ -95,6 +97,42 @@ export default function DesktopLauncher() {
                 <span className="dl-dock-label">{item.name}</span>
               </Link>
             ))}
+
+            {/* Clock In */}
+            {user && hotelIdentifier && (
+              <button
+                className="dl-dock-item"
+                onClick={() => { setOpen(false); navigate(`/face/${hotelIdentifier}/clock-in`); }}
+                title="Clock In"
+              >
+                <i className="bi bi-clock" />
+                <span className="dl-dock-label">Clock</span>
+              </button>
+            )}
+
+            {/* Public Page */}
+            {hotelIdentifier && (
+              <Link
+                className={`dl-dock-item ${isActive(`/hotel/${hotelIdentifier}`) ? 'dl-dock-item--active' : ''}`}
+                to={`/hotel/${hotelIdentifier}`}
+                title="Public Page"
+              >
+                <i className="bi bi-globe" />
+                <span className="dl-dock-label">Public Page</span>
+              </Link>
+            )}
+
+            {/* Super User */}
+            {user?.is_superuser && (
+              <button
+                className={`dl-dock-item ${isActive('/super-user') ? 'dl-dock-item--active' : ''}`}
+                onClick={() => { setOpen(false); navigate('/super-user'); }}
+                title="Super User Admin Panel"
+              >
+                <i className="bi bi-shield-lock" />
+                <span className="dl-dock-label">Super User</span>
+              </button>
+            )}
 
             {/* Logout */}
             {user && (
