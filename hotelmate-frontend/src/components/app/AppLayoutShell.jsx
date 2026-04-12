@@ -3,7 +3,7 @@ import { useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { getLayoutMode } from '@/policy/layoutPolicy';
 import MobileNavbar from '@/components/layout/MobileNavbar';
-import BigScreenNavbar from '@/components/layout/BigScreenNavbar';
+import DesktopLauncher from '@/components/layout/DesktopLauncher';
 import LogoBanner from '@/components/layout/LogoBanner';
 import AppRouter from './AppRouter';
 import Register from '@/components/auth/Register';
@@ -41,9 +41,7 @@ export default function AppLayoutShell({ collapsed, setCollapsed, isMobile }) {
   })();
 
   const sidebar = !isMobile && !hideNavigation && (
-    <div className={`sidebar-wrapper ${collapsed ? 'collapsed' : ''}`}>
-      <BigScreenNavbar collapsed={collapsed} setCollapsed={setCollapsed} />
-    </div>
+    <DesktopLauncher />
   );
 
   const layoutClass = `vw-100 ${collapsed ? 'collapsed' : 'expanded'} ${isMobile ? 'mt-0' : ''}`;

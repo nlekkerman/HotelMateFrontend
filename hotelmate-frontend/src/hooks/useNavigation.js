@@ -11,7 +11,7 @@ export const DEFAULT_NAV_ITEMS = [
   { slug: 'chat', name: 'Chat', path: '/hotel/{hotelSlug}/chat', icon: 'chat-dots' },
   { slug: 'rooms', name: 'Rooms', path: '/rooms', icon: 'door-closed' },
   { slug: 'housekeeping', name: 'Housekeeping', path: '/staff/hotel/{hotelSlug}/housekeeping', icon: 'house-gear' },
-  { slug: 'bookings', name: 'Bookings', path: '/staff/hotel/{hotelSlug}/room-bookings', icon: 'bed', hasDropdown: true },
+  { slug: 'room_bookings', name: 'Room Bookings', path: '/staff/hotel/{hotelSlug}/room-bookings', icon: 'calendar-check', hasDropdown: true },
   { slug: 'staff_management', name: 'Staff', path: '/{hotelSlug}/staff', icon: 'person-badge' },
   { slug: 'attendance', name: 'Attendance', path: '/attendance/{hotelSlug}', icon: 'clock-history' },
   { slug: 'room_services', name: 'Room Service', path: '/room_services/{hotelSlug}/orders-management', icon: 'box' },

@@ -1,0 +1,165 @@
+/* src/components/layout/DesktopLauncher.css */
+/* Compact desktop-only launcher — pill trigger + popover panel. */
+
+/* ---- Root ---- */
+.desktop-launcher-root {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1100;
+  font-family: inherit;
+}
+
+/* ---- Trigger pill ---- */
+.desktop-launcher-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 20px;
+  background: var(--dl-accent, #0d6efd);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.desktop-launcher-trigger:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  transform: translateY(-1px);
+}
+.desktop-launcher-trigger:focus-visible {
+  outline: 2px solid var(--dl-accent, #0d6efd);
+  outline-offset: 2px;
+}
+.desktop-launcher-trigger.open {
+  background: rgba(0, 0, 0, 0.7);
+}
+.desktop-launcher-trigger i {
+  font-size: 1rem;
+}
+
+/* ---- Panel ---- */
+.desktop-launcher-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 230px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  background: rgba(20, 20, 20, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  animation: dlSlideIn 0.12s ease-out;
+}
+
+@keyframes dlSlideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- User brief ---- */
+.dl-user-brief {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px;
+}
+.dl-user-name {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.78rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dl-logout-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 0.85rem;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+.dl-logout-btn:hover {
+  color: #ef4444;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ---- Divider ---- */
+.dl-divider {
+  height: 1px;
+  margin: 4px 12px 6px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ---- Items list ---- */
+.dl-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---- Single item ---- */
+.dl-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+  font-size: 0.82rem;
+  transition: background 0.12s, color 0.12s;
+  border-left: 3px solid transparent;
+}
+.dl-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  text-decoration: none;
+}
+.dl-item.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-left-color: var(--dl-accent, #0d6efd);
+}
+.dl-item i {
+  font-size: 1rem;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.dl-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Empty ---- */
+.dl-empty {
+  padding: 16px 14px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.8rem;
+  text-align: center;
+  margin: 0;
+}
+
+/* ---- Scrollbar ---- */
+.desktop-launcher-panel::-webkit-scrollbar {
+  width: 4px;
+}
+.desktop-launcher-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.desktop-launcher-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}

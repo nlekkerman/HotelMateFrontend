@@ -130,10 +130,10 @@ const staffRoutes = [
   { path: '/:hotelIdentifier/guests', element: <GuestList />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
   { path: '/:hotelIdentifier/guests/:guestId/edit', element: <GuestEdit />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
 
-  // Bookings
-  { path: '/bookings', element: <Bookings />, protected: true, mode: 'staff', requiredSlug: 'bookings' },
-  { path: '/staff/hotel/:hotelSlug/room-bookings', element: <BookingManagementPage />, protected: true, mode: 'staff', requiredSlug: 'bookings' },
-  { path: '/staff/hotel/:hotelSlug/booking-management', element: <BookingManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'bookings' },
+  // Room Bookings (canonical RBAC slug: room_bookings)
+  { path: '/bookings', element: <Bookings />, protected: true, mode: 'staff', requiredSlug: 'room_bookings' },
+  { path: '/staff/hotel/:hotelSlug/room-bookings', element: <BookingManagementPage />, protected: true, mode: 'staff', requiredSlug: 'room_bookings' },
+  { path: '/staff/hotel/:hotelSlug/booking-management', element: <BookingManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'room_bookings' },
 
   // Housekeeping
   { path: '/staff/hotel/:hotelSlug/housekeeping', element: <HousekeepingRooms />, protected: true, mode: 'staff', requiredSlug: 'housekeeping' },

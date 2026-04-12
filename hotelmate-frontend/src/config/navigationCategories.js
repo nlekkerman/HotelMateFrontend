@@ -41,7 +41,8 @@ export const NAVIGATION_CATEGORIES = [
 export const NAV_ITEM_CATEGORY_MAP = {
   // Front Office
   'rooms': 'front-office',
-  'bookings': 'front-office',
+  'room_bookings': 'front-office',
+  'restaurant_bookings': 'front-office',
   'chat': 'front-office',
   'housekeeping': 'front-office',
 
@@ -91,9 +92,10 @@ export const isInCategory = (slug, categoryId) => {
 export const SUBCATEGORIES = {
   'front-office': [
     { slug: 'rooms', name: 'Rooms', order: 1 },
-    { slug: 'bookings', name: 'Bookings', order: 2 },
-    { slug: 'chat', name: 'Guest Chat', order: 3 },
-    { slug: 'housekeeping', name: 'Housekeeping', order: 4 },
+    { slug: 'room_bookings', name: 'Room Bookings', order: 2 },
+    { slug: 'restaurant_bookings', name: 'Restaurant Bookings', order: 3 },
+    { slug: 'chat', name: 'Guest Chat', order: 4 },
+    { slug: 'housekeeping', name: 'Housekeeping', order: 5 },
   ],
   'fnb': [
     { slug: 'room_services', name: 'Room Services', order: 1 },
