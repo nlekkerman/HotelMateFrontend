@@ -16,8 +16,8 @@ const PATH_TO_NAV_MAPPING = [
   { match: (p) => p.includes("/guests"), slug: "rooms" },
 
   // Bookings
-  { match: (p) => p.startsWith("/bookings"), slug: "bookings" },
-  { match: (p) => p.includes("/room-bookings") || p.includes("/booking-management"), slug: "bookings" },
+  { match: (p) => p.startsWith("/bookings"), slug: "room_bookings" },
+  { match: (p) => p.includes("/room-bookings") || p.includes("/booking-management"), slug: "room_bookings" },
 
   // Housekeeping
   { match: (p) => p.includes("/housekeeping"), slug: "housekeeping" },
