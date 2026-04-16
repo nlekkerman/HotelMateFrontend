@@ -22,7 +22,7 @@ function StaffDetails() {
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
   const { hotelSlug, id } = useParams();
-  const { canAccess, isAdmin } = usePermissions();
+  const { canAccess, isAdmin, isSuperStaffAdmin, hasNavAccess } = usePermissions();
   const queryClient = useQueryClient();
   const { departments, roles, accessLevels, refetch: refetchMetadata } = useStaffMetadata(hotelSlug);
   const [newDeptName, setNewDeptName] = useState('');
@@ -514,20 +514,20 @@ function StaffDetails() {
         />
       </div>
 
-      {/* Navigation Permissions Section - Super Admin Only */}
-      {canAccess(['super_staff_admin']) && (
+      {/* Navigation Permissions Section */}
+      {(isSuperStaffAdmin || hasNavAccess('staff_management')) && (
         <div className="mt-5">
           <hr className="mb-4" />
           <button 
             className="btn btn-outline-primary mb-3"
             onClick={() => setShowPermissions(!showPermissions)}
           >
-            <i className={`bi bi-${showPermissions ? 'eye-slash' : 'key'} me-2`}></i>
-            {showPermissions ? 'Hide' : 'Manage'} Navigation Permissions
+            <i className={`bi bi-${showPermissions ? 'eye-slash' : 'shield-lock'} me-2`}></i>
+            {showPermissions ? 'Hide' : 'Show'} Navigation Access
           </button>
           
           {showPermissions && (
-            <NavigationPermissionManager staffId={id} />
+            <NavigationPermissionManager staffId={id} hotelSlug={hotelSlug} />
           )}
         </div>
       )}
