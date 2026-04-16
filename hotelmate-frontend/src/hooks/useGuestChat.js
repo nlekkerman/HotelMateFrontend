@@ -461,7 +461,6 @@ export const useGuestChat = ({ hotelSlug, token }) => {
       });
     } catch (err) {
       console.error('[useGuestChat] Sync error:', err);
-      chatDbg.logSyncError('guest', err);
     }
   }, [hotelSlug, chatSession, conversationId, guestChatDispatch]);
 
@@ -490,8 +489,6 @@ export const useGuestChat = ({ hotelSlug, token }) => {
           reply_to: replyTo,
         },
       ]);
-      chatDbg.logOptimisticAdd(clientMessageId, message);
-      chatDbg.logApiSend(clientMessageId);
       // Return context so onError can access clientMessageId
       return { clientMessageId };
     },
@@ -508,8 +505,6 @@ export const useGuestChat = ({ hotelSlug, token }) => {
           return sortMessages([...prev, { ...confirmedMsg, status: 'delivered' }]);
         });
         if (confirmedMsg.id) processedMessageIds.current.add(confirmedMsg.id);
-        chatDbg.logApiSendSuccess(clientMessageId, confirmedMsg.id);
-        chatDbg.logOptimisticReconcile(clientMessageId, confirmedMsg.id);
       }
 
       // Now safe to remove from sendingMessages
@@ -517,7 +512,6 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     },
     onError: (error, _vars, ctx) => {
       console.error('[useGuestChat] Send error:', error);
-      chatDbg.logApiSendError(ctx?.clientMessageId, error);
       setSendingMessages((prev) =>
         prev.map((m) =>
           m.client_message_id === ctx?.clientMessageId ? { ...m, status: 'failed' } : m
