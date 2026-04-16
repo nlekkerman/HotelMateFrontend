@@ -77,7 +77,6 @@ const BookingList = ({ hotelSlug }) => {
           };
         }
       );
-      logCacheUpdated('staff-room-bookings', { bookingId, summary: `${bookingId} status: -> CONFIRMED, is_new_for_staff: -> false` });
       toast.success('Booking approved, payment captured.');
     },
     onError: (error) => {
@@ -119,7 +118,6 @@ const BookingList = ({ hotelSlug }) => {
           };
         }
       );
-      logCacheUpdated('staff-room-bookings', { bookingId, summary: `${bookingId} status: -> CANCELLED, is_new_for_staff: -> false` });
       toast.success('Booking declined, authorization released.');
     },
     onError: (error) => {
@@ -148,7 +146,6 @@ const BookingList = ({ hotelSlug }) => {
           };
         }
       );
-      logCacheUpdated('staff-room-bookings', { bookingId, summary: `${bookingId} is_new_for_staff: -> false (precheckin)` });
       
       const result = await sendPrecheckinMutation.mutateAsync(bookingId);
       const sentTo = result.sent_to || 'guest';
