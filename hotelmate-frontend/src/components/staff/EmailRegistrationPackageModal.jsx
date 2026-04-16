@@ -20,7 +20,7 @@ export default function EmailRegistrationPackageModal({
 
     try {
       await emailRegistrationPackage(pkg.id, {
-        recipient_email: email,
+        email: email,
         message: message || undefined,
       });
       setSuccess(true);
