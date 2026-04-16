@@ -11,8 +11,6 @@ export default function AttendanceStatusBadge({ status, staffId, enhancedStatus 
       
       // Update if this is for the current staff member
       if (staffId && staff_id === staffId) {
-        console.log(`[AttendanceStatusBadge] Updating status for staff ${staffId}:`, action);
-        
         // Add visual feedback for the update
         const badgeElement = document.getElementById(`staff-${staffId}-status`);
         if (badgeElement) {
@@ -39,13 +37,9 @@ export default function AttendanceStatusBadge({ status, staffId, enhancedStatus 
     const handleFaceClockAction = (event) => {
       const { action, data } = event.detail || {};
       
-      console.log(`[AttendanceStatusBadge] Face clock action detected:`, { action, data });
-      
       // If this affects the current staff (face actions usually affect the acting user)
       // We could potentially identify by comparing user data, but for now, refresh all badges
       if (data && (data.staff_id === staffId || data.user_id === staffId)) {
-        console.log(`[AttendanceStatusBadge] Refreshing status for face action`);
-        
         // Add visual feedback
         const badgeElement = document.getElementById(`staff-${staffId}-status`);
         if (badgeElement) {
@@ -66,10 +60,8 @@ export default function AttendanceStatusBadge({ status, staffId, enhancedStatus 
 
     const handleBroadcastStatusUpdate = (event) => {
       const { staffId: eventStaffId, currentStatus, action } = event.detail;
-      console.log(`[AttendanceStatusBadge] Broadcast status update:`, event.detail);
       
       if (eventStaffId === staffId) {
-        console.log(`[AttendanceStatusBadge] Updating badge for staff ${staffId}`);
         
         // Add visual feedback
         const badgeElement = document.getElementById(`staff-${staffId}-status`);

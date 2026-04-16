@@ -24,7 +24,6 @@ const BookingDetailsCheckinSection = ({
             <Button
               variant="warning"
               onClick={() => {
-                console.log('Assign Room First clicked, setting showRoomAssignment to true');
                 onShowRoomAssignment();
               }}
             >

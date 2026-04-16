@@ -61,16 +61,6 @@ function maybeCleanupEventIds() {
 
 function logBookingEvent(event) {
   if (!DEBUG_REALTIME || event.category !== 'room_booking') return;
-  
-  console.group('🏨 [BOOKING DEBUG]');
-  console.log('Event Type:', event.type);
-  console.log('Event ID:', event.meta?.event_id);
-  console.log('Booking ID:', event.payload?.booking_id);
-  console.log('Status:', event.payload?.status);
-  console.log('Guest Name:', event.payload?.guest_name);
-  console.log('Channel:', event.source);
-  console.log('Timestamp:', event.meta?.ts);
-  console.groupEnd();
 }
 
 /**
@@ -79,15 +69,9 @@ function logBookingEvent(event) {
  * @returns {Object|null} Normalized event or null if unhandled
  */
 function normalizeFcmEvent(fcmPayload) {
-  console.log('🔥 [FCM] normalizeFcmEvent called with payload:', JSON.stringify(fcmPayload, null, 2));
-  
   const data = fcmPayload?.data || {};
-  console.log('🔥 [FCM] Extracted data:', data);
-  console.log('🔥 [FCM] Data type:', data.type);
   
   if (data.type === "staff_chat_message") {
-    console.log('🔥 [FCM] Normalizing staff_chat_message:', data);
-    
     try {
       const normalized = {
         category: "staff_chat",
@@ -107,7 +91,6 @@ function normalizeFcmEvent(fcmPayload) {
           ts: new Date().toISOString()
         }
       };
-      console.log('🔥 [FCM] Normalized staff_chat_message:', normalized);
       return normalized;
     } catch (error) {
       console.error('❌ [FCM] Error normalizing staff_chat_message:', error);
@@ -117,7 +100,6 @@ function normalizeFcmEvent(fcmPayload) {
   }
   
   if (data.type === "staff_chat_conversations_with_unread") {
-    console.log('🔥 [FCM] Normalizing staff_chat_conversations_with_unread:', data);
     // FCM does not provide per-conversation, so only update total
     const totalUnread = data.conversations_with_unread_count
       ? parseInt(data.conversations_with_unread_count, 10)
@@ -138,11 +120,9 @@ function normalizeFcmEvent(fcmPayload) {
         ts: new Date().toISOString()
       }
     };
-    console.log('🔥 [FCM] Synthesized spec-compliant unread event:', normalized);
     return normalized;
   }
   
-  console.log('🔥 [FCM] No handler found for FCM type:', data.type);
   return null;
 }
 
@@ -156,44 +136,9 @@ function normalizeFcmEvent(fcmPayload) {
  */
 export function handleIncomingRealtimeEvent({ source, channel, eventName, payload }) {
   try {
-    console.log('📡 Incoming realtime event:', { source, channel, eventName, payload });
-    
-    // 🚨 CATCH ALL REALTIME EVENTS TO DEBUG MISSING MESSAGE EVENTS
-    if (eventName?.includes('message') || eventName?.includes('created')) {
-      console.log('🚨🚨 [EventBus] MESSAGE-RELATED EVENT DETECTED:', { channel, eventName, payload });
-    }
-    
-    // 🔍 LOG ALL STAFF CHAT EVENTS TO DEBUG MISSING MESSAGES
-    if (eventName?.includes('staff_chat') || channel?.includes('staff-chat')) {
-      console.log('🔍🔍 [EventBus] ANY STAFF CHAT EVENT:', { source, channel, eventName, payloadKeys: Object.keys(payload || {}) });
-    }
-    
-    // 🔥 DEBUG: Log staff chat events specifically
-    if (channel?.includes('staff-chat') && !eventName?.startsWith('pusher:')) {
-      console.log('🚨 [EventBus] ===== STAFF CHAT EVENT RECEIVED =====');
-      console.log('🔥 [EventBus] Channel:', channel);
-      console.log('🔥 [EventBus] Event Name:', eventName);
-      console.log('🔥 [EventBus] Full Payload:', JSON.stringify(payload, null, 2));
-      console.log('🔥 [EventBus] Payload Type:', typeof payload);
-      console.log('🔥 [EventBus] Has category?', !!payload?.category, 'Value:', payload?.category);
-      console.log('🔥 [EventBus] Has type?', !!payload?.type, 'Value:', payload?.type);
-      console.log('🔥 [EventBus] Has payload.payload?', !!payload?.payload);
-      console.log('🔥 [EventBus] Event will be normalized and routed to chatStore');
-      
-      // 🚨 SPECIAL CHECK FOR MESSAGE EVENTS
-      if (eventName === 'realtime_staff_chat_message_created') {
-        console.log('🚨🚨🚨 [EventBus] FOUND THE MESSAGE EVENT WE NEED! 🚨🚨🚨');
-      } else {
-        console.log('🔍 [EventBus] This is NOT a message_created event, looking for that...');
-      }
-      console.log('🚨 [EventBus] ===================================');
-    }
 
     // 1️⃣ IGNORE PUSHER SYSTEM EVENTS (like pusher:subscription_succeeded)
     if (source === 'pusher' && eventName?.startsWith('pusher:')) {
-      if (!import.meta.env.PROD) {
-        console.log('🔄 [eventBus] Skipping Pusher system event:', eventName);
-      }
       return; // ⬅️ nothing else, no warning, no routing
     }
 
@@ -208,7 +153,6 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
         eventName.startsWith('realtime_staff_chat_')
       ) {
         effectiveType = eventName; // 👈 use the LONG name that chatStore expects
-        console.log('🔥 [EventBus] Using eventName as effectiveType:', effectiveType);
       }
 
       // FULL normalized - FIXED: Use effectiveType instead of payload.type
@@ -220,7 +164,6 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
         source,
         timestamp: payload.meta?.ts || new Date().toISOString(),
       };
-      console.log('🚀 [EventBus] Normalized event with effectiveType:', normalized);
       if (maybeHandleStaffChatUnreadUpdate(normalized)) {
         return;
       }
@@ -231,15 +174,6 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
 
     // SUPPORT raw Pusher event (e.g. direct message payload) - ALWAYS process staff-chat events
     if (channel?.includes("staff-chat") && eventName?.startsWith("realtime_staff_chat_")) {
-        if (!import.meta.env.PROD) {
-          console.log('📨 [EventBus] Processing staff-chat realtime event:', { 
-            eventName, 
-            channel, 
-            isMessageCreated: eventName === 'realtime_staff_chat_message_created',
-            messageId: payload?.id,
-            conversationId: payload?.conversation_id || payload?.conversation
-          });
-        }
         const normalized = {
           category: "staff_chat",
           type: eventName,
@@ -248,12 +182,6 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           source,
           timestamp: new Date().toISOString()
         };
-        if (!import.meta.env.PROD && eventName === 'realtime_staff_chat_message_created') {
-          console.log('🚀 [EventBus] Routing realtime_staff_chat_message_created to stores:', {
-            conversationId: payload?.conversation_id || payload?.conversation,
-            messageId: payload?.id
-          });
-        }
         if (maybeHandleStaffChatUnreadUpdate(normalized)) {
           return;
         }
@@ -264,15 +192,12 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
 
     // 3️⃣ FCM EVENT NORMALIZATION
     if (source === 'fcm') {
-      console.log('🔥 [EventBus] FCM event received - processing:', payload);
       const event = normalizeFcmEvent(payload);
 
       if (!event) {
         console.warn('⚠️ [EventBus] FCM event ignored - no handler for type:', payload?.data?.type);
         return;
       }
-
-      console.log('🚀 [EventBus] Normalized FCM event:', event);
 
       if (maybeHandleStaffChatUnreadUpdate(event)) {
         return;
@@ -285,7 +210,6 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
 
     // FALLBACK: Process ANY staff-chat event that doesn't match above patterns
     if (channel?.includes("staff-chat") && eventName && !eventName.startsWith('pusher:')) {
-        console.log('🆘 [EventBus] FALLBACK: Processing unmatched staff-chat event:', { eventName, channel, payload });
         const normalized = {
           category: "staff_chat",
           type: eventName,
@@ -294,7 +218,6 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           source,
           timestamp: new Date().toISOString()
         };
-        console.log('🆘 [EventBus] FALLBACK normalized event:', normalized);
         if (maybeHandleStaffChatUnreadUpdate(normalized)) {
           return;
         }
@@ -304,8 +227,6 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
 
     // Hotel-level guest messages channel (notify all staff when any guest sends message)
     if (channel?.endsWith('-guest-messages') && eventName === 'new-guest-message' && !eventName?.startsWith('pusher:')) {
-      console.log('📢 [EventBus] Hotel-level guest message notification:', { channel, eventName, payload });
-      
       // Extract hotel slug from channel name
       const hotelSlug = channel.split('-guest-messages')[0];
       
@@ -349,7 +270,6 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
 
     // Guest chat: only accept booking-based private channels
     if (channel?.startsWith('private-hotel-') && channel?.includes('-guest-chat-booking-') && !eventName?.startsWith('pusher:')) {
-      console.log('🏨 [EventBus] Detected booking-based guest chat channel:', channel);
       const normalized = {
         category: 'guest_chat',
         type: payload?.type || eventName || 'message_created',
@@ -362,7 +282,6 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
         source,
         timestamp: payload?.meta?.ts || new Date().toISOString(),
       };
-      console.log('🆘 [EventBus] FALLBACK normalized guest-chat event:', normalized);
       routeToDomainStores(normalized);
       return;
     }
@@ -370,7 +289,6 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
     // 4️⃣ RAW ROOM STATUS EVENTS NORMALIZATION
     // Support both hyphenated (legacy) and underscored (backend contract) event names
     if (channel?.includes('.rooms') && (eventName === 'room-status-changed' || eventName === 'room_status_changed')) {
-      console.log('🏠 [EventBus] Normalizing room status event:', { channel, eventName, payload });
       const normalized = {
         category: "rooms",
         type: "room_status_changed",
@@ -392,7 +310,6 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
     // 4b️⃣ ROOM OCCUPANCY EVENTS NORMALIZATION
     // Support both hyphenated (legacy) and underscored (backend contract) event names
     if (channel?.includes('.rooms') && (eventName === 'room-occupancy-updated' || eventName === 'room_occupancy_updated')) {
-      console.log('🏠 [EventBus] Normalizing room occupancy event:', { channel, eventName, payload });
       const normalized = {
         category: "rooms",
         type: "room_updated", // Map to existing room_updated handler in roomsStore
@@ -414,7 +331,6 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
     // 4c️⃣ RAW room_updated EVENT NORMALIZATION
     // Backend may emit raw room_updated without category/type envelope
     if (channel?.includes('.rooms') && eventName === 'room_updated') {
-      console.log('🏠 [EventBus] Normalizing raw room_updated event:', { channel, eventName, payload });
       const normalized = {
         category: "rooms",
         type: "room_updated",
@@ -437,7 +353,6 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
     // Events arriving on {hotelSlug}-staff-bookings or {hotelSlug}-staff-overstays
     // without normalized category/type envelope
     if ((channel?.endsWith('-staff-bookings') || channel?.endsWith('-staff-overstays')) && !eventName?.startsWith('pusher:')) {
-      console.log('🏨 [EventBus] Normalizing raw staff booking/overstay event:', { channel, eventName, payload });
       const normalized = {
         category: "room_booking",
         type: eventName, // e.g. booking_created, booking_overstay_flagged, etc.
@@ -462,10 +377,6 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
     // message_created directly on the private booking channel via useGuestChat.
     // Route ONLY to staff_chat so chatStore can update the staff conversation list.
     if (channel?.endsWith('-notifications') && eventName === 'new-guest-message' && !eventName?.startsWith('pusher:')) {
-      if (!import.meta.env.PROD) {
-        console.log('🔔 [EventBus] Staff notification: new-guest-message → staff_chat only', { channel, payload });
-      }
-
       const staffPayload = {
         id: payload?.message_id || payload?.id || `msg-${Date.now()}`,
         message: payload?.guest_message || payload?.message || 'New message',
@@ -520,10 +431,6 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
 function routeToDomainStores(event) {
   // Handle new normalized format from backend
   if (event.category && event.type) {
-    if (!import.meta.env.PROD) {
-      console.log('🚏 Routing NEW format event:', event.category, event.type);
-    }
-
     switch (event.category) {
       case "attendance":
         attendanceActions.handleEvent(event);
@@ -531,49 +438,21 @@ function routeToDomainStores(event) {
       case "staff_chat":
         // Filter out Pusher system events before processing
         if (event.type?.startsWith('pusher:') || event.eventType?.startsWith('pusher:')) {
-          if (!import.meta.env.PROD) {
-            console.log('🔄 [eventBus] Skipping Pusher system event:', event.type || event.eventType);
-          }
+          // Skip Pusher system events
         } else {
-          console.log('🚀 [EventBus] Routing staff_chat event to chatActions.handleEvent');
-          console.log('🚀 [EventBus] Event being routed:', { category: event.category, type: event.type, hasPayload: !!event.payload });
           chatActions.handleEvent(event);
         }
         break;
       case "guest_chat":
-        if (!import.meta.env.PROD) {
-          console.log('🔍 [EventBus] Routing guest_chat event to guestChatStore:', event.type);
-        }
         guestChatActions.handleEvent(event);
         // NOTE: Staff conversation list is updated via the separate staff_chat event
         // from the -notifications channel. No cross-domain routing needed here.
         break;
       case "room_service":
-        console.log('🍽️ [EventBus] Processing room service event:', {
-          type: event.type,
-          hasPayload: !!event.payload,
-          payloadKeys: event.payload ? Object.keys(event.payload) : [],
-          orderId: event.payload?.order_id || event.payload?.id,
-          roomNumber: event.payload?.room_number,
-          status: event.payload?.status
-        });
         roomServiceActions.handleEvent(event);
         maybeRecordOverviewSignal(event);
-        console.log('✅ [EventBus] Room service event sent to store');
         break;
       case "room_booking":
-        // Dev-only booking debug logging
-        if (import.meta.env.DEV && event.category === 'room_booking') {
-          console.group('🏨 [BOOKING DEBUG]');
-          console.log('Event Type:', event.type);
-          console.log('Event ID:', event.meta?.event_id);
-          console.log('Booking ID:', event.payload?.booking_id);
-          console.log('Status:', event.payload?.status);
-          console.log('Guest Name:', event.payload?.guest_name);
-          console.log('Source:', event.source);
-          console.log('Timestamp:', event.meta?.ts);
-          console.groupEnd();
-        }
         roomBookingActions.handleEvent(event);
         maybeRecordOverviewSignal(event);
         break;
@@ -585,14 +464,10 @@ function routeToDomainStores(event) {
         roomsActions.handleEvent(event);
         break;
       case "staff_notification":
-        console.log('🔔 [EventBus] Processing staff notification:', event.type);
         // Staff notifications are handled by the notification center only
         // No specific store needed - just let it flow to maybeAddToNotificationCenter
         break;
       default:
-        if (!import.meta.env.PROD) {
-          console.log('🚏 Unknown category:', event.category, event);
-        }
         break;
     }
     return;
@@ -618,7 +493,6 @@ function maybeHandleStaffChatUnreadUpdate(event) {
     timestamp: payload.updated_at || payload.timestamp || event.timestamp || new Date().toISOString(),
   };
 
-  console.log('📡 [EventBus] Dispatching staff chat unread counts update:', normalizedPayload);
   dispatchUnreadCountsUpdate(normalizedPayload);
   return true;
 }
@@ -711,7 +585,6 @@ function generateNotificationMessage(category, eventType, payload) {
 // Debug function for testing unread updates
 if (typeof window !== 'undefined') {
   window.debugRealtimeUnread = (conversationId, unreadCount, totalUnread = null) => {
-    console.log('🧪 DEBUG: Manually triggering realtime_staff_chat_unread_updated event:', { conversationId, unreadCount, totalUnread });
     handleIncomingRealtimeEvent({
       source: "debug",
       payload: {
@@ -734,7 +607,6 @@ if (typeof window !== 'undefined') {
   };
   
   window.debugTotalUnread = (totalUnread) => {
-    console.log('🧪 DEBUG: Manually triggering total unread update:', { totalUnread });
     handleIncomingRealtimeEvent({
       source: "debug",
       payload: {
@@ -754,7 +626,6 @@ if (typeof window !== 'undefined') {
     
     // Force MessengerWidget to update after a short delay
     setTimeout(() => {
-      console.log('🔥 [DEBUG] Dispatching forceMessengerUpdate event');
       window.dispatchEvent(new CustomEvent('forceMessengerUpdate', { 
         detail: { 
           totalUnread, 
@@ -767,8 +638,6 @@ if (typeof window !== 'undefined') {
   
   // Function to completely reset all unread counts
   window.resetAllUnreadCounts = () => {
-    console.log('🔥 DEBUG: RESETTING ALL UNREAD COUNTS TO ZERO');
-    
     // First set total unread to 0
     handleIncomingRealtimeEvent({
       source: "debug",
@@ -808,24 +677,17 @@ if (typeof window !== 'undefined') {
         }
       });
     });
-    
-    console.log('🔥 DEBUG: All unread counts reset to 0');
   };
   
   // Debug function to test messenger widget visual updates
   window.testMessengerBadge = (count = 0) => {
-    console.log('🧪 [DEBUG] Testing messenger badge with count:', count);
     window.debugTotalUnread(count);
     
     setTimeout(() => {
-      console.log('🧪 [DEBUG] After 1 second, check if badge updated properly');
       const badge = document.querySelector('.messenger-widget__badge');
       const header = document.querySelector('.messenger-widget__header');
-      console.log('🧪 [DEBUG] Badge element:', badge ? `EXISTS (${badge.textContent})` : 'NOT FOUND');
-      console.log('🧪 [DEBUG] Header classes:', header?.className || 'HEADER NOT FOUND');
       
       // Try to force a React re-render by dispatching a custom event
-      console.log('🧪 [DEBUG] Dispatching custom event to force React update');
       window.dispatchEvent(new CustomEvent('forceMessengerUpdate', { detail: { count } }));
     }, 1000);
   };
@@ -833,7 +695,6 @@ if (typeof window !== 'undefined') {
   // Quick test functions
   window.setBadge5 = () => window.testMessengerBadge(5);
   window.setBadge0 = () => {
-    console.log('🚨 Setting badge to 0 - using complete reset');
     window.resetAllUnreadCounts();
     setTimeout(() => window.testMessengerBadge(0), 500);
   };
@@ -841,48 +702,20 @@ if (typeof window !== 'undefined') {
   
   // Debug function to check current state
   window.debugCurrentState = () => {
-    console.log('🔍 [DEBUG] Current badge state check:');
     const badge = document.querySelector('.messenger-widget__badge');
     const header = document.querySelector('.messenger-widget__header');
-    
-    console.log('🎯 Current DOM State:', {
-      badgeExists: !!badge,
-      badgeText: badge?.textContent || 'NO BADGE',
-      badgeVisible: badge ? getComputedStyle(badge).display : 'NO BADGE',
-      headerClasses: header?.className || 'NO HEADER',
-      headerHasUnreadClass: header?.classList.contains('messenger-widget__header--unread') || false
-    });
   };
   
   // Comprehensive test function to check entire badge update chain
   window.testBadgeChain = (count = 5) => {
-    console.log(`🧪 [DEBUG] Testing complete badge update chain with count: ${count}`);
-    
     // Step 1: Update via Pusher simulation
-    console.log('📡 Step 1: Simulating Pusher event...');
     window.debugTotalUnread(count);
     
     // Step 2: Check store state after delay
     setTimeout(() => {
-      console.log('📊 Step 2: Checking chatStore state...');
-      // This would need access to the store - will be logged by the store itself
-      
       // Step 3: Check DOM elements
-      console.log('🔍 Step 3: Checking DOM elements...');
       const badge = document.querySelector('.messenger-widget__badge');
       const header = document.querySelector('.messenger-widget__header');
-      
-      console.log('🎯 Badge Update Test Results:', {
-        badgeExists: !!badge,
-        badgeText: badge?.textContent,
-        badgeVisible: badge && getComputedStyle(badge).display !== 'none',
-        headerClasses: header?.className,
-        headerHasUnreadClass: header?.classList.contains('messenger-widget__header--unread'),
-        expectedBadgeText: count > 99 ? '99+' : count.toString(),
-        expectedHeaderClass: count > 0 ? 'Should have messenger-widget__header--unread' : 'Should have main-bg',
-        testPassed: badge?.textContent === (count > 99 ? '99+' : count.toString()) && 
-                   (count > 0 ? header?.classList.contains('messenger-widget__header--unread') : header?.classList.contains('main-bg'))
-      });
     }, 200);
   };
 }

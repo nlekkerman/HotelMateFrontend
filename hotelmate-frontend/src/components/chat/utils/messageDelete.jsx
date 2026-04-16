@@ -19,14 +19,10 @@ import api from "@/services/api";
  */
 export const deleteMessage = async (messageId) => {
   try {
-    console.log('🗑️ Soft deleting message:', messageId);
-    
     const url = `/chat/messages/${messageId}/delete/`;
     
     // Call backend DELETE API - soft delete (default)
     const response = await api.delete(url);
-    
-    console.log('✅ Delete response:', response.data);
     
     return response.data;
   } catch (error) {
@@ -46,11 +42,9 @@ export const deleteMessage = async (messageId) => {
 export const updateMessagesAfterDeletion = (messages, messageId, updatedMessage, hardDelete = false) => {
   if (hardDelete) {
     // Hard delete - remove message completely
-    console.log(`💥 Hard deleting message ${messageId} - removing from UI`);
     return messages.filter(msg => msg.id !== messageId);
   } else {
     // Soft delete - update message with deletion text
-    console.log(`🗑️ Soft deleting message ${messageId} - showing as deleted`);
     return messages.map(msg => 
       msg.id === messageId 
         ? { 
@@ -95,8 +89,6 @@ export const handleMessageDeletion = async (
       return newMap;
     });
     
-    console.log('✅ Message soft deleted successfully');
-    
     // Call success callback
     if (onSuccess) {
       onSuccess('Message deleted successfully');
@@ -132,62 +124,25 @@ export const handleMessageDeletion = async (
  * @param {boolean} isGuest - Whether the current user is a guest (for contextual messages)
  */
 export const handlePusherDeletion = (data, setMessages, setMessageStatuses, isGuest = false) => {
-  console.log('🗑️ [PUSHER] Message deletion event received:', data);
-  console.log('🗑️ [PUSHER] Full event data:', JSON.stringify(data, null, 2));
-  
   const { message_id, soft_delete, hard_delete, message, deleted_by, original_sender, staff_name } = data;
   
   // Prefer soft_delete (new field), fallback to !hard_delete for backward compatibility
   const isSoftDelete = soft_delete !== undefined ? soft_delete : !hard_delete;
   
-  console.log('🗑️ [PUSHER] Extracted values:', {
-    message_id,
-    soft_delete,
-    hard_delete,
-    isSoftDelete,
-    message,
-    has_message: !!message,
-    deleted_by,
-    original_sender,
-    staff_name,
-    isGuest
-  });
-  
   if (!message_id) {
     console.error('❌ [PUSHER] No message_id in deletion event!');
     return;
   }
-
-  console.log(`🗑️ [PUSHER] Processing deletion for message ID: ${message_id}`);
   
   if (!isSoftDelete) {
     // Hard delete - permanently remove message from UI
-    console.log(`💥 [PUSHER] Hard deleting message ${message_id} - removing from UI`);
     setMessages(prevMessages => {
-      console.log(`💥 [PUSHER] Before filter - message count: ${prevMessages.length}`);
       const filtered = prevMessages.filter(msg => msg.id !== message_id);
-      console.log(`💥 [PUSHER] After filter - message count: ${filtered.length}`);
       return filtered;
     });
   } else {
     // Soft delete - update message with contextual deletion text
-    console.log(`🗑️ [PUSHER] Soft deleting message ${message_id} - showing as deleted`);
     setMessages(prevMessages => {
-      console.log(`🗑️ [PUSHER] Before update - message count: ${prevMessages.length}`);
-      
-      // Find the message to be deleted
-      const targetMessage = prevMessages.find(msg => msg.id === message_id);
-      if (targetMessage) {
-        console.log(`🗑️ [PUSHER] Found target message:`, {
-          id: targetMessage.id,
-          has_attachments: !!targetMessage.attachments,
-          attachment_count: targetMessage.attachments?.length,
-          message_text: targetMessage.message?.substring(0, 50)
-        });
-      } else {
-        console.warn(`⚠️ [PUSHER] Message ${message_id} NOT FOUND in current messages!`);
-      }
-      
       const updated = prevMessages.map(msg => {
         if (msg.id === message_id) {
           // Get contextual deletion message
@@ -196,7 +151,6 @@ export const handlePusherDeletion = (data, setMessages, setMessageStatuses, isGu
           // If we have context data, create custom message
           if (deleted_by && original_sender) {
             deletionMessage = getContextualDeletionText(deleted_by, original_sender, staff_name, isGuest);
-            console.log(`🗑️ [PUSHER] Using contextual deletion text: "${deletionMessage}"`);
           }
           
           const updatedMsg = { 
@@ -208,22 +162,11 @@ export const handlePusherDeletion = (data, setMessages, setMessageStatuses, isGu
             staff_name,
             attachments: [] // Clear attachments to hide images
           };
-          console.log(`🗑️ [PUSHER] Updated message ${message_id}:`, {
-            old_message: msg.message?.substring(0, 50),
-            new_message: updatedMsg.message,
-            old_attachments: msg.attachments?.length || 0,
-            new_attachments: updatedMsg.attachments?.length || 0,
-            is_deleted: updatedMsg.is_deleted,
-            deleted_by: updatedMsg.deleted_by,
-            original_sender: updatedMsg.original_sender
-          });
           return updatedMsg;
         }
         return msg;
       });
       
-      console.log(`🗑️ [PUSHER] After update - message count: ${updated.length}`);
-      console.log(`✅ [PUSHER] Deletion update complete for message ${message_id}`);
       return updated;
     });
   }
@@ -232,11 +175,8 @@ export const handlePusherDeletion = (data, setMessages, setMessageStatuses, isGu
   setMessageStatuses(prev => {
     const newMap = new Map(prev);
     newMap.delete(message_id);
-    console.log(`🗑️ [PUSHER] Removed message ${message_id} from status map`);
     return newMap;
   });
-  
-  console.log(`✅ [PUSHER] Message deletion handled successfully for ID: ${message_id}`);
 };
 
 /**

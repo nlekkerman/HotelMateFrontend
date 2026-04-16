@@ -66,13 +66,6 @@ const ChatWindowPopup = ({
   // Current user data loaded
 
   // Debug: Log conversation prop to check for issues
-  console.log('🔧 [ChatWindowPopup] DEBUG - Props received:', {
-    hasConversation: !!conversation,
-    conversationId: conversation?.id,
-    conversationKeys: conversation ? Object.keys(conversation) : 'no conversation',
-    hotelSlug,
-    hasStaff: !!staff
-  });
 
   // ✅ UNIFIED: Use chatStore for messages (single source of truth)
   const chatState = useChatState();
@@ -89,13 +82,6 @@ const ChatWindowPopup = ({
     setReply,
     cancelReply,
   } = useSendMessage(hotelSlug, conversation?.id);
-
-  console.log('🔧 [ChatWindowPopup] DEBUG - useSendMessage state:', {
-    sending,
-    hasError: !!sendError,
-    conversationId: conversation?.id,
-    isConversationIdValid: conversation?.id !== undefined && conversation?.id !== null
-  });
 
   const storeConversation = conversation?.id
     ? chatState.conversationsById[conversation.id]
@@ -132,7 +118,6 @@ const ChatWindowPopup = ({
       otherParticipant &&
       (!staff || Number(staff.id) === Number(currentUserId))
     ) {
-      // console.log('🔄 Correcting staff display - using other participant:', otherParticipant.full_name);
       displayStaff = otherParticipant;
     }
   }
@@ -142,7 +127,6 @@ const ChatWindowPopup = ({
     if (conversation?.id) {
       const loadMessages = async () => {
         try {
-          console.log("📥 Loading messages for conversation:", conversation.id);
           const response = await fetchMessages(
             hotelSlug,
             conversation.id,
@@ -159,12 +143,6 @@ const ChatWindowPopup = ({
               messages: fetchedMessages,
             },
           });
-
-          console.log(
-            "✅ Loaded",
-            fetchedMessages.length,
-            "messages into chatStore"
-          );
         } catch (error) {
           console.error("❌ Failed to load messages:", error);
         }
@@ -181,7 +159,6 @@ const ChatWindowPopup = ({
     conversation?.id,
     (messageId, data) => {
       // ✅ UNIFIED: Reactions updated via chatStore through realtime events
-      console.log("🎯 Reaction updated - handled via chatStore realtime");
     }
   );
 
@@ -189,7 +166,6 @@ const ChatWindowPopup = ({
   const { startEdit, cancelEdit, saveEdit, isEditing, editingMessageId } =
     useEditMessage(hotelSlug, conversation?.id, (messageId, updatedData) => {
       // ✅ UNIFIED: Message edits updated via chatStore through realtime events
-      console.log("✏️ Message edit updated - handled via chatStore realtime");
     });
 
   // Use delete message hook with proper callback
@@ -198,15 +174,10 @@ const ChatWindowPopup = ({
     conversation?.id,
     (messageId, hardDelete, result) => {
       // ✅ UNIFIED: All message deletions handled via chatStore through realtime events
-      console.log(
-        "🗑️ Message deletion completed - handled via chatStore realtime:",
-        { messageId, hardDelete }
-      );
 
       // Verify the update
       setTimeout(() => {
         const updatedMessages = messages.find((m) => m.id === messageId);
-        // console.log('🗑️ Message after update:', updatedMessages);
       }, 100);
     }
   );
@@ -224,27 +195,7 @@ const ChatWindowPopup = ({
   // Load read receipts from messages on initial load (CRITICAL!)
   useEffect(() => {
     if (messages.length > 0) {
-      console.log(
-        "📖📖📖 [POPUP LOAD] Loading read receipts from messages on initial load"
-      );
-      console.log("📖 [POPUP LOAD] Messages count:", messages.length);
-      console.log(
-        "📖 [POPUP LOAD] Sample message read data:",
-        messages[0]?.read_by_count,
-        messages[0]?.read_by_list
-      );
-      console.log(
-        "📖 [POPUP LOAD] All messages read data:",
-        messages.map((m) => ({
-          id: m.id,
-          text: m.message_text?.substring(0, 20) + "...",
-          read_by_count: m.read_by_count,
-          read_by_list: m.read_by_list,
-          is_read_by_current_user: m.is_read_by_current_user,
-        }))
-      );
       loadReadReceipts(messages);
-      console.log("✅ [POPUP LOAD] Read receipts loaded from messages");
     }
   }, [messages.length, loadReadReceipts]); // Include loadReadReceipts in dependencies
 
@@ -253,15 +204,8 @@ const ChatWindowPopup = ({
     const receiptKeys = Object.keys(readReceipts);
     if (receiptKeys.length === 0) return;
 
-    console.log(
-      "🔄🔄🔄 [POPUP SYNC] readReceipts state changed, syncing to messages array"
-    );
-    console.log("🔄 [POPUP SYNC] readReceipts keys:", receiptKeys);
-    console.log("🔄 [POPUP SYNC] Current messages count:", messages.length);
-
     // Batch update all messages with new read receipts
     const messageIdsToUpdate = receiptKeys.map(Number);
-    console.log("🔄 [POPUP SYNC] Message IDs to update:", messageIdsToUpdate);
 
     let updatedCount = 0;
     messageIdsToUpdate.forEach((msgId) => {
@@ -273,23 +217,12 @@ const ChatWindowPopup = ({
         const needsUpdate = message.read_by_count !== receipt.read_count;
 
         if (needsUpdate) {
-          console.log(`🔄 [POPUP SYNC] Updating message ${msgId}:`, {
-            oldCount: message.read_by_count,
-            newCount: receipt.read_count,
-            oldList: message.read_by_list?.length,
-            newList: receipt.read_by?.length,
-          });
-
           // ✅ UNIFIED: Read receipts are handled by chatStore via realtime events
           // No need to manually update message state - chatStore handles this automatically
           updatedCount++;
         }
       }
     });
-
-    console.log(
-      `✅ [POPUP SYNC] Found ${updatedCount} messages with read receipts`
-    );
   }, [readReceipts, messages]);
 
   // ✅ UNIFIED: Messages come through chatStore automatically - no legacy subscriptions needed
@@ -301,10 +234,6 @@ const ChatWindowPopup = ({
   useEffect(() => {
     if (!hotelSlug || !conversation?.id) return;
 
-    console.log(
-      "📋 [READ RECEIPTS] Setting up direct event listener for useReadReceipts"
-    );
-
     // Listen to chatStore events to also update useReadReceipts hook
     const handleStoreEvent = (event) => {
       if (event.detail?.type === "STAFF_CHAT_READ_RECEIPT_RECEIVED") {
@@ -313,11 +242,6 @@ const ChatWindowPopup = ({
 
         // Only handle events for this conversation
         if (conversationId === conversation.id) {
-          console.log(
-            "📋 [READ RECEIPTS] Received read receipt event for conversation:",
-            conversationId
-          );
-
           // Update useReadReceipts hook state
           if (updateReadReceipts) {
             updateReadReceipts({
@@ -359,8 +283,7 @@ const ChatWindowPopup = ({
   useEffect(() => {
     if (conversation?.id && messages.length > 0 && !isMinimized && messages.length > markedUpToRef.current) {
       // Set this conversation as active to prevent notifications
-      if (chatDispatch) {
-        chatDispatch({
+      if (chatDispatch) {        chatDispatch({
           type: CHAT_ACTIONS.SET_ACTIVE_CONVERSATION,
           payload: { conversationId: conversation.id },
         });
@@ -383,10 +306,6 @@ const ChatWindowPopup = ({
   // Clear active conversation when popup is minimized
   useEffect(() => {
     if (isMinimized && conversation?.id && chatDispatch) {
-      console.log(
-        "🎯 [POPUP MINIMIZE] Clearing active conversation:",
-        conversation.id
-      );
       chatDispatch({
         type: CHAT_ACTIONS.SET_ACTIVE_CONVERSATION,
         payload: { conversationId: null },
@@ -437,8 +356,6 @@ const ChatWindowPopup = ({
     // The useSendMessage hook only expects messageText - replyTo is handled internally
     const sentMessage = await sendMsg(messageText);
     if (sentMessage) {
-      console.log("📤 Raw message from API:", sentMessage);
-
       // Ensure the message has the correct timestamp field
       const normalizedMessage = {
         ...sentMessage,
@@ -447,8 +364,6 @@ const ChatWindowPopup = ({
           sentMessage.created_at ||
           new Date().toISOString(),
       };
-
-      console.log("📤 Normalized message:", normalizedMessage);
 
       // Only add optimistic updates for NON-REPLY messages
       // Replies will be handled via Pusher to ensure proper original message display
@@ -464,10 +379,8 @@ const ChatWindowPopup = ({
           },
         });
 
-        console.log("📤 Message dispatched to chatStore");
         scrollToBottom();
       } else {
-        console.log("📤 Reply sent - waiting for Pusher event for proper display");
       }
     }
   };
@@ -486,11 +399,7 @@ const ChatWindowPopup = ({
         replyTo?.id
       );
 
-      // console.log('✅ Upload successful:', result);
-
       if (result.success && result.message) {
-        console.log("📤 Raw file message from API:", result.message);
-
         // Ensure the message has the correct timestamp field
         const normalizedMessage = {
           ...result.message,
@@ -509,7 +418,7 @@ const ChatWindowPopup = ({
           },
         });
 
-        console.log("📤 File message dispatched to chatStore");
+
         setSelectedFiles([]);
         if (replyTo) cancelReply();
         scrollToBottom();
@@ -556,7 +465,6 @@ const ChatWindowPopup = ({
     try {
       // Set this conversation as active to prevent notifications
       if (conversation?.id && chatDispatch) {
-        console.log('🎯 [POPUP FOCUS] Setting conversation as active:', conversation.id);
         chatDispatch({
           type: CHAT_ACTIONS.SET_ACTIVE_CONVERSATION,
           payload: { conversationId: conversation.id },
@@ -564,16 +472,11 @@ const ChatWindowPopup = ({
       }
 
       if (conversation?.id && (conversation?.unread_count || 0) > 0) {
-        console.log('📮 [POPUP MARK ALL] Calling markConversationRead for conversation:', conversation.id);
         await markConversationRead();
-        console.log('✅ [POPUP MARK ALL] Successfully marked conversation as read');
-      } else {
-        console.log('ℹ️ [POPUP MARK ALL] No unread messages or invalid conversation ID');
       }
     } catch (error) {
       console.error('❌ [POPUP MARK ALL] Error marking conversation as read:', error);
     }
-    console.log("✅ [POPUP MARK ALL] markConversationRead completed");
   };
 
   // Handle reply
@@ -588,9 +491,7 @@ const ChatWindowPopup = ({
 
   // Handle delete - show confirmation modal
   const handleDelete = (messageId, permanent = false) => {
-    // console.log('🗑️ handleDelete called:', { messageId, permanent });
     const message = messages.find((m) => m.id === messageId);
-    // console.log('🗑️ Found message:', message);
 
     setMessageToDelete(message);
     setDeleteHard(permanent);
@@ -604,13 +505,7 @@ const ChatWindowPopup = ({
       return;
     }
 
-    // console.log('🗑️ Confirming delete:', {
-    //   messageId: messageToDelete.id,
-    //   hardDelete: deleteHard
-    // });
-
     const result = await deleteMsg(messageToDelete.id, deleteHard);
-    // console.log('🗑️ Delete result:', result);
 
     if (result.success) {
       setShowDeleteConfirm(false);
@@ -626,14 +521,12 @@ const ChatWindowPopup = ({
 
   // Handle share
   const handleShare = (message) => {
-    // console.log('📤 Share message:', message);
     setMessageToShare(message);
     setShowShareModal(true);
   };
 
   // Handle reaction
   const handleReaction = (messageId, emoji) => {
-    // console.log('👍 Handle reaction:', { messageId, emoji });
     const message = messages.find((m) => m.id === messageId);
     if (message) {
       toggleReaction(messageId, emoji, message.reactions || [], currentUserId);
@@ -798,14 +691,6 @@ const ChatWindowPopup = ({
                   const readByCount =
                     receipt?.read_count ?? message.read_by_count ?? 0;
 
-                  // Log message state including deletion status
-                  // console.log('💬 Rendering message:', {
-                  //   id: message.id,
-                  //   isDeleted: message.is_deleted,
-                  //   messageText: messageText.substring(0, 30),
-                  //   isOwn
-                  // });
-
                   return (
                     <div
                       key={message.id}
@@ -898,13 +783,6 @@ const ChatWindowPopup = ({
                       {/* Read Status for own messages */}
                       {isOwn && (
                         <>
-                          {/* Debug log for read status values */}
-                          {console.log(`[READ DEBUG] Message ${message.id}:`, {
-                            receipt: receipt,
-                            readByList: readByList,
-                            readByCount: readByCount,
-                            isRead: readByCount > 0,
-                          })}
                           <ReadStatus
                             isRead={readByCount > 0}
                             readBy={readByList}
@@ -998,11 +876,9 @@ const ChatWindowPopup = ({
         hotelSlug={hotelSlug}
         canManageParticipants={true}
         onParticipantRemoved={(participantId) => {
-          // console.log('✅ Participant removed:', participantId);
           // The conversation will be updated via Pusher
         }}
         onLeaveGroup={(convId) => {
-          // console.log('✅ Left group:', convId);
           // Close the chat window
           onClose();
         }}

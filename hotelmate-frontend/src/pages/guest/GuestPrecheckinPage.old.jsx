@@ -156,11 +156,9 @@ const GuestPrecheckinPage = () => {
         );
         
         const data = unwrap(response);
-        console.log('Precheckin API response data:', data);
         
         // Use new normalize function - trusts booker_type, no heuristics
         const normalized = normalizePrecheckinData(data);
-        console.log('Normalized precheckin data:', normalized);
         
         setNormalizedData(normalized);
         setPartyPrimary(normalized.primary);
@@ -297,7 +295,6 @@ const GuestPrecheckinPage = () => {
       setFieldErrors({ party: { primary: {}, companions: [] }, extras: {} });
       
       const payload = buildPayload();
-      console.log('Submitting payload:', payload);
       
       await publicAPI.post(
         `/hotel/${hotelSlug}/precheckin/submit/?token=${encodeURIComponent(token)}`,

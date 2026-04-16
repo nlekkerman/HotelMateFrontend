@@ -37,21 +37,6 @@ const BookingPaymentSuccess = () => {
   // Expiration handling
   const expiredHandler = useExpiredBookingHandler(finalHotelSlug);
 
-  // Debug logging (development only)
-  const debugBookingStatus = (booking, context = 'unknown') => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[PAYMENT_SUCCESS_DEBUG] ${context}:`, {
-        bookingId: booking?.booking_id || bookingId,
-        rawStatus: booking?.status,
-        paid_at: booking?.paid_at,
-        payment_provider: booking?.payment_provider,
-        payment_reference: booking?.payment_reference,
-        normalizedStatus: normalizeStatus(booking?.status),
-        isPaymentVerified: isPaymentVerified(booking)
-      });
-    }
-  };
-
   // Normalize status to handle case variations
   const normalizeStatus = (status) => {
     if (!status) return 'UNKNOWN';
@@ -101,16 +86,13 @@ const BookingPaymentSuccess = () => {
   // Fetch booking details (for polling)
   const fetchBookingDetails = React.useCallback(async () => {
     if (!finalHotelSlug || !bookingId) {
-      console.warn('[PAYMENT_SUCCESS] Missing hotel slug or booking ID:', { finalHotelSlug, bookingId });
       return null;
     }
     
     const canonicalUrl = `/hotel/${finalHotelSlug}/room-bookings/${bookingId}/`;
-    console.log(`[PAYMENT_SUCCESS] Polling: GET ${canonicalUrl} (via publicAPI: ${publicAPI.defaults.baseURL})`);
     const response = await publicAPI.get(canonicalUrl, {
       params: { ...(email ? { email } : {}) }
     });
-    debugBookingStatus(response.data, 'POLL_RESPONSE');
     return response.data;
   }, [finalHotelSlug, bookingId, email]);
 
@@ -160,11 +142,6 @@ const BookingPaymentSuccess = () => {
           }
           
           if (shouldStopPolling) {
-            console.log('[PAYMENT_SUCCESS] Stopping polling:', { 
-              normalizedStatus, 
-              paymentVerified, 
-              attempts: newAttempts 
-            });
             stopPolling();
           }
           
@@ -237,11 +214,7 @@ const BookingPaymentSuccess = () => {
         const normalizedStatus = normalizeStatus(bookingResponse.data?.status);
         if (normalizedStatus === 'CONFIRMED' || bookingResponse.data?.paid_at) {
           clearHold(finalHotelSlug);
-          console.log('[PAYMENT_SUCCESS] Cleared booking hold storage for confirmed booking');
         }
-        
-        // Debug initial booking state
-        debugBookingStatus(bookingResponse.data, 'INITIAL_LOAD');
         
         const hotelPreset = bookingResponse.data.hotel_preset || bookingResponse.data.hotel?.preset || bookingResponse.data.hotel?.global_style_variant || 1;
         setPreset(hotelPreset);
@@ -250,16 +223,9 @@ const BookingPaymentSuccess = () => {
         const paymentVerified = isPaymentVerified(bookingResponse.data);
         
         if (normalizedStatus === 'PENDING_PAYMENT' && !paymentVerified) {
-          console.log('[PAYMENT_SUCCESS] Starting polling for pending payment');
           startPolling();
         } else {
-          console.log('[PAYMENT_SUCCESS] No polling needed - booking processed:', {
-            normalizedStatus,
-            paymentVerified,
-            state: normalizedStatus === 'PENDING_APPROVAL' ? 'authorization_success' : 
-                   normalizedStatus === 'CONFIRMED' ? 'booking_confirmed' :
-                   normalizedStatus === 'DECLINED' ? 'booking_declined' : 'other'
-          });
+          // No polling needed
         }
         
         // Backend business logic note for developers
@@ -336,9 +302,6 @@ Proposed: Payment → PENDING_HOTEL_CONFIRMATION → Staff confirms → CONFIRME
     return null;
   }
 
-  // Debug current booking state
-  debugBookingStatus(booking, 'RENDER_STATE');
-  
   // Determine UI state based on normalized status and payment verification
   const normalizedStatus = normalizeStatus(booking?.status);
   const paymentVerified = isPaymentVerified(booking);

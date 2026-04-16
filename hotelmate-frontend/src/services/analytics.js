@@ -2,22 +2,11 @@
 import api, { buildStaffURL } from "@/services/api";
 
 function logRequest(name, hotelSlug, params, url) {
-  // Log request details in development mode only
-  if (process.env.NODE_ENV === 'development') {
-    console.log(
-      `%c[API] ${name}`,
-      "color:#09f;font-weight:bold;",
-      { hotelSlug, params, url }
-    );
-  }
+  // Logging removed
 }
 
 function logSuccess(name, res) {
-  // Log success details in development mode only
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[API] ${name} -> status:`, res.status);
-    console.log(`[API] ${name} -> payload:`, res.data);
-  }
+  // Logging removed
 }
 
 function logError(name, err) {

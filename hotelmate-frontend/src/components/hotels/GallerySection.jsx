@@ -33,9 +33,7 @@ const GallerySection = ({ hotelSlug, hotelName, isStaff = false }) => {
   const fetchGalleries = async () => {
     try {
       setLoading(true);
-      console.log('[GallerySection] 📡 Fetching galleries for:', hotelSlug);
       const response = await api.get(`/staff/hotel/${hotelSlug}/galleries/`);
-      console.log('[GallerySection] 📦 Response received:', response);
       
       // Handle paginated response - check for results array
       let data = [];
@@ -50,16 +48,12 @@ const GallerySection = ({ hotelSlug, hotelName, isStaff = false }) => {
         data = response;
       }
       
-      console.log('[GallerySection] 📊 Data to process:', data);
-      console.log('[GallerySection] 🔍 Data is array?', Array.isArray(data));
-      
       // For staff: show all active galleries (even empty ones)
       // For public: only show galleries with images
       const activeGalleries = isStaff 
         ? data.filter(g => g.is_active)
         : data.filter(g => g.is_active && g.images && g.images.length > 0);
       
-      console.log('[GallerySection] ✅ Active galleries:', activeGalleries);
       setGalleries(activeGalleries);
     } catch (error) {
       console.error('[GallerySection] ❌ Failed to fetch galleries:', error);

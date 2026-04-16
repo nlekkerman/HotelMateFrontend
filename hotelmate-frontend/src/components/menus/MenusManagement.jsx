@@ -78,9 +78,7 @@ export default function MenusManagement() {
       
       // Fetch all pages
       while (url) {
-        console.log('🔍 Fetching room service items from:', url);
         const response = await api.get(url.replace(api.defaults.baseURL, ''));
-        console.log('📦 Room service API response:', response.data);
         
         const pageData = response.data.results || response.data || [];
         allItems = [...allItems, ...pageData];
@@ -89,7 +87,6 @@ export default function MenusManagement() {
         url = response.data.next;
       }
       
-      console.log('✅ Setting ALL room service items:', allItems);
       setAllRoomServiceItems(allItems);
       setRoomServiceItems(allItems);
     } catch (err) {
@@ -122,9 +119,7 @@ export default function MenusManagement() {
       
       // Fetch all pages
       while (url) {
-        console.log('🔍 Fetching breakfast items from:', url);
         const response = await api.get(url.replace(api.defaults.baseURL, ''));
-        console.log('📦 Breakfast API response:', response.data);
         
         const pageData = response.data.results || response.data || [];
         allItems = [...allItems, ...pageData];
@@ -133,7 +128,6 @@ export default function MenusManagement() {
         url = response.data.next;
       }
       
-      console.log('✅ Setting ALL breakfast items:', allItems);
       setAllBreakfastItems(allItems);
       setBreakfastItems(allItems);
     } catch (err) {
@@ -320,13 +314,11 @@ export default function MenusManagement() {
       });
       
       if (response.status === 200) {
-        console.log('✅ Item updated successfully:', response.data);
         toast.success(`${formData.name} updated successfully!`);
         setShowEditModal(false);
         setEditingItem(null);
         
         // Refresh the menu items
-        console.log('🔄 Refreshing menu items for:', activeMenu);
         if (activeMenu === 'room_service') {
           fetchRoomServiceMenu();
         } else {
@@ -359,13 +351,11 @@ export default function MenusManagement() {
       const response = await api.delete(endpoint);
       
       if (response.status === 204 || response.status === 200) {
-        console.log('✅ Item deleted successfully');
         toast.success(`${editingItem.name} deleted successfully!`);
         setShowEditModal(false);
         setEditingItem(null);
         
         // Refresh the menu items
-        console.log('🔄 Refreshing menu items for:', activeMenu);
         if (activeMenu === 'room_service') {
           fetchRoomServiceMenu();
         } else {
@@ -424,12 +414,10 @@ export default function MenusManagement() {
       });
       
       if (response.status === 201) {
-        console.log('✅ Item created successfully:', response.data);
         toast.success(`${formData.name} created successfully!`);
         setShowCreateModal(false);
         
         // Refresh the menu items
-        console.log('🔄 Refreshing menu items for:', activeMenu);
         if (activeMenu === 'room_service') {
           fetchRoomServiceMenu();
         } else {
@@ -446,7 +434,6 @@ export default function MenusManagement() {
 
   // Render menu items
   const renderMenuItems = (items) => {
-    console.log('🎨 Rendering menu items:', items);
     // Ensure items is an array
     if (!Array.isArray(items) || items.length === 0) {
       return (

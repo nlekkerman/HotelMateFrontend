@@ -24,9 +24,7 @@ export const CocktailCalculator = () => {
   // Create cocktail API call
   const handleCreateCocktail = async (payload) => {
     try {
-      console.log("Creating cocktail with payload:", payload);
       const res = await api.post(`/stock_tracker/${user.hotel_slug}/cocktails/`, payload);
-      console.log("Cocktail created successfully:", res.data);
       return res.data;
     } catch (err) {
       console.error("Failed to create cocktail:", err);
@@ -107,7 +105,7 @@ export const CocktailCalculator = () => {
       <IngredientModal
         isOpen={ingredientModalOpen}
         onClose={() => setIngredientModalOpen(false)}
-        onSubmit={(ingredient) => console.log("New ingredient created:", ingredient)}
+        onSubmit={() => {}}
       />
 
       {/* Cocktails List */}

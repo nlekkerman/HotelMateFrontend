@@ -15,7 +15,6 @@ const ConfirmDeleteModal = ({
   messagePreview = '',
 }) => {
   const handleConfirm = () => {
-    // console.log('🗑️ Delete confirmed:', { hardDelete, messagePreview });
     onConfirm();
   };
 

@@ -29,25 +29,10 @@ const BookingDetailsRoomAssignmentSection = ({
   const { safeAssignMutation, unassignMutation } = mutations;
   const flags = booking?.flags || {};
   
-  // Debug: Check what room assignment fields are available
-  console.log('🏨 Room assignment debug:', {
-    booking,
-    assigned_room: booking?.assigned_room,
-    room: booking?.room,
-    room_number: booking?.room_number,
-    room_assigned_at: booking?.room_assigned_at,
-    allBookingKeys: booking ? Object.keys(booking) : null
-  });
-  
   if (booking?.assigned_room || booking?.room || booking?.assigned_room_number) {
     // Room is assigned
     const assignedRoom = booking?.assigned_room || booking?.room;
     const displayRoomNumber = getAssignedRoomNumber(booking);
-    console.log('🔧 Rendering assigned room section:', {
-      showRoomAssignment,
-      assignedRoomNumber: displayRoomNumber,
-      booking: booking?.booking_id
-    });
     
     return (
       <Card className="mt-3">
@@ -81,19 +66,9 @@ const BookingDetailsRoomAssignmentSection = ({
                   variant="outline-primary"
                   size="sm"
                   onClick={() => {
-                    console.log('🔧 Change Room button clicked!');
-                    console.log('🔧 Current showRoomAssignment:', showRoomAssignment);
-                    console.log('🔧 Booking status:', {
-                      checked_in_at: booking?.checked_in_at,
-                      checked_out_at: booking?.checked_out_at,
-                      isInHouse: !!booking.checked_in_at && !booking.checked_out_at
-                    });
-                    
                     setReason('');
                     setReasonError('');
                     onShowAssignment();
-                    
-                    console.log('🔧 Set showRoomAssignment to true');
                   }}
                   disabled={!!booking?.checked_out_at}
                 >

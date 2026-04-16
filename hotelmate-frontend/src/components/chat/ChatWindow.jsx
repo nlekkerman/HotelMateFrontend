@@ -63,25 +63,12 @@ const ChatWindow = ({
   onNewMessage,
   onClose,
 }) => {
-  // console.log('🔧 [CHATWINDOW PROPS] Received props:', {
-  //   propUserId,
-  //   propConversationId,
-  //   propHotelSlug,
-  //   propRoomNumber,
-  //   hasConversationData: !!propConversationData
-  // });
   
   const {
     hotelSlug: paramHotelSlug,
     conversationId: paramConversationIdFromURL,
   } = useParams();
   const location = useLocation();
-  
-  // console.log('🔧 [CHATWINDOW PARAMS] URL params:', {
-  //   paramHotelSlug,
-  //   paramConversationIdFromURL
-  // });
-  // console.log('🔧 [CHATWINDOW STATE] Location state:', location.state);
   
   const hotelSlug = propHotelSlug || paramHotelSlug;
   const conversationId = propConversationId || paramConversationIdFromURL;
@@ -105,7 +92,6 @@ const ChatWindow = ({
     // If still no room number, try conversation data prop
     if (!initialRoomNumber && isGuest && propConversationData?.room_number) {
       initialRoomNumber = propConversationData.room_number;
-      console.log('🔍 Retrieved room number from conversation data:', initialRoomNumber);
     }
     
     return initialRoomNumber;
@@ -136,12 +122,6 @@ const ChatWindow = ({
   const [currentStaff, setCurrentStaff] = useState(null);
   
   // Guest chat channels now managed by centralized RealtimeProvider
-  // Debug log for guest setup - DISABLED to prevent re-renders
-  // useEffect(() => {
-  //   if (isGuest) {
-  //     console.log('🔍 Guest Chat Store Debug - isGuest:', isGuest, 'conversationId:', conversationId);
-  //   }
-  // }, [isGuest, conversationId]);
   
   // Use conversation data from props (already fetched in ChatHomePage)
   const [conversationDetails, setConversationDetails] = useState(propConversationData || null);
@@ -149,7 +129,6 @@ const ChatWindow = ({
   // Fetch room number from conversation if not available (critical for guests)
   useEffect(() => {
     if (!roomNumber && conversationId && hotelSlug && isGuest) {
-      console.log('🔍 [ROOM NUMBER] Missing room number for guest, fetching from conversation...');
       
       const fetchRoomNumber = async () => {
         try {
@@ -157,7 +136,6 @@ const ChatWindow = ({
           if (response.data?.room_number) {
             // Update room number state
             setRoomNumber(response.data.room_number);
-            console.log('✅ [ROOM NUMBER] Fetched room number from backend:', response.data.room_number);
             
             // Update conversation details
             setConversationDetails(prev => ({
@@ -184,28 +162,7 @@ const ChatWindow = ({
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   
-  // Debug: Log messages state changes
-  useEffect(() => {
-    console.log('💬 [MESSAGES STATE] Current messages:', messages.length, messages.map(m => ({
-      id: m.id, 
-      msg: m.message?.substring(0, 20),
-      is_deleted: m.is_deleted,
-      has_attachments: !!m.attachments?.length,
-      reply_to: m.reply_to,
-      has_reply_to_message: !!m.reply_to_message
-    })));
-    
-    // Log deleted messages specifically
-    const deletedMessages = messages.filter(m => m.is_deleted);
-    if (deletedMessages.length > 0) {
-      console.log('🗑️ [DELETED MESSAGES] Found deleted messages:', deletedMessages.map(m => ({
-        id: m.id,
-        message: m.message,
-        attachments: m.attachments?.length || 0,
-        is_deleted: m.is_deleted
-      })));
-    }
-  }, [messages]);
+
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [seenMessages, setSeenMessages] = useState(new Set());
@@ -242,7 +199,6 @@ const ChatWindow = ({
   useEffect(() => {
     if (propConversationData) {
       setConversationDetails(propConversationData);
-      console.log('📋 Using conversation data from props:', propConversationData);
     }
   }, [propConversationData]);
 
@@ -296,27 +252,14 @@ const ChatWindow = ({
       if (beforeId) setLoadingMore(true);
       else setLoading(true);
 
-      console.log('🔥 [FETCH MESSAGES] Starting fetch with params:', {
-        hotelSlug,
-        conversationId,
-        beforeId,
-        endpoint: buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/messages/`)
-      });
-
       const res = await api.get(
         buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/messages/`),
         { params: { limit: MESSAGE_LIMIT, before_id: beforeId } }
       );
 
-      console.log('🔥 [FETCH MESSAGES] API response received:', {
-        messageCount: res.data.length,
-        messageIds: res.data.map(m => m.id)
-      });
-
       // Clean up deleted messages - remove attachments if is_deleted is true
       const newMessages = res.data.map(msg => {
         if (msg.is_deleted) {
-          console.log(`🗑️ [FETCH] Found deleted message ${msg.id} - clearing attachments`);
           return {
             ...msg,
             attachments: [] // Clear attachments for deleted messages
@@ -354,11 +297,6 @@ const ChatWindow = ({
       } else {
         // Initial load or switching conversation: replace messages with markers
         const messagesWithMarkers = addStaffJoinedMarkers(newMessages);
-        console.log('🔥 [FETCH MESSAGES] Setting messages in state:', {
-          originalCount: newMessages.length,
-          withMarkersCount: messagesWithMarkers.length,
-          messageIds: messagesWithMarkers.map(m => m.id)
-        });
         setMessages(messagesWithMarkers);
         setLoading(false);
         
@@ -415,15 +353,12 @@ const ChatWindow = ({
       if (!userId || isGuest || !hotelSlug) return;
       
       try {
-        console.log('👤 [STAFF ASSIGN] Assigning current staff to conversation:', conversationId);
         const response = await api.post(
           buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/assign-staff/`)
         );
         
         if (response.data?.assigned_staff) {
-          console.log('✅ [STAFF ASSIGN] Staff assigned:', response.data.assigned_staff.name);
           if (response.data?.messages_marked_read !== undefined) {
-            console.log('✅ [STAFF ASSIGN] Marked', response.data.messages_marked_read, 'guest messages as read');
           }
           
           // Show local notification for staff assignment
@@ -438,9 +373,7 @@ const ChatWindow = ({
         }
         
         // ADDITIONAL: Explicitly mark conversation as read to trigger Pusher event
-        console.log('📖 [STAFF ASSIGN] Explicitly marking conversation as read...');
         await api.post(buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/mark-read/`));
-        console.log('✅ [STAFF ASSIGN] Conversation marked as read - Pusher event should fire');
       } catch (error) {
         console.error('❌ [STAFF ASSIGN] Failed to assign staff to conversation:', error);
         // Don't block conversation loading if assignment fails
@@ -449,7 +382,6 @@ const ChatWindow = ({
 
     // Initialize chatStore conversation for staff viewing guest chat
     if (!isGuest && chatDispatch && conversationId) {
-      console.log('🔄 [UNIFIED] Initializing chatStore conversation for guest-to-staff:', conversationId);
       chatDispatch({
         type: CHAT_ACTIONS.SET_ACTIVE_CONVERSATION,
         payload: { conversationId: parseInt(conversationId) }
@@ -458,8 +390,6 @@ const ChatWindow = ({
     
     // Assign staff first (if staff), then fetch messages
     assignStaffToConversation().then(() => {
-      console.log('🔥 [INIT] About to fetch messages for staff API - conversationId:', conversationId);
-      console.log('🔥 [INIT] isGuest:', isGuest, 'userId:', userId);
       fetchMessages();
     });
 
@@ -476,14 +406,12 @@ const ChatWindow = ({
     
     // IMPORTANT: Skip staff Pusher if this is a guest (guests use centralized guestChatStore)
     if (isGuest) {
-      console.log('⏭️ Skipping staff Pusher - using guest Pusher hook instead');
       return;
     }
 
     // For staff conversations, we now use the centralized chatStore + channelRegistry subscription
     // The ConversationView component or StaffChatContext will handle the Pusher subscription
     // This component will receive updates via the chatStore sync below
-    console.log('📡 [STAFF-CONVERSATION] Using centralized chatStore for real-time updates:', conversationId);
     
     // Set active conversation in chatStore to ensure proper subscription
     chatDispatch({
@@ -548,33 +476,15 @@ const ChatWindow = ({
 
   // Guest Pusher setup - use useCallback to create stable event handlers
   const handleNewStaffMessage = useCallback((data) => {
-    console.log('📨 New staff message received by guest:', data);
-    console.log('📨 Message details:', {
-      id: data.id,
-      message: data.message,
-      sender_type: data.sender_type,
-      sender_id: data.sender_id,
-      reply_to: data.reply_to,
-      reply_to_message: data.reply_to_message
-    });
-    
     // 🔍 DEBUG: Check reply data for guests
-    if (data.reply_to) {
-      console.log('🔍 [GUEST PUSHER REPLY] Staff replied to message:', data.reply_to);
-      console.log('🔍 [GUEST PUSHER REPLY] reply_to_message:', data.reply_to_message);
-    }
     
     // Add message to list (check for duplicates)
     setMessages(prev => {
-      console.log('📨 Current messages count:', prev.length);
       const isDuplicate = prev.find(m => m.id === data.id);
       if (isDuplicate) {
-        console.log('⚠️ Duplicate message detected, skipping:', data.id);
         return prev;
       }
-      console.log('✅ Adding new staff message to UI:', data.id);
       const newMessages = [...prev, data];
-      console.log('✅ New messages count:', newMessages.length);
       return newMessages;
     });
     
@@ -612,25 +522,13 @@ const ChatWindow = ({
   }, []); // Stable callback
 
   const handleNewMessage = useCallback((data) => {
-    console.log('💬 New message received by guest (general event):', data);
-    console.log('💬 Message details:', {
-      id: data.id,
-      message: data.message,
-      sender_type: data.sender_type,
-      sender_id: data.sender_id
-    });
-    
     // Add message if not already present
     setMessages(prev => {
-      console.log('💬 Current messages count:', prev.length);
       const isDuplicate = prev.find(m => m.id === data.id);
       if (isDuplicate) {
-        console.log('⚠️ Duplicate message detected, skipping:', data.id);
         return prev;
       }
-      console.log('✅ Adding new message to UI:', data.id);
       const newMessages = [...prev, data];
-      console.log('✅ New messages count:', newMessages.length);
       return newMessages;
     });
     
@@ -642,8 +540,6 @@ const ChatWindow = ({
 
   // Handle staff assignment changes (for guests)
   const handleStaffAssigned = useCallback((data) => {
-    console.log('👤 Staff assigned event received:', data);
-    
     const newStaffInfo = {
       name: data.staff_name,
       role: data.staff_role,
@@ -668,30 +564,18 @@ const ChatWindow = ({
       
       setMessages((prev) => [...prev, systemMessage]);
       scrollToBottom();
-      console.log('✅ Added "joined chat" message for new staff:', data.staff_name);
-    } else {
-      console.log('ℹ️ Same staff member, skipping "joined chat" message');
     }
     
-    console.log('✅ Updated staff handler to:', data.staff_name);
   }, [currentStaff]);
 
   // Handle messages read by staff (for guest view)
   const handleMessagesReadByStaff = useCallback((data) => {
-    console.log('👁️ [SEEN STATUS] Messages read by staff event received:', data);
-    console.log('👁️ [SEEN STATUS] Event data:', JSON.stringify(data, null, 2));
-    console.log('👁️ [SEEN STATUS] Message IDs to mark as read:', data.message_ids);
-    
     const { message_ids } = data;
     if (message_ids && Array.isArray(message_ids)) {
-      console.log('👁️ [SEEN STATUS] Updating status for', message_ids.length, 'messages');
-      
       setMessageStatuses(prev => {
         const newMap = new Map(prev);
         message_ids.forEach(id => {
-          const oldStatus = newMap.get(id);
           newMap.set(id, 'read');
-          console.log(`👁️ [SEEN STATUS] Message ${id}: ${oldStatus} -> read`);
         });
         return newMap;
       });
@@ -700,15 +584,12 @@ const ChatWindow = ({
       setMessages(prevMessages => {
         const updated = prevMessages.map(msg => {
           if (message_ids.includes(msg.id)) {
-            console.log(`👁️ [SEEN STATUS] Marking message ${msg.id} as read in state`);
             return { ...msg, status: 'read', is_read_by_recipient: true, read_by_staff: true };
           }
           return msg;
         });
         return updated;
       });
-      
-      console.log('✅ [SEEN STATUS] Updated guest messages as read by staff');
     } else {
       console.warn('⚠️ [SEEN STATUS] No message_ids in event data or not an array:', message_ids);
     }
@@ -716,32 +597,24 @@ const ChatWindow = ({
 
   // Handle message deleted event (for guest view) - using utility
   const handleMessageDeleted = useCallback((data) => {
-    console.log('🗑️ [GUEST] handleMessageDeleted called with data:', data);
     handlePusherDeletion(data, setMessages, setMessageStatuses, isGuest);
   }, [isGuest]); // Only depend on isGuest
 
   // NEW: Handle content-deleted event from dedicated deletion channel
   const handleContentDeleted = useCallback((data) => {
-    console.log('🗑️🔴 [DELETION CHANNEL] content-deleted event received!');
-    console.log('🗑️🔴 [DELETION CHANNEL] Raw data:', JSON.stringify(data, null, 2));
-    
     // Use the same handler with isGuest flag for contextual messages
     handlePusherDeletion(data, setMessages, setMessageStatuses, isGuest);
   }, [isGuest]); // Only depend on isGuest
 
   // NEW: Handle attachment-deleted event from deletion channel
   const handleAttachmentDeleted = useCallback((data) => {
-    console.log('📎 [DELETION CHANNEL] attachment-deleted event received:', data);
     const { attachment_id, message_id } = data;
     
     if (message_id && attachment_id) {
-      console.log(`📎 Removing attachment ${attachment_id} from message ${message_id}`);
-      
       setMessages(prevMessages => 
         prevMessages.map(msg => {
           if (msg.id === message_id && msg.attachments) {
             const updatedAttachments = msg.attachments.filter(att => att.id !== attachment_id);
-            console.log(`📎 Attachments: ${msg.attachments.length} → ${updatedAttachments.length}`);
             
             return {
               ...msg,
@@ -751,28 +624,20 @@ const ChatWindow = ({
           return msg;
         })
       );
-      
-      console.log(`✅ Attachment ${attachment_id} removed from UI`);
     }
   }, []);
 
   // Guest chat now uses centralized guestChatStore via RealtimeProvider
   // All Pusher subscriptions are handled by the eventBus system
-  // console.log('🔧 [CHATWINDOW] Guest chat now uses centralized store via RealtimeProvider');
 
   // Use appropriate messages source based on user type
   const displayMessages = isGuest ? guestMessages : messages;
   
-  // Debug logging for message state - SIMPLIFIED to prevent re-renders
-  // console.log('🔥 [MESSAGE DEBUG] isGuest:', isGuest, 'messages:', displayMessages?.length || 0);
-
   // Initialize guest conversation when component loads
   useEffect(() => {
     if (isGuest && conversationId) {
-      console.log('🔄 [GUEST CHAT] Setting active conversation:', conversationId);
       setActiveGuestConversation(conversationId);
       fetchGuestMessages(conversationId).then(() => {
-        console.log('📥 [GUEST CHAT] Messages fetched, clearing loading state');
         setLoading(false);
         setLoadingMore(false);
       }).catch((err) => {
@@ -786,32 +651,21 @@ const ChatWindow = ({
   // FCM foreground message listener for guests
   useEffect(() => {
     if (!isGuest) {
-      console.log('🔔 Skipping FCM setup - not a guest');
       return;
     }
 
-    console.log('🔔 Setting up FCM foreground message listener for guest');
-    
     try {
       // Listen for foreground FCM messages (when tab is open)
       const unsubscribe = onMessage(messaging, (payload) => {
-        console.log('🔔 FCM foreground message received:', payload);
-        console.log('🔔 FCM payload.data:', payload.data);
-        console.log('🔔 FCM payload.notification:', payload.notification);
-        
         // Extract message data
         const data = payload.data;
         if (data && data.message_id) {
           // FCM notification already shown by service worker
           // Pusher event will handle adding the message to the UI
-          console.log('✅ FCM message received, Pusher will handle UI update');
-        } else {
-          console.warn('⚠️ FCM message received but no message_id in data');
         }
       });
 
       return () => {
-        console.log('🔔 Cleaning up FCM listener');
         unsubscribe();
       };
     } catch (error) {
@@ -901,8 +755,7 @@ const ChatWindow = ({
     
     // Add valid files
     if (validFiles.length > 0) {
-      setSelectedFiles([...selectedFiles, ...validFiles]);
-      console.log(`✅ Added ${validFiles.length} valid file(s) for upload`);
+      setSelectedFiles([]);
     }
     
     e.target.value = ''; // Reset input
@@ -942,15 +795,6 @@ const ChatWindow = ({
       __optimistic: true // Mark as optimistic for proper identification
     };
     
-    console.log('📤 Creating temp message:', {
-      tempId,
-      sender_type: tempMessage.sender_type,
-      userId,
-      isGuest,
-      staff: tempMessage.staff,
-      guest_name: tempMessage.guest_name
-    });
-
     setMessages(prev => [...prev, tempMessage]);
     setMessageStatuses(prev => new Map(prev).set(tempId, 'pending'));
     scrollToBottom();
@@ -965,7 +809,6 @@ const ChatWindow = ({
         // Add files
         filesToSend.forEach((file, index) => {
           formData.append('files', file);
-          console.log(`📎 File ${index + 1}: ${file.name} (${(file.size / 1024).toFixed(1)}KB, ${file.type})`);
         });
         
         // Add message text if present
@@ -977,33 +820,15 @@ const ChatWindow = ({
         const replyId = formatReplyData(replyToMessage);
         if (replyId) {
           formData.append('reply_to', replyId);
-          console.log('📤 [SEND REPLY WITH FILE] Adding reply_to to FormData:', {
-            reply_to: replyId,
-            replying_to_message: replyToMessage?.message?.substring(0, 50),
-            replying_to_sender: replyToMessage?.sender_type
-          });
         }
         
         // Add authentication - SAME AS TEXT MESSAGES
         if (userId) {
           // Staff - add staff_id to FormData (same as text messages)
           formData.append('staff_id', userId);
-          console.log('👤 Staff upload with staff_id:', userId);
         } else {
           // Guest upload - no PIN session auth
-          console.log('👤 Guest upload without session auth');
         }
-
-        console.log('📤 Uploading to Cloudinary via backend:', {
-          endpoint: `/api${buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/upload-attachment/`)}`,
-          fileCount: filesToSend.length,
-          totalSize: `${(filesToSend.reduce((sum, f) => sum + f.size, 0) / 1024).toFixed(1)}KB`,
-          hasMessage: !!messageToSend.trim(),
-          isGuest,
-          userId,
-          conversationId,
-          cloudinaryBase: CLOUDINARY_BASE
-        });
 
         // Build headers object for staff authentication
         const headers = {};
@@ -1023,15 +848,8 @@ const ChatWindow = ({
           if (hotelSlug_header) {
             headers['X-Hotel-Slug'] = hotelSlug_header;
           }
-          
-          console.log('📤 Staff upload headers:', { 
-            hasAuth: !!headers['Authorization'],
-            hotelId: headers['X-Hotel-ID'],
-            hotelSlug: headers['X-Hotel-Slug']
-          });
         } else {
           // Guest upload - no auth headers
-          console.log('📤 Guest upload - no auth headers');
         }
         // DON'T set Content-Type - browser sets it with boundary
 
@@ -1054,13 +872,6 @@ const ChatWindow = ({
         
         const apiBase = getApiBaseUrl();
         const uploadUrl = `${apiBase}/api${buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/upload-attachment/`)}`;
-        console.log('📤 [UPLOAD] Full upload URL:', uploadUrl);
-        console.log('📤 [UPLOAD] URL parts:', {
-          apiBase,
-          hotelSlug,
-          conversationId
-        });
-        
         response = await fetch(uploadUrl, {
           method: 'POST',
           headers: headers,
@@ -1075,16 +886,6 @@ const ChatWindow = ({
         }
         
         const data = await response.json();
-        console.log('✅ Upload successful - files stored in Cloudinary:', {
-          messageId: data.message?.id,
-          attachmentCount: data.attachments?.length,
-          attachments: data.attachments?.map(a => ({
-            name: a.file_name,
-            url: a.file_url,
-            type: a.file_type,
-            size: a.file_size_display
-          }))
-        });
         response = { data }; // Normalize response format
         
       } else {
@@ -1103,45 +904,18 @@ const ChatWindow = ({
         const replyId = formatReplyData(replyToMessage);
         if (replyId) {
           payload.reply_to = replyId;
-          console.log('📤 [SEND REPLY] Adding reply_to to payload:', {
-            reply_to: replyId,
-            replying_to_message: replyToMessage?.message?.substring(0, 50),
-            replying_to_sender: replyToMessage?.sender_type
-          });
         }
-
-        console.log('📤 [SEND MESSAGE] Sending payload:', {
-          hasMessage: !!payload.message,
-          hasReply: !!payload.reply_to,
-          staff_id: payload.staff_id,
-          isGuest: !userId
-        });
 
         response = await api.post(
           buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/messages/send/`),
           payload
         );
-        
-        console.log('✅ [SEND MESSAGE] Response received:', {
-          message_id: response.data?.message?.id || response.data?.id,
-          has_reply_to: !!(response.data?.message?.reply_to || response.data?.reply_to),
-          has_reply_to_message: !!(response.data?.message?.reply_to_message || response.data?.reply_to_message),
-          reply_data: response.data?.message?.reply_to_message || response.data?.reply_to_message
-        });
       }
 
       // Extract the actual message object
       const messageData = response.data?.message || response.data;
       
-      console.log('📨 [MESSAGE RECEIVED] Backend returned message:', {
-        id: messageData?.id,
-        has_reply_to: !!messageData?.reply_to,
-        reply_to_value: messageData?.reply_to,
-        has_reply_to_message: !!messageData?.reply_to_message,
-        reply_to_message_data: messageData?.reply_to_message
-      });
-      
-      // 🔍 DEBUG: Check if backend returned wrong sender_type
+      // Check if backend returned wrong sender_type
       if (userId && messageData?.sender_type !== 'staff') {
         console.error('❌ BACKEND ERROR: Staff sent message but backend returned sender_type:', messageData?.sender_type);
         console.error('❌ This is a BACKEND bug. Staff should always have sender_type="staff"');
@@ -1157,16 +931,13 @@ const ChatWindow = ({
 
       // Replace temp message with real message from backend
       if (messageData?.id) {
-        console.log(`🔄 Replacing temp message ${tempId} with real message ${messageData.id}`);
         setMessages(prev => {
           // Check if the real message already exists (from Pusher)
           const realMessageExists = prev.some(m => m.id === messageData.id);
           
           if (realMessageExists) {
-            console.log(`⚠️ Real message ${messageData.id} already exists, just removing temp`);
             return prev.filter(msg => msg.id !== tempId);
           } else {
-            console.log(`✅ Replacing temp ${tempId} with real ${messageData.id}`);
             return prev.map(msg => msg.id === tempId ? { ...messageData, status: 'delivered' } : msg);
           }
         });
@@ -1201,9 +972,6 @@ const ChatWindow = ({
       if (filesToSend.length > 0) {
         errorMessage += '\n\nTip: Files are uploaded to Cloudinary. Check file size (max 50MB) and type.';
       }
-      
-      console.error('❌ [FILE UPLOAD ERROR] Full error details:', err);
-      console.error('❌ [FILE UPLOAD ERROR] Error response:', err.response?.data);
       
       alert(errorMessage);
       
@@ -2036,18 +1804,12 @@ const ChatWindow = ({
           onClick={async () => {
             if (!conversationId) return;
             
-            console.log('📝 [INPUT FOCUS] User focused on message input');
-            
             try {
               // For staff: ALWAYS call backend regardless of local state
               if (userId) {
-                console.log('📝 [INPUT FOCUS] Staff marking guest messages as read');
                 
                 // FIRST: Call backend immediately (don't wait for state updates)
-                console.log('🔥 [INPUT FOCUS] Calling backend to mark ALL guest messages as read...');
                 const response = await api.post(buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/mark-read/`));
-                console.log('✅ [INPUT FOCUS] Backend response:', response.data);
-                console.log('✅ [INPUT FOCUS] Backend should have fired Pusher event to guest');
                 
                 // THEN: Update local UI (won't cause re-initialization issues)
                 setMessages(prevMessages => 
@@ -2070,15 +1832,11 @@ const ChatWindow = ({
                   return newMap;
                 });
                 
-                console.log('✅ [INPUT FOCUS] Local UI updated');
-                
                 // Update conversation badge in sidebar (remove unread count)
                 markConversationRead(conversationId);
-                console.log('✅ [INPUT FOCUS] Conversation marked as read in sidebar');
               } 
               // For guests: mark staff messages as read (no session auth needed)
               else if (isGuest) {
-                console.log('📝 [INPUT FOCUS] Guest marking staff messages as read');
                 
                 // Collect staff message IDs from current state
                 const staffMessageIds = [];
@@ -2088,7 +1846,6 @@ const ChatWindow = ({
                   const updated = prevMessages.map(msg => {
                     if (msg.sender_type === 'staff' && !msg.is_read_by_recipient && msg.status !== 'read') {
                       staffMessageIds.push(msg.id);
-                      console.log(`📝 [INPUT FOCUS] Marking staff message ${msg.id} as read`);
                       return { ...msg, status: 'read', is_read_by_recipient: true, read_by_guest: true };
                     }
                     return msg;
@@ -2098,7 +1855,6 @@ const ChatWindow = ({
                 
                 // Update message statuses map using the collected IDs
                 if (staffMessageIds.length > 0) {
-                  console.log(`📝 [INPUT FOCUS] Updating status map for ${staffMessageIds.length} staff messages`);
                   setMessageStatuses(prev => {
                     const newMap = new Map(prev);
                     staffMessageIds.forEach(id => {
@@ -2110,7 +1866,6 @@ const ChatWindow = ({
                 
                 // Then call backend to mark as read (will trigger Pusher event for staff)
                 const response = await api.post(buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/mark-read/`));
-                console.log('✅ [INPUT FOCUS] Guest marked conversation as read:', response.data);
               }
             } catch (error) {
               console.error('❌ [INPUT FOCUS] Failed to mark conversation as read:', error);

@@ -42,16 +42,10 @@ const VarianceHeatmapChart = ({
     setLoading(true);
     setError(null);
 
-    console.log('🔍 VarianceHeatmapChart: Fetching heatmap data...', {
-      hotelSlug,
-      selectedPeriods,
-      periodsCount: selectedPeriods.length
-    });
 
     try {
       const response = await getVarianceHeatmap(hotelSlug, selectedPeriods);
       
-      console.log('📦 VarianceHeatmapChart: Raw API Response:', response);
       
       if (!response || !response.heatmap_data) {
         console.error('❌ VarianceHeatmapChart: No heatmap data in response');
@@ -60,12 +54,6 @@ const VarianceHeatmapChart = ({
         return;
       }
 
-      console.log('✅ VarianceHeatmapChart: Heatmap data received:', {
-        heatmapDataType: Array.isArray(response.heatmap_data) ? 'array' : typeof response.heatmap_data,
-        heatmapDataLength: response.heatmap_data?.length,
-        categoriesCount: response.categories?.length,
-        periodsCount: response.periods?.length
-      });
 
       setChartData(response);
     } catch (err) {
@@ -95,7 +83,6 @@ const VarianceHeatmapChart = ({
    * Generate ECharts heatmap option
    */
   const getHeatmapOption = () => {
-    console.log('🔧 VarianceHeatmapChart: Generating chart option...', chartData);
     
     if (!chartData || !chartData.heatmap_data) {
       console.error('❌ VarianceHeatmapChart: No chart data available');
@@ -104,11 +91,6 @@ const VarianceHeatmapChart = ({
 
     const { heatmap_data, categories, periods } = chartData;
     
-    console.log('📋 VarianceHeatmapChart: Chart data structure:', {
-      heatmap_data: heatmap_data?.slice(0, 3), // First 3 items
-      categories,
-      periods
-    });
     
     // Map category codes to full names
     const categoryNames = categories.map(cat => getCategoryName(cat));
@@ -123,7 +105,6 @@ const VarianceHeatmapChart = ({
       return null;
     }
 
-    console.log('✅ VarianceHeatmapChart: Data structure validated');
 
     // Transform heatmap data for ECharts format
     // ECharts heatmap expects data as: [[x, y, value], ...]
@@ -164,11 +145,6 @@ const VarianceHeatmapChart = ({
       return null;
     }
 
-    console.log('✅ VarianceHeatmapChart: Data transformed successfully:', {
-      dataPoints: data.length,
-      sampleData: data.slice(0, 5),
-      valuesRange: { min: Math.min(...values), max: Math.max(...values) }
-    });
 
     // Calculate min/max for color scale
     const minValue = Math.min(...values);

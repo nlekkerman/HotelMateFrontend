@@ -36,29 +36,6 @@ export const PeriodSnapshots = () => {
       const response = await api.get(`/stock_tracker/${hotel_slug}/periods/`);
       const periodsData = response.data.results || response.data;
       
-      console.log('📊 Periods (MONTHS) data received:', periodsData);
-      if (periodsData.length > 0) {
-        console.log('📋 Sample PERIOD structure:', {
-          period_id: periodsData[0].id,
-          period_name: periodsData[0].period_name,
-          year: periodsData[0].year,
-          month: periodsData[0].month,
-          is_closed: periodsData[0].is_closed,
-          closed_at: periodsData[0].closed_at,
-          closed_by: periodsData[0].closed_by,
-          reopened_at: periodsData[0].reopened_at,
-          reopened_by: periodsData[0].reopened_by,
-          has_stocktake: !!periodsData[0].stocktake,
-          stocktake_object: periodsData[0].stocktake,
-          all_keys: Object.keys(periodsData[0])
-        });
-        console.log('💡 RELATIONSHIP: Period = Month, Stocktake = belongs to that month');
-        
-        if (periodsData[0].stocktake) {
-          console.log('✅ Stocktake data:', periodsData[0].stocktake);
-        }
-      }
-      
       setPeriods(periodsData);
       setError(null);
     } catch (err) {
@@ -70,59 +47,44 @@ export const PeriodSnapshots = () => {
   };
 
   const getPeriodBadge = (period, allPeriods) => {
-    console.log('🏷️ Badge for period:', period.period_name, 'is_closed:', period.is_closed);
     
     if (period.is_closed) {
-      console.log('   → Closed period badge');
       return <span className="badge bg-secondary">{period.period_name}</span>;
     }
     
     // For open periods, check if this is the most recent one
     const openPeriods = allPeriods.filter(p => !p.is_closed);
-    console.log('   → Open periods count:', openPeriods.length);
-    console.log('   → Open periods:', openPeriods.map(p => ({ name: p.period_name, start: p.start_date })));
     
     const mostRecentOpen = openPeriods.sort((a, b) => 
       new Date(b.start_date) - new Date(a.start_date)
     )[0];
     
-    console.log('   → Most recent open:', mostRecentOpen?.period_name);
-    console.log('   → Current period ID:', period.id, 'Most recent ID:', mostRecentOpen?.id);
     
     // Only the most recent open period is "Current Period"
     if (mostRecentOpen?.id === period.id) {
-      console.log('   → ✅ This is CURRENT period');
       return <span className="badge bg-success">Current Period</span>;
     }
     
     // Older open periods show "Open"
-    console.log('   → ⚠️ This is older OPEN period');
     return <span className="badge bg-info">Open</span>;
   };
 
   const filteredPeriods = periods.filter(period => {
-    console.log('🔍 Filtering period:', period.period_name, 'statusFilter:', statusFilter, 'is_closed:', period.is_closed);
     
     if (statusFilter === "all") {
-      console.log('   → Filter: ALL - include');
       return true;
     }
     if (statusFilter === "open") {
       const include = !period.is_closed;
-      console.log('   → Filter: OPEN - include?', include);
       return include;
     }
     if (statusFilter === "closed") {
       const include = period.is_closed;
-      console.log('   → Filter: CLOSED - include?', include);
       return include;
     }
-    console.log('   → Filter: default - include');
     return true;
   });
   
-  console.log('📋 Filtered periods result:', filteredPeriods.length, 'of', periods.length);
-  console.log('📊 Filtered period names:', filteredPeriods.map(p => p.period_name));
 
   const handleReopenClick = (e, period) => {
     e.stopPropagation(); // Prevent card click
@@ -142,17 +104,6 @@ export const PeriodSnapshots = () => {
   };
 
   const handlePeriodClick = async (period) => {
-    console.log('\n🔵 ========================================');
-    console.log('🔵 PERIOD CLICKED - Starting Flow');
-    console.log('🔵 ========================================');
-    console.log('📋 Period:', {
-      id: period.id,
-      name: period.period_name,
-      start: period.start_date,
-      end: period.end_date,
-      is_closed: period.is_closed,
-      has_stocktake: !!period.stocktake
-    });
 
     // FLOW:
     // 1. If period has stocktake → Go to stocktake details
@@ -160,29 +111,21 @@ export const PeriodSnapshots = () => {
     
     if (period.stocktake?.id) {
       // Has stocktake - go directly to stocktake details
-      console.log('✅ Period has stocktake ID:', period.stocktake.id);
-      console.log('   → Navigating to existing stocktake');
       navigate(`/stock_tracker/${hotel_slug}/stocktakes/${period.stocktake.id}`);
       return;
     }
     
     // No stocktake - search for existing stocktake first
-    console.warn('⚠️ Period missing stocktake reference, searching database...');
     try {
       const response = await api.get(`/stock_tracker/${hotel_slug}/stocktakes/`);
       const stocktakes = response.data.results || response.data;
       
-      console.log('📊 Found', stocktakes.length, 'total stocktakes in database');
       
       // Find stocktake that matches this period's dates
       // Use date-only string comparison to avoid timezone issues
       const periodStartDate = period.start_date.split('T')[0]; // Get YYYY-MM-DD
       const periodEndDate = period.end_date.split('T')[0]; // Get YYYY-MM-DD
       
-      console.log('🔍 Searching for stocktake matching dates:', {
-        start: periodStartDate,
-        end: periodEndDate
-      });
       
       const matchingStocktake = stocktakes.find(st => {
         const stStartDate = st.period_start.split('T')[0];
@@ -191,21 +134,11 @@ export const PeriodSnapshots = () => {
       });
       
       if (matchingStocktake) {
-        console.log('✅ Found existing stocktake:', {
-          id: matchingStocktake.id,
-          status: matchingStocktake.status,
-          total_lines: matchingStocktake.total_lines
-        });
-        console.log('   → Navigating to existing stocktake');
         navigate(`/stock_tracker/${hotel_slug}/stocktakes/${matchingStocktake.id}`);
         return;
       }
       
       // No stocktake exists - CREATE ONE for this period
-      console.log('\n📝 ========================================');
-      console.log('📝 STEP 1: Creating Stocktake');
-      console.log('📝 ========================================');
-      console.log('📦 Creating new stocktake for period:', period.period_name);
       toast.info(`Creating stocktake for ${period.period_name}...`);
       
       const createPayload = {
@@ -214,57 +147,21 @@ export const PeriodSnapshots = () => {
         status: 'DRAFT'
       };
       
-      console.log('📤 POST payload:', createPayload);
       
       const createResponse = await api.post(`/stock_tracker/${hotel_slug}/stocktakes/`, createPayload);
       const newStocktake = createResponse.data;
       
-      console.log('✅ Stocktake created:', {
-        id: newStocktake.id,
-        status: newStocktake.status,
-        total_lines: newStocktake.total_lines
-      });
       
       // POPULATE the stocktake with inventory items
-      console.log('\n🔄 ========================================');
-      console.log('🔄 STEP 2: Populating Stocktake');
-      console.log('🔄 ========================================');
-      console.log('📦 Populating stocktake with items...');
       toast.info('Loading inventory items...');
       
-      console.time('populate-duration');
       
       try {
         const populateResponse = await api.post(`/stock_tracker/${hotel_slug}/stocktakes/${newStocktake.id}/populate/`);
         
-        console.timeEnd('populate-duration');
-        
-        console.log('✅ Population complete:', {
-          lines_created: populateResponse.data.lines_created,
-          message: populateResponse.data.message
-        });
-        
         // Verify opening balances
-        console.log('\n🔍 ========================================');
-        console.log('🔍 STEP 3: Verifying Opening Balances');
-        console.log('🔍 ========================================');
-        
         const verifyResponse = await api.get(`/stock_tracker/${hotel_slug}/stocktakes/${newStocktake.id}/`);
         const populatedStocktake = verifyResponse.data;
-        
-        console.log('📊 Stocktake has', populatedStocktake.lines.length, 'lines');
-        
-        // Check first 5 lines for opening stock
-        console.log('🔍 Checking opening balances (first 5 items):');
-        populatedStocktake.lines.slice(0, 5).forEach(line => {
-          console.log(`  ${line.item_sku} - ${line.item_name}:`, {
-            opening_qty: line.opening_qty,
-            opening_display: `${line.opening_display_full_units} + ${line.opening_display_partial_units}`,
-            purchases: line.purchases,
-            expected_qty: line.expected_qty,
-            source: line.opening_qty === '0.0000' ? '❌ ZERO (ERROR!)' : '✅ Has opening'
-          });
-        });
         
         // Alert if all opening balances are zero
         const allZero = populatedStocktake.lines.every(line => 
@@ -275,8 +172,6 @@ export const PeriodSnapshots = () => {
           console.error('❌ WARNING: All opening balances are ZERO!');
           console.error('This indicates a backend issue. Contact support.');
           toast.warning('⚠️ Opening balances are all zero - this may need attention');
-        } else {
-          console.log('✅ Opening balances look good!');
         }
         
         toast.success(`Stocktake created and populated for ${period.period_name}! 🎉`);
@@ -287,13 +182,9 @@ export const PeriodSnapshots = () => {
         console.error('Error:', populateErr);
         console.error('Response:', populateErr.response?.data);
         
-        console.warn('⚠️ Failed to populate stocktake:', populateErr);
         toast.warning('Stocktake created but failed to populate. Click "Populate Lines" button.');
       }
       
-      console.log('\n✅ ========================================');
-      console.log('✅ FLOW COMPLETE - Navigating to Stocktake');
-      console.log('✅ ========================================\n');
       
       // Navigate to the new stocktake
       navigate(`/stock_tracker/${hotel_slug}/stocktakes/${newStocktake.id}`);

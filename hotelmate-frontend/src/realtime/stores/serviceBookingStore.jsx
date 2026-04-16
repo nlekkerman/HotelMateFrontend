@@ -229,7 +229,6 @@ export const serviceBookingActions = {
     }
 
     if (serviceBookingActions._processedEventIds.has(deduplicationKey)) {
-      console.log("[serviceBookingStore] Duplicate event detected, skipping:", deduplicationKey);
       return;
     }
 
@@ -242,8 +241,6 @@ export const serviceBookingActions = {
       const toDelete = eventIds.slice(0, 500);
       toDelete.forEach(id => serviceBookingActions._processedEventIds.delete(id));
     }
-
-    console.log("[serviceBookingStore] Processing event:", eventType, payload);
 
     // ✅ Handle events from the guide
     switch (eventType) {
@@ -301,9 +298,6 @@ export const serviceBookingActions = {
         break;
 
       default:
-        if (import.meta.env && !import.meta.env.PROD) {
-          console.log("[serviceBookingStore] Ignoring eventType:", eventType, event);
-        }
         break;
     }
   },

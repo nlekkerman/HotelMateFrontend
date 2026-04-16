@@ -63,8 +63,6 @@ export const BookingNotificationProvider = ({ children }) => {
   }, [allBookings.length, isEligibleForNotifications, lastSeenBookingCount]);
 
   const handleNewDinnerBooking = (booking) => {
-    console.log("🍽️ New dinner booking received:", booking);
-    
     setHasNewBooking(true);
 
     // Show toast notification
@@ -109,9 +107,7 @@ export const BookingNotificationProvider = ({ children }) => {
   // Request browser notification permission
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission().then((permission) => {
-        console.log("Booking notification permission:", permission);
-      });
+      Notification.requestPermission();
     }
   }, []);
 

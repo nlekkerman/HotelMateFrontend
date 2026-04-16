@@ -108,8 +108,6 @@ const GallerySectionPreset = ({ section, onUpdate }) => {
 
   const handleAddImageClick = () => {
     setShowAddImageModal(true);
-    // TODO: Implement image upload modal
-    console.log('Add image clicked for gallery:', selectedGalleryId);
   };
 
   const handleCreateGallery = async () => {

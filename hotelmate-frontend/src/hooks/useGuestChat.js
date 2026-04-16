@@ -173,7 +173,9 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     (evt) => {
       realtimeDiag.current.lastReceivedEventName = events?.message_created;
 
-      if (DEBUG_REALTIME) console.log('[useGuestChat] message_created event:', evt);
+      if (DEBUG_REALTIME) {
+        // debug logging removed
+      }
 
       // Accept canonical envelope OR raw payload
       const payload = evt?.payload ?? evt;
@@ -223,8 +225,6 @@ export const useGuestChat = ({ hotelSlug, token }) => {
     (evt) => {
       realtimeDiag.current.lastReceivedEventName = events?.message_read;
 
-      if (DEBUG_REALTIME) console.log('[useGuestChat] message_read event:', evt);
-
       const payload = evt?.payload ?? evt;
       const eventId = evt?.meta?.event_id;
 
@@ -258,7 +258,6 @@ export const useGuestChat = ({ hotelSlug, token }) => {
   // ── Realtime handler: message_deleted ─────────────────────────────────
   const handleMessageDeleted = useCallback(
     (evt) => {
-      if (DEBUG_REALTIME) console.log('[useGuestChat] message_deleted event:', evt);
 
       const payload = evt?.payload ?? evt;
       const messageId = payload.message_id || payload.id;
@@ -278,7 +277,6 @@ export const useGuestChat = ({ hotelSlug, token }) => {
   // ── Realtime handler: message_edited ──────────────────────────────────
   const handleMessageEdited = useCallback(
     (evt) => {
-      if (DEBUG_REALTIME) console.log('[useGuestChat] message_edited event:', evt);
 
       const payload = evt?.payload ?? evt;
       const messageId = payload.message_id || payload.id;
@@ -304,7 +302,6 @@ export const useGuestChat = ({ hotelSlug, token }) => {
   // ── Realtime handler: unread_updated ──────────────────────────────────
   const handleUnreadUpdated = useCallback(
     (evt) => {
-      if (DEBUG_REALTIME) console.log('[useGuestChat] unread_updated event:', evt);
 
       const payload = evt?.payload ?? evt;
 
@@ -357,7 +354,6 @@ export const useGuestChat = ({ hotelSlug, token }) => {
         // Debug: global event log
         if (DEBUG_REALTIME) {
           channel.bind_global((eventName, data) => {
-            console.log('[useGuestChat] global event:', { eventName, data, channel: channelName });
           });
         }
 

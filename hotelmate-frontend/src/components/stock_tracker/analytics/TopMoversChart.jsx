@@ -41,17 +41,10 @@ const TopMoversChart = ({
     setLoading(true);
     setError(null);
 
-    console.log('🔍 TopMoversChart: Fetching top movers data...', {
-      hotelSlug,
-      period1,
-      period2,
-      limit
-    });
 
     try {
       const response = await getTopMovers(hotelSlug, period1, period2, limit);
       
-      console.log('📦 TopMoversChart: Raw API Response:', response);
       
       if (!response) {
         console.error('❌ TopMoversChart: No response from API');
@@ -60,12 +53,6 @@ const TopMoversChart = ({
         return;
       }
 
-      console.log('✅ TopMoversChart: Data received:', {
-        increases: response.biggest_increases?.length,
-        decreases: response.biggest_decreases?.length,
-        new: response.new_items?.length,
-        discontinued: response.discontinued_items?.length
-      });
 
       setChartData(response);
     } catch (err) {
@@ -81,7 +68,6 @@ const TopMoversChart = ({
    * Transform data for chart display based on active tab
    */
   const getChartDataForTab = () => {
-    console.log('🔧 TopMoversChart: Getting data for tab:', activeTab);
     
     if (!chartData || typeof chartData !== 'object') {
       console.error('❌ TopMoversChart: Invalid chart data');
@@ -305,7 +291,6 @@ const TopMoversChart = ({
               config={chartConfig}
               height={height}
               onDataClick={(data) => {
-                console.log('Item clicked:', data);
                 if (onItemClick && data.dataIndex !== undefined) {
                   const item = currentChartData.datasets[0].items[data.dataIndex];
                   onItemClick(item);

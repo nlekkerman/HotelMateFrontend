@@ -106,13 +106,6 @@ export const useSurveyData = (hotelSlug, token) => {
           
           // Theme preset
           setPreset(data.preset || 'default');
-          
-          console.log('Survey data loaded successfully:', {
-            survey_state: finalState,
-            config: data.survey_config,
-            registry: data.field_registry || data.survey_field_registry,
-            booking: data.booking
-          });
         }
         
       } catch (err) {

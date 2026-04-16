@@ -112,7 +112,6 @@ export const useVoiceRecorder = () => {
         if (average < SILENCE_THRESHOLD) {
           // Silence detected
           if (Date.now() - silenceStart > SILENCE_DURATION) {
-            console.log('🔇 Silence detected for 4 seconds, auto-stopping...');
             addVoiceLog('info', '🔇 Silence detected - auto-stopping recording', {
               duration: '4 seconds',
               threshold: SILENCE_THRESHOLD

@@ -79,7 +79,6 @@ export default function DinnerBookingList() {
       .then((res) => {
         setBookings(res.data);
         setLoadingBookings(false);
-        console.log("Fetched dinner bookings:", res.data);
         
         // Initialize store with fetched bookings for realtime updates
         if (res.data && res.data.length > 0) {

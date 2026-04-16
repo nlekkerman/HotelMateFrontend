@@ -77,11 +77,9 @@ export const StocktakeDetail = () => {
     const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER || "mt1";
 
     if (!pusherKey) {
-      console.warn("⚠️ Pusher key not found in environment variables");
       return;
     }
 
-    console.log("🔌 Initializing Pusher for stocktake...");
 
     const pusherInstance = new Pusher(pusherKey, {
       cluster: pusherCluster,
@@ -89,12 +87,10 @@ export const StocktakeDetail = () => {
     });
 
     pusherInstance.connection.bind("connected", () => {
-      console.log("✅ Pusher connected");
       setPusherReady(true);
     });
 
     pusherInstance.connection.bind("disconnected", () => {
-      console.log("❌ Pusher disconnected");
       setPusherReady(false);
     });
 
@@ -106,14 +102,12 @@ export const StocktakeDetail = () => {
 
     // Cleanup on unmount
     return () => {
-      console.log("🔌 Disconnecting Pusher...");
       pusherInstance.disconnect();
     };
   }, []);
 
   // Pusher callbacks
   const handleLineUpdatedFromPusher = useCallback((updatedLine) => {
-    console.log("📡 Real-time line update received:", updatedLine.item_sku);
     setLines((prevLines) =>
       prevLines.map((line) => (line.id === updatedLine.id ? updatedLine : line))
     );
@@ -121,10 +115,6 @@ export const StocktakeDetail = () => {
   }, []);
 
   const handleStocktakeUpdatedFromPusher = useCallback((updatedStocktake) => {
-    console.log(
-      "📡 Real-time stocktake status change:",
-      updatedStocktake.status
-    );
     setStocktake(updatedStocktake);
 
     if (updatedStocktake.status === "APPROVED") {
@@ -135,7 +125,6 @@ export const StocktakeDetail = () => {
   }, []);
 
   const handleStocktakePopulatedFromPusher = useCallback((data) => {
-    console.log("📡 Real-time stocktake populated:", data.lines_created);
     toast.success(`${data.lines_created} items loaded into stocktake`, {
       autoClose: 3000,
     });
@@ -204,48 +193,21 @@ export const StocktakeDetail = () => {
   };
 
   const handlePopulate = async () => {
-    console.log('\n🔄 ========================================');
-    console.log('🔄 POPULATING STOCKTAKE');
-    console.log('🔄 ========================================');
-    console.log('📋 Stocktake ID:', id);
-    console.log('📅 Period:', {
-      start: stocktake.period_start,
-      end: stocktake.period_end
-    });
 
     try {
       setPopulating(true);
       
-      console.time('populate-duration');
       
       const response = await api.post(`/stock_tracker/${hotel_slug}/stocktakes/${id}/populate/`);
       
-      console.timeEnd('populate-duration');
       
-      console.log('✅ Population complete:', {
-        lines_created: response.data.lines_created,
-        message: response.data.message
-      });
       
       // Fetch updated stocktake
       await fetchStocktake();
       
       // Verify opening balances
-      console.log('\n🔍 Verifying opening balances...');
       const verifyResponse = await api.get(`/stock_tracker/${hotel_slug}/stocktakes/${id}/`);
       const populatedStocktake = verifyResponse.data;
-      
-      console.log('📊 Total lines:', populatedStocktake.lines.length);
-      
-      // Check first 5 lines
-      console.log('🔍 First 5 items:');
-      populatedStocktake.lines.slice(0, 5).forEach(line => {
-        console.log(`  ${line.item_sku} - ${line.item_name}:`, {
-          opening_qty: line.opening_qty,
-          opening_display: `${line.opening_display_full_units} + ${line.opening_display_partial_units}`,
-          expected_qty: line.expected_qty
-        });
-      });
       
       // Check for zeros
       const allZero = populatedStocktake.lines.every(line => 
@@ -256,7 +218,6 @@ export const StocktakeDetail = () => {
         console.error('❌ WARNING: All opening balances are ZERO!');
         toast.warning('⚠️ All opening balances are zero - please check previous period');
       } else {
-        console.log('✅ Opening balances look good!');
         toast.success('Stocktake populated successfully! 🎉');
       }
       
@@ -284,9 +245,6 @@ export const StocktakeDetail = () => {
     transfersOut = null,
     adjustments = null
   ) => {
-    console.log("\n🔵 ========================================");
-    console.log("🔵 PARENT HANDLER - handleUpdateLine CALLED");
-    console.log("🔵 ========================================");
 
     try {
       // Find the line being updated
@@ -296,12 +254,6 @@ export const StocktakeDetail = () => {
         return;
       }
 
-      console.log("📋 Target Line:", {
-        id: lineId,
-        name: currentLine.item_name,
-        sku: currentLine.item_sku,
-        category: currentLine.category_code,
-      });
 
       // Handle movements through add_movement endpoint (purchases and waste are read-only in serializer)
       let movementsAdded = false;
@@ -312,12 +264,10 @@ export const StocktakeDetail = () => {
           quantity: parseFloat(purchases),
           notes: "Purchases recorded during stocktake",
         };
-        console.log("🛒 SENDING PURCHASE:", purchasePayload);
-        const purchaseResponse = await api.post(
+        await api.post(
           `/stock_tracker/${hotel_slug}/stocktake-lines/${lineId}/add-movement/`,
           purchasePayload
         );
-        console.log("✅ PURCHASE RESPONSE:", purchaseResponse.data);
         movementsAdded = true;
       }
 
@@ -331,12 +281,10 @@ export const StocktakeDetail = () => {
           quantity: parseFloat(wasteQuantity),
           notes: "Waste recorded during stocktake",
         };
-        console.log("💥 SENDING WASTE:", wastePayload);
-        const wasteResponse = await api.post(
+        await api.post(
           `/stock_tracker/${hotel_slug}/stocktake-lines/${lineId}/add-movement/`,
           wastePayload
         );
-        console.log("✅ WASTE RESPONSE:", wasteResponse.data);
         movementsAdded = true;
       }
 
@@ -369,129 +317,22 @@ export const StocktakeDetail = () => {
         payload.adjustments = adjustments;
       }
 
-      console.log(
-        "\n📦 Final Payload to API:",
-        JSON.stringify(payload, null, 2)
-      );
 
       // Update the line with counted values and purchases
-      console.log("\n🌐 SENDING PATCH TO UPDATE LINE");
-      console.log("─────────────────────────────────────────");
       const response = await api.patch(
         `/stock_tracker/${hotel_slug}/stocktake-lines/${lineId}/`,
         payload
       );
 
-      console.log("\n✅ DATABASE RESPONSE RECEIVED");
-      console.log("─────────────────────────────────────────");
-      console.log("Full Response:", JSON.stringify(response.data, null, 2));
-
-      console.log("\n� CHECKING WHAT DB RETURNED:");
-      console.log("─────────────────────────────────────────");
-
-      console.log("\n📊 Movement Values from DB:");
-      console.log(
-        "  🛒 Purchases (DB):",
-        response.data.purchases,
-        "← DID THIS UPDATE?"
-      );
-      console.log(
-        "  💥 Waste (DB):",
-        response.data.waste,
-        "← DID THIS UPDATE?"
-      );
-
-      console.log("\n📊 Stock Calculations from DB:");
-      console.log("  Opening Qty (DB):", response.data.opening_qty);
-      console.log(
-        "  Expected Qty (DB):",
-        response.data.expected_qty,
-        "← Should be: opening + purchases - waste"
-      );
-      console.log("  Expected Value (DB):", response.data.expected_value);
-      console.log("  Counted Qty (DB):", response.data.counted_qty);
-      console.log("  Variance Qty (DB):", response.data.variance_qty);
-      console.log("  Variance Value (DB):", response.data.variance_value);
-
-      console.log("\n🧮 VERIFY BACKEND FORMULA:");
-      const db_opening = parseFloat(response.data.opening_qty) || 0;
-      const db_purchases = parseFloat(response.data.purchases) || 0;
-      const db_waste = parseFloat(response.data.waste) || 0;
-      const db_expected = parseFloat(response.data.expected_qty) || 0;
-      const calculated_expected = db_opening + db_purchases - db_waste;
-      console.log(
-        `  Formula: ${db_opening} + ${db_purchases} - ${db_waste} = ${calculated_expected.toFixed(
-          4
-        )}`
-      );
-      console.log(`  DB Expected: ${db_expected.toFixed(4)}`);
-      console.log(
-        `  Match: ${
-          Math.abs(calculated_expected - db_expected) < 0.01
-            ? "✅"
-            : "❌ MISMATCH!"
-        }`
-      );
-
-      console.log("\n🔍 Input Fields Sent vs Returned:");
-      console.log("  SENT purchases:", payload.purchases ?? "not sent");
-      console.log("  RETURNED purchases:", response.data.purchases);
-      console.log(
-        "  ⚠️ Match:",
-        payload.purchases == response.data.purchases
-          ? "✅"
-          : "❌ VALUES DIFFERENT!"
-      );
-
-      console.log(
-        "  SENT waste_quantity:",
-        payload.waste_quantity ?? "not sent"
-      );
-      console.log("  RETURNED waste:", response.data.waste);
-      console.log(
-        "  ⚠️ Match:",
-        payload.waste_quantity == response.data.waste
-          ? "✅"
-          : "❌ VALUES DIFFERENT!"
-      );
-
-      console.log("\n🔍 Display Values (DB):");
-      console.log(
-        "  Expected Full:",
-        response.data.expected_display_full_units
-      );
-      console.log(
-        "  Expected Partial:",
-        response.data.expected_display_partial_units
-      );
-      console.log("  Counted Full:", response.data.counted_display_full_units);
-      console.log(
-        "  Counted Partial:",
-        response.data.counted_display_partial_units
-      );
-      console.log(
-        "  Variance Full:",
-        response.data.variance_display_full_units
-      );
-      console.log(
-        "  Variance Partial:",
-        response.data.variance_display_partial_units
-      );
 
       // Step 3: Replace optimistic data with backend's authoritative calculations
-      console.log("\n🔄 STEP 3: REPLACING OPTIMISTIC WITH DB VALUES");
-      console.log("─────────────────────────────────────────");
 
       // If we added any movements (purchases or waste), refetch just this line to get fresh data
       // Movement POSTs happen separately, so PATCH response has stale movement data
       if (movementsAdded) {
-        console.log(
-          "\n🔄 Movements were added - refetching single line to get fresh data..."
-        );
         const freshLine = await api.get(
           `/stock_tracker/${hotel_slug}/stocktake-lines/${lineId}/`
         );
-        console.log("✅ Fresh line data received:", freshLine.data);
 
         setLines((prevLines) =>
           prevLines.map((line) => (line.id === lineId ? freshLine.data : line))
@@ -501,12 +342,6 @@ export const StocktakeDetail = () => {
         setLines((prevLines) =>
           prevLines.map((line) => {
             if (line.id === lineId) {
-              console.log("✅ Replacing line", lineId, "with DB data");
-              console.log("  Old line.expected_qty:", line.expected_qty);
-              console.log(
-                "  New line.expected_qty:",
-                response.data.expected_qty
-              );
               return response.data;
             }
             return line;
@@ -514,9 +349,6 @@ export const StocktakeDetail = () => {
         );
       }
 
-      console.log("\n✅ ========================================");
-      console.log("✅ UPDATE COMPLETE - UI NOW SHOWS DB VALUES");
-      console.log("✅ ========================================");
       
       // Check for large variances and warn user
       const finalLine = movementsAdded 
@@ -527,11 +359,6 @@ export const StocktakeDetail = () => {
       const varianceValue = parseFloat(finalLine.data?.variance_value || response.data.variance_value);
       
       if (Math.abs(varianceQty) > 10) {
-        console.warn('⚠️ LARGE VARIANCE DETECTED:', {
-          item: currentLine.item_name,
-          variance_qty: varianceQty,
-          variance_value: varianceValue
-        });
         
         if (varianceQty < -10) {
           toast.warning(`⚠️ Large shortage detected: ${currentLine.item_name} (${varianceQty.toFixed(2)} units)`, {
@@ -544,7 +371,6 @@ export const StocktakeDetail = () => {
         }
       }
       
-      console.log("\n");
     } catch (err) {
       console.error("\n❌ ========================================");
       console.error("❌ ERROR IN handleUpdateLine");
@@ -556,7 +382,6 @@ export const StocktakeDetail = () => {
       toast.error('Failed to update line');
       
       // Revert optimistic update on error by refetching
-      console.log("🔄 Reverting optimistic update by refetching from DB...");
       await fetchStocktake();
     }
   };
@@ -569,7 +394,6 @@ export const StocktakeDetail = () => {
       autoClose: 5000,
     });
   };
-
 
 
   if (loading)
@@ -747,23 +571,6 @@ export const StocktakeDetail = () => {
               <Badge bg="success">
                 €{(() => {
                   // DEBUG: Log the data we're working with
-                  console.log('💰 TOTAL STOCK VALUE DEBUG:', {
-                    stocktake_total_counted_value: stocktake.total_counted_value,
-                    categoryTotals: categoryTotals,
-                    categoryTotals_keys: categoryTotals ? Object.keys(categoryTotals) : [],
-                    sample_lines: lines.slice(0, 5).map(line => ({
-                      id: line.id,
-                      sku: line.item_sku,
-                      name: line.item_name,
-                      counted_full_units: line.counted_full_units,
-                      counted_partial_units: line.counted_partial_units,
-                      counted_qty: line.counted_qty,
-                      counted_value: line.counted_value,
-                      valuation_cost: line.valuation_cost
-                    })),
-                    lines_with_counted: lines.filter(l => l.counted_full_units !== null || l.counted_partial_units !== null).length,
-                    lines_with_value: lines.filter(l => l.counted_value && l.counted_value > 0).length
-                  });
                   
                   // Try to use backend field first (when it's available)
                   if (stocktake.total_counted_value) {
@@ -1336,22 +1143,9 @@ export const StocktakeDetail = () => {
             hotelSlug={hotel_slug}
             onLineUpdated={(updatedLine) => {
               // Direct line update callback - replaces line in state
-              console.log("📥 PARENT: onLineUpdated received - Full line:", updatedLine);
-              console.log("📥 PARENT: Key values:", {
-                id: updatedLine.id,
-                sku: updatedLine.item_sku,
-                purchases: updatedLine.purchases,
-                waste: updatedLine.waste,
-                expected_qty: updatedLine.expected_qty,
-                variance_qty: updatedLine.variance_qty,
-                expected_display_full: updatedLine.expected_display_full_units,
-                expected_display_partial: updatedLine.expected_display_partial_units,
-              });
 
               setLines((prevLines) => {
-                console.log("🔍 PARENT: Current lines count:", prevLines.length);
                 const lineIndex = prevLines.findIndex(l => l.id === updatedLine.id);
-                console.log("🔍 PARENT: Found line at index:", lineIndex);
                 
                 if (lineIndex === -1) {
                   console.error("❌ PARENT: Line not found in state! ID:", updatedLine.id);
@@ -1359,14 +1153,6 @@ export const StocktakeDetail = () => {
                 }
                 
                 const oldLine = prevLines[lineIndex];
-                console.log("🔄 PARENT: Replacing line in state:", {
-                  old_purchases: oldLine.purchases,
-                  new_purchases: updatedLine.purchases,
-                  old_waste: oldLine.waste,
-                  new_waste: updatedLine.waste,
-                  old_expected: oldLine.expected_qty,
-                  new_expected: updatedLine.expected_qty,
-                });
                 
                 const newLines = prevLines.map((line) => {
                   if (line.id === updatedLine.id) {
@@ -1375,7 +1161,6 @@ export const StocktakeDetail = () => {
                   return line;
                 });
                 
-                console.log("✅ PARENT: State updated, new line:", newLines[lineIndex]);
                 return newLines;
               });
             }}

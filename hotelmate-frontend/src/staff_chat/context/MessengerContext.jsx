@@ -32,7 +32,6 @@ export const MessengerProvider = ({ children }) => {
    * Called by MessengerWidget on mount
    */
   const registerOpenChatHandler = useCallback((handler) => {
-    console.log('📱 [MessengerContext] Registering openChat handler');
     setOpenChatHandler(() => handler);
   }, []);
 
@@ -42,7 +41,6 @@ export const MessengerProvider = ({ children }) => {
    * @param {Object} staff - Staff object (for 1-on-1 chats)
    */
   const openChat = useCallback((conversation, staff) => {
-    console.log('📱 [MessengerContext] openChat called:', { conversation, staff });
     if (openChatHandler) {
       openChatHandler(conversation, staff);
     } else {

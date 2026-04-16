@@ -16,26 +16,11 @@ export const useRestaurants = (hotelSlug) => {
     try {
       // Use staff hotel-scoped endpoint for restaurant management
       const endpoint = `/staff/hotel/${hotelSlug}/service-bookings/restaurants/`;
-      console.log("🔍 Fetching restaurants from:", endpoint);
-      console.log("📍 Hotel Slug:", hotelSlug);
       
       const res = await api.get(endpoint);
       
-      console.log("✅ API Response:", res.data);
-      console.log("📊 Number of restaurants:", Array.isArray(res.data) ? res.data.length : res.data.results?.length || 0);
-      
       // Handle both array and paginated responses
       let data = Array.isArray(res.data) ? res.data : (res.data.results || []);
-      
-      // Log hotel_slug for each restaurant to verify filtering
-      console.log("🔍 Before filtering - Total restaurants:", data.length);
-      data.forEach((restaurant, index) => {
-        console.log(`Restaurant ${index + 1}:`, {
-          name: restaurant.name,
-          hotel_slug: restaurant.hotel_slug,
-          hotel: restaurant.hotel
-        });
-      });
       
       // CLIENT-SIDE FILTERING: Filter restaurants by hotel_slug
       // This is a workaround for backend not filtering correctly
@@ -46,8 +31,6 @@ export const useRestaurants = (hotelSlug) => {
         }
         return matches;
       });
-      
-      console.log(`✅ After filtering - Restaurants for ${hotelSlug}:`, filteredData.length);
       
       setRestaurants(filteredData);
     } catch (err) {

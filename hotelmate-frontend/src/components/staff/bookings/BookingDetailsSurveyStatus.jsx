@@ -27,12 +27,6 @@ const BookingDetailsSurveyStatus = ({ booking }) => {
     const overallRating = surveyResponse?.overall_rating || booking?.survey_rating;
 
     // Debug logging to see what survey data we have
-    console.log('🔍 Survey Response Debug:', {
-      surveyResponse,
-      surveyPayload, 
-      overallRating,
-      bookingSurveyRating: booking?.survey_rating
-    });
 
     return (
       <Alert variant="success">

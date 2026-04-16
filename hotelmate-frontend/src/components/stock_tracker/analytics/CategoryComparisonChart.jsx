@@ -45,16 +45,10 @@ const CategoryComparisonChart = ({
     setLoading(true);
     setError(null);
 
-    console.log('🔍 CategoryComparisonChart: Fetching data...', {
-      hotelSlug,
-      selectedPeriods,
-      periodsCount: selectedPeriods.length
-    });
 
     try {
       const response = await getCompareCategories(hotelSlug, selectedPeriods);
       
-      console.log('📦 CategoryComparisonChart: Raw API Response:', response);
       
       // Comprehensive data validation
       if (!response) {
@@ -64,7 +58,6 @@ const CategoryComparisonChart = ({
         return;
       }
 
-      console.log('✅ CategoryComparisonChart: Response received, validating...');
 
       if (!response.categories) {
         console.warn('CategoryComparisonChart: Response missing categories property');
@@ -88,10 +81,8 @@ const CategoryComparisonChart = ({
       }
 
       // Transform API response to chart data format
-      console.log('🔄 CategoryComparisonChart: Starting transformation...');
       const transformedData = transformToChartData(response);
       
-      console.log('📊 CategoryComparisonChart: Transformed Data:', transformedData);
       
       if (!transformedData) {
         console.error('❌ CategoryComparisonChart: Transformation returned null');
@@ -100,14 +91,6 @@ const CategoryComparisonChart = ({
         return;
       }
       
-      console.log('✅ CategoryComparisonChart: Chart data set successfully', {
-        labels: transformedData.labels,
-        datasetsCount: transformedData.datasets?.length,
-        datasets: transformedData.datasets?.map(d => ({
-          label: d.label,
-          dataPoints: d.data?.length
-        }))
-      });
       
       setChartData(transformedData);
     } catch (err) {
@@ -137,16 +120,9 @@ const CategoryComparisonChart = ({
    * }
    */
   const transformToChartData = (apiResponse) => {
-    console.log('🔧 CategoryComparisonChart: Transform input:', apiResponse);
     
     const { categories, periods } = apiResponse;
 
-    console.log('📋 CategoryComparisonChart: Extracted categories and periods:', {
-      categoriesType: Array.isArray(categories) ? 'array' : typeof categories,
-      categoriesLength: categories?.length,
-      periodsType: Array.isArray(periods) ? 'array' : typeof periods,
-      periodsLength: periods?.length
-    });
 
     // Validate categories data
     if (!Array.isArray(categories) || categories.length === 0) {
@@ -161,7 +137,6 @@ const CategoryComparisonChart = ({
       periodLabels = periods.map(p => p.period_name || p.name || p);
     } else if (categories[0]?.periods) {
       periodLabels = categories[0].periods.map(p => p.period_name || p.name || p);
-    } else {
     }
 
     // Validate that we have periods data
@@ -199,7 +174,6 @@ const CategoryComparisonChart = ({
         itemsCounts = category.values.map(v => v.items_count || v.item_count || 0);
       }
 
-      console.log(`CategoryComparisonChart: Dataset for ${category.name || category.code}:`, dataValues);
 
       return {
         label: category.name || category.code || 'Unknown',
@@ -336,7 +310,6 @@ const CategoryComparisonChart = ({
             config={chartConfig}
             height={height}
             onDataClick={(data) => {
-              console.log('Category clicked:', data);
               if (onPeriodClick) {
                 onPeriodClick(data);
               }

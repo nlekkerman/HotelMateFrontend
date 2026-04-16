@@ -52,12 +52,7 @@ export const logConfigStatus = () => {
   if (import.meta.env.DEV) {
     const { isValid, issues, config } = checkStaffChatConfig();
     
-    if (isValid) {
-      console.log('✅ Staff Chat Configuration Valid');
-      console.log('Pusher:', config.pusher.key ? '✓' : '✗', config.pusher.cluster || 'N/A');
-      console.log('Firebase:', config.firebase.vapidKey ? '✓' : '✗');
-      console.log('API:', config.api.url ? '✓' : '✗');
-    } else {
+    if (!isValid) {
       console.error('❌ Staff Chat Configuration Issues:');
       issues.forEach(issue => console.error(`  - ${issue}`));
     }

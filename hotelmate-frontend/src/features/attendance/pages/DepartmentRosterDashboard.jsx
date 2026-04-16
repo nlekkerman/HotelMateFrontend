@@ -28,8 +28,6 @@ function DepartmentRosterDashboardComponent() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   
-  console.log('[DepartmentRosterDashboard] Rendering with hotelSlug:', hotelSlug);
-  
   // Core state
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [selectedDepartment, setSelectedDepartment] = useState(() => {
@@ -99,14 +97,12 @@ function DepartmentRosterDashboardComponent() {
       );
       
       if (currentPeriod) {
-        console.log('[DepartmentRoster] Auto-selecting current period:', currentPeriod);
         setSelectedPeriodId(currentPeriod.id);
       } else if (periods.items.length > 0) {
         // If no current period, select the most recent one
         const sortedPeriods = [...periods.items].sort((a, b) => 
           new Date(b.start_date) - new Date(a.start_date)
         );
-        console.log('[DepartmentRoster] Auto-selecting most recent period:', sortedPeriods[0]);
         setSelectedPeriodId(sortedPeriods[0].id);
       }
     }
@@ -153,7 +149,6 @@ function DepartmentRosterDashboardComponent() {
   // Real-time updates
   function handleRealtimeEvent(evt) {
     if (evt && evt.type === 'attendance_update') {
-      console.log('[DepartmentRoster] Real-time attendance update received:', evt);
       setRefreshKey(prev => prev + 1);
     }
   }
@@ -189,8 +184,6 @@ function DepartmentRosterDashboardComponent() {
       setRefreshKey(prev => prev + 1);
       setShowFinalizeModal(false);
     } catch (error) {
-      console.log('Finalize error response:', error.response?.data);
-      
       // Check if this is a validation error with force option
       if (error.response?.status === 400 && error.response?.data) {
         const errorData = error.response.data;
@@ -410,7 +403,6 @@ function DepartmentRosterDashboardComponent() {
                 departmentFilter={selectedDepartment}
                 availablePeriods={periods.items || []}
                 onPeriodSwitch={(newPeriodId) => {
-                  console.log('Switching to period:', newPeriodId);
                   setSelectedPeriodId(newPeriodId);
                   setRefreshKey(prev => prev + 1);
                 }}

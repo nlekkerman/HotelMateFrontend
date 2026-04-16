@@ -14,7 +14,6 @@ export const useCocktailCalculator = () => {
     const res = await api.get(`/stock_tracker/${hotelSlug}/cocktails/`);
     // Handle both paginated (res.data.results) and direct array (res.data) responses
     const cocktailsData = Array.isArray(res.data) ? res.data : (res.data.results || []);
-    console.log("Fetched cocktails:", cocktailsData);
     setCocktails(cocktailsData);
   } catch (err) {
     console.error("Error fetching cocktails:", err);

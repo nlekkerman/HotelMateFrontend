@@ -45,19 +45,13 @@ const StockKpiDetailModal = ({
         case 'topMoversCount':
           // First check if data is already in allKpisData
           if (allKpisData?.period_comparison?.top_movers) {
-            console.log('✅ Using top movers from KPI data:', allKpisData.period_comparison.top_movers);
             setDetailData(allKpisData.period_comparison.top_movers);
           } else if (allKpisData?.period_comparison) {
-            console.log('✅ Using full period_comparison data:', allKpisData.period_comparison);
             setDetailData(allKpisData.period_comparison);
           } else if (period1 && period2) {
-            console.log('⚠️ Fetching top movers via API:', { period1, period2 });
             const moversRes = await getTopMovers(hotelSlug, period2, period1, 50);
-            console.log('API response:', moversRes);
             setDetailData(moversRes);
           } else {
-            console.log('❌ No period comparison data available');
-            console.log('allKpisData:', allKpisData);
             setDetailData(null);
           }
           break;
@@ -450,30 +444,20 @@ const StockKpiDetailModal = ({
     // Try to get movers from multiple possible sources
     let moversData = null;
     
-    console.log('=== Rendering Top Movers ===');
-    console.log('detailData:', detailData);
-    console.log('detailData keys:', detailData ? Object.keys(detailData) : 'null');
-    console.log('allKpisData.period_comparison:', allKpisData?.period_comparison);
-    console.log('period_comparison keys:', allKpisData?.period_comparison ? Object.keys(allKpisData.period_comparison) : 'null');
-    
     // Source 1: From detailData.movers (direct API call structure)
     if (detailData?.movers) {
-      console.log('✅ Source: detailData.movers');
       moversData = detailData.movers;
     }
     // Source 2: From detailData.top_movers (KPI response structure)
     else if (detailData?.top_movers) {
-      console.log('✅ Source: detailData.top_movers');
       moversData = detailData.top_movers;
     }
     // Source 3: From allKpisData period_comparison.top_movers
     else if (allKpisData?.period_comparison?.top_movers) {
-      console.log('✅ Source: allKpisData.period_comparison.top_movers');
       moversData = allKpisData.period_comparison.top_movers;
     }
     // Source 4: Check if detailData has biggest_increases/biggest_decreases (period_comparison structure)
     else if (detailData && (detailData.biggest_increases || detailData.biggest_decreases)) {
-      console.log('✅ Source: detailData (period_comparison with biggest_increases/biggest_decreases)');
       moversData = {
         increases: detailData.biggest_increases || [],
         decreases: detailData.biggest_decreases || []
@@ -481,22 +465,18 @@ const StockKpiDetailModal = ({
     }
     // Source 5: Check if detailData itself is the movers object with increases/decreases
     else if (detailData && (detailData.increases || detailData.decreases)) {
-      console.log('✅ Source: detailData (direct object with increases/decreases)');
       moversData = detailData;
     }
     // Source 6: Check if detailData.movers_data exists
     else if (detailData?.movers_data) {
-      console.log('✅ Source: detailData.movers_data');
       moversData = detailData.movers_data;
     }
     // Source 7: Check if it's the period_comparison object itself with items
     else if (detailData && detailData.total_movers_count !== undefined) {
-      console.log('✅ Source: detailData is period_comparison object - checking for item arrays');
       // The backend might return different property names
       const possibleKeys = ['items', 'movers', 'top_items', 'changes'];
       for (const key of possibleKeys) {
         if (detailData[key] && Array.isArray(detailData[key])) {
-          console.log(`Found items in detailData.${key}`);
           const items = detailData[key];
           const increases = items.filter(item => (item.percentage_change || item.change_percentage || 0) > 0);
           const decreases = items.filter(item => (item.percentage_change || item.change_percentage || 0) < 0);
@@ -507,13 +487,10 @@ const StockKpiDetailModal = ({
     }
     // Source 7: Check if detailData is an array
     else if (detailData && Array.isArray(detailData)) {
-      console.log('✅ Source: detailData (array - grouping)');
       const increases = detailData.filter(item => (item.percentage_change || item.change_percentage || 0) > 0);
       const decreases = detailData.filter(item => (item.percentage_change || item.change_percentage || 0) < 0);
       moversData = { increases, decreases };
     }
-
-    console.log('Final moversData:', moversData);
 
     if (!moversData) {
       return (

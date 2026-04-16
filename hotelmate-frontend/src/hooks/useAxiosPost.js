@@ -21,11 +21,7 @@ function useAxiosPost(endpoint) {
       // Ensure endpoint starts with / for proper API routing
       const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
       
-      console.log('🔗 API Request:', {
-        client: client === publicAPI ? 'publicAPI' : 'api',
-        endpoint: cleanEndpoint
-      });
-      
+
       const response = await client.post(cleanEndpoint, postData, {
         headers: {
           "Content-Type": "application/json",

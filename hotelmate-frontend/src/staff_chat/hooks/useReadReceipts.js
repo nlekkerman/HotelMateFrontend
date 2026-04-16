@@ -58,24 +58,15 @@ const useReadReceipts = (hotelSlug, conversationId, currentUserId) => {
    */
   const markConversationRead = useCallback(async () => {
     if (!conversationId || !hotelSlug) {
-      console.log('⚠️ [useReadReceipts] markConversationRead - missing data:', {
-        conversationId,
-        hotelSlug
-      });
       return null;
     }
 
     try {
-      console.log('📮 [useReadReceipts] Calling markConversationAsRead API...');
       setLoading(true);
       const response = await markConversationAsRead(hotelSlug, conversationId);
       
-      console.log('✅ [useReadReceipts] API response:', response);
-      console.log('✅ [useReadReceipts] Message IDs marked:', response.message_ids);
-      
       // IMMEDIATELY update local state (don't wait for Pusher)
       if (response.message_ids && response.message_ids.length > 0) {
-        console.log('🔄 [READ] Updating readReceipts for message IDs:', response.message_ids);
         
         setReadReceipts(prev => {
           const next = { ...prev };
@@ -106,7 +97,6 @@ const useReadReceipts = (hotelSlug, conversationId, currentUserId) => {
             };
           });
           
-          console.log('✅ [READ] markConversationRead updated readReceipts for', response.message_ids.length, 'messages');
           return next;
         });
       }
@@ -171,8 +161,6 @@ const useReadReceipts = (hotelSlug, conversationId, currentUserId) => {
    * Format: { staff_id, staff_name, message_ids: [], timestamp }
    */
   const updateFromRealtimeEvent = useCallback((data) => {
-    console.log('🎯 [useReadReceipts] updateFromRealtimeEvent called:', data);
-    
     // Handle both legacy format (data.message_ids) and new format (data.messageIds)
     const messageIds = data.messageIds || data.message_ids;
     const staffId = data.staffId || data.staff_id;
@@ -183,13 +171,6 @@ const useReadReceipts = (hotelSlug, conversationId, currentUserId) => {
       console.warn('❌ [useReadReceipts] Invalid read receipt event - no message IDs:', data);
       return;
     }
-
-    console.log('📖 [useReadReceipts] Updating read receipts:', {
-      messageIds,
-      staffId,
-      staffName,
-      timestamp
-    });
 
     setReadReceipts(prev => {
       const next = { ...prev };
@@ -220,8 +201,6 @@ const useReadReceipts = (hotelSlug, conversationId, currentUserId) => {
             read_by: updatedReadBy,
             read_count: updatedReadBy.length,
           };
-          
-          console.log(`✅ [useReadReceipts] Updated message ${key} read receipts:`, next[key]);
         }
       });
       
@@ -237,7 +216,6 @@ const useReadReceipts = (hotelSlug, conversationId, currentUserId) => {
   const loadReadReceipts = useCallback((messages) => {
     if (!messages || messages.length === 0) return;
 
-    console.log('📋 [LOAD RECEIPTS] Processing', messages.length, 'messages');
     const updates = {};
     messages.forEach(msg => {
       if (msg.id) {
@@ -247,17 +225,14 @@ const useReadReceipts = (hotelSlug, conversationId, currentUserId) => {
           is_read_by_current_user: msg.is_read_by_current_user || false
         };
         updates[msg.id] = readReceipt;
-        console.log(`📋 [LOAD RECEIPTS] Message ${msg.id}:`, readReceipt);
       }
     });
     
-    console.log('📋 [LOAD RECEIPTS] Final updates:', updates);
     setReadReceipts(prev => {
       const newState = {
         ...prev,
         ...updates
       };
-      console.log('📋 [LOAD RECEIPTS] New readReceipts state:', newState);
       return newState;
     });
   }, []);

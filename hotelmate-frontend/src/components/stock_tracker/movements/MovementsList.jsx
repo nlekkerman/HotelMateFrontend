@@ -23,7 +23,6 @@ export const MovementsList = () => {
 
   const handleCreateMovement = async (movementData) => {
     try {
-      console.log('User from localStorage:', user);
       // Add hotel and staff fields from localStorage
       const dataWithHotel = {
         ...movementData,
@@ -31,7 +30,6 @@ export const MovementsList = () => {
         staff: user?.id,
         staff_name: user?.username || 'Unknown'
       };
-      console.log('Creating movement with data:', dataWithHotel);
       await createMovement(dataWithHotel);
       setModalOpen(false);
     } catch (err) {

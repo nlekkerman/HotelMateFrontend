@@ -64,16 +64,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
 
   // Handle voice command received from VoiceRecorder
   const onVoiceCommand = (command) => {
-    console.log('🎤 Voice command received:', command);
-    console.log('📊 Command details:', {
-      action: command.action,
-      item_identifier: command.item_identifier,
-      value: command.value,
-      full_units: command.full_units,
-      partial_units: command.partial_units,
-      line_id: command.line_id,
-      transcription: command.transcription
-    });
     setVoiceCommand(command);
   };
 
@@ -228,7 +218,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
 
   // Handle voice command cancellation
   const handleVoiceCommandCancel = () => {
-    console.log('❌ User cancelled voice command');
     setVoiceCommand(null);
   };
 
@@ -504,9 +493,7 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
    * Backend receives TWO fields for proper storage
    */
   const handleSaveCount = async (lineId, line) => {
-    console.log('💾 SAVE COUNT - Line:', lineId);
     const inputs = getLineInputs(lineId, line);
-    console.log('📥 Raw inputs:', inputs);
     
     // Clear any previous validation errors
     setValidationErrors((prev) => {
@@ -533,13 +520,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         fullUnits = Math.floor(combinedValue);  // 10 bottles or 2 boxes
         partialUnits = parseFloat((combinedValue - fullUnits).toFixed(3));  // 0.5
       }
-      console.log('🍯 Combined value split (SYRUPS/BULK_JUICES/BIB/WINE/SPIRITS):', { 
-        category: line.category_code, 
-        subcategory: line.subcategory,
-        original: inputs.fullUnits, 
-        full: fullUnits, 
-        partial: partialUnits 
-      });
     } else {
       // Normal categories: separate full and partial
       fullUnits = parseInt(inputs.fullUnits, 10);
@@ -549,7 +529,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
       if (isNaN(partialUnits)) partialUnits = 0;
     }
     
-    console.log('🔢 Parsed values:', { fullUnits, partialUnits });
     
     // NO frontend validation - backend handles all validation
     // Just send the raw values to backend
@@ -560,7 +539,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         counted_partial_units: partialUnits,
       };
       
-      console.log('🧮 Count Payload:', payload);
 
       // ✅ CORRECT ENDPOINT: /api/stock_tracker/{hotel_identifier}/stocktake-lines/{id}/
       const response = await api.patch(
@@ -568,12 +546,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         payload
       );
 
-      console.log('✅ Count saved - Updating UI from backend:', {
-        counted_full_units: response.data?.counted_full_units,
-        counted_partial_units: response.data?.counted_partial_units,
-        counted_qty: response.data?.counted_qty,
-        variance_qty: response.data?.variance_qty
-      });
 
       // Update with authoritative backend data (no optimistic update)
       if (response.data && typeof onLineUpdated === 'function') {
@@ -597,25 +569,17 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
    * Backend expects: { movement_type: 'PURCHASE', quantity, notes }
    */
   const handleSavePurchases = async (lineId, line) => {
-    console.log('\n🚀 ========== SAVE PURCHASES START ==========');
-    console.log('📋 Line ID:', lineId);
-    console.log('📦 Item:', line.item_name, '(SKU:', line.item_sku + ')');
-    console.log('👤 Current User:', user ? { id: user.id, name: user.staff_name || user.username } : 'NOT FOUND');
     
     const inputs = getLineInputs(lineId, line);
-    console.log('📝 Inputs:', inputs);
     
     if (!inputs.purchasesQty || inputs.purchasesQty === '') {
-      console.warn('❌ Validation failed: Empty quantity');
       setValidationErrors({ [lineId]: { purchasesQty: 'Please enter a purchases quantity' } });
       return;
     }
 
     const purchasesQty = parseFloat(inputs.purchasesQty);
-    console.log('🔢 Parsed quantity:', purchasesQty);
     
     if (isNaN(purchasesQty) || purchasesQty <= 0) {
-      console.warn('❌ Validation failed: Invalid quantity');
       setValidationErrors({ [lineId]: { purchasesQty: 'Must be a valid number greater than 0' } });
       return;
     }
@@ -628,7 +592,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     // DRAUGHT (D): Must be multiples of UOM (full kegs in pints)
     if (categoryCode === 'D') {
       if (purchasesQty % uom !== 0) {
-        console.warn(`❌ Validation failed: Not a multiple of ${uom}`);
         setValidationErrors({ 
           [lineId]: { 
             purchasesQty: `Purchases must be full kegs only (multiples of ${uom} pints)` 
@@ -640,7 +603,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     // BOTTLED BEER (B): Must be whole number of CASES (user enters cases, not bottles)
     else if (categoryCode === 'B') {
       if (purchasesQty % 1 !== 0) {
-        console.warn('❌ Validation failed: Not a whole number of cases');
         setValidationErrors({ 
           [lineId]: { 
             purchasesQty: 'Purchases must be full cases only (whole numbers, e.g., 5 cases)' 
@@ -652,7 +614,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     // SOFT_DRINKS and CORDIALS: Must be whole number of CASES (user enters cases, not bottles)
     else if (categoryCode === 'M' && (subcategory === 'SOFT_DRINKS' || subcategory === 'CORDIALS')) {
       if (purchasesQty % 1 !== 0) {
-        console.warn('❌ Validation failed: Not a whole number of cases');
         setValidationErrors({ 
           [lineId]: { 
             purchasesQty: 'Purchases must be full cases only (whole numbers, e.g., 5 cases)' 
@@ -666,7 +627,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
              (categoryCode === 'M' && (subcategory === 'SYRUPS' || subcategory === 'BIB' || subcategory === 'BULK_JUICES'))) {
       if (purchasesQty % 1 !== 0) {
         const unitType = (subcategory === 'BIB' || subcategory === 'BULK_JUICES') ? 'boxes' : 'bottles';
-        console.warn('❌ Validation failed: Not a whole number');
         setValidationErrors({ 
           [lineId]: { 
             purchasesQty: `Purchases must be full ${unitType} only (whole numbers)` 
@@ -678,7 +638,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     // JUICES: Must be whole numbers (full cases)
     else if (categoryCode === 'M' && subcategory === 'JUICES') {
       if (purchasesQty % 1 !== 0) {
-        console.warn('❌ Validation failed: Not a whole number');
         setValidationErrors({ 
           [lineId]: { 
             purchasesQty: 'Purchases must be full cases only (whole numbers)' 
@@ -688,7 +647,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
       }
     }
 
-    console.log('✅ Validation passed');
     
     // Clear error only if validation passes
     setValidationErrors((prev) => {
@@ -710,18 +668,12 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         if (user.username && !user.staff_name) payload.staff_name = user.username;
       }
       
-      console.log('📤 Payload:', JSON.stringify(payload, null, 2));
-      console.log('🌐 Endpoint:', `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/add-movement/`);
 
-      console.log('⏳ Sending request...');
       const response = await api.post(
         `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/add-movement/`,
         payload
       );
 
-      console.log('📥 Response received!');
-      console.log('📊 Status:', response.status);
-      console.log('📦 Full response:', JSON.stringify(response.data, null, 2));
       
       // Backend returns updated line in response.data.line
       const updatedLine = response.data.line || response.data;
@@ -732,38 +684,18 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         return;
       }
       
-      console.log('✅ Purchases saved successfully!');
-      console.log('📈 Line updates:', {
-        id: updatedLine.id,
-        purchases_OLD: line.purchases,
-        purchases_NEW: updatedLine.purchases,
-        expected_qty_OLD: line.expected_qty,
-        expected_qty_NEW: updatedLine.expected_qty,
-        variance_qty_NEW: updatedLine.variance_qty,
-      });
       
       // Update UI silently with backend data (no optimistic update)
-      console.log('🔄 Checking onLineUpdated callback...');
-      console.log('   - updatedLine exists:', !!updatedLine);
-      console.log('   - onLineUpdated type:', typeof onLineUpdated);
-      console.log('   - onLineUpdated is function:', typeof onLineUpdated === 'function');
       
       if (updatedLine && typeof onLineUpdated === 'function') {
-        console.log('🔄 Calling onLineUpdated with line:', updatedLine.id);
         try {
           onLineUpdated(updatedLine);
-          console.log('✅ onLineUpdated callback executed successfully');
         } catch (callbackErr) {
           console.error('❌ onLineUpdated callback failed:', callbackErr);
         }
-      } else {
-        console.warn('⚠️ Cannot update UI!');
-        console.warn('   updatedLine:', !!updatedLine);
-        console.warn('   onLineUpdated:', typeof onLineUpdated);
       }
 
       // Clear input after successful save
-      console.log('🧹 Clearing input...');
       setLineInputs((prev) => ({
         ...prev,
         [lineId]: {
@@ -771,15 +703,12 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
           purchasesQty: '',
         },
       }));
-      console.log('✅ Input cleared');
       
       // Refetch totals to update category summaries
       if (refetchTotals) {
-        console.log('🔄 Refetching totals...');
         refetchTotals();
       }
       
-      console.log('🎉 ========== SAVE PURCHASES COMPLETE ==========\n');
     } catch (err) {
       console.error('\n💥 ========== SAVE PURCHASES FAILED ==========');
       console.error('❌ Error:', err);
@@ -799,25 +728,17 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
    * Backend expects: { movement_type: 'WASTE', quantity, notes }
    */
   const handleSaveWaste = async (lineId, line) => {
-    console.log('\n🚀 ========== SAVE WASTE START ==========');
-    console.log('📋 Line ID:', lineId);
-    console.log('📦 Item:', line.item_name, '(SKU:', line.item_sku + ')');
-    console.log('👤 Current User:', user ? { id: user.id, name: user.staff_name || user.username } : 'NOT FOUND');
     
     const inputs = getLineInputs(lineId, line);
-    console.log('📝 Inputs:', inputs);
     
     if (!inputs.wasteQuantity || inputs.wasteQuantity === '') {
-      console.warn('❌ Validation failed: Empty quantity');
       setValidationErrors({ [lineId]: { wasteQuantity: 'Please enter a waste quantity' } });
       return;
     }
 
     const wasteQty = parseFloat(inputs.wasteQuantity);
-    console.log('🔢 Parsed quantity:', wasteQty);
     
     if (isNaN(wasteQty) || wasteQty <= 0) {
-      console.warn('❌ Validation failed: Invalid quantity');
       setValidationErrors({ [lineId]: { wasteQuantity: 'Must be a valid number greater than 0' } });
       return;
     }
@@ -830,7 +751,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     // DRAUGHT (D): Must be less than UOM (partial kegs in pints)
     if (categoryCode === 'D') {
       if (wasteQty >= uom) {
-        console.warn(`❌ Validation failed: Waste exceeds partial keg limit`);
         setValidationErrors({ 
           [lineId]: { 
             wasteQuantity: `Waste must be partial keg only (less than ${uom} pints)` 
@@ -842,7 +762,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     // BOTTLED BEER (B): Must be less than UOM (loose bottles, less than full case)
     else if (categoryCode === 'B') {
       if (wasteQty >= uom) {
-        console.warn(`❌ Validation failed: Waste exceeds partial case limit`);
         setValidationErrors({ 
           [lineId]: { 
             wasteQuantity: `Waste must be loose bottles only (less than ${uom} bottles per case)` 
@@ -852,7 +771,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
       }
       // Must be whole bottles for waste
       if (wasteQty % 1 !== 0) {
-        console.warn('❌ Validation failed: Waste must be whole bottles');
         setValidationErrors({ 
           [lineId]: { 
             wasteQuantity: 'Waste must be whole bottles (e.g., 3, 7, 11)' 
@@ -864,7 +782,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     // SOFT_DRINKS and CORDIALS: Must be less than UOM (loose bottles, less than full case)
     else if (categoryCode === 'M' && (subcategory === 'SOFT_DRINKS' || subcategory === 'CORDIALS')) {
       if (wasteQty >= uom) {
-        console.warn(`❌ Validation failed: Waste exceeds partial case limit`);
         setValidationErrors({ 
           [lineId]: { 
             wasteQuantity: `Waste must be loose bottles only (less than ${uom} bottles per case)` 
@@ -874,7 +791,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
       }
       // Must be whole bottles for waste
       if (wasteQty % 1 !== 0) {
-        console.warn('❌ Validation failed: Waste must be whole bottles');
         setValidationErrors({ 
           [lineId]: { 
             wasteQuantity: 'Waste must be whole bottles (e.g., 3, 7, 11)' 
@@ -888,7 +804,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
              (categoryCode === 'M' && (subcategory === 'SYRUPS' || subcategory === 'BIB' || subcategory === 'BULK_JUICES'))) {
       if (wasteQty >= 1) {
         const unitType = (subcategory === 'BIB' || subcategory === 'BULK_JUICES') ? 'box' : 'bottle';
-        console.warn('❌ Validation failed: Waste exceeds partial unit');
         setValidationErrors({ 
           [lineId]: { 
             wasteQuantity: `Waste must be partial ${unitType} only (less than 1)` 
@@ -900,7 +815,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     // JUICES: Must be less than UOM (partial cases)
     else if (categoryCode === 'M' && subcategory === 'JUICES') {
       if (wasteQty >= uom) {
-        console.warn(`❌ Validation failed: Waste exceeds partial case limit`);
         setValidationErrors({ 
           [lineId]: { 
             wasteQuantity: `Waste must be partial case only (less than ${uom} bottles)` 
@@ -910,7 +824,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
       }
     }
 
-    console.log('✅ Validation passed');
     
     // Clear error only if validation passes
     setValidationErrors((prev) => {
@@ -932,18 +845,12 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         if (user.username && !user.staff_name) payload.staff_name = user.username;
       }
       
-      console.log('📤 Payload:', JSON.stringify(payload, null, 2));
-      console.log('🌐 Endpoint:', `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/add-movement/`);
 
-      console.log('⏳ Sending request...');
       const response = await api.post(
         `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/add-movement/`,
         payload
       );
 
-      console.log('📥 Response received!');
-      console.log('📊 Status:', response.status);
-      console.log('📦 Full response:', JSON.stringify(response.data, null, 2));
       
       // Backend returns updated line in response.data.line
       const updatedLine = response.data.line || response.data;
@@ -954,38 +861,18 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         return;
       }
       
-      console.log('✅ Waste saved successfully!');
-      console.log('📈 Line updates:', {
-        id: updatedLine.id,
-        waste_OLD: line.waste,
-        waste_NEW: updatedLine.waste,
-        expected_qty_OLD: line.expected_qty,
-        expected_qty_NEW: updatedLine.expected_qty,
-        variance_qty_NEW: updatedLine.variance_qty,
-      });
       
       // Update UI silently with backend data (no optimistic update)
-      console.log('🔄 Checking onLineUpdated callback...');
-      console.log('   - updatedLine exists:', !!updatedLine);
-      console.log('   - onLineUpdated type:', typeof onLineUpdated);
-      console.log('   - onLineUpdated is function:', typeof onLineUpdated === 'function');
       
       if (updatedLine && typeof onLineUpdated === 'function') {
-        console.log('🔄 Calling onLineUpdated with line:', updatedLine.id);
         try {
           onLineUpdated(updatedLine);
-          console.log('✅ onLineUpdated callback executed successfully');
         } catch (callbackErr) {
           console.error('❌ onLineUpdated callback failed:', callbackErr);
         }
-      } else {
-        console.warn('⚠️ Cannot update UI!');
-        console.warn('   updatedLine:', !!updatedLine);
-        console.warn('   onLineUpdated:', typeof onLineUpdated);
       }
 
       // Clear input after successful save
-      console.log('🧹 Clearing input...');
       setLineInputs((prev) => ({
         ...prev,
         [lineId]: {
@@ -993,15 +880,12 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
           wasteQuantity: '',
         },
       }));
-      console.log('✅ Input cleared');
       
       // Refetch totals to update category summaries
       if (refetchTotals) {
-        console.log('🔄 Refetching totals...');
         refetchTotals();
       }
       
-      console.log('🎉 ========== SAVE WASTE COMPLETE ==========\n');
     } catch (err) {
       console.error('\n💥 ========== SAVE WASTE FAILED ==========');
       console.error('❌ Error:', err);
@@ -1047,12 +931,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         payload = {
           opening_qty: parseFloat(partialUnits).toFixed(4)
         };
-        console.log('🍯 Combined opening (SYRUPS/SPIRITS/WINES/BIB - bottles/boxes directly):', { 
-          input: inputs.openingPartialUnits,
-          opening_qty: partialUnits,
-          category: line.category_code,
-          subcategory: line.subcategory
-        });
       } else {
         // Other categories: calculate from full + partial
         const opening_qty = (fullUnits * uom) + partialUnits;
@@ -1061,7 +939,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
         };
       }
       
-      console.log('🧮 Opening Stock Payload:', payload);
 
       // ✅ PATCH endpoint to update opening_qty
       const response = await api.patch(
@@ -1071,17 +948,9 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
 
       const updatedLine = response.data;
       
-      console.log('✅ Opening stock saved - Full backend response:', {
-        opening_qty: updatedLine?.opening_qty,
-        expected_qty: updatedLine?.expected_qty,
-        variance_qty: updatedLine?.variance_qty,
-        opening_display_full: updatedLine?.opening_display_full_units,
-        opening_display_partial: updatedLine?.opening_display_partial_units
-      });
       
       // Update UI with backend data
       if (updatedLine && typeof onLineUpdated === 'function') {
-        console.log('🔄 Calling onLineUpdated with updated line');
         onLineUpdated(updatedLine);
       }
 
@@ -1131,15 +1000,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     
     // Debug logging for SYRUPS variance
     if (line.subcategory === 'SYRUPS' && line.sku === 'M0006') {
-      console.log('🔍 M0006 Variance Debug:', {
-        sku: line.sku,
-        name: line.name,
-        variance_display_full_units: line.variance_display_full_units,
-        variance_display_partial_units: line.variance_display_partial_units,
-        varianceDisplayFull,
-        varianceDisplayPartial,
-        calculated: Number(varianceDisplayFull) + Number(varianceDisplayPartial)
-      });
     }
     
     const isShortage = varianceValue < 0;
@@ -1820,12 +1680,6 @@ export const StocktakeLines = ({ lines = [], isLocked, onUpdateLine, onLineUpdat
     
     // DEBUG: Log labels for SYRUPS
     if (line.subcategory === 'SYRUPS') {
-      console.log('🔍 SYRUPS labels:', { 
-        sku: line.item_sku, 
-        showFull: labels.showFull,
-        counted_full: line.counted_full_units,
-        counted_partial: line.counted_partial_units
-      });
     }
     
     const uom = parseFloat(line.item_uom || line.uom || 1);

@@ -11,8 +11,6 @@ export default function TournamentQRGenerator({ tournament, onClose }) {
   const generateQRCode = async (url, title) => {
     setLoading(true);
     try {
-      console.log('🎯 Generating QR code for URL:', url);
-      
       // Generate QR code as data URL
       const qrDataURL = await QRCode.toDataURL(url, {
         width: 300,
@@ -25,7 +23,6 @@ export default function TournamentQRGenerator({ tournament, onClose }) {
       });
       
       setQRCodeDataURL(qrDataURL);
-      console.log('✅ QR code generated successfully');
       
     } catch (error) {
       console.error('Error generating QR code:', error);

@@ -28,15 +28,6 @@ export function usePublicPagePermissions(pageHotelSlug) {
 
     const canEditPublicPage = Boolean(isStaff && isOwnHotel && hasEditAccess);
 
-    console.log('[usePublicPagePermissions]', {
-      pageHotelSlug,
-      userHotelSlug: user?.hotel_slug,
-      isStaff,
-      isOwnHotel,
-      hasEditAccess,
-      canEditPublicPage,
-    });
-
     return { isOwnHotel, hasEditAccess, canEditPublicPage };
   }, [user, pageHotelSlug, isStaff, isAdmin]);
 }

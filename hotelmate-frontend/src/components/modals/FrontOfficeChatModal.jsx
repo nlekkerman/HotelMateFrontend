@@ -109,7 +109,6 @@ const FrontOfficeChatModal = ({
       // Bootstrap: GET /api/guest/context/?token={token}
       const ctx = await guestChatAPI.getChatBootstrap(hotelSlug, token);
       setContext(ctx);
-      console.log('[FrontOfficeChatModal] Context loaded:', ctx);
     } catch (err) {
       console.error('[FrontOfficeChatModal] Context error:', err);
       if (err.response?.status === 404) {
@@ -132,7 +131,6 @@ const FrontOfficeChatModal = ({
         channelName: context.pusher?.channel,
         chatSession: context.guest_chat?.session,
         onMessage: (message) => {
-          console.log('[FrontOfficeChatModal] Realtime message:', message);
         },
         onError: (error) => {
           console.warn('[FrontOfficeChatModal] Realtime error:', error);
@@ -172,7 +170,6 @@ const FrontOfficeChatModal = ({
     const poll = async () => {
       try {
         const msgs = await guestChatAPI.getMessages(hotelSlug, session);
-        console.log('[FrontOfficeChatModal] Polling update:', msgs.length);
       } catch (err) {
         console.warn('[FrontOfficeChatModal] Polling error:', err);
       }
@@ -206,7 +203,6 @@ const FrontOfficeChatModal = ({
       });
 
       setMessage('');
-      console.log('[FrontOfficeChatModal] Message sent:', result);
       
       // If not realtime, poll immediately for updates
       if (!realtimeConnected && pollTimerRef.current) {

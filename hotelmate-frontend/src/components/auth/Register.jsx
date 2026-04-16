@@ -20,25 +20,16 @@ const Register = () => {
 
   // Extract QR token and hotel slug from URL on component mount
   useEffect(() => {
-    console.log('🔍 Checking URL for QR parameters...');
-    console.log('🔍 Current URL:', window.location.href);
-    
     const token = searchParams.get('token');
     const hotel = searchParams.get('hotel');
     
-    console.log('🔍 Extracted token:', token ? token.substring(0, 10) + '...' : 'NULL');
-    console.log('🔍 Extracted hotel:', hotel || 'NULL');
-    
     if (token && hotel) {
-      console.log('✅ QR Registration detected:', { token: token.substring(0, 10) + '...', hotel });
       setIsQRRegistration(true);
       setFormData(prev => ({
         ...prev,
         qrToken: token,
         hotelSlug: hotel,
       }));
-    } else {
-      console.warn('⚠️ No QR parameters found - registration will use legacy method (may fail if QR required)');
     }
   }, [searchParams]);
 
@@ -72,25 +63,10 @@ const Register = () => {
     // Add QR token if this is a QR-based registration
     if (formData.qrToken) {
       payload.qr_token = formData.qrToken;
-      console.log('🔐 Including QR token in registration');
-    } else {
-      console.warn('⚠️ No QR token found - this might fail if backend requires it');
     }
-
-    console.log('🚀 Sending registration request:', {
-      endpoint: '/staff/register/',
-      payload: { 
-        username: payload.username,
-        registration_code: payload.registration_code,
-        password: '[HIDDEN]', 
-        qr_token: payload.qr_token ? `${payload.qr_token.substring(0, 10)}...` : '[NONE]'
-      }
-    });
 
     try {
       const response = await postData(payload);
-      
-      console.log('✅ Registration response:', response);
       
       // Store registration data from backend response
       // Note: No staff_id or is_active yet - manager creates staff profile later
@@ -104,7 +80,6 @@ const Register = () => {
           registration_code: response.registration_code,
           message: response.message,
         };
-        console.log('💾 Storing user data:', userToStore);
         localStorage.setItem('user', JSON.stringify(userToStore));
       }
       

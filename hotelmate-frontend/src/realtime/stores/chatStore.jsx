@@ -106,13 +106,6 @@ function chatReducer(state, action) {
         new Date(a.timestamp) - new Date(b.timestamp)
       );
 
-      console.log('🔄 [INIT_MESSAGES] Merged messages:', {
-        conversationId,
-        existingCount: existingMessages.length,
-        newFromAPI: newMessages.length,
-        finalCount: mergedMessages.length
-      });
-
       return {
         ...state,
         conversationsById: {
@@ -134,13 +127,6 @@ function chatReducer(state, action) {
 
     case CHAT_ACTIONS.RECEIVE_MESSAGE: {
       const { message, conversationId } = action.payload;
-      console.log('🎯 [REDUCER] RECEIVE_MESSAGE called:', { conversationId, messageId: message.id, messageText: message.message });
-      console.log('🎯 [REDUCER] Full action payload:', action.payload);
-      console.log('🎯 [REDUCER] Available conversations:', Object.keys(state.conversationsById));
-      console.log('🎯 [REDUCER] Current state snapshot:', {
-        totalConversations: Object.keys(state.conversationsById).length,
-        activeConversationId: state.activeConversationId
-      });
       
       let conversation = state.conversationsById[conversationId];
       
@@ -148,10 +134,7 @@ function chatReducer(state, action) {
       // will bring it in with full data (guest_name, room_number, etc.).
       // Creating stubs here caused ghost conversations with missing fields.
       if (!conversation) {
-        console.log('💬 [RECEIVE_MESSAGE] Conversation not in store yet, skipping:', conversationId);
         return state;
-      } else {
-        console.log('🎯 [REDUCER] Found existing conversation, current message count:', conversation.messages?.length || 0);
       }
 
       // Check if message already exists (avoid duplicates)
@@ -161,13 +144,6 @@ function chatReducer(state, action) {
       const updatedMessages = [...conversation.messages, message].sort((a, b) => 
         new Date(a.timestamp) - new Date(b.timestamp)
       );
-
-      console.log('🎯 [REDUCER] UPDATING CONVERSATION STATE:', {
-        conversationId,
-        oldMessageCount: conversation.messages.length,
-        newMessageCount: updatedMessages.length,
-        newMessage: { id: message.id, text: message.message, sender: message.sender }
-      });
 
       // Update unread count if not active conversation
       // Note: Backend will send unread_updated event with correct total, so we rely on that for accuracy
@@ -205,7 +181,6 @@ function chatReducer(state, action) {
         }
       };
       
-      console.log('✅ [REDUCER] RETURNING UPDATED STATE - message added to conversation', conversationId);
       return updatedState;
     }
 
@@ -283,14 +258,7 @@ function chatReducer(state, action) {
       const { conversationId } = action.payload;
       const conversation = state.conversationsById[conversationId];
       
-      console.log('🔥 [chatStore] MARK_CONVERSATION_READ reducer called:', { 
-        conversationId, 
-        conversation: conversation,
-        currentUnreadCount: conversation?.unread_count 
-      });
-      
       if (!conversation) {
-        console.log('❌ [chatStore] No conversation found for ID:', conversationId);
         return state;
       }
 
@@ -310,13 +278,6 @@ function chatReducer(state, action) {
           }
         }
       };
-      
-      console.log('✅ [chatStore] MARK_CONVERSATION_READ completed:', { 
-        conversationId, 
-        oldUnreadCount: conversation.unread_count,
-        newUnreadCount: 0,
-        updatedTotalOverride 
-      });
       
       return newState;
     }
@@ -423,16 +384,13 @@ function chatReducer(state, action) {
 
     case CHAT_ACTIONS.UPDATE_CONVERSATION_UNREAD: {
       const { conversationId, unreadCount = 0, metadata = {} } = action.payload;
-      console.log('📊 [chatReducer] UPDATE_CONVERSATION_UNREAD:', { conversationId, unreadCount, metadata });
       if (!conversationId) return state;
 
       const existing = state.conversationsById[conversationId];
       if (!existing) {
-        console.log('📊 [chatReducer] UPDATE_CONVERSATION_UNREAD skipped — conversation not in store:', conversationId);
         return state;
       }
       const previousUnread = existing.unread_count || 0;
-      console.log('📊 [chatReducer] Previous unread:', previousUnread, '-> New unread:', unreadCount);
       const updatedConversation = {
         ...existing,
         unread_count: unreadCount,
@@ -443,14 +401,6 @@ function chatReducer(state, action) {
         typeof state.totalUnreadOverride === 'number'
           ? Math.max(0, state.totalUnreadOverride + (unreadCount - previousUnread))
           : state.totalUnreadOverride;
-
-      console.log('📊 [chatReducer] UPDATE_CONVERSATION_UNREAD:', { 
-        conversationId,
-        previousUnread, 
-        newUnread: unreadCount,
-        previousTotal: state.totalUnreadOverride,
-        adjustedTotal
-      });
 
       return {
         ...state,
@@ -467,10 +417,6 @@ function chatReducer(state, action) {
         typeof action.payload.totalUnread === 'number'
           ? Math.max(0, action.payload.totalUnread)
           : null;
-      console.log('📊 [chatReducer] SET_TOTAL_UNREAD:', { 
-        previous: state.totalUnreadOverride, 
-        new: totalUnread 
-      });
       return {
         ...state,
         totalUnreadOverride: totalUnread,
@@ -494,7 +440,6 @@ function chatReducer(state, action) {
             : 0;
 
       if (isTotalUpdate || conversationId === undefined || conversationId === null) {
-        console.log('📊 [chatReducer] UPDATE_UNREAD_COUNTS (total only):', { normalizedTotalUnread });
         return {
           ...state,
           totalUnreadOverride: normalizedTotalUnread,
@@ -516,14 +461,7 @@ function chatReducer(state, action) {
           ? Math.max(0, conversationUnread)
           : existingConversation?.unread_count || 0;
 
-      console.log('📊 [chatReducer] UPDATE_UNREAD_COUNTS (conversation + total):', {
-        conversationId: numericConversationId,
-        nextUnread,
-        normalizedTotalUnread
-      });
-
       if (!existingConversation) {
-        console.log('📊 [chatReducer] UPDATE_UNREAD_COUNTS skipped — conversation not in store:', numericConversationId);
         return {
           ...state,
           totalUnreadOverride: normalizedTotalUnread,
@@ -566,7 +504,6 @@ function shouldProcessEvent(eventType, conversationId, messageId, lastEventTimes
   
   // If processed within last 3 seconds, skip
   if (lastProcessed && (now - lastProcessed) < 3000) {
-    console.log('🔄 Skipping duplicate event:', key);
     return false;
   }
   
@@ -611,15 +548,6 @@ export const chatActions = {
   _processedEventIds: new Set(), // Event ID-based deduplication
 
   handleEvent(event) {
-    console.log('🔥 [chatActions.handleEvent] CALLED with event:', event);
-    console.log('🔥 [chatActions.handleEvent] Event structure:', {
-      category: event.category,
-      type: event.type,
-      eventType: event.eventType,
-      hasPayload: !!event.payload,
-      payloadKeys: event.payload ? Object.keys(event.payload) : []
-    });
-    
     if (!globalChatDispatch || !globalChatGetState) {
       console.warn('💬 Chat store not initialized, skipping event:', event);
       return;
@@ -627,7 +555,6 @@ export const chatActions = {
 
     // ✅ Handle both staff_chat and guest_chat events (guest_chat updates staff conversation lists)
     if (event.category !== 'staff_chat' && event.category !== 'guest_chat') {
-      console.log('💬 Chat store ignoring non-chat event:', event.category);
       return;
     }
 
@@ -635,7 +562,6 @@ export const chatActions = {
     let eventType = event.eventType || event.type;  // ✅ support both formats
     const payload = event.data || event.payload;      // ✅ support both formats
     
-    console.log('🔥 [chatStore] Mapped event type:', { original: event.eventType || event.type, mapped: eventType });
     const eventId = event.meta?.event_id || null;
     const rawConversationId =
       payload?.conversation !== undefined
@@ -648,8 +574,6 @@ export const chatActions = {
         ? parseInt(rawConversationId, 10)
         : null;
     const numericConversationId = Number.isNaN(parsedConversationId) ? null : parsedConversationId;
-
-    console.log('💬 Chat store handling staff chat event:', { eventType, conversationId: numericConversationId, payload });
 
     const eventRequiresConversationId = !['realtime_staff_chat_unread_updated'].includes(eventType);
 
@@ -669,7 +593,6 @@ export const chatActions = {
     }
 
     if (chatActions._processedEventIds.has(deduplicationKey)) {
-      console.log("💬 Chat store duplicate event detected, skipping:", deduplicationKey);
       return;
     }
 
@@ -684,20 +607,8 @@ export const chatActions = {
     }
 
     // ✅ Handle events with EXACT backend event names from notification_manager.py
-    console.log(`📨 [chatStore] Processing ${eventType}:`, { conversationId: numericConversationId, payload });
     switch (eventType) {
       case 'realtime_staff_chat_message_created': {
-        console.log('📨 [chatStore] Processing message_created:', { numericConversationId, payload });
-        console.log('🔥 [chatStore] Raw payload fields:', Object.keys(payload));
-        console.log('🔥 [chatStore] Full payload:', JSON.stringify(payload, null, 2));
-        console.log('🔥 [chatStore] Message payload structure:', {
-          hasId: !!payload.id,
-          hasText: !!payload.text,
-          hasMessage: !!payload.message,
-          senderId: payload.sender_id ?? payload.sender,
-          conversation: payload.conversation,
-          conversationId: payload.conversation_id,
-        });
 
         // Full message object - be flexible with field names from backend
         const hasId = payload.id;
@@ -708,20 +619,8 @@ export const chatActions = {
         // For guest messages, we can be more flexible with sender validation
         const hasFullMessage = hasId && hasMessage && (hasSender || isGuestMessage);
 
-        console.log('🔥 [chatStore] Message validation details:', { 
-          hasId: !!hasId, 
-          idValue: hasId,
-          hasMessage: !!hasMessage, 
-          messageValue: hasMessage,
-          hasSender: !!hasSender, 
-          senderValue: hasSender,
-          isGuestMessage,
-          hasFullMessage 
-        });
-
         if (!hasFullMessage) {
           console.error('❌ [chatStore] Message validation FAILED - missing required fields');
-          console.error('❌ Raw payload that failed validation:', payload);
         }
 
         if (hasFullMessage) {
@@ -776,24 +675,6 @@ export const chatActions = {
             } : null,
           };
 
-          console.log('✅ [chatStore] Message validation PASSED - creating mapped message:', mappedMessage);
-          console.log('📎 [chatStore] Attachment normalization:', {
-            originalAttachments: payload.attachments,
-            normalizedAttachments: normalizedAttachments,
-            attachmentCount: normalizedAttachments.length,
-            firstAttachmentUrls: normalizedAttachments.length > 0 ? {
-              original_url: payload.attachments[0]?.url,
-              normalized_file_url: normalizedAttachments[0]?.file_url
-            } : null
-          });
-          console.log('🚀 [chatStore] DISPATCHING RECEIVE_MESSAGE from realtime_staff_chat_message_created:', { 
-            conversationId: numericConversationId, 
-            messageId: payload.id, 
-            messageText: text?.substring(0, 50),
-            hasAttachments: normalizedAttachments.length > 0,
-            sender: payload.sender_id || payload.sender
-          });
-          
           globalChatDispatch({
             type: CHAT_ACTIONS.RECEIVE_MESSAGE,
             payload: {
@@ -801,8 +682,6 @@ export const chatActions = {
               message: mappedMessage,
             },
           });
-          
-          console.log('✅ [chatStore] RECEIVE_MESSAGE dispatch completed successfully for realtime message:', payload.id);
         } else if (payload.notification && payload.sender_id) {
           // FCM fallback
           const fcmMessage = {
@@ -911,7 +790,6 @@ export const chatActions = {
 
       case 'realtime_staff_chat_typing': {
         // Handle typing indicators (can be added to state if needed)
-        console.log('💬 Typing indicator received:', payload);
         break;
       }
 
@@ -942,8 +820,6 @@ export const chatActions = {
       // Conversation updates come through other event types
 
       case 'realtime_staff_chat_unread_updated': {
-        console.log('📊 [chatStore] Processing unread_updated with new format:', { numericConversationId, payload });
-        
         // Extract new payload fields according to spec
         const {
           conversation_id,
@@ -959,13 +835,6 @@ export const chatActions = {
             : typeof unread_count === 'number'
               ? unread_count
               : null;
-        
-        console.log('📊 [chatStore] Enhanced unread update:', {
-          conversationId: conversation_id,
-          conversationUnread: normalizedConversationUnread,
-          totalUnread: total_unread,
-          isTotal: is_total_update
-        });
         
         // Dispatch UPDATE_UNREAD_COUNTS action to properly handle both counts
         globalChatDispatch({
@@ -983,13 +852,10 @@ export const chatActions = {
       }
 
       case 'realtime_staff_chat_conversations_with_unread': {
-        console.log('📊 [chatStore] Processing conversations_with_unread:', payload);
-        
         // Extract conversations_with_unread count from payload
         const { conversations_with_unread, updated_at } = payload;
         
         if (typeof conversations_with_unread === 'number') {
-          console.log('📊 [chatStore] Updating conversation count badge:', conversations_with_unread);
           
           // Force MessengerWidget to update by dispatching a state change
           // This event doesn't change individual conversation data, just triggers UI update
@@ -1023,9 +889,7 @@ export const chatActions = {
       default:
         // Filter out Pusher system events (pusher:subscription_succeeded, etc.)
         if (eventType?.startsWith('pusher:')) {
-          console.log('🔄 [chatStore] Pusher system event:', eventType);
-        } else {
-          console.log('💬 Unknown staff chat event type:', eventType, event);
+          // Pusher system event - ignore
         }
     }
   }
@@ -1042,7 +906,6 @@ export function ChatProvider({ children }) {
     // Add debug functions to window for testing
     if (typeof window !== 'undefined') {
       window.debugRealtimeUnread = (conversationId, unreadCount) => {
-        console.log('🧪 Debug: Simulating unread_updated event:', { conversationId, unreadCount });
         dispatch({
           type: CHAT_ACTIONS.UPDATE_CONVERSATION_UNREAD,
           payload: { conversationId: parseInt(conversationId), unreadCount }
@@ -1050,7 +913,6 @@ export function ChatProvider({ children }) {
       };
       
       window.debugTotalUnread = (totalUnread) => {
-        console.log('🧪 Debug: Setting total unread:', totalUnread);
         dispatch({
           type: CHAT_ACTIONS.SET_TOTAL_UNREAD,
           payload: { totalUnread }

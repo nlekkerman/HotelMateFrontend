@@ -66,9 +66,7 @@ export const createConversation = async (hotelSlug, participantIds, title = null
     
     // Log whether backend returned existing or created new
     if (response.status === 200) {
-      // console.log('✅ Backend returned EXISTING conversation:', response.data.id);
     } else if (response.status === 201) {
-      // console.log('🆕 Backend CREATED NEW conversation:', response.data.id);
     }
     
     // Return conversation data with status code

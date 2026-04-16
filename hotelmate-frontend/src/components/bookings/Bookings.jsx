@@ -126,9 +126,6 @@ export default function Bookings() {
       {!qrCategorySlug && (
        <div className="d-flex flex-wrap justify-content-center gap-2 mb-4">
   {categories.map((c) => {
-    console.log("Restaurant data:", c); // Log whole object
-    console.log("Restaurant image URL:", c.image); // Log image
-
     const isSelected = selectedCategoryId === c.id;
 
     // Construct image URL from environment variable

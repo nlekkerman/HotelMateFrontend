@@ -40,33 +40,22 @@ const AnalyticsFilters = ({
   const fetchPeriods = async () => {
     setLoadingPeriods(true);
     try {
-      console.log('🔍 [AnalyticsFilters] Fetching periods for hotel:', hotelSlug);
       const response = await getPeriodsList(hotelSlug, true); // Get only closed periods
-      console.log('📋 [AnalyticsFilters] Periods received from API:', response);
       
       if (response && Array.isArray(response)) {
-        console.log(`✅ [AnalyticsFilters] Setting ${response.length} periods:`, 
-          response.map(p => ({ id: p.id, name: p.period_name, closed: p.is_closed }))
-        );
         setPeriods(response);
         
         // Auto-select last 3 periods for multi-period comparison
         if (selectedPeriods.length === 0 && response.length >= 3) {
           const lastThree = response.slice(0, 3).map(p => p.id);
-          console.log('🎯 [AnalyticsFilters] Auto-selecting last 3 periods:', lastThree);
           onPeriodsChange?.(lastThree);
         }
         
         // Auto-select last 2 periods for two-period comparison
         if (!period1 && !period2 && response.length >= 2) {
-          console.log('🎯 [AnalyticsFilters] Auto-selecting periods for comparison:', 
-            { period1: response[1].id, period2: response[0].id }
-          );
           onPeriod1Change?.(response[1].id);
           onPeriod2Change?.(response[0].id);
         }
-      } else {
-        console.warn('⚠️ [AnalyticsFilters] Response is not an array:', response);
       }
     } catch (error) {
       console.error('❌ [AnalyticsFilters] Error fetching periods:', error);

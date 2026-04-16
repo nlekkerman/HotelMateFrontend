@@ -233,7 +233,6 @@ export const roomServiceActions = {
     }
 
     if (roomServiceActions._processedEventIds.has(deduplicationKey)) {
-      console.log("[roomServiceStore] Duplicate event detected, skipping:", deduplicationKey);
       return;
     }
 
@@ -337,9 +336,6 @@ export const roomServiceActions = {
         break;
 
       default:
-        if (import.meta.env && !import.meta.env.PROD) {
-          console.log("[roomServiceStore] Ignoring eventType:", eventType, event);
-        }
         break;
     }
   },

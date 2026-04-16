@@ -47,12 +47,6 @@ const ItemTrendsChart = ({
     setLoading(true);
     setError(null);
 
-    console.log('🔍 ItemTrendsChart: Fetching trend data...', {
-      hotelSlug,
-      selectedPeriods,
-      selectedCategory,
-      selectedItems
-    });
 
     try {
       const params = {
@@ -61,23 +55,15 @@ const ItemTrendsChart = ({
         items: selectedItems.length > 0 ? selectedItems : undefined
       };
 
-      console.log('📦 ItemTrendsChart: API params:', params);
 
       const response = await getTrendAnalysis(hotelSlug, params.periods, params.category, params.items);
       
-      console.log('📦 ItemTrendsChart: Raw API Response:', response);
       
       // API returns {items: [...], periods: [...], filters: {...}}
       const itemsData = response.items || [];
       
-      console.log('📋 ItemTrendsChart: Items data:', {
-        itemsCount: itemsData.length,
-        hasItems: itemsData.length > 0,
-        sampleItem: itemsData[0]
-      });
       
       if (!itemsData || itemsData.length === 0) {
-        console.warn('⚠️ ItemTrendsChart: No trend data available');
         setError('No trend data available for selected filters');
         setChartData(null);
         return;
@@ -85,13 +71,10 @@ const ItemTrendsChart = ({
 
       // Extract unique categories from items
       const uniqueCategories = [...new Set(itemsData.map(item => item.category_name || item.category).filter(Boolean))];
-      console.log('📋 ItemTrendsChart: Categories found:', uniqueCategories);
       setAvailableCategories(uniqueCategories);
 
       // Transform API response to chart data
-      console.log('🔄 ItemTrendsChart: Starting transformation...');
       const transformedData = transformToChartData(response);
-      console.log('📊 ItemTrendsChart: Transformed Data:', transformedData);
       
       setChartData(transformedData);
     } catch (err) {
@@ -128,15 +111,9 @@ const ItemTrendsChart = ({
    * }
    */
   const transformToChartData = (apiResponse) => {
-    console.log('🔧 ItemTrendsChart: Transform input:', apiResponse);
     
     const { items, periods, filters } = apiResponse;
 
-    console.log('📋 ItemTrendsChart: Transform data:', {
-      itemsCount: items?.length,
-      periodsCount: periods?.length,
-      filters
-    });
 
     if (!items || items.length === 0) {
       console.error('❌ ItemTrendsChart: No items to transform');

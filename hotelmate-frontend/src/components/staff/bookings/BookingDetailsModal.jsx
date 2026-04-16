@@ -72,16 +72,6 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
   } = useAvailableRooms(hotelSlug, bookingId);
   
   // Debug available rooms
-  console.log('🏨 Available rooms debug:', {
-    availableRooms,
-    isLoadingRooms,
-    roomsError,
-    hotelSlug,
-    bookingId,
-    isArray: Array.isArray(availableRooms),
-    availableRoomsKeys: availableRooms ? Object.keys(availableRooms) : null,
-    availableRoomsStructure: availableRooms
-  });
   
   // Mutations
   const safeAssignMutation = useSafeAssignRoom(hotelSlug);
@@ -101,12 +91,10 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
     const fetchOverstayStatus = async () => {
       if (!booking?.booking_id || !hotelSlug) return;
       
-      console.log('[BookingDetailsModal] Fetching overstay status for:', booking.booking_id);
       setIsLoadingOverstayStatus(true);
       setOverstayStatusError(false);
       try {
         const response = await staffOverstayAPI.staffOverstayStatus(hotelSlug, booking.booking_id);
-        console.log('[BookingDetailsModal] Overstay status response:', response.data);
         setOverstayStatus(response.data);
         setOverstayStatusError(false);
       } catch (error) {
@@ -295,27 +283,6 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
   const handleExtendStay = async () => {
     if (!booking?.booking_id) return;
     
-    // Debug logging to help diagnose the issue
-    console.log('[BookingDetailsModal] Extend stay debug info:', {
-      booking_id: booking.booking_id,
-      status: booking.status,
-      checked_in_at: booking.checked_in_at,
-      checked_out_at: booking.checked_out_at,
-      assigned_room: booking.assigned_room,
-      room: booking.room,
-      isInHouse: !!booking.checked_in_at && !booking.checked_out_at,
-      is_checked_in: !!booking.checked_in_at && !booking.checked_out_at,
-      current_status: booking.checked_in_at ? (booking.checked_out_at ? 'checked-out' : 'checked-in') : 'not-checked-in',
-      booking_status_field: booking.status,
-      check_in_date: booking.check_in,
-      check_out_date: booking.check_out,
-      extendMode,
-      extendNights,
-      extendDate
-    });
-    console.log('[BookingDetailsModal] Full booking object:', booking);
-    console.log('[BookingDetailsModal] Full booking object:', booking);
-    
     // Validate exactly one of add_nights or new_checkout_date
     const hasNights = extendMode === 'nights' && extendNights > 0;
     const hasDate = extendMode === 'date' && extendDate.trim();
@@ -332,19 +299,11 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
       ? { add_nights: extendNights }
       : { new_checkout_date: extendDate };
       
-    console.log('[BookingDetailsModal] Sending extend request:', {
-      hotelSlug,
-      bookingId: booking.booking_id,
-      payload,
-      idempotencyKey: extendIdempotencyKey
-    });
-      
     setIsExtending(true);
     try {
       const response = await staffOverstayAPI.staffOverstayExtend(hotelSlug, booking.booking_id, payload, {
         idempotencyKey: extendIdempotencyKey
       });
-      console.log('[BookingDetailsModal] Extend response:', response.data);
       toast.success('Stay extended successfully');
       setShowExtendModal(false);
       
@@ -365,14 +324,10 @@ const BookingDetailsModal = ({ show, onClose, bookingId, hotelSlug, staffProfile
       });
     } catch (error) {
       console.error('[BookingDetailsModal] Extend error:', error);
-      console.error('[BookingDetailsModal] Error response data:', error.response?.data);
-      console.error('[BookingDetailsModal] Error status:', error.response?.status);
-      console.error('[BookingDetailsModal] Error message:', error.message);
       
       if (error.response?.status === 409) {
         // Handle room conflicts - use the exact backend response structure
         const errorData = error.response?.data;
-        console.log('[BookingDetailsModal] 409 conflict data:', errorData);
         
         // Check if this is a check-in status issue
         if (errorData?.detail?.includes('not checked-in')) {

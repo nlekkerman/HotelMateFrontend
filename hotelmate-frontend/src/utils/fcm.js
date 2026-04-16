@@ -12,13 +12,11 @@ export const requestFCMPermission = async () => {
   try {
     // Check if browser supports notifications
     if (!('Notification' in window)) {
-      console.log('This browser does not support notifications');
       return null;
     }
 
     // Check if service workers are supported
     if (!('serviceWorker' in navigator)) {
-      console.log('Service workers not supported');
       return null;
     }
 
@@ -27,18 +25,12 @@ export const requestFCMPermission = async () => {
       window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.')
         ? '/firebase-messaging-sw.js'
         : 'https://hotelsmates.com/firebase-messaging-sw.js';
-    console.log('🚀 Attempting to register Firebase SW at:', swPath);
     const registration = await navigator.serviceWorker.register(swPath);
-    console.log('✅ Service worker registered:', registration);
-    console.log('✅ Service worker scriptURL:', registration.active?.scriptURL);
-    console.log('✅ Service worker scope:', registration.scope);
 
     // Request permission
     const permission = await Notification.requestPermission();
     
     if (permission === 'granted') {
-      console.log('✅ Notification permission granted');
-      
       // Get FCM token
       const token = await getToken(messaging, {
         vapidKey: VAPID_KEY,
@@ -46,14 +38,11 @@ export const requestFCMPermission = async () => {
       });
 
       if (token) {
-        console.log('✅ FCM Token obtained:', token.substring(0, 20) + '...');
         return token;
       } else {
-        console.log('❌ No registration token available');
         return null;
       }
     } else {
-      console.log('❌ Notification permission denied');
       return null;
     }
   } catch (error) {

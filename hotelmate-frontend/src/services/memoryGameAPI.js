@@ -473,7 +473,6 @@ class MemoryGameAPI {
       const lowestTop10Score = sortedScores[9] || 0; // 10th place (index 9)
       
       if (calculatedScore > lowestTop10Score) {
-        console.log(`✅ High score: ${calculatedScore} > ${lowestTop10Score} (10th place)`);
         // Calculate estimated rank
         const betterScores = sortedScores.filter(score => score > calculatedScore);
         const estimatedRank = betterScores.length + 1;
@@ -485,7 +484,6 @@ class MemoryGameAPI {
         };
       }
       
-      console.log(`❌ Not a high score: ${calculatedScore} <= ${lowestTop10Score} (10th place)`);
       return {
         isHighScore: false,
         rank: null,
@@ -506,8 +504,6 @@ class MemoryGameAPI {
   // Check if player has already played in this tournament
   async hasPlayerAlreadyPlayed(tournamentId, playerName, roomNumber) {
     try {
-      console.log(`🔍 Checking if player "${playerName}" (Room: ${roomNumber}) has already played tournament ${tournamentId}`);
-      
       const leaderboardData = await this.getTournamentLeaderboard(tournamentId);
       
       let leaderboardArray = [];
@@ -541,7 +537,6 @@ class MemoryGameAPI {
       });
       
       if (existingEntry) {
-        console.log(`❌ Player already played:`, existingEntry);
         return {
           hasPlayed: true,
           existingEntry: existingEntry,
@@ -549,7 +544,6 @@ class MemoryGameAPI {
         };
       }
       
-      console.log(`✅ Player has not played yet`);
       return {
         hasPlayed: false,
         existingEntry: null,
@@ -572,12 +566,10 @@ class MemoryGameAPI {
     try {
       const tournaments = await this.getTournaments(hotelSlug);
       if (!tournaments || !Array.isArray(tournaments)) {
-        console.log(`📅 No tournaments found for ${hotelSlug}`);
         return [];
       }
 
       const now = new Date();
-      console.log(`🕐 Checking active tournaments for ${hotelSlug} at: ${now.toISOString()}`);
       
       const activeTournaments = tournaments.filter(tournament => {
         const startTime = new Date(tournament.start_date);
@@ -587,35 +579,14 @@ class MemoryGameAPI {
         const isActiveByStatus = tournament.status === 'active';
         const isActiveByTime = now >= startTime && now <= endTime;
         
-        console.log(`🔍 Checking tournament "${tournament.name}" (ID: ${tournament.id}):`);
-        console.log(`   Status field: ${tournament.status}`);
-        console.log(`   is_active field: ${tournament.is_active}`);
-        console.log(`   Start: ${startTime.toISOString()}`);
-        console.log(`   End: ${endTime.toISOString()}`);
-        console.log(`   Now: ${now.toISOString()}`);
-        console.log(`   Active by status: ${isActiveByStatus}`);
-        console.log(`   Active by time: ${isActiveByTime}`);
-        console.log(`   Time until start: ${Math.floor((startTime.getTime() - now.getTime()) / 1000 / 60)} minutes`);
-        console.log(`   Time until end: ${Math.floor((endTime.getTime() - now.getTime()) / 1000 / 60)} minutes`);
-        
         // Tournament is active if backend says "active" AND it hasn't ended yet
         // Allow some flexibility - if backend says active, trust it unless clearly expired
         const hasNotEnded = now <= endTime;
-        console.log(`   Has not ended: ${hasNotEnded}`);
         const isActive = isActiveByStatus && hasNotEnded;
-        
-        if (isActive) {
-          console.log(`🏆 ✅ ACTIVE TOURNAMENT FOUND: "${tournament.name}"`);
-        } else if (isActiveByStatus && !hasNotEnded) {
-          console.log(`❌ Status says active but tournament ended - Status: ${tournament.status}, Ended: ${!hasNotEnded}`);
-        } else {
-          console.log(`❌ Not active - Status: ${tournament.status}, Has not ended: ${hasNotEnded}`);
-        }
         
         return isActive;
       });
 
-      console.log(`✅ Found ${activeTournaments.length} active tournaments for ${hotelSlug}`);
       return activeTournaments;
     } catch (error) {
       console.error(`❌ Failed to fetch active tournaments for ${hotelSlug}:`, error);
@@ -628,16 +599,11 @@ class MemoryGameAPI {
     try {
       const tournaments = await this.getTournaments(hotelSlug);
       if (!tournaments || !Array.isArray(tournaments)) {
-        console.log(`📅 No tournaments found for ${hotelSlug}`);
         return [];
       }
 
       const now = new Date();
       const lookAheadTime = new Date(now.getTime() + (hoursAhead * 60 * 60 * 1000));
-      
-      console.log(`🔍 Looking for upcoming tournaments for ${hotelSlug}:`);
-      console.log(`   Now: ${now.toISOString()}`);
-      console.log(`   ${hoursAhead}h ahead: ${lookAheadTime.toISOString()}`);
       
       const upcomingTournaments = tournaments.filter(tournament => {
         const startTime = new Date(tournament.start_date);
@@ -645,19 +611,9 @@ class MemoryGameAPI {
         // Check if tournament is upcoming and within the time window
         const isUpcoming = startTime > now && startTime <= lookAheadTime;
         
-        if (isUpcoming) {
-          console.log(`📅 UPCOMING: "${tournament.name}" (ID: ${tournament.id})`);
-          console.log(`   Hotel: ${tournament.hotel}`);
-          console.log(`   Starts: ${startTime.toISOString()}`);
-          console.log(`   Status: ${tournament.status || 'upcoming (assumed)'}`);
-          const minutesUntil = Math.floor((startTime.getTime() - now.getTime()) / (1000 * 60));
-          console.log(`   In ${minutesUntil} minutes`);
-        }
-        
         return isUpcoming;
       }).sort((a, b) => new Date(a.start_date) - new Date(b.start_date)); // Sort by start time
 
-      console.log(`✅ Found ${upcomingTournaments.length} upcoming tournaments for ${hotelSlug}`);
       return upcomingTournaments;
     } catch (error) {
       console.error(`❌ Failed to fetch upcoming tournaments for ${hotelSlug}:`, error);
@@ -668,12 +624,9 @@ class MemoryGameAPI {
   // Get the next relevant tournament (active or upcoming)
   async getNextTournament(hotelSlug = 'hotel-killarney') {
     try {
-      console.log(`🎯 Finding next tournament for ${hotelSlug}...`);
-      
       // First check for active tournaments
       const activeTournaments = await this.getActiveTournaments(hotelSlug);
       if (activeTournaments.length > 0) {
-        console.log(`🎯 Using active tournament: "${activeTournaments[0].name}" for ${hotelSlug}`);
         return {
           tournament: activeTournaments[0],
           status: 'active',
@@ -685,7 +638,6 @@ class MemoryGameAPI {
       // Then check for upcoming tournaments (within next 2 hours)
       const upcomingTournaments = await this.getUpcomingTournaments(2, hotelSlug);
       if (upcomingTournaments.length > 0) {
-        console.log(`🎯 Using upcoming tournament: "${upcomingTournaments[0].name}" for ${hotelSlug}`);
         return {
           tournament: upcomingTournaments[0],
           status: 'upcoming',
@@ -694,7 +646,6 @@ class MemoryGameAPI {
         };
       }
 
-      console.log(`❌ No active or upcoming tournaments found for ${hotelSlug}`);
       return {
         tournament: null,
         status: 'none',
@@ -754,23 +705,12 @@ class MemoryGameAPI {
   // NEW: Submit tournament score with token-based player tracking
   async submitTournamentScore(tournamentId, scoreData) {
     try {
-      console.log(`🎯 Submitting score to tournament ${tournamentId}:`, scoreData);
-      
       // Ensure we have a player_token in the scoreData
       if (!scoreData.player_token) {
         console.warn('⚠️ No player_token provided in scoreData - this may cause tracking issues');
       }
       
       const response = await api.post(`${this.baseURL}/tournaments/${tournamentId}/submit_score/`, scoreData);
-      
-      console.log(`✅ Score submitted successfully:`, response.data);
-      console.log(`   Score: ${response.data.score}`);
-      console.log(`   Best Score: ${response.data.best_score}`);
-      console.log(`   Rank: ${response.data.rank || 'N/A'}`);
-      console.log(`   Is Personal Best: ${response.data.is_personal_best}`);
-      console.log(`   Updated: ${response.data.updated}`);
-      console.log(`   Message: ${response.data.message || 'N/A'}`);
-      console.log(`   Player Token: ${response.data.player_token || 'N/A'}`);
       
       return response.data;
     } catch (error) {

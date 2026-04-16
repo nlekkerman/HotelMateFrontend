@@ -34,11 +34,7 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
 
   // Handle real-time status updates from Pusher
   const handleAttendanceEvent = ({ type, payload }) => {
-    console.log('[StaffProfile] Pusher event:', { type, payload });
-    
     if (type === 'clock-status-updated' && payload.staff_id === staff.id) {
-      console.log('[StaffProfile] Updating status for current staff:', payload);
-      
       setRealTimeStaff(prev => ({
         ...prev,
         is_on_duty: payload.is_on_duty,

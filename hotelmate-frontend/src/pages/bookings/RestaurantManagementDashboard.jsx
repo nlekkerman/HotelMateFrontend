@@ -18,10 +18,6 @@ const RestaurantManagementDashboard = () => {
   const navigate = useNavigate();
   const [showAddModal, setShowAddModal] = useState(false);
 
-  console.log("🏨 RestaurantManagementDashboard - URL hotelSlug:", urlHotelSlug);
-  console.log("🏨 RestaurantManagementDashboard - User hotelSlug:", user?.hotel_slug);
-  console.log("🏨 RestaurantManagementDashboard - Final hotelSlug:", hotelSlug);
-
   const {
     restaurants,
     loading,

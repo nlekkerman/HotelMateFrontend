@@ -31,7 +31,6 @@ const GuestList = () => {
     async function fetchGuests() {
       try {
         const res = await api.get(`/guests/${hotelIdentifier}/guests/`);
-        console.log("Fetched guests:", res.data.results);
         setGuests(res.data.results);
       } catch {
         setError("Failed to load guests.");

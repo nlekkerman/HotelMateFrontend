@@ -72,14 +72,12 @@ const RoomCard = ({ room, preset }) => {
   const handleBookNow = () => {
     // Use booking_cta_url from API guide if available
     if (room.booking_cta_url) {
-      console.log('[RoomCard] 🔗 Using API booking URL:', room.booking_cta_url);
       // Clean up /public/booking/ URLs from backend
       const cleanUrl = room.booking_cta_url.replace('/public/booking/', '/booking/');
       navigate(cleanUrl);
     } else {
       // Fallback to manual construction
       const bookingUrl = `/booking/${slug}?room_type_code=${room.code}`;
-      console.log('[RoomCard] 🔗 Using fallback booking URL:', bookingUrl);
       navigate(bookingUrl);
     }
   };

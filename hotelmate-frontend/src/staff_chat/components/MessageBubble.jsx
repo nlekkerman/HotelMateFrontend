@@ -69,12 +69,6 @@ const MessageBubble = ({
 
   // Debug logging for deleted messages
   if (isDeleted) {
-    // console.log('🗑️ MessageBubble - Rendering deleted message:', {
-    //   isDeleted,
-    //   deletedText,
-    //   messageText,
-    //   hasAttachments: attachments?.length > 0
-    // });
   }
 
   return (
@@ -94,13 +88,8 @@ const MessageBubble = ({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            //
-            // console.log('🔘 onReply function:', onReply);
-            // console.log('🔘 onReply toString:', onReply.toString());
             if (onReply) {
-              //
               onReply();
-              //
             } else {
               console.error('❌ onReply is not defined!');
             }

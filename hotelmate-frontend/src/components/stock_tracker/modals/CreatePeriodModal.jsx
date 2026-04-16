@@ -84,11 +84,6 @@ export const CreatePeriodModal = ({ show, onHide, hotelSlug, onSuccess }) => {
       return;
     }
 
-    console.log('📅 Creating period:', {
-      start_date: startDate,
-      end_date: endDate,
-      period_type: periodType
-    });
 
     setLoading(true);
 
@@ -101,11 +96,6 @@ export const CreatePeriodModal = ({ show, onHide, hotelSlug, onSuccess }) => {
 
       const response = await api.post(`/stock_tracker/${hotelSlug}/periods/`, payload);
 
-      console.log('✅ Period created:', {
-        id: response.data.id,
-        period_name: response.data.period_name,
-        is_closed: response.data.is_closed
-      });
 
       toast.success(`Period "${response.data.period_name}" created successfully! 🎉`);
 

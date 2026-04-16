@@ -26,7 +26,6 @@ const StockItemsMobile = () => {
 
   // Monitor modal state
   useEffect(() => {
-    console.log('showModal changed to:', showModal);
   }, [showModal]);
 
   // Filter items
@@ -66,25 +65,17 @@ const StockItemsMobile = () => {
 
   const handleSave = async (itemData) => {
     try {
-      console.log('handleSave called in StockItemsMobile');
-      console.log('Item data received:', itemData);
-      console.log('Is editing:', !!editingItem);
       
       // Add hotel field from localStorage
       const dataWithHotel = {
         ...itemData,
         hotel: user?.hotel_id
       };
-      console.log('Data with hotel field:', dataWithHotel);
       
       if (editingItem) {
-        console.log('Updating item ID:', editingItem.id);
         await updateItem(editingItem.id, dataWithHotel);
-        console.log('Item updated successfully');
       } else {
-        console.log('Creating new item');
         const result = await createItem(dataWithHotel);
-        console.log('Item created successfully:', result);
       }
       setShowModal(false);
       setEditingItem(null);
@@ -95,11 +86,8 @@ const StockItemsMobile = () => {
   };
 
   const handleAddNew = () => {
-    console.log('handleAddNew called');
-    console.log('Current showModal:', showModal);
     setEditingItem(null);
     setShowModal(true);
-    console.log('Setting showModal to true');
   };
 
   const clearFilters = () => {

@@ -366,15 +366,6 @@ export const guestChatActions = {
   _processedEventIds: new Set(), // Event ID-based deduplication
 
   handleEvent: (event, dispatchRef = null) => {
-    console.log('🔥 [guestChatActions.handleEvent] Called with event:', {
-      category: event.category,
-      type: event.type,
-      payload: event.payload,
-      meta: event.meta,
-      hasDispatch: !!dispatchRef,
-      hasGlobalDispatch: !!globalGuestChatDispatch
-    });
-    
     // Use provided dispatch or global fallback
     const dispatch = dispatchRef || globalGuestChatDispatch;
     
@@ -419,7 +410,6 @@ export const guestChatActions = {
     }
 
     if (guestChatActions._processedEventIds.has(eventId)) {
-      console.log("[guestChatStore] Duplicate event detected, skipping:", eventId);
       return;
     }
 
@@ -432,8 +422,6 @@ export const guestChatActions = {
       const toDelete = eventIds.slice(0, 500);
       toDelete.forEach(id => guestChatActions._processedEventIds.delete(id));
     }
-
-    console.log("[guestChatStore] Processing event:", eventType, conversationId, payload);
 
     // ✅ Handle events — canonical event names only
     switch (eventType) {
@@ -521,7 +509,7 @@ export const guestChatActions = {
       }
 
       default:
-        console.log('[guestChatStore] Unknown event type:', eventType, event);
+        break;
     }
   },
 

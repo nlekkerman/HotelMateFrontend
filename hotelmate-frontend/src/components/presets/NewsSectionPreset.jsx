@@ -22,7 +22,6 @@ const NewsSectionPreset = ({ section, onUpdate }) => {
 
   const handleAddArticle = () => {
     // TODO: Implement add article modal
-    console.log('Add article clicked');
   };
 
   if (newsItems.length === 0) {

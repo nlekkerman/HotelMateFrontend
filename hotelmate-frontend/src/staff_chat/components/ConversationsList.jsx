@@ -36,14 +36,6 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
   
   // Debug logging for conversation updates
   useEffect(() => {
-    console.log('📋 [CONVERSATIONS LIST] Conversations updated:', {
-      count: conversations.length,
-      totalUnread,
-      conversationsWithUnread,
-      conversationIds: conversations.map(c => c.id),
-      unreadCounts: conversations.map(c => ({ id: c.id, unread: c.unread_count, title: c.title })),
-      timestamp: new Date().toISOString()
-    });
   }, [conversations, totalUnread, conversationsWithUnread]);
 
   // Search functionality
@@ -59,7 +51,6 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
 
   // Initial load - fetch conversations once on mount
   useEffect(() => {
-    console.log('📋 [CONVERSATIONS LIST] Component mounted, fetching conversations');
     if (hotelSlug) {
       fetchStaffConversations();
     }
@@ -75,8 +66,6 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
         // Get active room conversations (guest chat bookings)
         const { fetchRoomConversations } = await import('@/services/roomConversationsAPI');
         const roomConversations = await fetchRoomConversations(hotelSlug);
-        
-        console.log('🔗 [CONVERSATIONS LIST] Found room conversations:', roomConversations?.length || 0);
 
         const cleanupFunctions = [];
 
@@ -84,7 +73,6 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
         roomConversations?.forEach((conversation) => {
           if (conversation.conversation_id || conversation.id) {
             const conversationId = conversation.conversation_id || conversation.id;
-            console.log('🔗 [CONVERSATIONS LIST] Subscribing to staff conversation:', conversationId);
             const cleanup = subscribeToStaffChatConversation(hotelSlug, conversationId);
             cleanupFunctions.push(cleanup);
           }
@@ -105,7 +93,6 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
 
     // Cleanup on unmount
     return () => {
-      console.log('🧹 [CONVERSATIONS LIST] Cleaning up guest booking subscriptions');
       cleanupFunctions.forEach(cleanup => cleanup?.());
     };
   }, [hotelSlug]);
@@ -116,12 +103,10 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
   const { startConversation } = useStartConversation(hotelSlug);
 
   const handleStartNewChat = async (staff) => {
-    // console.log('🚀 Starting chat with staff:', staff);
     
     // ✅ FIX: Prevent race condition - create unique key for user pair
     const conversationKey = [currentUserId, staff.id].sort().join('-');
     if (creatingConversationsWith.has(conversationKey)) {
-      console.log('🔒 Already creating conversation between users:', conversationKey, '- skipping duplicate request');
       return;
     }
     
@@ -145,20 +130,16 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
       });
 
       if (existingConv) {
-        // console.log('✅ Found existing conversation:', existingConv.id);
         // Open existing conversation
         if (onOpenChat) {
           onOpenChat(existingConv, staff);
           clearSearch();
         }
       } else {
-        // console.log('🆕 Creating new conversation with staff:', staff.id);
         // Create new conversation
         const conversation = await startConversation([staff.id]);
-        // console.log('✅ Conversation created:', conversation);
         
         if (conversation && onOpenChat) {
-          // console.log('📞 Calling onOpenChat with:', { conversation, staff });
           onOpenChat(conversation, staff);
           clearSearch();
           
@@ -202,7 +183,6 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
     
     try {
       const response = await bulkMarkAsRead(hotelSlug, unreadConvIds);
-      console.log('✅ Marked all as read:', response);
       
       // Refresh conversations to get updated unread counts
       await fetchStaffConversations();

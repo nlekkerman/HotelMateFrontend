@@ -19,11 +19,9 @@ export const StocktakeManualValues = ({ stocktakeId, hotelSlug, stocktake }) => 
     setSuccess(false);
 
     try {
-      console.log('💰 Saving stocktake manual values:', { stocktakeId, manualPurchases });
       await api.patch(`/stock_tracker/${hotelSlug}/stocktakes/${stocktakeId}/`, {
         manual_purchases_value: manualPurchases ? parseFloat(manualPurchases) : null
       });
-      console.log('✅ Stocktake manual values saved');
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {

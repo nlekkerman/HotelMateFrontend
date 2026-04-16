@@ -42,13 +42,9 @@ const InlinePageBuilder = forwardRef(({ hotel, sections, onUpdate }, ref) => {
           section_type: sectionType.section_type,
           position: nextPosition
         };
-        console.log('[InlinePageBuilder] 📤 Creating section with payload:', payload);
-        console.log('[InlinePageBuilder] 📤 Section type definition:', sectionType);
         
         const newSection = await createSection(hotel.slug, payload);
         
-        console.log('[InlinePageBuilder] ✅ Section created:', newSection);
-        console.log('[InlinePageBuilder] ✅ New section type received:', newSection.section_type);
         toast.success(`${sectionType.label} created successfully!`);
         
         // Refresh to show new section
@@ -92,13 +88,9 @@ const InlinePageBuilder = forwardRef(({ hotel, sections, onUpdate }, ref) => {
       }
 
       // Backend creates section and first container automatically
-      console.log('[InlinePageBuilder] 📤 Creating section+container with payload:', payload);
-      console.log('[InlinePageBuilder] 📤 Selected section type:', selectedSectionType);
       
       const newSection = await createSection(hotel.slug, payload);
       
-      console.log('[InlinePageBuilder] ✅ Section created with container:', newSection);
-      console.log('[InlinePageBuilder] ✅ New section type received:', newSection.section_type);
       toast.success(`${selectedSectionType.label} created successfully!`);
       
       // Reset and close

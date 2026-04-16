@@ -17,7 +17,6 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
   e.preventDefault();
-    console.log("🔹 handleSubmit called");
   setLocalError(null);
 
   if (!username || !password) {
@@ -27,7 +26,6 @@ const Login = () => {
 
   try {
     const data = await loginUser(username, password);
-    console.log("Backend response access_level:", data.access_level);
     if (!data) {
       setLocalError("No data received from server.");
       return;

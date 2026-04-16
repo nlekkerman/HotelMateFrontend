@@ -37,12 +37,6 @@ export const StaffChatProvider = ({ children }) => {
         .filter(c => !c.room && !c.room_number && !c.guest_name)
         .map(c => ({ ...c, _source: 'staff_chat' }));
 
-      console.log('[StaffChatContext] Filtered conversations:', {
-        total: convs.length,
-        staffOnly: staffOnlyConvs.length,
-        filteredOut: convs.length - staffOnlyConvs.length,
-      });
-
       // Load conversations into chatStore
       chatDispatch({
         type: CHAT_ACTIONS.INIT_CONVERSATIONS_FROM_API,
@@ -83,18 +77,13 @@ export const StaffChatProvider = ({ children }) => {
   const markConversationRead = async (conversationId) => {
     if (!conversationId) return;
     try {
-      console.log('🔥 [StaffChatContext] markConversationRead called:', { conversationId });
-      
       // Update chat store immediately
-      console.log('🔥 [StaffChatContext] Dispatching MARK_CONVERSATION_READ to chatStore');
       chatDispatch({
         type: CHAT_ACTIONS.MARK_CONVERSATION_READ,
         payload: { conversationId }
       });
       
-      console.log('🔥 [StaffChatContext] Calling backend markConversationAsRead API');
       await markConversationAsRead(hotelSlug, conversationId);
-      console.log('✅ [StaffChatContext] markConversationRead completed successfully', { conversationId });
     } catch (err) {
       console.error("❌ [StaffChatContext] Failed to mark conversation as read:", err);
     }
@@ -143,14 +132,6 @@ export const StaffChatProvider = ({ children }) => {
   
   // Stable subscription management - only subscribe/unsubscribe when actually needed
   useEffect(() => {
-    console.log('🚨🚨 [StaffChatContext] SUBSCRIPTION EFFECT TRIGGERED 🚨🚨');
-    console.log('🔍 [StaffChatContext] Subscription effect running with:', {
-      hotelSlug,
-      conversationsCount: conversations.length,
-      conversationIds: conversations.map(c => c.id),
-      conversations: conversations
-    });
-    
     if (!hotelSlug) {
       console.warn('⚠️ [StaffChatContext] No hotelSlug, skipping subscriptions');
       return;
@@ -160,15 +141,9 @@ export const StaffChatProvider = ({ children }) => {
     const currentConversationIds = new Set(conversations.map(c => c.id));
     const subscribedIds = new Set(subscriptionsRef.current.keys());
     
-    console.log('🔍 [StaffChatContext] Subscription state:', {
-      currentConversations: Array.from(currentConversationIds),
-      alreadySubscribed: Array.from(subscribedIds)
-    });
-    
     // Subscribe to NEW conversations only
     currentConversationIds.forEach(conversationId => {
       if (!subscribedIds.has(conversationId)) {
-        console.log('🔗 [StaffChatContext] Subscribing to conversation:', conversationId);
         const cleanup = subscribeToStaffChatConversation(hotelSlug, conversationId);
         subscriptionsRef.current.set(conversationId, cleanup);
       }
@@ -177,7 +152,6 @@ export const StaffChatProvider = ({ children }) => {
     // Unsubscribe from REMOVED conversations only  
     subscribedIds.forEach(conversationId => {
       if (!currentConversationIds.has(conversationId)) {
-        console.log('🧹 [StaffChatContext] Unsubscribing from removed conversation:', conversationId);
         const cleanup = subscriptionsRef.current.get(conversationId);
         if (cleanup) cleanup();
         subscriptionsRef.current.delete(conversationId);
@@ -189,20 +163,10 @@ export const StaffChatProvider = ({ children }) => {
   // Cleanup ALL subscriptions only on unmount
   useEffect(() => {
     return () => {
-      console.log('🧹 [StaffChatContext] Component unmounting - cleaning up all subscriptions');
       subscriptionsRef.current.forEach(cleanup => cleanup());
       subscriptionsRef.current.clear();
     };
   }, []); // Empty dependency array - only runs on mount/unmount
-
-  // Debug logging
-  useEffect(() => {
-    console.log('[StaffChatContext] Unread snapshot:', {
-      totalUnread,
-      override: chatState.totalUnreadOverride,
-      conversations: conversations.length,
-    });
-  }, [conversations.length, totalUnread, chatState.totalUnreadOverride]);
 
   return (
     <StaffChatContext.Provider value={{

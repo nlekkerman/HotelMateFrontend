@@ -29,7 +29,6 @@ const StaffCreate = () => {
   const { user: authUser } = useAuth();
 
   useEffect(() => {
-    console.log("[StaffCreate] Current logged-in user:", authUser);
     const fetchPendingRegistrations = async () => {
       try {
         const hotelSlug = authUser?.hotel_slug;
@@ -41,7 +40,6 @@ const StaffCreate = () => {
 
         // Fetch pending registrations for this hotel
         const response = await api.get(`staff/${hotelSlug}/pending-registrations/`);
-        console.log("Pending registrations:", response.data);
         
         // Set the pending users list
         setUsers(response.data.pending_users || []);
@@ -82,19 +80,11 @@ const StaffCreate = () => {
     const fetchMetadata = async () => {
       setLoading(true);
       try {
-        console.log("🔍 Fetching ALL departments (handling pagination)...");
-        
         // Fetch ALL departments (handle pagination)
         const deptList = await fetchAllPaginated("staff/departments/?page_size=100");
-        console.log("✅ Fetched departments:", deptList);
-        console.log("📏 Total departments count:", deptList.length);
-        
-        console.log("🔍 Fetching ALL roles (handling pagination)...");
         
         // Fetch ALL roles (handle pagination)
         const roleList = await fetchAllPaginated("staff/roles/?page_size=100");
-        console.log("✅ Fetched roles:", roleList);
-        console.log("📏 Total roles count:", roleList.length);
         
         if (deptList.length === 0) {
           console.warn("⚠️ No departments found in database!");
@@ -110,8 +100,7 @@ const StaffCreate = () => {
         setRoles(roleList);
       } catch (err) {
         console.error("❌ Failed to fetch metadata:", err);
-        console.error("Error response:", err.response);
-        console.error("Error data:", err.response?.data);
+
         setError(`Failed to load departments and roles: ${err.response?.data?.detail || err.message}`);
       } finally {
         setLoading(false);
@@ -216,8 +205,6 @@ const StaffCreate = () => {
     setError("Please select a role");
     return;
   }
-  
-  console.log("Creating staff profile for user:", selectedUser);
 
   try {
     const hotelSlug = authUser?.hotel_slug;
@@ -240,12 +227,8 @@ const StaffCreate = () => {
       allowed_navs: selectedNavItems, // Add selected navigation items
     };
 
-    console.log("Sending staff creation payload:", payload);
-
     // Use the new backend endpoint: POST /api/staff/{hotel_slug}/create-staff/
     const response = await api.post(`staff/${hotelSlug}/create-staff/`, payload);
-
-    console.log("Staff created successfully:", response.data);
     
     // Show success message
     const registrationCode = response.data.deleted_code || response.data.registration_code;

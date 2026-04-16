@@ -40,13 +40,10 @@ class FirebaseService {
       const permission = await Notification.requestPermission();
       
       if (permission === 'granted') {
-        console.log('Notification permission granted');
         return true;
       } else if (permission === 'denied') {
-        console.log('Notification permission denied');
         return false;
       } else {
-        console.log('Notification permission dismissed');
         return false;
       }
     } catch (error) {
@@ -69,7 +66,6 @@ class FirebaseService {
       const databases = await indexedDB.databases();
       for (const db of databases) {
         if (db.name?.includes('firebase')) {
-          console.log('🗑️ Deleting Firebase database:', db.name);
           indexedDB.deleteDatabase(db.name);
         }
       }
@@ -78,7 +74,6 @@ class FirebaseService {
       const existingRegistrations = await navigator.serviceWorker.getRegistrations();
       for (const registration of existingRegistrations) {
         if (registration.active?.scriptURL.includes('firebase-messaging-sw.js')) {
-          console.log('🔄 Unregistering old service worker...');
           await registration.unregister();
         }
       }
@@ -92,8 +87,6 @@ class FirebaseService {
         { scope: '/', updateViaCache: 'none' }
       );
       
-      console.log('✅ Service Worker registered:', registration);
-
       // Wait for service worker to be ready
       await navigator.serviceWorker.ready;
 
@@ -104,8 +97,6 @@ class FirebaseService {
       });
 
       if (currentToken) {
-        console.log('FCM Token obtained:', currentToken);
-        
         // Save token to localStorage
         localStorage.setItem('fcm_token', currentToken);
         
@@ -114,7 +105,6 @@ class FirebaseService {
         
         return currentToken;
       } else {
-        console.log('No FCM token available. Request permission first.');
         return null;
       }
     } catch (error) {
@@ -135,9 +125,6 @@ class FirebaseService {
    */
   async saveFCMTokenToBackend(fcmToken) {
     try {
-      console.log('💾 Attempting to save FCM token to backend...');
-      console.log('📝 Token:', fcmToken.substring(0, 50) + '...');
-      
       // Get user object from authStore bridge (primary) with localStorage fallback
       // Fallback needed: saveFCMTokenToBackend can be called before React mounts
       const user = getAuthUser() || (() => {
@@ -148,8 +135,6 @@ class FirebaseService {
         return;
       }
 
-      console.log('👤 User found:', user.username, 'ID:', user.staff_id);
-      
       const authToken = user.token;
       
       if (!authToken) {
@@ -157,16 +142,11 @@ class FirebaseService {
         return;
       }
 
-      console.log('🔑 Auth token found:', authToken.substring(0, 20) + '...');
-      console.log('🌐 Using centralized api service for FCM token');
-
       const response = await api.post(
         '/staff/save-fcm-token/',
         { fcm_token: fcmToken }
       );
 
-      console.log('✅ FCM token saved to backend successfully!');
-      console.log('📊 Response:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Error saving FCM token to backend:');
@@ -186,8 +166,6 @@ class FirebaseService {
     }
 
     return onMessage(messaging, (payload) => {
-      console.log('Foreground message received:', payload);
-      
       const notificationTitle = payload.notification?.title || 'New Notification';
       const notificationBody = payload.notification?.body || '';
       const notificationData = payload.data || {};
@@ -231,8 +209,6 @@ class FirebaseService {
 
     const handler = (event) => {
       if (event.data && event.data.type === 'NOTIFICATION_CLICKED') {
-        console.log('Notification clicked, routing to:', event.data.route);
-        
         if (callback) {
           callback(event.data);
         }
@@ -299,7 +275,6 @@ class FirebaseService {
         });
         const storedToken = localStorage.getItem('fcm_token');
         if (freshToken && freshToken !== storedToken) {
-          console.log('FCM token rotated — re-saving to backend');
           localStorage.setItem('fcm_token', freshToken);
           await this.saveFCMTokenToBackend(freshToken);
         }
@@ -319,7 +294,6 @@ class FirebaseService {
         this._tokenRefreshInterval = null;
       }
       localStorage.removeItem('fcm_token');
-      console.log('FCM token removed from localStorage');
       
       // Optionally notify backend to remove token
       const user = getAuthUser() || (() => {

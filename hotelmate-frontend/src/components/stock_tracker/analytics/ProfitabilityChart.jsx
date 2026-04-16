@@ -44,30 +44,14 @@ const ProfitabilityChart = ({
       
       const categoryCode = selectedCategory !== 'all' ? categoryNameToCode[selectedCategory] : undefined;
 
-      console.log('🏷️ ProfitabilityChart - Fetching with category:', {
-        selectedCategory,
-        categoryCode,
-        hotelSlug
-      });
 
       // Note: getProfitabilityData doesn't accept period parameter - uses current data
       const data = await getProfitabilityData(hotelSlug, categoryCode);
       
-      console.log('🏷️ ProfitabilityChart - API Response:', {
-        dataType: Array.isArray(data) ? 'array' : typeof data,
-        dataLength: Array.isArray(data) ? data.length : 'N/A',
-        categoryCode
-      });
       
       // API returns array of items directly
       const itemsList = Array.isArray(data) ? data : [];
       
-      console.log('🏷️ ProfitabilityChart - Raw API Items:', itemsList.slice(0, 3).map(item => ({
-        category: item.category,
-        category_code: item.category_code,
-        category_name: item.category_name,
-        item_name: item.item_name
-      })));
       
       // Group by category for summary
       const summary = calculateSummary(itemsList);
@@ -171,13 +155,6 @@ const ProfitabilityChart = ({
 
     // Debug logging for category names
     if (currentView === 'category') {
-      console.log('🏷️ ProfitabilityChart - Category Labels:', {
-        labels,
-        sourceData: sourceData.map(item => ({
-          category_name: item.category_name,
-          gp_percentage: item.gp_percentage
-        }))
-      });
     }
 
     const metricData = sourceData.map(item => {

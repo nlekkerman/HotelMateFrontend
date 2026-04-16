@@ -156,8 +156,6 @@ export default function RoomServiceOrdersManagement() {
   useEffect(() => {
     if (!hotelSlug) return;
 
-    console.log('🔥 [RoomServiceManagement] Subscribing to real-time channels for:', hotelSlug);
-    
     // Subscribe to base hotel channels including room-service
     const cleanup = subscribeBaseHotelChannels({ 
       hotelSlug, 
@@ -196,36 +194,18 @@ export default function RoomServiceOrdersManagement() {
   const handleStatusChange = (order, newStatus) => {
     const prev = order.status;
 
-    console.log('🔄 [OrdersManagement] Status change initiated:', {
-      orderId: order.id,
-      oldStatus: prev,
-      newStatus,
-      roomNumber: order.room_number,
-      hotelSlug,
-      viewMode
-    });
-
     // 🚀 PURE REAL-TIME APPROACH - NO OPTIMISTIC UPDATES
     // Only send API request and let Pusher handle all UI updates
     
-    console.log('🌐 [OrdersManagement] Sending API PATCH request - waiting for Pusher event');
     api
       .patch(buildStaffURL(hotelSlug, 'room_services', `/orders/${order.id}/`), {
         status: newStatus,
       })
       .then((response) => {
-        console.log('✅ [OrdersManagement] API status update successful:', {
-          orderId: order.id,
-          newStatus,
-          responseData: response.data,
-          timestamp: new Date().toISOString()
-        });
-        
         refreshCount();
         toast.success(`Order #${order.id} status updated to ${newStatus}`);
         
         // 🔥 MANUAL PUSHER EVENT AS BACKUP (in case backend doesn't send it)
-        console.log('📡 [OrdersManagement] Dispatching backup Pusher-style event');
         const enhancedOrderData = {
           ...order,
           status: newStatus,
@@ -264,7 +244,6 @@ export default function RoomServiceOrdersManagement() {
               source: 'orders-management'
             }
           }));
-          console.log('🔔 [OrdersManagement] Backup real-time event dispatched');
         }
       })
       .catch((err) => {

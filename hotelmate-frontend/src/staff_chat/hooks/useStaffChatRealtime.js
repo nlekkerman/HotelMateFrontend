@@ -95,7 +95,6 @@ const useStaffChatRealtime = ({
     // Trigger callbacks for new messages
     newMessages.forEach(message => {
       if (callbacksRef.current.onNewMessage) {
-        console.log('🔔 [useStaffChatRealtime] Store-detected new message:', message.id);
         callbacksRef.current.onNewMessage(message);
       }
     });
@@ -103,7 +102,6 @@ const useStaffChatRealtime = ({
     // Trigger callbacks for edited messages  
     editedMessages.forEach(message => {
       if (callbacksRef.current.onMessageEdited) {
-        console.log('✏️ [useStaffChatRealtime] Store-detected edited message:', message.id);
         callbacksRef.current.onMessageEdited(message);
       }
     });
@@ -111,7 +109,6 @@ const useStaffChatRealtime = ({
     // Trigger callbacks for deleted messages
     deletedMessageIds.forEach(messageId => {
       if (callbacksRef.current.onMessageDeleted) {
-        console.log('🗑️ [useStaffChatRealtime] Store-detected deleted message:', messageId);
         callbacksRef.current.onMessageDeleted({ message_id: messageId });
       }
     });

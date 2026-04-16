@@ -24,7 +24,6 @@ const CategoryBreakdownChart = ({
   useEffect(() => {
     if (hotelSlug && period) {
       fetchData();
-    } else {
     }
   }, [hotelSlug, period]);
 

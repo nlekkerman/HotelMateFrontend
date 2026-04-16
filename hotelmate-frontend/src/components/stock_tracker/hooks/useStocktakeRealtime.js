@@ -30,25 +30,17 @@ export function useStocktakeRealtime(
 ) {
   useEffect(() => {
     if (!enabled || !pusher || !hotelIdentifier || !stocktakeId) {
-      console.log('⏸️ Stocktake real-time updates disabled', {
-        enabled,
-        pusher: !!pusher,
-        hotelIdentifier,
-        stocktakeId
-      });
       return;
     }
 
     // Channel name format: {hotelIdentifier}-stocktake-{stocktakeId}
     const channelName = `${hotelIdentifier}-stocktake-${stocktakeId}`;
 
-    console.log('🔌 Subscribing to stocktake channel:', channelName);
 
     const channel = pusher.subscribe(channelName);
 
     // 1. Line counted quantities updated (by another user)
     channel.bind('line-counted-updated', (data) => {
-      console.log('📡 Pusher: Line counted updated', data);
       
       addVoiceLog('info', '📡 Pusher real-time event received: line-counted-updated', {
         channel: channelName,
@@ -62,14 +54,12 @@ export function useStocktakeRealtime(
       });
 
       if (data.line && typeof onLineUpdated === 'function') {
-        console.log('📡 Calling onLineUpdated callback with Pusher data');
         onLineUpdated(data.line);
         addVoiceLog('success', '✅ UI updated from Pusher event', {
           lineId: data.line.id,
           itemName: data.line.item_name
         });
       } else {
-        console.warn('⚠️ Pusher event missing line data or callback not provided');
         addVoiceLog('warning', '⚠️ Pusher event received but could not update UI', {
           hasLineData: !!data.line,
           hasCallback: typeof onLineUpdated === 'function'
@@ -79,7 +69,6 @@ export function useStocktakeRealtime(
 
     // 2. Movement (purchase/waste) added (by another user)
     channel.bind('line-movement-added', (data) => {
-      console.log('📡 Pusher: Movement added', data);
       
       addVoiceLog('info', '📡 Pusher real-time event received: line-movement-added', {
         channel: channelName,
@@ -102,7 +91,6 @@ export function useStocktakeRealtime(
 
     // 3. Stocktake status changed (approved/locked)
     channel.bind('stocktake-status-changed', (data) => {
-      console.log('� Pusher: Stocktake status changed', data);
 
       if (data.stocktake && typeof onStocktakeUpdated === 'function') {
         onStocktakeUpdated(data.stocktake);
@@ -111,7 +99,6 @@ export function useStocktakeRealtime(
 
     // 4. Stocktake populated with items
     channel.bind('stocktake-populated', (data) => {
-      console.log('� Pusher: Stocktake populated', data);
 
       if (typeof onStocktakePopulated === 'function') {
         onStocktakePopulated(data);
@@ -120,7 +107,6 @@ export function useStocktakeRealtime(
 
     // Handle connection state
     channel.bind('pusher:subscription_succeeded', () => {
-      console.log('✅ Successfully subscribed to:', channelName);
       addVoiceLog('success', '✅ Pusher subscription active for real-time updates', {
         channel: channelName,
         listening: ['line-counted-updated', 'line-movement-added', 'stocktake-status-changed']
@@ -137,7 +123,6 @@ export function useStocktakeRealtime(
 
     // Cleanup on unmount
     return () => {
-      console.log('🔌 Unsubscribing from:', channelName);
       channel.unbind_all();
       pusher.unsubscribe(channelName);
     };

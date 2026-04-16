@@ -33,8 +33,6 @@ const StaffChatContainer = ({
       const conversation = conversations.find(c => c.id === conversationId);
       
       if (conversation) {
-        console.log('📱 [StaffChatContainer] Opening conversation from URL:', conversationId);
-        
         // Get current user ID from auth context
         const currentUserData = authUser || {};
         const currentUserId = currentUserData?.staff_id || currentUserData?.id;

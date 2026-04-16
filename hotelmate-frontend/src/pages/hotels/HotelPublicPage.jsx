@@ -38,15 +38,10 @@ const HotelPublicPage = () => {
      
       // Get basic page data (includes all sections with full data)
       const data = await getPublicHotelPage(slug);
-      console.log('[HotelPublicPage] 📦 Public page data sections:', data.sections?.length, data.sections?.[0]);
-      console.log('[HotelPublicPage] 🏨 Hotel data:', data.hotel);
       
       // Debug section types to identify backend issues
       if (data.sections?.length > 0) {
-        console.log('[HotelPublicPage] 🔍 Section types analysis:');
         data.sections.forEach((section, index) => {
-          console.log(`  Section ${index + 1}: ID=${section.id}, Name="${section.name}", Type="${section.section_type}", Element="${section.element?.element_type || 'N/A'}"`);
-          
           // Flag problematic sections
           if (section.section_type === 'unknown' || !section.section_type) {
             console.error(`  ❌ PROBLEMATIC SECTION FOUND: ID=${section.id}, Name="${section.name}"`);
@@ -61,36 +56,20 @@ const HotelPublicPage = () => {
       // Run debug utility to understand the API response
       await debugRoomTypesAPI(slug);
       
-      // Debug the complete API response structure
-      console.log('[HotelPublicPage] 🔍 Complete API response:', JSON.stringify(data, null, 2));
-      
       // Log room types data following API guide structure
       const roomsSections = data.sections?.filter(section => 
         section.element?.element_type === 'rooms_list' || section.section_type === 'rooms'
       );
       
-      console.log('[HotelPublicPage] 🏠 Found rooms sections:', roomsSections?.length || 0);
-      
       roomsSections?.forEach((section, index) => {
-        console.log(`[HotelPublicPage] 🏠 Rooms section ${index + 1}:`, section.name);
-        console.log(`[HotelPublicPage] 🏠 Section element:`, section.element);
-        console.log(`[HotelPublicPage] 🏠 Section rooms_data:`, section.rooms_data);
-        console.log(`[HotelPublicPage] 🏠 Room types count:`, section.rooms_data?.room_types?.length || 0);
-        
         if (section.rooms_data?.room_types?.length > 0) {
-          section.rooms_data.room_types.forEach((room, roomIndex) => {
-            console.log(`[HotelPublicPage] 🏠 Room ${roomIndex + 1}: ${room.name} - ${room.currency} ${room.starting_price_from}/night`);
-            console.log(`[HotelPublicPage] 🏠 Room data:`, room);
-          });
+          // Room types found OK
         } else {
           console.warn('[HotelPublicPage] ⚠️ No room types found in this section');
         }
       });
       
       // Also check if rooms data is in a different location
-      if (data.hotel) {
-        console.log('[HotelPublicPage] 🏨 Hotel object keys:', Object.keys(data.hotel));
-      }
       
       // Note: Public API already returns all sections (active + inactive for staff)
       // with complete data including section_type, hero_data, galleries, etc.
@@ -110,11 +89,6 @@ const HotelPublicPage = () => {
         return section;
       });
       
-      console.log('[HotelPublicPage] Final sections count:', data?.sections?.length);
-      console.log('[HotelPublicPage] First section after processing:', data.sections?.[0]);
-      console.log('[HotelPublicPage] First section keys:', data.sections?.[0] ? Object.keys(data.sections[0]) : 'no section');
-      console.log('[HotelPublicPage] First section section_type:', data.sections?.[0]?.section_type);
-      
       setPageData(data);
       
     } catch (err) {
@@ -133,8 +107,6 @@ const HotelPublicPage = () => {
   }, [slug]);
 
   useEffect(() => {
-    console.log('[HotelPublicPage] useEffect triggered, slug:', slug);
-    
     if (!slug) {
       setError('No hotel slug provided');
       setLoading(false);
@@ -149,9 +121,6 @@ const HotelPublicPage = () => {
   useEffect(() => {
     const pageElement = document.querySelector('.hotel-public-page');
     if (pageElement && pageData) {
-      const attrValue = pageElement.getAttribute('data-preset');
-      console.log('[HotelPublicPage] 🔍 DOM Check - data-preset attribute value:', attrValue);
-      console.log('[HotelPublicPage] 🔍 DOM Check - getCurrentVariant():', getCurrentVariant());
     }
   }, [pageData]); // Check whenever pageData changes
 
@@ -161,77 +130,11 @@ const HotelPublicPage = () => {
   const handleStyleChange = async (newVariant) => {
     try {
       setUpdatingStyle(true);
-      console.log('[HotelPublicPage] 🎨 Updating page style to variant:', newVariant);
-      console.log('[HotelPublicPage] 📊 Before change - Current preset:', getCurrentVariant());
-      console.log('[HotelPublicPage] 📊 Page root element data-preset:', document.querySelector('.hotel-public-page')?.getAttribute('data-preset'));
       
       const result = await updatePageStyle(slug, newVariant);
-      console.log('[HotelPublicPage] ✅ Update result from backend:', result);
       
       // Refresh page data to get updated sections
       await fetchPageData();
-      
-      console.log('[HotelPublicPage] ✅ Page style updated successfully');
-      console.log('[HotelPublicPage] 📊 After change - New current variant:', getCurrentVariant());
-      console.log('[HotelPublicPage] 📊 Page root element data-preset:', document.querySelector('.hotel-public-page')?.getAttribute('data-preset'));
-      
-      // Debug button styling
-      setTimeout(() => {
-        const pageRoot = document.querySelector('.hotel-public-page');
-        console.log('[HotelPublicPage] 🔍 Page root data-preset:', pageRoot?.getAttribute('data-preset'));
-        
-        const heroBtn = document.querySelector('.hero-edit');
-        if (heroBtn) {
-          const styles = window.getComputedStyle(heroBtn);
-          console.log('[HotelPublicPage] 🔍 Hero button found:', heroBtn);
-          console.log('[HotelPublicPage] 🔍 Hero button classes:', heroBtn.className);
-          console.log('[HotelPublicPage] 🔍 Hero button computed styles:');
-          console.log('  - background:', styles.background);
-          console.log('  - backgroundColor:', styles.backgroundColor);
-          console.log('  - border:', styles.border);
-          console.log('  - borderColor:', styles.borderColor);
-          console.log('  - color:', styles.color);
-          console.log('  - boxShadow:', styles.boxShadow);
-          
-          // Check CSS selector specificity
-          console.log('[HotelPublicPage] 🔍 Testing CSS selector: [data-preset="' + newVariant + '"] .hero-edit');
-          const matchingRule = Array.from(document.styleSheets)
-            .flatMap(sheet => {
-              try { return Array.from(sheet.cssRules || []); } 
-              catch(e) { return []; }
-            })
-            .find(rule => rule.selectorText?.includes(`[data-preset="${newVariant}"] .hero-edit`));
-          console.log('[HotelPublicPage] 🔍 Matching CSS rule:', matchingRule?.cssText);
-        } else {
-          console.log('[HotelPublicPage] ⚠️ Hero button NOT FOUND');
-        }
-        
-        const listBtn = document.querySelector('.list-section-add-list');
-        if (listBtn) {
-          const styles = window.getComputedStyle(listBtn);
-          console.log('[HotelPublicPage] 🔍 List button found:', listBtn);
-          console.log('[HotelPublicPage] 🔍 List button classes:', listBtn.className);
-          console.log('[HotelPublicPage] 🔍 List button parent:', listBtn.parentElement);
-          console.log('[HotelPublicPage] 🔍 List button ancestor with data-preset:', listBtn.closest('[data-preset]'));
-          console.log('[HotelPublicPage] 🔍 Selector test - [data-preset="' + newVariant + '"] .list-section-add-list matches:', document.querySelector('[data-preset="' + newVariant + '"] .list-section-add-list'));
-          console.log('[HotelPublicPage] 🔍 List button computed styles:');
-          console.log('  - background:', styles.background);
-          console.log('  - border:', styles.border);
-          console.log('  - color:', styles.color);
-          
-          // Check all matching stylesheets
-          const allRules = Array.from(document.styleSheets)
-            .flatMap(sheet => {
-              try { return Array.from(sheet.cssRules || []); } 
-              catch(e) { return []; }
-            })
-            .filter(rule => rule.selectorText?.includes('.list-section-add-list'))
-            .map(rule => ({ selector: rule.selectorText, style: rule.style.cssText }));
-          console.log('[HotelPublicPage] 🔍 All CSS rules for .list-section-add-list:', allRules);
-        } else {
-          console.log('[HotelPublicPage] ⚠️ List button NOT FOUND');
-        }
-      }, 100);
 
     } catch (err) {
       console.error('[HotelPublicPage] ❌ Failed to update page style:', err);
@@ -249,7 +152,6 @@ const HotelPublicPage = () => {
       return 1;
     }
     const variant = pageData.sections[0]?.style_variant || 1;
-    console.log('[HotelPublicPage] getCurrentVariant returning:', variant, 'from section:', pageData.sections[0]?.name);
     return variant;
   };
 
@@ -257,8 +159,6 @@ const HotelPublicPage = () => {
    * Render section based on NEW section type
    */
   const renderSection = (section) => {
-    console.log('[HotelPublicPage] 🎨 Rendering section:', section.name, 'Type:', section.section_type);
-    
     // Skip inactive sections
     if (section.is_active === false) {
       return null;
@@ -288,7 +188,6 @@ const HotelPublicPage = () => {
           console.warn(`[HotelPublicPage] Section with unknown type found:`, section);
           // Try to determine the actual type based on element_type or other properties
           if (section.element?.element_type) {
-            console.log(`[HotelPublicPage] Attempting to render based on element_type: ${section.element.element_type}`);
             // Create a new section object with the corrected type
             const correctedSection = { ...section, section_type: section.element.element_type };
             return renderSection(correctedSection);
@@ -327,7 +226,6 @@ const HotelPublicPage = () => {
 
   // Loading state
   if (loading) {
-    console.log('[HotelPublicPage] RENDERING: Loading state');
     return (
       <div className="min-vh-100 d-flex align-items-center justify-content-center">
         <div className="text-center">
@@ -340,7 +238,6 @@ const HotelPublicPage = () => {
 
   // Error state
   if (error) {
-    console.log('[HotelPublicPage] RENDERING: Error state -', error);
     return (
       <Container className="min-vh-100 d-flex align-items-center justify-content-center">
         <Alert variant="danger" className="text-center">
@@ -358,7 +255,6 @@ const HotelPublicPage = () => {
 
   // No data or empty sections
   if (!pageData) {
-    console.log('[HotelPublicPage] RENDERING: No pageData');
     return (
       <Container className="min-vh-100 d-flex align-items-center justify-content-center">
         <Alert variant="warning" className="text-center">
@@ -379,7 +275,6 @@ const HotelPublicPage = () => {
   
   if (isEmpty && !canEditPublicPage) {
     // Non-editors see "Coming Soon" for empty pages
-    console.log('[HotelPublicPage] RENDERING: Empty sections (non-staff)');
     return (
       <Container className="min-vh-100 d-flex align-items-center justify-content-center">
         <Alert variant="info" className="text-center">
@@ -396,15 +291,10 @@ const HotelPublicPage = () => {
   }
   
   // Render page
-  console.log('[HotelPublicPage] RENDERING: Full page with', pageData.sections.length, 'sections');
   const currentPreset = getCurrentVariant();
-  console.log('[HotelPublicPage] 🎯 Rendering page with data-preset:', currentPreset);
-  console.log('[HotelPublicPage] 🎯 Type of currentPreset:', typeof currentPreset, 'Value:', currentPreset);
-  console.log('[HotelPublicPage] 📋 All sections:', pageData.sections.map(s => ({ name: s.name, variant: s.style_variant })));
   
   // Force string conversion for data attribute
   const presetValue = String(currentPreset);
-  console.log('[HotelPublicPage] 🎯 Setting data-preset to:', presetValue);
   
   return (
     <div 

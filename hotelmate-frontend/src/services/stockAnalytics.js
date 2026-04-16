@@ -275,25 +275,12 @@ export const getStockValueReport = async (hotelSlug, periodId) => {
 export const getPeriodsList = async (hotelSlug, closedOnly = false) => {
   try {
     const params = closedOnly ? { is_closed: true } : {};
-    console.log('🔍 [getPeriodsList] Fetching periods:', { hotelSlug, closedOnly, params });
     
     const response = await api.get(`stock_tracker/${hotelSlug}/periods/`, { params });
     const data = response.data.results || response.data;
     
-    console.log('📋 [getPeriodsList] Raw API response:', {
-      totalReceived: Array.isArray(data) ? data.length : 'not array',
-      firstFew: Array.isArray(data) ? data.slice(0, 3).map(p => ({
-        id: p.id,
-        name: p.period_name,
-        closed: p.is_closed,
-        start: p.start_date,
-        end: p.end_date
-      })) : data
-    });
-    
     if (closedOnly && Array.isArray(data)) {
       const closedPeriods = data.filter(p => p.is_closed === true);
-      console.log(`🔒 [getPeriodsList] Filtering closed only: ${closedPeriods.length} out of ${data.length} periods`);
       return closedPeriods;
     }
     

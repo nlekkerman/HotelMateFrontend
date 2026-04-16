@@ -63,13 +63,10 @@ export const VoiceRecorder = ({ stocktakeId, hotelSlug, onCommandReceived, isLoc
         hotelSlug,
       };
       
-      console.log('🎤 Sending audio to backend...', audioInfo);
       addVoiceLog('info', '📤 Sending audio to backend...', audioInfo);
 
       // Send audio to backend
       const response = await sendVoiceCommand(audioBlob, stocktakeId, hotelSlug);
-
-      console.log('✅ Backend response:', response);
 
       // Check if backend returned success
       if (response.success === false) {

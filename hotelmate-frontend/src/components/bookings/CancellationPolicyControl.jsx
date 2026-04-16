@@ -52,13 +52,10 @@ const CancellationPolicyControl = ({ hotelSlug }) => {
 
   // Load data on mount
   useEffect(() => {
-    console.log('[CancellationPolicyControl] useEffect triggered with hotelSlug:', hotelSlug);
     if (!hotelSlug) {
-      console.log('[CancellationPolicyControl] No hotel slug provided, skipping API calls');
       return;
     }
     
-    console.log('[CancellationPolicyControl] Starting API calls...');
     loadPolicies();
     loadRatePlans();
     loadHotelSettings();
@@ -70,12 +67,9 @@ const CancellationPolicyControl = ({ hotelSlug }) => {
       setPoliciesLoading(true);
       setPoliciesError(null);
       
-      console.log('[CancellationPolicyControl] Loading policies for hotel:', hotelSlug);
       const data = await cancellationPolicyService.getCancellationPolicies(hotelSlug);
-      console.log('[CancellationPolicyControl] Policies API response:', data);
       
       setPolicies(data.results || data || []); // Handle both paginated and direct arrays
-      console.log('[CancellationPolicyControl] Policies set to state:', data.results || data || []);
       
     } catch (error) {
       console.error('Failed to load cancellation policies:', error);
@@ -92,12 +86,9 @@ const CancellationPolicyControl = ({ hotelSlug }) => {
       setRatePlansLoading(true);
       setRatePlansError(null);
       
-      console.log('[CancellationPolicyControl] Loading rate plans for hotel:', hotelSlug);
       const data = await cancellationPolicyService.getRatePlans(hotelSlug);
-      console.log('[CancellationPolicyControl] Rate plans API response:', data);
       
       setRatePlans(data.results || data || []);
-      console.log('[CancellationPolicyControl] Rate plans set to state:', data.results || data || []);
       
     } catch (error) {
       console.error('Failed to load rate plans:', error);
@@ -141,8 +132,6 @@ const CancellationPolicyControl = ({ hotelSlug }) => {
         default_cancellation_policy: defaultPolicyId
       };
       
-      console.log('[CancellationPolicyControl] Saving hotel default policy:', payload);
-      
       await cancellationPolicyService.patchHotelSettings(hotelSlug, payload);
       
       setHotelSettings(prev => ({
@@ -166,8 +155,6 @@ const CancellationPolicyControl = ({ hotelSlug }) => {
 
   // Handle policy creation from modal
   const handlePolicyCreated = async (newPolicy) => {
-    console.log('[CancellationPolicyControl] New policy created:', newPolicy);
-    
     // Add policy to the list
     setPolicies(prev => [...prev, newPolicy]);
     
@@ -181,8 +168,6 @@ const CancellationPolicyControl = ({ hotelSlug }) => {
       const payload = {
         default_cancellation_policy: newPolicy.id
       };
-      
-      console.log('[CancellationPolicyControl] Auto-saving new policy as default:', payload);
       
       await cancellationPolicyService.patchHotelSettings(hotelSlug, payload);
       

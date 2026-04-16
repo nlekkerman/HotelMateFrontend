@@ -72,8 +72,6 @@ const SurveyRequirementsConfig = ({ hotelSlug }) => {
         setOriginalConfig(configData);
         setFieldRegistry(field_registry);
         
-        console.log('Survey config loaded:', { configData, field_registry });
-        
       } catch (err) {
         console.error('Failed to load survey config:', err);
         if (err.response?.status === 404) {

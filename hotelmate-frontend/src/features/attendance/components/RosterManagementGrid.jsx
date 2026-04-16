@@ -573,19 +573,10 @@ export default function RosterManagementGrid({
 
     if (!selectedDepartment) return [];
 
-    // Debug: log the first staff member's structure
-    if (baseStaff.length > 0) {
-      console.log("Debug - Staff structure:", baseStaff[0]);
-      console.log("Debug - Selected department:", selectedDepartment);
-    }
-
     return baseStaff.filter((staff) => {
       // Check both possible department structures
       const deptSlug = staff.department?.slug || staff.department_detail?.slug;
       const match = deptSlug === selectedDepartment;
-      if (!match && baseStaff.length > 0) {
-        console.log(`Debug - Staff ${staff.id} dept slug:`, deptSlug, "vs selected:", selectedDepartment);
-      }
       return match;
     });
   }, [allStaff, selectedDepartment]);
@@ -723,11 +714,6 @@ export default function RosterManagementGrid({
     const copiedDraftsForDate = draftCopiedShifts.filter(
       (shift) => shift.staff === staffId && shift.shift_date === dateStr
     );
-    
-    // Debug logging
-    if (copiedDraftsForDate.length > 0) {
-      console.log(`Found ${copiedDraftsForDate.length} copied drafts for staff ${staffId} on ${dateStr}:`, copiedDraftsForDate);
-    }
     
     // Combine and sort by start time
     const allShifts = [...serverShifts, ...draftsForDate, ...copiedDraftsForDate];
@@ -980,15 +966,8 @@ export default function RosterManagementGrid({
   };
 
   const handleCopySuccess = (copiedShifts, operation, targetPeriodId = null) => {
-    console.log('=== COPY SUCCESS HANDLER ===');
-    console.log('Received copied shifts:', copiedShifts);
-    console.log('Target period ID:', targetPeriodId);
-    console.log('Current period ID:', selectedPeriod?.id);
-    
     // If copying to different period, switch to target period
     if (targetPeriodId && targetPeriodId !== selectedPeriod?.id && onPeriodSwitch) {
-      console.log('Switching to target period:', targetPeriodId);
-      
       // Store copied shifts for target period
       const targetPeriodStorageKey = `roster_copied_draft_${hotelSlug}_${targetPeriodId}`;
       const copiedDraftState = {
@@ -1010,7 +989,6 @@ export default function RosterManagementGrid({
       // Same period copy - add to current state
       setDraftCopiedShifts(prev => {
         const updated = [...prev, ...copiedShifts];
-        console.log('Setting new draftCopiedShifts:', updated);
         return updated;
       });
       setHasCopiedChanges(true);
@@ -1019,8 +997,6 @@ export default function RosterManagementGrid({
       setToastMessage(message);
       setToastVariant("success");
     }
-    
-    console.log('=== END COPY SUCCESS ===');
   };
 
   const showToast = (message, variant = "success") => {
@@ -1376,12 +1352,6 @@ export default function RosterManagementGrid({
                             staff.id,
                             day
                           );
-                          
-                          // Debug: log shifts for first staff member
-                          if (staff.id === filteredStaff[0]?.id) {
-                            console.log(`Shifts for ${staff.first_name} on ${format(day, 'MMM d')}:`, dayShifts);
-                            console.log('Copied drafts:', getCopiedDraftShiftsForStaffAndDate(staff.id, day));
-                          }
 
                           return (
                             <td
@@ -1404,8 +1374,6 @@ export default function RosterManagementGrid({
                                   <div className="shifts-list">
                                     {dayShifts.map((shift, idx) => {
                                       const isCopiedDraft = shift.is_copied_draft === true;
-                                      
-                                      console.log('Rendering shift:', shift.id, 'isCopiedDraft:', isCopiedDraft);
                                       
                                       // Create unique key combining shift data
                                       const uniqueKey = `${shift.id || 'temp'}_${shift.staff}_${shift.shift_date}_${shift.shift_start}_${idx}`;

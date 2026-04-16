@@ -39,8 +39,6 @@ useEffect(() => {
         .get(`/hotel_info/categories/${initialData.category}/`)  // Assuming your API supports this endpoint
         .then((res) => {
           const categoryDetail = res.data;
-          // categoryDetail should have at least slug and name
-          console.log("Fetched category detail:", categoryDetail);
 
           // Now check if categoryDetail.slug matches any of the categories loaded
           const matchedCategory = categories.find(

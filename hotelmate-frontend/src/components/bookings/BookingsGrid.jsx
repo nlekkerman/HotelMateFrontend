@@ -110,15 +110,12 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
       )
     );
 
-    console.log("Booking assigned locally:", bookingId, "to table", tableId);
-
     // Then sync with backend
     try {
       await api.post(`/bookings/assign/${hotelSlug}/${restaurantSlug}/`, {
         booking_id: bookingId,
         table_id: tableId,
       });
-      console.log("Booking synced to backend:", bookingId);
     } catch (err) {
       console.error("Failed to assign booking to backend:", err);
     }
@@ -133,7 +130,6 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
 
       if (res.data.success) {
         setBookings((prev) => prev.filter((b) => b.id !== res.data.booking_id));
-        console.log("Booking deleted:", res.data.booking_id);
       }
     } catch (err) {
       console.error("Failed to delete booking:", err);
@@ -211,7 +207,6 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
               draggable
               onDragStart={(e) => {
                 e.dataTransfer.setData("bookingId", b.id);
-                console.log("Drag start from guest list:", b.id);
               }}
               className="p-2 border rounded d-flex justify-content-between align-items-center"
               style={{ minWidth: "200px", fontSize: "0.9rem", cursor: "grab" }}
@@ -326,7 +321,6 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
                       className="main-bg text-white"
                       onDragStart={(e) => {
                         e.dataTransfer.setData("bookingId", b.id);
-                        console.log("Drag start from timeline:", b.id);
                       }}
                       style={{
                         position: "absolute",

@@ -37,26 +37,10 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
 
   // Enhanced real-time tracking of current active order
   useEffect(() => {
-    console.log('🔄 [RoomService] Current order tracking effect triggered:', {
-      hasRoomServiceState: !!roomServiceState,
-      hasCurrentOrder: !!currentOrder,
-      currentOrderId: currentOrder?.id,
-      currentOrderStatus: currentOrder?.status
-    });
-    
     if (!roomServiceState || !currentOrder) return;
 
     const orderId = currentOrder.id;
     const storeOrder = roomServiceState.ordersById[orderId];
-    
-    console.log('🎯 [RoomService] Order comparison:', {
-      orderId,
-      storeOrderExists: !!storeOrder,
-      storeOrderStatus: storeOrder?.status,
-      currentOrderStatus: currentOrder?.status,
-      storeOrderUpdatedAt: storeOrder?.updated_at,
-      storeOrder: storeOrder
-    });
     
     if (storeOrder) {
       // Always sync the current order with store data
@@ -69,14 +53,6 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
         const timeDiff = now - updatedTime;
         
         if (timeDiff < 10000 && timeDiff > 0 && storeOrder.status !== currentOrder.status) {
-          console.log('🚨 [RoomService] Status change detected!', {
-            orderId,
-            oldStatus: currentOrder.status,
-            newStatus: storeOrder.status,
-            timeDiff,
-            updatedAt: storeOrder.updated_at
-          });
-          
           const statusMessages = {
             'pending': '📋 Your order is being reviewed by our kitchen staff',
             'accepted': '✅ Great! Your order is being prepared',
@@ -110,17 +86,9 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
 
   // Real-time sync of all orders for this room using new Pusher logic
   useEffect(() => {
-    console.log('🏠 [RoomService] Room orders sync effect triggered:', {
-      hasRoomServiceState: !!roomServiceState,
-      storeOrdersCount: roomServiceState ? Object.keys(roomServiceState.ordersById).length : 0,
-      roomNumber,
-      hotelIdentifier
-    });
-    
     if (!roomServiceState) return;
     
     const storeOrders = Object.values(roomServiceState.ordersById);
-    console.log('📋 [RoomService] All store orders:', storeOrders);
     const roomOrders = storeOrders.filter(order => {
       // Match room number (convert both to numbers for comparison)
       const orderRoomNum = parseInt(order.room_number);
@@ -134,26 +102,8 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
       const hotelMatch = !orderHotel || orderHotel === hotelIdentifier;
       const matches = roomMatch && hotelMatch;
       
-      console.log('🔍 [RoomService] Order filter check:', {
-        orderId: order.id,
-        orderRoomNum,
-        currentRoomNum,
-        roomMatch,
-        orderHotel,
-        hotelIdentifier,
-        hotelMatch,
-        overallMatch: matches,
-        orderStatus: order.status
-      });
-      
       return matches;
     }).sort((a, b) => new Date(b.created_at || b.timestamp) - new Date(a.created_at || a.timestamp));
-    
-    console.log('🎯 [RoomService] Filtered room orders:', {
-      totalStoreOrders: storeOrders.length,
-      roomOrdersCount: roomOrders.length,
-      roomOrders: roomOrders.map(o => ({ id: o.id, status: o.status, room_number: o.room_number }))
-    });
     
     // Always update previousOrders with latest data from store
     setPreviousOrders(roomOrders);
@@ -200,21 +150,12 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
   useEffect(() => {
     if (!hotelIdentifier) return;
 
-    console.log('🔥 [RoomService] Subscribing to real-time channels:', {
-      hotelIdentifier,
-      roomNumber,
-      userType: 'guest'
-    });
-    
     // Subscribe to base hotel channels including room-service
     const cleanup = subscribeBaseHotelChannels({ 
       hotelSlug: hotelIdentifier
     });
     
-    console.log('✅ [RoomService] Pusher subscription initialized for hotel:', hotelIdentifier);
-    
     return () => {
-      console.log('🧹 [RoomService] Cleaning up Pusher subscriptions');
       cleanup();
     };
   }, [hotelIdentifier, roomNumber]);
@@ -222,35 +163,20 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
   // 🚨 DEBUG: Listen for FCM notifications and other events
   useEffect(() => {
     const handleFCMMessage = (event) => {
-      console.log('📱 [RoomService] FCM notification received:', event.detail || event);
     };
 
     const handlePusherEvent = (event) => {
-      console.log('📡 [RoomService] Pusher event received:', event.detail || event);
     };
 
     const handleCustomEvent = (event) => {
-      if (event.type.includes('room') || event.type.includes('order') || event.type.includes('service')) {
-        console.log('🔔 [RoomService] Custom event received:', event.type, event.detail || event);
-      }
     };
 
     // 🔥 NEW: Listen for status updates from orders management page
     const handleStatusUpdate = (event) => {
-      console.log('🚨 [RoomService] Status update event from orders management:', event.detail);
-      
       const { orderId, oldStatus, newStatus, order, source } = event.detail;
       
       // Check if this affects our current room
       if (order.room_number == roomNumber) {
-        console.log('✨ [RoomService] Status update is for our room!', {
-          roomNumber,
-          orderId,
-          oldStatus,
-          newStatus,
-          source
-        });
-        
         // Update the store manually to ensure synchronization
         roomServiceDispatch({
           type: 'ORDER_UPDATED',
@@ -298,9 +224,6 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
       window.addEventListener('pusher-event', handlePusherEvent);
       window.addEventListener('room-service-update', handleCustomEvent);
       window.addEventListener('room-service-status-updated', handleStatusUpdate);
-      
-      // Debug: Log if we're listening
-      console.log('👂 [RoomService] Event listeners registered for FCM, Pusher, and status update events');
     }
 
     return () => {
@@ -327,20 +250,10 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
       return;
     }
     
-    console.log('🔄 RoomService: Fetching menu for', {
-      roomNumber,
-      hotelIdentifier,
-      url: `/guest/hotels/${hotelIdentifier}/room/${roomNumber}/menu/`
-    });
-    
     // Fetch menu
     guestAPI
       .get(`/hotels/${hotelIdentifier}/room/${roomNumber}/menu/`)
       .then((res) => {
-        console.log('✅ RoomService: Menu fetched successfully', {
-          itemCount: res.data?.length || 0,
-          items: res.data
-        });
         setItems(res.data || []);
         setLoading(false);
         const initQty = {};
@@ -385,12 +298,6 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
         setPreviousOrders(filtered);
 
         // 🔄 Initialize the Pusher store with fetched orders
-        console.log('🔄 [RoomService] Initializing store with API-fetched orders:', {
-          totalOrders: filtered.length,
-          orderIds: filtered.map(o => o.id),
-          statuses: filtered.map(o => `${o.id}:${o.status}`)
-        });
-        
         // Convert API orders to store format and initialize
         const storeOrders = filtered.map(order => ({
           ...order,
@@ -408,15 +315,13 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
             payload: { order }
           });
         });
-        console.log('✅ [RoomService] Store initialized with', storeOrders.length, 'orders via dispatch');
-
+        
         // Latest active (non-completed)
         const latestForRoom = filtered.find(
           (ord) => ord.status !== "completed" && ord.status !== "cancelled"
         );
         
         setCurrentOrder(latestForRoom || null);
-        console.log('🎯 [RoomService] Current active order set:', latestForRoom?.id || 'none');
       })
       .catch((err) => {
         setPreviousOrders([]);
@@ -442,14 +347,6 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
   };
 
   const handlePlaceOrder = async () => {
-    console.log('📤 [RoomService] Starting order submission:', {
-      roomNumber,
-      hotelIdentifier,
-      orderItems,
-      specialInstructions,
-      itemCount: Object.keys(orderItems).length
-    });
-    
     setSubmitting(true);
     setSubmitError(null);
 
@@ -476,19 +373,12 @@ export default function RoomService({ isAdmin, roomNumber: propRoomNumber, hotel
         room_number: Number(roomNumber)
       };
       
-      console.log('✅ [RoomService] Order created successfully:', {
-        orderId: newOrder.id,
-        orderData: newOrder,
-        apiResponse: orderResp.data
-      });
-      
       setCurrentOrder(newOrder);
       setOrderItems({});
       setSpecialInstructions('');
       setShowOrderPanel(false);
       
       // 2) Add to real-time store for proper Pusher integration
-      console.log('🔄 [RoomService] Dispatching ORDER_CREATED to store:', newOrder);
       roomServiceDispatch({
         type: 'ORDER_CREATED',
         payload: { order: newOrder }

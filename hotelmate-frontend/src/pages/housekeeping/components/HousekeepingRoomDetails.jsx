@@ -88,18 +88,12 @@ function HousekeepingRoomDetails() {
         // Use the housekeeping dashboard endpoint to get room data
         const response = await api.get(`/staff/hotel/${hotelSlugToUse}/housekeeping/dashboard/`);
         
-        console.log('[HousekeepingRoomDetails] Dashboard response:', response.data);
-        
         // Find the specific room from the dashboard data
         const { rooms_by_status = {} } = response.data;
         let foundRoom = null;
         
-        console.log('[HousekeepingRoomDetails] Looking for room:', roomNumber);
-        console.log('[HousekeepingRoomDetails] Available room statuses:', Object.keys(rooms_by_status));
-        
         // Search through all status categories to find the room
         Object.entries(rooms_by_status).forEach(([status, statusRooms]) => {
-          console.log(`[HousekeepingRoomDetails] Checking ${status} rooms:`, statusRooms);
           if (Array.isArray(statusRooms)) {
             const room = statusRooms.find(r => {
               // Try different room number formats
@@ -113,7 +107,6 @@ function HousekeepingRoomDetails() {
                      rId === roomNum;
             });
             if (room && !foundRoom) {
-              console.log('[HousekeepingRoomDetails] Found room:', room);
               foundRoom = room;
             }
           }

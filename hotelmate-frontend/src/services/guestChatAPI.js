@@ -100,15 +100,6 @@ export const getChatBootstrap = async (hotelSlug, token) => {
 
   validateBootstrapContract(data);
 
-  console.log('[GuestChatAPI] Bootstrap validated:', {
-    conversation_id: data.conversation_id,
-    channel_name: data.channel_name,
-    events: data.events,
-    pusherCluster: data.pusher.cluster,
-    hasAuthEndpoint: !!data.pusher.auth_endpoint,
-    permissions: data.permissions,
-  });
-
   return data;
 };
 

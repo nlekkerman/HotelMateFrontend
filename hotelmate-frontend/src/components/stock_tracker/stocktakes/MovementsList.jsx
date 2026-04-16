@@ -51,32 +51,18 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
       setLoading(true);
       setError(null);
       
-      console.log('🔍 ========== FETCHING MOVEMENTS ==========');
-      console.log('📋 Line ID:', lineId);
-      console.log('🏨 Hotel Slug:', hotelSlug);
-      console.log('🌐 Endpoint:', `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/movements/`);
       
       // ✅ CORRECT ENDPOINT: /api/stock_tracker/{hotel}/stocktake-lines/{id}/movements/
       const response = await api.get(
         `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/movements/`
       );
       
-      console.log('📥 Response status:', response.status);
-      console.log('📦 Full response data:', JSON.stringify(response.data, null, 2));
-      console.log('🔑 Response keys:', Object.keys(response.data));
       
       // Backend returns { movements: [...], summary: {...} }
       const movementsArray = response.data.movements || response.data || [];
       
-      console.log('📊 Movements array type:', Array.isArray(movementsArray));
-      console.log('📊 Movement count:', movementsArray.length);
-      
-      if (movementsArray.length > 0) {
-        console.log('📝 First movement:', movementsArray[0]);
-      }
       
       setMovements(movementsArray);
-      console.log('✅ ========== MOVEMENTS LOADED ==========\n');
     } catch (err) {
       console.error('❌ Failed to fetch movements:', err);
       console.error('❌ Error response:', err.response?.data);
@@ -103,7 +89,6 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
         `/stock_tracker/${hotelSlug}/stocktake-lines/${lineId}/delete-movement/${movementToDelete.id}/`
       );
 
-      console.log('✅ Movement deleted:', response.data);
       
       // Close ALL modals before showing success
       setShowDeleteConfirm(false);
@@ -172,7 +157,6 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
         payload.reference = editForm.reference;
       }
 
-      console.log('✏️ Updating movement:', editingMovement.id, payload);
 
       // ✅ ENDPOINT: /api/stock_tracker/{hotel}/stocktake-lines/{lineId}/update-movement/{movementId}/
       const response = await api.patch(
@@ -180,7 +164,6 @@ export const MovementsList = ({ lineId, hotelSlug, isLocked, onMovementDeleted, 
         payload
       );
 
-      console.log('✅ Movement updated:', response.data);
 
       // Update local list with the updated movement
       setMovements(prev => 

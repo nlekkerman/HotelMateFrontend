@@ -65,9 +65,6 @@ export const StockItemModal = ({ isOpen, onClose, onSave, item, categories }) =>
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Modal handleSubmit called');
-    console.log('Form data being saved:', formData);
-    console.log('Is editing item:', !!item);
     onSave(formData);
   };
 

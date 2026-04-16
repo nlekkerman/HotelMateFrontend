@@ -143,17 +143,12 @@ export default function AttendanceTable({
             const derivedStatus = safeString(row._status);
 
             const handleRowClick = (e) => {
-              console.log('[AttendanceTable] Row clicked:', row);
               // Prevent row click if clicking on action buttons
               if (e.target.closest('button') || e.target.closest('.btn')) {
-                console.log('[AttendanceTable] Click prevented - button/btn detected');
                 return;
               }
               if (typeof onRowClick === 'function') {
-                console.log('[AttendanceTable] Calling onRowClick with row:', row);
                 onRowClick(row);
-              } else {
-                console.log('[AttendanceTable] onRowClick is not a function:', typeof onRowClick);
               }
             };
 
@@ -199,7 +194,6 @@ export default function AttendanceTable({
                       }}
                       hotelSlug={hotelSlug}
                       onAction={(result) => {
-                        console.log('[AttendanceTable] Clock action completed:', result);
                         if (typeof onRowAction === 'function') {
                           onRowAction(result);
                         }

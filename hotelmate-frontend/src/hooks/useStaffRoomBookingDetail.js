@@ -22,9 +22,6 @@ export const useRoomBookingDetail = (hotelSlug, bookingId) => {
       // Survey data is automatically included when it exists
       const response = await api.get(url);
       
-      // Log the response to see the actual structure
-      console.log('Booking detail response:', response.data);
-      
       // Handle field mapping if needed (similar to list view)
       const booking = response.data;
       
@@ -34,8 +31,6 @@ export const useRoomBookingDetail = (hotelSlug, bookingId) => {
         // Ensure party is always available
         party: booking.party || booking.booking_party || booking.guests || null,
       };
-      
-      console.log('Mapped booking:', mappedBooking);
 
       // Diff against previous and log changes
       if (prevBooking) {
@@ -46,7 +41,7 @@ export const useRoomBookingDetail = (hotelSlug, bookingId) => {
           if (String(ov) !== String(nv)) diffs.push({ field: f, from: ov, to: nv });
         }
         if (diffs.length) {
-          console.debug('[staff-room-booking] cache diff:', mappedBooking.booking_id || bookingId, diffs);
+          // Diff detected, no-op (was console.debug)
         }
       }
 
@@ -60,22 +55,14 @@ export const useAvailableRooms = (hotelSlug, bookingId) => {
   return useQuery({
     queryKey: queryKeys.staffAvailableRooms(hotelSlug, bookingId),
     queryFn: async () => {
-      console.log('🏨 [ROOMS API] Fetching available rooms:', {
-        hotelSlug,
-        bookingId,
-        endpoint: buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/available-rooms/`)
-      });
-      
       const url = buildStaffURL(hotelSlug, 'room-bookings', `/${bookingId}/available-rooms/`);
       const response = await api.get(url);
-      
-      console.log('🏨 [ROOMS API] Response:', response.data);
       
       return response.data;
     },
     enabled: !!bookingId && !!hotelSlug,
     onError: (error) => {
-      console.error('🏨 [ROOMS API] Error:', error);
+      console.error('[ROOMS API] Error:', error);
     }
   });
 };

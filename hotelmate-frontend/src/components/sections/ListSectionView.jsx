@@ -26,17 +26,11 @@ const ListSectionView = ({ section, onUpdate }) => {
     saving,
   } = useListSectionActions(slug, section, onUpdate);
 
-  console.log('ListSectionView - showAddCard:', showAddCard);
-  console.log('ListSectionView - selectedList:', selectedList);
-  console.log('ListSectionView - canEditPublicPage:', canEditPublicPage);
-  console.log('ListSectionView - lists:', lists);
-
   if (lists.length === 0) {
     return null;
   }
 
   const hasCards = lists.some(l => l.cards && l.cards.length > 0);
-  console.log('ListSectionView - hasCards:', hasCards);
 
   return (
     <section className="list-section-view py-5">
@@ -61,8 +55,6 @@ const ListSectionView = ({ section, onUpdate }) => {
               {canEditPublicPage && (
                 <Col xs={12} md={6} lg={4} className="mb-4">
                   <div className="placeholder-add-card" onClick={() => {
-                    console.log('Placeholder clicked, list:', list);
-                    console.log('openAddCard function:', openAddCard);
                     openAddCard(list);
                   }}>
                     <i className="bi bi-plus-circle"></i>

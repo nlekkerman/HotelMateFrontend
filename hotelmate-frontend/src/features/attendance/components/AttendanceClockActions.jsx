@@ -32,7 +32,6 @@ export default function AttendanceClockActions({ staff, hotelSlug, onAction }) {
       } else {
         // Handle secondary actions (show options modal)
         showClockOptionsModal(currentStatus, hotelSlug, (modalResult) => {
-          console.log('[AttendanceClockActions] Modal action completed:', modalResult);
           if (typeof onAction === 'function') {
             onAction(modalResult);
           }
@@ -41,8 +40,6 @@ export default function AttendanceClockActions({ staff, hotelSlug, onAction }) {
         return; // Exit early for modal
       }
 
-      console.log('[AttendanceClockActions] Action completed:', result);
-      
       // Show success notification
       showToast(`${primaryAction.label} successful!`, 'success', 2000);
       

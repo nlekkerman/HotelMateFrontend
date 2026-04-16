@@ -115,12 +115,8 @@ const CreateCancellationPolicyModal = ({
         }
       }
 
-      console.log('[CreateCancellationPolicyModal] Creating policy with payload:', payload);
-
       // Create the policy
       const newPolicy = await cancellationPolicyService.createCancellationPolicy(hotelSlug, payload);
-      
-      console.log('[CreateCancellationPolicyModal] Policy created successfully:', newPolicy);
       
       // Show success message
       toast.success(`Cancellation policy "${newPolicy.name}" created successfully!`);

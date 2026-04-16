@@ -41,11 +41,7 @@ const ThemeProvider = ({ children }) => {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["theme", hotelSlug, user?.is_staff, user?.hotel_slug], // Include user state in key
     queryFn: async () => {
-      console.log('[ThemeContext] Fetching theme for:', hotelSlug);
-      console.log('[ThemeContext] User from AuthContext:', user);
-      console.log('[ThemeContext] User is staff:', user?.is_staff, 'User hotel_slug:', user?.hotel_slug);
-      
-      // Debug: Cross-check AuthContext user against authStore bridge
+      // Cross-check AuthContext user against authStore bridge
       // NOTE: This intentional fallback corrects stale AuthContext state during login transitions.
       // Safe to keep until AuthContext is verified as single source of truth in all flows.
       const bridgeUser = getAuthUser() || (() => {
@@ -55,9 +51,6 @@ const ThemeProvider = ({ children }) => {
       let actualHotelSlug = user?.hotel_slug;
       
       if (bridgeUser) {
-        console.log('[ThemeContext] Bridge user:', bridgeUser);
-        console.log('[ThemeContext] Bridge is_staff:', bridgeUser.is_staff);
-        
         // Fix: If user has staff-level access but is_staff is false, correct it
         const shouldBeStaff = bridgeUser.is_superuser || 
                              bridgeUser.access_level === 'staff_admin' || 
@@ -65,11 +58,9 @@ const ThemeProvider = ({ children }) => {
                              bridgeUser.staff_id;
                              
         if (shouldBeStaff && !bridgeUser.is_staff) {
-          console.log('[ThemeContext] 🔧 FIXING: User should be staff but is_staff=false, correcting...');
           actualIsStaff = true;
           actualHotelSlug = bridgeUser.hotel_slug;
         } else if (!user?.is_staff && bridgeUser.is_staff) {
-          console.log('[ThemeContext] Using bridge data as AuthContext seems incorrect');
           actualIsStaff = bridgeUser.is_staff;
           actualHotelSlug = bridgeUser.hotel_slug;
         }
@@ -77,9 +68,7 @@ const ThemeProvider = ({ children }) => {
       
       // For staff users, use staff endpoint
       if (actualIsStaff && actualHotelSlug) {
-        console.log('[ThemeContext] Using STAFF endpoint for theme');
         const res = await api.get(`/staff/hotel/${actualHotelSlug}/settings/`);
-        console.log('[ThemeContext] Staff settings response:', res.data);
         // Map to ThemeContext format with ALL colors
         return {
           ...res.data, // Include all settings data
@@ -96,10 +85,8 @@ const ThemeProvider = ({ children }) => {
         };
       }
       // For guests, try public hotel page endpoint which might have theme data
-      console.log('[ThemeContext] Using PUBLIC hotel page endpoint for theme');
       try {
         const res = await api.get(`/public/hotel/${hotelSlug}/page/`);
-        console.log('[ThemeContext] Public hotel page response:', res.data);
         return {
           ...res.data,
           main_color: res.data.main_color || res.data.primary_color || '#3498db',
@@ -145,8 +132,7 @@ const ThemeProvider = ({ children }) => {
   // 2️⃣ Apply CSS variables - ALL theme colors
   const applyTheme = (theme) => {
     if (!theme) return;
-    console.log('[ThemeContext] Applying theme:', theme);
-    
+
     const hexToRgb = (hex) => {
       if (!hex) return "";
       const shorthand = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;

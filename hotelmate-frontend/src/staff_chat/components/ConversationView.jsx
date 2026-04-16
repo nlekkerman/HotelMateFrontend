@@ -112,11 +112,6 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     }
 
     if (!import.meta.env.PROD) {
-      console.log('🔗 [ConversationView] Subscribing to staff chat channel:', {
-        hotelSlug,
-        conversationId: conversation.id,
-        channelName: `${hotelSlug}.staff-chat.${conversation.id}`
-      });
     }
 
     // Subscribe to the conversation's Pusher channel
@@ -124,7 +119,6 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
 
     return () => {
       if (!import.meta.env.PROD) {
-        console.log('🧹 [ConversationView] Cleaning up staff chat subscription:', conversation.id);
       }
       cleanup();
     };
@@ -132,12 +126,6 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
 
   // Handle realtime events from store (messages automatically update via store state)
   useEffect(() => {
-    console.log('📨 [CHAT STORE] Messages updated from store:', {
-      conversationId: conversation?.id,
-      messageCount: messages.length,
-      lastMessageId: messages[messages.length - 1]?.id
-    });
-    
     // Auto scroll to bottom when new messages arrive
     if (messages.length > 0) {
       scrollToBottom();
@@ -153,7 +141,6 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
 
   // Debug: Log replyTo state changes
   useEffect(() => {
-    // console.log('🔔 ConversationView - replyTo state changed:', replyTo);
   }, [replyTo]);
   
   // Check if user is manager/admin via centralized permissions
@@ -195,7 +182,6 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     const observer = new IntersectionObserver(
       async (entries) => {
         if (entries[0].isIntersecting && messages.length > markedUpToRef.current) {
-          console.log('👁️ [AUTO MARK READ] Last message is visible, marking conversation as read');
           await markConversationRead();
           markedUpToRef.current = messages.length;
         }
@@ -253,18 +239,9 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
 
   // Mark ALL messages as read when user focuses input (handles new messages while chat was open)
   const handleInputFocus = async () => {
-    console.log('🎯🎯🎯 [MARK ALL AS READ] Input focused, marking conversation as read');
-    console.log('🎯 [MARK ALL AS READ] Conversation ID:', conversation?.id);
-    console.log('🎯 [MARK ALL AS READ] Current unread count:', storeConversation?.unread_count || 0);
-    console.log('🎯 [MARK ALL AS READ] Messages count:', messages.length);
-    
     try {
       if (conversation?.id && (storeConversation?.unread_count || 0) > 0) {
-        console.log('📮 [MARK ALL AS READ] Calling markConversationRead for conversation:', conversation.id);
         await markConversationRead(conversation.id);
-        console.log('✅ [MARK ALL AS READ] Successfully marked conversation as read');
-      } else {
-        console.log('ℹ️ [MARK ALL AS READ] No unread messages or invalid conversation ID');
       }
     } catch (error) {
       console.error('❌ [MARK ALL AS READ] Error marking conversation as read:', error);
@@ -272,17 +249,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
   };
 
   const handleSendMessage = async (messageText, mentions) => {
-    console.log('📤 [SEND MESSAGE] Starting message send:', {
-      messageText: messageText?.substring(0, 50),
-      hasFiles: selectedFiles.length > 0,
-      fileCount: selectedFiles.length,
-      conversationId: conversation?.id,
-      replyToId: replyTo?.id,
-      currentUserId
-    });
-    
     if ((!messageText.trim() && selectedFiles.length === 0) || sending) {
-      console.warn('⚠️ [SEND MESSAGE] Cannot send - empty or already sending');
       return;
     }
 
@@ -311,18 +278,10 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
       }
       
       // Add new message to store
-      console.log('✅ [SEND MESSAGE] Message sent successfully:', {
-        messageId: result.message?.id || result.id,
-        hasMessage: !!result.message,
-        hasId: !!result.id,
-        isReply: !!replyTo?.id
-      });
-      
       const messageToAdd = result.message || result;
       const isReply = replyTo?.id !== null && replyTo?.id !== undefined;
       
       if (messageToAdd && messageToAdd.id && !isReply) {
-        console.log('📝 [SEND MESSAGE] Adding non-reply message to store:', messageToAdd.id);
         chatDispatch({
           type: 'RECEIVE_MESSAGE',
           payload: {
@@ -331,7 +290,6 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
           }
         });
       } else if (isReply) {
-        console.log('📝 [SEND MESSAGE] Reply sent - waiting for Pusher event for proper display');
       }
       
       // Clear inputs
@@ -346,15 +304,6 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
   };
 
   const handleReply = useCallback((message) => {
-    //
-    //
-    // console.log('🔄 Reply button clicked, message object:', message);
-    // console.log('🔄 Message type:', typeof message);
-    // console.log('🔄 Message ID:', message?.id);
-    // console.log('🔄 Message text:', message?.message || message?.content);
-    // console.log('🔄 Sender info:', message?.sender, message?.sender_info);
-    // console.log('🔄 Sender name:', message?.sender_name);
-    
     // Ensure message has proper structure for MessageInput
     const replyMessage = {
       id: message.id,
@@ -370,8 +319,6 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
       is_deleted: message.is_deleted || false,
     };
     
-    // console.log('🔄 Setting replyTo state to:', replyMessage);
-    //
     setReplyTo(replyMessage);
   }, []);
 
@@ -444,7 +391,6 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
       const result = await deleteAttachment(hotelSlug, attachmentId);
       
       // ✅ UNIFIED: Attachment deletion will be updated via chatStore through realtime events
-      console.log('📎 Attachment deleted - will be updated via chatStore realtime:', result.message_id);
     } catch (err) {
       console.error('Error deleting attachment:', err);
       alert('Failed to delete file. Please try again.');
@@ -537,22 +483,6 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
               
               // Debug log for message render
               if (isOwn) {
-                console.log(`🎨🎨🎨 [UI RENDER] Message ${message.id} RENDER CYCLE:`, {
-                  text: (message.message || message.content || '').substring(0, 30),
-                  messageObjectId: message.id,
-                  messageData: { 
-                    read_by_list: message.read_by_list, 
-                    read_by_count: message.read_by_count,
-                    read_by_list_length: message.read_by_list?.length,
-                    full_read_by_list: JSON.stringify(message.read_by_list)
-                  },
-                  finalReadStatus: readStatus,
-                  willShowAsSeen: readStatus.read_count > 0,
-                  passedToMessageBubble: {
-                    readByList: readStatus.read_by,
-                    readByCount: readStatus.read_count
-                  }
-                });
               }
 
               // Attach ref to last message for intersection observer
@@ -675,12 +605,10 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
         hotelSlug={hotelSlug}
         canManageParticipants={true}
         onParticipantRemoved={(participantId) => {
-          // console.log('✅ Participant removed:', participantId);
           // Reload messages to reflect changes
           loadMessages();
         }}
         onLeaveGroup={(convId) => {
-          // console.log('✅ Left group:', convId);
           // You may want to navigate away or show a message
           alert('You have left the group');
         }}

@@ -96,14 +96,6 @@ function RoomDetails() {
 
   // Specific action handlers
   const handleCheckout = async () => {
-    if (!import.meta.env.PROD) {
-      console.log(`[RoomDetails] Checkout attempt - Room ${roomNumber}:`, {
-        roomId: room?.id,
-        roomStatus: room?.room_status,
-        isOccupied: room?.is_occupied
-      });
-    }
-    
     if (actionStates.checkout || !room?.id) return;
     
     setActionStates(prev => ({ ...prev, checkout: true }));

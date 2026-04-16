@@ -30,13 +30,6 @@ export function getPusherClient() {
     };
 
     const authToken = getAuthToken();
-    console.log('🔧 [realtimeClient] Initializing Pusher with config:', {
-      appKey,
-      cluster: cluster || 'eu',
-      authEndpoint: `${import.meta.env.VITE_API_BASE_URL}/pusher/auth`,
-      hasToken: !!authToken
-    });
-
     pusherInstance = new Pusher(appKey, {
       cluster: cluster || 'eu',
       encrypted: true,
@@ -50,14 +43,6 @@ export function getPusherClient() {
     });
 
     // Global connection logging
-    pusherInstance.connection.bind('connected', () => {
-      console.log('🔗 Pusher connected via realtimeClient');
-    });
-
-    pusherInstance.connection.bind('disconnected', () => {
-      console.log('🔌 Pusher disconnected via realtimeClient');
-    });
-
     pusherInstance.connection.bind('error', (err) => {
       console.error('❌ Pusher connection error:', err);
     });

@@ -47,8 +47,6 @@ export function applyThemeToApp(settings) {
   if (settings.link_hover_color) {
     root.style.setProperty('--color-link-hover', settings.link_hover_color);
   }
-  
-  console.log('✅ Theme applied globally');
 }
 
 /**

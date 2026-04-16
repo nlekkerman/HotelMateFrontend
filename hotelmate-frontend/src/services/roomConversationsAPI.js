@@ -26,16 +26,10 @@ export const fetchRoomConversations = async (hotelSlug) => {
       throw new Error('Hotel slug is required');
     }
     
-    console.log('[RoomConversationsAPI] Fetching room conversations for hotel:', hotelSlug);
     const response = await api.get(buildRoomChatURL(hotelSlug, 'conversations/'));
     
     // Handle different response formats
     const conversations = Array.isArray(response.data) ? response.data : response.data?.conversations || [];
-    
-    console.log('[RoomConversationsAPI] Room conversations response:', {
-      count: conversations.length,
-      data: conversations
-    });
     
     return conversations;
   } catch (error) {
@@ -74,19 +68,7 @@ export const fetchRoomConversationMessages = async (hotelSlug, conversationId, o
     const queryString = params.toString() ? `?${params.toString()}` : '';
     const endpoint = buildRoomChatURL(hotelSlug, `conversations/${conversationId}/messages/${queryString}`);
     
-    console.log('[RoomConversationsAPI] Fetching messages:', {
-      hotelSlug,
-      conversationId,
-      endpoint,
-      options
-    });
-    
     const response = await api.get(endpoint);
-    
-    console.log('[RoomConversationsAPI] Messages response:', {
-      messageCount: response.data?.messages?.length || response.data?.length || 0,
-      conversationId
-    });
     
     return response.data;
   } catch (error) {
@@ -108,16 +90,8 @@ export const sendRoomConversationMessage = async (hotelSlug, conversationId, mes
   try {
     const endpoint = buildRoomChatURL(hotelSlug, `conversations/${conversationId}/messages/send/`);
     
-    console.log('[RoomConversationsAPI] Sending message:', {
-      hotelSlug,
-      conversationId,
-      endpoint,
-      messageLength: messageData.message?.length || 0
-    });
-    
     const response = await api.post(endpoint, messageData);
     
-    console.log('[RoomConversationsAPI] Message sent successfully:', response.data);
     return response.data;
   } catch (error) {
     console.error('[RoomConversationsAPI] Error sending room conversation message:', error);
@@ -135,15 +109,8 @@ export const markRoomConversationRead = async (hotelSlug, conversationId) => {
   try {
     const endpoint = buildStaffURL(hotelSlug, 'chat', `conversations/${conversationId}/mark-read/`);
     
-    console.log('[RoomConversationsAPI] Marking conversation as read:', {
-      hotelSlug,
-      conversationId,
-      endpoint
-    });
-    
     const response = await api.post(endpoint);
     
-    console.log('[RoomConversationsAPI] Conversation marked as read:', response.data);
     return response.data;
   } catch (error) {
     console.error('[RoomConversationsAPI] Error marking conversation as read:', error);
@@ -164,11 +131,8 @@ export const fetchRoomConversationsUnreadCount = async (hotelSlug) => {
     
     const endpoint = buildRoomChatURL(hotelSlug, 'conversations/unread-count/');
     
-    console.log('[RoomConversationsAPI] Fetching unread count for hotel:', hotelSlug);
-    
     const response = await api.get(endpoint);
     
-    console.log('[RoomConversationsAPI] Unread count response:', response.data);
     return response.data || { total_unread: 0, conversations: [] };
   } catch (error) {
     console.error('[RoomConversationsAPI] Error fetching unread count:', error);

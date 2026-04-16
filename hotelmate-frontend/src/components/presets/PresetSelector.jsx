@@ -28,13 +28,6 @@ const PresetSelector = ({
   
   // Sync selectedVariant when currentVariant changes
   useEffect(() => {
-    console.log('[PresetSelector] currentVariant changed to:', currentVariant);
-    console.log('[PresetSelector] Full sections data:', sections);
-    console.log('[PresetSelector] sections style_variants:', sections.map(s => ({ 
-      name: s.name, 
-      variant: s.style_variant,
-      allKeys: Object.keys(s)
-    })));
     setSelectedVariant(currentVariant);
   }, [currentVariant, sections]);
 
@@ -51,12 +44,10 @@ const PresetSelector = ({
   const toggleMobileMenu = () => setIsMobileMenuOpen(prev => !prev);
 
   const handleVariantChange = async (variant) => {
-    console.log('[PresetSelector] handleVariantChange called with variant:', variant);
     setSelectedVariant(variant);
     if (onVariantChange) {
       await onVariantChange(variant);
     }
-    console.log('[PresetSelector] After variant change, selectedVariant:', variant);
   };
 
   return (

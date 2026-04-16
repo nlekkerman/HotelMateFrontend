@@ -13,15 +13,6 @@ const ChatHomePage = ({ selectedRoom, onSelectRoom, onUnreadChange }) => {
   const { conversations, markConversationRead } = useChat(); // Get both conversations and markConversationRead
   const { mainColor } = useTheme();
   const userId = user?.id;
-  
-  // Debug log conversations
-  useEffect(() => {
-    console.log('🏠 [ChatHomePage] Conversations updated:', {
-      count: conversations.length,
-      conversations: conversations,
-      hasGuestMode: !userId
-    });
-  }, [conversations, userId]);
 
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);

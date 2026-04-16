@@ -166,13 +166,10 @@ export default function Analytics() {
     const chartsToCloseAfter = [];
 
     try {
-      console.log('🚀 Starting export for charts:', selectedChartIds);
       
       // First, ensure all selected charts are open
-      console.log('📂 Opening selected charts...');
       for (const chartId of selectedChartIds) {
         if (!visibleSections[chartId]) {
-          console.log(`Opening chart: ${chartId}`);
           chartsToCloseAfter.push(chartId);
           toggleSection(chartId);
         }
@@ -180,7 +177,6 @@ export default function Analytics() {
 
       // Wait for all charts to open and render
       if (chartsToCloseAfter.length > 0) {
-        console.log(`⏳ Waiting for ${chartsToCloseAfter.length} charts to render...`);
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
       
@@ -196,23 +192,15 @@ export default function Analytics() {
       // Process each selected chart
       for (let i = 0; i < selectedChartIds.length; i++) {
         const chartId = selectedChartIds[i];
-        console.log(`\n📊 Processing chart ${i + 1}/${selectedChartIds.length}: ${chartId}`);
         setExportProgress(Math.round(((i + 1) / selectedChartIds.length) * 100));
 
         // Find the chart element using data attribute
         const chartElement = document.querySelector(`[data-chart-section="${chartId}"]`);
 
         if (!chartElement) {
-          console.warn(`❌ Chart ${chartId} not found or not visible. Skipping...`);
           continue;
         }
 
-        console.log(`✅ Chart element found:`, {
-          width: chartElement.offsetWidth,
-          height: chartElement.offsetHeight,
-          scrollWidth: chartElement.scrollWidth,
-          scrollHeight: chartElement.scrollHeight
-        });
 
         // Wait for charts to load - check for SVG or canvas elements
         let attempts = 0;
@@ -223,23 +211,19 @@ export default function Analytics() {
           const hasMinHeight = chartElement.offsetHeight > 100;
           
           if (hasContent && hasMinHeight) {
-            console.log(`✅ Chart content loaded (attempt ${attempts + 1})`);
             break;
           }
           
-          console.log(`⏳ Waiting for chart content... (attempt ${attempts + 1}/${maxAttempts})`);
           await new Promise(resolve => setTimeout(resolve, 500));
           attempts++;
         }
 
         if (attempts >= maxAttempts) {
-          console.warn(`⚠️ Chart ${chartId} did not fully load after ${maxAttempts} attempts`);
         }
 
         // Additional wait for animations
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        console.log('📸 Capturing chart with html2canvas...');
 
         // Capture the chart as canvas with improved settings
         const canvas = await html2canvas(chartElement, {
@@ -252,14 +236,9 @@ export default function Analytics() {
           allowTaint: true,
           foreignObjectRendering: false,
           onclone: (clonedDoc) => {
-            console.log('🔄 Document cloned for capture');
           }
         });
 
-        console.log(`📐 Canvas created:`, {
-          width: canvas.width,
-          height: canvas.height
-        });
 
         // Check if canvas is empty
         if (canvas.width === 0 || canvas.height === 0) {
@@ -284,11 +263,6 @@ export default function Analytics() {
           chartWidth = (canvas.width * maxChartHeight) / canvas.height;
         }
         
-        console.log(`📄 Chart dimensions:`, {
-          chartWidth,
-          chartHeight,
-          currentY: exportedCount === 0 ? margin : undefined
-        });
         
         // Track Y position for current page
         if (exportedCount === 0) {
@@ -301,7 +275,6 @@ export default function Analytics() {
           
           if (chartHeight + spacing > remainingSpace) {
             // Chart doesn't fit, start new page
-            console.log(`📄 Starting new page (remaining space: ${remainingSpace}mm, needed: ${chartHeight}mm)`);
             pdf.addPage();
             currentY = margin;
             currentPageCharts = 0;
@@ -311,7 +284,6 @@ export default function Analytics() {
           }
         }
         
-        console.log(`📍 Placing chart at Y: ${currentY}mm`);
         
         // Add image to PDF at calculated position
         const imgData = canvas.toDataURL('image/png');
@@ -323,7 +295,6 @@ export default function Analytics() {
         currentPageCharts++;
 
         exportedCount++;
-        console.log(`✅ Chart ${chartId} exported successfully (${exportedCount} total, ${currentPageCharts} on current page)`);
 
         // Small delay between charts
         await new Promise(resolve => setTimeout(resolve, 300));
@@ -340,15 +311,12 @@ export default function Analytics() {
       const timestamp = new Date().toISOString().split('T')[0];
       const filename = `${hotel_slug}_analytics_${timestamp}.pdf`;
 
-      console.log(`💾 Saving PDF as: ${filename}`);
-      console.log(`✅ Total charts exported: ${exportedCount}`);
 
       // Save the PDF
       pdf.save(filename);
 
       // Close temporarily opened charts
       if (chartsToCloseAfter.length > 0) {
-        console.log(`🧹 Closing ${chartsToCloseAfter.length} temporarily opened charts...`);
         await new Promise(resolve => setTimeout(resolve, 500));
         chartsToCloseAfter.forEach(chartId => {
           closeSection(chartId);
@@ -365,7 +333,6 @@ export default function Analytics() {
       
       // Clean up: close temporarily opened charts even if export failed
       if (chartsToCloseAfter.length > 0) {
-        console.log(`🧹 Cleaning up: closing temporarily opened charts...`);
         chartsToCloseAfter.forEach(chartId => {
           closeSection(chartId);
         });

@@ -36,7 +36,6 @@ export function useAnalytics(hotelSlug, params = {}) {
     async function fetchData() {
       setLoading(true);
       setError(null);
-console.log("Fetching KPIs with params:", formattedParams);
       let slug = "";
       if (typeof hotelSlug === "string") {
         slug = hotelSlug;

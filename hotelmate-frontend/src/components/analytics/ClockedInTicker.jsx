@@ -35,7 +35,6 @@ function StaffTimelineRow({ log, now }) {
     last_name: log.staff_name?.split(" ").slice(1).join(" ") || "",
     department_detail: log.department || { name: "N/A", slug: null },
   };
-  console.log("Constructed staffData:", staffData);
   const workedPercent = isClockedIn ? getWorkedPercent(log.time_in, now) : 100;
   const workedDuration = isClockedIn
     ? getWorkedDuration(log.time_in, now)
@@ -105,10 +104,6 @@ export default function ClockedInTimeline({ staffList }) {
     return () => clearInterval(intervalId);
   }, []);
 
-  // Debug log to check what backend sends
-  useEffect(() => {
-    console.log("Raw staffList data:", staffList);
-  }, [staffList]);
   const clockedInStaff = staffList.filter((log) => !log.time_out);
   return (
     <div>

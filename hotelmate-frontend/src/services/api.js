@@ -31,12 +31,7 @@ const baseURL = (() => {
   // Fallback to production URL
   return "https://hotel-porter-d25ad83b12cf.herokuapp.com/api";
 })();
-console.log("[API INIT]", {
-  platform,
-  isNative,
-  origin: window.location.origin,
-  baseURL,
-});
+
 const api = axios.create({
   baseURL,
   timeout: 30000,
@@ -238,9 +233,7 @@ export const cancellationPolicyService = {
    */
   getCancellationPolicies: async (hotelSlug) => {
     const url = buildStaffURL(hotelSlug, 'cancellation-policies');
-    console.log('[API] Fetching cancellation policies from:', url);
     const response = await api.get(url);
-    console.log('[API] Cancellation policies response:', response.data);
     return response.data;
   },
 
@@ -251,9 +244,7 @@ export const cancellationPolicyService = {
    */
   getRatePlans: async (hotelSlug) => {
     const url = buildStaffURL(hotelSlug, 'rate-plans');
-    console.log('[API] Fetching rate plans from:', url);
     const response = await api.get(url);
-    console.log('[API] Rate plans response:', response.data);
     return response.data;
   },
 

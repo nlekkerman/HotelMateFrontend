@@ -45,8 +45,6 @@ const CheckoutTimeConfig = ({ hotelSlug }) => {
   const handleConfigUpdate = (data) => {
     // Check if this is an access-config update that affects our settings
     if (data && (data.standard_checkout_time !== undefined || data.late_checkout_grace_minutes !== undefined)) {
-      console.log('[CheckoutTimeConfig] Received realtime config update:', data);
-      
       // Invalidate queries to trigger refetch
       queryClient.invalidateQueries({ 
         queryKey: ['staff-access-config', hotelSlug] 

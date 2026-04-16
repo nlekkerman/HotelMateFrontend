@@ -52,8 +52,6 @@ const DepartmentStatusSummary = ({
     // 2. Events routed through eventBus to attendanceStore
     // 3. Components react to store state changes
     
-    console.log('[DepartmentStatus] Using centralized attendance store for real-time updates');
-    
     // The component will automatically refresh when the parent passes new refreshKey
     // due to real-time events being processed by the attendance store
     

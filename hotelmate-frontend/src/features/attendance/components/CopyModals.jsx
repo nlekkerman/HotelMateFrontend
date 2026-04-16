@@ -61,20 +61,12 @@ export function CopyDayModal({
     setError(null);
 
     try {
-      console.log('=== COPY DAY OPERATION ===');
-      console.log('Source date:', sourceDate);
-      console.log('Target date:', targetDate);
-      console.log('Department filter:', departmentSlug);
-      console.log('All existing shifts:', existingShifts);
-      
       // Find all shifts on the source date
       const sourceShifts = existingShifts.filter(shift => {
         const matchesDate = shift.shift_date === sourceDate;
         const matchesDepartment = !departmentSlug || shift.department === departmentSlug;
         return matchesDate && matchesDepartment;
       });
-      
-      console.log('Found source shifts to copy:', sourceShifts);
       
       if (sourceShifts.length === 0) {
         setError(`No shifts found on ${sourceDate}${departmentSlug ? ` for ${departmentSlug} department` : ''}`);
@@ -94,8 +86,6 @@ export function CopyDayModal({
         notes: `${shift.notes || ''} [Copied from ${sourceDate}]`,
         is_copied_draft: true
       }));
-      
-      console.log('Created copied shifts:', copiedShifts);
 
       if (onSuccess) {
         onSuccess(copiedShifts, `${copiedShifts.length} shifts copied from ${sourceFormatted}`);
@@ -255,8 +245,6 @@ export function CopyStaffWeekModal({
         shift.shift_date >= selectedPeriod.start_date &&
         shift.shift_date <= selectedPeriod.end_date
       );
-      
-      console.log('Found source shifts for staff:', sourceShifts);
       
       if (sourceShifts.length === 0) {
         setError(`No shifts found for ${staffName} in source period`);
@@ -449,15 +437,9 @@ export function CopyBulkModal({
           return;
         }
         
-        console.log('Source period:', selectedPeriod);
-        console.log('Target period:', targetPeriod);
-        
         // Get all existing shifts for department staff in source period
         const departmentStaffIds = departmentStaff.map(s => s.id);
-        const existingShifts = departmentShifts || []; // This should be passed as prop
-        
-        console.log('Department staff IDs:', departmentStaffIds);
-        console.log('Existing shifts to copy from:', existingShifts);
+        const existingShifts = departmentShifts || [];
         
         // Filter shifts for department staff in source period
         const sourceShifts = existingShifts.filter(shift => 
@@ -465,8 +447,6 @@ export function CopyBulkModal({
           shift.shift_date >= selectedPeriod.start_date &&
           shift.shift_date <= selectedPeriod.end_date
         );
-        
-        console.log('Found source shifts for department:', sourceShifts);
         
         if (sourceShifts.length === 0) {
           setError(`No shifts found for ${departmentSlug} department in source period`);
@@ -478,8 +458,6 @@ export function CopyBulkModal({
         const sourcePeriodStart = new Date(selectedPeriod.start_date);
         const targetPeriodStart = new Date(targetPeriod.start_date);
         const daysDifference = Math.floor((targetPeriodStart - sourcePeriodStart) / (1000 * 60 * 60 * 24));
-        
-        console.log('Days difference between periods:', daysDifference);
         
         // Copy each source shift with adjusted date
         mockCopiedShifts = sourceShifts.map(shift => {
@@ -500,7 +478,6 @@ export function CopyBulkModal({
           };
         });
         
-        console.log('Created copied shifts:', mockCopiedShifts);
       } else if (copyMode === "staff" && selectedStaffIds.length > 0) {
         // Mock staff copy
         mockCopiedShifts = selectedStaffIds.map(staffId => ({

@@ -62,7 +62,7 @@ export default function useLogin() {
         if (fcmToken) {
           // Save FCM token to localStorage for debugging/reference
           localStorage.setItem('fcm_token', fcmToken);
-          console.log('✅ [LOGIN] FCM token saved to localStorage:', fcmToken.substring(0, 20) + '...');
+
         }
       } catch (fcmError) {
         console.error("Failed to get FCM token:", fcmError);

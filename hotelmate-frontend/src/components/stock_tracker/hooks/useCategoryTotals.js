@@ -47,7 +47,6 @@ export const useCategoryTotals = (hotelSlug, stocktakeId) => {
   // Fetch all category totals on mount or when dependencies change
   useEffect(() => {
     if (hotelSlug && stocktakeId) {
-      console.log('🔍 Fetching category totals for:', { hotelSlug, stocktakeId });
       fetchCategoryTotals().catch(err => {
         console.error('❌ Failed to fetch category totals:', err);
       });

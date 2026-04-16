@@ -34,41 +34,16 @@ export const DeletePeriodModal = ({
       return;
     }
 
-    console.log('\n🗑️ ========================================');
-    console.log('🗑️ DELETING PERIOD - Starting');
-    console.log('🗑️ ========================================');
-    console.log('📋 Period to delete:', {
-      period_id: period.id,
-      period_name: period.period_name,
-      start_date: period.start_date,
-      end_date: period.end_date,
-      is_closed: period.is_closed,
-      has_stocktake: !!period.stocktake_id
-    });
 
     setDeleting(true);
     setError(null);
 
     try {
-      console.log('🌐 Sending DELETE request...');
-      console.log('   URL:', `/stock_tracker/${hotelSlug}/periods/${period.id}/`);
 
       const response = await api.delete(
         `/stock_tracker/${hotelSlug}/periods/${period.id}/`
       );
 
-      console.log('\n✅ ========================================');
-      console.log('✅ PERIOD DELETED SUCCESSFULLY');
-      console.log('✅ ========================================');
-      console.log('📊 Response:', {
-        message: response.data.message,
-        deleted_counts: response.data.deleted
-      });
-      console.log('\n📋 What was deleted:');
-      console.log('   - Periods:', response.data.deleted.period);
-      console.log('   - Stocktakes:', response.data.deleted.stocktakes);
-      console.log('   - Stocktake Lines:', response.data.deleted.stocktake_lines);
-      console.log('   - Snapshots:', response.data.deleted.snapshots);
 
       toast.success(
         `✅ Period "${period.period_name}" deleted successfully!\n\n` +

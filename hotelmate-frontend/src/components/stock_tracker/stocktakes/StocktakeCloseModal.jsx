@@ -86,28 +86,16 @@ export const StocktakeCloseModal = ({
       return;
     }
 
-    console.log('\n🔐 ========================================');
-    console.log('🔐 APPROVE & CLOSE PERIOD - Starting');
-    console.log('🔐 ========================================');
-    console.log('📋 Stocktake:', {
-      id: stocktake.id,
-      period_start: stocktake.period_start,
-      period_end: stocktake.period_end,
-      status: stocktake.status
-    });
 
     setSaving(true);
     setError(null);
 
     try {
       // Step 1: Find the period for this stocktake
-      console.log('\n📅 STEP 1: Finding matching period');
-      console.log('─────────────────────────────────────────');
       
       const periodsResponse = await api.get(`/stock_tracker/${hotelSlug}/periods/`);
       const periods = periodsResponse.data.results || periodsResponse.data;
       
-      console.log('📊 Found', periods.length, 'total periods');
       
       // Find period matching stocktake dates
       const period = periods.find(p => 
@@ -123,53 +111,29 @@ export const StocktakeCloseModal = ({
         throw new Error('Could not find matching period for this stocktake');
       }
 
-      console.log('✅ Found matching period:', {
-        id: period.id,
-        name: period.period_name,
-        is_closed: period.is_closed,
-        has_stocktake: !!period.stocktake_id
-      });
 
       // Step 2: Update period with manual values (if provided)
       if (manualPurchases || manualSales) {
-        console.log('\n💰 STEP 2: Updating period with manual financial values');
-        console.log('─────────────────────────────────────────');
         
         const periodPayload = {};
         
         if (manualPurchases) {
           periodPayload.manual_purchases_amount = parseFloat(manualPurchases).toFixed(2);
-          console.log('   💸 Manual Purchases (COGS):', periodPayload.manual_purchases_amount);
         }
         
         if (manualSales) {
           periodPayload.manual_sales_amount = parseFloat(manualSales).toFixed(2);
-          console.log('   💵 Manual Sales Revenue:', periodPayload.manual_sales_amount);
         }
 
-        console.log('� PATCH /periods/' + period.id + '/', periodPayload);
         
         await api.patch(
           `/stock_tracker/${hotelSlug}/periods/${period.id}/`,
           periodPayload
         );
 
-        console.log('✅ Period updated with manual values');
-      } else {
-        console.log('\n⏭️ STEP 2: Skipping manual values (none provided)');
-        console.log('   → Will use auto-calculated values from item data');
       }
 
       // Step 3: Use combined approve-and-close endpoint
-      console.log('\n🔒 STEP 3: Approve Stocktake & Close Period (Combined)');
-      console.log('─────────────────────────────────────────');
-      console.log('📤 POST /periods/' + period.id + '/approve-and-close/');
-      console.log('   This endpoint will:');
-      console.log('   1. Change stocktake status: DRAFT → APPROVED');
-      console.log('   2. Lock the stocktake (no more edits)');
-      console.log('   3. Create stock adjustments for variances');
-      console.log('   4. Close the period: OPEN → CLOSED');
-      console.log('   5. Create StockSnapshot records (closing stock)');
       
       const payload = notes ? { notes } : {};
       
@@ -178,20 +142,7 @@ export const StocktakeCloseModal = ({
         payload
       );
 
-      console.log('\n✅ ========================================');
-      console.log('✅ APPROVE & CLOSE COMPLETE');
-      console.log('✅ ========================================');
-      console.log('📊 Response:', {
-        period: response.data.period,
-        stocktake_updated: response.data.stocktake_updated,
-        adjustments_created: response.data.adjustments_created
-      });
       
-      console.log('\n📸 What happens next:');
-      console.log('   → Stocktake is now APPROVED and locked');
-      console.log('   → Period is now CLOSED');
-      console.log('   → Stock snapshots created (closing balances)');
-      console.log('   → These closing balances become opening for next period!');
 
       // Step 4: Notify parent component of success
       if (onSuccess) {

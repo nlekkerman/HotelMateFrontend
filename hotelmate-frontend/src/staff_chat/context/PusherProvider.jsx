@@ -61,18 +61,15 @@ const PusherProvider = ({
     // Check initial connection state
     const checkConnection = () => {
       const state = pusherMethods.getConnectionState();
-      console.log('🔌 [PusherProvider] Connection state:', state);
       setIsReady(state === 'connected');
     };
 
     // Bind to connection state changes
     const handleConnected = () => {
-      console.log('✅ [PusherProvider] Pusher connected - isReady = true');
       setIsReady(true);
     };
 
     const handleDisconnected = () => {
-      console.log('❌ [PusherProvider] Pusher disconnected - isReady = false');
       setIsReady(false);
     };
 

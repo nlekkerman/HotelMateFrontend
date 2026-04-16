@@ -38,11 +38,6 @@ export function writeGuestBookingToken(bookingId, token) {
   if (!bookingId || !token) return;
   try {
     localStorage.setItem(getGuestBookingTokenKey(bookingId), token);
-    console.log('[GuestBookingTokens] Stored token for booking:', {
-      booking_id: bookingId,
-      token_preview: token.substring(0, 10) + '...',
-      storage_key: getGuestBookingTokenKey(bookingId)
-    });
   } catch (error) {
     console.error('[GuestBookingTokens] Failed to write token to localStorage:', error);
   }
@@ -56,7 +51,6 @@ export function clearGuestBookingToken(bookingId) {
   if (!bookingId) return;
   try {
     localStorage.removeItem(getGuestBookingTokenKey(bookingId));
-    console.log('[GuestBookingTokens] Cleared token for booking:', bookingId);
   } catch (error) {
     console.error('[GuestBookingTokens] Failed to clear token:', error);
   }
@@ -76,17 +70,6 @@ export function clearGuestBookingToken(bookingId) {
  */
 export function resolveGuestBookingToken({ bookingId, bookingToken, queryToken }) {
   const resolved = bookingToken || readGuestBookingToken(bookingId) || queryToken || null;
-  
-  console.log('[GuestBookingTokens] Token resolution:', {
-    booking_id: bookingId,
-    has_booking_token: !!bookingToken,
-    has_stored_token: !!readGuestBookingToken(bookingId),
-    has_query_token: !!queryToken,
-    resolved_source: bookingToken ? 'booking_payload' : 
-                    readGuestBookingToken(bookingId) ? 'localStorage' :
-                    queryToken ? 'query_string' : 'none',
-    resolved_preview: resolved ? resolved.substring(0, 10) + '...' : 'null'
-  });
   
   return resolved;
 }
@@ -120,7 +103,6 @@ export function cleanupOldGuestBookingTokens(maxAgeInDays = 30) {
     });
     
     if (keysToRemove.length > 0) {
-      console.log('[GuestBookingTokens] Cleaned up old tokens:', keysToRemove.length);
     }
   } catch (error) {
     console.error('[GuestBookingTokens] Token cleanup failed:', error);

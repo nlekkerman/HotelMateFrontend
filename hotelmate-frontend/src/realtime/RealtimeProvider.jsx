@@ -37,33 +37,20 @@ function RealtimeManager({ children }) {
       user?.staff_id ??
       (user?.is_staff ? user?.id : null);
 
-    console.log('🔄 RealtimeProvider effect:', { 
-      hotelSlug, 
-      staffId, 
-      hasUser: !!user,
-      hasSelectedHotel: !!selectedHotel 
-    });
-
     // Only subscribe if we don't already have an active subscription for this hotel/staff
     if (hotelSlug && !cleanupRef.current) {
-      console.log('🚀 Starting realtime subscriptions for hotel:', hotelSlug);
       cleanupRef.current = subscribeBaseHotelChannels({ hotelSlug, staffId });
     } else if (!hotelSlug) {
-      console.log('⚠️ No hotel slug available, skipping subscriptions');
       // Clean up if we had subscriptions but no longer have hotel info
       if (cleanupRef.current) {
-        console.log('🧹 Cleaning up subscriptions - no hotel slug');
         cleanupRef.current();
         cleanupRef.current = null;
       }
-    } else {
-      console.log('📡 Realtime subscriptions already active for hotel:', hotelSlug);
     }
 
     // Cleanup on unmount only
     return () => {
       if (cleanupRef.current) {
-        console.log('🧹 Component unmounting - cleaning up subscriptions');
         cleanupRef.current();
         cleanupRef.current = null;
       }
@@ -78,7 +65,6 @@ function RealtimeManager({ children }) {
  * ✅ Provides unified realtime architecture with all 6 domain stores
  */
 export function RealtimeProvider({ children }) {
-  console.log('[RealtimeProvider] HousekeepingProvider mounted via RealtimeProvider');
   return (
     <>
       <OverviewSignalsProvider>

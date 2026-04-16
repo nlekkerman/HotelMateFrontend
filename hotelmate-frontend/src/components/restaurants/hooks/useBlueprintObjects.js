@@ -15,10 +15,8 @@ export function useBlueprintObjects(hotelSlug, restaurantSlug, blueprintId) {
   // ✅ Always run effect, but guard inside
   useEffect(() => {
   if (!baseUrl) return;
-  console.log("Fetching objects from:", baseUrl);
   api.get(baseUrl)
     .then(res => {
-      console.log("Fetched objects:", res.data);
       setObjects(res.data.results || []); // <-- use results array
     })
     .catch(err => console.error("Error fetching blueprint objects:", err));
@@ -48,7 +46,6 @@ const createObject = async (obj) => {
 
     // 2. Update local state
     setObjects((prev) => [...prev, savedObject]);
-    console.log("Object saved and added:", savedObject);
   } catch (err) {
     console.error("Failed to create object", err);
   }
@@ -63,7 +60,6 @@ const deleteObject = async (objectId) => {
 
     // 2. Remove the object from local state
     setObjects((prev) => prev.filter((obj) => obj.id !== objectId));
-    console.log("Object deleted:", objectId);
   } catch (err) {
     console.error("Failed to delete object", err);
     setError(err);

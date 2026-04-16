@@ -26,9 +26,6 @@ const HotelPortalPage = () => {
 
   // Real-time updates for settings changes
   useHotelRealtime(hotelSlug, (updatedData) => {
-    console.log("[HotelPortal] 🔄 Real-time settings update received");
-    console.log("[HotelPortal] 📸 Hero image:", updatedData.hero_image_display);
-    
     // Update settings state directly from Pusher data
     setSettings(prev => ({
       ...prev,
@@ -45,16 +42,12 @@ const HotelPortalPage = () => {
       setLoading(true);
       setError(null);
 
-      console.log("[HotelPortal] 🔍 Fetching hotel data and settings...");
-
       // Fetch hotel details from public endpoint with full booking data
       const response = await api.get(`/public/hotel/${hotelSlug}/page/`);
 
       if (!response.data) {
         throw new Error("Hotel not found");
       }
-
-      console.log("[HotelPortal] ✅ Hotel data received:", response.data);
 
       // Set hotel data
       setHotel(response.data);
@@ -75,11 +68,6 @@ const HotelPortalPage = () => {
         // Include all hotel data as settings fallback
         ...response.data
       };
-      
-      console.log("[HotelPortal] 📸 Hero image:", extractedSettings.hero_image_display);
-      console.log("[HotelPortal] 💬 Welcome message:", extractedSettings.welcome_message);
-      console.log("[HotelPortal] 🖼️ Gallery:", extractedSettings.gallery);
-      console.log("[HotelPortal] 🏨 Amenities:", extractedSettings.amenities);
       
       setSettings(extractedSettings);
 

@@ -12,7 +12,6 @@ const HotelsFiltersBar = ({ filters, onChange, cities = [], countries = [], hote
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchInput !== filters.q) {
-        console.log('[Filters] Search changed to:', searchInput);
         onChange({ ...filters, q: searchInput });
       }
     }, 300);
@@ -21,7 +20,6 @@ const HotelsFiltersBar = ({ filters, onChange, cities = [], countries = [], hote
   }, [searchInput, filters.q]);
 
   const handleCityChange = (e) => {
-    console.log('[Filters] City changed to:', e.target.value);
     // Clear other location/type filters when city is selected
     onChange({ 
       ...filters, 
@@ -33,7 +31,6 @@ const HotelsFiltersBar = ({ filters, onChange, cities = [], countries = [], hote
   };
 
   const handleCountryChange = (e) => {
-    console.log('[Filters] Country changed to:', e.target.value);
     // Clear other location/type filters when country is selected
     onChange({ 
       ...filters, 
@@ -45,13 +42,11 @@ const HotelsFiltersBar = ({ filters, onChange, cities = [], countries = [], hote
   };
 
   const handleSortChange = (e) => {
-    console.log('[Filters] Sort changed to:', e.target.value);
     onChange({ ...filters, sort: e.target.value });
     e.target.blur(); // Close dropdown after selection
   };
 
   const handleHotelTypeChange = (e) => {
-    console.log('[Filters] Hotel type changed to:', e.target.value);
     // Clear location filters when hotel type is selected
     onChange({ 
       ...filters, 

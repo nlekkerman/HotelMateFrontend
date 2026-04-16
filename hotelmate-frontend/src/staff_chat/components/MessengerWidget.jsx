@@ -132,13 +132,8 @@ const MessengerWidget = ({
 
     // Auto-mark conversation as read when opening
     if (conversation.unread_count > 0 || conversation.unreadCount > 0) {
-      console.log(
-        "📖 [MessengerWidget] Auto-marking conversation as read:",
-        conversation.id
-      );
       try {
         await markConversationRead(conversation.id);
-        console.log("✅ [MessengerWidget] Conversation marked as read");
       } catch (error) {
         console.error(
           "❌ [MessengerWidget] Failed to mark conversation as read:",
@@ -204,22 +199,12 @@ const MessengerWidget = ({
   useEffect(() => {
     const conversationId = searchParams.get("conversation");
     if (conversationId && conversations && conversations.length > 0) {
-      console.log(
-        "🔗 [MessengerWidget] Auto-opening conversation from URL:",
-        conversationId
-      );
-
       // Find the conversation by ID
       const targetConversation = conversations.find(
         (c) => c.id === parseInt(conversationId)
       );
 
       if (targetConversation) {
-        console.log(
-          "✅ [MessengerWidget] Found conversation for auto-open:",
-          targetConversation
-        );
-
         // Open the conversation (this will also mark it as read)
         handleOpenChat(targetConversation, null);
 
@@ -303,7 +288,6 @@ const MessengerWidget = ({
   };
 
   const handleGroupCreated = (conversation) => {
-    // console.log('✅ Group created:', conversation);
 
     // Open the newly created group chat
     handleOpenChat(conversation, null);
@@ -316,10 +300,6 @@ const MessengerWidget = ({
     "bottom-right": "messenger-widget--bottom-right",
     "bottom-left": "messenger-widget--bottom-left",
   };
-
-  // console.log('🎨 MessengerWidget render - openChats:', openChats);
-  // console.log('🎨 Number of open chats:', openChats.length);
-  // console.log('🎨 Visible chats:', visibleChats.length);
 
   // 🚫 HIDE WIDGET FOR NON-AUTHENTICATED STAFF USERS
   // (moved below all hooks to comply with React Rules of Hooks)

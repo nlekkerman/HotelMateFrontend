@@ -52,11 +52,6 @@ export default function OrdersSummary() {
         roomServiceActions.initFromAPI(response.data.orders);
       }
       
-      console.log('📊 Orders summary loaded:', {
-        total: response.data.pagination.total_orders,
-        page: response.data.pagination.page,
-        statuses: response.data.status_breakdown
-      });
     } catch (error) {
       console.error('Failed to fetch orders summary:', error);
       toast.error('Failed to load orders summary');

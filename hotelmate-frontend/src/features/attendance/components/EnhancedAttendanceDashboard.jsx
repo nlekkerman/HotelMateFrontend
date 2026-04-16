@@ -147,7 +147,6 @@ export default function EnhancedAttendanceDashboard() {
   };
 
   const handleModalSuccess = (result) => {
-    console.log('Operation successful:', result);
     setPeriodsRefreshKey(prev => prev + 1);
     handleRefresh();
   };

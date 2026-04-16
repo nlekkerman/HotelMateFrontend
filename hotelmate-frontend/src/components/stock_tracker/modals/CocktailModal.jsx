@@ -56,9 +56,7 @@ const handleSubmit = async () => {
   };
 
   try {
-    console.log("Submitting cocktail:", payload);
     const result = await onSubmit(payload);
-    console.log("API returned:", result);
     setCocktailName("");
     setIngredients([]);
     onClose();

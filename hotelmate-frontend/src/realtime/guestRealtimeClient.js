@@ -41,12 +41,6 @@ export function createGuestPusherClient({ key, cluster, authEndpoint, chatSessio
     return pusherInstances.get(cacheKey);
   }
 
-  console.log('[GuestRealtime] Creating Pusher instance from backend config', {
-    cluster,
-    authEndpoint,
-    sessionPreview: chatSession.substring(0, 10) + '...',
-  });
-
   const pusher = new Pusher(key, {
     cluster,
     encrypted: true,
@@ -59,16 +53,6 @@ export function createGuestPusherClient({ key, cluster, authEndpoint, chatSessio
 
   pusher.connection.bind('error', (err) => {
     console.error('[GuestRealtime] Pusher connection error:', err);
-  });
-
-  pusher.connection.bind('connected', () => {
-    console.log('[GuestRealtime] Pusher connected', {
-      socketId: pusher.connection.socket_id,
-    });
-  });
-
-  pusher.connection.bind('disconnected', () => {
-    console.log('[GuestRealtime] Pusher disconnected');
   });
 
   pusherInstances.set(cacheKey, pusher);
@@ -86,7 +70,6 @@ export function disconnectGuestPusher(chatSession, authEndpoint) {
   if (pusherInstances.has(cacheKey)) {
     pusherInstances.get(cacheKey).disconnect();
     pusherInstances.delete(cacheKey);
-    console.log('[GuestRealtime] Guest Pusher instance cleaned up');
   }
 }
 
@@ -96,5 +79,4 @@ export function disconnectGuestPusher(chatSession, authEndpoint) {
 export function disconnectAllGuestPushers() {
   pusherInstances.forEach((pusher) => pusher.disconnect());
   pusherInstances.clear();
-  console.log('[GuestRealtime] All guest Pusher instances cleaned up');
 }

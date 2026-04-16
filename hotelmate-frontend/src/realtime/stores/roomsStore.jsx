@@ -190,9 +190,6 @@ export const roomsActions = {
     if (eventId) {
       // Check if already processed using store state
       if (dispatchRef && roomsActions._lastEventIds && roomsActions._lastEventIds[eventId]) {
-        if (!import.meta.env.PROD) {
-          console.debug('[roomsStore] Skipping duplicate event:', eventId);
-        }
         return;
       }
       
@@ -222,10 +219,6 @@ export const roomsActions = {
     if (!roomNumber) {
       console.warn('[roomsStore] Could not extract room number from event:', event);
       return;
-    }
-
-    if (!import.meta.env.PROD) {
-      console.log(`[roomsStore] Processing ${eventType} for room ${roomNumber}`);
     }
 
     switch (eventType) {
@@ -260,10 +253,6 @@ export const roomsActions = {
           break;
         }
 
-        if (!import.meta.env.PROD) {
-          console.log(`[roomsStore] Room ${resolvedRoomNumber} status changed to:`, status);
-        }
-
         const roomSnapshot = {
           room_status: status,
           last_status_change: payload?.timestamp ?? new Date().toISOString(),
@@ -284,9 +273,6 @@ export const roomsActions = {
       }
 
       default:
-        if (!import.meta.env.PROD) {
-          console.log("[roomsStore] Ignoring eventType:", eventType, event);
-        }
         break;
     }
   },
@@ -296,10 +282,6 @@ export const roomsActions = {
     if (!dispatchRef) {
       console.warn('[roomsStore] bulkReplace called before store is ready');
       return;
-    }
-
-    if (!import.meta.env.PROD) {
-      console.log('[roomsStore] Bulk replace with', rooms?.length || 0, 'rooms');
     }
 
     dispatchRef({
@@ -312,10 +294,6 @@ export const roomsActions = {
   reset() {
     if (!dispatchRef) {
       return;
-    }
-
-    if (!import.meta.env.PROD) {
-      console.log('[roomsStore] Resetting rooms store');
     }
 
     dispatchRef({
@@ -331,9 +309,5 @@ export { ACTIONS };
 // Development debug helper
 if (!import.meta.env.PROD) {
   window.debugRoomsStore = () => {
-    console.log('[roomsStore] Current state:', dispatchRef ? 'Store ready' : 'Store not ready');
-    if (dispatchRef) {
-      console.log('Event IDs processed:', Object.keys(roomsActions._lastEventIds || {}).length);
-    }
   };
 }

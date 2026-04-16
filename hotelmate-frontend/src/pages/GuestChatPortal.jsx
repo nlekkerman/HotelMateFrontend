@@ -25,13 +25,7 @@ const GuestChatPortal = () => {
   // Persist token so it survives page reloads
   if (token) persistGuestToken(token);
   
-  useEffect(() => {
-    console.log('[GuestChatPortal] Initialized with params:', {
-      hotelSlug,
-      hasToken: !!token,
-      url: window.location.href
-    });
-  }, [hotelSlug, token]);
+
   
   // Show error if missing required parameters
   if (!hotelSlug || !token) {

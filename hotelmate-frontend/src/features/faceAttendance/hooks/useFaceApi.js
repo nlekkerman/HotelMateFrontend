@@ -89,7 +89,6 @@ export function useFaceApi() {
       
       // Trigger manual refresh for navigation components after successful face clock-in
       if (data.action === 'clock_in_success' || data.action === 'unrostered_clock_in_success') {
-        console.log('[FaceAPI] 📡 Triggering manual navigation refresh after face clock-in');
         // Dispatch custom event for navigation refresh
         window.dispatchEvent(new CustomEvent('face-clock-action-success', {
           detail: { action: 'clock_in', hotelSlug, data }
@@ -143,7 +142,6 @@ export function useFaceApi() {
       const data = response.data;
       
       // Trigger manual refresh for navigation components after successful break toggle
-      console.log('[FaceAPI] 📡 Triggering manual navigation refresh after break toggle');
       window.dispatchEvent(new CustomEvent('face-clock-action-success', {
         detail: { action: 'break_toggle', hotelSlug, data }
       }));
@@ -195,7 +193,6 @@ export function useFaceApi() {
       const data = response.data;
       
       // Trigger manual refresh for navigation components after successful face clock-out
-      console.log('[FaceAPI] 📡 Triggering manual navigation refresh after face clock-out');
       window.dispatchEvent(new CustomEvent('face-clock-action-success', {
         detail: { action: 'clock_out', hotelSlug, data }
       }));

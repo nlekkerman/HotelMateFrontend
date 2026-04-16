@@ -10,15 +10,7 @@ import api from '@/services/api';
  * @param {*} data - Event data from backend
  */
 function safeEventHandler(onEvent, type, data) {
-  console.log(`[Attendance Store] 📨 safeEventHandler called for ${type}:`, {
-    hasOnEvent: typeof onEvent === 'function',
-    dataType: typeof data,
-    data,
-    timestamp: new Date().toISOString()
-  });
-  
   if (typeof onEvent !== 'function') {
-    console.warn(`[Attendance Store] ⚠️ No onEvent callback provided for ${type}`);
     return;
   }
   
@@ -28,18 +20,10 @@ function safeEventHandler(onEvent, type, data) {
     
     const normalizedEvent = { type, payload };
     
-    console.log(`[Attendance Store] ✅ Normalized ${type} event, calling handler:`, {
-      event: normalizedEvent,
-      hasPayload: Object.keys(payload).length > 0,
-      timestamp: new Date().toISOString()
-    });
-    
     // Call with normalized { type, payload } structure
     onEvent(normalizedEvent);
-    
-    console.log(`[Attendance Store] 🎯 Successfully dispatched ${type} event to handler`);
   } catch (error) {
-    console.error(`[Attendance Store] ❌ Error handling event ${type}:`, error);
+    console.error(`[Attendance Store] Error handling event ${type}:`, error);
   }
 }
 
@@ -112,7 +96,6 @@ export function useAttendanceRealtime(hotelSlug, onEvent) {
           }
         };
 
-        console.log('[Attendance Store] 📡 Store change detected, calling handler:', eventData);
         safeEventHandler(handlerRef.current, 'clock-status-updated', eventData.payload);
       }
     }
@@ -148,7 +131,6 @@ export function useAttendanceRealtime(hotelSlug, onEvent) {
           payload: currentUser
         };
 
-        console.log('[Attendance Store] 📡 Personal status change detected:', eventData);
         safeEventHandler(handlerRef.current, eventType, currentUser);
       }
     }

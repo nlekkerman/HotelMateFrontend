@@ -333,9 +333,7 @@ export function testCalculations(frontendLine, backendLine) {
   
   // Log if any mismatches found
   if (!results.expected.match || !results.counted.match || !results.variance.match) {
-    console.warn('⚠️ Calculation mismatch detected:', results);
   } else {
-    console.log('✅ Frontend calculations match backend');
   }
   
   return results;

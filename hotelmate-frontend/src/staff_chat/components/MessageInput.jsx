@@ -45,13 +45,11 @@ const MessageInput = ({
     
     // Trigger onFocus callback when user starts typing (mark as read)
     if (e.target.value.length === 1 && onFocus) {
-      console.log('📝 [MessageInput] User started typing - triggering onFocus to mark as read');
       onFocus();
     }
   };
 
   const handleFocus = (e) => {
-    console.log('🎯 [MessageInput] Input focused - triggering onFocus to mark conversation as read');
     if (onFocus) {
       onFocus();
     }

@@ -39,33 +39,15 @@ const SalesListView = () => {
       setLoading(true);
       setError(null);
 
-      console.log('\n📊 === SALES LIST VIEW - FETCHING DATA ===');
-      console.log('Hotel:', hotel_slug);
-      console.log('Selected Category:', selectedCategory);
 
       const filters = selectedCategory !== 'all' ? { category: selectedCategory } : {};
-      console.log('Filters:', filters);
-      console.log('Calling getAllSales...');
 
       const data = await getAllSales(hotel_slug, filters);
 
-      console.log('✅ API Response received:');
-      console.log('  Raw data type:', typeof data);
-      console.log('  Is array?', Array.isArray(data));
-      console.log('  Has results?', !!data?.results);
-      console.log('  Data:', data);
 
       const salesArray = Array.isArray(data) ? data : data.results || [];
-      console.log('  Final sales array length:', salesArray.length);
       
-      if (salesArray.length > 0) {
-        console.log('  First sale sample:', salesArray[0]);
-        console.log('  Total sales found:', salesArray.length);
-      } else {
-        console.warn('⚠️ No sales returned from API!');
-        console.warn('Expected: 17 sales from Sept 11, 2025');
-        console.warn('Check backend endpoint: /api/stock_tracker/' + hotel_slug + '/sales/');
-      }
+
 
       setSales(salesArray);
     } catch (err) {

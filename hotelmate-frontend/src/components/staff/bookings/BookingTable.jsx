@@ -34,25 +34,19 @@ const BookingTable = ({
       return;
     }
     
-    console.log('🔍 [BookingTable] Fetching staff profile for user:', user.staff_id, 'hotelSlug:', hotelSlug);
-    
     api
       .get(`/staff/hotel/${hotelSlug}/me/`)
       .then((res) => {
-        console.log('🔍 [BookingTable] Staff profile response:', res.data);
         setStaffProfile(res.data);
       })
       .catch((error) => {
-        console.log('🔍 [BookingTable] Staff profile fetch failed, trying fallback:', error);
         // Fallback to old endpoint
         api
           .get("/staff/me/")
           .then((res) => {
-            console.log('🔍 [BookingTable] Fallback staff profile response:', res.data);
             setStaffProfile(res.data);
           })
           .catch((fallbackError) => {
-            console.log('🔍 [BookingTable] Both staff profile endpoints failed:', fallbackError);
             setStaffProfile(null);
           });
       });
@@ -75,25 +69,12 @@ const BookingTable = ({
     if (!booking.staff_seen_at) {
       // 🔥 Optimistic update (instant UI feedback)
       // Create a better display name from available staff profile data
-      console.log('🔍 [BookingTable] Creating display name from:', {
-        staffProfile,
-        staffProfile_first_name: staffProfile?.first_name,
-        staffProfile_last_name: staffProfile?.last_name,
-        staffProfile_full_name: staffProfile?.full_name,
-        user_username: user?.username,
-        user_email: user?.email,
-        user_staff_id: user?.staff_id,
-        user_id: user?.id
-      });
-      
       const displayName = staffProfile?.first_name && staffProfile?.last_name 
                            ? `${staffProfile.first_name} ${staffProfile.last_name}` 
                            : staffProfile?.full_name ||
                              user?.username || 
                              user?.email?.split('@')[0] ||
                              `Staff #${user?.staff_id || user?.id}`;
-                             
-      console.log('🔍 [BookingTable] Final display name:', displayName);
       
       const optimisticUpdate = {
         ...booking,
@@ -287,21 +268,6 @@ const BookingTable = ({
           </thead>
         <tbody>
   {sortedBookings.map((booking) => {
-    // 🔥 DEBUG: verify what the LIST row actually receives (not the modal)
-    if (booking?.booking_id === "BK-2025-0005") {
-      console.log("LIST ROW BK-2025-0005", {
-        booking_id: booking.booking_id,
-        checked_in_at: booking.checked_in_at,
-        checked_out_at: booking.checked_out_at,
-        updated_at: booking.updated_at,
-        assigned_room_number: booking.assigned_room_number,
-        room_type_name_root: booking.room_type_name,
-        room_type_name_room: booking.room?.room_type_name,
-        party_primary: booking.party?.primary?.full_name,
-        party_total: booking.party?.total_count,
-      });
-    }
-
     return (
       <tr
         key={booking.booking_id}

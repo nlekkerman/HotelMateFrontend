@@ -32,7 +32,6 @@ const LowStockChart = ({
   // Initial load: fetch category summary on mount
   useEffect(() => {
     if (hotelSlug && period) {
-      console.log('🔄 Fetching low stock data for current period:', period);
       fetchCategorySummary();
     }
   }, [hotelSlug, period]);
@@ -64,12 +63,9 @@ const LowStockChart = ({
       setError(null);
 
       const data = await getLowStockItems(hotelSlug, servingsThreshold, period);
-      console.log('📦 Low Stock API Response for Period:', period, data);
       
       // API returns array of low stock items directly
       const lowStockItems = Array.isArray(data) ? data : [];
-      console.log('📊 Low Stock Items Count:', lowStockItems.length);
-      console.log('🔍 Period ID being used:', period);
       
       if (lowStockItems.length === 0) {
         setError('Great news! All items have sufficient stock levels.');
@@ -233,11 +229,6 @@ const LowStockChart = ({
     const actualStocks = topItems.map(item => item.current_stock); // Keep actual values for tooltips
     const colors = topItems.map(item => item.color);
 
-    console.log('Chart Data:', topItems.map(item => ({
-      name: item.item_name,
-      current: item.current_stock,
-      threshold: item.threshold
-    })));
 
     return {
       labels,

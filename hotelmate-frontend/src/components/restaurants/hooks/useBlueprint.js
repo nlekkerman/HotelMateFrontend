@@ -6,7 +6,7 @@ export const useBlueprint = (hotelSlug, restaurantSlug) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const log = (...args) => console.log("[useBlueprint]", ...args);
+  const log = (...args) => {};
 
   // Helper: fetch restaurant ID by slug
   const getRestaurantIdBySlug = async (slug) => {
@@ -65,23 +65,18 @@ export const useBlueprint = (hotelSlug, restaurantSlug) => {
 
   if (data.background_image) {
     if (data.background_image instanceof File || data.background_image instanceof Blob) {
-      console.log("[createBlueprint] Attaching background image", data.background_image);
       formData.append("background_image", data.background_image);
     } else {
       console.warn("[createBlueprint] background_image is not a File/Blob", data.background_image);
     }
-  } else {
-    console.log("[createBlueprint] No background image provided");
   }
 
   try {
-    console.log("[createBlueprint] Sending FormData to API", formData);
     const res = await api.post(
       `/bookings/${hotelSlug}/${slug}/blueprint/`,
       formData,
       { headers: { "Content-Type": "multipart/form-data" } }
     );
-    console.log("[createBlueprint] Blueprint creation successful", res.data);
     setBlueprint(res.data);
   } catch (err) {
     const errData = err.response?.data || err.message;

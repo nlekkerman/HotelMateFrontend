@@ -19,7 +19,6 @@ export async function performClockIn(hotelSlug, location = 'Manual') {
       notes: 'Manual clock in from navigation'
     });
     
-    console.log('[ClockActions] Clock in successful:', response.data);
     return response.data;
   } catch (error) {
     console.error('[ClockActions] Clock in failed:', error);
@@ -41,7 +40,6 @@ export async function performClockOut(hotelSlug, reason = 'End of shift') {
       notes: 'Manual clock out from navigation'
     });
     
-    console.log('[ClockActions] Clock out successful:', response.data);
     return response.data;
   } catch (error) {
     console.error('[ClockActions] Clock out failed:', error);
@@ -56,15 +54,12 @@ export async function performClockOut(hotelSlug, reason = 'End of shift') {
  */
 export async function startBreak(hotelSlug) {
   try {
-    console.log('[ClockActions] Starting break via API');
-    
     const response = await api.post(`/staff/hotel/${hotelSlug}/attendance/clock-logs/`, {
       action: 'start_break',
       location_name: 'Manual',
       notes: 'Break started from navigation'
     });
     
-    console.log('[ClockActions] Break start successful:', response.data);
     return response.data;
   } catch (error) {
     console.error('[ClockActions] Break start failed:', error);
@@ -79,15 +74,12 @@ export async function startBreak(hotelSlug) {
  */
 export async function endBreak(hotelSlug) {
   try {
-    console.log('[ClockActions] Ending break via API');
-    
     const response = await api.post(`/staff/hotel/${hotelSlug}/attendance/clock-logs/`, {
       action: 'end_break',
       location_name: 'Manual',
       notes: 'Break ended from navigation'
     });
     
-    console.log('[ClockActions] Break end successful:', response.data);
     return response.data;
   } catch (error) {
     console.error('[ClockActions] Break end failed:', error);

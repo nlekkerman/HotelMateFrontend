@@ -155,8 +155,6 @@ export const useSurveyForm = ({ surveyConfig, fieldRegistry, token, hotelSlug })
         }
       });
       
-      console.log('Submitting survey:', payload);
-      
       await publicAPI.post(`/hotel/${hotelSlug}/survey/submit/`, payload);
       
       setSuccess(true);

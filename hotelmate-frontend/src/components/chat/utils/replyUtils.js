@@ -64,25 +64,7 @@ export const scrollToOriginalMessage = (originalMessageId) => {
  */
 export const createReplyHandlers = (setReplyingTo, messageInputRef) => {
   const startReply = (message) => {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('💬 [REPLY BUTTON CLICKED]');
-    console.log('📩 Message ID:', message.id);
-    console.log('📩 Message text:', message.message || message.content);
-    console.log('📩 Sender type:', message.sender_type);
-    console.log('📩 Staff name:', message.staff_name);
-    console.log('📩 Guest name:', message.guest_name);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('Setting replyingTo:', {
-      id: message.id,
-      message: message.message?.substring(0, 50) + '...',
-      sender_type: message.sender_type,
-      sender_name: message.sender_type === 'staff' ? message.staff_name : message.guest_name
-    });
-    
     setReplyingTo(message);
-    
-    console.log('✅ replyingTo state updated - reply preview should appear');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     // Focus on message input
     if (messageInputRef?.current) {

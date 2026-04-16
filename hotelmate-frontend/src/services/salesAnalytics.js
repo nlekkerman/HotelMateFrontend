@@ -50,17 +50,7 @@ export const getSalesAnalysis = async (hotelSlug, periodId, options = {}) => {
     
     const endpoint = `/stock_tracker/${hotelSlug}/periods/${periodId}/sales-analysis/`;
     
-    console.log('📡 Sales Analysis Request:', { endpoint, periodId, params });
-    
     const response = await api.get(endpoint, { params });
-    
-    console.log('✅ Sales Analysis Response:', {
-      periodId,
-      hasData: !!response.data,
-      generalSalesCount: response.data?.general_sales?.count || 0,
-      cocktailSalesCount: response.data?.cocktail_sales?.count || 0,
-      totalRevenue: response.data?.combined_sales?.total_revenue || 0
-    });
     
     if (response.data?.combined_sales?.total_revenue === 0) {
       console.warn('⚠️ Sales Analysis returned zero revenue - check if data is linked to period');
@@ -135,23 +125,9 @@ export const getSales = async (hotelSlug, filters = {}) => {
     
     const endpoint = `/stock_tracker/${hotelSlug}/sales/`;
     
-    console.log('📡 Fetching Sales:', { 
-      endpoint, 
-      filters: params
-    });
-    
     const response = await api.get(endpoint, { params });
     
     const salesArray = Array.isArray(response.data) ? response.data : response.data?.results || [];
-    
-    console.log('✅ Sales Retrieved:', { 
-      count: salesArray.length,
-      filter: filters.month 
-        ? `MONTH: ${filters.month}`
-        : filters.start_date || filters.end_date 
-          ? `DATE RANGE: ${filters.start_date || 'ANY'} to ${filters.end_date || 'ANY'}`
-          : 'ALL DATES'
-    });
     
     if (salesArray.length === 0) {
       console.warn('⚠️ No sales found with current filters:', params);
@@ -305,20 +281,7 @@ export const getSaleById = async (hotelSlug, saleId) => {
  */
 export const createSale = async (hotelSlug, saleData) => {
   try {
-    console.log('📡 Creating Sale:', {
-      item: saleData.item,
-      quantity: saleData.quantity,
-      month: saleData.month || 'N/A',
-      sale_date: saleData.sale_date || 'N/A'
-    });
-    
     const response = await api.post(`/stock_tracker/${hotelSlug}/sales/`, saleData);
-    
-    console.log('✅ Sale Created:', {
-      id: response.data.id,
-      sale_date: response.data.sale_date,
-      revenue: response.data.total_revenue
-    });
     
     return response.data;
   } catch (error) {
@@ -346,8 +309,6 @@ export const bulkCreateSales = async (hotelSlug, stocktakeId, salesData) => {
       stocktake_id: stocktakeId,
       sales: salesData
     });
-    
-    console.log('✅ Bulk created sales:', response.data.created_count || salesData.length);
     
     return response.data;
   } catch (error) {
@@ -382,7 +343,6 @@ export const updateSale = async (hotelSlug, saleId, updateData) => {
 export const deleteSale = async (hotelSlug, saleId) => {
   try {
     const response = await api.delete(`/stock_tracker/${hotelSlug}/sales/${saleId}/`);
-    console.log('✅ Deleted sale:', saleId);
     return response.data;
   } catch (error) {
     console.error('❌ Error deleting sale:', error);
@@ -434,12 +394,6 @@ export const getSalesSummary = async (hotelSlug, filters = {}) => {
       
       params.start_date = startDate;
       params.end_date = endDate;
-      
-      console.log('📅 Month converted to date range:', { 
-        month: filters.month, 
-        start_date: startDate, 
-        end_date: endDate 
-      });
     }
     // Date range filtering (PRIMARY method)
     else if (filters.start_date && filters.end_date) {
@@ -457,18 +411,7 @@ export const getSalesSummary = async (hotelSlug, filters = {}) => {
       params.stocktake = filters.stocktake;
     }
     
-    console.log('📡 Fetching Sales Summary:', { 
-      endpoint: `/stock_tracker/${hotelSlug}/sales/summary/`,
-      params
-    });
-    
     const response = await api.get(`/stock_tracker/${hotelSlug}/sales/summary/`, { params });
-    
-    console.log('✅ Sales Summary Retrieved:', {
-      categoryCount: response.data?.by_category?.length || 0,
-      totalSales: response.data?.overall?.total_sales || 0,
-      totalRevenue: response.data?.overall?.total_revenue || 0
-    });
     
     return response.data;
   } catch (error) {

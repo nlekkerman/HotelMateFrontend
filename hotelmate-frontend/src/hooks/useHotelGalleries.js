@@ -21,7 +21,7 @@ export const useHotelGalleries = (hotelSlug) => {
     try {
       setLoading(true);
       const response = await api.get(`/staff/hotel/${hotelSlug}/galleries/`);
-      console.log('[useHotelGalleries] 📦 Fetched galleries:', response.data);
+
       
       // Handle paginated response - check for results array
       let data = [];
@@ -40,7 +40,7 @@ export const useHotelGalleries = (hotelSlug) => {
         image_count: g.image_count || 0
       }));
       
-      console.log('[useHotelGalleries] ✅ Setting galleries:', galleriesWithImages);
+
       setGalleries(galleriesWithImages);
       setError(null);
     } catch (err) {
@@ -183,8 +183,7 @@ export const useHotelGalleries = (hotelSlug) => {
 
     // Listen for gallery updates
     channel.bind('gallery-updated', (data) => {
-      console.log('[useHotelGalleries] 🔄 Real-time gallery update:', data);
-      
+
       // Refresh galleries when changes occur
       fetchGalleries();
     });

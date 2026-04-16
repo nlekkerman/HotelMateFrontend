@@ -282,44 +282,14 @@ const BookingStatusPage = () => {
 
       // Debug API call details
       const endpointUrl = `/hotel/${hotelSlug}/room-bookings/${bookingId}/`;
-      const fullUrl = `${publicAPI.defaults.baseURL}${endpointUrl}`;
-      
-      console.log('🌐 [BookingStatusPage] API Call Debug:', {
-        hotelSlug,
-        bookingId,
-        token: token ? `${token.substring(0, 10)}...` : 'null',
-        endpointUrl,
-        fullUrl: fullUrl + `?token=${token}`,
-        publicAPIBaseURL: publicAPI.defaults.baseURL
-      });
 
       // Call the existing hotel-specific booking endpoint with token + email
       const response = await publicAPI.get(endpointUrl, { params: { token, email } });
 
-      console.log('📡 [BookingStatusPage] Full API Response:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: response.headers,
-        data: response.data
-      });
-
       const data = unwrap(response);
-      
-      console.log('📦 [BookingStatusPage] Unwrapped Response Data:', {
-        dataType: typeof data,
-        isObject: typeof data === 'object',
-        isNull: data === null,
-        keys: data ? Object.keys(data) : 'null',
-        fullData: data
-      });
 
       // Hotel slug mismatch protection - redirect if URL doesn't match booking's hotel
       if (data.hotel?.slug && data.hotel.slug !== hotelSlug) {
-        console.log('🔄 [BookingStatusPage] Hotel slug mismatch detected, redirecting:', {
-          url_slug: hotelSlug,
-          booking_hotel_slug: data.hotel.slug,
-          redirecting_to: `/hotel/${data.hotel.slug}/booking/${bookingId}/status?token=${token}`
-        });
         navigate(`/hotel/${data.hotel.slug}/booking/${bookingId}/status?token=${token}`, { replace: true });
         return;
       }
@@ -332,13 +302,6 @@ const BookingStatusPage = () => {
       // Guest token for chat/room service comes from the URL query token,
       // NOT from the public booking detail response (backend hardening).
       // The query string ?token=... is the intended guest-token source.
-
-      // Debug initial booking data structure
-      console.log("📥 Initial booking data loaded:", {
-        status: data.status,
-        checked_in_at: data.checked_in_at,
-        assigned_room_number: data.assigned_room_number,
-      });
 
       // Determine if cancellation should be allowed
       // Use API can_cancel if provided, otherwise check status-based logic
@@ -423,7 +386,6 @@ const BookingStatusPage = () => {
 
       // Bootstrap: GET /api/guest/context/?token={token}
       const ctx = await getGuestBootstrap(hotelSlug, resolvedToken);
-      console.log('[BookingStatusPage] Guest context loaded:', ctx);
       setGuestContext(ctx);
     } catch (err) {
       console.error('[BookingStatusPage] Guest context failed:', {
@@ -472,7 +434,6 @@ const BookingStatusPage = () => {
       );
 
       const result = unwrap(response);
-      console.log("Cancellation response:", result);
 
       // Set cancellation success data
       setCancellationSuccess(result);
@@ -500,7 +461,6 @@ const BookingStatusPage = () => {
   };
 
   useEffect(() => {
-    console.log('🚀 [BookingStatusPage] Component mounted - fetching booking status');
     fetchBookingStatus();
   }, []);
 
@@ -595,18 +555,6 @@ const BookingStatusPage = () => {
     : booking.status;
   const statusInfo = getStatusDisplay(effectiveStatus);
 
-  // Debug current booking state
-  console.log("🔍 Current booking state:", {
-    status: booking?.status,
-    checked_in_at: booking?.checked_in_at,
-    checked_out_at: booking?.checked_out_at,
-    assigned_room_number: booking?.assigned_room_number,
-    isCheckedOut: isCheckedOut,
-    isCheckedIn: isCheckedIn,
-    hasRoomAssigned: hasRoomAssigned,
-    statusInfo: statusInfo,
-  });
-
   // Token-scoped permissions logic
   const allowed = guestContext?.allowed_actions;
 
@@ -635,18 +583,6 @@ const BookingStatusPage = () => {
     hasAllowed("breakfast") ||
     hasAllowed("can_breakfast") ||
     (isCheckedIn && !contextError?.status);
-
-  // Debug chat permissions
-  console.log("🎛️ [BookingStatusPage] Chat permissions debug:", {
-    guestContext,
-    allowed,
-    hasChat: hasAllowed("chat"),
-    hasCanChat: hasAllowed("can_chat"),
-    finalCanChat: canChat,
-    isCheckedIn,
-    contextError,
-    contextLoading,
-  });
 
   const chatDisabledReason = !token
     ? "Missing booking token"
@@ -727,11 +663,6 @@ const BookingStatusPage = () => {
                     console.error('[BookingStatusPage] No token available for chat navigation');
                     return;
                   }
-                  
-                  console.log('[BookingStatusPage] Chat navigation:', {
-                    hotelSlug,
-                    token_preview: chatToken.substring(0, 10) + '...'
-                  });
                   
                   const chatParams = new URLSearchParams({
                     hotel_slug: hotelSlug,

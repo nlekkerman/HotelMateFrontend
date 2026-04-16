@@ -198,9 +198,6 @@ export const attendanceActions = {
     }
 
     if (attendanceActions._processedEventIds?.has(deduplicationKey)) {
-      if (import.meta.env && !import.meta.env.PROD) {
-        console.log("[attendanceStore] Duplicate event detected, skipping:", deduplicationKey, event);
-      }
       return;
     }
 
@@ -216,8 +213,6 @@ export const attendanceActions = {
       const toDelete = eventIds.slice(0, 500); // Remove oldest half
       toDelete.forEach(id => attendanceActions._processedEventIds.delete(id));
     }
-
-    console.log("[attendanceStore] Processing event:", eventType, payload);
 
     // ✅ Handle events from the guide
     switch (eventType) {
@@ -251,9 +246,6 @@ export const attendanceActions = {
         break;
 
       default:
-        if (import.meta.env && !import.meta.env.PROD) {
-          console.log("[attendanceStore] Ignoring eventType:", eventType, event);
-        }
         break;
     }
   },

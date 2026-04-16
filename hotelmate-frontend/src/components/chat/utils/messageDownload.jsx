@@ -42,8 +42,6 @@ export const getCloudinaryUrl = (url, cloudinaryBase = "https://res.cloudinary.c
  */
 export const downloadFile = async (fileUrl, fileName) => {
   try {
-    console.log(`⬇️ Downloading: ${fileName} from ${fileUrl}`);
-    
     // Fetch file
     const response = await fetch(fileUrl);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -67,7 +65,6 @@ export const downloadFile = async (fileUrl, fileName) => {
       window.URL.revokeObjectURL(url);
     }, 100);
     
-    console.log(`✅ Downloaded: ${fileName}`);
     return true;
   } catch (error) {
     console.error(`❌ Failed to download ${fileName}:`, error);
@@ -132,8 +129,6 @@ export const handleMessageDownload = async (
   }
   
   try {
-    console.log('💾 Downloading attachments from message:', message.id);
-    
     // Download all attachments if present
     if (message.attachments && message.attachments.length > 0) {
       const results = await downloadAllAttachments(message.attachments, cloudinaryBase);
@@ -159,8 +154,6 @@ export const handleMessageDownload = async (
     } else {
       onError && onError('Nothing to download from this message.');
     }
-    
-    console.log('✅ Download completed');
   } catch (error) {
     console.error('❌ Failed to download:', error);
     onError && onError('Failed to download. Please try again.');
@@ -223,7 +216,6 @@ export const exportMessageAsJSON = (message) => {
       window.URL.revokeObjectURL(url);
     }, 100);
     
-    console.log('✅ Message exported as JSON');
     return true;
   } catch (error) {
     console.error('❌ Failed to export message as JSON:', error);

@@ -38,16 +38,10 @@ const WaterfallCostChart = ({
     setLoading(true);
     setError(null);
 
-    console.log('🔍 WaterfallCostChart: Fetching cost analysis data...', {
-      hotelSlug,
-      period1,
-      period2
-    });
 
     try {
       const response = await getCostAnalysis(hotelSlug, period1, period2);
       
-      console.log('📦 WaterfallCostChart: Raw API Response:', response);
       
       if (!response || !response.waterfall_data) {
         console.error('❌ WaterfallCostChart: No waterfall data in response');
@@ -56,10 +50,6 @@ const WaterfallCostChart = ({
         return;
       }
 
-      console.log('✅ WaterfallCostChart: Waterfall data received:', {
-        waterfallDataLength: response.waterfall_data?.length,
-        sampleData: response.waterfall_data?.slice(0, 3)
-      });
 
       setChartData(response);
     } catch (err) {
@@ -75,7 +65,6 @@ const WaterfallCostChart = ({
    * Generate ECharts waterfall chart option
    */
   const getWaterfallOption = () => {
-    console.log('🔧 WaterfallCostChart: Generating chart option...', chartData);
     
     if (!chartData || !chartData.waterfall_data) {
       console.error('❌ WaterfallCostChart: No chart data available');
@@ -84,10 +73,6 @@ const WaterfallCostChart = ({
 
     const waterfallData = chartData.waterfall_data;
     
-    console.log('📋 WaterfallCostChart: Processing waterfall data:', {
-      itemsCount: waterfallData.length,
-      items: waterfallData.map(d => ({ label: d.label, value: d.value, type: d.type }))
-    });
 
     // Prepare data for waterfall chart
     // ECharts doesn't have built-in waterfall, so we create it using stacked bars

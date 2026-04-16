@@ -24,7 +24,6 @@ export function OrderCountProvider({ children }) {
     // Skip API calls in guest context (when no staff authentication)
     const isGuestContext = window.location.pathname.includes('/booking/status/');
     if (isGuestContext) {
-      console.log('Skipping room service count refresh in guest context');
       return;
     }
     try {
@@ -44,7 +43,6 @@ export function OrderCountProvider({ children }) {
     // Skip API calls in guest context (when no staff authentication)
     const isGuestContext = window.location.pathname.includes('/booking/status/');
     if (isGuestContext) {
-      console.log('Skipping breakfast count refresh in guest context');
       return;
     }
     try {

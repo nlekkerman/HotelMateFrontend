@@ -12,6 +12,5 @@ import api from '@/services/api';
  */
 export async function provisionHotel(payload) {
   const response = await api.post('/hotel/hotels/provision/', payload);
-  console.log('[provisionHotel] raw response.data:', JSON.stringify(response.data, null, 2));
   return response.data;
 }

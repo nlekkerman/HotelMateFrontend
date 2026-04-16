@@ -77,7 +77,6 @@ export const usePrecheckinData = (hotelSlug, token) => {
         );
         
         const data = unwrap(response);
-        console.log('Precheckin API response data:', data);
         
         // Extract configuration
         const {

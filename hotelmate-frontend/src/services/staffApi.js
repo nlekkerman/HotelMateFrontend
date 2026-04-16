@@ -67,10 +67,6 @@ export const publicPageBuilderAPI = {
    */
   createElement: (hotelSlug, elementData) => {
     const url = `/staff/hotel/${hotelSlug}/public-elements/`;
-    console.log('[staffApi.createElement] URL:', url);
-    console.log('[staffApi.createElement] Payload:', JSON.stringify(elementData, null, 2));
-    console.log('[staffApi.createElement] section field:', elementData.section);
-    console.log('[staffApi.createElement] section type:', typeof elementData.section);
     return api.post(url, elementData);
   },
 
@@ -173,7 +169,6 @@ export const staffOverstayAPI = {
    */
   staffOverstayStatus: (hotelSlug, bookingId) => {
     const url = buildStaffURL(hotelSlug, 'room-bookings', `${bookingId}/overstay/status/`);
-    console.log('[staffOverstayAPI] Status request URL:', url);
     return api.get(url);
   },
 
@@ -186,7 +181,6 @@ export const staffOverstayAPI = {
    */
   staffOverstayAcknowledge: (hotelSlug, bookingId, payload) => {
     const url = buildStaffURL(hotelSlug, 'room-bookings', `${bookingId}/overstay/acknowledge/`);
-    console.log('[staffOverstayAPI] Acknowledge request URL:', url);
     return api.post(url, {
       note: payload.note || '',
       dismiss: payload.dismiss || false
@@ -203,14 +197,6 @@ export const staffOverstayAPI = {
    */
   staffOverstayExtend: (hotelSlug, bookingId, payload, options = {}) => {
     const url = buildStaffURL(hotelSlug, 'room-bookings', `${bookingId}/overstay/extend/`);
-    
-    console.log('[staffOverstayAPI] Extend request details:', {
-      hotelSlug,
-      bookingId,
-      url,
-      payload,
-      options
-    });
     
     // Validate payload - exactly one of add_nights or new_checkout_date
     const hasAddNights = payload.add_nights !== undefined && payload.add_nights !== null;

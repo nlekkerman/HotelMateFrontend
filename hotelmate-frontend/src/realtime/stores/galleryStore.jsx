@@ -11,7 +11,6 @@ export function GalleryStoreProvider({ children }) {
 
   // Placeholder for migration - will be implemented in Phase 6
   const handleEvent = (normalizedEvent) => {
-    console.log('🖼️ Gallery store received event:', normalizedEvent);
     // TODO: Implement gallery event handling in Phase 6
   };
 

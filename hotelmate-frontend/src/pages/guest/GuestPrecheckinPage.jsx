@@ -82,14 +82,8 @@ const GuestPrecheckinPage = () => {
       ...(primaryBase.precheckin_payload || {}) // Flatten precheckin_payload into primary object for form
     };
     
-    console.log('🔄 Primary guest merge - Base:', primaryBase);
-    console.log('🔄 Primary guest merge - Payload:', primaryBase.precheckin_payload);
-    console.log('🔄 Primary guest merge - Final:', primary);
-    
     // CANONICAL: Use booking.expected_guests directly from public precheckin API
     const expectedGuests = booking.expected_guests || 0;
-    console.log('🎯 Guest precheckin - Expected guests from backend:', expectedGuests);
-    console.log('📊 Party data - Total recorded:', data.party?.total_count, 'Missing:', data.party_missing_count);
     
     // Validate we have expected_guests data
     if (expectedGuests === 0) {
@@ -104,12 +98,6 @@ const GuestPrecheckinPage = () => {
       party.companions || [],
       maxCompanions
     );
-    
-    console.log('👥 Companion slots calculation:');
-    console.log('  • Expected guests:', expectedGuests);
-    console.log('  • Max companions (expected - 1):', maxCompanions);
-    console.log('  • Current companions from backend:', party.companions?.length || 0);
-    console.log('  • Missing companions needed:', Math.max(0, maxCompanions - (party.companions?.length || 0)));
     
     // Determine booking contact based on booker_type (no heuristics)
     let bookingContact;
@@ -133,16 +121,6 @@ const GuestPrecheckinPage = () => {
       };
     }
     
-    // Final comparison logging  
-    const recordedGuests = party?.total_count || 0;
-    const partyMissingCount = data.party_missing_count || 0;
-    console.log('📊 EXPECTED vs RECORDED COMPARISON:');
-    console.log('  • Expected: booking.expected_guests =', expectedGuests);
-    console.log('  • Recorded: party.total_count =', recordedGuests);
-    console.log('  • Missing: party_missing_count =', partyMissingCount);
-    console.log('  • Max companion slots available:', maxCompanions);
-    console.log('  • Actual companion slots created:', companionSlots.length);
-
     return {
       booking,
       bookingContact,
@@ -254,7 +232,6 @@ const GuestPrecheckinPage = () => {
       if (cached) {
         try {
           data = JSON.parse(cached);
-          console.log('[Precheckin] Loaded from sessionStorage cache');
         } catch {
           sessionStorage.removeItem(cacheKey);
         }
@@ -275,26 +252,6 @@ const GuestPrecheckinPage = () => {
         }
       }
 
-      console.log('Precheckin API response data:', data);
-      console.log('🏗️ Field registry (old format):', data.precheckin_field_registry);
-      console.log('🏗️ Precheckin fields (new format):', data.precheckin_fields);
-      console.log('📋 Config enabled:', data.precheckin_config?.enabled);
-      console.log('📋 Config required:', data.precheckin_config?.required);
-
-      // Detailed field configurations
-      if (data.precheckin_field_registry) {
-        console.log('🔍 ETA field config:', data.precheckin_field_registry.eta);
-        console.log('🔍 Nationality field config:', data.precheckin_field_registry.nationality);
-        console.log('🔍 Consent checkbox config:', data.precheckin_field_registry.consent_checkbox);
-        console.log('🔍 Special requests config:', data.precheckin_field_registry.special_requests);
-
-        // Show nationality choices
-        if (data.precheckin_field_registry.nationality?.choices) {
-          console.log('🌍 Available nationality choices:', data.precheckin_field_registry.nationality.choices);
-        }
-      }
-
-      // Use new normalize function - trusts booker_type, no heuristics
       const normalized = normalizePrecheckinData(data);
 
       setNormalizedData(normalized);
@@ -303,7 +260,6 @@ const GuestPrecheckinPage = () => {
 
       // Initialize extras with existing data from booking.extras
       if (data.booking?.extras) {
-        console.log('🎯 Initializing extras with existing data:', data.booking.extras);
         setExtrasValues(data.booking.extras);
       }
 
@@ -547,8 +503,6 @@ const GuestPrecheckinPage = () => {
         }
       });
     
-    console.log('🔍 Built payload (backend format):', JSON.stringify(payload, null, 2));
-    
     return payload;
   };
 
@@ -570,7 +524,6 @@ const GuestPrecheckinPage = () => {
       const payload = buildPayload();
       // Add token to payload instead of query parameter
       payload.token = token;
-      console.log('🚀 Submitting payload:', JSON.stringify(payload, null, 2));
       
       await publicAPI.post(
         `/hotel/${hotelSlug}/precheckin/submit/`,
@@ -587,7 +540,6 @@ const GuestPrecheckinPage = () => {
       
       // Handle field errors from backend
       if (err.response?.status === 400 && err.response?.data?.field_errors) {
-        console.log('🔍 Backend field errors:', err.response.data.field_errors);
         const mappedErrors = err.response.data.field_errors;
         setFieldErrors(mappedErrors);
       }

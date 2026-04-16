@@ -60,7 +60,6 @@ export const copyMessageToClipboard = async (message) => {
   try {
     const shareText = formatMessageForSharing(message);
     await navigator.clipboard.writeText(shareText);
-    console.log('✅ Message copied to clipboard');
     return true;
   } catch (error) {
     console.error('❌ Failed to copy to clipboard:', error);
@@ -96,12 +95,11 @@ export const shareMessageViaWebShare = async (message) => {
     }
     
     await navigator.share(shareData);
-    console.log('✅ Message shared successfully');
     return true;
   } catch (error) {
     // User cancelled or error occurred
     if (error.name === 'AbortError') {
-      console.log('ℹ️ Share cancelled by user');
+      // Share cancelled by user
     } else {
       console.error('❌ Error sharing message:', error);
     }
@@ -116,8 +114,6 @@ export const shareMessageViaWebShare = async (message) => {
  * @param {Function} onError - Callback on error
  */
 export const handleMessageShare = async (message, onSuccess, onError) => {
-  console.log('📤 Attempting to share message:', message.id);
-  
   // Try Web Share API first (if available and on mobile)
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   
@@ -150,9 +146,6 @@ export const createShareableLink = (message, conversationId, hotelSlug) => {
   // This would create a temporary public link to the message
   // Requires backend support
   
-  console.log('ℹ️ createShareableLink not yet implemented');
-  console.log('ℹ️ Message:', message.id, 'Conversation:', conversationId, 'Hotel:', hotelSlug);
-  
   return null;
 };
 
@@ -164,9 +157,6 @@ export const createShareableLink = (message, conversationId, hotelSlug) => {
 export const exportMessageAsFile = async (message) => {
   // Placeholder for future implementation
   // This would create a formatted file (JSON, text, or PDF) with the message and attachments
-  
-  console.log('ℹ️ exportMessageAsFile not yet implemented');
-  console.log('ℹ️ Message:', message.id);
   
   return false;
 };

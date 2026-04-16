@@ -176,12 +176,9 @@ const GuestRoomBookingPage = () => {
 
   // Fetch hotel data
   useEffect(() => {
-    console.log('[UseEffect] Hotel data useEffect triggered with hotelSlug:', hotelSlug);
     if (!hotelSlug) {
-      console.log('[UseEffect] No hotel slug, skipping fetch');
       return;
     }
-    console.log('[UseEffect] Calling fetchHotelData');
     fetchHotelData();
   }, [hotelSlug]);
 
@@ -191,14 +188,11 @@ const GuestRoomBookingPage = () => {
     
     const existingHold = getHold(hotelSlug);
     if (existingHold) {
-      console.log('[BOOKING_HOLD] Rehydrating existing hold:', existingHold);
-      
       // Check if hold is expired
       const now = new Date();
       const expiresAt = new Date(existingHold.expiresAt);
       
       if (now > expiresAt) {
-        console.log('[BOOKING_HOLD] Hold expired, clearing storage');
         clearHold(hotelSlug);
         return;
       }
@@ -216,14 +210,12 @@ const GuestRoomBookingPage = () => {
       
       // Cross-hotel validation
       if (bookingData.hotel?.slug !== hotelSlug) {
-        console.log('[BOOKING_HOLD] Cross-hotel booking detected, clearing storage');
         expiredHandler.handleExpired(new Error('Cross-hotel booking'));
         return;
       }
       
       // Check booking status
       if (expiredHandler.isExpiredBooking(bookingData)) {
-        console.log('[BOOKING_HOLD] Booking expired or cancelled');
         expiredHandler.handleExpired(bookingData);
         return;
       }
@@ -333,19 +325,6 @@ const GuestRoomBookingPage = () => {
       });
       
       const quoteData = unwrap(response);
-      console.log('[GuestRoomBookingPage] Full Quote response:', quoteData);
-      console.log('[GuestRoomBookingPage] Cancellation policy data:', {
-        cancellation_policy_id: quoteData?.cancellation_policy_id,
-        cancellation_policy_text: quoteData?.cancellation_policy_text,
-        cancellation_policy_name: quoteData?.cancellation_policy_name,
-        cancellation_policy_code: quoteData?.cancellation_policy_code,
-        template_type: quoteData?.template_type,
-        is_refundable: quoteData?.is_refundable,
-        hours_before_checkin: quoteData?.hours_before_checkin,
-        penalty_type: quoteData?.penalty_type,
-        penalty_amount: quoteData?.penalty_amount
-      });
-      console.log('[GuestRoomBookingPage] Backend should send policy info for hotel default policy!');
       
       setQuote(quoteData);
       setSelectedRoom(roomCode);
@@ -443,16 +422,6 @@ const GuestRoomBookingPage = () => {
       
       const payload = buildBookingPayload();
 
-      // Debug logging
-      console.log('[BOOKING] 🚀 Final canonical payload:', payload);
-      console.log('[BOOKING] 📋 Payload validation:', {
-        has_booker_fields: bookerType === 'THIRD_PARTY' && payload.booker_first_name,
-        no_booker_fields_for_self: bookerType === 'SELF' && !payload.booker_first_name,
-        party_count: payload.party ? payload.party.length : 0,
-        party_companions_only: payload.party ? !payload.party.some(p => p.role === 'PRIMARY') : true,
-        no_legacy_keys: !payload.guest && !payload.companions && !payload.primary_guest && !payload.booker
-      });
-
       const response = await publicAPI.post(`/hotel/${hotelSlug}/bookings/`, payload);
       
       // Store booking data and persist hold
@@ -467,7 +436,6 @@ const GuestRoomBookingPage = () => {
         };
         setHold(hotelSlug, holdData);
         setBookingHold(holdData);
-        console.log('[BOOKING_HOLD] Persisted booking hold:', holdData);
       }
       
       setStep(4);

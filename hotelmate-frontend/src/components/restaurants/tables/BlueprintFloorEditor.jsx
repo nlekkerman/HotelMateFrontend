@@ -252,7 +252,6 @@ export default function BlueprintFloorEditor({
       ...prev,
       [id]: pos,
     }));
-    console.log("Dragging table", id, "to", pos);
   };
 
   const handleTableDragStop = (id, pos) => {

@@ -23,7 +23,6 @@ const shouldIgnoreBookingEvent = (booking, payload) => {
   
   // Always ignore non-operational statuses for staff views
   if (status && NON_OPERATIONAL_STATUSES.includes(status.toUpperCase())) {
-    console.debug('[roomBookingStore] Ignoring non-operational booking status:', status);
     return true;
   }
   
@@ -207,7 +206,6 @@ export const roomBookingActions = {
     const eventId = event.meta?.event_id;
     if (eventId) {
       if (roomBookingActions._processedEventIds.has(eventId)) {
-        console.debug('[roomBookingStore] Skipping duplicate event:', eventId);
         return;
       }
       roomBookingActions._processedEventIds.add(eventId);
@@ -233,8 +231,6 @@ export const roomBookingActions = {
       console.warn('[roomBookingStore] Could not extract booking ID from event:', event);
       return;
     }
-
-    console.log(`[roomBookingStore] Processing ${eventType} for booking ${bookingId}`);
 
     switch (eventType) {
       case "booking_created":
@@ -342,13 +338,9 @@ export const roomBookingActions = {
       case "integrity_healed":
       case "party_healed":
       case "guests_healed":
-        console.debug(`[roomBookingStore] Healing event received (ignored): ${eventType}`, event);
         return; // Return early — no React Query invalidation needed
 
       default:
-        if (import.meta.env && !import.meta.env.PROD) {
-          console.log("[roomBookingStore] Ignoring eventType:", eventType, event);
-        }
         return; // Return early — unknown event, no invalidation
     }
 
@@ -388,7 +380,7 @@ export const roomBookingActions = {
     import('react-toastify').then(({ toast }) => {
       toast[type]?.(message) || toast(message);
     }).catch(() => {
-      console.log('[roomBookingStore] Toast notification:', type, message);
+      // Toast library not available
     });
   },
 };

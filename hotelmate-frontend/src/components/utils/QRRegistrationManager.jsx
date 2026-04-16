@@ -23,14 +23,11 @@ const QRRegistrationManager = () => {
         throw new Error('Hotel slug not found. Please log in again.');
       }
 
-      console.log('🎫 Generating registration package for:', hotelSlug);
-
       const response = await api.post(
         '/staff/registration-package/',
         { hotel_slug: hotelSlug }
       );
 
-      console.log('✅ Package generated:', response.data);
       setCurrentPackage(response.data);
       
       // Add to packages list

@@ -117,7 +117,6 @@ function AttendanceDashboardComponent() {
   const { user: authUser } = useAuth();
   const { isSuperStaffAdmin } = usePermissions();
   
-  console.log('[AttendanceDashboardComponent] Rendering with hotelSlug:', hotelSlug);
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedDate, setSelectedDate] = useState(
     () => new Date().toISOString().slice(0, 10)
@@ -152,20 +151,16 @@ function AttendanceDashboardComponent() {
   }, [viewMode, setSearchParams]);
   
   function handleRowClick(row) {
-    console.log('[AttendanceDashboard] handleRowClick called with:', row);
     // Handle both table rows and staff summaries
     if (row.id && row.full_name) {
       // This is a staff summary from card view
-      console.log('[AttendanceDashboard] Setting staff summary:', row);
       setSelectedStaffSummary(row);
       setSelectedStaffRow(null);
     } else {
       // This is a table row
-      console.log('[AttendanceDashboard] Setting staff row:', row);
       setSelectedStaffRow(row);
       setSelectedStaffSummary(null);
     }
-    console.log('[AttendanceDashboard] Setting showStaffModal to true');
     setShowStaffModal(true);
   }
 
@@ -233,8 +228,6 @@ function AttendanceDashboardComponent() {
 
     // Handle real-time clock status updates
     if (type === 'clock-status-updated') {
-      console.log('[AttendanceDashboard] Real-time clock status update:', payload);
-      
       // Window event dispatching removed - realtime updates now handled through attendance store
       // The navbar and other components should use the store-driven hooks instead
       
@@ -244,7 +237,6 @@ function AttendanceDashboardComponent() {
       }
       
       // Refresh table data immediately for real-time updates
-      console.log('[AttendanceDashboard] Refreshing table data due to status change');
       setRefreshKey((prev) => prev + 1);
       return; // Early return to avoid double refresh
     }
@@ -311,8 +303,7 @@ function AttendanceDashboardComponent() {
 
     // Handle approved/rejected events
     if (type === "log-approved" || type === "log-rejected") {
-      const action = type === "log-approved" ? "approved" : "rejected";
-      console.log(`[Dashboard] Clock log ${action} for ${staffName}`);
+      // Clock log approved/rejected
     }
 
     // Handle unknown event types
@@ -431,8 +422,6 @@ function AttendanceDashboardComponent() {
       
       showSuccessMessage('finalize');
     } catch (err) {
-      console.log('Finalize error response:', err.response?.data);
-      
       // Check if this is a validation error with force option
       if (err.response?.status === 400 && err.response?.data) {
         const errorData = err.response.data;
@@ -456,7 +445,6 @@ function AttendanceDashboardComponent() {
   };
 
   function handleRowAction(actionType, log) {
-    console.log("Row action:", actionType, log);
     setRefreshKey((prev) => prev + 1);
   }
 
@@ -599,10 +587,6 @@ function AttendanceDashboardComponent() {
       return id === staffId;
     });
   }
-
-  console.log("ROSTER", roster.items);
-  console.log("LOGS", logs.items);
-  console.log("MERGED", mergedRows);
 
   return (
     <div className="container py-4 attendance-dashboard d-flex flex-column vw-100 justify-content-center align-self-center align-items-center">
@@ -813,7 +797,6 @@ function AttendanceDashboardComponent() {
 
 // Wrap with error boundary
 export default function AttendanceDashboard() {
-  console.log('[AttendanceDashboard] Component is rendering');
   return (
     <AttendanceErrorBoundary showDetails={process.env.NODE_ENV === 'development'}>
       <AttendanceDashboardComponent />

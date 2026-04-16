@@ -56,7 +56,6 @@ const HotelsLandingPage = () => {
 
   // Fetch hotels when filters change
   useEffect(() => {
-    console.log('[HotelsLanding] Filters changed:', filters);
     fetchHotels();
   }, [filters]);
 
@@ -87,22 +86,11 @@ const HotelsLandingPage = () => {
       if (filters.hotel_type) params.hotel_type = filters.hotel_type;
       if (filters.sort && filters.sort !== 'featured') params.sort_by = filters.sort;
       
-      console.log('[HotelsLanding] Fetching hotels with params:', params);
-      
       // Fetch hotels from public API endpoint with filters
       const response = await publicHotelPageAPI.getHotels(params);
       
       // Extract hotels from response (backend handles filtering and sorting)
       const hotelsData = response.results || response;
-      
-      console.log('[HotelsLanding] Raw API response:', response);
-      console.log('[HotelsLanding] First hotel data:', hotelsData?.[0]);
-      console.log('[HotelsLanding] Image fields:', hotelsData?.[0] && {
-        hero_image_url: hotelsData[0].hero_image_url,
-        hero_image: hotelsData[0].hero_image,
-        logo_url: hotelsData[0].logo_url,
-        logo: hotelsData[0].logo,
-      });
       
       // Set hotels directly - backend does all the filtering and sorting
       const activeHotels = Array.isArray(hotelsData) 
@@ -126,8 +114,6 @@ const HotelsLandingPage = () => {
   };
 
   // Cache bust verification
-  console.log('🚨 HotelsLandingPage LOADED at:', new Date().toISOString());
-  console.log('🚨 WARNINGS SHOULD BE VISIBLE NOW!');
 
   return (
     <div className="hotels-landing-page min-vh-100 bg-light">

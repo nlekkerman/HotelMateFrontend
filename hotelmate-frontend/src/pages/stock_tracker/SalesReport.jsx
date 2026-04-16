@@ -41,12 +41,10 @@ export default function SalesReport() {
   const fetchAvailableMonths = async () => {
     try {
       setLoading(true);
-      console.log('📅 Fetching all sales to determine available months...');
       
       // Fetch ALL sales
       const allSales = await getSales(hotel_slug, {});
       
-      console.log('✅ Fetched sales:', allSales.length);
       
       if (allSales.length === 0) {
         setError('No sales found. Please create some sales first.');
@@ -57,7 +55,6 @@ export default function SalesReport() {
       // Group sales by month
       const groupedByMonth = groupSalesByMonth(allSales);
       
-      console.log('📊 Available months:', groupedByMonth.map(m => m.monthLabel));
       
       setAvailableMonths(groupedByMonth);
       
@@ -77,17 +74,14 @@ export default function SalesReport() {
       setLoading(true);
       setError(null);
       
-      console.log('📊 Fetching sales summary for month:', selectedMonth);
 
       // Fetch sales for selected month
       const sales = await getSales(hotel_slug, { month: selectedMonth });
       
-      console.log('✅ Sales for', selectedMonth, ':', sales.length);
       
       // Calculate summary
       const summary = await getSalesSummary(hotel_slug, { month: selectedMonth });
       
-      console.log('✅ Summary:', summary);
       
       setSalesData(sales);
       setSalesSummary(summary);

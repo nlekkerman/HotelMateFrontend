@@ -5,40 +5,12 @@ import { format } from 'date-fns';
 const BookingDetailsPrecheckinSummary = ({ booking }) => {
   const isComplete = booking?.precheckin_submitted_at != null;
   
-  // Debug logging to verify canonical contract compliance
-  console.log('🔍 [CANONICAL CONTRACT] Booking detail response:', {
-    booking_id: booking?.booking_id,
-    adults: booking?.adults,
-    children: booking?.children,
-    party_complete: booking?.party_complete,
-    party_missing_count: booking?.party_missing_count,
-    party_total_count: booking?.party?.total_count,
-    precheckin_submitted_at: booking?.precheckin_submitted_at,
-    has_precheckin_payload: !!booking?.precheckin_payload,
-    has_party_primary: !!booking?.party?.primary,
-    has_party_primary_precheckin: !!booking?.party?.primary?.precheckin_payload
-  });
-  
-  // EXPANDED DEBUG: Check individual precheckin payload data
-  console.log('🔬 [PRECHECKIN PAYLOAD DEBUG] Detailed breakdown:');
-  console.log('Booking-level precheckin_payload:', booking?.precheckin_payload);
-  console.log('Primary guest precheckin_payload:', booking?.party?.primary?.precheckin_payload);
-  console.log('Primary guest nationality:', booking?.party?.primary?.precheckin_payload?.nationality);
-  
-  if (booking?.party?.companions) {
-    booking.party.companions.forEach((companion, index) => {
-      console.log(`Companion ${index + 1} precheckin_payload:`, companion.precheckin_payload);
-      console.log(`Companion ${index + 1} nationality:`, companion.precheckin_payload?.nationality);
-    });
-  }
-  
   // Check if any precheckin data exists anywhere
   const hasAnyPrecheckinData = !!(
     booking?.precheckin_payload && Object.keys(booking.precheckin_payload).length > 0 ||
     booking?.party?.primary?.precheckin_payload && Object.keys(booking.party.primary.precheckin_payload).length > 0 ||
     booking?.party?.companions?.some(c => c.precheckin_payload && Object.keys(c.precheckin_payload).length > 0)
   );
-  console.log('🚨 [DATA CHECK] Has ANY precheckin data?', hasAnyPrecheckinData);
   
   if (!isComplete) {
     return (

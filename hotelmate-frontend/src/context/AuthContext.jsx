@@ -77,7 +77,6 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('player_name');
     localStorage.removeItem('room_number');
     
-    console.log('🧹 [AuthContext] Logout: All localStorage items cleared');
     // Navigation handled by components calling logout
   };
 

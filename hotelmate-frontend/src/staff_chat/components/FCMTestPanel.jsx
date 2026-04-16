@@ -21,7 +21,6 @@ const FCMTestPanel = () => {
     
     // Setup foreground message listener
     const unsubscribe = FirebaseService.setupForegroundMessageListener((payload) => {
-      // console.log('🔔 Foreground notification received:', payload);
       showMessage(`Received: ${payload.notification?.title || 'Notification'}`, 'success');
     });
 
@@ -87,10 +86,6 @@ const FCMTestPanel = () => {
       if (token) {
         setFcmToken(token);
         showMessage('FCM token obtained and saved to backend!', 'success');
-        
-        // Check backend response
-        // console.log('✅ FCM Token saved for staff:', authUser?.staff_id);
-        // console.log('📝 Token:', token);
       } else {
         showMessage('Failed to get FCM token. Check console for errors.', 'error');
       }

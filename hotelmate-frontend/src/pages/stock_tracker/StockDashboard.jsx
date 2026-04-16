@@ -28,26 +28,22 @@ export default function StockDashboard() {
   // Fetch reports when period changes
   useEffect(() => {
     if (selectedPeriod) {
-      console.log('useEffect triggered - fetching reports for:', selectedPeriod.period_name, 'ID:', selectedPeriod.id);
       fetchBackendReports(selectedPeriod.id);
     }
   }, [selectedPeriod?.id]); // Only trigger when ID changes
 
   const fetchPeriods = async () => {
     try {
-      console.log('Fetching periods for:', hotel_slug);
       
       const periodsResponse = await api.get(`/stock_tracker/${hotel_slug}/periods/`);
       const allPeriods = periodsResponse.data.results || periodsResponse.data;
       
-      console.log('All periods:', allPeriods);
       
       // Filter closed periods and sort by end_date descending
       const closedPeriods = allPeriods
         .filter(p => p.is_closed)
         .sort((a, b) => new Date(b.end_date) - new Date(a.end_date));
       
-      console.log('Closed periods:', closedPeriods);
       
       setPeriods(closedPeriods);
       
@@ -70,21 +66,13 @@ export default function StockDashboard() {
       setReportsLoading(true);
       setReportsError(null);
       
-      console.log('==========================================');
-      console.log('🔄 FETCHING REPORTS FOR PERIOD ID:', periodId);
-      console.log('Hotel Slug:', hotel_slug);
-      console.log('==========================================');
       
       const stockValueUrl = `/stock_tracker/${hotel_slug}/reports/stock-value/?period=${periodId}`;
       
-      console.log('📡 Stock Value URL:', stockValueUrl);
       
       // Fetch stock value report
       const stockValueResp = await api.get(stockValueUrl);
       
-      console.log('✅ Stock Value Report Response:', stockValueResp.data);
-      console.log('   - Period:', stockValueResp.data.period.period_name);
-      console.log('   - Cost Value:', stockValueResp.data.totals.cost_value);
       
       setStockValueReport(stockValueResp.data);
       
@@ -94,16 +82,13 @@ export default function StockDashboard() {
       setReportsError(err.response?.data?.detail || err.message || 'Failed to load reports');
     } finally {
       setReportsLoading(false);
-      console.log('==========================================');
     }
   };
 
   const handlePeriodChange = (e) => {
     const periodId = parseInt(e.target.value);
-    console.log('Period changed to ID:', periodId);
     const period = periods.find(p => p.id === periodId);
     if (period) {
-      console.log('Selected period:', period.period_name);
       setSelectedPeriod(period);
     }
   };
