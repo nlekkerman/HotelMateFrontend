@@ -178,7 +178,7 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           category: "staff_chat",
           type: eventName,
           payload: payload,           // <---- PAYLOAD IS THE MESSAGE
-          meta: { channel, eventName, event_id: payload?.event_id, _chatDbgId },
+          meta: { channel, eventName, event_id: payload?.event_id },
           source,
           timestamp: new Date().toISOString()
         };
@@ -214,7 +214,7 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           category: "staff_chat",
           type: eventName,
           payload: payload,
-          meta: { channel, eventName, event_id: payload?.event_id || payload?.id, _chatDbgId },
+          meta: { channel, eventName, event_id: payload?.event_id || payload?.id },
           source,
           timestamp: new Date().toISOString()
         };
@@ -265,6 +265,41 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
       // Add to notification center
       maybeAddToNotificationCenter(guestMessageNotification);
       
+      // Also route to chatStore so the sidebar conversation list updates
+      // (unread count, last message preview) without requiring a page refresh.
+      // The -notifications channel also bridges guest messages, but this ensures
+      // the hotel-wide channel always keeps the sidebar in sync.
+      if (payload?.conversation_id) {
+        const guestChatStoreEvent = {
+          category: 'staff_chat',
+          type: 'realtime_staff_chat_message_created',
+          payload: {
+            id: payload?.message_id || payload?.id || `guest-msg-${Date.now()}`,
+            message: payload?.message || 'New message',
+            sender_id: payload?.guest_id || payload?.sender_id || `guest-${Date.now()}`,
+            sender: payload?.guest_id || payload?.sender_id || `guest-${Date.now()}`,
+            sender_name: payload?.guest_name || 'Guest',
+            sender_role: 'guest',
+            sender_type: 'guest',
+            conversation_id: payload.conversation_id,
+            conversation: payload.conversation_id,
+            booking_id: payload?.booking_id,
+            room_number: payload?.room_number,
+            timestamp: payload?.timestamp || new Date().toISOString(),
+            created_at: payload?.timestamp || new Date().toISOString()
+          },
+          meta: {
+            channel,
+            eventName: 'realtime_staff_chat_message_created',
+            event_id: payload?.event_id || payload?.id || `guest-msg-store-${Date.now()}`,
+            conversation_id: payload.conversation_id
+          },
+          source,
+          timestamp: payload?.timestamp || new Date().toISOString()
+        };
+        routeToDomainStores(guestChatStoreEvent);
+      }
+      
       return;
     }
 
@@ -297,8 +332,7 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           channel, 
           eventName, 
           event_id: payload?.event_id || payload?.id || `room-status-${Date.now()}`,
-          scope: { room_number: payload?.room_number },
-          _dbgId
+          scope: { room_number: payload?.room_number }
         },
         source,
         timestamp: new Date().toISOString()
@@ -318,8 +352,7 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           channel, 
           eventName, 
           event_id: payload?.event_id || payload?.id || `room-occupancy-${Date.now()}`,
-          scope: { room_number: payload?.room_number },
-          _dbgId
+          scope: { room_number: payload?.room_number }
         },
         source,
         timestamp: new Date().toISOString()
@@ -339,8 +372,7 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           channel,
           eventName,
           event_id: payload?.event_id || payload?.id || `room-updated-${Date.now()}`,
-          scope: { room_number: payload?.room_number },
-          _dbgId
+          scope: { room_number: payload?.room_number }
         },
         source,
         timestamp: new Date().toISOString()
@@ -361,8 +393,7 @@ export function handleIncomingRealtimeEvent({ source, channel, eventName, payloa
           channel,
           eventName,
           event_id: payload?.event_id || payload?.meta?.event_id || payload?.id || `staff-${Date.now()}`,
-          scope: { booking_id: payload?.booking_id || payload?.id },
-          _dbgId
+          scope: { booking_id: payload?.booking_id || payload?.id }
         },
         source,
         timestamp: payload?.meta?.ts || new Date().toISOString()

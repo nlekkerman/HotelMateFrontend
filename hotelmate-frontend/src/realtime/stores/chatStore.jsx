@@ -130,11 +130,30 @@ function chatReducer(state, action) {
       
       let conversation = state.conversationsById[conversationId];
       
-      // If conversation doesn't exist in the store, skip — the API hydration
-      // will bring it in with full data (guest_name, room_number, etc.).
-      // Creating stubs here caused ghost conversations with missing fields.
+      // If conversation doesn't exist in the store, create a minimal stub so the
+      // sidebar can display the new message immediately. The next API hydration
+      // will fill in remaining fields (participants, etc.).
       if (!conversation) {
-        return state;
+        const isGuest = message.sender_type === 'guest' || message.sender_role === 'guest';
+        conversation = {
+          id: conversationId,
+          conversation_id: conversationId,
+          title: '',
+          participants: [],
+          messages: [],
+          unread_count: 0,
+          lastMessage: null,
+          last_message: null,
+          updatedAt: message.timestamp || new Date().toISOString(),
+          last_message_time: message.timestamp || new Date().toISOString(),
+          guest_name: message.guest_name || (isGuest ? message.sender_name : null) || null,
+          guestName: message.guest_name || (isGuest ? message.sender_name : null) || null,
+          room_number: message.room_number || null,
+          roomNumber: message.room_number || null,
+          room: message.room_number ? { number: message.room_number, guest_name: message.guest_name || message.sender_name } : null,
+          _source: isGuest ? 'room_chat' : (message._source || null),
+          _stubbed: true, // flag so API hydration can fill in missing fields
+        };
       }
 
       // Check if message already exists (avoid duplicates)
