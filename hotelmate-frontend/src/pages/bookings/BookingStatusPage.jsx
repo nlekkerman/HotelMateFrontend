@@ -281,7 +281,6 @@ const BookingStatusPage = () => {
       setError(null);
 
       // Debug API call details
-      logQueryRefetchStart('guest-booking-status', { bookingId });
       const endpointUrl = `/hotel/${hotelSlug}/room-bookings/${bookingId}/`;
       const fullUrl = `${publicAPI.defaults.baseURL}${endpointUrl}`;
       
