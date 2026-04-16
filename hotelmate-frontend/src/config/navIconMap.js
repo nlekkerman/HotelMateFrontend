@@ -1,7 +1,61 @@
 // src/config/navIconMap.js
 // Canonical icon mapping for navigation slugs.
-// Uses Bootstrap Icons (bi-*). All keys are canonical RBAC slugs.
+// Dual system: Lucide React components for desktop launcher,
+// Bootstrap Icon classes for legacy/mobile usage.
+import {
+  LayoutGrid,
+  Home,
+  MessageCircle,
+  DoorOpen,
+  CalendarCheck,
+  UtensilsCrossed,
+  ConciergeBell,
+  Sparkles,
+  Clock,
+  Info,
+  Settings,
+  UserCog,
+  BarChart3,
+  Wrench,
+  Gamepad2,
+  ShieldCheck,
+  Globe,
+  LogOut,
+  Circle,
+} from 'lucide-react';
 
+// ── Lucide component map (used by desktop launcher) ──────────────
+const LUCIDE_ICON_MAP = {
+  overview:             LayoutGrid,
+  home:                 Home,
+  chat:                 MessageCircle,
+  rooms:                DoorOpen,
+  room_bookings:        CalendarCheck,
+  restaurant_bookings:  UtensilsCrossed,
+  room_services:        ConciergeBell,
+  housekeeping:         Sparkles,
+  attendance:           Clock,
+  hotel_info:           Info,
+  admin_settings:       Settings,
+  staff_management:     UserCog,
+  stock_tracker:        BarChart3,
+  maintenance:          Wrench,
+  entertainment:        Gamepad2,
+  front_office:         DoorOpen,
+  guest_relations:      MessageCircle,
+  public_page:          Globe,
+  super_user:           ShieldCheck,
+  clock_in:             Clock,
+  logout:               LogOut,
+};
+
+const LUCIDE_FALLBACK = Circle;
+
+export function getLucideIcon(slug) {
+  return LUCIDE_ICON_MAP[slug] || LUCIDE_FALLBACK;
+}
+
+// ── Bootstrap Icon class map (legacy — mobile nav, etc.) ─────────
 const NAV_ICON_MAP = {
   overview:             'bi bi-grid-1x2',
   home:                 'bi bi-house',

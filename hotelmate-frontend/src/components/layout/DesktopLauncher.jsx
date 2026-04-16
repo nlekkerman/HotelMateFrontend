@@ -1,17 +1,98 @@
 // src/components/layout/DesktopLauncher.jsx
-// Desktop-only horizontal dock launcher for staff area.
-// Closed: small tab/bookmark at top-center. Open: wide horizontal dashboard bar.
-// Does NOT render on mobile.
+// Desktop-only full-width launcher panel for staff area.
+// Closed: small tab/bookmark at top-right. Open: full-width panel with staggered tiles.
+// Does NOT render on mobile. RBAC logic lives in useDesktopNav — untouched here.
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useDesktopNav } from '@/hooks/useDesktopNav';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
+import { getLucideIcon } from '@/config/navIconMap';
+import { ChevronUp, LayoutGrid, Clock, Globe, ShieldCheck, LogOut } from 'lucide-react';
 import './DesktopLauncher.css';
+
+// Respect prefers-reduced-motion
+const prefersReducedMotion =
+  typeof window !== 'undefined' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Panel animation — enters from right
+const panelVariants = prefersReducedMotion
+  ? { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } }
+  : {
+      hidden: { opacity: 0, x: '30%' },
+      visible: { opacity: 1, x: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
+      exit: { opacity: 0, x: '20%', transition: { duration: 0.2, ease: 'easeIn' } },
+    };
+
+// Container for staggered children
+const gridVariants = prefersReducedMotion
+  ? { visible: {} }
+  : {
+      visible: {
+        transition: { staggerChildren: 0.04, delayChildren: 0.08 },
+      },
+    };
+
+// Individual tile animation
+const tileVariants = prefersReducedMotion
+  ? { hidden: { opacity: 0 }, visible: { opacity: 1 } }
+  : {
+      hidden: { opacity: 0, y: 12 },
+      visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] },
+      },
+    };
+
+function LauncherTile({ to, onClick, slug, label, active, variant, children }) {
+  const IconComponent = getLucideIcon(slug);
+  const inner = (
+    <>
+      <span className="dl-tile-icon">
+        {children || <IconComponent size={22} strokeWidth={1.8} />}
+      </span>
+      <span className="dl-tile-label">{label}</span>
+      {active && <span className="dl-tile-active-dot" />}
+    </>
+  );
+
+  const classes = [
+    'dl-tile',
+    active && 'dl-tile--active',
+    variant && `dl-tile--${variant}`,
+  ].filter(Boolean).join(' ');
+
+  const motionProps = {
+    variants: tileVariants,
+    whileHover: prefersReducedMotion ? {} : { y: -3, scale: 1.04 },
+    whileTap: prefersReducedMotion ? {} : { scale: 0.97 },
+  };
+
+  if (to) {
+    return (
+      <motion.div {...motionProps}>
+        <Link to={to} className={classes} title={label}>
+          {inner}
+        </Link>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div {...motionProps}>
+      <button type="button" className={classes} onClick={onClick} title={label}>
+        {inner}
+      </button>
+    </motion.div>
+  );
+}
 
 export default function DesktopLauncher() {
   const [open, setOpen] = useState(false);
-  const barRef = useRef(null);
+  const panelRef = useRef(null);
   const tabRef = useRef(null);
   const location = useLocation();
   const { items } = useDesktopNav();
@@ -25,7 +106,7 @@ export default function DesktopLauncher() {
     if (!open) return;
     function onClickOutside(e) {
       if (
-        barRef.current && !barRef.current.contains(e.target) &&
+        panelRef.current && !panelRef.current.contains(e.target) &&
         tabRef.current && !tabRef.current.contains(e.target)
       ) {
         setOpen(false);
@@ -61,97 +142,108 @@ export default function DesktopLauncher() {
   const accentColor = mainColor || '#0d6efd';
 
   return (
-    <div className="desktop-launcher-root d-none d-lg-block">
-      {/* Collapsed tab — like a folder bookmark */}
+    <div className="desktop-launcher-root d-none d-lg-block" style={{ '--dl-accent': accentColor }}>
+      {/* Collapsed tab — top-right bookmark */}
       <button
         ref={tabRef}
         className={`dl-tab ${open ? 'dl-tab--open' : ''}`}
         onClick={toggle}
         aria-expanded={open}
         aria-haspopup="true"
-        aria-label={open ? 'Close navigation' : 'Open navigation'}
-        style={{ '--dl-accent': accentColor }}
+        aria-label={open ? 'Close launcher' : 'Open launcher'}
       >
-        <i className={`bi ${open ? 'bi-chevron-up' : 'bi-grid-3x3-gap-fill'}`} />
+        {open
+          ? <ChevronUp size={16} strokeWidth={2.2} />
+          : <LayoutGrid size={16} strokeWidth={2} />
+        }
       </button>
 
-      {/* Expanded horizontal dock */}
-      {open && (
-        <nav
-          ref={barRef}
-          className="dl-dock"
-          role="navigation"
-          aria-label="Staff navigation"
-          style={{ '--dl-accent': accentColor }}
-        >
-          {/* Nav items — horizontal row */}
-          <div className="dl-dock-items">
-            {items.map((item) => (
-              <Link
-                key={item.slug}
-                to={item.path}
-                className={`dl-dock-item ${isActive(item.path) ? 'dl-dock-item--active' : ''}`}
-                title={item.name}
+      {/* Full-width launcher panel */}
+      <AnimatePresence>
+        {open && (
+          <motion.nav
+            ref={panelRef}
+            className="dl-panel"
+            role="navigation"
+            aria-label="Staff navigation"
+            variants={panelVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
+            <div className="dl-panel-inner">
+              {/* Module tiles grid */}
+              <motion.div
+                className="dl-grid"
+                variants={gridVariants}
+                initial="hidden"
+                animate="visible"
               >
-                <i className={item.icon} />
-                <span className="dl-dock-label">{item.name}</span>
-              </Link>
-            ))}
+                {items.map((item) => (
+                  <LauncherTile
+                    key={item.slug}
+                    to={item.path}
+                    slug={item.slug}
+                    label={item.name}
+                    active={isActive(item.path)}
+                  />
+                ))}
 
-            {/* Clock In */}
-            {user && hotelIdentifier && (
-              <button
-                className="dl-dock-item"
-                onClick={() => { setOpen(false); navigate(`/face/${hotelIdentifier}/clock-in`); }}
-                title="Clock In"
-              >
-                <i className="bi bi-clock" />
-                <span className="dl-dock-label">Clock</span>
-              </button>
-            )}
+                {/* Clock In */}
+                {user && hotelIdentifier && (
+                  <LauncherTile
+                    slug="clock_in"
+                    label="Clock In"
+                    onClick={() => { setOpen(false); navigate(`/face/${hotelIdentifier}/clock-in`); }}
+                  >
+                    <Clock size={22} strokeWidth={1.8} />
+                  </LauncherTile>
+                )}
 
-            {/* Public Page */}
-            {hotelIdentifier && (
-              <Link
-                className={`dl-dock-item ${isActive(`/hotel/${hotelIdentifier}`) ? 'dl-dock-item--active' : ''}`}
-                to={`/hotel/${hotelIdentifier}`}
-                title="Public Page"
-              >
-                <i className="bi bi-globe" />
-                <span className="dl-dock-label">Public Page</span>
-              </Link>
-            )}
+                {/* Public Page */}
+                {hotelIdentifier && (
+                  <LauncherTile
+                    to={`/hotel/${hotelIdentifier}`}
+                    slug="public_page"
+                    label="Public Page"
+                    active={isActive(`/hotel/${hotelIdentifier}`)}
+                  >
+                    <Globe size={22} strokeWidth={1.8} />
+                  </LauncherTile>
+                )}
 
-            {/* Super User */}
-            {user?.is_superuser && (
-              <button
-                className={`dl-dock-item ${isActive('/super-user') ? 'dl-dock-item--active' : ''}`}
-                onClick={() => { setOpen(false); navigate('/super-user'); }}
-                title="Super User Admin Panel"
-              >
-                <i className="bi bi-shield-lock" />
-                <span className="dl-dock-label">Super User</span>
-              </button>
-            )}
+                {/* Super User */}
+                {user?.is_superuser && (
+                  <LauncherTile
+                    slug="super_user"
+                    label="Super User"
+                    active={isActive('/super-user')}
+                    onClick={() => { setOpen(false); navigate('/super-user'); }}
+                  >
+                    <ShieldCheck size={22} strokeWidth={1.8} />
+                  </LauncherTile>
+                )}
 
-            {/* Logout */}
-            {user && (
-              <button
-                className="dl-dock-item dl-dock-item--logout"
-                onClick={() => { setOpen(false); logout(); }}
-                title="Logout"
-              >
-                <i className="bi bi-box-arrow-right" />
-                <span className="dl-dock-label">Logout</span>
-              </button>
-            )}
-          </div>
+                {/* Logout */}
+                {user && (
+                  <LauncherTile
+                    slug="logout"
+                    label="Logout"
+                    variant="logout"
+                    onClick={() => { setOpen(false); logout(); }}
+                  >
+                    <LogOut size={22} strokeWidth={1.8} />
+                  </LauncherTile>
+                )}
+              </motion.div>
 
-          {items.length === 0 && (
-            <p className="dl-empty">No modules available.</p>
-          )}
-        </nav>
-      )}
+              {items.length === 0 && (
+                <p className="dl-empty">No modules available.</p>
+              )}
+            </div>
+          </motion.nav>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
