@@ -326,10 +326,6 @@ const BookingStatusPage = () => {
       
       // The API returns booking data directly with can_cancel and cancellation_preview
       setBooking(data);
-      logQueryRefetchSuccess('guest-booking-status', {
-        bookingId: data.booking_id || bookingId,
-        summary: `${data.booking_id || bookingId} status=${data.status} room=${data.assigned_room_number || '-'}`,
-      });
       setHotel(data.hotel);
       setCancellationPolicy(data.cancellation_policy);
       
