@@ -931,8 +931,20 @@ const ChatWindow = ({
 
       // Replace temp message with real message from backend
       if (messageData?.id) {
+        // Immediately add the confirmed message to chatStore so the sync effect
+        // won't drop it during the window between API response and Pusher echo.
+        if (!isGuest && chatDispatch && conversationId) {
+          chatDispatch({
+            type: CHAT_ACTIONS.RECEIVE_MESSAGE,
+            payload: {
+              conversationId: parseInt(conversationId),
+              message: { ...messageData, status: 'delivered' },
+            },
+          });
+        }
+
         setMessages(prev => {
-          // Check if the real message already exists (from Pusher)
+          // Check if the real message already exists (from Pusher or store sync)
           const realMessageExists = prev.some(m => m.id === messageData.id);
           
           if (realMessageExists) {
