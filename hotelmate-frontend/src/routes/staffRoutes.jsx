@@ -80,6 +80,16 @@ const RedirectToHousekeeping = () => {
   return <Navigate to={`/staff/hotel/${slug}/housekeeping`} replace />;
 };
 
+// Generic canonical redirect — builds the canonical URL from the user's hotel slug.
+// Used as a safety net for stale / malformed backend nav payloads that emit bare slugs
+// like `/housekeeping` or `/settings` instead of the canonical `/staff/hotel/<slug>/...`.
+const RedirectToCanonical = ({ build }) => {
+  const { user } = useAuth();
+  const slug = user?.hotel_slug;
+  if (!slug) return <Navigate to="/login" replace />;
+  return <Navigate to={build(slug)} replace />;
+};
+
 const staffRoutes = [
   // Staff dashboard / feed (synthetic, auth-only)
   { path: '/staff/:hotelSlug/feed', element: <Home />, protected: true },
