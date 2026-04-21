@@ -180,6 +180,8 @@ const staffRoutes = [
   { path: '/chat', element: <RedirectToCanonical build={(s) => `/hotel/${s}/chat`} />, protected: true, mode: 'staff', requiredSlug: 'chat' },
   { path: '/restaurants', element: <RedirectToCanonical build={(s) => `/hotel-${s}/restaurants`} />, protected: true, mode: 'staff', requiredSlug: 'restaurant_bookings' },
   { path: '/staff', element: <RedirectToCanonical build={(s) => `/${s}/staff`} />, protected: true, mode: 'staff', requiredSlug: 'staff_management' },
+  { path: '/staff-management', element: <RedirectToCanonical build={(s) => `/${s}/staff`} />, protected: true, mode: 'staff', requiredSlug: 'staff_management' },
+  { path: '/staff_management', element: <RedirectToCanonical build={(s) => `/${s}/staff`} />, protected: true, mode: 'staff', requiredSlug: 'staff_management' },
   { path: '/attendance', element: <RedirectToCanonical build={(s) => `/attendance/${s}`} />, protected: true, mode: 'staff', requiredSlug: 'attendance' },
   { path: '/room_services', element: <RedirectToCanonical build={(s) => `/room_services/${s}`} />, protected: true, mode: 'staff', requiredSlug: 'room_services' },
   { path: '/room-services', element: <RedirectToCanonical build={(s) => `/room_services/${s}`} />, protected: true, mode: 'staff', requiredSlug: 'room_services' },
