@@ -73,6 +73,13 @@ const RedirectToRoomsHub = () => {
   return <Navigate to={`/staff/hotel/${slug}/rooms`} replace />;
 };
 
+const RedirectToHousekeeping = () => {
+  const { user } = useAuth();
+  const slug = user?.hotel_slug;
+  if (!slug) return <Navigate to="/login" replace />;
+  return <Navigate to={`/staff/hotel/${slug}/housekeeping`} replace />;
+};
+
 const staffRoutes = [
   // Staff dashboard / feed (synthetic, auth-only)
   { path: '/staff/:hotelSlug/feed', element: <Home />, protected: true },
@@ -142,6 +149,8 @@ const staffRoutes = [
   // ---------------- Housekeeping ----------------
   { path: '/staff/hotel/:hotelSlug/housekeeping', element: <HousekeepingRooms />, protected: true, mode: 'staff', requiredSlug: 'housekeeping' },
   { path: '/staff/hotel/:hotelSlug/housekeeping/rooms/:roomNumber', element: <HousekeepingRoomDetails />, protected: true, mode: 'staff', requiredSlug: 'housekeeping' },
+  // Legacy / malformed nav payload fallback → redirect to canonical housekeeping hub
+  { path: '/housekeeping', element: <RedirectToHousekeeping />, protected: true, mode: 'staff', requiredSlug: 'housekeeping' },
 
   // ---------------- Hotel Info ----------------
   { path: '/hotel_info/:hotel_slug', element: <HotelInfo />, protected: true, mode: 'staff', requiredSlug: 'hotel_info' },
