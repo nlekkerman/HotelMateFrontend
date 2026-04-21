@@ -168,6 +168,24 @@ const staffRoutes = [
 
   // ---------------- Chat ----------------
   { path: '/hotel/:hotelSlug/chat', element: 'CHAT_HOME_PAGE', protected: true, mode: 'staff', requiredSlug: 'chat' },
+
+  // ---------------- Canonical redirect fallbacks ----------------
+  // Safety net for stale / malformed backend nav payloads that emit bare slugs
+  // (e.g. `/housekeeping`, `/settings`) instead of hotel-scoped canonical paths.
+  // Each entry here maps a bare slug → the canonical hotel-scoped URL.
+  { path: '/feed', element: <RedirectToCanonical build={(s) => `/staff/${s}/feed`} />, protected: true },
+  { path: '/home', element: <RedirectToCanonical build={(s) => `/staff/${s}/feed`} />, protected: true },
+  { path: '/overview', element: <RedirectToCanonical build={(s) => `/staff/${s}/overview`} />, protected: true },
+  { path: '/settings', element: <RedirectToCanonical build={(s) => `/staff/${s}/settings`} />, protected: true, mode: 'staff', requiredSlug: 'admin_settings' },
+  { path: '/chat', element: <RedirectToCanonical build={(s) => `/hotel/${s}/chat`} />, protected: true, mode: 'staff', requiredSlug: 'chat' },
+  { path: '/restaurants', element: <RedirectToCanonical build={(s) => `/hotel-${s}/restaurants`} />, protected: true, mode: 'staff', requiredSlug: 'restaurant_bookings' },
+  { path: '/staff', element: <RedirectToCanonical build={(s) => `/${s}/staff`} />, protected: true, mode: 'staff', requiredSlug: 'staff_management' },
+  { path: '/attendance', element: <RedirectToCanonical build={(s) => `/attendance/${s}`} />, protected: true, mode: 'staff', requiredSlug: 'attendance' },
+  { path: '/room_services', element: <RedirectToCanonical build={(s) => `/room_services/${s}`} />, protected: true, mode: 'staff', requiredSlug: 'room_services' },
+  { path: '/room-services', element: <RedirectToCanonical build={(s) => `/room_services/${s}`} />, protected: true, mode: 'staff', requiredSlug: 'room_services' },
+  { path: '/hotel_info', element: <RedirectToCanonical build={(s) => `/hotel_info/${s}`} />, protected: true, mode: 'staff', requiredSlug: 'hotel_info' },
+  { path: '/hotel-info', element: <RedirectToCanonical build={(s) => `/hotel_info/${s}`} />, protected: true, mode: 'staff', requiredSlug: 'hotel_info' },
+  { path: '/room-bookings', element: <RedirectToCanonical build={(s) => `/staff/hotel/${s}/room-bookings`} />, protected: true, mode: 'staff', requiredSlug: 'room_bookings' },
 ];
 
 export default staffRoutes;
