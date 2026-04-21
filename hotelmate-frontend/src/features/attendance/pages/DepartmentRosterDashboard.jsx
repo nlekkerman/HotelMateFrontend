@@ -428,7 +428,7 @@ function DepartmentRosterDashboardComponent() {
                 </p>
                 <Button 
                   variant="outline-primary"
-                  onClick={() => navigate(`/enhanced-attendance/${hotelSlug}`)}
+                  onClick={() => navigate(`/attendance/${hotelSlug}?tab=enhanced`)}
                 >
                   Create Period in Management Dashboard
                 </Button>

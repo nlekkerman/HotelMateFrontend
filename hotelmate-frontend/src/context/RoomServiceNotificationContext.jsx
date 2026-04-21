@@ -1,6 +1,7 @@
 // src/context/RoomServiceNotificationContext.jsx
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "react-toastify";
 import { useRoomServiceState } from "@/realtime/stores/roomServiceStore";
 import { showNotification, canShowNotifications } from "@/utils/notificationUtils";
@@ -9,6 +10,7 @@ const RoomServiceNotificationContext = createContext();
 
 export const RoomServiceNotificationProvider = ({ children }) => {
   const { user } = useAuth();
+  const { hasNavAccess, isSuperUser } = usePermissions();
   const roomServiceState = useRoomServiceState();
   const [hasNewRoomService, setHasNewRoomService] = useState(false);
   const [hasNewBreakfast, setHasNewBreakfast] = useState(false);
@@ -18,26 +20,14 @@ export const RoomServiceNotificationProvider = ({ children }) => {
   const allOrders = Object.values(roomServiceState.ordersById);
   const roomServiceOrders = allOrders.filter(order => order.type !== 'breakfast');
   const breakfastOrders = allOrders.filter(order => order.type === 'breakfast');
-  
-  // Check if user is eligible for room service notifications based on department/role
+
+  // Eligibility is backend-driven: any user granted the room_services module gets
+  // order notifications. No hardcoded department / role-name strings.
   const isEligibleForNotifications = useCallback(() => {
-    if (!user?.department && !user?.role) return false;
-    
-    const deptSlug = user.department?.toLowerCase().replace(/ /g, '-').replace(/&/g, 'and');
-    const roleSlug = user.role?.toLowerCase().replace(/ /g, '_');
-    
-    // Kitchen department receives room service and breakfast orders
-    if (deptSlug === "kitchen" || deptSlug === "food-and-beverage") {
-      return true;
-    }
-    
-    // Porter and room service waiters receive delivery notifications
-    if (roleSlug === "porter" || roleSlug === "room_service_waiter") {
-      return true;
-    }
-    
-    return false;
-  }, [user?.department, user?.role]);
+    if (!user) return false;
+    if (isSuperUser) return true;
+    return hasNavAccess('room_services');
+  }, [user, isSuperUser, hasNavAccess]);
   
   // Monitor store for new orders and trigger notifications
   useEffect(() => {
@@ -88,8 +78,8 @@ export const RoomServiceNotificationProvider = ({ children }) => {
       {
         autoClose: 5000,
         onClick: () => {
-          // Navigate to room service orders page
-          window.location.href = `/${user.hotel_slug}/room-service-orders`;
+          // Navigate to the canonical Room Services hub (orders tab)
+          window.location.href = `/room_services/${user.hotel_slug}`;
         },
       }
     );
@@ -101,13 +91,13 @@ export const RoomServiceNotificationProvider = ({ children }) => {
         icon: "/favicons/favicon.svg",
         tag: `room-service-${data.order_id}`,
         data: {
-          url: `/${user.hotel_slug}/room-service-orders`
+          url: `/room_services/${user.hotel_slug}`
         }
       }).then(notification => {
         if (notification && notification.onclick !== undefined) {
           notification.onclick = () => {
             window.focus();
-            window.location.href = `/${user.hotel_slug}/room-service-orders`;
+            window.location.href = `/room_services/${user.hotel_slug}`;
           };
         }
       }).catch(console.error);
@@ -139,7 +129,7 @@ export const RoomServiceNotificationProvider = ({ children }) => {
       {
         autoClose: 5000,
         onClick: () => {
-          window.location.href = `/${user.hotel_slug}/breakfast-orders`;
+          window.location.href = `/room_services/${user.hotel_slug}?tab=breakfast`;
         },
       }
     );
@@ -154,7 +144,7 @@ export const RoomServiceNotificationProvider = ({ children }) => {
             icon: "/favicon-32x32.png",
             tag: `breakfast-${data.order_id}`,
             data: {
-              url: `/${user.hotel_slug}/breakfast-orders`
+              url: `/room_services/${user.hotel_slug}?tab=breakfast`
             }
           });
         });
@@ -168,7 +158,7 @@ export const RoomServiceNotificationProvider = ({ children }) => {
 
         notification.onclick = () => {
           window.focus();
-          window.location.href = `/${user.hotel_slug}/breakfast-orders`;
+          window.location.href = `/room_services/${user.hotel_slug}?tab=breakfast`;
         };
       }
     }

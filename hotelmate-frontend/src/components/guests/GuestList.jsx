@@ -10,8 +10,11 @@ import { useAuth } from '@/context/AuthContext';
 // Extend dayjs with the plugins
 dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
-const GuestList = () => {
-  const { hotelIdentifier } = useParams();
+const GuestList = ({ hotelIdentifier: hotelIdentifierProp } = {}) => {
+  const params = useParams();
+  // Support both legacy route param (:hotelIdentifier) and new canonical route (:hotelSlug),
+  // plus an explicit prop passed from RoomsHub.
+  const hotelIdentifier = hotelIdentifierProp || params.hotelIdentifier || params.hotelSlug;
   const [guests, setGuests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

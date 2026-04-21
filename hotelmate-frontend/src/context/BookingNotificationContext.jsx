@@ -1,6 +1,7 @@
 // src/context/BookingNotificationContext.jsx
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "react-toastify";
 import api from "@/services/api";
 import { useServiceBookingState } from "@/realtime/stores/serviceBookingStore";
@@ -10,34 +11,23 @@ const BookingNotificationContext = createContext();
 
 export const BookingNotificationProvider = ({ children }) => {
   const { user } = useAuth();
+  const { hasNavAccess, isSuperUser } = usePermissions();
   const bookingState = useServiceBookingState();
   const [hasNewBooking, setHasNewBooking] = useState(false);
   const [lastSeenBookingCount, setLastSeenBookingCount] = useState(0);
-  
+
   // Get all bookings from store
   const allBookings = Object.values(bookingState.bookingsById);
   const bookingNotifications = allBookings.slice(0, 10); // Show latest 10 for notifications
-  
-  // Check if user is eligible for booking notifications based on department/role
+
+  // Eligibility is driven purely by canonical backend permission output — any user
+  // whose effective_navs grants restaurant or room-bookings visibility receives
+  // dinner-booking notifications. No role-name / department-string parsing.
   const isEligibleForNotifications = useCallback(() => {
-    if (!user?.department && !user?.role) return false;
-    
-    const deptSlug = user.department?.toLowerCase().replace(/ /g, '-').replace(/&/g, 'and');
-    const roleSlug = user.role?.toLowerCase().replace(/ /g, '_');
-    
-    // Food & Beverage department receives booking notifications
-    if (deptSlug === "food-and-beverage") {
-      return true;
-    }
-    
-    // Roles that should receive booking notifications
-    const bookingRoles = ["receptionist", "manager", "food_and_beverage_manager"];
-    if (roleSlug && bookingRoles.includes(roleSlug)) {
-      return true;
-    }
-    
-    return false;
-  }, [user?.department, user?.role]);
+    if (!user) return false;
+    if (isSuperUser) return true;
+    return hasNavAccess('restaurant_bookings') || hasNavAccess('room_bookings');
+  }, [user, isSuperUser, hasNavAccess]);
   
   // Monitor store for new bookings and trigger notifications
   useEffect(() => {
@@ -71,7 +61,7 @@ export const BookingNotificationProvider = ({ children }) => {
       {
         autoClose: 5000,
         onClick: () => {
-          window.location.href = `/${user.hotel_slug}/bookings`;
+          window.location.href = `/staff/hotel/${user.hotel_slug}/room-bookings`;
         },
       }
     );
@@ -86,7 +76,7 @@ export const BookingNotificationProvider = ({ children }) => {
         if (notification && notification.onclick !== undefined) {
           notification.onclick = () => {
             window.focus();
-            window.location.href = `/${user.hotel_slug}/bookings`;
+            window.location.href = `/staff/hotel/${user.hotel_slug}/room-bookings`;
           };
         }
       }).catch(console.error);

@@ -728,7 +728,7 @@ function AttendanceDashboardComponent() {
                 <strong>New!</strong> For better roster management, use the dedicated{' '}
                 <button 
                   className="btn btn-link p-0 mx-1" 
-                  onClick={() => navigate(`/department-roster/${hotelSlug}`)}
+                  onClick={() => navigate(`/attendance/${hotelSlug}?tab=department-roster`)}
                   style={{ textDecoration: 'underline' }}
                 >
                   Department Roster Dashboard

@@ -93,17 +93,17 @@ const RestaurantManagementDashboard = () => {
           >
             <div className="container-fluid contextual-actions-container">
               <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-2 flex-wrap">
-              <button className="contextual-action-btn" onClick={() => navigate(`/room_services/${hotelSlug}/orders`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <button className="contextual-action-btn" onClick={() => navigate(`/room_services/${hotelSlug}`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
                 <i className="bi bi-receipt-cutoff" style={{ color: mainColor || '#3498db' }} />
                 <span className="action-label" style={{ color: mainColor || '#3498db' }}>Room Service</span>
               </button>
-              <button className="contextual-action-btn" onClick={() => navigate(`/room_services/${hotelSlug}/breakfast-orders`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <button className="contextual-action-btn" onClick={() => navigate(`/room_services/${hotelSlug}?tab=breakfast`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
                 <i className="bi bi-egg-fried" style={{ color: mainColor || '#3498db' }} />
                 <span className="action-label" style={{ color: mainColor || '#3498db' }}>Breakfast</span>
               </button>
-              <button className="contextual-action-btn" onClick={() => navigate('/bookings')} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+              <button className="contextual-action-btn" onClick={() => navigate(`/staff/hotel/${hotelSlug}/room-bookings`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
                 <i className="bi bi-calendar3" style={{ color: mainColor || '#3498db' }} />
-                <span className="action-label" style={{ color: mainColor || '#3498db' }}>Bookings</span>
+                <span className="action-label" style={{ color: mainColor || '#3498db' }}>Room Bookings</span>
               </button>
             </div>
           </div>

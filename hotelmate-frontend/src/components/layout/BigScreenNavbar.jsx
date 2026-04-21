@@ -321,19 +321,19 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
     if (path.includes('/housekeeping')) {
       return [
         { icon: 'house-gear', label: 'All Rooms', action: () => navigate(`/staff/hotel/${hotelIdentifier}/housekeeping`) },
-        { icon: 'door-closed', label: 'Rooms List', action: () => navigate('/rooms') },
+        { icon: 'door-closed', label: 'Rooms List', action: () => navigate(`/staff/hotel/${hotelIdentifier}/rooms`) },
         { icon: 'tools', label: 'Maintenance', action: () => navigate('/maintenance') },
-        { icon: 'calendar-event', label: 'Bookings', action: () => navigate('/bookings') },
+        { icon: 'calendar-event', label: 'Bookings', action: () => navigate(`/staff/hotel/${hotelIdentifier}/room-bookings`) },
       ];
     }
     
     // GUESTS - Guest management
     if (path.includes('/guests')) {
       return [
-        { icon: 'people-fill', label: 'All Guests', action: () => navigate(`/${hotelIdentifier}/guests`) },
-        { icon: 'door-open', label: 'Rooms', action: () => navigate('/rooms') },
-        { icon: 'calendar-event', label: 'Bookings', action: () => navigate('/bookings') },
-        { icon: 'receipt', label: 'Room Service', action: () => navigate(`/room_services/${hotelIdentifier}/orders`) },
+        { icon: 'people-fill', label: 'All Guests', action: () => navigate(`/staff/hotel/${hotelIdentifier}/rooms?tab=guests`) },
+        { icon: 'door-open', label: 'Rooms', action: () => navigate(`/staff/hotel/${hotelIdentifier}/rooms`) },
+        { icon: 'calendar-event', label: 'Bookings', action: () => navigate(`/staff/hotel/${hotelIdentifier}/room-bookings`) },
+        { icon: 'receipt', label: 'Room Service', action: () => navigate(`/room_services/${hotelIdentifier}`) },
       ];
     }
     
@@ -366,13 +366,13 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
       ];
     }
     
-    // BOOKINGS - Restaurant bookings
-    if (path.includes('/bookings')) {
+    // ROOM BOOKINGS - canonical room bookings hub
+    if (path.includes('/room-bookings') || path.includes('/booking-management') || path === '/bookings') {
       return [
-        { icon: 'calendar3', label: 'All Bookings', action: () => navigate('/bookings') },
-        { icon: 'calendar-plus', label: 'Today', action: () => navigate('/bookings?filter=today') },
-        { icon: 'hourglass-split', label: 'Pending', action: () => navigate('/bookings?filter=pending') },
-        { icon: 'check-circle', label: 'Confirmed', action: () => navigate('/bookings?filter=confirmed') },
+        { icon: 'calendar3', label: 'All Bookings', action: () => navigate(`/staff/hotel/${hotelIdentifier}/room-bookings`) },
+        { icon: 'calendar-plus', label: 'Today', action: () => navigate(`/staff/hotel/${hotelIdentifier}/room-bookings?filter=today`) },
+        { icon: 'hourglass-split', label: 'Pending', action: () => navigate(`/staff/hotel/${hotelIdentifier}/room-bookings?filter=pending`) },
+        { icon: 'gear', label: 'Settings', action: () => navigate(`/staff/hotel/${hotelIdentifier}/room-bookings?tab=settings`) },
       ];
     }
     
@@ -391,19 +391,19 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
     // RESTAURANTS - Restaurant management
     if (path.includes('/restaurants')) {
       return [
-        { icon: 'receipt-cutoff', label: 'Room Service', action: () => navigate(`/room_services/${hotelIdentifier}/orders`) },
-        { icon: 'egg-fried', label: 'Breakfast', action: () => navigate(`/room_services/${hotelIdentifier}/breakfast-orders`) },
-        { icon: 'calendar3', label: 'Bookings', action: () => navigate('/bookings') },
+        { icon: 'receipt-cutoff', label: 'Room Service', action: () => navigate(`/room_services/${hotelIdentifier}`) },
+        { icon: 'egg-fried', label: 'Breakfast', action: () => navigate(`/room_services/${hotelIdentifier}?tab=breakfast`) },
+        { icon: 'calendar3', label: 'Room Bookings', action: () => navigate(`/staff/hotel/${hotelIdentifier}/room-bookings`) },
       ];
     }
     
-    // ROOM SERVICE - Room service orders
+    // ROOM SERVICE - Room service orders (canonical hub, tabs)
     if (path.includes('/room_service') || path.includes('/room_services')) {
       return [
-        { icon: 'receipt-cutoff', label: 'All Orders', action: () => navigate(`/room_services/${hotelIdentifier}/orders`) },
-        { icon: 'egg-fried', label: 'Breakfast', action: () => navigate(`/room_services/${hotelIdentifier}/breakfast-orders`) },
-        { icon: 'clipboard-data', label: 'Management', action: () => navigate(`/room_services/${hotelIdentifier}/orders-management`) },
-        { icon: 'graph-up', label: 'Summary', action: () => navigate(`/room_services/${hotelIdentifier}/orders-summary`) },
+        { icon: 'receipt-cutoff', label: 'All Orders', action: () => navigate(`/room_services/${hotelIdentifier}`) },
+        { icon: 'egg-fried', label: 'Breakfast', action: () => navigate(`/room_services/${hotelIdentifier}?tab=breakfast`) },
+        { icon: 'clipboard-data', label: 'Management', action: () => navigate(`/room_services/${hotelIdentifier}?tab=management`) },
+        { icon: 'graph-up', label: 'Summary', action: () => navigate(`/room_services/${hotelIdentifier}?tab=summary`) },
       ];
     }
     
@@ -411,19 +411,19 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
     if (path.includes('/maintenance')) {
       return [
         { icon: 'tools', label: 'All Tasks', action: () => navigate('/maintenance') },
-        { icon: 'door-open', label: 'Rooms', action: () => navigate('/rooms') },
+        { icon: 'door-open', label: 'Rooms', action: () => navigate(`/staff/hotel/${hotelIdentifier}/rooms`) },
         { icon: 'people', label: 'Staff', action: () => navigate(`/${hotelIdentifier}/staff`) },
       ];
     }
     
     // GAMES - removed
 
-    // ATTENDANCE & ROSTER - Attendance management
+    // ATTENDANCE & ROSTER - Attendance management (canonical hub, tabs)
     if (path.includes('/attendance') || path.includes('/roster') || path.includes('/enhanced-attendance') || path.includes('/department-roster')) {
       return [
         { icon: 'clock', label: 'Live View', action: () => navigate(`/attendance/${hotelIdentifier}`) },
-        { icon: 'calendar-week', label: 'Rosters', action: () => navigate(`/department-roster/${hotelIdentifier}`) },
-        { icon: 'bar-chart', label: 'Analytics', action: () => navigate(`/enhanced-attendance/${hotelIdentifier}`) },
+        { icon: 'calendar-week', label: 'Rosters', action: () => navigate(`/attendance/${hotelIdentifier}?tab=department-roster`) },
+        { icon: 'bar-chart', label: 'Analytics', action: () => navigate(`/attendance/${hotelIdentifier}?tab=enhanced`) },
       ];
     }
     

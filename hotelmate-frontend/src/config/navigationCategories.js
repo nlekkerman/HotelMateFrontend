@@ -1,6 +1,13 @@
 /**
  * Navigation Categories Configuration
- * Defines the main navigation categories and maps nav items to categories
+ * Defines the main navigation categories and maps nav items to categories.
+ *
+ * Cleanup pass: after dead modules were removed, "F&B" and "Guest Relations"
+ * only held a single nav item each, which made them awkward dropdowns.
+ * They have been merged into the remaining categories:
+ *   - room_services (was F&B) → now under Front Office
+ *   - hotel_info (was Guest Relations) → now under Front Office
+ * Synthetic pages (home, admin_settings) remain uncategorized.
  */
 
 export const NAVIGATION_CATEGORIES = [
@@ -12,26 +19,11 @@ export const NAVIGATION_CATEGORIES = [
     order: 1,
   },
   {
-    id: 'fnb',
-    name: 'F&B',
-    icon: 'cup-hot',
-    slug: 'fnb',
-    order: 2,
-  },
-  {
     id: 'staff',
     name: 'Staff',
     icon: 'people-fill',
     slug: 'staff',
-    order: 3,
-  },
-  
-  {
-    id: 'guest-relations',
-    name: 'Guest Relations',
-    icon: 'info-circle-fill',
-    slug: 'guest-relations',
-    order: 5,
+    order: 2,
   },
 ];
 
@@ -39,23 +31,19 @@ export const NAVIGATION_CATEGORIES = [
  * Maps navigation item slugs to their parent category
  */
 export const NAV_ITEM_CATEGORY_MAP = {
-  // Front Office
+  // Front Office (guest-facing operations)
   'rooms': 'front-office',
   'room_bookings': 'front-office',
   'restaurant_bookings': 'front-office',
+  'room_services': 'front-office',
   'chat': 'front-office',
   'housekeeping': 'front-office',
-
-  // F&B / Services
-  'room_services': 'fnb',
+  'hotel_info': 'front-office',
 
   // Staff & Operations
   'staff_management': 'staff',
   'attendance': 'staff',
   'maintenance': 'staff',
-
-  // Guest Relations
-  'hotel_info': 'guest-relations',
 
   // Uncategorized (rendered outside category groups)
   'home': null,
@@ -84,26 +72,22 @@ export const isInCategory = (slug, categoryId) => {
 };
 
 /**
- * Subcategory definitions for future expansion
- * These represent the detailed structure within each category
+ * Subcategory definitions — ordered lists of items within each category.
  */
 export const SUBCATEGORIES = {
   'front-office': [
     { slug: 'rooms', name: 'Rooms', order: 1 },
     { slug: 'room_bookings', name: 'Room Bookings', order: 2 },
     { slug: 'restaurant_bookings', name: 'Restaurant Bookings', order: 3 },
-    { slug: 'chat', name: 'Guest Chat', order: 4 },
+    { slug: 'room_services', name: 'Room Services', order: 4 },
     { slug: 'housekeeping', name: 'Housekeeping', order: 5 },
-  ],
-  'fnb': [
-    { slug: 'room_services', name: 'Room Services', order: 1 },
+    { slug: 'chat', name: 'Guest Chat', order: 6 },
+    { slug: 'hotel_info', name: 'Hotel Info', order: 7 },
   ],
   'staff': [
     { slug: 'staff_management', name: 'Staff', order: 1 },
     { slug: 'attendance', name: 'Attendance', order: 2 },
     { slug: 'maintenance', name: 'Maintenance', order: 3 },
   ],
-  'guest-relations': [
-    { slug: 'hotel_info', name: 'Hotel Info', order: 1 },
-  ],
 };
+

@@ -27,7 +27,7 @@ const MODULE_CONFIG = {
   room_services: {
     label: 'Room Service',
     icon: 'bi-box',
-    pathTemplate: '/room_services/{hotelSlug}/orders-management',
+    pathTemplate: '/room_services/{hotelSlug}?tab=management',
     color: '#e15759',
   },
   housekeeping: {

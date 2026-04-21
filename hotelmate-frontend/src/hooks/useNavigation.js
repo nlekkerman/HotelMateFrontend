@@ -5,17 +5,18 @@ import {
   getCategoryById
 } from "@/config/navigationCategories";
 
-/* @deprecated — remove when backend guarantees navigation_items on every login */
+/* @deprecated — remove when backend guarantees navigation_items on every login.
+ * Paths here must match the canonical entry paths declared in staffRoutes.jsx. */
 export const DEFAULT_NAV_ITEMS = [
   { slug: 'home', name: 'Home', path: '/staff/{hotelSlug}/feed', icon: 'house' },
   { slug: 'chat', name: 'Chat', path: '/hotel/{hotelSlug}/chat', icon: 'chat-dots' },
-  { slug: 'rooms', name: 'Rooms', path: '/rooms', icon: 'door-closed' },
+  { slug: 'rooms', name: 'Rooms', path: '/staff/hotel/{hotelSlug}/rooms', icon: 'door-closed' },
   { slug: 'housekeeping', name: 'Housekeeping', path: '/staff/hotel/{hotelSlug}/housekeeping', icon: 'house-gear' },
   { slug: 'room_bookings', name: 'Room Bookings', path: '/staff/hotel/{hotelSlug}/room-bookings', icon: 'calendar-check', hasDropdown: true },
   { slug: 'restaurant_bookings', name: 'Restaurants', path: '/hotel-{hotelSlug}/restaurants', icon: 'calendar2-event' },
   { slug: 'staff_management', name: 'Staff', path: '/{hotelSlug}/staff', icon: 'person-badge' },
   { slug: 'attendance', name: 'Attendance', path: '/attendance/{hotelSlug}', icon: 'clock-history' },
-  { slug: 'room_services', name: 'Room Service', path: '/room_services/{hotelSlug}/orders-management', icon: 'box' },
+  { slug: 'room_services', name: 'Room Service', path: '/room_services/{hotelSlug}', icon: 'box' },
   { slug: 'maintenance', name: 'Maintenance', path: '/maintenance', icon: 'tools' },
   { slug: 'hotel_info', name: 'Hotel Info', path: '/hotel_info/{hotelSlug}', icon: 'info-circle' },
   { slug: 'admin_settings', name: 'Settings', path: '/staff/{hotelSlug}/settings', icon: 'gear', requiresHotelSlug: true },

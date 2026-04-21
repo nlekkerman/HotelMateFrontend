@@ -16,6 +16,7 @@ import {
 } from "@/services/roomOperations";
 import { handleRoomOperationError } from "@/utils/errorHandling";
 import { useAuth } from '@/context/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 
 function HousekeepingRoomDetails() {
   const { hotelSlug, roomNumber } = useParams();
@@ -50,8 +51,11 @@ function HousekeepingRoomDetails() {
   const [addingNote, setAddingNote] = useState(false);
   
   const { user: userData } = useAuth();
-  const canManageRooms = ['housekeeping', 'admin', 'manager'].includes(userData?.role?.toLowerCase()) || userData?.is_superuser;
-  const canUseManagerOverride = userData?.is_manager || userData?.is_superuser || userData?.role?.toLowerCase() === 'manager';
+  const { hasNavAccess, isAdmin, isSuperStaffAdmin, isSuperUser, canAccess } = usePermissions();
+  // Canonical permission checks — backend-driven, no role-name string matching.
+  const canManageRooms = isSuperUser || isAdmin || hasNavAccess('housekeeping') || hasNavAccess('rooms');
+  // Manager override is a privileged action: allow super/admin tiers and explicit manager role.
+  const canUseManagerOverride = isSuperUser || isSuperStaffAdmin || canAccess(['manager']);
 
   // Realtime store integration
   const roomsState = useRoomsState();

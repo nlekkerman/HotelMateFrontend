@@ -11,6 +11,7 @@ import {
 } from "@/services/roomOperations";
 import { handleRoomOperationError } from "@/utils/errorHandling";
 import { useAuth } from '@/context/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const RoomCard = ({ room }) => {
   const navigate = useNavigate();
@@ -18,10 +19,11 @@ const RoomCard = ({ room }) => {
   const [isUpdating, setIsUpdating] = useState(false);
 
   const { user: userData } = useAuth();
-  const userRole = userData?.role || userData?.user_type;
+  const { hasNavAccess, isAdmin, isSuperUser } = usePermissions();
+  // Canonical permission check: anyone who can access housekeeping or rooms modules
+  // can perform room turnover actions. Admin / superuser bypass via usePermissions.
   const canPerformQuickActions =
-    ["housekeeping", "admin", "manager"].includes(userRole?.toLowerCase()) ||
-    userData?.is_superuser;
+    isSuperUser || isAdmin || hasNavAccess('housekeeping') || hasNavAccess('rooms');
 
   const calculateStayDuration = (checkInDate) => {
     if (!checkInDate) return "Unknown";
@@ -82,7 +84,7 @@ const RoomCard = ({ room }) => {
         style={{ cursor: "pointer" }}
         onClick={() =>
           navigate(
-            `/room-management/${room.hotel_slug}/room/${room.room_number}`
+            `/staff/hotel/${room.hotel_slug}/rooms/${room.room_number}`
           )
         }
       >

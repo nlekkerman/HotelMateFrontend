@@ -197,7 +197,7 @@ export default function EnhancedAttendanceDashboard() {
                   </Dropdown.Item>
                   <Dropdown.Divider />
                   <Dropdown.Item onClick={() => {
-                    navigate(`/department-roster/${hotelSlug}`);
+                    navigate(`/attendance/${hotelSlug}?tab=department-roster`);
                   }}>
                     📅 Department Rosters
                   </Dropdown.Item>

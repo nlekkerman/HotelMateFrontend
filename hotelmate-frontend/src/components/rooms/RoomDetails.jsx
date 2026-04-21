@@ -464,7 +464,10 @@ function RoomDetails() {
       <div className="text-center my-5">
         <button
           className="btn btn-outline-secondary btn-lg px-4"
-          onClick={() => navigate("/rooms")}
+          onClick={() => {
+            const slug = hotelIdentifier || getHotelSlug();
+            navigate(slug ? `/staff/hotel/${slug}/rooms` : "/rooms");
+          }}
         >
           <i className="bi bi-arrow-left me-2"></i>
           Back to Rooms List
