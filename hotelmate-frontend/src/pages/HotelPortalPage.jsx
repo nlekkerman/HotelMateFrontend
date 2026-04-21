@@ -8,6 +8,42 @@ import useHotelTheme from "@/hooks/useHotelTheme";
 import useHotelRealtime from "@/hooks/useHotelRealtime";
 
 /**
+ * Reserved top-level path segments that must never be treated as hotel slugs.
+ * These are known staff/app routes or removed modules. If one of these lands
+ * on the `/:hotelSlug` catch-all (typo, stale link, or orphan nav item), we
+ * short-circuit to a NotFound state instead of calling
+ * `/api/public/hotel/<reserved>/page/` which always 404s.
+ */
+const RESERVED_PORTAL_SLUGS = new Set([
+  "restaurant-bookings",
+  "restaurants",
+  "bookings",
+  "room-bookings",
+  "rooms",
+  "room_services",
+  "housekeeping",
+  "maintenance",
+  "staff",
+  "reception",
+  "games",
+  "entertainment",
+  "stock-tracker",
+  "stock_tracker",
+  "good-to-know",
+  "good_to_know",
+  "good_to_know_console",
+  "settings",
+  "admin",
+  "super-user",
+  "overview",
+  "attendance",
+  "roster",
+  "hotel_info",
+  "menus_management",
+  "api",
+]);
+
+/**
  * HotelPortalPage - Public hotel page for guests
  * Displays hotel information, rooms, amenities, and booking options
  */
@@ -15,6 +51,7 @@ const HotelPortalPage = () => {
   const { hotelSlug } = useParams();
   const navigate = useNavigate();
   const { selectHotel, isStaff, user } = useAuth();
+  const isReservedSlug = RESERVED_PORTAL_SLUGS.has(String(hotelSlug || "").toLowerCase());
 
   const [hotel, setHotel] = useState(null);
   const [settings, setSettings] = useState(null);
@@ -34,8 +71,15 @@ const HotelPortalPage = () => {
   });
 
   useEffect(() => {
+    if (isReservedSlug) {
+      setLoading(false);
+      setError(`Page '/${hotelSlug}' not found`);
+      setHotel(null);
+      setSettings(null);
+      return;
+    }
     fetchHotelData();
-  }, [hotelSlug]);
+  }, [hotelSlug, isReservedSlug]);
 
   const fetchHotelData = async () => {
     try {

@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
 import SubmitMaintenanceRequest from "@/components/maintenance/SubmitMaintenanceRequest";
 import MaintenanceRequests from "@/components/maintenance/MaintenanceRequests";
 
@@ -8,6 +9,8 @@ export default function Maintenance() {
   const navigate = useNavigate();
   const { hotelIdentifier } = useParams();
   const { mainColor } = useTheme();
+  const { user } = useAuth();
+  const hotelSlug = hotelIdentifier || user?.hotel_slug || "";
   
   // nothing but composition: both share the same fetchRequests via refetch
   let refetch; // we'll wire this up via a ref in MaintenanceRequests
@@ -31,11 +34,11 @@ export default function Maintenance() {
               <i className="bi bi-tools" style={{ color: mainColor || '#3498db' }} />
               <span className="action-label" style={{ color: mainColor || '#3498db' }}>All Tasks</span>
             </button>
-            <button className="contextual-action-btn" onClick={() => navigate('/rooms')} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+            <button className="contextual-action-btn" onClick={() => navigate(`/staff/hotel/${hotelSlug}/rooms`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
               <i className="bi bi-door-open" style={{ color: mainColor || '#3498db' }} />
               <span className="action-label" style={{ color: mainColor || '#3498db' }}>Rooms</span>
             </button>
-            <button className="contextual-action-btn" onClick={() => navigate(`/${hotelIdentifier}/staff`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+            <button className="contextual-action-btn" onClick={() => navigate(`/${hotelSlug}/staff`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
               <i className="bi bi-people" style={{ color: mainColor || '#3498db' }} />
               <span className="action-label" style={{ color: mainColor || '#3498db' }}>Staff</span>
             </button>

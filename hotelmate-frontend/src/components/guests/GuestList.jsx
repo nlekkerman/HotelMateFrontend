@@ -92,11 +92,11 @@ const GuestList = ({ hotelIdentifier: hotelIdentifierProp } = {}) => {
               <i className="bi bi-people-fill" style={{ color: mainColor || '#3498db' }} />
               <span className="action-label" style={{ color: mainColor || '#3498db' }}>All Guests</span>
             </button>
-            <button className="contextual-action-btn" onClick={() => navigate('/rooms')} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+            <button className="contextual-action-btn" onClick={() => navigate(`/staff/hotel/${hotelIdentifier}/rooms`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
               <i className="bi bi-door-open" style={{ color: mainColor || '#3498db' }} />
               <span className="action-label" style={{ color: mainColor || '#3498db' }}>Rooms</span>
             </button>
-            <button className="contextual-action-btn" onClick={() => navigate('/bookings')} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
+            <button className="contextual-action-btn" onClick={() => navigate(`/staff/hotel/${hotelIdentifier}/room-bookings`)} style={{ color: mainColor || '#3498db', boxShadow: `0 4px 15px ${mainColor ? `${mainColor}66` : 'rgba(52, 152, 219, 0.4)'}` }}>
               <i className="bi bi-calendar-event" style={{ color: mainColor || '#3498db' }} />
               <span className="action-label" style={{ color: mainColor || '#3498db' }}>Bookings</span>
             </button>
