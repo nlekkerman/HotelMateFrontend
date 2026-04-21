@@ -1,7 +1,5 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
 import Home from '@/pages/home/Home';
-import Reception from '@/components/Reception';
 import Settings from '@/components/utils/Settings';
 import SuperUser from '@/pages/SuperUser';
 import Maintenance from '@/pages/maintenance/Maintenance';
@@ -40,25 +38,7 @@ import { HousekeepingRooms } from '@/pages/housekeeping';
 import HousekeepingRoomDetails from '@/pages/housekeeping/components/HousekeepingRoomDetails';
 
 import HotelInfo from '@/pages/hotel_info/HotelInfo';
-import GoodToKnowConsole from '@/components/hotel_info/GoodToKnowConsole';
 
-import StockDashboard from '@/pages/stock_tracker/StockDashboard';
-import Analytics from '@/pages/stock_tracker/Analytics';
-import StockOperations from '@/pages/stock_tracker/StockOperations';
-import StockItemsResponsive from '@/components/stock_tracker/stock_items/StockItemsResponsive';
-import StockItemProfitability from '@/components/stock_tracker/stock_items/StockItemProfitability';
-import { MovementsList } from '@/components/stock_tracker/movements/MovementsList';
-import { StocktakesList } from '@/components/stock_tracker/stocktakes/StocktakesList';
-import { StocktakeDetail } from '@/components/stock_tracker/stocktakes/StocktakeDetail';
-import { PeriodSnapshots } from '@/components/stock_tracker/periods/PeriodSnapshots';
-import { PeriodSnapshotDetail } from '@/components/stock_tracker/periods/PeriodSnapshotDetail';
-import { PeriodsComparison } from '@/components/stock_tracker/periods/PeriodsComparison';
-import { CocktailsPage } from '@/pages/stock_tracker/CocktailsPage';
-import SalesReport from '@/pages/stock_tracker/SalesReport';
-import SalesEntry from '@/pages/stock_tracker/SalesEntry';
-import SalesListView from '@/pages/stock_tracker/SalesListView';
-
-import ChatHomePage from '@/pages/chat/ChatHomePage';
 import OverviewPage from '@/pages/staff/OverviewPage';
 
 /**
@@ -78,9 +58,6 @@ const staffRoutes = [
   // Operations overview — auth-only (RBAC filtering handled inside the page)
   { path: '/staff/:hotelSlug/overview', element: <OverviewPage />, protected: true },
   { path: '/staff/:hotelSlug/section-editor', element: <SectionEditorPage />, protected: true, mode: 'staff', requiredSlug: 'admin_settings' },
-
-  // Reception
-  { path: '/reception', element: <Reception />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
 
   // Settings
   { path: '/staff/:hotelSlug/settings', element: <Settings />, protected: true, mode: 'staff', requiredSlug: 'admin_settings' },
@@ -142,27 +119,6 @@ const staffRoutes = [
   // Hotel Info
   { path: '/hotel_info/:hotel_slug', element: <HotelInfo />, protected: true, mode: 'staff', requiredSlug: 'hotel_info' },
   { path: '/hotel_info/:hotel_slug/:category', element: <HotelInfo />, protected: true, mode: 'staff', requiredSlug: 'hotel_info' },
-  { path: '/good_to_know_console/:hotel_slug', element: <GoodToKnowConsole />, protected: true, mode: 'staff', requiredSlug: 'hotel_info' },
-
-  // Stock Tracker
-  { path: '/stock_tracker/:hotel_slug', element: <StockDashboard />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
-  { path: '/stock_tracker/:hotel_slug/analytics', element: <Analytics />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
-  { path: '/stock_tracker/:hotel_slug/operations', element: <StockOperations />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
-  { path: '/stock_tracker/:hotel_slug/items', element: <StockItemsResponsive />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
-  { path: '/stock_tracker/:hotel_slug/profitability', element: <StockItemProfitability />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
-  { path: '/stock_tracker/:hotel_slug/movements', element: <MovementsList />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
-  { path: '/stock_tracker/:hotel_slug/stocktakes', element: <StocktakesList />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
-  { path: '/stock_tracker/:hotel_slug/stocktakes/:id', element: <StocktakeDetail />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
-  { path: '/stock_tracker/:hotel_slug/periods', element: <PeriodSnapshots />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
-  { path: '/stock_tracker/:hotel_slug/periods/:id', element: <PeriodSnapshotDetail />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
-  { path: '/stock_tracker/:hotel_slug/comparison', element: <PeriodsComparison />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
-  { path: '/stock_tracker/:hotel_slug/sales/analysis', element: <SalesReport />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
-  { path: '/stock_tracker/:hotel_slug/sales/list', element: <SalesListView />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
-  { path: '/stock_tracker/:hotel_slug/sales/entry', element: <SalesEntry />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
-  // Legacy redirects (no protection needed — they redirect to protected routes)
-  { path: '/stock_tracker/:hotel_slug/sales-report', element: <Navigate to="../sales/analysis" replace /> },
-  { path: '/stock_tracker/:hotel_slug/sales', element: <Navigate to="./entry" replace /> },
-  { path: '/stock_tracker/:hotel_slug/cocktails', element: <CocktailsPage />, protected: true, mode: 'staff', requiredSlug: 'stock_tracker' },
 
   // Chat (staff view)
   { path: '/hotel/:hotelSlug/chat', element: 'CHAT_HOME_PAGE', protected: true, mode: 'staff', requiredSlug: 'chat' },

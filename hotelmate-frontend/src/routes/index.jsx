@@ -6,11 +6,9 @@ import authRoutes from './authRoutes';
 import { publicRoutesEarly, publicRoutesLate } from './publicRoutes';
 import guestRoutes from './guestRoutes';
 import staffRoutes from './staffRoutes';
-import gameRoutes from './gameRoutes';
 
 // Dynamic imports for components needing layout-level props
 import Register from '@/components/auth/Register';
-import WhackAMolePage from '@/games/whack-a-mole/pages/GamePage';
 import ChatHomePage from '@/pages/chat/ChatHomePage';
 
 /**
@@ -21,11 +19,9 @@ import ChatHomePage from '@/pages/chat/ChatHomePage';
  *   2. Public routes early (/ , /hotel/:slug, etc.)
  *   3. Staff routes (all ProtectedRoute-wrapped)
  *   4. Guest routes (booking flows, guest services)
- *   5. Game routes (ProtectedRoute-wrapped)
- *   6. Public routes late (/:hotelSlug catch-all, * not-found)
+ *   5. Public routes late (/:hotelSlug catch-all, * not-found)
  *
  * @param {Object} ctx — layout-level state/callbacks injected from AppLayoutShell
- * @param {Object} ctx.audioSettings
  * @param {Object} ctx.selectedRoom
  * @param {Function} ctx.handleSelectRoom
  * @param {Function} ctx.RegisterWithToken — guarded Register component
@@ -36,7 +32,6 @@ export function buildRoutes(ctx) {
     ...publicRoutesEarly,
     ...resolveSpecial(staffRoutes, ctx),
     ...guestRoutes,
-    ...resolveSpecial(gameRoutes, ctx),
     ...publicRoutesLate,
   ];
 
@@ -67,9 +62,6 @@ function resolveSpecial(configs, ctx) {
   return configs.map((cfg) => {
     if (cfg.element === 'REGISTER_WITH_TOKEN') {
       return { ...cfg, element: ctx.RegisterWithToken };
-    }
-    if (cfg.element === 'WHACK_A_MOLE') {
-      return { ...cfg, element: <WhackAMolePage audioSettings={ctx.audioSettings} /> };
     }
     if (cfg.element === 'CHAT_HOME_PAGE') {
       return {

@@ -7,10 +7,9 @@
  */
 
 // Route prefix to required RBAC module slug mapping.
-// Slugs are the 13 canonical backend RBAC module slugs ONLY.
+// Slugs are the canonical backend RBAC module slugs ONLY.
 const PATH_TO_NAV_MAPPING = [
   // Front Office
-  { match: (p) => p === "/reception" || p.startsWith("/reception/"), slug: "rooms" },
   { match: (p) => p.startsWith("/rooms"), slug: "rooms" },
   { match: (p) => p.includes("/room-management"), slug: "rooms" },
   { match: (p) => p.includes("/guests"), slug: "rooms" },
@@ -43,15 +42,8 @@ const PATH_TO_NAV_MAPPING = [
   // Maintenance
   { match: (p) => p.startsWith("/maintenance"), slug: "maintenance" },
 
-  // Stock Tracker
-  { match: (p) => p.startsWith("/stock_tracker"), slug: "stock_tracker" },
-
-  // Hotel Info (includes good_to_know)
+  // Hotel Info
   { match: (p) => p.startsWith("/hotel_info"), slug: "hotel_info" },
-  { match: (p) => p.startsWith("/good_to_know_console"), slug: "hotel_info" },
-
-  // Entertainment
-  { match: (p) => p.startsWith("/games"), slug: "entertainment" },
 
   // Admin Settings (must be before /staff/ catch-all)
   { match: (p) => p.includes("/settings") && p.includes("/staff/"), slug: "admin_settings" },
@@ -61,6 +53,15 @@ const PATH_TO_NAV_MAPPING = [
   // Staff Home (catch-all for /staff/ prefix — MUST be last)
   { match: (p) => p.startsWith("/staff/"), slug: "home" },
 ];
+
+/**
+ * Build the neutral fallback path for denied-but-authenticated staff.
+ * Always points at a surviving, auth-only route.
+ */
+function buildStaffFallback(user) {
+  const slug = user?.hotel_slug;
+  return slug ? `/staff/${slug}/feed` : "/login";
+}
 
 /**
  * Determines if a user can access a staff route
@@ -91,11 +92,13 @@ export function canAccessStaffPath({ pathname, user, requiredSlug }) {
   // Prefer explicit requiredSlug from route config over pathname auto-mapping
   const requiredNavSlug = requiredSlug || findRequiredNavSlug(pathname);
   
+  const fallback = buildStaffFallback(user);
+
   if (!requiredNavSlug) {
     // Case B: Authenticated but unmapped route → redirect to staff entry point
     return {
       allowed: false,
-      redirectTo: "/reception",
+      redirectTo: fallback,
       reason: `Unmapped route: ${pathname} not found in staff route mapping (deny by default)`
     };
   }
@@ -105,7 +108,7 @@ export function canAccessStaffPath({ pathname, user, requiredSlug }) {
   if (!Array.isArray(effectiveNavs)) {
     return {
       allowed: false,
-      redirectTo: "/reception",
+      redirectTo: fallback,
       reason: "Invalid permission data: effective_navs must be an array from backend"
     };
   }
@@ -114,7 +117,7 @@ export function canAccessStaffPath({ pathname, user, requiredSlug }) {
   if (!effectiveNavs.includes(requiredNavSlug)) {
     return {
       allowed: false,
-      redirectTo: "/reception",
+      redirectTo: fallback,
       reason: `Access denied: User lacks '${requiredNavSlug}' permission for ${pathname}`
     };
   }

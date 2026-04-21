@@ -56,8 +56,6 @@ export const NAV_ITEM_CATEGORY_MAP = {
 
   // Guest Relations
   'hotel_info': 'guest-relations',
-  'entertainment': 'guest-relations',
-  'stock_tracker': 'guest-relations',
 
   // Uncategorized (rendered outside category groups)
   'home': null,
@@ -107,7 +105,5 @@ export const SUBCATEGORIES = {
   ],
   'guest-relations': [
     { slug: 'hotel_info', name: 'Hotel Info', order: 1 },
-    { slug: 'entertainment', name: 'Entertainment', order: 2 },
-    { slug: 'stock_tracker', name: 'Stock Tracker', order: 3 },
   ],
 };

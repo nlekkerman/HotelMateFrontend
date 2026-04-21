@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useMediaQuery } from 'react-responsive';
-import '@/games/whack-a-mole/styles/InterfaceStyles.css';
 import '@/styles/main.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';

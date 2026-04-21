@@ -12,9 +12,6 @@ const GUEST_ROUTE_PATTERNS = [
 
   // Good to Know (Public)
   "/good_to_know/:hotel_slug/:slug",
-
-  // Quiz Game (Public - Anonymous play via QR)
-  "/games/quiz",
 ];
 
 /**
@@ -56,14 +53,10 @@ export function getLayoutMode(pathname) {
   // NOTE: These patterns align with backend slugs and route structure
   const isStaffRoute =
     pathname.startsWith("/staff/") ||
-    pathname === "/reception" ||
     pathname.startsWith("/rooms") ||
     pathname.startsWith("/bookings") ||
     pathname.startsWith("/maintenance") ||
-    pathname.startsWith("/stock_tracker") || // Note: no trailing slash for consistency
-    pathname.startsWith("/games") ||
-    pathname.startsWith("/hotel_info") || // Note: no trailing slash for consistency
-    pathname.startsWith("/good_to_know_console");
+    pathname.startsWith("/hotel_info");
 
   // PUBLIC: Public-facing pages without staff navigation
   // CRITICAL FIX: Add /booking/:hotelSlug pattern to fix staff nav leak

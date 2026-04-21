@@ -18,8 +18,6 @@ export const DEFAULT_NAV_ITEMS = [
   { slug: 'room_services', name: 'Room Service', path: '/room_services/{hotelSlug}/orders-management', icon: 'box' },
   { slug: 'maintenance', name: 'Maintenance', path: '/maintenance', icon: 'tools' },
   { slug: 'hotel_info', name: 'Hotel Info', path: '/hotel_info/{hotelSlug}', icon: 'info-circle' },
-  { slug: 'stock_tracker', name: 'Stock Tracker', path: '/stock_tracker/{hotelSlug}', icon: 'graph-up' },
-  { slug: 'entertainment', name: 'Entertainment', path: '/games/?hotel={hotelSlug}', icon: 'controller' },
   { slug: 'admin_settings', name: 'Settings', path: '/staff/{hotelSlug}/settings', icon: 'gear', requiresHotelSlug: true },
 ];
 

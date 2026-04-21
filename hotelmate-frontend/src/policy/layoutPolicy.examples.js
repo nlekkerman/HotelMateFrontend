@@ -21,7 +21,6 @@ export const LAYOUT_MODE_EXAMPLES = [
   ["/guest-booking/hotel-x/restaurant/main/room/101", "guest"],
   ["/guest-booking/hotel-x/restaurant/main", "guest"],
   ["/good_to_know/hotel-x/wifi-info", "guest"],
-  ["/games/quiz", "guest"],
 
   // PUBLIC routes (CRITICAL: booking flows must be public)
   ["/", "public"],
@@ -38,17 +37,13 @@ export const LAYOUT_MODE_EXAMPLES = [
   ["/booking/test-hotel-123", "public"],
 
   // STAFF routes
-  ["/reception", "staff"],
   ["/rooms", "staff"],
   ["/room-management/hotel-killarney/room/101", "staff"],
   ["/bookings", "staff"],
   ["/bookings/123", "staff"],
   ["/maintenance", "staff"],
   ["/maintenance/tasks", "staff"],
-  ["/stock_tracker/inventory", "staff"],
-  ["/games/memory-match", "staff"],
   ["/hotel_info/settings", "staff"],
-  ["/good_to_know_console/manage", "staff"],
   ["/staff/hotel-x/dashboard", "staff"],
   ["/staff/hotel-x/feed", "staff"],
 ];

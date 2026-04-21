@@ -13,7 +13,7 @@ const mockUsers = {
   staffAdmin: {
     is_staff: true,
     is_superuser: false,
-    effective_navs: ["home", "rooms", "stock_tracker"],
+    effective_navs: ["home", "rooms"],
     access_level: "staff_admin"
   },
   regularStaff: {
@@ -62,12 +62,9 @@ const layoutTests = [
   ["/room_services/hotel-x/room/101/menu", "guest", "Room service menu"],
   ["/chat/hotel-x/conversations/123/messages", "guest", "Guest chat"],
   ["/good_to_know/hotel-x/wifi-info", "guest", "Guest info"],
-  ["/games/quiz", "guest", "Quiz game"],
   
   // Staff routes
-  ["/reception", "staff", "Reception desk"],
   ["/rooms", "staff", "Rooms management"],
-  ["/stock_tracker/inventory", "staff", "Stock tracker"],
   ["/staff/hotel-x/dashboard", "staff", "Staff dashboard"],
 ];
 
@@ -76,25 +73,19 @@ const accessTests = [
   // Superuser access
   {
     user: mockUsers.superuser,
-    pathname: "/stock_tracker/inventory", 
+    pathname: "/rooms",
     expected: true,
     description: "Superuser can access all routes"
   },
-  
+
   // Staff admin with permissions
   {
     user: mockUsers.staffAdmin,
-    pathname: "/reception",
-    expected: true, 
-    description: "Staff admin with rooms permission (via /reception)"
-  },
-  {
-    user: mockUsers.staffAdmin,
-    pathname: "/stock_tracker/dashboard",
+    pathname: "/rooms",
     expected: true,
-    description: "Staff admin with stock_tracker permission"
+    description: "Staff admin with rooms permission"
   },
-  
+
   // Staff admin without permissions
   {
     user: mockUsers.staffAdmin,
@@ -102,37 +93,31 @@ const accessTests = [
     expected: false,
     description: "Staff admin without maintenance permission"
   },
-  
+
   // Regular staff with limited permissions
   {
     user: mockUsers.regularStaff,
-    pathname: "/reception",
+    pathname: "/rooms",
     expected: true,
-    description: "Regular staff with rooms permission (via /reception)"
+    description: "Regular staff with rooms permission"
   },
-  {
-    user: mockUsers.regularStaff,
-    pathname: "/stock_tracker/inventory", 
-    expected: false,
-    description: "Regular staff without stock_tracker permission"
-  },
-  
+
   // No permissions
   {
     user: mockUsers.noPermissions,
-    pathname: "/reception",
+    pathname: "/rooms",
     expected: false,
     description: "Staff with no permissions"
   },
-  
+
   // Non-staff user
   {
     user: mockUsers.nonStaff,
-    pathname: "/reception",
+    pathname: "/rooms",
     expected: false,
     description: "Non-staff user should be denied"
   },
-  
+
   // Unmapped route (deny by default)
   {
     user: mockUsers.staffAdmin,

@@ -15,9 +15,7 @@ import {
   Info,
   Settings,
   UserCog,
-  BarChart3,
   Wrench,
-  Gamepad2,
   ShieldCheck,
   Globe,
   LogOut,
@@ -38,9 +36,7 @@ const LUCIDE_ICON_MAP = {
   hotel_info:           Info,
   admin_settings:       Settings,
   staff_management:     UserCog,
-  stock_tracker:        BarChart3,
   maintenance:          Wrench,
-  entertainment:        Gamepad2,
   front_office:         DoorOpen,
   guest_relations:      MessageCircle,
   public_page:          Globe,
@@ -69,9 +65,7 @@ const NAV_ICON_MAP = {
   hotel_info:           'bi bi-info-circle',
   admin_settings:       'bi bi-gear',
   staff_management:     'bi bi-person-badge',
-  stock_tracker:        'bi bi-graph-up',
   maintenance:          'bi bi-tools',
-  entertainment:        'bi bi-controller',
 };
 
 const FALLBACK_ICON = 'bi bi-circle';

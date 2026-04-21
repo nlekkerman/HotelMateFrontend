@@ -78,13 +78,6 @@ const GuestHotelHome = ({ hotel, settings, editorMode = 'view', canEdit = false,
       path: `/good_to_know/${hotel.slug}`
     },
     {
-      title: 'Games & Entertainment',
-      description: 'Play games and participate in tournaments',
-      icon: 'controller',
-      color: '#fd7e14',
-      path: '/games'
-    },
-    {
       title: 'Requests & Support',
       description: 'Need something? Let us know!',
       icon: 'chat-dots-fill',

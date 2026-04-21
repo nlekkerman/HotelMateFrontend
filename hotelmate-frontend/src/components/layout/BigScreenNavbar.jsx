@@ -51,9 +51,7 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
   // Detect current section for contextual navigation
   const getCurrentSection = () => {
     const path = location.pathname;
-    if (path.includes('/stock_tracker')) return 'stock';
     if (path.includes('/chat')) return 'chat';
-    if (path.includes('/games')) return 'games';
     if (path.includes('/restaurants')) return 'restaurant';
     if (path.includes('/bookings') && !path.includes('/room-bookings')) return 'bookings';
     if (path.includes('/room-bookings') || path.includes('/booking-management')) return 'room-bookings';
@@ -68,13 +66,12 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
   // Define active path helpers
   const isPartialActive = (path) => {
     if (path === "/") return location.pathname === "/";
-    
-    // Handle paths with query parameters (like Games)
+
     if (path.includes('?')) {
       const pathWithoutQuery = path.split('?')[0];
       return location.pathname.startsWith(pathWithoutQuery);
     }
-    
+
     return location.pathname.startsWith(path);
   };
 
@@ -358,18 +355,8 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
       ];
     }
     
-    // STOCK TRACKER - Fixed routes
-    if (path.includes('/stock_tracker')) {
-      return [
-        { icon: 'box-seam', label: 'Items', action: () => navigate(`/stock_tracker/${hotelIdentifier}/items`) },
-        { icon: 'clipboard-check', label: 'Stocktakes', action: () => navigate(`/stock_tracker/${hotelIdentifier}/stocktakes`) },
-        { icon: 'calendar-range', label: 'Periods', action: () => navigate(`/stock_tracker/${hotelIdentifier}/periods`) },
-        { icon: 'arrows-move', label: 'Operations', action: () => navigate(`/stock_tracker/${hotelIdentifier}/operations`) },
-        { icon: 'graph-up', label: 'Analytics', action: () => navigate(`/stock_tracker/${hotelIdentifier}/analytics`) },
-        { icon: 'cash-coin', label: 'Sales', action: () => navigate(`/stock_tracker/${hotelIdentifier}/sales/analysis`) },
-      ];
-    }
-    
+    // STOCK TRACKER - removed
+
     // CHAT - Chat features
     if (path.includes('/chat')) {
       return [
@@ -429,17 +416,8 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
       ];
     }
     
-    // GAMES - Fixed game routes
-    if (path.includes('/games')) {
-      return [
-        { icon: 'controller', label: 'Dashboard', action: () => navigate('/games') },
-        { icon: 'grid-3x3-gap', label: 'Memory Match', action: () => navigate('/games/memory-match') },
-        { icon: 'joystick', label: 'Whack-a-Mole', action: () => navigate('/games/whack-a-mole') },
-        { icon: 'trophy-fill', label: 'Leaderboard', action: () => navigate('/games/memory-match/leaderboard') },
-        { icon: 'award', label: 'Tournaments', action: () => navigate('/games/memory-match/tournaments') },
-      ];
-    }
-    
+    // GAMES - removed
+
     // ATTENDANCE & ROSTER - Attendance management
     if (path.includes('/attendance') || path.includes('/roster') || path.includes('/enhanced-attendance') || path.includes('/department-roster')) {
       return [
@@ -472,7 +450,6 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
     //   (Already implemented above)
     //
     // GUEST RELATIONS CATEGORY:
-    //   - Entertainment: View/manage activities, event calendar
     //   - Good To Know: Already implemented (hotel_info routes)
     //
     // Note: Quick actions will be populated based on route context and user

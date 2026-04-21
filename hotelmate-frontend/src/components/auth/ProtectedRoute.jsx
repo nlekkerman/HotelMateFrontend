@@ -12,14 +12,14 @@ import { canAccessStaffPath } from '@/policy/staffAccessPolicy';
  * @param {Object} props
  * @param {"auth"|"staff"} props.mode  - "auth" = login only, "staff" = login + permission. Default: "auth"
  * @param {string}  [props.requiredSlug]         - nav slug checked when mode="staff"
- * @param {string}  [props.unauthorizedRedirect] - where to send denied users (default "/reception")
+ * @param {string}  [props.unauthorizedRedirect] - where to send denied users (default "/login")
  * @param {React.ReactNode} props.children
  */
 const ProtectedRoute = ({
   children,
   mode = 'auth',
   requiredSlug,
-  unauthorizedRedirect = '/reception',
+  unauthorizedRedirect = '/login',
 }) => {
   const { user } = useAuth();
   const location = useLocation();

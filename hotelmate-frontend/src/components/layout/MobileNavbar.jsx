@@ -86,7 +86,6 @@ const MobileNavbar = () => {
   }, [collapsed]);
 
   const isActive = (path) => {
-    // Handle paths with query parameters (like Games)
     if (path.includes('?')) {
       const pathWithoutQuery = path.split('?')[0];
       return location.pathname.startsWith(pathWithoutQuery);
@@ -487,71 +486,6 @@ const MobileNavbar = () => {
                             const orderCount = getOrderCountForItem(item);
                             const showNewBadge = hasNewBadgeForItem(item);
 
-                            // Special handling for Stock Tracker with sub-items
-                            if (item.slug === 'stock_tracker') {
-                              return (
-                                <li key={item.slug} className="mb-2">
-                                  {/* Main Stock Tracker Header */}
-                                  <div className="nav-link text-white py-2 px-3" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
-                                    <div className="d-flex justify-content-between align-items-center">
-                                      <div>
-                                        <i className={`bi bi-${item.icon} me-2`} />
-                                        {item.name}
-                                      </div>
-                                      {orderCount > 0 && (
-                                        <span className="badge bg-danger rounded-pill">
-                                          {orderCount}
-                                        </span>
-                                      )}
-                                      {showNewBadge && orderCount === 0 && (
-                                        <span className="badge bg-danger">NEW</span>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {/* Stock Tracker Sub-items */}
-                                  <ul className="list-unstyled ps-4 mt-1">
-                                    <li className="mb-1">
-                                      <Link
-                                        className={`nav-link ${
-                                          location.pathname === `/stock_tracker/${hotelIdentifier}` ? "active" : ""
-                                        } text-white py-1 px-2 small`}
-                                        to={`/stock_tracker/${hotelIdentifier}`}
-                                        onClick={toggleNavbar}
-                                      >
-                                        <i className="bi bi-speedometer2 me-2" />
-                                        Dashboard
-                                      </Link>
-                                    </li>
-                                    <li className="mb-1">
-                                      <Link
-                                        className={`nav-link ${
-                                          location.pathname.includes('/stocktakes') ? "active" : ""
-                                        } text-white py-1 px-2 small`}
-                                        to={`/stock_tracker/${hotelIdentifier}/stocktakes`}
-                                        onClick={toggleNavbar}
-                                      >
-                                        <i className="bi bi-clipboard-check me-2" />
-                                        Stocktakes
-                                      </Link>
-                                    </li>
-                                    <li className="mb-1">
-                                      <Link
-                                        className={`nav-link ${
-                                          location.pathname.includes('/periods') ? "active" : ""
-                                        } text-white py-1 px-2 small`}
-                                        to={`/stock_tracker/${hotelIdentifier}/periods`}
-                                        onClick={toggleNavbar}
-                                      >
-                                        <i className="bi bi-calendar-range me-2" />
-                                        Periods
-                                      </Link>
-                                    </li>
-                                  </ul>
-                                </li>
-                              );
-                            }
-
                             // Regular category items
                             return (
                               <li key={item.slug} className="mb-2">
@@ -585,20 +519,6 @@ const MobileNavbar = () => {
                     </li>
                   );
                 })}
-
-                {/* ShootAR — experimental game */}
-                <li className="nav-item">
-                  <Link
-                    className={`nav-link ${
-                      location.pathname === "/shootar" ? "active" : ""
-                    } text-white`}
-                    to="/shootar"
-                    onClick={toggleNavbar}
-                  >
-                    <i className="bi bi-crosshair me-2" />
-                    ShootAR
-                  </Link>
-                </li>
 
                 <li className="nav-item">
                   <button
