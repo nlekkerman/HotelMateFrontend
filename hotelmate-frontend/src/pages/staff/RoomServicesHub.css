@@ -132,18 +132,18 @@
 .booking-management-page .nav-tabs .nav-link.active,
 .rooms-hub .nav-tabs .nav-link.active,
 .staff-hub .nav-tabs .nav-link.active {
-  color: #1e3a8a;
+  color: #ffffff;
   background:
     linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.92) 0%,
-      rgba(226, 232, 240, 0.88) 100%
+      rgba(22, 163, 74, 0.9) 0%,
+      rgba(20, 83, 45, 0.92) 100%
     );
-  border-color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.55);
   box-shadow:
-    0 12px 30px rgba(30, 64, 175, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -10px 16px rgba(148, 163, 184, 0.25);
+    0 12px 30px rgba(20, 83, 45, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -10px 16px rgba(20, 83, 45, 0.5);
   font-weight: 700;
 }
 
@@ -152,5 +152,5 @@
 .booking-management-page .nav-tabs .nav-link.active i,
 .rooms-hub .nav-tabs .nav-link.active i,
 .staff-hub .nav-tabs .nav-link.active i {
-  color: #1e3a8a;
+  color: #ffffff;
 }
