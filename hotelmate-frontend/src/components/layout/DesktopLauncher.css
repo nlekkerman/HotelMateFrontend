@@ -193,8 +193,6 @@
 
 .dl-tile:hover .dl-tile-icon {
   color: #2563eb;
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  border-color: rgba(96, 165, 250, 0.5);
 }
 
 .dl-tile:focus-visible {
@@ -213,15 +211,12 @@
   );
   border-color: rgba(59, 130, 246, 0.55);
   box-shadow:
-    inset 3px 0 0 0 #2563eb,
     0 4px 14px rgba(37, 99, 235, 0.18),
     0 0 0 1px rgba(96, 165, 250, 0.15);
 }
 
 .dl-tile--active .dl-tile-icon {
   color: #1d4ed8;
-  background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
-  border-color: rgba(59, 130, 246, 0.6);
 }
 
 .dl-tile-active-dot {
@@ -236,22 +231,25 @@
   box-shadow: 0 0 6px rgba(37, 99, 235, 0.4);
 }
 
-/* ── Icon container ───────────────────────────────────────────── */
+/* ── Icon + label content wrapper ─────────────────────────────── */
+.dl-tile-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* ── Icon (no chip/background, just the glyph) ────────────────── */
 .dl-tile-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
   color: #64748b;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.8) 0%,
-    rgba(219, 234, 254, 0.5) 100%
-  );
-  border: 1px solid rgba(191, 219, 254, 0.5);
-  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  background: transparent;
+  border: none;
+  transition: color 0.2s ease;
   line-height: 1;
 }
 
@@ -284,8 +282,6 @@
 }
 .dl-tile--logout:hover .dl-tile-icon {
   color: #dc2626;
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  border-color: rgba(248, 113, 113, 0.5);
 }
 
 /* ================================================================
