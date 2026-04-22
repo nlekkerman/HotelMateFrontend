@@ -19,7 +19,7 @@ export const useRestaurantDetail = (hotelSlug, restaurantSlug) => {
         setRestaurant(res.data);
 
         // Fetch blueprint for this restaurant using staff API
-        const bpRes = await api.get(`/staff/hotel/${hotelSlug}/service-bookings/${restaurantSlug}/blueprint/`);
+        const bpRes = await api.get(`/staff/hotel/${hotelSlug}/service-bookings/blueprint/${restaurantSlug}/`);
         setBlueprint(bpRes.data.results?.[0] || null);
       } catch (err) {
         console.error("Error fetching restaurant detail:", err);
