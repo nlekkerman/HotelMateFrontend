@@ -675,7 +675,7 @@
   color: #000000;
   font-size: 0.95rem;
   cursor: pointer;
-  box-shadow: 0 3px 5px rgba(90, 118, 177, 0.25);
+  box-shadow: 0 1px 5px rgba(90, 118, 177, 0.25);
   transition: height 0.15s, width 0.15s, background 0.15s, border-radius 0.15s, box-shadow 0.15s;
 }
 .dl-tab:hover {
