@@ -9,7 +9,7 @@ import { useDesktopNav } from '@/hooks/useDesktopNav';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { getLucideIcon } from '@/config/navIconMap';
-import { ChevronUp, LayoutGrid, Clock, Globe, ShieldCheck, LogOut, X } from 'lucide-react';
+import { ChevronUp, LayoutGrid, Clock, Globe, ShieldCheck, LogOut, X, UserCircle } from 'lucide-react';
 import './DesktopLauncher.css';
 
 // Respect prefers-reduced-motion
@@ -17,13 +17,13 @@ const prefersReducedMotion =
   typeof window !== 'undefined' &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Panel animation — enters from right
+// Panel animation — enters from right (softened, slower roll in/out)
 const panelVariants = prefersReducedMotion
   ? { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } }
   : {
       hidden: { opacity: 0, x: '30%' },
-      visible: { opacity: 1, x: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
-      exit: { opacity: 0, x: '20%', transition: { duration: 0.2, ease: 'easeIn' } },
+      visible: { opacity: 1, x: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
+      exit: { opacity: 0, x: '20%', transition: { duration: 0.45, ease: [0.4, 0, 0.2, 1] } },
     };
 
 // Container for staggered children
@@ -31,7 +31,7 @@ const gridVariants = prefersReducedMotion
   ? { visible: {} }
   : {
       visible: {
-        transition: { staggerChildren: 0.04, delayChildren: 0.08 },
+        transition: { staggerChildren: 0.05, delayChildren: 0.18 },
       },
     };
 
@@ -43,7 +43,7 @@ const tileVariants = prefersReducedMotion
       visible: {
         opacity: 1,
         y: 0,
-        transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] },
+        transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
       },
     };
 
@@ -207,6 +207,18 @@ export default function DesktopLauncher() {
                     onClick={() => { setOpen(false); navigate(`/face/${hotelIdentifier}/clock-in`); }}
                   >
                     <Clock size={22} strokeWidth={1.8} />
+                  </LauncherTile>
+                )}
+
+                {/* My Profile */}
+                {user && hotelIdentifier && (
+                  <LauncherTile
+                    to={`/${hotelIdentifier}/staff/me`}
+                    slug="profile"
+                    label="My Profile"
+                    active={isActive(`/${hotelIdentifier}/staff/me`)}
+                  >
+                    <UserCircle size={22} strokeWidth={1.8} />
                   </LauncherTile>
                 )}
 
