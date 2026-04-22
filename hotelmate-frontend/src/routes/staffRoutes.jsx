@@ -90,9 +90,23 @@ const RedirectToCanonical = ({ build }) => {
   return <Navigate to={build(slug)} replace />;
 };
 
+// Redirect bare staff hotel URLs (e.g. `/staff/hotel/:hotelSlug`, `/staff/:hotelSlug`)
+// to the canonical staff feed so stale links / bookmarks don't hit the public 404.
+const RedirectToStaffFeed = () => {
+  const params = useParams();
+  const { user } = useAuth();
+  const slug = params.hotelSlug || user?.hotel_slug;
+  if (!slug) return <Navigate to="/login" replace />;
+  return <Navigate to={`/staff/${slug}/feed`} replace />;
+};
+
 const staffRoutes = [
   // Staff dashboard / feed (synthetic, auth-only)
   { path: '/staff/:hotelSlug/feed', element: <Home />, protected: true },
+  // Bare staff hotel URLs → canonical feed
+  { path: '/staff/hotel/:hotelSlug', element: <RedirectToStaffFeed />, protected: true },
+  { path: '/staff/hotel/:hotelSlug/', element: <RedirectToStaffFeed />, protected: true },
+  { path: '/staff/:hotelSlug', element: <RedirectToStaffFeed />, protected: true },
   // Operations overview — auth-only (RBAC filtering handled inside the page)
   { path: '/staff/:hotelSlug/overview', element: <OverviewPage />, protected: true },
   { path: '/staff/:hotelSlug/section-editor', element: <SectionEditorPage />, protected: true, mode: 'staff', requiredSlug: 'admin_settings' },
