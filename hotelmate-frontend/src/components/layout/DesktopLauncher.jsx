@@ -9,7 +9,7 @@ import { useDesktopNav } from '@/hooks/useDesktopNav';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { getLucideIcon } from '@/config/navIconMap';
-import { ChevronUp, LayoutGrid, Clock, Globe, ShieldCheck, LogOut } from 'lucide-react';
+import { ChevronUp, LayoutGrid, Clock, Globe, ShieldCheck, LogOut, X } from 'lucide-react';
 import './DesktopLauncher.css';
 
 // Respect prefers-reduced-motion
@@ -172,6 +172,16 @@ export default function DesktopLauncher() {
             exit="exit"
           >
             <div className="dl-panel-inner">
+              {/* Close button */}
+              <button
+                type="button"
+                className="dl-close"
+                onClick={() => setOpen(false)}
+                aria-label="Close launcher"
+              >
+                <X size={18} strokeWidth={2} />
+              </button>
+
               {/* Module tiles grid */}
               <motion.div
                 className="dl-grid"

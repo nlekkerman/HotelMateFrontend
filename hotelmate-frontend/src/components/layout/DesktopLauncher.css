@@ -89,6 +89,36 @@
 }
 
 /* ================================================================
+   CLOSE BUTTON — top-right inside panel
+   ================================================================ */
+.dl-close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+  z-index: 2;
+}
+.dl-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.dl-close:focus-visible {
+  outline: 2px solid var(--dl-accent, #0d6efd);
+  outline-offset: 2px;
+}
+
+/* ================================================================
    TILE GRID — responsive auto-fit grid
    ================================================================ */
 .dl-grid {
