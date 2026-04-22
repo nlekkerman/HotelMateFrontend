@@ -100,6 +100,30 @@ const RedirectToStaffFeed = () => {
   return <Navigate to={`/staff/${slug}/feed`} replace />;
 };
 
+/**
+ * React Router v7 requires dynamic params to occupy an entire segment
+ * (`:param` must start the segment). Legacy URLs of the form
+ * `/hotel-<slug>/restaurants[/...]` use a literal `hotel-` prefix inside the
+ * same segment, which does not match `/hotel-:hotelSlug/restaurants`.
+ *
+ * These wrappers capture the first segment as a whole (`:hotelPrefix`) and
+ * strip the `hotel-` prefix before delegating to the real page / redirect.
+ */
+const HotelPrefixRestaurants = () => {
+  const { hotelPrefix, restaurantSlug } = useParams();
+  if (!hotelPrefix || !hotelPrefix.startsWith('hotel-')) {
+    return <Navigate to="/" replace />;
+  }
+  const hotelSlug = hotelPrefix.slice('hotel-'.length);
+  if (!hotelSlug) return <Navigate to="/" replace />;
+  return (
+    <RestaurantManagementDashboard
+      hotelSlug={hotelSlug}
+      restaurantSlug={restaurantSlug}
+    />
+  );
+};
+
 const staffRoutes = [
   // Staff dashboard / feed (synthetic, auth-only)
   { path: '/staff/:hotelSlug/feed', element: <Home />, protected: true },
@@ -138,8 +162,13 @@ const staffRoutes = [
   { path: '/face/:hotelSlug/register', element: <RedirectWithTab to={(p) => `/attendance/${p.hotelSlug}/face-register`} />, protected: true, mode: 'staff', requiredSlug: 'attendance' },
 
   // ---------------- Restaurant Bookings ----------------
-  { path: '/hotel-:hotelSlug/restaurants', element: <RestaurantManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'restaurant_bookings' },
-  { path: '/hotel-:hotelSlug/restaurants/:restaurantSlug', element: <RestaurantManagementDashboard />, protected: true, mode: 'staff', requiredSlug: 'restaurant_bookings' },
+  // NOTE: URLs use a literal `hotel-` prefix inside the first segment. RR v7
+  // requires params to span the entire segment, so we capture `:hotelPrefix`
+  // and strip the prefix inside `HotelPrefixRestaurants`.
+  { path: '/hotel-:hotelSlug/restaurants', element: <HotelPrefixRestaurants />, protected: true, mode: 'staff', requiredSlug: 'restaurant_bookings' },
+  { path: '/hotel-:hotelSlug/restaurants/:restaurantSlug', element: <HotelPrefixRestaurants />, protected: true, mode: 'staff', requiredSlug: 'restaurant_bookings' },
+  { path: '/:hotelPrefix/restaurants', element: <HotelPrefixRestaurants />, protected: true, mode: 'staff', requiredSlug: 'restaurant_bookings' },
+  { path: '/:hotelPrefix/restaurants/:restaurantSlug', element: <HotelPrefixRestaurants />, protected: true, mode: 'staff', requiredSlug: 'restaurant_bookings' },
 
   // ---------------- Rooms (canonical + redirects) ----------------
   { path: '/staff/hotel/:hotelSlug/rooms', element: <RoomsHub />, protected: true, mode: 'staff', requiredSlug: 'rooms' },

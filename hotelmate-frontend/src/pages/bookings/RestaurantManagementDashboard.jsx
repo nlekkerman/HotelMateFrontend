@@ -10,11 +10,14 @@ import RestaurantList from "@/components/restaurants/RestaurantList";
 import CreateRestaurantModal from "@/components/restaurants/modals/CreateRestaurantModal";
 import api from "@/services/api";
 
-const RestaurantManagementDashboard = () => {
+const RestaurantManagementDashboard = ({
+  hotelSlug: hotelSlugProp,
+  restaurantSlug: restaurantSlugProp,
+} = {}) => {
   const { user } = useAuth();
   const { mainColor } = useTheme();
   const { hotelSlug: urlHotelSlug } = useParams();
-  const hotelSlug = urlHotelSlug || user?.hotel_slug;
+  const hotelSlug = hotelSlugProp || urlHotelSlug || user?.hotel_slug;
   const navigate = useNavigate();
   const [showAddModal, setShowAddModal] = useState(false);
 
