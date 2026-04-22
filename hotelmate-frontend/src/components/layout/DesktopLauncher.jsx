@@ -212,17 +212,6 @@ export default function DesktopLauncher() {
                   </LauncherTile>
                 )}
 
-                {/* My Profile */}
-                {user && hotelIdentifier && (
-                  <LauncherTile
-                    to={`/${hotelIdentifier}/staff/me`}
-                    slug="profile"
-                    label="My Profile"
-                    active={isActive(`/${hotelIdentifier}/staff/me`)}
-                  >
-                    <UserCircle size={22} strokeWidth={1.8} />
-                  </LauncherTile>
-                )}
 
                 {/* Public Page */}
                 {hotelIdentifier && (
@@ -245,6 +234,18 @@ export default function DesktopLauncher() {
                     onClick={() => { setOpen(false); navigate('/super-user'); }}
                   >
                     <ShieldCheck size={22} strokeWidth={1.8} />
+                  </LauncherTile>
+                )}
+
+                {/* My Profile */}
+                {user && hotelIdentifier && (
+                  <LauncherTile
+                    to={`/${hotelIdentifier}/staff/me`}
+                    slug="profile"
+                    label="My Profile"
+                    active={isActive(`/${hotelIdentifier}/staff/me`)}
+                  >
+                    <UserCircle size={22} strokeWidth={1.8} />
                   </LauncherTile>
                 )}
 
