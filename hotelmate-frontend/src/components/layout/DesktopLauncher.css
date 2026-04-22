@@ -82,8 +82,9 @@
    PANEL INNER — centered max-width wrapper for content
    ================================================================ */
 .dl-panel-inner {
-  max-width: 960px;
-  margin: 0 auto;
+  max-width: none;
+  width: 100%;
+  margin: 0;
   padding: 44px 32px 36px;
 }
 
