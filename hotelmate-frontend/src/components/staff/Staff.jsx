@@ -7,6 +7,7 @@ import ClockedInTicker from "@/components/analytics/ClockedInTicker.jsx";
 import RegistrationPackagesPanel from "./RegistrationPackagesPanel";
 import SectionDepartmentsRoles from "@/components/utils/settings-sections/SectionDepartmentsRoles";
 import StaffCreate from "./StaffCreate";
+import "@/pages/staff/RoomServicesHub.css";
 
 export default function Staff() {
   const { hotelSlug } = useParams();
@@ -118,12 +119,12 @@ export default function Staff() {
   const withoutFace = totalStaff - withFace;
 
   return (
-    <div className="container my-4">
+    <div className="staff-hub container my-4">
       {/* Tab Navigation */}
       <ul className="nav nav-tabs mb-4">
         <li className="nav-item">
           <button
-            className={`nav-link text-dark ${activeTab === "directory" ? "active fw-semibold" : ""}`}
+            className={`nav-link ${activeTab === "directory" ? "active fw-semibold" : ""}`}
             onClick={() => setActiveTab("directory")}
           >
             <i className="bi bi-people me-1"></i> Staff
@@ -133,7 +134,7 @@ export default function Staff() {
         {isAdmin && (
           <li className="nav-item">
             <button
-              className={`nav-link text-dark ${activeTab === "packages" ? "active fw-semibold" : ""}`}
+              className={`nav-link ${activeTab === "packages" ? "active fw-semibold" : ""}`}
               onClick={() => setActiveTab("packages")}
             >
               <i className="bi bi-qr-code me-1"></i> Registration Packages
@@ -144,7 +145,7 @@ export default function Staff() {
         {isAdmin && (
           <li className="nav-item">
             <button
-              className={`nav-link text-dark ${activeTab === "pending" ? "active fw-semibold" : ""}`}
+              className={`nav-link ${activeTab === "pending" ? "active fw-semibold" : ""}`}
               onClick={() => setActiveTab("pending")}
             >
               <i className="bi bi-person-plus me-1"></i> Pending Staff Requests
@@ -158,7 +159,7 @@ export default function Staff() {
         {isAdmin && (
           <li className="nav-item">
             <button
-              className={`nav-link text-dark ${activeTab === "departments" ? "active fw-semibold" : ""}`}
+              className={`nav-link ${activeTab === "departments" ? "active fw-semibold" : ""}`}
               onClick={() => setActiveTab("departments")}
             >
               <i className="bi bi-diagram-3 me-1"></i> Departments & Roles
