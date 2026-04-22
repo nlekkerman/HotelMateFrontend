@@ -2,28 +2,45 @@
 // Desktop-only full-width launcher panel for staff area.
 // Closed: small tab/bookmark at top-right. Open: full-width panel with staggered tiles.
 // Does NOT render on mobile. RBAC logic lives in useDesktopNav — untouched here.
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useDesktopNav } from '@/hooks/useDesktopNav';
-import { useTheme } from '@/context/ThemeContext';
-import { useAuth } from '@/context/AuthContext';
-import { getLucideIcon } from '@/config/navIconMap';
-import { ChevronUp, LayoutGrid, Clock, Globe, ShieldCheck, LogOut, X, UserCircle } from 'lucide-react';
-import './DesktopLauncher.css';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { useDesktopNav } from "@/hooks/useDesktopNav";
+import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
+import { getLucideIcon } from "@/config/navIconMap";
+import {
+  ChevronUp,
+  LayoutGrid,
+  Clock,
+  Globe,
+  ShieldCheck,
+  LogOut,
+  X,
+  UserCircle,
+} from "lucide-react";
+import "./DesktopLauncher.css";
 
 // Respect prefers-reduced-motion
 const prefersReducedMotion =
-  typeof window !== 'undefined' &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  typeof window !== "undefined" &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // Panel animation — enters from right (softened, slower roll in/out)
 const panelVariants = prefersReducedMotion
   ? { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } }
   : {
-      hidden: { opacity: 0, x: '30%' },
-      visible: { opacity: 1, x: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
-      exit: { opacity: 0, x: '20%', transition: { duration: 0.45, ease: [0.4, 0, 0.2, 1] } },
+      hidden: { opacity: 0, x: "30%" },
+      visible: {
+        opacity: 1,
+        x: 0,
+        transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+      },
+      exit: {
+        opacity: 0,
+        x: "20%",
+        transition: { duration: 0.45, ease: [0.4, 0, 0.2, 1] },
+      },
     };
 
 // Container for staggered children
@@ -62,10 +79,12 @@ function LauncherTile({ to, onClick, slug, label, active, variant, children }) {
   );
 
   const classes = [
-    'dl-tile',
-    active && 'dl-tile--active',
+    "dl-tile",
+    active && "dl-tile--active",
     variant && `dl-tile--${variant}`,
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const motionProps = {
     variants: tileVariants,
@@ -108,24 +127,26 @@ export default function DesktopLauncher() {
     if (!open) return;
     function onClickOutside(e) {
       if (
-        panelRef.current && !panelRef.current.contains(e.target) &&
-        tabRef.current && !tabRef.current.contains(e.target)
+        panelRef.current &&
+        !panelRef.current.contains(e.target) &&
+        tabRef.current &&
+        !tabRef.current.contains(e.target)
       ) {
         setOpen(false);
       }
     }
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
   }, [open]);
 
   // Close on Escape
   useEffect(() => {
     if (!open) return;
     function onKey(e) {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === "Escape") setOpen(false);
     }
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
   // Close on navigation
@@ -136,28 +157,32 @@ export default function DesktopLauncher() {
   const toggle = useCallback(() => setOpen((v) => !v), []);
 
   const isActive = (path) => {
-    if (path === '/') return location.pathname === '/';
-    const cleanPath = path.split('?')[0];
+    if (path === "/") return location.pathname === "/";
+    const cleanPath = path.split("?")[0];
     return location.pathname.startsWith(cleanPath);
   };
 
-  const accentColor = mainColor || '#0d6efd';
+  const accentColor = mainColor || "#0d6efd";
 
   return (
-    <div className="desktop-launcher-root d-none d-lg-block" style={{ '--dl-accent': accentColor }}>
+    <div
+      className="desktop-launcher-root d-none d-lg-block"
+      style={{ "--dl-accent": accentColor }}
+    >
       {/* Collapsed tab — top-right bookmark */}
       <button
         ref={tabRef}
-        className={`dl-tab ${open ? 'dl-tab--open' : ''}`}
+        className={`dl-tab ${open ? "dl-tab--open" : ""}`}
         onClick={toggle}
         aria-expanded={open}
         aria-haspopup="true"
-        aria-label={open ? 'Close launcher' : 'Open launcher'}
+        aria-label={open ? "Close launcher" : "Open launcher"}
       >
-        {open
-          ? <ChevronUp size={16} strokeWidth={2.2} />
-          : <span className="dl-tab-label">Menu</span>
-        }
+        {open ? (
+          <ChevronUp size={16} strokeWidth={2.2} />
+        ) : (
+          <span className="dl-tab-label">Menu</span>
+        )}
       </button>
 
       {/* Full-width launcher panel */}
@@ -201,18 +226,6 @@ export default function DesktopLauncher() {
                   />
                 ))}
 
-                {/* Clock In */}
-                {user && hotelIdentifier && (
-                  <LauncherTile
-                    slug="clock_in"
-                    label="Clock In"
-                    onClick={() => { setOpen(false); navigate(`/face/${hotelIdentifier}/clock-in`); }}
-                  >
-                    <Clock size={22} strokeWidth={1.8} />
-                  </LauncherTile>
-                )}
-
-
                 {/* Public Page */}
                 {hotelIdentifier && (
                   <LauncherTile
@@ -224,20 +237,7 @@ export default function DesktopLauncher() {
                     <Globe size={22} strokeWidth={1.8} />
                   </LauncherTile>
                 )}
-
-                {/* Super User */}
-                {user?.is_superuser && (
-                  <LauncherTile
-                    slug="super_user"
-                    label="Super User"
-                    active={isActive('/super-user')}
-                    onClick={() => { setOpen(false); navigate('/super-user'); }}
-                  >
-                    <ShieldCheck size={22} strokeWidth={1.8} />
-                  </LauncherTile>
-                )}
-
-                {/* My Profile */}
+ {/* My Profile */}
                 {user && hotelIdentifier && (
                   <LauncherTile
                     to={`/${hotelIdentifier}/staff/me`}
@@ -248,14 +248,45 @@ export default function DesktopLauncher() {
                     <UserCircle size={22} strokeWidth={1.8} />
                   </LauncherTile>
                 )}
+                {/* Super User */}
+                {user?.is_superuser && (
+                  <LauncherTile
+                    slug="super_user"
+                    label="Super User"
+                    active={isActive("/super-user")}
+                    onClick={() => {
+                      setOpen(false);
+                      navigate("/super-user");
+                    }}
+                  >
+                    <ShieldCheck size={22} strokeWidth={1.8} />
+                  </LauncherTile>
+                )}
 
+               
+                {/* Clock In */}
+                {user && hotelIdentifier && (
+                  <LauncherTile
+                    slug="clock_in"
+                    label="Clock In"
+                    onClick={() => {
+                      setOpen(false);
+                      navigate(`/face/${hotelIdentifier}/clock-in`);
+                    }}
+                  >
+                    <Clock size={22} strokeWidth={1.8} />
+                  </LauncherTile>
+                )}
                 {/* Logout */}
                 {user && (
                   <LauncherTile
                     slug="logout"
                     label="Logout"
                     variant="logout"
-                    onClick={() => { setOpen(false); logout(); }}
+                    onClick={() => {
+                      setOpen(false);
+                      logout();
+                    }}
                   >
                     <LogOut size={22} strokeWidth={1.8} />
                   </LauncherTile>
