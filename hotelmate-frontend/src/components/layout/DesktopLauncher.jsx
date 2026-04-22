@@ -51,10 +51,12 @@ function LauncherTile({ to, onClick, slug, label, active, variant, children }) {
   const IconComponent = getLucideIcon(slug);
   const inner = (
     <>
-      <span className="dl-tile-icon">
-        {children || <IconComponent size={22} strokeWidth={1.8} />}
+      <span className="dl-tile-content">
+        <span className="dl-tile-icon">
+          {children || <IconComponent size={22} strokeWidth={1.8} />}
+        </span>
+        <span className="dl-tile-label">{label}</span>
       </span>
-      <span className="dl-tile-label">{label}</span>
       {active && <span className="dl-tile-active-dot" />}
     </>
   );
