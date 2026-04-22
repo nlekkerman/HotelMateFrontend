@@ -101,6 +101,327 @@
 }
 
 /* ================================================================
+   PANEL INNER
+   ================================================================ */
+.dl-panel-inner {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 44px 32px 36px;
+}
+
+/* ================================================================
+   CLOSE BUTTON
+   ================================================================ */
+.dl-close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(147, 197, 253, 0.4);
+  background: rgba(255, 255, 255, 0.6);
+  color: #1e40af;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, border-color 0.18s, box-shadow 0.18s;
+  z-index: 2;
+  box-shadow: 0 2px 6px rgba(30, 64, 175, 0.08);
+}
+.dl-close:hover {
+  background: rgba(255, 255, 255, 0.9);
+  color: #1e3a8a;
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.15);
+}
+.dl-close:focus-visible {
+  outline: 2px solid var(--dl-accent, #2563eb);
+  outline-offset: 2px;
+}
+
+/* ================================================================
+   TILE GRID
+   ================================================================ */
+.dl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 12px;
+}
+
+/* ================================================================
+   SINGLE TILE
+   ================================================================ */
+.dl-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 88px;
+  padding: 16px 8px 14px;
+  border-radius: 14px;
+  color: #1e293b; /* dark slate for label */
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid rgba(191, 219, 254, 0.45);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(239, 246, 255, 0.65) 100%
+  );
+  font-family: inherit;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
+    box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.dl-tile:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(219, 234, 254, 0.85) 100%
+  );
+  border-color: rgba(96, 165, 250, 0.55);
+  color: #0f172a;
+  text-decoration: none;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.15);
+  transform: translateX(2px) translateY(-1px);
+}
+
+.dl-tile:hover .dl-tile-icon {
+  color: #1d4ed8;
+}
+
+.dl-tile:focus-visible {
+  outline: 2px solid var(--dl-accent, #2563eb);
+  outline-offset: -2px;
+  border-radius: 14px;
+}
+
+/* ── Active tile ──────────────────────────────────────────────── */
+.dl-tile--active {
+  color: #0f172a; /* near-black label */
+  background: linear-gradient(
+    135deg,
+    rgba(147, 197, 253, 0.55) 0%,
+    rgba(96, 165, 250, 0.45) 100%
+  );
+  border-color: rgba(37, 99, 235, 0.7);
+  box-shadow:
+    0 6px 20px rgba(37, 99, 235, 0.28),
+    0 0 0 1px rgba(59, 130, 246, 0.3);
+}
+
+.dl-tile--active .dl-tile-icon {
+  color: #1e3a8a; /* darker blue for the active icon */
+}
+
+.dl-tile--active .dl-tile-label {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.dl-tile-active-dot {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+  box-shadow: 0 0 6px rgba(37, 99, 235, 0.5);
+}
+
+/* ── Icon + label content wrapper ─────────────────────────────── */
+.dl-tile-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* ── Icon (no chip/background, just the glyph) ────────────────── */
+/* All icons use the active blue tone for consistency against the light panel. */
+.dl-tile-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1d4ed8;
+  background: transparent;
+  border: none;
+  transition: color 0.2s ease;
+  line-height: 1;
+}
+
+/* ── Label ────────────────────────────────────────────────────── */
+.dl-tile-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  line-height: 1.2;
+  color: inherit;
+}
+
+/* ── Logout variant ───────────────────────────────────────────── */
+.dl-tile--logout {
+  color: #475569;
+}
+.dl-tile--logout .dl-tile-icon {
+  color: #64748b;
+}
+.dl-tile--logout:hover {
+  color: #b91c1c;
+  background: linear-gradient(
+    135deg,
+    rgba(254, 242, 242, 0.9) 0%,
+    rgba(254, 226, 226, 0.75) 100%
+  );
+  border-color: rgba(248, 113, 113, 0.5);
+  box-shadow: 0 6px 18px rgba(220, 38, 38, 0.15);
+}
+.dl-tile--logout:hover .dl-tile-icon {
+  color: #dc2626;
+}
+
+/* ================================================================
+   EMPTY STATE
+   ================================================================ */
+.dl-empty {
+  padding: 24px 20px;
+  color: #475569;
+  font-size: 0.85rem;
+  text-align: center;
+  margin: 0;
+}
+
+/* ================================================================
+   REDUCED MOTION
+   ================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .dl-tile,
+  .dl-tile-icon,
+  .dl-tab,
+  .dl-close {
+    transition: none !important;
+  }
+  .dl-tile:hover {
+    transform: none !important;
+  }
+}
+/* src/components/layout/DesktopLauncher.css */
+/* Desktop-only full-width launcher panel — tab trigger + tile grid. */
+/* Visual theme: blue/white glassmorphism. Logic, position & grid unchanged. */
+
+/* ================================================================
+   ROOT — anchors both the tab and the panel overlay
+   ================================================================ */
+.desktop-launcher-root {
+  position: fixed;
+  top: 0;
+  right: 24px;
+  z-index: 1100;
+  font-family: inherit;
+}
+
+/* ================================================================
+   COLLAPSED TAB — small bookmark handle at top-right
+   ================================================================ */
+.dl-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 72px;
+  height: 28px;
+  margin: 0 0 0 auto;
+  border: none;
+  border-radius: 0 0 10px 10px;
+  background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
+  color: #fff;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.25);
+  transition: height 0.15s, width 0.15s, background 0.15s, border-radius 0.15s, box-shadow 0.15s;
+}
+.dl-tab:hover {
+  height: 32px;
+  width: 82px;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+}
+.dl-tab:focus-visible {
+  outline: 2px solid var(--dl-accent, #2563eb);
+  outline-offset: 2px;
+}
+.dl-tab--open {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(219, 234, 254, 0.92) 100%);
+  color: #1e3a8a;
+  width: 72px;
+  height: 26px;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 3px 10px rgba(30, 64, 175, 0.15);
+}
+.dl-tab--open:hover {
+  width: 82px;
+  height: 30px;
+}
+
+.dl-tab-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+/* ================================================================
+   FULL-WIDTH PANEL — spans viewport, light blue frosted glass
+   ================================================================ */
+.dl-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(239, 246, 255, 0.85) 0%,
+    rgba(219, 234, 254, 0.78) 50%,
+    rgba(255, 255, 255, 0.82) 100%
+  );
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  border-bottom: 1px solid rgba(147, 197, 253, 0.35);
+  box-shadow:
+    0 12px 36px rgba(30, 64, 175, 0.12),
+    0 2px 8px rgba(30, 64, 175, 0.06);
+  z-index: 1099;
+  overflow-y: auto;
+  max-height: 85vh;
+}
+
+/* Fallback for browsers without backdrop-filter support */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .dl-panel {
+    background: linear-gradient(
+      135deg,
+      rgba(239, 246, 255, 0.98) 0%,
+      rgba(219, 234, 254, 0.98) 50%,
+      rgba(255, 255, 255, 0.98) 100%
+    );
+  }
+}
+
+/* ================================================================
    PANEL INNER — centered max-width wrapper for content
    ================================================================ */
 .dl-panel-inner {
