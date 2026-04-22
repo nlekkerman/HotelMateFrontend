@@ -7,6 +7,7 @@ import RoomServiceOrders from '@/components/room_service/RoomServiceOrders';
 import RoomServiceOrdersManagement from '@/components/room_service/RoomServiceOrdersManagement';
 import OrdersSummary from '@/components/room_service/OrdersSummary';
 import BreakfastRoomService from '@/components/room_service/BreakfastRoomService';
+import './RoomServicesHub.css';
 
 const TABS = [
   { key: 'orders', label: 'Active Orders', icon: 'bi-receipt-cutoff' },

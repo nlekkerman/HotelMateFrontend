@@ -6,6 +6,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import AttendanceDashboard from '@/features/attendance/pages/AttendanceDashboard';
 import DepartmentRosterDashboard from '@/features/attendance/pages/DepartmentRosterDashboard';
 import EnhancedAttendanceDashboard from '@/features/attendance/components/EnhancedAttendanceDashboard';
+import './RoomServicesHub.css';
 
 const TABS = [
   { key: 'dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },

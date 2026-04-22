@@ -8,6 +8,7 @@ import RoomTypesTab from './room-management/RoomTypesTab';
 import RoomsTab from './room-management/RoomsTab';
 import GuestList from '@/components/guests/GuestList';
 import './RoomManagement.css';
+import './RoomServicesHub.css';
 
 const TABS = [
   { key: 'list', label: 'Rooms', icon: 'bi-door-closed' },

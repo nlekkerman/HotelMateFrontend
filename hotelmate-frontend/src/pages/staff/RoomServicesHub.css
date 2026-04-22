@@ -1,0 +1,75 @@
+/* src/pages/staff/RoomServicesHub.css */
+/* Shared tab styling for hub pages (Room Services + Attendance + Room Bookings + Rooms). */
+
+.room-services-hub .nav-tabs,
+.attendance-hub .nav-tabs,
+.booking-management-page .nav-tabs,
+.rooms-hub .nav-tabs {
+  border-bottom: 1px solid rgba(147, 197, 253, 0.35);
+  gap: 6px;
+}
+
+.room-services-hub .nav-tabs .nav-link,
+.attendance-hub .nav-tabs .nav-link,
+.booking-management-page .nav-tabs .nav-link,
+.rooms-hub .nav-tabs .nav-link {
+  color: #ffffff;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border: 1px solid rgba(37, 99, 235, 0.55);
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  padding: 8px 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow:
+    0 2px 8px rgba(37, 99, 235, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.room-services-hub .nav-tabs .nav-link i,
+.attendance-hub .nav-tabs .nav-link i,
+.booking-management-page .nav-tabs .nav-link i,
+.rooms-hub .nav-tabs .nav-link i {
+  color: #ffffff;
+}
+
+.room-services-hub .nav-tabs .nav-link:hover,
+.room-services-hub .nav-tabs .nav-link:focus,
+.attendance-hub .nav-tabs .nav-link:hover,
+.attendance-hub .nav-tabs .nav-link:focus,
+.booking-management-page .nav-tabs .nav-link:hover,
+.booking-management-page .nav-tabs .nav-link:focus,
+.rooms-hub .nav-tabs .nav-link:hover,
+.rooms-hub .nav-tabs .nav-link:focus {
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%);
+  border-color: rgba(30, 64, 175, 0.7);
+  box-shadow:
+    0 6px 16px rgba(37, 99, 235, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+.room-services-hub .nav-tabs .nav-link.active,
+.attendance-hub .nav-tabs .nav-link.active,
+.booking-management-page .nav-tabs .nav-link.active,
+.rooms-hub .nav-tabs .nav-link.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+  border-color: rgba(30, 58, 138, 0.8);
+  box-shadow:
+    0 8px 20px rgba(30, 64, 175, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  font-weight: 700;
+}
+
+.room-services-hub .nav-tabs .nav-link.active i,
+.attendance-hub .nav-tabs .nav-link.active i,
+.booking-management-page .nav-tabs .nav-link.active i,
+.rooms-hub .nav-tabs .nav-link.active i {
+  color: #ffffff;
+}
+</content>
+</invoke>
