@@ -154,7 +154,7 @@ export default function DesktopLauncher() {
       >
         {open
           ? <ChevronUp size={16} strokeWidth={2.2} />
-          : <LayoutGrid size={16} strokeWidth={2} />
+          : <span className="dl-tab-label">Menu</span>
         }
       </button>
 
