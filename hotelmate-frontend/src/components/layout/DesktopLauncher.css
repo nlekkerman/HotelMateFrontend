@@ -383,7 +383,6 @@
   top: 0;
   left: 0;
   right: 0;
-  background: rgba(14, 14, 16, 0.97);
   backdrop-filter: blur(24px) saturate(1.2);
   -webkit-backdrop-filter: blur(24px) saturate(1.2);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
