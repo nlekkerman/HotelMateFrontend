@@ -181,10 +181,69 @@
    PANEL INNER
    ================================================================ */
 .dl-panel-inner {
+  position: relative;
   max-width: none;
   width: 100%;
   margin: 0;
-  padding: 44px 32px 36px;
+  padding: 44px 32px 76px; /* extra bottom space for the Close tab */
+}
+
+/* ================================================================
+   CLOSE TAB (bottom-right, mirrors the Menu tab)
+   ================================================================ */
+.dl-tab--close {
+  position: absolute;
+  bottom: 0;
+  right: 24px;
+  top: auto;
+  left: auto;
+  /* Flip the rounded corners to hang off the bottom edge */
+  border-top: 1px solid rgba(255, 255, 255, 0.45);
+  border-bottom: none;
+  border-radius: 16px 16px 0 0;
+  width: 132px;
+  height: 44px;
+  transform: translateY(1px); /* sit flush with panel bottom */
+  /* Distinct amber/orange palette so it reads differently from the blue Menu tab */
+  background: linear-gradient(
+    135deg,
+    rgba(245, 158, 11, 0.9) 0%,
+    rgba(180, 83, 9, 0.92) 100%
+  );
+  border-color: rgba(255, 237, 213, 0.55);
+  color: #fff7ed;
+  box-shadow:
+    0 -6px 18px rgba(180, 83, 9, 0.35),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 8px 14px rgba(120, 53, 15, 0.35);
+}
+.dl-tab--close::before {
+  /* flip the top dome sheen to a bottom dome */
+  inset: 55% 0 0 0;
+  border-radius: 40% 40% 0 0 / 80% 80% 0 0;
+  background: linear-gradient(
+    to top,
+    rgba(255, 255, 255, 0.45) 0%,
+    rgba(255, 255, 255, 0.15) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+.dl-tab--close:hover {
+  height: 50px;
+  width: 144px;
+  background: linear-gradient(
+    135deg,
+    rgba(251, 191, 36, 0.95) 0%,
+    rgba(194, 65, 12, 0.95) 100%
+  );
+  box-shadow:
+    0 -10px 26px rgba(194, 65, 12, 0.45),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 10px 16px rgba(120, 53, 15, 0.45);
+}
+.dl-tab--close .dl-tab-label {
+  color: #fff7ed;
+  text-shadow: 0 1px 2px rgba(120, 53, 15, 0.35);
 }
 
 /* ================================================================

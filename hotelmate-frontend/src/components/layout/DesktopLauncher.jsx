@@ -16,7 +16,6 @@ import {
   Globe,
   ShieldCheck,
   LogOut,
-  X,
   UserCircle,
 } from "lucide-react";
 import "./DesktopLauncher.css";
@@ -199,16 +198,6 @@ export default function DesktopLauncher() {
             exit="exit"
           >
             <div className="dl-panel-inner">
-              {/* Close button */}
-              <button
-                type="button"
-                className="dl-close"
-                onClick={() => setOpen(false)}
-                aria-label="Close launcher"
-              >
-                <X size={18} strokeWidth={2} />
-              </button>
-
               {/* Module tiles grid */}
               <motion.div
                 className="dl-grid"
@@ -297,6 +286,16 @@ export default function DesktopLauncher() {
               {items.length === 0 && (
                 <p className="dl-empty">No modules available.</p>
               )}
+
+              {/* Close tab — bottom-right, mirrors the Menu tab */}
+              <button
+                type="button"
+                className="dl-tab dl-tab--close"
+                onClick={() => setOpen(false)}
+                aria-label="Close launcher"
+              >
+                <span className="dl-tab-label">Close</span>
+              </button>
             </div>
           </motion.nav>
         )}
