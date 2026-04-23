@@ -161,7 +161,8 @@
     0 12px 36px rgba(30, 64, 175, 0.12),
     0 2px 8px rgba(30, 64, 175, 0.06);
   z-index: 1099;
-  overflow-y: auto;
+  /* Allow the Close bookmark tab to stick out below the panel */
+  overflow: visible;
   max-height: 85vh;
 }
 
@@ -185,7 +186,10 @@
   max-width: none;
   width: 100%;
   margin: 0;
-  padding: 44px 32px 76px; /* extra bottom space for the Close tab */
+  padding: 44px 32px 36px;
+  /* Internal scroll so the Close tab outside can stay fixed below */
+  max-height: 85vh;
+  overflow-y: auto;
 }
 
 /* ================================================================
@@ -193,17 +197,17 @@
    ================================================================ */
 .dl-tab--close {
   position: absolute;
-  bottom: 0;
+  top: 100%;           /* hang off the bottom of the panel */
   right: 24px;
-  top: auto;
+  bottom: auto;
   left: auto;
-  /* Flip the rounded corners to hang off the bottom edge */
-  border-top: 1px solid rgba(255, 255, 255, 0.45);
-  border-bottom: none;
-  border-radius: 16px 16px 0 0;
+  margin-top: -1px;    /* overlap panel border cleanly */
+  /* Bookmark shape pointing DOWN (rounded bottom, flat top joining the panel) */
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-top: none;
+  border-radius: 0 0 16px 16px;
   width: 132px;
   height: 44px;
-  transform: translateY(1px); /* sit flush with panel bottom */
   /* Distinct amber/orange palette so it reads differently from the blue Menu tab */
   background: linear-gradient(
     135deg,
@@ -213,17 +217,17 @@
   border-color: rgba(255, 237, 213, 0.55);
   color: #fff7ed;
   box-shadow:
-    0 -6px 18px rgba(180, 83, 9, 0.35),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.55),
-    inset 0 8px 14px rgba(120, 53, 15, 0.35);
+    0 10px 20px rgba(180, 83, 9, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -8px 14px rgba(120, 53, 15, 0.35);
 }
 .dl-tab--close::before {
-  /* flip the top dome sheen to a bottom dome */
-  inset: 55% 0 0 0;
-  border-radius: 40% 40% 0 0 / 80% 80% 0 0;
+  /* Top dome sheen, matches the Menu tab direction */
+  inset: 0 0 55% 0;
+  border-radius: 0 0 40% 40% / 0 0 80% 80%;
   background: linear-gradient(
-    to top,
-    rgba(255, 255, 255, 0.45) 0%,
+    to bottom,
+    rgba(255, 255, 255, 0.5) 0%,
     rgba(255, 255, 255, 0.15) 60%,
     rgba(255, 255, 255, 0) 100%
   );
@@ -237,9 +241,9 @@
     rgba(194, 65, 12, 0.95) 100%
   );
   box-shadow:
-    0 -10px 26px rgba(194, 65, 12, 0.45),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.6),
-    inset 0 10px 16px rgba(120, 53, 15, 0.45);
+    0 14px 28px rgba(194, 65, 12, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -10px 16px rgba(120, 53, 15, 0.45);
 }
 .dl-tab--close .dl-tab-label {
   color: #fff7ed;

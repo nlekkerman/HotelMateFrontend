@@ -286,17 +286,18 @@ export default function DesktopLauncher() {
               {items.length === 0 && (
                 <p className="dl-empty">No modules available.</p>
               )}
-
-              {/* Close tab — bottom-right, mirrors the Menu tab */}
-              <button
-                type="button"
-                className="dl-tab dl-tab--close"
-                onClick={() => setOpen(false)}
-                aria-label="Close launcher"
-              >
-                <span className="dl-tab-label">Close</span>
-              </button>
             </div>
+
+            {/* Close tab — hangs below the panel like a bookmark,
+                mirroring the Menu tab which hangs from the top. */}
+            <button
+              type="button"
+              className="dl-tab dl-tab--close"
+              onClick={() => setOpen(false)}
+              aria-label="Close launcher"
+            >
+              <span className="dl-tab-label">Close</span>
+            </button>
           </motion.nav>
         )}
       </AnimatePresence>
