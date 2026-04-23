@@ -430,28 +430,50 @@
   z-index: 2;
 }
 
-/* ── Logout variant ───────────────────────────────────────────── */
+/* ── Logout variant ───────────────────────────────────────────────
+   Intentionally styled unlike the rest: dark slate ghost tile with a
+   red accent ring/icon so it reads as a distinct "sign-out" action,
+   not just another module. ────────────────────────────────────── */
 .dl-tile--logout {
-  color: #ffffff;
-  background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
-  border-color: rgba(185, 28, 28, 0.55);
+  color: #e5e7eb;
+  background: linear-gradient(
+    135deg,
+    rgba(30, 41, 59, 0.92) 0%,
+    rgba(15, 23, 42, 0.94) 100%
+  );
+  border: 1px dashed rgba(248, 113, 113, 0.55);
   box-shadow:
-    0 6px 18px rgba(220, 38, 38, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    inset 0 -6px 12px rgba(153, 27, 27, 0.25);
+    0 4px 14px rgba(15, 23, 42, 0.35),
+    inset 0 0 0 1px rgba(248, 113, 113, 0.15);
 }
-.dl-tile--logout .dl-tile-icon,
+/* Suppress default gloss sheen so it doesn't look like the other tiles */
+.dl-tile--logout::before,
+.dl-tile--logout::after {
+  display: none;
+}
+.dl-tile--logout .dl-tile-icon {
+  color: #fca5a5;
+}
 .dl-tile--logout .dl-tile-label {
-  color: #ffffff;
+  color: #f1f5f9;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.62rem;
 }
 .dl-tile--logout:hover {
   color: #ffffff;
-  background: linear-gradient(135deg, #ef4444 0%, #991b1b 100%);
-  border-color: rgba(153, 27, 27, 0.8);
+  background: linear-gradient(
+    135deg,
+    rgba(15, 23, 42, 0.96) 0%,
+    rgba(127, 29, 29, 0.9) 100%
+  );
+  border-style: solid;
+  border-color: rgba(239, 68, 68, 0.8);
   box-shadow:
-    0 10px 26px rgba(220, 38, 38, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -8px 14px rgba(127, 29, 29, 0.4);
+    0 8px 22px rgba(127, 29, 29, 0.45),
+    inset 0 0 0 1px rgba(248, 113, 113, 0.35);
+  transform: translateY(-1px);
 }
 .dl-tile--logout:hover .dl-tile-icon,
 .dl-tile--logout:hover .dl-tile-label {
