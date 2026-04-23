@@ -269,6 +269,7 @@ export default function DesktopLauncher() {
                   <LauncherTile
                     slug="clock_in"
                     label="Clock In"
+                    variant="clockin"
                     onClick={() => {
                       setOpen(false);
                       navigate(`/face/${hotelIdentifier}/clock-in`);

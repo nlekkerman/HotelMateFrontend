@@ -432,19 +432,57 @@
 
 /* ── Logout variant ───────────────────────────────────────────── */
 .dl-tile--logout {
-  color: #4b5563;
+  color: #ffffff;
+  background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+  border-color: rgba(185, 28, 28, 0.55);
+  box-shadow:
+    0 6px 18px rgba(220, 38, 38, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -6px 12px rgba(153, 27, 27, 0.25);
 }
-.dl-tile--logout .dl-tile-icon {
-  color: #6b7280;
+.dl-tile--logout .dl-tile-icon,
+.dl-tile--logout .dl-tile-label {
+  color: #ffffff;
 }
 .dl-tile--logout:hover {
   color: #ffffff;
-  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
-  border-color: rgba(185, 28, 28, 0.7);
-  box-shadow: 0 10px 26px rgba(220, 38, 38, 0.4);
+  background: linear-gradient(135deg, #ef4444 0%, #991b1b 100%);
+  border-color: rgba(153, 27, 27, 0.8);
+  box-shadow:
+    0 10px 26px rgba(220, 38, 38, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -8px 14px rgba(127, 29, 29, 0.4);
 }
 .dl-tile--logout:hover .dl-tile-icon,
 .dl-tile--logout:hover .dl-tile-label {
+  color: #ffffff;
+}
+
+/* ── Clock In variant ─────────────────────────────────────────── */
+.dl-tile--clockin {
+  color: #ffffff;
+  background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+  border-color: rgba(5, 150, 105, 0.55);
+  box-shadow:
+    0 6px 18px rgba(16, 185, 129, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -6px 12px rgba(6, 95, 70, 0.25);
+}
+.dl-tile--clockin .dl-tile-icon,
+.dl-tile--clockin .dl-tile-label {
+  color: #ffffff;
+}
+.dl-tile--clockin:hover {
+  color: #ffffff;
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+  border-color: rgba(6, 95, 70, 0.8);
+  box-shadow:
+    0 10px 26px rgba(16, 185, 129, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -8px 14px rgba(6, 78, 59, 0.4);
+}
+.dl-tile--clockin:hover .dl-tile-icon,
+.dl-tile--clockin:hover .dl-tile-label {
   color: #ffffff;
 }
 
