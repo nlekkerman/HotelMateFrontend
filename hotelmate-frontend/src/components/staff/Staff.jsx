@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "@/services/api";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useCan } from "@/rbac";
 import StaffByDepartment from "./StaffByDepartment";
 import ClockedInTicker from "@/components/analytics/ClockedInTicker.jsx";
 import RegistrationPackagesPanel from "./RegistrationPackagesPanel";
@@ -13,10 +14,15 @@ export default function Staff() {
   const { hotelSlug } = useParams();
   const [searchParams] = useSearchParams();
   const { isAdmin } = usePermissions();
+  // Phase 1 RBAC: backend-driven tab visibility via `user.rbac.staff_management.actions.<key>`.
+  const { can, canAny } = useCan();
+  const canSeePackages = can('staff_management', 'registration_package_read');
+  const canSeePending = can('staff_management', 'pending_registration_read');
+  const canSeeDepartmentsRoles = canAny('staff_management', ['department_read', 'role_read']);
   const [pendingCount, setPendingCount] = useState(0);
 
   const initialTab =
-    searchParams.get("tab") === "packages" && isAdmin
+    searchParams.get("tab") === "packages" && canSeePackages
       ? "packages"
       : "directory";
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -70,7 +76,7 @@ export default function Staff() {
 
   // Fetch pending registration count
   useEffect(() => {
-    if (!hotelSlug || !isAdmin) return;
+    if (!hotelSlug || !canSeePending) return;
     const fetchPendingCount = async () => {
       try {
         const response = await api.get(`staff/${hotelSlug}/pending-registrations/`);
@@ -81,7 +87,7 @@ export default function Staff() {
       }
     };
     fetchPendingCount();
-  }, [hotelSlug, isAdmin]);
+  }, [hotelSlug, canSeePending]);
 
   useEffect(() => {
     if (!showClockedIn) {
@@ -131,7 +137,7 @@ export default function Staff() {
           </button>
         </li>
 
-        {isAdmin && (
+        {canSeePackages && (
           <li className="nav-item">
             <button
               className={`nav-link ${activeTab === "packages" ? "active fw-semibold" : ""}`}
@@ -142,7 +148,7 @@ export default function Staff() {
           </li>
         )}
 
-        {isAdmin && (
+        {canSeePending && (
           <li className="nav-item">
             <button
               className={`nav-link ${activeTab === "pending" ? "active fw-semibold" : ""}`}
@@ -156,7 +162,7 @@ export default function Staff() {
           </li>
         )}
 
-        {isAdmin && (
+        {canSeeDepartmentsRoles && (
           <li className="nav-item">
             <button
               className={`nav-link ${activeTab === "departments" ? "active fw-semibold" : ""}`}
@@ -169,13 +175,13 @@ export default function Staff() {
       </ul>
 
       {/* Registration Packages Tab */}
-      {activeTab === "packages" && isAdmin && <RegistrationPackagesPanel />}
+      {activeTab === "packages" && canSeePackages && <RegistrationPackagesPanel />}
 
       {/* Pending Staff Requests Tab */}
-      {activeTab === "pending" && isAdmin && <StaffCreate />}
+      {activeTab === "pending" && canSeePending && <StaffCreate />}
 
       {/* Departments & Roles Tab */}
-      {activeTab === "departments" && isAdmin && <SectionDepartmentsRoles />}
+      {activeTab === "departments" && canSeeDepartmentsRoles && <SectionDepartmentsRoles />}
 
       {/* Staff Directory Tab */}
       {activeTab === "directory" && (

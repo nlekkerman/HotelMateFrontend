@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { FaTrash, FaPaperPlane, FaComments } from "react-icons/fa";
 import api from "@/services/api";
 import DeletionModal from "@/components/modals/DeletionModal";
+import { useCan } from "@/rbac";
 
 // Map status → badge color
 const STATUS_COLORS = {
@@ -16,6 +17,16 @@ export default function MaintenanceRequests() {
   const [loading, setLoading] = useState(true);
   const [commentByRequest, setCommentByRequest] = useState({});
   const [modalRequestId, setModalRequestId] = useState(null);
+
+  // Phase 1 RBAC: backend-driven action authority via `user.rbac.maintenance.actions.<key>`.
+  const { can } = useCan();
+  const canRequestUpdate = can('maintenance', 'request_update');
+  const canRequestDelete = can('maintenance', 'request_delete');
+  const canCommentCreate = can('maintenance', 'comment_create');
+  // TODO(RBAC): The status-change <select> covers transitions (accept/resolve/reopen/close)
+  // which map to distinct backend action keys. Until the backend exposes per-transition
+  // gating in the dashboard payload, we use the broad `request_update` as a baseline
+  // and rely on backend rejection for forbidden transitions.
 
   // Fetch list
   const fetchRequests = async () => {
@@ -75,13 +86,15 @@ export default function MaintenanceRequests() {
         <div key={r.id} className="col-12 col-md-6 col-lg-4">
           <div className="card h-100 shadow-sm position-relative">
             {/* Delete button */}
-            <button
-              className="btn btn-sm text-danger position-absolute top-0 end-0 m-2"
-              onClick={() => setModalRequestId(r.id)}
-              title="Delete request"
-            >
-              <FaTrash />
-            </button>
+            {canRequestDelete && (
+              <button
+                className="btn btn-sm text-danger position-absolute top-0 end-0 m-2"
+                onClick={() => setModalRequestId(r.id)}
+                title="Delete request"
+              >
+                <FaTrash />
+              </button>
+            )}
 
             <div className="card-body d-flex flex-column">
               {/* Title & Status */}
@@ -132,18 +145,26 @@ export default function MaintenanceRequests() {
               )}
 
               {/* Status selector */}
-              <select
-                className="form-select form-select-sm mb-3"
-                value={r.status}
-                onChange={(e) =>
-                  handleStatusChange(r.id, e.target.value)
-                }
-              >
-                <option value="open">Open</option>
-                <option value="in_progress">In Progress</option>
-                <option value="resolved">Resolved</option>
-                <option value="closed">Closed</option>
-              </select>
+              {canRequestUpdate ? (
+                <select
+                  className="form-select form-select-sm mb-3"
+                  value={r.status}
+                  onChange={(e) =>
+                    handleStatusChange(r.id, e.target.value)
+                  }
+                >
+                  <option value="open">Open</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="closed">Closed</option>
+                </select>
+              ) : (
+                <div className="mb-3">
+                  <span className={`badge bg-${STATUS_COLORS[r.status] || 'secondary'} text-capitalize`}>
+                    {r.status.replace('_', ' ')}
+                  </span>
+                </div>
+              )}
 
               {/* Comments */}
               <div className="mt-auto">
@@ -169,24 +190,26 @@ export default function MaintenanceRequests() {
                   )}
                 </div>
                 {/* Comment input */}
-                <div className="input-group input-group-sm">
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Write a comment…"
-                    value={commentByRequest[r.id] || ""}
-                    onChange={(e) =>
-                      handleCommentChange(r.id, e.target.value)
-                    }
-                  />
-                  <button
-                    className="btn btn-outline-primary"
-                    onClick={() => submitComment(r.id)}
-                    title="Submit comment"
-                  >
-                    <FaPaperPlane />
-                  </button>
-                </div>
+                {canCommentCreate && (
+                  <div className="input-group input-group-sm">
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Write a comment…"
+                      value={commentByRequest[r.id] || ""}
+                      onChange={(e) =>
+                        handleCommentChange(r.id, e.target.value)
+                      }
+                    />
+                    <button
+                      className="btn btn-outline-primary"
+                      onClick={() => submitComment(r.id)}
+                      title="Submit comment"
+                    >
+                      <FaPaperPlane />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

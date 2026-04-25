@@ -1029,7 +1029,7 @@ const ChatWindow = ({
       (errorMsg) => {
         alert(errorMsg);
       },
-      null // Guest session auth removed (PIN-based auth deleted)
+      hotelSlug
     );
     
     setShowDeleteConfirm(false);

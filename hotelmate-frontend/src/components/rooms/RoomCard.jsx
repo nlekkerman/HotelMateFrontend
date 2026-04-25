@@ -11,7 +11,7 @@ import {
 } from "@/services/roomOperations";
 import { handleRoomOperationError } from "@/utils/errorHandling";
 import { useAuth } from '@/context/AuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useCan } from '@/rbac';
 
 const RoomCard = ({ room }) => {
   const navigate = useNavigate();
@@ -19,11 +19,19 @@ const RoomCard = ({ room }) => {
   const [isUpdating, setIsUpdating] = useState(false);
 
   const { user: userData } = useAuth();
-  const { hasNavAccess, isAdmin, isSuperUser } = usePermissions();
-  // Canonical permission check: anyone who can access housekeeping or rooms modules
-  // can perform room turnover actions. Admin / superuser bypass via usePermissions.
+  // Phase 1 RBAC: action authority comes from backend `user.rbac.<module>.actions.<action>`.
+  // Each turnover button gets its own action gate; no role/tier/nav fallbacks.
+  const { can } = useCan();
+  const canHousekeepingTransition = can('housekeeping', 'status_transition');
+  const canRoomsInspect = can('rooms', 'inspect');
+  const canRoomsMaintenanceFlag = can('rooms', 'maintenance_flag');
+  const canRoomsMaintenanceClear = can('rooms', 'maintenance_clear');
+  // Aggregate flag for the outer panel: any quick action authority.
   const canPerformQuickActions =
-    isSuperUser || isAdmin || hasNavAccess('housekeeping') || hasNavAccess('rooms');
+    canHousekeepingTransition ||
+    canRoomsInspect ||
+    canRoomsMaintenanceFlag ||
+    canRoomsMaintenanceClear;
 
   const calculateStayDuration = (checkInDate) => {
     if (!checkInDate) return "Unknown";
@@ -235,7 +243,7 @@ const RoomCard = ({ room }) => {
           <div className="mt-auto">
             {canPerformQuickActions ? (
               <>
-                {room.room_status === "CHECKOUT_DIRTY" && (
+                {room.room_status === "CHECKOUT_DIRTY" && canHousekeepingTransition && (
                   <button
                     className="btn btn-sm btn-warning w-100 mb-2"
                     onClick={(e) => {
@@ -249,7 +257,7 @@ const RoomCard = ({ room }) => {
                   </button>
                 )}
 
-                {room.room_status === "CLEANING_IN_PROGRESS" && (
+                {room.room_status === "CLEANING_IN_PROGRESS" && canHousekeepingTransition && (
                   <button
                     className="btn btn-sm btn-info w-100 mb-2"
                     onClick={(e) => {
@@ -263,7 +271,7 @@ const RoomCard = ({ room }) => {
                   </button>
                 )}
 
-                {room.room_status === "CLEANED_UNINSPECTED" && (
+                {room.room_status === "CLEANED_UNINSPECTED" && canRoomsInspect && (
                   <button
                     className="btn btn-sm btn-success w-100 mb-2"
                     onClick={(e) => {
@@ -277,7 +285,7 @@ const RoomCard = ({ room }) => {
                   </button>
                 )}
 
-                {["READY_FOR_GUEST"].includes(room.room_status) && (
+                {["READY_FOR_GUEST"].includes(room.room_status) && canRoomsMaintenanceFlag && (
                   <button
                     className="btn btn-sm btn-warning w-100 mb-2"
                     onClick={(e) => {
@@ -292,7 +300,8 @@ const RoomCard = ({ room }) => {
                 )}
 
                 {room.maintenance_required &&
-                  room.room_status === "MAINTENANCE_REQUIRED" && (
+                  room.room_status === "MAINTENANCE_REQUIRED" &&
+                  canRoomsMaintenanceClear && (
                     <button
                       className="btn btn-sm btn-success w-100 mb-2"
                       onClick={(e) => {

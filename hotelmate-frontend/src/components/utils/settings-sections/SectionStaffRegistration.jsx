@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, Button, Form, InputGroup } from 'react-bootstrap';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
+import { useCan } from '@/rbac';
 
 export default function SectionStaffRegistration() {
   const [loading, setLoading] = useState(false);
@@ -10,6 +11,10 @@ export default function SectionStaffRegistration() {
   const [requireBoth, setRequireBoth] = useState(true);
   const [hasExpiration, setHasExpiration] = useState(false);
   const { user } = useAuth();
+  // Phase 1 RBAC: backend-driven action authority via `user.rbac.staff_management.actions.<key>`.
+  const { can } = useCan();
+  const canReadPackages = can('staff_management', 'registration_package_read');
+  const canCreatePackages = can('staff_management', 'registration_package_create');
 
   // Auth headers and base URL are now handled automatically by api.js service
 
@@ -56,6 +61,7 @@ export default function SectionStaffRegistration() {
   };
 
   return (
+    canReadPackages ? (
     <Card className="shadow-sm mb-4">
       <Card.Body className="p-4">
         <h4 className="mb-1">
@@ -96,26 +102,28 @@ export default function SectionStaffRegistration() {
         </div>
 
         {/* Generate Button */}
-        <div className="text-center mb-4">
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={generatePackage}
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-2"></span>
-                Generating...
-              </>
-            ) : (
-              <>
-                <i className="bi bi-plus-circle me-2"></i>
-                Generate Package
-              </>
-            )}
-          </Button>
-        </div>
+        {canCreatePackages && (
+          <div className="text-center mb-4">
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={generatePackage}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2"></span>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-plus-circle me-2"></i>
+                  Generate Package
+                </>
+              )}
+            </Button>
+          </div>
+        )}
 
         {/* Current Package Display */}
         {currentPackage && (
@@ -177,5 +185,6 @@ export default function SectionStaffRegistration() {
         )}
       </Card.Body>
     </Card>
+    ) : null
   );
 }

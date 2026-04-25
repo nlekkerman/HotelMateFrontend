@@ -3,9 +3,16 @@ import { Card, Button, Form, ListGroup, Badge, Spinner } from "react-bootstrap";
 import { useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import api from "@/services/api";
+import { useCan } from "@/rbac";
 
 export default function SectionDepartmentsRoles() {
   const { hotelSlug } = useParams();
+  // Phase 1 RBAC: backend-driven action authority via `user.rbac.staff_management.actions.<key>`.
+  const { can } = useCan();
+  const canDepartmentRead = can('staff_management', 'department_read');
+  const canDepartmentManage = can('staff_management', 'department_manage');
+  const canRoleRead = can('staff_management', 'role_read');
+  const canRoleManage = can('staff_management', 'role_manage');
   const [departments, setDepartments] = useState([]);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -74,6 +81,8 @@ export default function SectionDepartmentsRoles() {
     );
   }
 
+  if (!canDepartmentRead && !canRoleRead) return null;
+
   return (
     <Card className="shadow-sm mb-4">
       <Card.Body className="p-4">
@@ -87,6 +96,7 @@ export default function SectionDepartmentsRoles() {
 
         <div className="row">
           {/* Departments */}
+          {canDepartmentRead && (
           <div className="col-md-6 mb-3">
             <h6 className="fw-bold mb-3">
               <i className="bi bi-building me-1"></i> Departments
@@ -115,14 +125,19 @@ export default function SectionDepartmentsRoles() {
                 placeholder="e.g. Front Desk"
                 value={newDept}
                 onChange={(e) => setNewDept(e.target.value)}
+                disabled={!canDepartmentManage}
               />
-              <Button type="submit" size="sm" variant="primary" disabled={savingDept || !newDept.trim()}>
-                {savingDept ? <Spinner animation="border" size="sm" /> : "Add"}
-              </Button>
+              {canDepartmentManage && (
+                <Button type="submit" size="sm" variant="primary" disabled={savingDept || !newDept.trim()}>
+                  {savingDept ? <Spinner animation="border" size="sm" /> : "Add"}
+                </Button>
+              )}
             </Form>
           </div>
+          )}
 
           {/* Roles */}
+          {canRoleRead && (
           <div className="col-md-6 mb-3">
             <h6 className="fw-bold mb-3">
               <i className="bi bi-person-gear me-1"></i> Roles
@@ -151,12 +166,16 @@ export default function SectionDepartmentsRoles() {
                 placeholder="e.g. Manager"
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value)}
+                disabled={!canRoleManage}
               />
-              <Button type="submit" size="sm" variant="primary" disabled={savingRole || !newRole.trim()}>
-                {savingRole ? <Spinner animation="border" size="sm" /> : "Add"}
-              </Button>
+              {canRoleManage && (
+                <Button type="submit" size="sm" variant="primary" disabled={savingRole || !newRole.trim()}>
+                  {savingRole ? <Spinner animation="border" size="sm" /> : "Add"}
+                </Button>
+              )}
             </Form>
           </div>
+          )}
         </div>
       </Card.Body>
     </Card>

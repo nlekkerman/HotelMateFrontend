@@ -3,6 +3,7 @@ import { Row, Col, Button, Form, Alert, Spinner, InputGroup } from 'react-bootst
 import { useParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useCan } from '@/rbac';
 import {
   listRegistrationPackages,
   generateRegistrationPackages,
@@ -15,6 +16,12 @@ export default function RegistrationPackagesPanel() {
   const { hotelSlug } = useParams();
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
+  // Phase 1 RBAC: backend-driven action authority via `user.rbac.staff_management.actions.<key>`.
+  const { can } = useCan();
+  const canReadPackages = can('staff_management', 'registration_package_read');
+  const canCreatePackages = can('staff_management', 'registration_package_create');
+  const canEmailPackages = can('staff_management', 'registration_package_email');
+  const canPrintPackages = can('staff_management', 'registration_package_print');
 
   const slug = hotelSlug || user?.hotel_slug;
 
@@ -82,54 +89,56 @@ export default function RegistrationPackagesPanel() {
     }
   };
 
-  if (!isAdmin) return null;
+  if (!canReadPackages) return null;
 
   return (
     <div>
       {/* Generation controls */}
-      <div className="card shadow-sm mb-4">
-        <div className="card-body">
-          <h5 className="mb-3">
-            <i className="bi bi-plus-circle me-2"></i>
-            Generate Registration Packages
-          </h5>
-          <div className="d-flex align-items-end gap-3 flex-wrap">
-            <div>
-              <Form.Label className="small text-muted mb-1">
-                Number of packages
-              </Form.Label>
-              <InputGroup style={{ maxWidth: '160px' }}>
-                <Form.Select
-                  value={genCount}
-                  onChange={(e) => setGenCount(Number(e.target.value))}
-                  disabled={generating}
-                >
-                  {[1, 2, 3, 5, 10].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </Form.Select>
-              </InputGroup>
+      {canCreatePackages && (
+        <div className="card shadow-sm mb-4">
+          <div className="card-body">
+            <h5 className="mb-3">
+              <i className="bi bi-plus-circle me-2"></i>
+              Generate Registration Packages
+            </h5>
+            <div className="d-flex align-items-end gap-3 flex-wrap">
+              <div>
+                <Form.Label className="small text-muted mb-1">
+                  Number of packages
+                </Form.Label>
+                <InputGroup style={{ maxWidth: '160px' }}>
+                  <Form.Select
+                    value={genCount}
+                    onChange={(e) => setGenCount(Number(e.target.value))}
+                    disabled={generating}
+                  >
+                    {[1, 2, 3, 5, 10].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </InputGroup>
+              </div>
+              <Button
+                variant="primary"
+                onClick={handleGenerate}
+                disabled={generating}
+              >
+                {generating ? (
+                  <>
+                    <Spinner size="sm" className="me-1" /> Generating...
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-qr-code me-1"></i> Generate
+                  </>
+                )}
+              </Button>
             </div>
-            <Button
-              variant="primary"
-              onClick={handleGenerate}
-              disabled={generating}
-            >
-              {generating ? (
-                <>
-                  <Spinner size="sm" className="me-1" /> Generating...
-                </>
-              ) : (
-                <>
-                  <i className="bi bi-qr-code me-1"></i> Generate
-                </>
-              )}
-            </Button>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Feedback */}
       {genSuccess && (
@@ -168,8 +177,8 @@ export default function RegistrationPackagesPanel() {
             <Col key={pkg.id}>
               <RegistrationPackageCard
                 pkg={pkg}
-                onEmail={(p) => setEmailPkg(p)}
-                onPrint={(p) => printRegistrationPackage(p)}
+                onEmail={canEmailPackages ? (p) => setEmailPkg(p) : null}
+                onPrint={canPrintPackages ? (p) => printRegistrationPackage(p) : null}
               />
             </Col>
           ))}
@@ -177,7 +186,7 @@ export default function RegistrationPackagesPanel() {
       )}
 
       {/* Email modal */}
-      {emailPkg && (
+      {emailPkg && canEmailPackages && (
         <EmailRegistrationPackageModal
           show={!!emailPkg}
           onHide={() => setEmailPkg(null)}

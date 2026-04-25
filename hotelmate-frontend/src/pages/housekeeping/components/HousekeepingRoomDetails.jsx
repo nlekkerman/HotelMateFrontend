@@ -16,7 +16,7 @@ import {
 } from "@/services/roomOperations";
 import { handleRoomOperationError } from "@/utils/errorHandling";
 import { useAuth } from '@/context/AuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useCan } from '@/rbac';
 
 function HousekeepingRoomDetails() {
   const { hotelSlug, roomNumber } = useParams();
@@ -51,11 +51,31 @@ function HousekeepingRoomDetails() {
   const [addingNote, setAddingNote] = useState(false);
   
   const { user: userData } = useAuth();
-  const { hasNavAccess, isAdmin, isSuperStaffAdmin, isSuperUser, canAccess } = usePermissions();
-  // Canonical permission checks — backend-driven, no role-name string matching.
-  const canManageRooms = isSuperUser || isAdmin || hasNavAccess('housekeeping') || hasNavAccess('rooms');
-  // Manager override is a privileged action: allow super/admin tiers and explicit manager role.
-  const canUseManagerOverride = isSuperUser || isSuperStaffAdmin || canAccess(['manager']);
+  // Phase 1 RBAC: action authority comes from backend `user.rbac.<module>.actions.<action>`.
+  // Legacy role/tier/nav checks (hasNavAccess/isAdmin/canAccess) MUST NOT gate action buttons.
+  const { can, canAny } = useCan();
+  const canHousekeepingTransition = can('housekeeping', 'status_transition');
+  const canHousekeepingFrontDesk = can('housekeeping', 'status_front_desk');
+  const canHousekeepingStatusOverride = can('housekeeping', 'status_override');
+  const canRoomsInspect = can('rooms', 'inspect');
+  const canRoomsMaintenanceFlag = can('rooms', 'maintenance_flag');
+  const canRoomsMaintenanceClear = can('rooms', 'maintenance_clear');
+  const canRoomsCheckoutDestructive = can('rooms', 'checkout_destructive');
+  // Panel-level visibility: anyone who can transition/override status can see the override panel.
+  const canSeeStatusOverridePanel = canAny('housekeeping', [
+    'status_transition',
+    'status_front_desk',
+    'status_override',
+  ]);
+  // Turnover panel is visible whenever the user has any of the relevant action authorities.
+  const canSeeTurnoverPanel =
+    canHousekeepingTransition ||
+    canRoomsInspect ||
+    canRoomsMaintenanceFlag ||
+    canRoomsMaintenanceClear ||
+    canRoomsCheckoutDestructive;
+  // Alias preserved for the existing manager-override branch logic in handleStatusOverride.
+  const canUseManagerOverride = canHousekeepingStatusOverride;
 
   // Realtime store integration
   const roomsState = useRoomsState();
@@ -324,13 +344,20 @@ function HousekeepingRoomDetails() {
 
   // Render turnover actions based on current status
   const renderTurnoverActions = () => {
-    if (!canManageRooms || !currentRoom) return null;
+    if (!currentRoom) return null;
 
     const status = currentRoom.room_status;
     const actions = [];
 
     switch (status) {
       case 'OCCUPIED':
+        if (!canRoomsCheckoutDestructive) {
+          return (
+            <div className="text-muted">
+              <small>No turnover actions available for current status.</small>
+            </div>
+          );
+        }
         actions.push(
           <button
             key="checkout"
@@ -354,6 +381,13 @@ function HousekeepingRoomDetails() {
         break;
 
       case 'CHECKOUT_DIRTY':
+        if (!canHousekeepingTransition) {
+          return (
+            <div className="text-muted">
+              <small>No turnover actions available for current status.</small>
+            </div>
+          );
+        }
         actions.push(
           <button
             key="start-cleaning"
@@ -377,6 +411,13 @@ function HousekeepingRoomDetails() {
         break;
 
       case 'CLEANING_IN_PROGRESS':
+        if (!canHousekeepingTransition) {
+          return (
+            <div className="text-muted">
+              <small>No turnover actions available for current status.</small>
+            </div>
+          );
+        }
         actions.push(
           <button
             key="mark-cleaned"
@@ -400,38 +441,58 @@ function HousekeepingRoomDetails() {
         break;
 
       case 'CLEANED_UNINSPECTED':
-        actions.push(
-          <button
-            key="inspect"
-            className="btn btn-primary me-2"
-            onClick={handleInspect}
-            disabled={actionStates.inspect}
-          >
-            <i className="bi bi-eye me-2"></i>
-            Inspect Room
-          </button>,
-          <button
-            key="mark-maintenance"
-            className="btn btn-secondary"
-            onClick={handleMarkMaintenance}
-            disabled={actionStates.markMaintenance}
-          >
-            {actionStates.markMaintenance ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-2" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <i className="bi bi-tools me-2"></i>
-                Needs Maintenance
-              </>
-            )}
-          </button>
-        );
+        if (canRoomsInspect) {
+          actions.push(
+            <button
+              key="inspect"
+              className="btn btn-primary me-2"
+              onClick={handleInspect}
+              disabled={actionStates.inspect}
+            >
+              <i className="bi bi-eye me-2"></i>
+              Inspect Room
+            </button>
+          );
+        }
+        if (canRoomsMaintenanceFlag) {
+          actions.push(
+            <button
+              key="mark-maintenance"
+              className="btn btn-secondary"
+              onClick={handleMarkMaintenance}
+              disabled={actionStates.markMaintenance}
+            >
+              {actionStates.markMaintenance ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-tools me-2"></i>
+                  Needs Maintenance
+                </>
+              )}
+            </button>
+          );
+        }
+        if (actions.length === 0) {
+          return (
+            <div className="text-muted">
+              <small>No turnover actions available for current status.</small>
+            </div>
+          );
+        }
         break;
 
       case 'MAINTENANCE_REQUIRED':
+        if (!canRoomsMaintenanceClear) {
+          return (
+            <div className="text-muted">
+              <small>No turnover actions available for current status.</small>
+            </div>
+          );
+        }
         actions.push(
           <button
             key="complete-maintenance"
@@ -539,7 +600,7 @@ function HousekeepingRoomDetails() {
             {/* Left Column: Turnover Actions & Override */}
             <div className="col-md-8">
               {/* Turnover Actions Panel */}
-              {canManageRooms && (
+              {canSeeTurnoverPanel && (
                 <div className="card mb-4">
                   <div className="card-header bg-success text-white">
                     <h5 className="mb-0">
@@ -554,7 +615,7 @@ function HousekeepingRoomDetails() {
               )}
 
               {/* Quick Status Override */}
-              {canManageRooms && (
+              {canSeeStatusOverridePanel && (
                 <div className="card mb-4">
                   <div className={`card-header ${canUseManagerOverride ? 'bg-danger text-white' : 'bg-warning text-dark'}`}>
                     <h6 className="mb-0">

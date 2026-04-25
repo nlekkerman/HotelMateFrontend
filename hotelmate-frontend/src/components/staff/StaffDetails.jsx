@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { useQueryClient } from "@tanstack/react-query";
 import api from "@/services/api";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useCan } from "@/rbac";
 import { useFaceAdminApi } from "@/features/faceAttendance/hooks/useFaceAdminApi";
 import { useHotelFaceConfig } from "@/features/faceAttendance/hooks/useHotelFaceConfig";
 import NavigationPermissionManager from "./NavigationPermissionManager";
@@ -23,6 +24,15 @@ function StaffDetails() {
   const [saving, setSaving] = useState(false);
   const { hotelSlug, id } = useParams();
   const { canAccess, isAdmin, isSuperStaffAdmin, hasNavAccess } = usePermissions();
+  // Phase 1 RBAC: backend-driven action authority via `user.rbac.staff_management.actions.<key>`.
+  // TODO(RBAC): handleSave covers profile + assign_role/department/access_level + nav assignment
+  // in a single submit; per-field gating requires backend split. Edit Profile button is gated
+  // by the broadest of these (staff_update_profile) for now.
+  const { can } = useCan();
+  const canUpdateProfile = can('staff_management', 'staff_update_profile');
+  const canReadNavigation = can('staff_management', 'navigation_read');
+  const canDepartmentManage = can('staff_management', 'department_manage');
+  const canRoleManage = can('staff_management', 'role_manage');
   const queryClient = useQueryClient();
   const { departments, roles, accessLevels, refetch: refetchMetadata } = useStaffMetadata(hotelSlug);
   const [newDeptName, setNewDeptName] = useState('');
@@ -183,7 +193,7 @@ function StaffDetails() {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="mb-0 text-primary">👤 Staff Details</h2>
         <div className="d-flex gap-2">
-          {isAdmin && !isEditing && (
+          {canUpdateProfile && !isEditing && (
             <button onClick={startEditing} className="btn btn-outline-primary">
               <i className="bi bi-pencil me-2"></i>Edit Profile
             </button>
@@ -193,9 +203,11 @@ function StaffDetails() {
               <button onClick={cancelEditing} className="btn btn-outline-secondary" disabled={saving}>
                 Cancel
               </button>
-              <button onClick={handleSave} className="btn btn-success" disabled={saving}>
-                {saving ? <><span className="spinner-border spinner-border-sm me-2"></span>Saving...</> : <><i className="bi bi-check-lg me-2"></i>Save</>}
-              </button>
+              {canUpdateProfile && (
+                <button onClick={handleSave} className="btn btn-success" disabled={saving}>
+                  {saving ? <><span className="spinner-border spinner-border-sm me-2"></span>Saving...</> : <><i className="bi bi-check-lg me-2"></i>Save</>}
+                </button>
+              )}
             </>
           )}
           <button
@@ -278,7 +290,7 @@ function StaffDetails() {
                     <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
                 </select>
-                {departments.length === 0 && (
+                {departments.length === 0 && canDepartmentManage && (
                   <div className="mt-2">
                     <div className="input-group input-group-sm">
                       <input type="text" className="form-control" placeholder="New department name"
@@ -301,7 +313,7 @@ function StaffDetails() {
                     <option key={r.id} value={r.id}>{r.name}</option>
                   ))}
                 </select>
-                {roles.length === 0 && (
+                {roles.length === 0 && canRoleManage && (
                   <div className="mt-2">
                     <div className="input-group input-group-sm">
                       <input type="text" className="form-control" placeholder="New role name"
@@ -374,6 +386,8 @@ function StaffDetails() {
       </div>
 
       {/* Face Management Section */}
+      {/* TODO(RBAC): Face registration is not in the canonical staff_management action keys. */}
+      {/* Await backend action mapping before replacing this gate. */}
       {(canAccess(['staff_admin', 'super_staff_admin']) || canAccess(['manager'])) && (
         <div className="mt-4">
           <hr className="mb-4" />
@@ -506,7 +520,10 @@ function StaffDetails() {
       </div>
 
       {/* Navigation Permissions Section */}
-      {(isSuperStaffAdmin || hasNavAccess('staff_management')) && (
+      {/* Phase 1 RBAC: visibility = navigation_read. The current */}
+      {/* NavigationPermissionManager is read-only (disabled checkboxes), so */}
+      {/* navigation_manage gating is unused here and reserved for a future editor. */}
+      {canReadNavigation && (
         <div className="mt-5">
           <hr className="mb-4" />
           <button 

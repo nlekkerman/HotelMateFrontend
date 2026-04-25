@@ -3,6 +3,7 @@ import api from "@/services/api";
 import { useNavigate,useParams  } from "react-router-dom";
 import { DEFAULT_NAV_ITEMS } from "@/hooks/useNavigation";
 import { useAuth } from '@/context/AuthContext';
+import { useCan } from '@/rbac';
 
 const StaffCreate = () => {
   const [users, setUsers] = useState([]);
@@ -27,6 +28,9 @@ const StaffCreate = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
+  // Phase 1 RBAC: backend-driven action authority via `user.rbac.staff_management.actions.<key>`.
+  const { can } = useCan();
+  const canCreateStaff = can('staff_management', 'staff_create');
 
   useEffect(() => {
     const fetchPendingRegistrations = async () => {
@@ -541,14 +545,16 @@ const StaffCreate = () => {
                     >
                       <i className="bi bi-x-circle me-2"></i>Cancel
                     </button>
-                    <button 
-                      type="submit" 
-                      className="btn btn-primary"
-                      disabled={loading}
-                    >
-                      <i className="bi bi-check-circle me-2"></i>
-                      {loading ? 'Creating...' : 'Create Staff'}
-                    </button>
+                    {canCreateStaff && (
+                      <button 
+                        type="submit" 
+                        className="btn btn-primary"
+                        disabled={loading}
+                      >
+                        <i className="bi bi-check-circle me-2"></i>
+                        {loading ? 'Creating...' : 'Create Staff'}
+                      </button>
+                    )}
                   </div>
                 </form>
               </div>

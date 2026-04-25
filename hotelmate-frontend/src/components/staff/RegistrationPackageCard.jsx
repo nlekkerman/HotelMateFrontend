@@ -53,24 +53,28 @@ export default function RegistrationPackageCard({ pkg, onEmail, onPrint }) {
         )}
 
         {/* Actions */}
-        {!isUsed && (
+        {!isUsed && (onEmail || onPrint) && (
           <div className="d-flex gap-2 mt-3">
-            <Button
-              variant="outline-primary"
-              size="sm"
-              className="flex-fill"
-              onClick={() => onEmail(pkg)}
-            >
-              <i className="bi bi-envelope me-1"></i> Email
-            </Button>
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              className="flex-fill"
-              onClick={() => onPrint(pkg)}
-            >
-              <i className="bi bi-printer me-1"></i> Print
-            </Button>
+            {onEmail && (
+              <Button
+                variant="outline-primary"
+                size="sm"
+                className="flex-fill"
+                onClick={() => onEmail(pkg)}
+              >
+                <i className="bi bi-envelope me-1"></i> Email
+              </Button>
+            )}
+            {onPrint && (
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                className="flex-fill"
+                onClick={() => onPrint(pkg)}
+              >
+                <i className="bi bi-printer me-1"></i> Print
+              </Button>
+            )}
           </div>
         )}
       </Card.Body>

@@ -10,6 +10,7 @@ import {
   deleteRoom,
 } from '@/services/roomManagementApi';
 import { fetchRoomTypes } from '@/services/roomManagementApi';
+import { useCan } from '@/rbac';
 
 const EMPTY_ROOM = { room_number: '', room_type_id: '', is_active: true };
 
@@ -43,6 +44,11 @@ const ROOM_STATUS_LABELS = {
 };
 
 const RoomsTab = ({ hotelSlug }) => {
+  // Phase 1 RBAC: action authority comes from backend `user.rbac.rooms.actions.<key>`.
+  const { can } = useCan();
+  const canCreateRoom = can('rooms', 'inventory_create');
+  const canUpdateRoom = can('rooms', 'inventory_update');
+  const canDeleteRoom = can('rooms', 'inventory_delete');
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('single'); // 'single' | 'bulk' | 'edit'
@@ -288,12 +294,16 @@ const RoomsTab = ({ hotelSlug }) => {
 
         {/* Actions */}
         <div className="d-flex gap-2">
-          <Button variant="outline-primary" size="sm" onClick={openBulk} disabled={!hasRoomTypes}>
-            <i className="bi bi-collection me-1"></i> Bulk Create
-          </Button>
-          <Button variant="primary" size="sm" onClick={openCreate} disabled={!hasRoomTypes}>
-            <i className="bi bi-plus-lg me-1"></i> New Room
-          </Button>
+          {canCreateRoom && (
+            <Button variant="outline-primary" size="sm" onClick={openBulk} disabled={!hasRoomTypes}>
+              <i className="bi bi-collection me-1"></i> Bulk Create
+            </Button>
+          )}
+          {canCreateRoom && (
+            <Button variant="primary" size="sm" onClick={openCreate} disabled={!hasRoomTypes}>
+              <i className="bi bi-plus-lg me-1"></i> New Room
+            </Button>
+          )}
         </div>
       </div>
 
@@ -344,17 +354,21 @@ const RoomsTab = ({ hotelSlug }) => {
                     </Badge>
                   </td>
                   <td className="text-end">
-                    <Button variant="outline-primary" size="sm" className="me-1" onClick={() => openEdit(room)}>
-                      <i className="bi bi-pencil"></i>
-                    </Button>
-                    <Button
-                      variant="outline-danger"
-                      size="sm"
-                      onClick={() => handleDelete(room)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      <i className="bi bi-trash"></i>
-                    </Button>
+                    {canUpdateRoom && (
+                      <Button variant="outline-primary" size="sm" className="me-1" onClick={() => openEdit(room)}>
+                        <i className="bi bi-pencil"></i>
+                      </Button>
+                    )}
+                    {canDeleteRoom && (
+                      <Button
+                        variant="outline-danger"
+                        size="sm"
+                        onClick={() => handleDelete(room)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <i className="bi bi-trash"></i>
+                      </Button>
+                    )}
                   </td>
                 </tr>
                 );

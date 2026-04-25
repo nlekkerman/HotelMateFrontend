@@ -15,7 +15,7 @@ import {
 } from "@/services/roomOperations";
 import { handleRoomOperationError } from "@/utils/errorHandling";
 import { useAuth } from '@/context/AuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useCan } from '@/rbac';
 
 function RoomDetails() {
   const { hotelIdentifier, roomNumber, id } = useParams();
@@ -49,9 +49,15 @@ function RoomDetails() {
   const [activeTab, setActiveTab] = useState('notes');
   
   const { user: userData } = useAuth();
-  const { canAccess, isSuperUser } = usePermissions();
-  const canManageRooms = canAccess(['housekeeping', 'manager']) || isSuperUser;
-  const canUseManagerOverride = canAccess(['manager']) || isSuperUser;
+  // Phase 1 RBAC: action authority comes from backend `user.rbac.<module>.actions.<action>`.
+  // Legacy role/tier checks (canAccess/isSuperUser) MUST NOT gate action buttons.
+  const { can } = useCan();
+  const canHousekeepingTransition = can('housekeeping', 'status_transition');
+  const canRoomsCheckoutDestructive = can('rooms', 'checkout_destructive');
+  const canRoomsInspect = can('rooms', 'inspect');
+  const canRoomsMaintenanceFlag = can('rooms', 'maintenance_flag');
+  const canRoomsMaintenanceClear = can('rooms', 'maintenance_clear');
+  const canHousekeepingStatusOverride = can('housekeeping', 'status_override');
 
   // Realtime store integration
   const roomsState = useRoomsState();
@@ -259,14 +265,12 @@ function RoomDetails() {
 
   // Contextual action logic based on room_status
   const getPrimaryActions = () => {
-    if (!canManageRooms) return [];
-    
     const status = room?.room_status;
     const actions = [];
 
     // Check-in is handled from booking management, not room management
     // Only show checkout if room status is OCCUPIED (use consistent real-time data)
-    if (currentRoom?.room_status === 'OCCUPIED') {
+    if (currentRoom?.room_status === 'OCCUPIED' && canRoomsCheckoutDestructive) {
       actions.push({
         key: 'checkout',
         label: 'Check Out',
@@ -275,7 +279,7 @@ function RoomDetails() {
         loading: actionStates.checkout,
         handler: handleCheckout
       });
-    } else if (status === 'CHECKOUT_DIRTY') {
+    } else if (status === 'CHECKOUT_DIRTY' && canHousekeepingTransition) {
       actions.push({
         key: 'startCleaning',
         label: 'Start Cleaning',
@@ -284,7 +288,7 @@ function RoomDetails() {
         loading: actionStates.startCleaning,
         handler: handleStartCleaning
       });
-    } else if (status === 'CLEANING_IN_PROGRESS') {
+    } else if (status === 'CLEANING_IN_PROGRESS' && canHousekeepingTransition) {
       actions.push({
         key: 'markCleaned',
         label: 'Mark Cleaned',
@@ -293,7 +297,7 @@ function RoomDetails() {
         loading: actionStates.markCleaned,
         handler: handleMarkCleaned
       });
-    } else if (status === 'CLEANED_UNINSPECTED') {
+    } else if (status === 'CLEANED_UNINSPECTED' && canRoomsInspect) {
       actions.push({
         key: 'inspect',
         label: 'Inspect',
@@ -302,7 +306,7 @@ function RoomDetails() {
         loading: actionStates.inspect,
         handler: handleInspect
       });
-    } else if (status === 'MAINTENANCE_REQUIRED') {
+    } else if (status === 'MAINTENANCE_REQUIRED' && canRoomsMaintenanceClear) {
       actions.push({
         key: 'completeMaintenance',
         label: 'Complete Maintenance',
@@ -318,8 +322,8 @@ function RoomDetails() {
 
   const getSecondaryActions = () => {
     const actions = [];
-    
-    if (canManageRooms && !room?.maintenance_required) {
+
+    if (canRoomsMaintenanceFlag && !room?.maintenance_required) {
       actions.push({
         key: 'markMaintenance',
         label: 'Mark for Maintenance',
@@ -327,7 +331,7 @@ function RoomDetails() {
         loading: actionStates.markMaintenance
       });
     }
-    
+
     return actions;
   };
 
@@ -437,14 +441,16 @@ function RoomDetails() {
                     <i className="bi bi-tools" />
                   </button>
                 ))}
-                <button 
-                  className="btn btn-sm btn-outline-warning" 
-                  onClick={() => setShowStatusModal(true)}
-                  disabled={actionStates.statusOverride}
-                  title="Advanced Status Override"
-                >
-                  <i className="bi bi-gear" />
-                </button>
+                {canHousekeepingStatusOverride && (
+                  <button
+                    className="btn btn-sm btn-outline-warning"
+                    onClick={() => setShowStatusModal(true)}
+                    disabled={actionStates.statusOverride}
+                    title="Advanced Status Override"
+                  >
+                    <i className="bi bi-gear" />
+                  </button>
+                )}
               </div>
             </div>
           </div>

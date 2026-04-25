@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import StaffConfirmationModal from '@/components/staff/modals/StaffConfirmationModal';
 import StaffInputModal from '@/components/staff/modals/StaffInputModal';
+import { useCan } from '@/rbac';
 
 /**
  * Booking Actions Component
@@ -21,7 +22,13 @@ const BookingActions = ({
   const [showSurveyModal, setShowSurveyModal] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showDeclineModal, setShowDeclineModal] = useState(false);
-  
+
+  // Phase 1 RBAC: backend-driven action authority via `user.rbac.bookings.actions.<key>`.
+  const { can } = useCan();
+  const canCommunicate = can('bookings', 'communicate');
+  const canOverrideConflicts = can('bookings', 'override_conflicts');
+  const canAssignRoom = can('bookings', 'assign_room');
+
   const canApprove = booking.status === 'PENDING_APPROVAL' || booking.status === 'PENDING_PAYMENT';
   const canDecline = booking.status === 'PENDING_APPROVAL' || booking.status === 'PENDING_PAYMENT';
   const canSendPrecheckin = booking.status === 'CONFIRMED' && 
@@ -102,7 +109,7 @@ const BookingActions = ({
       )}
       
       {/* Approve/Decline buttons - only for PENDING_APPROVAL and not expired */}
-      {effectiveCanApprove && (
+      {effectiveCanApprove && canOverrideConflicts && (
         <button 
           onClick={handleApprove}
           className="btn btn-success btn-sm me-2"
@@ -123,7 +130,7 @@ const BookingActions = ({
         </button>
       )}
       
-      {effectiveCanDecline && (
+      {effectiveCanDecline && canOverrideConflicts && (
         <button 
           onClick={handleDecline}
           className="btn btn-outline-warning btn-sm me-2"
@@ -145,7 +152,7 @@ const BookingActions = ({
       )}
 
       {/* Pre-check-in button - conditional based on completion status and not expired */}
-      {effectiveCanSendPrecheckin && (
+      {effectiveCanSendPrecheckin && canCommunicate && (
         isPrecheckinComplete ? (
           <button 
             onClick={() => {
@@ -174,7 +181,7 @@ const BookingActions = ({
       )}
 
       {/* Room Operation button - conditional based on guest status */}
-      {canShowRoomOperation && (
+      {canShowRoomOperation && canAssignRoom && (
         <button 
           className="btn btn-outline-primary btn-sm"
           title={isInHouse ? "Move guest to different room" : "Reassign room before check-in"}
@@ -189,6 +196,7 @@ const BookingActions = ({
       )}
 
       {/* Survey button - only for COMPLETED bookings */}
+      {/* TODO(RBAC): Await backend action mapping before replacing this gate. Survey communications are not yet covered by the canonical bookings action keys. */}
       {canSendSurvey && (
         hasSurveySent && !isSurveyCompleted ? (
           <button 

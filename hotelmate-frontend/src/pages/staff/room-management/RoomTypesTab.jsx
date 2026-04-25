@@ -9,6 +9,7 @@ import {
   deleteRoomType,
   uploadRoomTypePhoto,
 } from '@/services/roomManagementApi';
+import { useCan } from '@/rbac';
 
 const EMPTY_FORM = {
   name: '',
@@ -41,6 +42,10 @@ function validateRoomTypeForm(form) {
 }
 
 const RoomTypesTab = ({ hotelSlug }) => {
+  // Phase 1 RBAC: backend-driven action authority via `user.rbac.rooms.actions.<key>`.
+  const { can } = useCan();
+  const canTypeManage = can('rooms', 'type_manage');
+  const canMediaManage = can('rooms', 'media_manage');
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null); // null = create, object = edit
@@ -194,9 +199,11 @@ const RoomTypesTab = ({ hotelSlug }) => {
       {/* Header row */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <span className="text-muted">{list.length} room type{list.length !== 1 ? 's' : ''}</span>
-        <Button variant="primary" size="sm" onClick={openCreate}>
-          <i className="bi bi-plus-lg me-1"></i> New Room Type
-        </Button>
+        {canTypeManage && (
+          <Button variant="primary" size="sm" onClick={openCreate}>
+            <i className="bi bi-plus-lg me-1"></i> New Room Type
+          </Button>
+        )}
       </div>
 
       {/* List */}
@@ -205,9 +212,11 @@ const RoomTypesTab = ({ hotelSlug }) => {
           <i className="bi bi-layers"></i>
           <h5>No room types yet</h5>
           <p>Create your first room type to start building inventory.</p>
-          <Button variant="primary" onClick={openCreate}>
-            <i className="bi bi-plus-lg me-1"></i> Create Room Type
-          </Button>
+          {canTypeManage && (
+            <Button variant="primary" onClick={openCreate}>
+              <i className="bi bi-plus-lg me-1"></i> Create Room Type
+            </Button>
+          )}
         </div>
       ) : (
         <div className="row g-3">
@@ -241,17 +250,21 @@ const RoomTypesTab = ({ hotelSlug }) => {
                     <small className="text-muted">Bed: {rt.bed_setup}</small>
                   )}
                   <div className="mt-auto pt-2 d-flex gap-2">
-                    <Button variant="outline-primary" size="sm" onClick={() => openEdit(rt)}>
-                      <i className="bi bi-pencil me-1"></i> Edit
-                    </Button>
-                    <Button
-                      variant="outline-danger"
-                      size="sm"
-                      onClick={() => handleDelete(rt)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      <i className="bi bi-trash me-1"></i> Remove
-                    </Button>
+                    {canTypeManage && (
+                      <Button variant="outline-primary" size="sm" onClick={() => openEdit(rt)}>
+                        <i className="bi bi-pencil me-1"></i> Edit
+                      </Button>
+                    )}
+                    {canTypeManage && (
+                      <Button
+                        variant="outline-danger"
+                        size="sm"
+                        onClick={() => handleDelete(rt)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <i className="bi bi-trash me-1"></i> Remove
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -392,28 +405,30 @@ const RoomTypesTab = ({ hotelSlug }) => {
                 </Form.Group>
               </div>
               {/* Photo upload */}
-              <div className="col-12">
-                <Form.Group>
-                  <Form.Label>Photo</Form.Label>
-                  {editing?.photo_url && !photoFile && (
-                    <div className="mb-2">
-                      <img
-                        src={editing.photo_url}
-                        alt="Current"
-                        style={{ maxHeight: 100, borderRadius: 6 }}
-                      />
-                    </div>
-                  )}
-                  <Form.Control
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setPhotoFile(e.target.files[0] || null)}
-                  />
-                  <Form.Text className="text-muted">
-                    Upload a photo for this room type. Replaces existing photo.
-                  </Form.Text>
-                </Form.Group>
-              </div>
+              {canMediaManage && (
+                <div className="col-12">
+                  <Form.Group>
+                    <Form.Label>Photo</Form.Label>
+                    {editing?.photo_url && !photoFile && (
+                      <div className="mb-2">
+                        <img
+                          src={editing.photo_url}
+                          alt="Current"
+                          style={{ maxHeight: 100, borderRadius: 6 }}
+                        />
+                      </div>
+                    )}
+                    <Form.Control
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setPhotoFile(e.target.files[0] || null)}
+                    />
+                    <Form.Text className="text-muted">
+                      Upload a photo for this room type. Replaces existing photo.
+                    </Form.Text>
+                  </Form.Group>
+                </div>
+              )}
             </div>
           </Modal.Body>
           <Modal.Footer>

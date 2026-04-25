@@ -100,6 +100,29 @@ export const sendRoomConversationMessage = async (hotelSlug, conversationId, mes
 };
 
 /**
+ * Delete a room conversation message (staff-zone)
+ * Routes to /api/staff/hotel/{slug}/chat/messages/{id}/delete/ (replaces legacy /api/chat/messages/{id}/delete/)
+ * @param {string} hotelSlug - The hotel's slug identifier
+ * @param {number} messageId - The message ID to delete
+ * @param {boolean} hardDelete - If true, permanently delete (managers only)
+ * @returns {Promise<Object>} Deletion result
+ */
+export const deleteRoomConversationMessage = async (hotelSlug, messageId, hardDelete = false) => {
+  try {
+    if (!hotelSlug) {
+      throw new Error('Hotel slug is required');
+    }
+    const params = hardDelete ? '?hard_delete=true' : '';
+    const endpoint = buildRoomChatURL(hotelSlug, `messages/${messageId}/delete/${params}`);
+    const response = await api.delete(endpoint);
+    return response.data;
+  } catch (error) {
+    console.error('[RoomConversationsAPI] Error deleting room conversation message:', error);
+    throw error;
+  }
+};
+
+/**
  * Mark a room conversation as read by staff
  * @param {string} hotelSlug - The hotel's slug identifier
  * @param {number} conversationId - The conversation ID
@@ -151,6 +174,7 @@ export default {
   fetchRoomConversations,
   fetchRoomConversationMessages,
   sendRoomConversationMessage,
+  deleteRoomConversationMessage,
   markRoomConversationRead,
   fetchRoomConversationsUnreadCount
 };

@@ -2,8 +2,7 @@
 import { getPusherClient } from './realtimeClient';
 import { createGuestPusherClient } from './guestRealtimeClient';
 import { handleIncomingRealtimeEvent } from './eventBus';
-import { SESSION_HEADER } from '../services/guestChatAPI.js';
-import { guestAPI } from '../services/api.js';
+import * as guestChatAPI from '../services/guestChatAPI.js';
 
 let subscriptionsActive = false;
 let currentChannels = [];
@@ -212,17 +211,12 @@ export async function markConversationRead(conversationId, conversationType = "g
       await markConversationAsRead(hotelSlug, conversationId);
 
     } else {
-      // Guest chat — session-based auth
+      // Guest chat — session-based auth, routed through guestChatAPI service
       if (!chatSession) {
         console.warn("⚠️ markConversationRead(guest) called without chatSession — skipping");
         return;
       }
-      await guestAPI.post(
-        `/hotel/${hotelSlug}/chat/conversations/${conversationId}/mark_read/`,
-        {},
-        { headers: { [SESSION_HEADER]: chatSession } }
-      );
-
+      await guestChatAPI.markRead(hotelSlug, chatSession, conversationId);
     }
   } catch (error) {
     console.error('❌ Error marking conversation as read:', error);

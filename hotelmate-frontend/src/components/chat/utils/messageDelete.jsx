@@ -9,22 +9,23 @@
  * - Local state updates
  */
 
-import api from "@/services/api";
+import { deleteRoomConversationMessage } from "@/services/roomConversationsAPI";
 
 /**
  * Deletes a message (soft delete by default)
+ * Routes through the staff-zone room conversations API
+ * (/api/staff/hotel/{slug}/chat/messages/{id}/delete/).
+ * @param {string} hotelSlug - The hotel slug (required)
  * @param {number} messageId - The ID of the message to delete
- * @param {Object} guestSession - Optional guest session for authentication
+ * @param {boolean} [hardDelete=false] - Permanently delete (managers only)
  * @returns {Promise<Object>} - The response data from backend
  */
-export const deleteMessage = async (messageId) => {
+export const deleteMessage = async (hotelSlug, messageId, hardDelete = false) => {
   try {
-    const url = `/chat/messages/${messageId}/delete/`;
-    
-    // Call backend DELETE API - soft delete (default)
-    const response = await api.delete(url);
-    
-    return response.data;
+    if (!hotelSlug) {
+      throw new Error('[messageDelete] hotelSlug is required to delete a message');
+    }
+    return await deleteRoomConversationMessage(hotelSlug, messageId, hardDelete);
   } catch (error) {
     console.error('❌ Failed to delete message:', error);
     throw error;
@@ -65,17 +66,18 @@ export const updateMessagesAfterDeletion = (messages, messageId, updatedMessage,
  * @param {Function} setMessageStatuses - State setter for message statuses map
  * @param {Function} onSuccess - Callback on successful deletion
  * @param {Function} onError - Callback on error
- * @param {Object} guestSession - Optional guest session for authentication
+ * @param {string} hotelSlug - Hotel slug used to scope the staff-zone DELETE request
  */
 export const handleMessageDeletion = async (
   messageId,
   setMessages,
   setMessageStatuses,
   onSuccess,
-  onError
+  onError,
+  hotelSlug
 ) => {
   try {
-    const result = await deleteMessage(messageId);
+    const result = await deleteMessage(hotelSlug, messageId);
     
     // Update message in local state
     if (result?.message) {
