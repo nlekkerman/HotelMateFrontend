@@ -32,18 +32,19 @@ export default function ClockedInStaffRow({ log, now }) {
   const departmentName = log.department?.name || "No Department";
 
   return (
-    <div className="d-flex align-items-center py-3 px-3 border-bottom">
+    <div className="cid-row">
       {/* Staff Info - Clean and Simple */}
       <div className="me-3" style={{ minWidth: "200px" }}>
         <div className="d-flex align-items-center">
           <div className="me-3">
-            <div className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
-                 style={{ width: "40px", height: "40px", fontSize: "14px", fontWeight: "bold" }}>
+            <div className="cid-avatar">
               {staffName.charAt(0).toUpperCase()}
             </div>
           </div>
           <div>
-            <div className="fw-semibold">{staffName}</div>
+            <div className="fw-semibold" style={{ color: "#1e3a8a" }}>
+              {staffName}
+            </div>
             <small className="text-muted">{departmentName}</small>
           </div>
         </div>
@@ -52,13 +53,15 @@ export default function ClockedInStaffRow({ log, now }) {
       {/* Clock In Time */}
       <div className="me-3 text-center" style={{ minWidth: "100px" }}>
         <div className="small text-muted">Clocked In</div>
-        <div className="fw-bold">{formatTime(log.time_in)}</div>
+        <div className="fw-bold" style={{ color: "#1e3a8a" }}>
+          {formatTime(log.time_in)}
+        </div>
       </div>
 
       {/* Worked Duration */}
       <div className="me-3 text-center" style={{ minWidth: "120px" }}>
         <div className="small text-muted">Time Worked</div>
-        <div className="badge bg-success fs-6">{workedDuration}</div>
+        <span className="cid-badge cid-badge--success">{workedDuration}</span>
       </div>
 
       {/* Simple Time Indicator */}
@@ -67,7 +70,7 @@ export default function ClockedInStaffRow({ log, now }) {
           <div className="d-flex justify-content-between align-items-center">
             <small className="text-muted">Working since {formatTime(log.time_in)}</small>
             <small className="text-muted">
-              {workedMinutes < 60 
+              {workedMinutes < 60
                 ? `${workedMinutes} minutes`
                 : `${Math.floor(workedMinutes / 60)}h ${workedMinutes % 60}m`
               }

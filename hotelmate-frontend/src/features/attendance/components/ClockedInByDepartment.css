@@ -1,0 +1,343 @@
+/* src/features/attendance/components/ClockedInByDepartment.css */
+/* Visual theme: blue/white glassmorphism — visually mirrors DesktopLauncher.
+   Intentionally NOT shared with DesktopLauncher.css. All classes use the
+   `cid-` prefix so styling is fully isolated. */
+
+/* ================================================================
+   ROOT
+   ================================================================ */
+.cid-root {
+  --cid-accent: #2563eb;
+  font-family: inherit;
+  isolation: isolate;
+}
+
+/* ================================================================
+   GLASS PANEL (filter / header bar + each department section)
+   ================================================================ */
+.cid-panel {
+  position: relative;
+  border-radius: 18px;
+  border: 1px solid rgba(147, 197, 253, 0.45);
+  background: linear-gradient(
+    135deg,
+    rgba(239, 246, 255, 0.85) 0%,
+    rgba(219, 234, 254, 0.78) 50%,
+    rgba(255, 255, 255, 0.82) 100%
+  );
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow:
+    0 12px 30px rgba(30, 64, 175, 0.12),
+    0 2px 8px rgba(30, 64, 175, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  overflow: hidden;
+}
+
+/* Glossy top sheen */
+.cid-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 65% 0;
+  border-radius: 18px 18px 40% 40% / 18px 18px 60% 60%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.18) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Diagonal gloss streak */
+.cid-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0) 35%,
+    rgba(255, 255, 255, 0.22) 50%,
+    rgba(255, 255, 255, 0) 65%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.8;
+}
+
+/* Fallback for browsers without backdrop-filter support */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .cid-panel {
+    background: linear-gradient(
+      135deg,
+      rgba(239, 246, 255, 0.98) 0%,
+      rgba(219, 234, 254, 0.98) 50%,
+      rgba(255, 255, 255, 0.98) 100%
+    );
+  }
+}
+
+.cid-panel-body {
+  position: relative;
+  z-index: 1; /* above gloss */
+  padding: 18px 20px;
+}
+
+/* ================================================================
+   HEADER TAB / PILL — mirrors the dl-tab look
+   ================================================================ */
+.cid-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 14px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(37, 99, 235, 0.82) 0%,
+      rgba(30, 58, 138, 0.86) 100%
+    );
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(30, 64, 175, 0.25);
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow:
+    0 6px 18px rgba(37, 99, 235, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -8px 14px rgba(30, 64, 175, 0.35);
+}
+
+.cid-tab::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 55% 0;
+  border-radius: 14px 14px 40% 40% / 14px 14px 80% 80%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.18) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cid-tab > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Subtitle next to the header pill */
+.cid-subtitle {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: #475569;
+  letter-spacing: 0.02em;
+}
+
+/* ================================================================
+   SECTION CARD HEADER (each department) — looks like a tile/banner
+   ================================================================ */
+.cid-section {
+  margin-bottom: 1.25rem;
+}
+
+.cid-section-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  border-radius: 14px 14px 0 0;
+  border: 1px solid rgba(191, 219, 254, 0.55);
+  border-bottom: none;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(219, 234, 254, 0.7) 100%
+  );
+  color: #1e3a8a;
+  font-weight: 700;
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 4px 14px rgba(30, 64, 175, 0.08);
+}
+
+.cid-section-header::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 55% 0;
+  border-radius: 14px 14px 40% 40% / 14px 14px 80% 80%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.15) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cid-section-header > * {
+  position: relative;
+  z-index: 1;
+}
+
+.cid-section-body {
+  position: relative;
+  border: 1px solid rgba(191, 219, 254, 0.55);
+  border-top: none;
+  border-radius: 0 0 14px 14px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(239, 246, 255, 0.85) 100%
+  );
+  box-shadow:
+    0 6px 18px rgba(37, 99, 235, 0.12),
+    inset 0 -1px 0 rgba(147, 197, 253, 0.25);
+  overflow: hidden;
+}
+
+/* Badges within the glass header */
+.cid-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.cid-badge--success {
+  border-color: rgba(5, 150, 105, 0.45);
+  background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+/* ================================================================
+   FORM CONTROLS within the glass panel
+   ================================================================ */
+.cid-panel .form-select,
+.cid-panel .form-control {
+  border: 1px solid rgba(147, 197, 253, 0.5);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.cid-panel .form-select:focus,
+.cid-panel .form-control:focus {
+  border-color: rgba(59, 130, 246, 0.7);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+
+.cid-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #1e3a8a;
+  letter-spacing: 0.02em;
+}
+
+/* ================================================================
+   STAFF ROW — glassy hover, subtle separators
+   ================================================================ */
+.cid-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(147, 197, 253, 0.25);
+  background: transparent;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.cid-row:last-child {
+  border-bottom: none;
+}
+
+.cid-row:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(219, 234, 254, 0.65) 0%,
+    rgba(239, 246, 255, 0.45) 100%
+  );
+}
+
+.cid-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  box-shadow:
+    0 4px 10px rgba(37, 99, 235, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  flex-shrink: 0;
+}
+
+/* ================================================================
+   EMPTY / LOADING STATES
+   ================================================================ */
+.cid-empty {
+  position: relative;
+  z-index: 1;
+  padding: 36px 24px;
+  text-align: center;
+  color: #4b5563;
+}
+
+.cid-empty .cid-empty-icon {
+  font-size: 3rem;
+  color: #93c5fd;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+/* ================================================================
+   REDUCED MOTION
+   ================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .cid-row,
+  .cid-panel,
+  .cid-section-header {
+    transition: none !important;
+  }
+}

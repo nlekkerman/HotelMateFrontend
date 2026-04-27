@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Card, Spinner, Alert, Badge } from "react-bootstrap";
+import { Card, Spinner, Alert } from "react-bootstrap";
 import { useClockLogsForDate } from "../hooks/useAttendanceData";
 import ClockedInStaffRow from "./ClockedInStaffRow";
 import api from "@/services/api";
+import "./ClockedInByDepartment.css";
 
 /**
  * Simple list component for clocked-in staff
@@ -18,8 +19,8 @@ function ClockedInStaffList({ staffList }) {
 
   if (staffList.length === 0) {
     return (
-      <div className="text-center text-muted py-4">
-        <i className="bi bi-clock"></i>
+      <div className="cid-empty py-4">
+        <i className="bi bi-clock cid-empty-icon"></i>
         <div>No staff clocked in for this department</div>
       </div>
     );
@@ -141,12 +142,14 @@ export default function ClockedInByDepartment({ hotelSlug, refreshKey = 0 }) {
 
   if (loading) {
     return (
-      <Card>
-        <Card.Body className="text-center py-4">
-          <Spinner animation="border" className="mb-3" />
-          <div>Loading currently clocked-in staff...</div>
-        </Card.Body>
-      </Card>
+      <div className="cid-root">
+        <div className="cid-panel">
+          <div className="cid-panel-body text-center py-4">
+            <Spinner animation="border" className="mb-3" />
+            <div>Loading currently clocked-in staff...</div>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -161,13 +164,17 @@ export default function ClockedInByDepartment({ hotelSlug, refreshKey = 0 }) {
 
   if (clockedInLogs.length === 0) {
     return (
-      <Card>
-        <Card.Body className="text-center py-5">
-          <i className="bi bi-clock" style={{ fontSize: "3rem", color: "#6c757d" }}></i>
-          <h5 className="mt-3 text-muted">No Staff Currently Clocked In</h5>
-          <p className="text-muted">All staff have clocked out for today.</p>
-        </Card.Body>
-      </Card>
+      <div className="cid-root">
+        <div className="cid-panel">
+          <div className="cid-panel-body cid-empty">
+            <i className="bi bi-clock cid-empty-icon"></i>
+            <h5 className="mt-2 mb-1" style={{ color: "#1e3a8a" }}>
+              No Staff Currently Clocked In
+            </h5>
+            <p className="mb-0 text-muted">All staff have clocked out for today.</p>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -175,18 +182,20 @@ export default function ClockedInByDepartment({ hotelSlug, refreshKey = 0 }) {
   const filteredCount = staffByDepartment.reduce((sum, dept) => sum + dept.staff.length, 0);
 
   return (
-    <div className="clocked-in-by-department">
-      {/* Department Filter */}
-      <Card className="mb-3">
-        <Card.Body className="py-2">
-          <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+    <div className="cid-root clocked-in-by-department">
+      {/* Department Filter — glass panel */}
+      <div className="cid-panel mb-3">
+        <div className="cid-panel-body">
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
             <div>
-              <h6 className="mb-0">Currently Clocked In</h6>
-              <small className="text-muted">Real-time view</small>
+              <span className="cid-tab">Currently Clocked In</span>
+              <small className="cid-subtitle">Real-time view</small>
             </div>
-            <div className="d-flex align-items-center gap-3">
+            <div className="d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-3">
               <div className="d-flex align-items-center gap-2">
-                <label className="form-label mb-0 text-nowrap">Filter by Department:</label>
+                <label className="cid-label mb-0 text-nowrap">
+                  Filter by Department:
+                </label>
                 <select
                   className="form-select form-select-sm"
                   style={{ minWidth: "180px" }}
@@ -202,39 +211,35 @@ export default function ClockedInByDepartment({ hotelSlug, refreshKey = 0 }) {
                 </select>
               </div>
               <div className="d-flex align-items-center gap-2">
-                <Badge bg="success" className="fs-6">
-                  {selectedDepartment === "all" 
+                <span className="cid-badge cid-badge--success">
+                  {selectedDepartment === "all"
                     ? `${totalClockedIn} Total Working`
                     : `${filteredCount} Working`
                   }
-                </Badge>
+                </span>
                 <small className="text-muted">
                   <i className="bi bi-arrow-clockwise"></i> Auto-refresh: 30s
                 </small>
               </div>
             </div>
           </div>
-        </Card.Body>
-      </Card>
+        </div>
+      </div>
 
-      {/* Staff by Department */}
+      {/* Staff by Department — glass section cards */}
       {staffByDepartment.map(({ department, staff }) => (
-        <Card key={department} className="mb-4">
-          <Card.Header>
-            <div className="d-flex justify-content-between align-items-center">
-              <h6 className="mb-0">
-                <i className="bi bi-building me-2"></i>
-                {department}
-              </h6>
-              <Badge bg="primary">
-                {staff.length} staff
-              </Badge>
-            </div>
-          </Card.Header>
-          <Card.Body className="p-0">
+        <div key={department} className="cid-section">
+          <div className="cid-section-header">
+            <h6 className="mb-0 d-flex align-items-center" style={{ color: "#1e3a8a" }}>
+              <i className="bi bi-building me-2"></i>
+              {department}
+            </h6>
+            <span className="cid-badge">{staff.length} staff</span>
+          </div>
+          <div className="cid-section-body">
             <ClockedInStaffList staffList={staff} />
-          </Card.Body>
-        </Card>
+          </div>
+        </div>
       ))}
     </div>
   );
