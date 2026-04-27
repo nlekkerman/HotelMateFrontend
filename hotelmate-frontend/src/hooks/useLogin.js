@@ -42,6 +42,7 @@ export default function useLogin() {
         role_slug: data.role_slug || data.role,
         effective_navs: data.effective_navs || data.allowed_navs || [],
         navigation_items: data.navigation_items || [],
+        rbac: data.rbac || {},
         department: data.department,
         role: data.role,
         profile_image_url: profileImageUrl,

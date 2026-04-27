@@ -359,7 +359,7 @@ const MobileNavbar = () => {
                 })}
 
                 {/* Quick Access: Room Bookings */}
-                {hasNavAccess('bookings') && (
+                {hasNavAccess('room_bookings') && (
                   <li className="nav-item">
                     <button
                       className={`nav-link ${
