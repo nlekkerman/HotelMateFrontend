@@ -6,6 +6,7 @@ import CancellationPolicyControl from './CancellationPolicyControl';
 import ApprovalCutoffConfig from './ApprovalCutoffConfig';
 import CheckoutTimeConfig from './CheckoutTimeConfig';
 import { useAuth } from '@/context/AuthContext';
+import { useCan } from '@/rbac';
 
 /**
  * BookingManagementDashboard - Dashboard component for managing bookings
@@ -13,8 +14,26 @@ import { useAuth } from '@/context/AuthContext';
  */
 const BookingManagementDashboard = ({ hotelSlug }) => {
   const { user } = useAuth();
+  // Backend RBAC: booking rules/config gated by `bookings.manage_rules`.
+  const { can } = useCan();
+  const canManageRules = can('bookings', 'manage_rules');
   // Get hotel slug from props or auth context as fallback
   const currentHotelSlug = hotelSlug || user?.hotel_slug || null;
+
+  if (!canManageRules) {
+    return (
+      <Container fluid className="py-4">
+        <Row className="justify-content-center">
+          <Col lg={8}>
+            <div className="alert alert-warning" role="alert">
+              <i className="bi bi-shield-lock me-2"></i>
+              You do not have permission to manage booking rules and configuration.
+            </div>
+          </Col>
+        </Row>
+      </Container>
+    );
+  }
 
   return (
     <Container fluid className="py-4">

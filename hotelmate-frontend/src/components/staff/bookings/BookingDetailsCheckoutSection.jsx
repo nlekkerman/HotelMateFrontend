@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, Button } from 'react-bootstrap';
 import { getAssignedRoomNumber } from '@/utils/bookingDisplayHelpers';
+import { useCan } from '@/rbac';
 
 const BookingDetailsCheckoutSection = ({ 
   booking,
@@ -9,6 +10,9 @@ const BookingDetailsCheckoutSection = ({
 }) => {
   // TASK D: Use checked_in_at/checked_out_at logic instead of status
   const isInHouse = !!booking?.checked_in_at && !booking?.checked_out_at;
+  // Backend RBAC: check-out action gated by `bookings.checkout`.
+  const { can } = useCan();
+  const canCheckOut = can('bookings', 'checkout');
   
   if (!isInHouse) return null;
   
@@ -23,7 +27,7 @@ const BookingDetailsCheckoutSection = ({
           <Button
             variant="warning"
             onClick={onCheckOut}
-            disabled={checkOutMutation.isPending}
+            disabled={!canCheckOut || checkOutMutation.isPending}
             size="lg"
           >
             {checkOutMutation.isPending ? 'Checking Out...' : 'Check Out Guest'}

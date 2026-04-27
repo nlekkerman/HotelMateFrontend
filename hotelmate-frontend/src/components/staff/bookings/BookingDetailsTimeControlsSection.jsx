@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, Alert, Badge, Button, Spinner } from 'react-bootstrap';
 import { format } from 'date-fns';
 import AcknowledgeOverstayForm from '../modals/AcknowledgeOverstayForm';
+import { useCan } from '@/rbac';
 
 /**
  * Format minutes into human-readable duration
@@ -42,6 +43,12 @@ const BookingDetailsTimeControlsSection = ({
   const warnings = bookingWarnings;
   const activeWarning = warnings?.active;
   const isExpired = booking.status === 'EXPIRED';
+
+  // Backend RBAC: overstay acknowledge gated by `bookings.resolve_overstay`,
+  // extend stay gated by `bookings.extend`.
+  const { can } = useCan();
+  const canResolveOverstay = can('bookings', 'resolve_overstay');
+  const canExtendStay = can('bookings', 'extend');
   
   // Show expired banner OR active warning panel (not both)
   if (!activeWarning && !isExpired) {
@@ -226,7 +233,7 @@ const BookingDetailsTimeControlsSection = ({
                   
                   return (
                     <>
-                      {showAcknowledge && (
+                      {showAcknowledge && canResolveOverstay && (
                         <Button 
                           variant={isAcknowledged ? "outline-success" : "outline-warning"} 
                           size="sm" 
@@ -244,7 +251,7 @@ const BookingDetailsTimeControlsSection = ({
                           )}
                         </Button>
                       )}
-                      {showExtend && !isResolved && (
+                      {showExtend && !isResolved && canExtendStay && (
                         <Button 
                           variant="outline-primary" 
                           size="sm" 

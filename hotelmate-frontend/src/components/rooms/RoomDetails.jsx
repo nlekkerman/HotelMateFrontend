@@ -58,6 +58,19 @@ function RoomDetails() {
   const canRoomsMaintenanceFlag = can('rooms', 'maintenance_flag');
   const canRoomsMaintenanceClear = can('rooms', 'maintenance_clear');
   const canHousekeepingStatusOverride = can('housekeeping', 'status_override');
+  // Panel-level visibility for the Turnover and Quick Status Override cards.
+  // Anyone holding any related action authority gets the panels; the individual
+  // buttons inside each panel still gate on their own action keys.
+  const canManageRooms =
+    canHousekeepingTransition ||
+    canRoomsInspect ||
+    canRoomsMaintenanceFlag ||
+    canRoomsMaintenanceClear ||
+    canRoomsCheckoutDestructive ||
+    canHousekeepingStatusOverride;
+  // Manager-override branch: only the explicit `housekeeping.status_override`
+  // action grants the elevated UX (red theme + bypass templates).
+  const canUseManagerOverride = canHousekeepingStatusOverride;
 
   // Realtime store integration
   const roomsState = useRoomsState();

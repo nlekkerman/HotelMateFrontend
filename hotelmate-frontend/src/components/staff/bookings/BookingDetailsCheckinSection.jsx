@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, Button } from 'react-bootstrap';
 import { getAssignedRoomNumber } from '@/utils/bookingDisplayHelpers';
+import { useCan } from '@/rbac';
 
 const BookingDetailsCheckinSection = ({ 
   booking, 
@@ -9,6 +10,10 @@ const BookingDetailsCheckinSection = ({
   checkInMutation
 }) => {
   const assignedRoom = booking?.assigned_room || booking?.room;
+  // Backend RBAC: check-in action gated by `bookings.checkin`.
+  const { can } = useCan();
+  const canCheckIn = can('bookings', 'checkin');
+  const canAssignRoom = can('bookings', 'assign_room');
   
   if (booking?.checked_in_at) return null;
   
@@ -26,6 +31,7 @@ const BookingDetailsCheckinSection = ({
               onClick={() => {
                 onShowRoomAssignment();
               }}
+              disabled={!canAssignRoom}
             >
               Assign Room First
             </Button>
@@ -36,7 +42,7 @@ const BookingDetailsCheckinSection = ({
             <Button
               variant="success"
               onClick={onCheckIn}
-              disabled={checkInMutation.isPending || (booking?.flags?.can_check_in === false)}
+              disabled={!canCheckIn || checkInMutation.isPending || (booking?.flags?.can_check_in === false)}
               size="lg"
             >
               {checkInMutation.isPending ? 'Checking In...' : 'Check In Guest'}

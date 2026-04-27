@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, Button, Form, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { format } from 'date-fns';
 import { getAssignedRoomNumber } from '@/utils/bookingDisplayHelpers';
+import { useCan } from '@/rbac';
 
 const BookingDetailsRoomAssignmentSection = ({ 
   booking, 
@@ -28,6 +29,9 @@ const BookingDetailsRoomAssignmentSection = ({
   
   const { safeAssignMutation, unassignMutation } = mutations;
   const flags = booking?.flags || {};
+  // Backend RBAC: room assign/move/unassign gated by `bookings.assign_room`.
+  const { can } = useCan();
+  const canAssignRoom = can('bookings', 'assign_room');
   
   if (booking?.assigned_room || booking?.room || booking?.assigned_room_number) {
     // Room is assigned
@@ -52,7 +56,7 @@ const BookingDetailsRoomAssignmentSection = ({
                 )}
               </div>
               <div className="d-flex gap-2">
-                {flags.can_unassign_room && (
+                {flags.can_unassign_room && canAssignRoom && (
                   <Button
                     variant="outline-danger"
                     size="sm"
@@ -70,7 +74,7 @@ const BookingDetailsRoomAssignmentSection = ({
                     setReasonError('');
                     onShowAssignment();
                   }}
-                  disabled={!!booking?.checked_out_at}
+                  disabled={!canAssignRoom || !!booking?.checked_out_at}
                 >
                   {(() => {
                     if (booking?.checked_out_at) return 'Cannot Change (Checked Out)';
@@ -168,7 +172,7 @@ const BookingDetailsRoomAssignmentSection = ({
                   const partyComplete = booking?.party_complete ?? true; // Default to true if not present
                   const partyMissingCount = booking?.party_missing_count; // NO fallback
                   const isPartyIncomplete = !partyComplete;
-                  const isDisabled = !selectedRoomId || safeAssignMutation.isPending || isPartyIncomplete;
+                  const isDisabled = !canAssignRoom || !selectedRoomId || safeAssignMutation.isPending || isPartyIncomplete;
                   
                   const button = (
                     <Button
@@ -242,7 +246,7 @@ const BookingDetailsRoomAssignmentSection = ({
                     setReasonError('');
                     onShowAssignment();
                   }}
-                  disabled={isDisabled || !!booking?.checked_out_at}
+                  disabled={!canAssignRoom || isDisabled || !!booking?.checked_out_at}
                   className={isDisabled ? 'party-gated-button' : ''}
                 >
                   {(() => {
@@ -357,7 +361,7 @@ const BookingDetailsRoomAssignmentSection = ({
                   const partyComplete = booking?.party_complete ?? true; // Default to true if not present
                   const partyMissingCount = booking?.party_missing_count; // NO fallback
                   const isPartyIncomplete = !partyComplete;
-                  const isDisabled = !selectedRoomId || safeAssignMutation.isPending || isPartyIncomplete;
+                  const isDisabled = !canAssignRoom || !selectedRoomId || safeAssignMutation.isPending || isPartyIncomplete;
                   
                   const button = (
                     <Button

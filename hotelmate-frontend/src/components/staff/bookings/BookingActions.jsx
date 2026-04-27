@@ -26,8 +26,9 @@ const BookingActions = ({
   // Phase 1 RBAC: backend-driven action authority via `user.rbac.bookings.actions.<key>`.
   const { can } = useCan();
   const canCommunicate = can('bookings', 'communicate');
-  const canOverrideConflicts = can('bookings', 'override_conflicts');
   const canAssignRoom = can('bookings', 'assign_room');
+  const canUpdate = can('bookings', 'update');
+  const canCancel = can('bookings', 'cancel');
 
   const canApprove = booking.status === 'PENDING_APPROVAL' || booking.status === 'PENDING_PAYMENT';
   const canDecline = booking.status === 'PENDING_APPROVAL' || booking.status === 'PENDING_PAYMENT';
@@ -109,7 +110,7 @@ const BookingActions = ({
       )}
       
       {/* Approve/Decline buttons - only for PENDING_APPROVAL and not expired */}
-      {effectiveCanApprove && canOverrideConflicts && (
+      {effectiveCanApprove && canUpdate && (
         <button 
           onClick={handleApprove}
           className="btn btn-success btn-sm me-2"
@@ -130,7 +131,7 @@ const BookingActions = ({
         </button>
       )}
       
-      {effectiveCanDecline && canOverrideConflicts && (
+      {effectiveCanDecline && canCancel && (
         <button 
           onClick={handleDecline}
           className="btn btn-outline-warning btn-sm me-2"
@@ -195,9 +196,8 @@ const BookingActions = ({
         </button>
       )}
 
-      {/* Survey button - only for COMPLETED bookings */}
-      {/* TODO(RBAC): Await backend action mapping before replacing this gate. Survey communications are not yet covered by the canonical bookings action keys. */}
-      {canSendSurvey && (
+      {/* Survey button - only for COMPLETED bookings. Guest communication gate per backend RBAC contract. */}
+      {canSendSurvey && canCommunicate && (
         hasSurveySent && !isSurveyCompleted ? (
           <button 
             onClick={handleSendSurvey}

@@ -6,7 +6,7 @@ import RoomCard from "@/components/rooms/RoomCard";
 import { useRoomsState, useRoomsDispatch, roomsActions } from "@/realtime/stores/roomsStore.jsx";
 import { getAuthUser } from '@/lib/authStore';
 import { useAuth } from '@/context/AuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useCan } from '@/rbac';
 
 const fetchRooms = async () => {
   const userData = getAuthUser();
@@ -50,7 +50,16 @@ function RoomList() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user: userData } = useAuth();
-  const { isSuperStaffAdmin } = usePermissions();
+  // Phase 1 RBAC: backend `user.rbac.rooms.actions.<action>` is the only authority.
+  // The "Manage" entry point exposes inventory + room-type CRUD, so any inventory or
+  // type-management authority unlocks it.
+  const { canAny } = useCan();
+  const canManageRoomInventory = canAny('rooms', [
+    'inventory_create',
+    'inventory_update',
+    'inventory_delete',
+    'type_manage',
+  ]);
 
   // Handle categorical response format - flatten all rooms
   const allRooms = React.useMemo(() => {
@@ -166,7 +175,7 @@ function RoomList() {
               Live
             </span>
           )}
-          {isSuperStaffAdmin && userData?.hotel_slug && (
+          {canManageRoomInventory && userData?.hotel_slug && (
             <Link
               to={`/staff/hotel/${userData.hotel_slug}/room-management`}
               className="btn btn-sm btn-outline-secondary"
@@ -191,7 +200,7 @@ function RoomList() {
           <p className="text-muted">
             Add room types and rooms in Room Management to get started.
           </p>
-          {userData?.hotel_slug && (
+          {canManageRoomInventory && userData?.hotel_slug && (
             <Link
               to={`/staff/hotel/${userData.hotel_slug}/room-management`}
               className="btn btn-primary"

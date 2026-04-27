@@ -5,6 +5,7 @@ import BookingDetailsModal from './BookingDetailsModal';
 import BookingStatusBadges from './BookingStatusBadges';
 import BookingTimeWarningBadges from './BookingTimeWarningBadges';
 import { useAuth } from '@/context/AuthContext';
+import { useCan } from '@/rbac';
 import api from '@/services/api';
 
 /**
@@ -26,6 +27,9 @@ const BookingTable = ({
   const [staffProfile, setStaffProfile] = useState(null);
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  // Backend RBAC: mark-seen mutates booking state, gated by `bookings.update`.
+  const { can } = useCan();
+  const canMarkSeen = can('bookings', 'update');
   
   // Fetch staff profile for proper name display
   useEffect(() => {
@@ -66,7 +70,7 @@ const BookingTable = ({
   
   const handleBookingClick = async (booking) => {
     // Mark as seen if not already seen
-    if (!booking.staff_seen_at) {
+    if (!booking.staff_seen_at && canMarkSeen) {
       // 🔥 Optimistic update (instant UI feedback)
       // Create a better display name from available staff profile data
       const displayName = staffProfile?.first_name && staffProfile?.last_name 
