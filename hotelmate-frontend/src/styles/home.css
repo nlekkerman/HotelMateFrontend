@@ -387,27 +387,26 @@
 }
 
 /* Post Card
-   — Same glassmorphism family as the feed container, slightly brighter
-     so individual posts read as elevated surfaces inside the feed.
+   — Same blue/white glassmorphism as the feed container & attendance panels.
 */
 .post-card {
   position: relative;
   border-radius: var(--radius-lg);
   overflow: hidden;
   isolation: isolate;
-  border: 1px solid rgba(191, 219, 254, 0.4);
+  border: 1px solid rgba(191, 219, 254, 0.35);
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.92) 0%,
-    rgba(248, 250, 252, 0.88) 55%,
-    rgba(255, 255, 255, 0.92) 100%
+    rgba(248, 250, 252, 0.9) 0%,
+    rgba(241, 245, 249, 0.85) 55%,
+    rgba(255, 255, 255, 0.9) 100%
   );
-  backdrop-filter: blur(14px) saturate(1.2);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
   box-shadow:
     0 10px 26px rgba(30, 64, 175, 0.07),
     0 2px 6px rgba(15, 23, 42, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
   transition: transform var(--transition-normal),
     box-shadow var(--transition-normal),
     border-color var(--transition-normal);
@@ -460,8 +459,8 @@
   .post-card {
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.98) 0%,
-      rgba(248, 250, 252, 0.98) 55%,
+      rgba(248, 250, 252, 0.98) 0%,
+      rgba(241, 245, 249, 0.98) 55%,
       rgba(255, 255, 255, 0.98) 100%
     );
   }
