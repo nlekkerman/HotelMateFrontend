@@ -1,11 +1,16 @@
 import React, { useState } from "react";
 import api from "@/services/api";
 import { handleAttendanceError, showSuccessMessage, ERROR_TYPES } from "../utils/errorHandling";
+import { useCan } from "@/rbac";
+import NoAccess from "@/components/NoAccess";
 
 export default function AttendanceRowActions({ row, hotelSlug, onAction }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  
+  const { can } = useCan();
+  const canApprove = can("attendance", "log_approve");
+  const canReject = can("attendance", "log_reject");
+
   // Defensive checks for row structure
   if (!row || !Array.isArray(row.logs)) {
     return null;
@@ -19,11 +24,19 @@ export default function AttendanceRowActions({ row, hotelSlug, onAction }) {
     return null;
   }
 
+  // Hide entirely if user has neither authority.
+  if (!canApprove && !canReject) {
+    return <NoAccess inline />;
+  }
+
   async function handleDecision(decision) {
     if (!pendingLog || !hotelSlug || !decision) {
       console.warn("Invalid decision parameters:", { pendingLog, hotelSlug, decision });
       return;
     }
+
+    if (decision === "approve" && !canApprove) return;
+    if (decision === "reject" && !canReject) return;
 
     // Prevent multiple clicks
     if (busy) return;
@@ -66,30 +79,34 @@ export default function AttendanceRowActions({ row, hotelSlug, onAction }) {
   return (
     <div>
       <div className="d-flex gap-2">
-        <button
-          type="button"
-          className="btn btn-sm btn-outline-success"
-          disabled={busy}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleDecision("approve");
-          }}
-          title={busy ? "Processing..." : "Approve this unrostered log"}
-        >
-          {busy ? "..." : "Approve"}
-        </button>
-        <button
-          type="button"
-          className="btn btn-sm btn-outline-danger"
-          disabled={busy}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleDecision("reject");
-          }}
-          title={busy ? "Processing..." : "Reject this unrostered log"}
-        >
-          {busy ? "..." : "Reject"}
-        </button>
+        {canApprove && (
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-success"
+            disabled={busy}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDecision("approve");
+            }}
+            title={busy ? "Processing..." : "Approve this unrostered log"}
+          >
+            {busy ? "..." : "Approve"}
+          </button>
+        )}
+        {canReject && (
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-danger"
+            disabled={busy}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDecision("reject");
+            }}
+            title={busy ? "Processing..." : "Reject this unrostered log"}
+          >
+            {busy ? "..." : "Reject"}
+          </button>
+        )}
       </div>
       {error && (
         <div className="text-danger small mt-1" style={{ fontSize: "0.75rem" }}>

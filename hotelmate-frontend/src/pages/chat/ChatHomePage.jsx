@@ -10,6 +10,10 @@ const ChatHomePage = ({ selectedRoom, onSelectRoom, onUnreadChange }) => {
   const { hotelSlug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  // RBAC: staff page-level gate. Guests use a separate token-based portal.
+  const visible = user?.rbac?.chat?.visible === true;
+  const canRead = user?.rbac?.chat?.read === true;
+  if (!visible || !canRead) return null;
   const { conversations, markConversationRead } = useChat(); // Get both conversations and markConversationRead
   const { mainColor } = useTheme();
   const userId = user?.id;

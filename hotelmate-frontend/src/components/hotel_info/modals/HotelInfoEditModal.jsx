@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import api from "@/services/api";
+import { useCan } from "@/rbac";
 
 export default function HotelInfoEditModal({
   initialData,
@@ -7,6 +8,11 @@ export default function HotelInfoEditModal({
   onSuccess,
   onClose,
 }) {
+  // Backend-driven RBAC: action authority comes from
+  // `user.rbac.hotel_info.actions.entry_update`. Fail-closed for missing perms.
+  const { can } = useCan();
+  const canEntryUpdate = can("hotel_info", "entry_update");
+
   const [categories, setCategories] = useState([]);
   const [categoryName, setCategoryName] = useState("");
   const [title, setTitle] = useState(initialData?.title || "");
@@ -62,6 +68,7 @@ useEffect(() => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canEntryUpdate) return;
     setSaving(true);
     setError(null);
 
@@ -186,7 +193,7 @@ const getFullImageUrl = (path) => {
   )}
       {error && <div className="alert alert-danger">{error}</div>}
 
-      <button className="btn btn-primary" type="submit" disabled={saving}>
+      <button className="btn btn-primary" type="submit" disabled={saving || !canEntryUpdate}>
         {saving ? "Saving..." : "Save"}
       </button>
       <button

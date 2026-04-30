@@ -12,11 +12,13 @@ const StaffChatFloatingButton = ({ position = 'bottom-right' }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const hotelSlug = user?.hotel_slug;
+  // RBAC: staff_chat visibility
+  const visible = user?.rbac?.staff_chat?.visible === true;
   
   // Get unread count with 30-second auto-refresh
   const { totalUnread, loading } = useUnreadCount(hotelSlug, 30000);
 
-  if (!hotelSlug) return null;
+  if (!hotelSlug || !visible) return null;
 
   const handleClick = () => {
     navigate(`/${hotelSlug}/staff-chat`);

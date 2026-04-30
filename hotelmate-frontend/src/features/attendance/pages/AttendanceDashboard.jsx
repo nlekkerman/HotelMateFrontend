@@ -24,7 +24,7 @@ import { AttendanceDashboardSkeleton, AttendanceTableSkeleton, PeriodSelectorSke
 import { deriveStatus } from "../utils/attendanceStatus";
 import useStaffMetadata from "@/hooks/useStaffMetadata";
 import { useAuth } from '@/context/AuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useCan } from "@/rbac";
 import "../components/AttendanceCards.css";
 import { handleRealTimeStatusUpdate, showStatusNotification } from "../utils/statusUpdates";
 import { safeStaffId, safeStaffName, safeTimeSlice, safeNumber } from "../utils/safeUtils";
@@ -115,8 +115,9 @@ function AttendanceDashboardComponent() {
   const { hotelSlug } = useParams();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
-  const { isSuperStaffAdmin } = usePermissions();
-  
+  const { can } = useCan();
+  const canUseKiosk = can("attendance", "clock_in_out");
+
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedDate, setSelectedDate] = useState(
     () => new Date().toISOString().slice(0, 10)
@@ -618,12 +619,11 @@ function AttendanceDashboardComponent() {
               )}
             </div>
             
-            {/* Enhanced Dashboard & Kiosk Mode Toggle - Only for Super Staff/Admin */}
+            {/* Kiosk Mode Toggle - gated by attendance.clock_in_out (kiosk performs clock actions) */}
             {(() => {
               const isKioskMode = localStorage.getItem('kioskMode') === 'true';
-              
-              // For now, show to all staff users for testing
-              return authUser?.is_staff ? (
+
+              return canUseKiosk ? (
                 <div className="kiosk-control-block d-flex gap-2">
                   
                   <button

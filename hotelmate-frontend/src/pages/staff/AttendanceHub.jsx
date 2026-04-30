@@ -3,6 +3,8 @@
 // Replaces the separate /roster, /department-roster, /enhanced-attendance entry routes.
 import React from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import NoAccess from '@/components/NoAccess';
 import AttendanceDashboard from '@/features/attendance/pages/AttendanceDashboard';
 import DepartmentRosterDashboard from '@/features/attendance/pages/DepartmentRosterDashboard';
 import EnhancedAttendanceDashboard from '@/features/attendance/components/EnhancedAttendanceDashboard';
@@ -18,6 +20,13 @@ export default function AttendanceHub() {
   const { hotelSlug } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'dashboard';
+  const { user } = useAuth();
+
+  // Backend-driven RBAC read gate. Route-level `requiredSlug: 'attendance'`
+  // covers nav/module visibility; this enforces the explicit per-module
+  // read flag (`user.rbac.attendance.read`) before rendering any attendance
+  // surface. Fail-closed when the flag is missing or not strictly true.
+  const canReadAttendance = user?.rbac?.attendance?.read === true;
 
   const selectTab = (key) => {
     const next = new URLSearchParams(searchParams);
@@ -25,6 +34,15 @@ export default function AttendanceHub() {
     else next.set('tab', key);
     setSearchParams(next, { replace: true });
   };
+
+  if (!canReadAttendance) {
+    return (
+      <div className="container my-4">
+        <h2 className="mb-4 text-center">Attendance</h2>
+        <NoAccess message="You do not have permission to view attendance." />
+      </div>
+    );
+  }
 
   return (
     <div className="attendance-hub">

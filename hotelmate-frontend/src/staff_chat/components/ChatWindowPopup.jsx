@@ -32,6 +32,7 @@ import useReadReceipts from "../hooks/useReadReceipts";
 // ✅ UNIFIED: No individual popup subscriptions - handled globally by StaffChatContext
 import { useChatState, useChatDispatch } from "@/realtime/stores/chatStore.jsx";
 import { CHAT_ACTIONS } from "@/realtime/stores/chatActions.js";
+import { useCan } from "@/rbac";
 
 /**
  * ChatWindowPopup Component
@@ -54,6 +55,14 @@ const ChatWindowPopup = ({
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const markedUpToRef = useRef(0);
+
+  // RBAC: staff_chat module action gates. Authority is `user.rbac.staff_chat.actions.<action>` only.
+  const { can } = useCan();
+  const canSend = can('staff_chat', 'message_send');
+  const canAttach = can('staff_chat', 'attachment_upload');
+  const canModerate = can('staff_chat', 'message_moderate');
+  const canDeleteAttachment = can('staff_chat', 'attachment_delete');
+  const canAssign = can('staff_chat', 'conversation_assign');
 
   // Get event subscription from StaffChatContext
   // ✅ UNIFIED: Using chatStore only - no legacy useStaffChat subscriptions
@@ -347,6 +356,8 @@ const ChatWindowPopup = ({
 
   // Handle send message
   const handleSendMessage = async (messageText, mentions) => {
+    // RBAC: staff_chat.message_send required for any send.
+    if (!canSend) return;
     // If files are selected, upload them instead
     if (selectedFiles.length > 0) {
       await handleUploadFiles(messageText);
@@ -388,6 +399,8 @@ const ChatWindowPopup = ({
   // Handle file upload
   const handleUploadFiles = async (messageText = "") => {
     if (selectedFiles.length === 0) return;
+    // RBAC: staff_chat.attachment_upload
+    if (!canAttach) return;
 
     setUploading(true);
     try {
@@ -504,6 +517,8 @@ const ChatWindowPopup = ({
       console.error("❌ No message to delete");
       return;
     }
+    // RBAC: staff_chat.message_moderate
+    if (!canModerate) return;
 
     const result = await deleteMsg(messageToDelete.id, deleteHard);
 
@@ -700,13 +715,13 @@ const ChatWindowPopup = ({
                           : "staff-chat-message--other"
                       }`}
                     >
-                      {/* Message Actions Dropdown */}
+                      {/* Message Actions Dropdown - RBAC gates from staff_chat module */}
                       <MessageActions
                         message={message}
                         isOwn={isOwn}
                         canEdit={isOwn}
-                        canDelete={isOwn}
-                        canHardDelete={false} // Set based on user permissions
+                        canDelete={canModerate}
+                        canHardDelete={canModerate}
                         onReply={() => handleReply(message)}
                         onShare={() => handleShare(message)}
                         onEdit={() => handleEdit(message.id, messageText)}
@@ -749,7 +764,7 @@ const ChatWindowPopup = ({
                           }
                           onShare={() => handleShare(message)}
                           onDelete={
-                            isOwn ? () => handleDelete(message.id, false) : null
+                            canModerate ? () => handleDelete(message.id, false) : null
                           }
                           reactions={
                             <ReactionsList
@@ -805,9 +820,9 @@ const ChatWindowPopup = ({
               onSend={handleSendMessage}
               replyTo={replyTo}
               onCancelReply={cancelReply}
-              disabled={sending || uploading}
+              disabled={sending || uploading || !canSend}
               placeholder="Type a message..."
-              onFileSelect={handleFileSelect}
+              onFileSelect={canAttach ? handleFileSelect : undefined}
               selectedFiles={selectedFiles}
               onRemoveFile={handleRemoveFile}
               onFocus={handleInputFocus}
@@ -874,7 +889,7 @@ const ChatWindowPopup = ({
         groupTitle={conversationData?.title}
         conversationId={conversationData?.id}
         hotelSlug={hotelSlug}
-        canManageParticipants={true}
+        canManageParticipants={canAssign}
         onParticipantRemoved={(participantId) => {
           // The conversation will be updated via Pusher
         }}

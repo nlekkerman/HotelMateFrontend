@@ -17,7 +17,7 @@ import { deleteRoomConversationMessage } from "@/services/roomConversationsAPI";
  * (/api/staff/hotel/{slug}/chat/messages/{id}/delete/).
  * @param {string} hotelSlug - The hotel slug (required)
  * @param {number} messageId - The ID of the message to delete
- * @param {boolean} [hardDelete=false] - Permanently delete (managers only)
+ * @param {boolean} [hardDelete=false] - Permanently delete. Caller MUST gate via useCan('chat','message_moderate').
  * @returns {Promise<Object>} - The response data from backend
  */
 export const deleteMessage = async (hotelSlug, messageId, hardDelete = false) => {

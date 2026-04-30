@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import api from "@/services/api";
 import HotelInfoModal from "@/components/modals/HotelInfoModal"; // Use your modal component
+import { useCan } from "@/rbac";
 
 function slugify(text) {
   return text
@@ -13,6 +14,14 @@ function slugify(text) {
 }
 
 export default function CreateCategoryForm({ hotelSlug, onSuccess, onClose }) {
+  // Backend-driven RBAC: action authority comes from
+  // `user.rbac.hotel_info.actions.category_manage` (creating a category) and
+  // `user.rbac.hotel_info.actions.qr_generate` (post-create QR step).
+  // Fail-closed for missing perms.
+  const { can } = useCan();
+  const canCategoryManage = can("hotel_info", "category_manage");
+  const canQrGenerate = can("hotel_info", "qr_generate");
+
   const [name, setName] = useState("");
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -26,6 +35,7 @@ export default function CreateCategoryForm({ hotelSlug, onSuccess, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canCategoryManage) return;
     setSaving(true);
     setError(null);
     setShowQrModal(false);
@@ -61,6 +71,7 @@ export default function CreateCategoryForm({ hotelSlug, onSuccess, onClose }) {
 
   // Generate QR for this category (must use slug!)
   const handleGenerateQr = async () => {
+    if (!canQrGenerate) return;
     setCreatingQr(true);
     setQrError(null);
     try {
@@ -84,6 +95,7 @@ export default function CreateCategoryForm({ hotelSlug, onSuccess, onClose }) {
 
   return (
     <>
+      {!canCategoryManage ? null : (
       <form onSubmit={handleSubmit} className="mb-3">
         <div className="mb-2">
           <label className="form-label">Category Name</label>
@@ -103,7 +115,7 @@ export default function CreateCategoryForm({ hotelSlug, onSuccess, onClose }) {
         </div>
         {error && <div className="text-danger mb-2">{error}</div>}
         <div className="d-flex gap-2">
-          <button className="btn btn-primary" type="submit" disabled={saving || showQrModal}>
+          <button className="btn btn-primary" type="submit" disabled={saving || showQrModal || !canCategoryManage}>
             {saving ? "Creating..." : "Create Category"}
           </button>
           {onClose && (
@@ -113,6 +125,7 @@ export default function CreateCategoryForm({ hotelSlug, onSuccess, onClose }) {
           )}
         </div>
       </form>
+      )}
 
       {showQrModal && (
         <HotelInfoModal>
@@ -120,13 +133,19 @@ export default function CreateCategoryForm({ hotelSlug, onSuccess, onClose }) {
             <h5 className="mb-3">Generate QR for this Category</h5>
             {!qrUrl ? (
               <>
-                <button
-                  className="btn btn-dark"
-                  onClick={handleGenerateQr}
-                  disabled={creatingQr}
-                >
-                  {creatingQr ? "Generating QR..." : "Generate QR"}
-                </button>
+                {canQrGenerate ? (
+                  <button
+                    className="btn btn-dark"
+                    onClick={handleGenerateQr}
+                    disabled={creatingQr}
+                  >
+                    {creatingQr ? "Generating QR..." : "Generate QR"}
+                  </button>
+                ) : (
+                  <div className="alert alert-warning mb-0">
+                    Category created. You do not have permission to generate the QR code.
+                  </div>
+                )}
                 {qrError && <div className="text-danger mt-2">{qrError}</div>}
               </>
             ) : (

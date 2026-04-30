@@ -8,6 +8,7 @@ import { useChatState } from "@/realtime/stores/chatStore.jsx";
 import ConversationsList from "./ConversationsList";
 import ChatWindowPopup from "./ChatWindowPopup";
 import GroupChatModal from "./GroupChatModal";
+import { useCan } from "@/rbac";
 import "../staffChat.css";
 
 /**
@@ -22,6 +23,12 @@ const MessengerWidget = ({
 }) => {
 
   const { user, isStaff } = useAuth();
+
+  // RBAC: authority for visibility comes from `user.rbac.staff_chat`. `isStaff`
+  // is only used as a logged-in-staff-session precondition, never as authority.
+  const { can } = useCan();
+  const staffChatVisible = user?.rbac?.staff_chat?.visible === true;
+  const canCreateConversation = can('staff_chat', 'conversation_create');
 
   // ✅ SIMPLIFIED: Get hotel slug - everyone in same hotel has same slug!
   const getHotelSlug = () => {
@@ -280,6 +287,8 @@ const MessengerWidget = ({
   };
 
   const handleOpenGroupModal = () => {
+    // RBAC: staff_chat.conversation_create
+    if (!canCreateConversation) return;
     setShowGroupModal(true);
   };
 
@@ -301,9 +310,9 @@ const MessengerWidget = ({
     "bottom-left": "messenger-widget--bottom-left",
   };
 
-  // 🚫 HIDE WIDGET FOR NON-AUTHENTICATED STAFF USERS
+  // 🚫 HIDE WIDGET FOR USERS WITHOUT staff_chat VISIBILITY
   // (moved below all hooks to comply with React Rules of Hooks)
-  if (!user || !isStaff) {
+  if (!user || !staffChatVisible) {
     return null;
   }
 

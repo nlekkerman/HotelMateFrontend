@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useCan } from "@/rbac";
 import api from "@/services/api";
 import HotelInfoCreateForm from "@/components/hotel_info/HotelInfoCreateForm";
 import HotelInfoModal from "@/components/modals/HotelInfoModal.jsx";
@@ -17,6 +18,26 @@ export default function HotelInfo() {
   const { user } = useAuth();
   const { mainColor } = useTheme();
   const navigate = useNavigate();
+
+  // Backend-driven RBAC. Route-level `requiredSlug: 'hotel_info'` covers
+  // nav/module visibility; this enforces the explicit per-module read flag
+  // (`user.rbac.hotel_info.read`) plus action gates
+  // (`user.rbac.hotel_info.actions.<key>`). Fail-closed for missing perms.
+  const { can } = useCan();
+  const canReadHotelInfo =
+    user?.rbac?.hotel_info?.read === true ||
+    can("hotel_info", "entry_read");
+  // TODO:
+  // category_read not separated from hotel_info.read.
+  // If backend enforces different access later,
+  // split categories list gating from main page read.
+  // eslint-disable-next-line no-unused-vars
+  const canCategoryRead = can("hotel_info", "category_read");
+  const canCategoryManage = can("hotel_info", "category_manage");
+  const canEntryCreate = can("hotel_info", "entry_create");
+  const canEntryUpdate = can("hotel_info", "entry_update");
+  const canQrRead = can("hotel_info", "qr_read");
+  const canQrGenerate = can("hotel_info", "qr_generate");
 
   // ── State ─────────────────────────────────────────────────────────
   const [categories, setCategories] = useState([]);
@@ -75,7 +96,7 @@ export default function HotelInfo() {
         : [];
       setCategoryData(items);
 
-      if (user) {
+      if (user && canQrRead) {
         const qrRes = await api.get("/hotel_info/category_qr/", {
           params: { hotel_slug: hotelSlug, category_slug: activeCategory },
         });
@@ -97,6 +118,14 @@ export default function HotelInfo() {
     async (cat) => {
       setShowCreateForm(false);
 
+      // Pre-check existing QR (requires qr_read). If absent, fall back to
+      // generation flow (requires qr_generate). Without either perm, just
+      // navigate — backend will 403 if user is not allowed to read.
+      if (!canQrRead) {
+        navigate(`/hotel_info/${hotelSlug}/${cat.slug}`);
+        return;
+      }
+
       try {
         // Try fetching existing QR
         await api.get("/hotel_info/category_qr/", {
@@ -106,6 +135,11 @@ export default function HotelInfo() {
         navigate(`/hotel_info/${hotelSlug}/${cat.slug}`);
       } catch (err) {
         if (err.response?.status === 404) {
+          if (!canQrGenerate) {
+            // No QR yet, but user lacks qr_generate — just navigate without QR.
+            navigate(`/hotel_info/${hotelSlug}/${cat.slug}`);
+            return;
+          }
           // Not found: ask the user
           const ok = window.confirm(
             `There’s no QR for “${cat.name}” yet. Generate it now?`
@@ -126,7 +160,7 @@ export default function HotelInfo() {
         }
       }
     },
-    [hotelSlug, navigate]
+    [hotelSlug, navigate, canQrRead, canQrGenerate]
   );
 
   // ── Effects ────────────────────────────────────────────────────────
@@ -219,7 +253,15 @@ export default function HotelInfo() {
     return base.filter((sec) => sec.items.length > 0);
   }, [categoryData]);
 
-  // ── Early exits ────────────────────────────────────────────────────
+  // ── Early exits ────────────────────────────────────────────────────  if (!canReadHotelInfo) {
+    return (
+      <div className="container my-4">
+        <div className="alert alert-warning text-center" role="alert">
+          You do not have permission to view hotel information.
+        </div>
+      </div>
+    );
+  }
   if (loadingCategories)
     return (
       <div className="loading">
@@ -324,7 +366,8 @@ export default function HotelInfo() {
             >
               <div className="container-fluid contextual-actions-container">
                 <div className="d-flex align-items-center justify-content-center gap-2 py-2 px-2 flex-wrap">
-                  <button
+                  {canCategoryManage && (
+                    <button
                   className="contextual-action-btn"
                   onClick={() => {
                     setShowCreateCategory((prev) => !prev);
@@ -338,6 +381,8 @@ export default function HotelInfo() {
                   <i className="bi bi-folder-plus" style={{ color: mainColor || '#3498db' }} />
                   <span className="action-label" style={{ color: mainColor || '#3498db' }}>Create Category</span>
                 </button>
+                  )}
+                {canEntryCreate && (
                 <button
                   className="contextual-action-btn"
                   onClick={() => {
@@ -352,6 +397,8 @@ export default function HotelInfo() {
                   <i className="bi bi-file-earmark-plus" style={{ color: mainColor || '#3498db' }} />
                   <span className="action-label" style={{ color: mainColor || '#3498db' }}>Create Info</span>
                 </button>
+                )}
+                {canQrRead && (
                 <button
                   className="contextual-action-btn"
                   onClick={() => setShowQRConfirmModal(true)}
@@ -363,6 +410,7 @@ export default function HotelInfo() {
                   <i className="bi bi-qr-code" style={{ color: mainColor || '#3498db' }} />
                   <span className="action-label" style={{ color: mainColor || '#3498db' }}>Download QR</span>
                 </button>
+                )}
               </div>
             </div>
           </div>
@@ -532,12 +580,14 @@ export default function HotelInfo() {
                             return (
                               <div key={item.id} className="col">
                                 <div className="card h-100 shadow-sm">
-                                  <button
-                                    className="btn btn-sm btn-outline-primary mt-2"
-                                    onClick={() => openEditModal(item)}
-                                  >
-                                    Edit
-                                  </button>
+                                  {canEntryUpdate && (
+                                    <button
+                                      className="btn btn-sm btn-outline-primary mt-2"
+                                      onClick={() => openEditModal(item)}
+                                    >
+                                      Edit
+                                    </button>
+                                  )}
                                   <div className="card-header text-center bold main-bg text-white">
                                     {eventDateFormatted} @{" "}
                                     {eventTimeFormatted

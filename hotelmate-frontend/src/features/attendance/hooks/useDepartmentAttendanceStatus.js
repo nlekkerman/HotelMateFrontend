@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '@/services/api';
 import { useAttendanceState, useAttendanceDispatch } from '@/realtime/stores/attendanceStore.jsx';
 import { attendanceActions } from '@/realtime/stores/attendanceStore.jsx';
+import { useCan } from '@/rbac';
 
 /**
  * Hook to fetch real-time attendance status by department - now using centralized store
@@ -57,8 +58,12 @@ export const useDepartmentAttendanceStatus = (hotelSlug, refreshKey = 0) => {
  */
 export const useAttendanceApproval = (hotelSlug, onSuccess) => {
   const [approving, setApproving] = useState(new Set());
+  const { can } = useCan();
+  const canApprove = can('attendance', 'log_approve');
+  const canReject = can('attendance', 'log_reject');
 
   const approveLog = async (logId) => {
+    if (!canApprove) return;
     setApproving(prev => new Set([...prev, logId]));
     
     try {
@@ -80,6 +85,7 @@ export const useAttendanceApproval = (hotelSlug, onSuccess) => {
   };
 
   const rejectLog = async (logId) => {
+    if (!canReject) return;
     setApproving(prev => new Set([...prev, logId]));
     
     try {
@@ -103,6 +109,8 @@ export const useAttendanceApproval = (hotelSlug, onSuccess) => {
   return {
     approveLog,
     rejectLog,
+    canApprove,
+    canReject,
     isApproving: (logId) => approving.has(logId)
   };
 };

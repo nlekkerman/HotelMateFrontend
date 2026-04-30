@@ -19,14 +19,35 @@ export default function MaintenanceRequests() {
   const [modalRequestId, setModalRequestId] = useState(null);
 
   // Phase 1 RBAC: backend-driven action authority via `user.rbac.maintenance.actions.<key>`.
-  const { can } = useCan();
+  const { can, canAny } = useCan();
   const canRequestUpdate = can('maintenance', 'request_update');
   const canRequestDelete = can('maintenance', 'request_delete');
   const canCommentCreate = can('maintenance', 'comment_create');
-  // TODO(RBAC): The status-change <select> covers transitions (accept/resolve/reopen/close)
-  // which map to distinct backend action keys. Until the backend exposes per-transition
-  // gating in the dashboard payload, we use the broad `request_update` as a baseline
-  // and rely on backend rejection for forbidden transitions.
+  // Show the status selector if the user can perform any transition or a
+  // generic update. Per-option visibility below maps each status value to its
+  // specific backend action key. Backend remains the final authority on
+  // forbidden transitions.
+  const canChangeStatus = canAny('maintenance', [
+    'request_update',
+    'request_accept',
+    'request_resolve',
+    'request_reopen',
+    'request_close',
+  ]);
+
+  // Map a target status value to the action key required to transition to it.
+  const STATUS_ACTION = {
+    open: 'request_reopen',
+    in_progress: 'request_accept',
+    resolved: 'request_resolve',
+    closed: 'request_close',
+  };
+  const canTransitionTo = (status) => {
+    if (canRequestUpdate) return true;
+    const actionKey = STATUS_ACTION[status];
+    if (!actionKey) return false;
+    return can('maintenance', actionKey);
+  };
 
   // Fetch list
   const fetchRequests = async () => {
@@ -145,7 +166,7 @@ export default function MaintenanceRequests() {
               )}
 
               {/* Status selector */}
-              {canRequestUpdate ? (
+              {canChangeStatus ? (
                 <select
                   className="form-select form-select-sm mb-3"
                   value={r.status}
@@ -153,10 +174,21 @@ export default function MaintenanceRequests() {
                     handleStatusChange(r.id, e.target.value)
                   }
                 >
-                  <option value="open">Open</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="resolved">Resolved</option>
-                  <option value="closed">Closed</option>
+                  {/* Always render the current status so the select reflects
+                      reality, even if the user cannot transition back to it. */}
+                  {(['open', 'in_progress', 'resolved', 'closed']).map((s) => {
+                    const allowed = s === r.status || canTransitionTo(s);
+                    if (!allowed) return null;
+                    const label = {
+                      open: 'Open',
+                      in_progress: 'In Progress',
+                      resolved: 'Resolved',
+                      closed: 'Closed',
+                    }[s];
+                    return (
+                      <option key={s} value={s}>{label}</option>
+                    );
+                  })}
                 </select>
               ) : (
                 <div className="mb-3">

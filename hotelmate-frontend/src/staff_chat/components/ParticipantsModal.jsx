@@ -26,6 +26,9 @@ const ParticipantsModal = ({
   const [error, setError] = useState(null);
 
   const handleRemoveParticipant = async (participantId) => {
+    // Defence-in-depth: callers gate canManageParticipants via
+    // can('staff_chat','conversation_assign'); enforce here as well.
+    if (!canManageParticipants) return;
     if (!conversationId || !hotelSlug) {
       console.error('Missing conversationId or hotelSlug');
       return;

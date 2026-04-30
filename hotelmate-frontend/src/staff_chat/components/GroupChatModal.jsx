@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { Modal, Button, Form, Alert, Spinner } from 'react-bootstrap';
 import StaffSelector from './StaffSelector';
 import useGroupChat from '../hooks/useGroupChat';
+import { useCan } from '@/rbac';
 
 /**
  * GroupChatModal Component
@@ -27,6 +28,10 @@ const GroupChatModal = ({
     isValid,
   } = useGroupChat(hotelSlug);
 
+  // RBAC: staff_chat.conversation_create
+  const { can } = useCan();
+  const canCreateConversation = can('staff_chat', 'conversation_create');
+
   // Reset form when modal is closed
   useEffect(() => {
     if (!show) {
@@ -35,6 +40,8 @@ const GroupChatModal = ({
   }, [show, reset]);
 
   const handleCreateGroup = async () => {
+    // RBAC: staff_chat.conversation_create
+    if (!canCreateConversation) return;
     const conversation = await createGroup();
     
     if (conversation) {
@@ -159,7 +166,7 @@ const GroupChatModal = ({
           <Button 
             variant="primary" 
             onClick={handleCreateGroup}
-            disabled={!isValid() || isCreating}
+            disabled={!isValid() || isCreating || !canCreateConversation}
           >
             {isCreating ? (
               <>

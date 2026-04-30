@@ -71,6 +71,11 @@ const StaffChatContainer = ({
     setSelectedStaff(null);
   };
 
+  // RBAC: fail closed for staff_chat visibility/read at the container.
+  const visible = authUser?.rbac?.staff_chat?.visible === true;
+  const canRead = authUser?.rbac?.staff_chat?.read === true;
+  if (!visible || !canRead) return null;
+
   return (
     <div className="staff-chat-container">
       {activeView === 'list' ? (

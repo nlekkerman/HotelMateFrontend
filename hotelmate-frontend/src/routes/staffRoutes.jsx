@@ -190,9 +190,12 @@ const staffRoutes = [
   // Menus authoring is a distinct surface — keep as sibling under room_services permission.
   { path: '/menus_management/:hotelSlug', element: <MenusManagement />, protected: true, mode: 'staff', requiredSlug: 'room_services' },
 
-  // ---------------- Guests (part of Rooms module) ----------------
-  { path: '/:hotelIdentifier/guests', element: <GuestList />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
-  { path: '/:hotelIdentifier/guests/:guestId/edit', element: <GuestEdit />, protected: true, mode: 'staff', requiredSlug: 'rooms' },
+  // ---------------- Guests (visibility-only, no nav slug) ----------------
+  // Route access is gated by `user.rbac.guests.visible` via staffAccessPolicy.
+  // Component-level surfaces enforce `user.rbac.guests.read` and
+  // `user.rbac.guests.actions.update`.
+  { path: '/:hotelIdentifier/guests', element: <GuestList />, protected: true, mode: 'staff', requiredSlug: 'guests' },
+  { path: '/:hotelIdentifier/guests/:guestId/edit', element: <GuestEdit />, protected: true, mode: 'staff', requiredSlug: 'guests' },
 
   // ---------------- Room Bookings (canonical + redirects) ----------------
   { path: '/staff/hotel/:hotelSlug/room-bookings', element: <RoomBookingsHub />, protected: true, mode: 'staff', requiredSlug: 'room_bookings' },

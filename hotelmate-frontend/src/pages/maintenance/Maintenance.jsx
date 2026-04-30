@@ -11,9 +11,26 @@ export default function Maintenance() {
   const { mainColor } = useTheme();
   const { user } = useAuth();
   const hotelSlug = hotelIdentifier || user?.hotel_slug || "";
-  
+
+  // Backend-driven RBAC read gate. Route-level `requiredSlug: 'maintenance'`
+  // covers nav/module visibility; this enforces the explicit per-module
+  // read flag (`user.rbac.maintenance.read`) before rendering list/detail
+  // surfaces. Fail-closed when the flag is missing or not strictly true.
+  const canReadMaintenance = user?.rbac?.maintenance?.read === true;
+
   // nothing but composition: both share the same fetchRequests via refetch
   let refetch; // we'll wire this up via a ref in MaintenanceRequests
+
+  if (!canReadMaintenance) {
+    return (
+      <div className="container my-4">
+        <h2 className="mb-4 text-center">Maintenance Center</h2>
+        <div className="alert alert-warning text-center" role="alert">
+          You do not have permission to view maintenance requests.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container my-4">

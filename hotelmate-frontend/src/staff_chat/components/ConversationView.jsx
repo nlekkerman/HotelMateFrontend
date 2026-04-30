@@ -13,7 +13,7 @@ import ParticipantsModal from './ParticipantsModal';
 import useReadReceipts from '../hooks/useReadReceipts';
 import { useStaffChat } from '../context/StaffChatContext';
 import { useAuth } from '@/context/AuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useCan } from '@/rbac';
 
 /**
  * ConversationView Component
@@ -143,9 +143,13 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
   useEffect(() => {
   }, [replyTo]);
   
-  // Check if user is manager/admin via centralized permissions
-  const { canAccess } = usePermissions();
-  const isManagerOrAdmin = canAccess(['manager', 'admin', 'super_staff_admin', 'staff_admin']);
+  // RBAC: staff_chat module action gates. Authority is `user.rbac.staff_chat.actions.<action>` only.
+  const { can } = useCan();
+  const canSend = can('staff_chat', 'message_send');
+  const canAttach = can('staff_chat', 'attachment_upload');
+  const canModerate = can('staff_chat', 'message_moderate');
+  const canDeleteAttachment = can('staff_chat', 'attachment_delete');
+  const canAssign = can('staff_chat', 'conversation_assign');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -252,6 +256,10 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     if ((!messageText.trim() && selectedFiles.length === 0) || sending) {
       return;
     }
+    // RBAC: staff_chat.message_send required for any send.
+    if (!canSend) return;
+    // RBAC: staff_chat.attachment_upload required when files are attached.
+    if (selectedFiles.length > 0 && !canAttach) return;
 
     setSending(true);
     
@@ -328,6 +336,8 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
   };
 
   const handleFileSelect = (files) => {
+    // RBAC: staff_chat.attachment_upload
+    if (!canAttach) return;
     // Validate file count
     if (files.length > 10) {
       alert('Maximum 10 files per upload');
@@ -355,6 +365,8 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
   }, []);
 
   const handleDelete = useCallback(async (messageId, hardDelete = false) => {
+    // RBAC: staff_chat.message_moderate (no ownership-based bypass).
+    if (!canModerate) return;
     const confirmText = hardDelete 
       ? 'Permanently delete this message? This cannot be undone.'
       : 'Delete this message?';
@@ -382,9 +394,11 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
     } finally {
       setDeleting(false);
     }
-  }, [hotelSlug, conversation?.id, chatDispatch]);
+  }, [hotelSlug, conversation?.id, chatDispatch, canModerate]);
 
   const handleDeleteAttachment = async (attachmentId) => {
+    // RBAC: staff_chat.attachment_delete
+    if (!canDeleteAttachment) return;
     if (!confirm('Delete this file?')) return;
 
     try {
@@ -512,7 +526,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
                     onReply={() => handleReply(message)}
                     onReaction={() => handleReaction(message.id)}
                     onShare={() => handleShare(message)}
-                    onDelete={isOwn || isManagerOrAdmin ? () => handleDelete(message.id, false) : null}
+                    onDelete={canModerate ? () => handleDelete(message.id, false) : null}
                     reactions={
                       message.reactions && message.reactions.length > 0 ? (
                         <ReactionsList
@@ -532,8 +546,8 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
                       message={message}
                       isOwn={isOwn}
                       canEdit={isOwn}
-                      canDelete={isOwn}
-                      canHardDelete={isManagerOrAdmin}
+                      canDelete={canModerate}
+                      canHardDelete={canModerate}
                       onEdit={() => setEditingMessageId(message.id)}
                       onDelete={() => handleDelete(message.id, false)}
                       onHardDelete={() => handleDelete(message.id, true)}
@@ -564,11 +578,11 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
       {/* Message Input */}
       <MessageInput
         onSend={handleSendMessage}
-        disabled={sending}
+        disabled={sending || !canSend}
         placeholder={`Message ${staff?.full_name || 'staff member'}...`}
         replyTo={replyTo}
         onCancelReply={handleCancelReply}
-        onFileSelect={handleFileSelect}
+        onFileSelect={canAttach ? handleFileSelect : undefined}
         selectedFiles={selectedFiles}
         onRemoveFile={handleRemoveFile}
         showMentionSuggestions={true}
@@ -603,7 +617,7 @@ const ConversationView = ({ hotelSlug, conversation, staff, currentUser }) => {
         groupTitle={conversation?.title}
         conversationId={conversation?.id}
         hotelSlug={hotelSlug}
-        canManageParticipants={true}
+        canManageParticipants={canAssign}
         onParticipantRemoved={(participantId) => {
           // Reload messages to reflect changes
           loadMessages();

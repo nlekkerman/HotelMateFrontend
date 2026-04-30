@@ -6,13 +6,20 @@
  * NO super_staff_admin bypass - backend populates effective_navs for all tiers.
  */
 
+// Modules that do NOT have a nav slug exposed via `effective_navs`.
+// For these, route access is gated by `user.rbac.<module>.visible === true`
+// instead of nav membership. Backend remains the final 403 authority.
+const VISIBILITY_ONLY_SLUGS = new Set(["guests"]);
+
 // Route prefix to required RBAC module slug mapping.
 // Slugs are the canonical backend RBAC module slugs ONLY.
 const PATH_TO_NAV_MAPPING = [
   // Front Office
   { match: (p) => p.startsWith("/rooms"), slug: "rooms" },
   { match: (p) => p.includes("/room-management"), slug: "rooms" },
-  { match: (p) => p.includes("/guests"), slug: "rooms" },
+  // Guests has no nav slug — routes opt-in explicitly via `requiredSlug: 'guests'`.
+  // Visibility is enforced via `user.rbac.guests.visible` below.
+  { match: (p) => /\/[^/]+\/guests(?:\/|$)/.test(p), slug: "guests" },
 
   // Bookings
   { match: (p) => p.startsWith("/bookings"), slug: "room_bookings" },
@@ -100,6 +107,22 @@ export function canAccessStaffPath({ pathname, user, requiredSlug }) {
       allowed: false,
       redirectTo: fallback,
       reason: `Unmapped route: ${pathname} not found in staff route mapping (deny by default)`
+    };
+  }
+
+  // Visibility-only modules (no nav slug): gate via `user.rbac.<module>.visible`.
+  if (VISIBILITY_ONLY_SLUGS.has(requiredNavSlug)) {
+    const visible = user?.rbac?.[requiredNavSlug]?.visible === true;
+    if (!visible) {
+      return {
+        allowed: false,
+        redirectTo: fallback,
+        reason: `Access denied: User lacks 'rbac.${requiredNavSlug}.visible' for ${pathname}`
+      };
+    }
+    return {
+      allowed: true,
+      reason: `Access granted: User has 'rbac.${requiredNavSlug}.visible'`
     };
   }
 

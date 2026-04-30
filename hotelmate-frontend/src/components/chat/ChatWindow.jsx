@@ -37,6 +37,7 @@ import {
 import { showStaffAssignmentNotification } from '@/utils/guestNotifications.jsx';
 import { staffChatConversationChannel } from '@/lib/pusher/channels';
 import { useAuth } from '@/context/AuthContext';
+import { useCan } from '@/rbac';
 
 const MESSAGE_LIMIT = 10;
 
@@ -79,6 +80,16 @@ const ChatWindow = ({
   
   // Guest is someone WITHOUT a userId (not authenticated as staff)
   const isGuest = !userId;
+
+  // RBAC: staff actions are gated by `chat` module action keys. Guests have no
+  // `user.rbac` and therefore bypass `useCan` ONLY for `message_send` and
+  // `attachment_upload` — guest authority is the booking/guest token, not RBAC.
+  const { can } = useCan();
+  const canSend = isGuest ? true : can('chat', 'message_send');
+  const canAttach = isGuest ? true : can('chat', 'attachment_upload');
+  const canModerate = !isGuest && can('chat', 'message_moderate');
+  const canDeleteAttachment = !isGuest && can('chat', 'attachment_delete');
+  const canAssign = !isGuest && can('chat', 'conversation_assign');
 
   // UNIFIED: Use chatStore for guest-to-staff messages (new system)
   const chatState = useChatState();
@@ -351,6 +362,8 @@ const ChatWindow = ({
     // Assign staff to conversation when they open it (STAFF ONLY)
     const assignStaffToConversation = async () => {
       if (!userId || isGuest || !hotelSlug) return;
+      // RBAC: gate on chat.conversation_assign
+      if (!canAssign) return;
       
       try {
         const response = await api.post(
@@ -727,6 +740,11 @@ const ChatWindow = ({
   };
 
   const handleFileSelect = (e) => {
+    // RBAC: chat.attachment_upload (guest token bypass)
+    if (!canAttach) {
+      e.target.value = '';
+      return;
+    }
     const files = Array.from(e.target.files);
     const errors = [];
     
@@ -768,6 +786,10 @@ const ChatWindow = ({
   const handleSendMessage = async () => {
     // Allow sending if there's either a message or files
     if ((!newMessage.trim() && selectedFiles.length === 0) || !conversationId) return;
+    // RBAC: chat.message_send (guest token bypass)
+    if (!canSend) return;
+    // RBAC: chat.attachment_upload required when sending files
+    if (selectedFiles.length > 0 && !canAttach) return;
 
     const messageToSend = newMessage;
     const filesToSend = [...selectedFiles];
@@ -1017,6 +1039,8 @@ const ChatWindow = ({
   // Handle delete message (using utility)
   const handleDeleteMessage = async () => {
     if (!messageToDelete) return;
+    // RBAC: chat.message_moderate (no guest bypass)
+    if (!canModerate) return;
     
     await handleMessageDeletion(
       messageToDelete.id,
@@ -1354,7 +1378,8 @@ const ChatWindow = ({
                       boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
                     }}
                   >
-                    {/* Delete button with text */}
+                    {/* Delete button with text - RBAC: chat.attachment_delete */}
+                    {canDeleteAttachment && (
                     <button
                       className="btn btn-sm d-flex align-items-center gap-1"
                       style={{ 
@@ -1375,6 +1400,7 @@ const ChatWindow = ({
                       <FaTrash style={{ fontSize: '0.75rem' }} />
                       <span>Delete</span>
                     </button>
+                    )}
                     {/* Download button with arrow */}
                     <button
                       className="btn btn-sm d-flex align-items-center gap-1"
@@ -1582,8 +1608,8 @@ const ChatWindow = ({
               >
                 {/* First row: Delete, Share, Seen */}
                 <div className="d-flex align-items-center gap-2" style={{ justifyContent: isMine ? 'flex-end' : 'flex-start' }}>
-                  {/* Delete button - only for own messages */}
-                  {isMine && (
+                  {/* Delete button - RBAC: chat.message_moderate (staff only). Ownership is no longer the authority. */}
+                  {canModerate && (
                     <button
                       className="btn btn-link p-0 text-muted"
                       style={{ 
@@ -1781,13 +1807,14 @@ const ChatWindow = ({
             onChange={handleFileSelect}
             ref={fileInputRef}
             style={{ display: 'none' }}
+            disabled={!canAttach}
           />
 
-          {/* Attachment Button */}
+          {/* Attachment Button - RBAC: chat.attachment_upload (guest token bypass) */}
           <button
             className="btn d-flex align-items-center justify-content-center"
             onClick={() => fileInputRef.current?.click()}
-            disabled={!conversationId || uploading}
+            disabled={!conversationId || uploading || !canAttach}
             title="Attach files"
             style={{ marginRight: '0.5rem' }}
           >
@@ -1884,12 +1911,12 @@ const ChatWindow = ({
             }
           }}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !uploading) handleSendMessage();
+            if (e.key === "Enter" && !uploading && canSend) handleSendMessage();
           }}
-          disabled={!conversationId || uploading}
+          disabled={!conversationId || uploading || !canSend}
           style={{
-            backgroundColor: (!conversationId || uploading) ? '#f8f9fa' : 'white',
-            borderColor: (!conversationId || uploading) ? '#dee2e6' : '#ced4da'
+            backgroundColor: (!conversationId || uploading || !canSend) ? '#f8f9fa' : 'white',
+            borderColor: (!conversationId || uploading || !canSend) ? '#dee2e6' : '#ced4da'
           }}
           title={!conversationId ? 'No conversation ID available - check debug info below' : uploading ? 'Uploading...' : 'Type your message...'}
         />
@@ -1919,7 +1946,7 @@ const ChatWindow = ({
         <button
           className="btn d-flex align-items-center justify-content-center"
           onClick={handleSendMessage}
-          disabled={!conversationId || uploading || (!newMessage.trim() && selectedFiles.length === 0)}
+          disabled={!conversationId || uploading || !canSend || (!newMessage.trim() && selectedFiles.length === 0) || (selectedFiles.length > 0 && !canAttach)}
           title={uploading ? "Uploading..." : "Send message"}
         >
             {uploading ? (

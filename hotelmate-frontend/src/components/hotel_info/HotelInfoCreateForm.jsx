@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from "react";
 import api from "@/services/api";
+import { useCan } from "@/rbac";
 
 export default function HotelInfoCreateForm({ hotelSlug, onSuccess, onClose }) {
+  // Backend-driven RBAC: action authority comes from
+  // `user.rbac.hotel_info.actions.entry_create`. Fail-closed for missing perms.
+  const { can } = useCan();
+  const canEntryCreate = can("hotel_info", "entry_create");
+
   const [categories, setCategories] = useState([]);
   const [categorySlug, setCategorySlug] = useState("");
   const [title, setTitle] = useState("");
@@ -27,8 +33,11 @@ export default function HotelInfoCreateForm({ hotelSlug, onSuccess, onClose }) {
       });
   }, [hotelSlug]);
 
+  if (!canEntryCreate) return null;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canEntryCreate) return;
     setSaving(true);
     setError(null);
 

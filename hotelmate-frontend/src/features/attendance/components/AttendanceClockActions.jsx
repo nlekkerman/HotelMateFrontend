@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { handleClockAction, showClockOptionsModal, getActionDescription } from "../utils/clockActions";
 import { showToast } from "../utils/statusUpdates";
+import { useCan } from "@/rbac";
+import NoAccess from "@/components/NoAccess";
 
 /**
  * Attendance Clock Actions Component
@@ -9,6 +11,9 @@ import { showToast } from "../utils/statusUpdates";
 export default function AttendanceClockActions({ staff, hotelSlug, onAction }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { can } = useCan();
+  const canClock = can("attendance", "clock_in_out");
+  const canBreak = can("attendance", "break_toggle");
 
   // Don't show actions if no staff or current_status
   if (!staff || !staff.current_status || !hotelSlug) {
@@ -16,9 +21,17 @@ export default function AttendanceClockActions({ staff, hotelSlug, onAction }) {
   }
 
   const currentStatus = staff.current_status;
+  // Primary action authority depends on current status:
+  // off_duty -> clock_in_out, on_duty/on_break -> break_toggle
+  const isBreakAction = currentStatus.status === 'on_duty' || currentStatus.status === 'on_break';
+  const canPrimary = isBreakAction ? canBreak : canClock;
 
   const handleAction = async (actionType = 'primary') => {
     if (loading) return;
+    if (actionType === 'primary' && !canPrimary) return;
+    // Secondary modal exposes both break_toggle and clock_in_out options;
+    // require at least one to be allowed.
+    if (actionType !== 'primary' && !canBreak && !canClock) return;
 
     setLoading(true);
     setError(null);
@@ -90,6 +103,11 @@ export default function AttendanceClockActions({ staff, hotelSlug, onAction }) {
   // Show secondary options for complex states
   const showSecondaryAction = currentStatus.status === 'on_duty' || currentStatus.status === 'on_break';
 
+  // Hide entirely if user has no clock authority at all.
+  if (!canClock && !canBreak) {
+    return <NoAccess inline />;
+  }
+
   return (
     <div className="attendance-clock-actions">
       <div className="d-flex gap-2 align-items-center">
@@ -97,7 +115,7 @@ export default function AttendanceClockActions({ staff, hotelSlug, onAction }) {
         <button
           type="button"
           className={`btn btn-sm btn-${primaryAction.variant}`}
-          disabled={loading}
+          disabled={loading || !canPrimary}
           onClick={(e) => {
             e.stopPropagation();
             handleAction('primary');

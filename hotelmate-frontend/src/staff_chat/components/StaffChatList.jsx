@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
+import { useAuth } from '@/context/AuthContext';
+import { useCan } from '@/rbac';
 import useStaffList from '../hooks/useStaffList';
 import useStaffSearch from '../hooks/useStaffSearch';
 import useStartConversation from '../hooks/useStartConversation';
@@ -12,6 +14,13 @@ import StaffListItem from './StaffListItem';
  */
 const StaffChatList = ({ hotelSlug, onConversationCreated }) => {
   const [initiatingChatWithId, setInitiatingChatWithId] = useState(null);
+  
+  // RBAC: staff_chat gates.
+  const { user } = useAuth();
+  const { can } = useCan();
+  const visible = user?.rbac?.staff_chat?.visible === true;
+  const canRead = user?.rbac?.staff_chat?.read === true;
+  const canCreateConversation = can('staff_chat', 'conversation_create');
   
   // Search functionality
   const { searchTerm, debouncedSearchTerm, handleSearchChange, clearSearch } = useStaffSearch();
@@ -30,6 +39,8 @@ const StaffChatList = ({ hotelSlug, onConversationCreated }) => {
   } = useStartConversation(hotelSlug);
 
   const handleStartChat = async (staffId) => {
+    // RBAC: staff_chat.conversation_create
+    if (!canCreateConversation) return;
     setInitiatingChatWithId(staffId);
     
     try {
@@ -50,6 +61,9 @@ const StaffChatList = ({ hotelSlug, onConversationCreated }) => {
   const handleRetry = () => {
     refetch();
   };
+
+  // RBAC: fail closed for staff_chat visibility/read.
+  if (!visible || !canRead) return null;
 
   // Error state
   if (error) {
@@ -113,7 +127,7 @@ const StaffChatList = ({ hotelSlug, onConversationCreated }) => {
               <StaffListItem
                 key={staff.id}
                 staff={staff}
-                onStartChat={handleStartChat}
+                onStartChat={canCreateConversation ? handleStartChat : undefined}
                 isLoading={initiatingChatWithId === staff.id}
               />
             ))}

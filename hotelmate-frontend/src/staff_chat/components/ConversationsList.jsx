@@ -9,6 +9,7 @@ import useUnreadCount from '../hooks/useUnreadCount';
 import { useStaffChat } from '../context/StaffChatContext';
 import { subscribeToStaffChatConversation } from '@/realtime/channelRegistry';
 import { staffChatConversationChannel } from '@/lib/pusher/channels';
+import { useCan } from '@/rbac';
 
 /**
  * ConversationsList Component
@@ -26,6 +27,12 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
   // ✅ FIX: Get current user ID from auth context instead of localStorage
   const { user } = useAuth();
   const currentUserId = user?.staff_id || user?.id || null;
+
+  // RBAC: staff_chat module gates. Authority is `user.rbac.staff_chat.*` only.
+  const { can } = useCan();
+  const visible = user?.rbac?.staff_chat?.visible === true;
+  const canRead = user?.rbac?.staff_chat?.read === true;
+  const canCreateConversation = can('staff_chat', 'conversation_create');
 
   // Get conversations from StaffChatContext (real-time updates via Pusher)
   const { conversations, fetchStaffConversations } = useStaffChat();
@@ -103,6 +110,8 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
   const { startConversation } = useStartConversation(hotelSlug);
 
   const handleStartNewChat = async (staff) => {
+    // RBAC: staff_chat.conversation_create
+    if (!canCreateConversation) return;
     
     // ✅ FIX: Prevent race condition - create unique key for user pair
     const conversationKey = [currentUserId, staff.id].sort().join('-');
@@ -197,6 +206,9 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
 
   const showSearchResults = searchTerm.trim().length > 0;
 
+  // RBAC: fail closed for staff_chat visibility/read.
+  if (!visible || !canRead) return null;
+
   return (
     <div className="h-100 d-flex flex-column">
       {/* Search Bar */}
@@ -272,7 +284,7 @@ const ConversationsList = ({ hotelSlug, onOpenChat }) => {
                     key={staff.id}
                     className="list-group-item list-group-item-action border-0 py-3"
                     onClick={() => handleStartNewChat(staff)}
-                    disabled={startingChatWithId === staff.id}
+                    disabled={startingChatWithId === staff.id || !canCreateConversation}
                   >
                     <div className="d-flex align-items-center">
                       {/* Circular Avatar */}

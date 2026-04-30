@@ -1,10 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/services/api";
+import { useAuth } from "@/context/AuthContext";
+import { useCan } from "@/rbac";
 
 const GuestEdit = () => {
   const { hotelIdentifier, guestId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Backend-driven RBAC. Guests has no nav slug \u2014 visibility comes from
+  // `user.rbac.guests.visible`, detail read from `user.rbac.guests.read`,
+  // and edit from `user.rbac.guests.actions.update`. Fail-closed.
+  const { can } = useCan();
+  const canGuestsVisible = user?.rbac?.guests?.visible === true;
+  const canGuestsRead = user?.rbac?.guests?.read === true;
+  const canGuestsUpdate = can("guests", "update");
+
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -18,6 +30,10 @@ const GuestEdit = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (!canGuestsRead) {
+      setLoading(false);
+      return;
+    }
     async function fetchGuest() {
       try {
         const res = await api.get(
@@ -31,7 +47,7 @@ const GuestEdit = () => {
       }
     }
     fetchGuest();
-  }, [guestId]);
+  }, [guestId, hotelIdentifier, canGuestsRead]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -39,6 +55,7 @@ const GuestEdit = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canGuestsUpdate) return;
     try {
       await api.put(`/guests/${hotelIdentifier}/guests/${guestId}/`, formData);
       navigate(`/${hotelIdentifier}/guests`);
@@ -46,6 +63,26 @@ const GuestEdit = () => {
       setError("Failed to update guest.");
     }
   };
+
+  if (!canGuestsVisible) {
+    return (
+      <div className="container py-4">
+        <div className="alert alert-warning text-center" role="alert">
+          You do not have permission to view guests.
+        </div>
+      </div>
+    );
+  }
+
+  if (!canGuestsRead) {
+    return (
+      <div className="container py-4">
+        <div className="alert alert-warning text-center" role="alert">
+          You do not have permission to read guest details.
+        </div>
+      </div>
+    );
+  }
 
   if (loading)
     return (
@@ -85,11 +122,12 @@ const GuestEdit = () => {
               name={name}
               value={formData[name] || ""}
               onChange={handleChange}
+              disabled={!canGuestsUpdate}
             />
           </div>
         ))}
         <div className="buttons-container">
-          <button type="submit" className="btn custom-button">
+          <button type="submit" className="btn custom-button" disabled={!canGuestsUpdate}>
             Save Changes
           </button>
         </div>

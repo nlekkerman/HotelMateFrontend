@@ -22,12 +22,22 @@ const GuestList = ({ hotelIdentifier: hotelIdentifierProp } = {}) => {
   const { mainColor } = useTheme();
   const { user } = useAuth();
 
+  // Backend-driven RBAC. Guests has no nav slug — visibility is governed by
+  // `user.rbac.guests.visible` (route-level via staffAccessPolicy) and list
+  // read is gated here by `user.rbac.guests.read`. Fail-closed for missing.
+  const canGuestsVisible = user?.rbac?.guests?.visible === true;
+  const canGuestsRead = user?.rbac?.guests?.read === true;
+
   const hotelName = user?.hotel_name || "Your Hotel";
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!hotelIdentifier) {
       setError("Missing hotel identifier in URL.");
+      setLoading(false);
+      return;
+    }
+    if (!canGuestsRead) {
       setLoading(false);
       return;
     }
@@ -42,7 +52,27 @@ const GuestList = ({ hotelIdentifier: hotelIdentifierProp } = {}) => {
       }
     }
     fetchGuests();
-  }, [hotelIdentifier]);
+  }, [hotelIdentifier, canGuestsRead]);
+
+  if (!canGuestsVisible) {
+    return (
+      <div className="container-fluid py-4">
+        <div className="alert alert-warning text-center" role="alert">
+          You do not have permission to view guests.
+        </div>
+      </div>
+    );
+  }
+
+  if (!canGuestsRead) {
+    return (
+      <div className="container-fluid py-4">
+        <div className="alert alert-warning text-center" role="alert">
+          You do not have permission to read the guest list.
+        </div>
+      </div>
+    );
+  }
 
    if (loading) {
   return (
