@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
+import { useCan } from "@/rbac";
 
 const booleanFields = ["taking_bookings", "is_active"]; // add other boolean fields if needed
 
@@ -14,6 +15,9 @@ const RestaurantEditModal = ({
   saving,
   error,
 }) => {
+  // Backend RBAC: edit/save is gated by `restaurant_bookings.restaurant_update`.
+  const { can } = useCan();
+  const canUpdateRestaurant = can("restaurant_bookings", "restaurant_update");
   const [localValue, setLocalValue] = useState(value ?? false); // default false for booleans
 
   useEffect(() => {
@@ -69,7 +73,7 @@ const RestaurantEditModal = ({
         <Button variant="secondary" onClick={onClose}>
           Cancel
         </Button>
-        <Button variant="primary" onClick={onSave} disabled={saving}>
+        <Button variant="primary" onClick={onSave} disabled={saving || !canUpdateRestaurant}>
           {saving ? "Saving..." : "Save"}
         </Button>
       </Modal.Footer>

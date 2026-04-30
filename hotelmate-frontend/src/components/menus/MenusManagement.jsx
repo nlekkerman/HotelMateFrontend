@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useCan } from "@/rbac";
 import { useTheme } from "@/context/ThemeContext";
 import { toast } from "react-toastify";
 import api, { buildStaffURL } from "@/services/api";
@@ -34,8 +35,19 @@ function buildImageUrl(img) {
 
 export default function MenusManagement() {
   const { user } = useAuth();
+  const { can } = useCan();
   const { mainColor } = useTheme();
   const hotelSlug = user?.hotel_slug;
+
+  // Backend RBAC: per-action permissions on the `room_services` module.
+  const canReadModule = user?.rbac?.room_services?.read === true;
+  const canReadMenu = can("room_services", "menu_read");
+  // No separate menu_item_read in backend contract — menu items inherit menu_read.
+  const canReadMenuItem = canReadMenu;
+  const canCreateMenuItem = can("room_services", "menu_item_create");
+  const canUpdateMenuItem = can("room_services", "menu_item_update");
+  const canDeleteMenuItem = can("room_services", "menu_item_delete");
+  const canManageMenuItemImage = can("room_services", "menu_item_image_manage");
   
   const [activeMenu, setActiveMenu] = useState(null); // 'room_service' or 'breakfast'
   const [roomServiceItems, setRoomServiceItems] = useState([]);
@@ -273,6 +285,15 @@ export default function MenusManagement() {
     e.preventDefault();
     
     if (!editingItem) return;
+
+    if (!canUpdateMenuItem) {
+      toast.error("You do not have permission to update menu items.");
+      return;
+    }
+    if (imageFile && !canManageMenuItemImage) {
+      toast.error("You do not have permission to change menu item images.");
+      return;
+    }
     
     if (!formData.name || !formData.description) {
       toast.error('Please fill in all required fields');
@@ -336,6 +357,11 @@ export default function MenusManagement() {
   // Handle delete item
   const handleDeleteItem = async () => {
     if (!editingItem) return;
+
+    if (!canDeleteMenuItem) {
+      toast.error("You do not have permission to delete menu items.");
+      return;
+    }
     
     if (!confirm(`Are you sure you want to delete "${editingItem.name}"? This action cannot be undone.`)) {
       return;
@@ -373,6 +399,15 @@ export default function MenusManagement() {
   // Handle form submission (for create)
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!canCreateMenuItem) {
+      toast.error("You do not have permission to create menu items.");
+      return;
+    }
+    if (imageFile && !canManageMenuItemImage) {
+      toast.error("You do not have permission to upload menu item images.");
+      return;
+    }
     
     if (!formData.name || !formData.description) {
       toast.error('Please fill in all required fields');
@@ -544,8 +579,9 @@ export default function MenusManagement() {
                   <div className="btn-group" role="group">
                     <button 
                       className="btn btn-outline-primary btn-sm"
-                      title="Edit Item"
+                      title={canUpdateMenuItem ? "Edit Item" : "You do not have permission to edit menu items."}
                       onClick={() => handleEditItem(item)}
+                      disabled={!canUpdateMenuItem}
                     >
                       <i className="bi bi-pencil"></i>
                     </button>
@@ -567,6 +603,13 @@ export default function MenusManagement() {
 
   return (
     <div className="container my-4">
+      {!canReadModule ? (
+        <div className="alert alert-warning my-3" role="alert">
+          <i className="bi bi-shield-lock me-2" />
+          You do not have permission to view menus management.
+        </div>
+      ) : (
+      <>
       {/* Header */}
       <div className="d-flex align-items-center justify-content-between mb-4">
         <div>
@@ -581,6 +624,7 @@ export default function MenusManagement() {
       {/* Menu Type Selection */}
       <div className="row mb-5">
         <div className="col-12">
+          {canReadMenu ? (
           <div className="d-flex justify-content-center gap-4">
             {/* Room Service Button */}
             <button
@@ -628,6 +672,12 @@ export default function MenusManagement() {
               </div>
             </button>
           </div>
+          ) : (
+            <div className="alert alert-warning text-center" role="alert">
+              <i className="bi bi-shield-lock me-2" />
+              You do not have permission to view menus.
+            </div>
+          )}
         </div>
       </div>
 
@@ -662,6 +712,8 @@ export default function MenusManagement() {
             <button 
               className="btn btn-primary"
               onClick={handleOpenCreateModal}
+              disabled={!canCreateMenuItem}
+              title={canCreateMenuItem ? '' : 'You do not have permission to create menu items.'}
             >
               <i className="bi bi-plus-circle me-2"></i>
               Add New Item
@@ -724,8 +776,17 @@ export default function MenusManagement() {
           {/* Menu Items */}
           {!loading && !error && (
             <>
-              {activeMenu === 'room_service' && renderMenuItems(roomServiceItems)}
-              {activeMenu === 'breakfast' && renderMenuItems(breakfastItems)}
+              {!canReadMenuItem ? (
+                <div className="alert alert-warning" role="alert">
+                  <i className="bi bi-shield-lock me-2" />
+                  You do not have permission to view menu items.
+                </div>
+              ) : (
+                <>
+                  {activeMenu === 'room_service' && renderMenuItems(roomServiceItems)}
+                  {activeMenu === 'breakfast' && renderMenuItems(breakfastItems)}
+                </>
+              )}
             </>
           )}
         </div>
@@ -881,7 +942,8 @@ export default function MenusManagement() {
                           className="form-control"
                           accept="image/*"
                           onChange={handleImageChange}
-                          disabled={uploadingImage}
+                          disabled={uploadingImage || !canManageMenuItemImage}
+                          title={canManageMenuItemImage ? '' : 'You do not have permission to upload menu item images.'}
                         />
                         {uploadingImage && (
                           <div className="spinner-border spinner-border-sm text-primary" role="status">
@@ -1125,6 +1187,8 @@ export default function MenusManagement() {
                             id="edit-image"
                             accept="image/*"
                             onChange={handleImageChange}
+                            disabled={!canManageMenuItemImage}
+                            title={canManageMenuItemImage ? '' : 'You do not have permission to change menu item images.'}
                           />
                           <div className="form-text">
                             Choose a new image to replace the current one. Max size: 5MB
@@ -1157,7 +1221,8 @@ export default function MenusManagement() {
                     type="button" 
                     className="btn btn-danger"
                     onClick={handleDeleteItem}
-                    disabled={modalLoading}
+                    disabled={modalLoading || !canDeleteMenuItem}
+                    title={canDeleteMenuItem ? '' : 'You do not have permission to delete menu items.'}
                   >
                     <i className="bi bi-trash me-2"></i>
                     Delete Item
@@ -1198,6 +1263,8 @@ export default function MenusManagement() {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

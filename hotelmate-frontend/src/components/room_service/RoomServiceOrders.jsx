@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "@/context/AuthContext";
+import { useCan } from "@/rbac";
 import api from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useTheme } from "@/context/ThemeContext";
@@ -11,6 +12,12 @@ import { roomServiceActions } from "@/realtime/stores/roomServiceStore";
 
 export default function RoomServiceOrders() {
   const { user } = useAuth();
+  const { can } = useCan();
+  // Backend RBAC: list visibility is governed by `user.rbac.room_services.read`.
+  // Status transitions are governed by per-action keys on `room_services`.
+  const canReadModule = user?.rbac?.room_services?.read === true;
+  const canAcceptOrder = can("room_services", "order_accept");
+  const canCompleteOrder = can("room_services", "order_complete");
   const navigate = useNavigate();
   const hotelSlug = user?.hotel_slug;
   const { refreshAll: refreshCount } = useOrderCount(hotelSlug);
@@ -92,6 +99,15 @@ export default function RoomServiceOrders() {
       return;
     }
 
+    // Backend RBAC: gate the actual transition by per-action permission.
+    if (newStatus !== prev) {
+      const requiredAction = newStatus === "accepted" ? "order_accept" : "order_complete";
+      if (!can("room_services", requiredAction)) {
+        toast.error("You do not have permission to perform this action.");
+        return;
+      }
+    }
+
     // Optimistically update UI
     setOrders((all) =>
       newStatus === "completed"
@@ -150,6 +166,13 @@ export default function RoomServiceOrders() {
 
   return (
     <div className="container my-4">
+      {!canReadModule ? (
+        <div className="alert alert-warning my-3" role="alert">
+          <i className="bi bi-shield-lock me-2" />
+          You do not have permission to view room service orders.
+        </div>
+      ) : (
+      <>
       {/* Mobile Quick Actions - Same style as desktop */}
       <div 
         className="d-lg-none position-fixed start-0 end-0"
@@ -232,6 +255,11 @@ export default function RoomServiceOrders() {
                           onChange={(e) =>
                             handleStatusChange(order, e.target.value)
                           }
+                          disabled={
+                            order.status === "completed" ||
+                            (order.status === "pending" && !canAcceptOrder) ||
+                            (order.status === "accepted" && !canCompleteOrder)
+                          }
                         >
                           {["pending", "accepted", "completed"].map((s) => (
                             <option key={s} value={s}>
@@ -261,6 +289,8 @@ export default function RoomServiceOrders() {
           )}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

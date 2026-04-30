@@ -1,8 +1,37 @@
 import React from "react";
 import { Card, Row, Col, Badge, Button } from "react-bootstrap";
+import { useCan } from "@/rbac";
 
 export default function RestaurantReservationDetails({ booking, onClose }) {
+  // Backend RBAC: detail/record reads are gated by
+  // `restaurant_bookings.actions.record_read`. Render fallback when missing.
+  const { can } = useCan();
   if (!booking) return null;
+  if (!can("restaurant_bookings", "record_read")) {
+    return (
+      <Card className="bg-white text-dark shadow-sm mb-4 border-0 d-flex flex-column w-100">
+        <Card.Header className="main-bg text-white d-flex justify-content-between align-items-center">
+          <h5 className="mb-0">🍽️ Reservation Details</h5>
+          {onClose && (
+            <Button
+              variant="outline-light"
+              size="sm"
+              onClick={onClose}
+              className="ms-2"
+            >
+              ✕
+            </Button>
+          )}
+        </Card.Header>
+        <Card.Body>
+          <div className="alert alert-warning mb-0" role="alert">
+            <i className="bi bi-shield-lock me-2" />
+            You do not have permission to view this booking's details.
+          </div>
+        </Card.Body>
+      </Card>
+    );
+  }
 
   const {
     date,

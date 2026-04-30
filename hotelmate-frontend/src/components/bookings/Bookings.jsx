@@ -5,6 +5,7 @@ import RestaurantBookings from "./RestaurantBookings";
 import { useBookingNotifications } from "@/context/BookingNotificationContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from '@/context/AuthContext';
+import { useCan } from "@/rbac";
 
 export default function Bookings() {
   const {
@@ -16,6 +17,11 @@ export default function Bookings() {
   const { markAllBookingRead } = useBookingNotifications();
   const { mainColor } = useTheme();
   const { user: authUser } = useAuth();
+  // Backend RBAC: listing categories is gated by
+  // `restaurant_bookings.category_read`. Module visibility is enforced via
+  // route gating on `restaurant_bookings`.
+  const { can } = useCan();
+  const canReadCategories = can("restaurant_bookings", "category_read");
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -123,7 +129,7 @@ export default function Bookings() {
         </div>
       </div>
 
-      {!qrCategorySlug && (
+      {!qrCategorySlug && canReadCategories && (
        <div className="d-flex flex-wrap justify-content-center gap-2 mb-4">
   {categories.map((c) => {
     const isSelected = selectedCategoryId === c.id;

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Row, Col, Button, Form, Alert, Spinner, InputGroup } from 'react-bootstrap';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
 import { useCan } from '@/rbac';
 import {
   listRegistrationPackages,
@@ -15,7 +14,6 @@ import { printRegistrationPackage } from './PrintableRegistrationPackageView';
 export default function RegistrationPackagesPanel() {
   const { hotelSlug } = useParams();
   const { user } = useAuth();
-  const { isAdmin } = usePermissions();
   // Phase 1 RBAC: backend-driven action authority via `user.rbac.staff_management.actions.<key>`.
   const { can } = useCan();
   const canReadPackages = can('staff_management', 'registration_package_read');

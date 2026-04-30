@@ -2,9 +2,13 @@ import React from "react";
 import { Row, Col, Card } from "react-bootstrap";
 
 const RestaurantList = ({ restaurants, selectedRestaurant, onSelect, onAddRestaurant }) => {
+  // The "Add Restaurant" card is only rendered when the parent has supplied
+  // an `onAddRestaurant` callback. The parent gates that callback on
+  // `restaurant_bookings.actions.restaurant_create`.
   return (
     <Row className="g-4">
-      {/* Add Restaurant Card - Big Plus Button */}
+      {/* Add Restaurant Card - Big Plus Button (RBAC: restaurant_create) */}
+      {onAddRestaurant && (
       <Col xs={12} sm={6} md={4} lg={3}>
         <Card 
           className="h-100 border-0 shadow-sm"
@@ -47,6 +51,7 @@ const RestaurantList = ({ restaurants, selectedRestaurant, onSelect, onAddRestau
           </Card.Body>
         </Card>
       </Col>
+      )}
 
       {/* Restaurant Cards */}
       {restaurants.map((restaurant) => {

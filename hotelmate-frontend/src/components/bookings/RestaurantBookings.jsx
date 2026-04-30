@@ -5,8 +5,17 @@ import BookingsGrid from "@/components/bookings/BookingsGrid";
 import BookingsHistory from "@/components/bookings/BookingsHistory";
 import { useServiceBookingState, serviceBookingActions } from "@/realtime/stores/serviceBookingStore";
 import { Modal } from "react-bootstrap";
+import { useAuth } from "@/context/AuthContext";
+import { useCan } from "@/rbac";
 
 export default function RestaurantBookings({ hotelSlug, restaurantId }) {
+  // Backend RBAC: list/grid visibility is governed by
+  // `user.rbac.restaurant_bookings.read`. Record-detail access (the modal
+  // below) is governed by `restaurant_bookings.actions.record_read`.
+  const { user } = useAuth();
+  const { can } = useCan();
+  const canReadModule = user?.rbac?.restaurant_bookings?.read === true;
+  const canReadRecord = can("restaurant_bookings", "record_read");
   const bookingState = useServiceBookingState();
   const [bookings, setBookings] = useState([]);
   const [restaurantSlug, setRestaurantSlug] = useState(null);
@@ -117,8 +126,11 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
     return (
       <tr
         key={booking.id}
-        onClick={() => setSelectedBooking(booking)}
-        style={{ cursor: "pointer" }}
+        onClick={() => {
+          // Detail modal opens only when caller has `record_read`.
+          if (canReadRecord) setSelectedBooking(booking);
+        }}
+        style={{ cursor: canReadRecord ? "pointer" : "default" }}
       >
         <td>{name}</td>
         <td>{room}</td>
@@ -162,6 +174,15 @@ export default function RestaurantBookings({ hotelSlug, restaurantId }) {
   }
 
   if (error) return <div className="alert alert-danger">{error?.message || 'Failed to load restaurant bookings'}</div>;
+
+  if (!canReadModule) {
+    return (
+      <div className="alert alert-warning my-3" role="alert">
+        <i className="bi bi-shield-lock me-2" />
+        You do not have permission to view restaurant bookings.
+      </div>
+    );
+  }
 
   return (
     <>

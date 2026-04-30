@@ -6,6 +6,7 @@ import CreateTableModal from "@/components/restaurants/modals/CreateTableModal";
 import CreateBlueprintObjectModal from "@/components/restaurants/modals/CreateBlueprintObjectModal";
 import EditTableModal from "@/components/restaurants/modals/EditTableModal";
 import EditBlueprintObjectModal from "@/components/restaurants/modals/EditBlueprintObjectModal";
+import { useCan } from "@/rbac";
 
 function DraggableTable({
   table,
@@ -15,6 +16,7 @@ function DraggableTable({
   onDrag,
   onStop,
   onEdit,
+  canEdit,
 }) {
   const ref = useRef(null);
   const [hovered, setHovered] = useState(false);
@@ -27,6 +29,7 @@ function DraggableTable({
       nodeRef={ref}
       position={{ x: pos.x * scaleX, y: pos.y * scaleY }}
       bounds="parent"
+      disabled={!canEdit}
       onDrag={(e, data) =>
         onDrag(table.id, { x: data.x / scaleX, y: data.y / scaleY })
       }
@@ -40,7 +43,7 @@ function DraggableTable({
         style={{
           width,
           height,
-          cursor: "move",
+          cursor: canEdit ? "move" : "default",
           position: "absolute",
           borderRadius: table.shape === "CIRCLE" ? "50%" : "0",
           transform: `rotate(${table.rotation || 0}deg)`,
@@ -56,7 +59,8 @@ function DraggableTable({
       >
         {table.code}
 
-        {/* Hover icon */}
+        {/* Hover edit icon — gated by `table_manage`. */}
+        {canEdit && (
         <div
           onClick={(e) => {
             e.stopPropagation(); // Prevent drag
@@ -83,12 +87,13 @@ function DraggableTable({
         >
           ✏️
         </div>
+        )}
       </div>
     </Draggable>
   );
 }
 
-function DraggableObject({ obj, pos, scaleX, scaleY, onDrag, onStop, onEdit }) {
+function DraggableObject({ obj, pos, scaleX, scaleY, onDrag, onStop, onEdit, canEdit }) {
   const ref = useRef(null);
   const [hovered, setHovered] = useState(false);
 
@@ -100,6 +105,7 @@ function DraggableObject({ obj, pos, scaleX, scaleY, onDrag, onStop, onEdit }) {
       nodeRef={ref}
       position={{ x: pos.x * scaleX, y: pos.y * scaleY }}
       bounds="parent"
+      disabled={!canEdit}
       onDrag={(e, data) =>
         onDrag(obj.id, { x: data.x / scaleX, y: data.y / scaleY })
       }
@@ -113,7 +119,7 @@ function DraggableObject({ obj, pos, scaleX, scaleY, onDrag, onStop, onEdit }) {
         style={{
           width,
           height,
-          cursor: "move",
+          cursor: canEdit ? "move" : "default",
           position: "absolute",
           transform: `rotate(${obj.rotation || 0}deg)`,
           background: "#eee",
@@ -137,8 +143,8 @@ function DraggableObject({ obj, pos, scaleX, scaleY, onDrag, onStop, onEdit }) {
 
 
 
-        {/* Hover edit icon */}
-        {onEdit && (
+        {/* Hover edit icon — gated by `blueprint_manage`. */}
+        {onEdit && canEdit && (
           <div
             onClick={(e) => {
               e.stopPropagation();
@@ -179,6 +185,12 @@ export default function BlueprintFloorEditor({
   restaurantId,
   blueprint,
 }) {
+  // Backend RBAC gates:
+  //   - table_manage     : create/edit/delete dining tables (incl. drag move)
+  //   - blueprint_manage : create/edit/delete blueprint objects (incl. drag)
+  const { can } = useCan();
+  const canManageTables = can("restaurant_bookings", "table_manage");
+  const canManageBlueprint = can("restaurant_bookings", "blueprint_manage");
   if (!blueprint) return <p>No blueprint available.</p>;
 
   // --- Dining Tables ---
@@ -255,6 +267,7 @@ export default function BlueprintFloorEditor({
   };
 
   const handleTableDragStop = (id, pos) => {
+    if (!canManageTables) return;
     // Optimistic update: update local tablePositions right away
     setTablePositions((prev) => ({
       ...prev,
@@ -277,6 +290,7 @@ export default function BlueprintFloorEditor({
   };
 
   const handleObjectDragStop = (id, pos) => {
+    if (!canManageBlueprint) return;
     updateObject(id, {
       x: Math.round(pos.x),
       y: Math.round(pos.y),
@@ -290,6 +304,7 @@ export default function BlueprintFloorEditor({
 
   // Handle delete
   const handleDeleteTable = async (tableId) => {
+    if (!canManageTables) return;
     if (window.confirm("Are you sure you want to delete this table?")) {
       await deleteTable(tableId);
       setTablePositions((prev) => {
@@ -301,36 +316,42 @@ export default function BlueprintFloorEditor({
   };
   return (
     <>
-      {/* Controls */}
+      {/* Controls — each gated by its respective backend permission. */}
       <div className="controls mb-2">
-        <button
-          className="btn custom-button me-2"
-          onClick={() => setShowTableModal(true)}
-        >
-          Add Table
-        </button>
-        <button
-          className="btn btn-secondary"
-          onClick={() => setShowObjectModal(true)}
-        >
-          Add Object
-        </button>
+        {canManageTables && (
+          <button
+            className="btn custom-button me-2"
+            onClick={() => setShowTableModal(true)}
+          >
+            Add Table
+          </button>
+        )}
+        {canManageBlueprint && (
+          <button
+            className="btn btn-secondary"
+            onClick={() => setShowObjectModal(true)}
+          >
+            Add Object
+          </button>
+        )}
       </div>
 
       {/* Modals */}
       <CreateTableModal
-        show={showTableModal}
+        show={showTableModal && canManageTables}
         onClose={() => setShowTableModal(false)}
-        onCreate={(table) =>
-          createTable({ ...table, restaurant: restaurantId, x: 0, y: 0 })
-        }
+        onCreate={(table) => {
+          if (!canManageTables) return;
+          createTable({ ...table, restaurant: restaurantId, x: 0, y: 0 });
+        }}
         nextTableNumber={tables.length + 1}
       />
 
       <CreateBlueprintObjectModal
-        show={showObjectModal}
+        show={showObjectModal && canManageBlueprint}
         onClose={() => setShowObjectModal(false)}
-        onCreate={(obj) =>
+        onCreate={(obj) => {
+          if (!canManageBlueprint) return;
           createObject({
             name: obj.name,
             blueprint_id: blueprint.id,
@@ -340,8 +361,8 @@ export default function BlueprintFloorEditor({
             width: obj.width || 50,
             height: obj.height || 50,
             rotation: obj.rotation || 0,
-          })
-        }
+          });
+        }}
         objectTypes={objectTypes}
       />
 
@@ -365,6 +386,7 @@ export default function BlueprintFloorEditor({
             scaleY={scaleY}
             onDrag={handleTableDrag}
             onStop={handleTableDragStop}
+            canEdit={canManageTables}
             onEdit={(table) => {
               setEditingTable(table);
               setShowTableModal(true);
@@ -382,6 +404,7 @@ export default function BlueprintFloorEditor({
             scaleY={scaleY}
             onDrag={handleObjectDrag}
             onStop={handleObjectDragStop}
+            canEdit={canManageBlueprint}
             onEdit={(obj) => {
               setEditingObject(obj);
               setShowEditObjectModal(true);
@@ -389,10 +412,11 @@ export default function BlueprintFloorEditor({
           />
         ))}
         <EditTableModal
-          show={showTableModal}
+          show={showTableModal && canManageTables}
           table={editingTable}
           onClose={handleCloseTableModal}
           onUpdate={(updatedTable) => {
+            if (!canManageTables) return;
             updateTable(editingTable.id, updatedTable);
             setShowTableModal(false);
           }}
@@ -401,18 +425,20 @@ export default function BlueprintFloorEditor({
 
         {/* Edit Object Modal */}
         <EditBlueprintObjectModal
-          show={showEditObjectModal}
+          show={showEditObjectModal && canManageBlueprint}
           object={editingObject}
           onClose={() => {
             setEditingObject(null);
             setShowEditObjectModal(false);
           }}
           onUpdate={(updatedObj) => {
+            if (!canManageBlueprint) return;
             if (!editingObject) return;
             updateObject(editingObject.id, updatedObj);
             setShowEditObjectModal(false);
           }}
           onDelete={async (objId) => {
+            if (!canManageBlueprint) return;
             if (!window.confirm("Are you sure you want to delete this object?"))
               return;
             // Assuming you have a deleteObject method similar to tables

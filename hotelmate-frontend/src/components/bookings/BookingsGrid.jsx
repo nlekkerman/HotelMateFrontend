@@ -1,7 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
 import api from "@/services/api";
 import ConfirmationModal from "@/components/modals/ConfirmationModal";
+import { useCan } from "@/rbac";
 export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
+  // Backend RBAC: restaurant booking grid actions are gated by
+  // `restaurant_bookings.actions.*`. UI affordances are hidden when the user
+  // lacks authority; the backend remains the final 403 authority.
+  const { can } = useCan();
+  const canAssign = can("restaurant_bookings", "assignment_assign");
+  const canUnseat = can("restaurant_bookings", "assignment_unseat");
+  const canDeleteRecord = can("restaurant_bookings", "record_delete");
   const [bookings, setBookings] = useState([]);
   const [tables, setTables] = useState([]);
   const [filter, setFilter] = useState("today");
@@ -98,8 +106,9 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
     };
   };
 
-  // Drag & drop handler
+  // Drag & drop handler — gated by `assignment_assign`.
   const handleDrop = async (e, tableId) => {
+    if (!canAssign) return;
     const bookingId = e.dataTransfer.getData("bookingId");
     if (!bookingId) return;
 
@@ -121,8 +130,12 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
     }
   };
 
-  // Delete booking completely
+  // Delete booking completely — gated by `record_delete`.
   const handleDelete = async (bookingId) => {
+    if (!canDeleteRecord) {
+      setBookingToDelete(null);
+      return;
+    }
     try {
       const res = await api.delete(
         `/bookings/delete/${hotelSlug}/${restaurantSlug}/${bookingId}/`
@@ -138,8 +151,9 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
     }
   };
 
-  // Unseat booking (remove from table -> guest list)
+  // Unseat booking — gated by `assignment_unseat`.
   const handleUnseat = async (bookingId) => {
+    if (!canUnseat) return;
     try {
       const res = await api.post(
         `/bookings/unseat/${hotelSlug}/${restaurantSlug}/`,
@@ -204,12 +218,20 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
           .map((b) => (
             <div
               key={b.id}
-              draggable
+              draggable={canAssign}
               onDragStart={(e) => {
+                if (!canAssign) {
+                  e.preventDefault();
+                  return;
+                }
                 e.dataTransfer.setData("bookingId", b.id);
               }}
               className="p-2 border rounded d-flex justify-content-between align-items-center"
-              style={{ minWidth: "200px", fontSize: "0.9rem", cursor: "grab" }}
+              style={{
+                minWidth: "200px",
+                fontSize: "0.9rem",
+                cursor: canAssign ? "grab" : "default",
+              }}
             >
               <div>
                 {b.guest?.full_name} – Room {b.room?.room_number} <br />
@@ -229,13 +251,15 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
                 </span>
               </div>
 
-              <button
-                className="btn btn-sm btn-danger ms-2 on-hoover-button"
-                title="Delete this booking"
-                onClick={() => setBookingToDelete(b)}
-              >
-                🗑
-              </button>
+              {canDeleteRecord && (
+                <button
+                  className="btn btn-sm btn-danger ms-2 on-hoover-button"
+                  title="Delete this booking"
+                  onClick={() => setBookingToDelete(b)}
+                >
+                  🗑
+                </button>
+              )}
             </div>
           ))}
       </div>
@@ -317,9 +341,13 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
                   return (
                     <div
                       key={b.id}
-                      draggable
+                      draggable={canAssign}
                       className="main-bg text-white"
                       onDragStart={(e) => {
+                        if (!canAssign) {
+                          e.preventDefault();
+                          return;
+                        }
                         e.dataTransfer.setData("bookingId", b.id);
                       }}
                       style={{
@@ -337,7 +365,7 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
                         padding: "2px",
                       }}
                     >
-                      {/* Top-right overlay buttons */}
+                      {/* Top-right overlay buttons (each gated independently) */}
                       <div
                         style={{
                           position: "absolute",
@@ -347,28 +375,32 @@ export default function BookingsGrid({ hotelSlug, restaurantSlug, date }) {
                           gap: "4px",
                         }}
                       >
-                        <button
-                          className="btn btn-sm btn-warning p-1 on-hoover-button"
-                          style={{ lineHeight: 1, fontSize: "0.65rem" }}
-                          title="Unseat this booking"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleUnseat(b.id);
-                          }}
-                        >
-                          ⤴
-                        </button>
-                        <button
-                          className="btn btn-sm btn-danger p-1 on-hoover-button"
-                          style={{ lineHeight: 1, fontSize: "0.65rem" }}
-                          title="Delete this booking"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setBookingToDelete(b);
-                          }}
-                        >
-                          🗑
-                        </button>
+                        {canUnseat && (
+                          <button
+                            className="btn btn-sm btn-warning p-1 on-hoover-button"
+                            style={{ lineHeight: 1, fontSize: "0.65rem" }}
+                            title="Unseat this booking"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUnseat(b.id);
+                            }}
+                          >
+                            ⤴
+                          </button>
+                        )}
+                        {canDeleteRecord && (
+                          <button
+                            className="btn btn-sm btn-danger p-1 on-hoover-button"
+                            style={{ lineHeight: 1, fontSize: "0.65rem" }}
+                            title="Delete this booking"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setBookingToDelete(b);
+                            }}
+                          >
+                            🗑
+                          </button>
+                        )}
                       </div>
 
                       {/* Booking content (unaffected by buttons) */}

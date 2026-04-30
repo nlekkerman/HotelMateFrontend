@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import api from '@/services/api';
 import { useRoomServiceState } from '@/realtime/stores/roomServiceStore';
 import { roomServiceActions } from '@/realtime/stores/roomServiceStore';
@@ -7,6 +8,9 @@ import { toast } from 'react-toastify';
 
 export default function OrdersSummary() {
   const { hotelIdentifier } = useParams();
+  const { user } = useAuth();
+  // Backend RBAC: summary list visibility is `user.rbac.room_services.read`.
+  const canReadModule = user?.rbac?.room_services?.read === true;
   const roomServiceState = useRoomServiceState();
   const [orders, setOrders] = useState([]);
   const [pagination, setPagination] = useState({});
@@ -104,6 +108,13 @@ export default function OrdersSummary() {
 
   return (
     <div className="container-fluid py-4">
+      {!canReadModule ? (
+        <div className="alert alert-warning my-3" role="alert">
+          <i className="bi bi-shield-lock me-2" />
+          You do not have permission to view the orders summary.
+        </div>
+      ) : (
+      <>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>
           <i className="bi bi-clipboard-data me-2"></i>

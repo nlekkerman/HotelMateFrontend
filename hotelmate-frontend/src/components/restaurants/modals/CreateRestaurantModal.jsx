@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from '@/context/AuthContext';
+import { useCan } from "@/rbac";
 
 const CreateRestaurantModal = ({ show, toggle, onCreated, api, hotelSlug: propHotelSlug }) => {
   const [name, setName] = useState("");
@@ -13,9 +14,16 @@ const CreateRestaurantModal = ({ show, toggle, onCreated, api, hotelSlug: propHo
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { user: authUser } = useAuth();
+  // Backend RBAC: creation is gated by `restaurant_bookings.restaurant_create`.
+  const { can } = useCan();
+  const canCreateRestaurant = can("restaurant_bookings", "restaurant_create");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canCreateRestaurant) {
+      setError("You do not have permission to create restaurants.");
+      return;
+    }
     setLoading(true);
     setError("");
 

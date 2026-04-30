@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { useQueryClient } from "@tanstack/react-query";
 import api from "@/services/api";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/context/AuthContext";
 import { useCan } from "@/rbac";
 import { useFaceAdminApi } from "@/features/faceAttendance/hooks/useFaceAdminApi";
 import { useHotelFaceConfig } from "@/features/faceAttendance/hooks/useHotelFaceConfig";
@@ -23,14 +24,23 @@ function StaffDetails() {
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
   const { hotelSlug, id } = useParams();
-  const { canAccess, isAdmin, isSuperStaffAdmin, hasNavAccess } = usePermissions();
+  const { canAccess } = usePermissions();
   // Phase 1 RBAC: backend-driven action authority via `user.rbac.staff_management.actions.<key>`.
-  // TODO(RBAC): handleSave covers profile + assign_role/department/access_level + nav assignment
-  // in a single submit; per-field gating requires backend split. Edit Profile button is gated
-  // by the broadest of these (staff_update_profile) for now.
+  // Profile-field edits and authority assignments are intentionally separated:
+  //   - profile fields (name, active) → `staff_update_profile` (or self-edit)
+  //   - role / department / access_level dropdowns → matching `authority_*` keys
+  // Holding an authority_* key alone must NOT grant profile-field edits.
   const { can } = useCan();
-  const canUpdateProfile = can('staff_management', 'staff_update_profile');
-  const canReadNavigation = can('staff_management', 'navigation_read');
+  const { user: authUser } = useAuth();
+  const canReadModule = authUser?.rbac?.staff_management?.read === true;
+  const isOwnProfile =
+    !!authUser?.id && !!staff?.user?.id && authUser.id === staff.user.id;
+  const canEditProfile =
+    isOwnProfile || can('staff_management', 'staff_update_profile');
+  const canViewAuthority = can('staff_management', 'authority_view');
+  const canAssignDepartment = can('staff_management', 'authority_department_assign');
+  const canAssignRole = can('staff_management', 'authority_role_assign');
+  const canAssignAccessLevel = can('staff_management', 'authority_access_level_assign');
   const canDepartmentManage = can('staff_management', 'department_manage');
   const canRoleManage = can('staff_management', 'role_manage');
   const queryClient = useQueryClient();
@@ -98,8 +108,6 @@ function StaffDetails() {
   const handleRegisterFace = () => {
     navigate(`/face/${hotelSlug}/register?staffId=${id}`);
   };
-
-  // isAdmin from usePermissions covers isSuperUser || isSuperStaffAdmin || isStaffAdmin
 
   const startEditing = () => {
     setEditData({
@@ -187,13 +195,33 @@ function StaffDetails() {
 
     return <div className="text-muted mt-3">Loading staff details...</div>;
   }
+  // Phase 1 RBAC: top-level read gate. Backend-authoritative.
+  if (!canReadModule) {
+    return (
+      <div className="container mt-4 mb-5 p-4 bg-white rounded shadow-sm">
+        <h2 className="mb-3 text-danger">
+          <i className="bi bi-shield-lock me-2"></i>Access denied
+        </h2>
+        <p className="text-muted mb-3">
+          You do not have permission to view this staff profile.
+        </p>
+        <button
+          onClick={() => navigate(`/${hotelSlug}/staff`)}
+          className="btn btn-outline-secondary"
+        >
+          <i className="bi bi-arrow-left me-2"></i>
+          Back to Staff List
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="container mt-4 mb-5 p-4 bg-white rounded shadow-sm">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="mb-0 text-primary">👤 Staff Details</h2>
         <div className="d-flex gap-2">
-          {canUpdateProfile && !isEditing && (
+          {canEditProfile && !isEditing && (
             <button onClick={startEditing} className="btn btn-outline-primary">
               <i className="bi bi-pencil me-2"></i>Edit Profile
             </button>
@@ -203,7 +231,7 @@ function StaffDetails() {
               <button onClick={cancelEditing} className="btn btn-outline-secondary" disabled={saving}>
                 Cancel
               </button>
-              {canUpdateProfile && (
+              {canEditProfile && (
                 <button onClick={handleSave} className="btn btn-success" disabled={saving}>
                   {saving ? <><span className="spinner-border spinner-border-sm me-2"></span>Saving...</> : <><i className="bi bi-check-lg me-2"></i>Save</>}
                 </button>
@@ -260,11 +288,13 @@ function StaffDetails() {
               <div className="mb-3">
                 <label className="form-label fw-bold">First Name</label>
                 <input type="text" className="form-control" value={editData.first_name}
+                  disabled={!canEditProfile}
                   onChange={(e) => setEditData(prev => ({ ...prev, first_name: e.target.value }))} />
               </div>
               <div className="mb-3">
                 <label className="form-label fw-bold">Last Name</label>
                 <input type="text" className="form-control" value={editData.last_name}
+                  disabled={!canEditProfile}
                   onChange={(e) => setEditData(prev => ({ ...prev, last_name: e.target.value }))} />
               </div>
             </>
@@ -284,6 +314,7 @@ function StaffDetails() {
               <div className="mb-3">
                 <label className="form-label fw-bold">Department</label>
                 <select className="form-select" value={editData.department}
+                  disabled={!canAssignDepartment}
                   onChange={(e) => setEditData(prev => ({ ...prev, department: e.target.value }))}>
                   <option value="">-- No Department --</option>
                   {departments.map(d => (
@@ -307,6 +338,7 @@ function StaffDetails() {
               <div className="mb-3">
                 <label className="form-label fw-bold">Role</label>
                 <select className="form-select" value={editData.role}
+                  disabled={!canAssignRole}
                   onChange={(e) => setEditData(prev => ({ ...prev, role: e.target.value }))}>
                   <option value="">-- No Role --</option>
                   {roles.map(r => (
@@ -330,6 +362,7 @@ function StaffDetails() {
               <div className="mb-3">
                 <label className="form-label fw-bold">Access Level</label>
                 <select className="form-select" value={editData.access_level}
+                  disabled={!canAssignAccessLevel}
                   onChange={(e) => setEditData(prev => ({ ...prev, access_level: e.target.value }))}>
                   {accessLevels.length > 0 ? accessLevels.map(al => (
                     <option key={al.value || al} value={al.value || al}>{al.label || al}</option>
@@ -344,6 +377,7 @@ function StaffDetails() {
               </div>
               <div className="mb-3 form-check">
                 <input type="checkbox" className="form-check-input" id="isActiveCheck" checked={editData.is_active}
+                  disabled={!canEditProfile}
                   onChange={(e) => setEditData(prev => ({ ...prev, is_active: e.target.checked }))} />
                 <label className="form-check-label fw-bold" htmlFor="isActiveCheck">Active</label>
               </div>
@@ -386,8 +420,11 @@ function StaffDetails() {
       </div>
 
       {/* Face Management Section */}
-      {/* TODO(RBAC): Face registration is not in the canonical staff_management action keys. */}
-      {/* Await backend action mapping before replacing this gate. */}
+      {/* NOTE: Face registration belongs to the `attendance` module, not */}
+      {/* `staff_management`. This `canAccess` gate is intentionally retained */}
+      {/* until the attendance RBAC refactor pass replaces it with the */}
+      {/* corresponding `attendance` action key. Do NOT migrate it to a */}
+      {/* `staff_management` action — face data is out-of-scope for this module. */}
       {(canAccess(['staff_admin', 'super_staff_admin']) || canAccess(['manager'])) && (
         <div className="mt-4">
           <hr className="mb-4" />
@@ -520,10 +557,10 @@ function StaffDetails() {
       </div>
 
       {/* Navigation Permissions Section */}
-      {/* Phase 1 RBAC: visibility = navigation_read. The current */}
-      {/* NavigationPermissionManager is read-only (disabled checkboxes), so */}
-      {/* navigation_manage gating is unused here and reserved for a future editor. */}
-      {canReadNavigation && (
+      {/* Phase 1 RBAC: visibility = `authority_view` (View authority/permissions */}
+      {/* for staff). NavigationPermissionManager is read-only (disabled */}
+      {/* checkboxes); a future editor would gate writes on `authority_nav_assign`. */}
+      {canViewAuthority && (
         <div className="mt-5">
           <hr className="mb-4" />
           <button 

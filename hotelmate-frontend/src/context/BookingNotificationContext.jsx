@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useCan } from "@/rbac";
 import { toast } from "react-toastify";
 import api from "@/services/api";
 import { useServiceBookingState } from "@/realtime/stores/serviceBookingStore";
@@ -12,6 +13,10 @@ const BookingNotificationContext = createContext();
 export const BookingNotificationProvider = ({ children }) => {
   const { user } = useAuth();
   const { hasNavAccess, isSuperUser } = usePermissions();
+  // Backend RBAC: marking restaurant bookings seen is gated by
+  // `restaurant_bookings.record_mark_seen`.
+  const { can } = useCan();
+  const canMarkSeen = can("restaurant_bookings", "record_mark_seen");
   const bookingState = useServiceBookingState();
   const [hasNewBooking, setHasNewBooking] = useState(false);
   const [lastSeenBookingCount, setLastSeenBookingCount] = useState(0);
@@ -85,6 +90,9 @@ export const BookingNotificationProvider = ({ children }) => {
 
   const markAllBookingRead = async () => {
     if (!user?.hotel_slug) return;
+    // RBAC short-circuit — backend will 403 anyway, but we avoid the round-trip
+    // and keep the unread badge visible for users without `record_mark_seen`.
+    if (!canMarkSeen) return;
 
     try {
       await api.post(`/bookings/mark-seen/${user.hotel_slug}/`);

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "@/services/api";
-import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/context/AuthContext";
 import { useCan } from "@/rbac";
 import StaffByDepartment from "./StaffByDepartment";
 import ClockedInTicker from "@/components/analytics/ClockedInTicker.jsx";
@@ -13,8 +13,10 @@ import "@/pages/staff/RoomServicesHub.css";
 export default function Staff() {
   const { hotelSlug } = useParams();
   const [searchParams] = useSearchParams();
-  const { isAdmin } = usePermissions();
-  // Phase 1 RBAC: backend-driven tab visibility via `user.rbac.staff_management.actions.<key>`.
+  const { user } = useAuth();
+  // Phase 1 RBAC: backend-driven module/tab visibility via `user.rbac.staff_management`.
+  // Top-level read flag gates the list/detail surface; per-action keys gate tabs.
+  const canReadModule = user?.rbac?.staff_management?.read === true;
   const { can, canAny } = useCan();
   const canSeePackages = can('staff_management', 'registration_package_read');
   const canSeePending = can('staff_management', 'pending_registration_read');
@@ -183,8 +185,8 @@ export default function Staff() {
       {/* Departments & Roles Tab */}
       {activeTab === "departments" && canSeeDepartmentsRoles && <SectionDepartmentsRoles />}
 
-      {/* Staff Directory Tab */}
-      {activeTab === "directory" && (
+      {/* Staff Directory Tab — gated by `staff_management.read` */}
+      {activeTab === "directory" && canReadModule && (
         <>
           <div className="text-center mb-4">
             <h2 className="fw-bold mb-3">

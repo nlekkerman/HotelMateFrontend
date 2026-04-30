@@ -5,9 +5,16 @@ import { useEditRestaurant } from "@/components/restaurants/hooks/useEditRestaur
 import RestaurantEditModal from "@/components/restaurants/modals/RestaurantEditModal";
 import BlueprintFloorEditor from "@/components/restaurants/tables/BlueprintFloorEditor";
 import { FaEdit } from "react-icons/fa";
+import { useCan } from "@/rbac";
 
 const Restaurant = () => {
   const { hotelSlug, restaurantSlug } = useParams();
+  // Backend RBAC gates:
+  //   - restaurant_update : per-field edit affordances + save
+  //   - blueprint_read    : ability to view the blueprint surface at all
+  const { can } = useCan();
+  const canUpdateRestaurant = can("restaurant_bookings", "restaurant_update");
+  const canReadBlueprint = can("restaurant_bookings", "blueprint_read");
   const { restaurant: fetchedRestaurant, blueprint, loading, error } =
     useRestaurantDetail(hotelSlug, restaurantSlug);
 
@@ -24,11 +31,13 @@ const Restaurant = () => {
   }, [fetchedRestaurant]);
 
   const handleEditClick = (fieldKey) => {
+    if (!canUpdateRestaurant) return;
     setCurrentField(fieldKey);
     setShowModal(true);
   };
 
   const handleSave = async () => {
+    if (!canUpdateRestaurant) return;
     const result = await saveRestaurant();
     if (result.success) {
       setRestaurant((prev) => ({
@@ -71,21 +80,23 @@ const Restaurant = () => {
                     : restaurant[key]}
                 </span>
 
-                {/* Always show edit icon */}
-                <FaEdit
-                  className="text-primary"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => handleEditClick(key)}
-                  title={`Edit ${label}`}
-                />
+                {/* Edit affordance — gated by `restaurant_update`. */}
+                {canUpdateRestaurant && (
+                  <FaEdit
+                    className="text-primary"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleEditClick(key)}
+                    title={`Edit ${label}`}
+                  />
+                )}
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Blueprint Toggle */}
-      {blueprint && (
+      {/* Blueprint Toggle — gated by `blueprint_read`. */}
+      {blueprint && canReadBlueprint && (
         <div className="text-center my-3">
           <button
             className="btn btn-outline-secondary"
@@ -96,7 +107,7 @@ const Restaurant = () => {
         </div>
       )}
 
-      {showBlueprint && blueprint && (
+      {showBlueprint && blueprint && canReadBlueprint && (
         <div className="mt-3 border rounded p-3">
           <BlueprintFloorEditor
             hotelSlug={hotelSlug}

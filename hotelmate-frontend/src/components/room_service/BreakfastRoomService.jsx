@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useCan } from "@/rbac";
 import api from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useTheme } from "@/context/ThemeContext";
@@ -9,6 +10,12 @@ import { roomServiceActions } from "@/realtime/stores/roomServiceStore";
 
 export default function BreakfastRoomService() {
   const { user } = useAuth();
+  const { can } = useCan();
+  // Backend RBAC: list visibility is `user.rbac.room_services.read`. Status
+  // transitions on breakfast orders use dedicated `breakfast_order_*` keys.
+  const canReadModule = user?.rbac?.room_services?.read === true;
+  const canAcceptOrder = can("room_services", "breakfast_order_accept");
+  const canCompleteOrder = can("room_services", "breakfast_order_complete");
   const hotelSlug = user?.hotel_slug;
   const { refreshAll } = useOrderCount(hotelSlug);
   const { hasNewBreakfast, markBreakfastRead } = useRoomServiceNotifications();
@@ -88,6 +95,15 @@ export default function BreakfastRoomService() {
       return;
     }
 
+    // Backend RBAC: gate the actual transition by per-action permission.
+    if (newStatus !== prev) {
+      const requiredAction = newStatus === "accepted" ? "breakfast_order_accept" : "breakfast_order_complete";
+      if (!can("room_services", requiredAction)) {
+        alert("You do not have permission to perform this action.");
+        return;
+      }
+    }
+
     // Optimistically update store (realtime event will update definitively)
     dispatch({
       type: 'ORDER_STATUS_CHANGED',
@@ -139,6 +155,12 @@ export default function BreakfastRoomService() {
 
   return (
     <div className="container my-4">
+      {!canReadModule ? (
+        <div className="alert alert-warning my-3" role="alert">
+          <i className="bi bi-shield-lock me-2" />
+          You do not have permission to view breakfast orders.
+        </div>
+      ) : (
       <div className="card shadow-sm">
         <div className="card-header d-flex align-items-center justify-content-between flex-wrap">
           <h3 className="mb-0">
@@ -205,6 +227,11 @@ export default function BreakfastRoomService() {
                           }`}
                           value={order.status}
                           onChange={(e) => handleStatusChange(order, e.target.value)}
+                          disabled={
+                            order.status === "completed" ||
+                            (order.status === "pending" && !canAcceptOrder) ||
+                            (order.status === "accepted" && !canCompleteOrder)
+                          }
                         >
                           {/* Show current status */}
                           {order.status === "pending" && (
@@ -244,6 +271,7 @@ export default function BreakfastRoomService() {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { Container, Row, Col, Spinner, Alert } from "react-bootstrap";
 
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useCan } from "@/rbac";
 import { useRestaurantSelection } from "@/components/restaurants/hooks/useRestaurantSelection";
 import RestaurantList from "@/components/restaurants/RestaurantList";
 import CreateRestaurantModal from "@/components/restaurants/modals/CreateRestaurantModal";
@@ -16,6 +17,11 @@ const RestaurantManagementDashboard = ({
 } = {}) => {
   const { user } = useAuth();
   const { mainColor } = useTheme();
+  // Backend RBAC: list visibility uses the route gate
+  // (`restaurant_bookings` nav). The "Add Restaurant" affordance is governed
+  // by `restaurant_bookings.actions.restaurant_create`.
+  const { can } = useCan();
+  const canCreateRestaurant = can("restaurant_bookings", "restaurant_create");
   const { hotelSlug: urlHotelSlug } = useParams();
   const hotelSlug = hotelSlugProp || urlHotelSlug || user?.hotel_slug;
   const navigate = useNavigate();
@@ -44,6 +50,7 @@ const RestaurantManagementDashboard = ({
   };
 
   const handleAddRestaurant = () => {
+    if (!canCreateRestaurant) return;
     setShowAddModal(true);
   };
 
@@ -135,18 +142,20 @@ const RestaurantManagementDashboard = ({
           restaurants={restaurants}
           selectedRestaurant={selectedRestaurant}
           onSelect={handleRestaurantClick}
-          onAddRestaurant={handleAddRestaurant}
+          onAddRestaurant={canCreateRestaurant ? handleAddRestaurant : null}
         />
       )}
 
-      {/* Create Restaurant Modal */}
-      <CreateRestaurantModal
-        show={showAddModal}
-        toggle={() => setShowAddModal(false)}
-        onCreated={handleRestaurantCreated}
-        api={api}
-        hotelSlug={hotelSlug}
-      />
+      {/* Create Restaurant Modal — only mounted when create authority exists */}
+      {canCreateRestaurant && (
+        <CreateRestaurantModal
+          show={showAddModal}
+          toggle={() => setShowAddModal(false)}
+          onCreated={handleRestaurantCreated}
+          api={api}
+          hotelSlug={hotelSlug}
+        />
+      )}
     </Container>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { useCan } from "@/rbac";
 import api, { buildStaffURL } from "@/services/api";
 import { useOrderCount } from "@/hooks/useOrderCount.jsx";
 import { useTheme } from "@/context/ThemeContext";
@@ -13,6 +14,12 @@ import { toast } from "react-toastify";
 export default function RoomServiceOrdersManagement() {
   const { hotelIdentifier } = useParams();
   const { user } = useAuth();
+  const { can } = useCan();
+  // Backend RBAC: list visibility is `user.rbac.room_services.read`. Status
+  // transitions require per-action permissions on `room_services`.
+  const canReadModule = user?.rbac?.room_services?.read === true;
+  const canAcceptOrder = can("room_services", "order_accept");
+  const canCompleteOrder = can("room_services", "order_complete");
   const hotelSlug = hotelIdentifier || user?.hotel_slug;
   const { refreshAll: refreshCount } = useOrderCount(hotelSlug);
   const { hasNewRoomService, markRoomServiceRead } = useRoomServiceNotifications();
@@ -194,6 +201,15 @@ export default function RoomServiceOrdersManagement() {
   const handleStatusChange = (order, newStatus) => {
     const prev = order.status;
 
+    // Backend RBAC: gate the actual transition by per-action permission.
+    if (newStatus !== prev) {
+      const requiredAction = newStatus === "accepted" ? "order_accept" : "order_complete";
+      if (!can("room_services", requiredAction)) {
+        toast.error("You do not have permission to perform this action.");
+        return;
+      }
+    }
+
     // 🚀 PURE REAL-TIME APPROACH - NO OPTIMISTIC UPDATES
     // Only send API request and let Pusher handle all UI updates
     
@@ -322,6 +338,12 @@ export default function RoomServiceOrdersManagement() {
 
   return (
     <div className="container my-4">
+      {!canReadModule ? (
+        <div className="alert alert-warning my-3" role="alert">
+          <i className="bi bi-shield-lock me-2" />
+          You do not have permission to view room service orders.
+        </div>
+      ) : (
       <div className="card shadow-sm">
         <div className="card-header d-flex align-items-center justify-content-between flex-wrap">
           <h3 className="mb-0">
@@ -522,6 +544,11 @@ export default function RoomServiceOrdersManagement() {
                               onChange={(e) =>
                                 handleStatusChange(order, e.target.value)
                               }
+                              disabled={
+                                order.status === "completed" ||
+                                (order.status === "pending" && !canAcceptOrder) ||
+                                (order.status === "accepted" && !canCompleteOrder)
+                              }
                             >
                               {["pending", "accepted", "completed"].map((s) => (
                                 <option key={s} value={s}>
@@ -570,6 +597,7 @@ export default function RoomServiceOrdersManagement() {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }
