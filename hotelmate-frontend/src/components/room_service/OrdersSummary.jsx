@@ -330,6 +330,8 @@ export default function OrdersSummary() {
           )}
         </>
       )}
+      </>
+      )}
     </div>
   );
 }
