@@ -22,10 +22,10 @@ const MessengerWidget = ({
   onExpandChange,
 }) => {
 
-  const { user, isStaff } = useAuth();
+  const { user } = useAuth();
 
-  // RBAC: authority for visibility comes from `user.rbac.staff_chat`. `isStaff`
-  // is only used as a logged-in-staff-session precondition, never as authority.
+  // RBAC: authority for visibility comes from `user.rbac.staff_chat.visible`.
+  // No tier/role flag (e.g. `isStaff`) is consulted for authority.
   const { can } = useCan();
   const staffChatVisible = user?.rbac?.staff_chat?.visible === true;
   const canCreateConversation = can('staff_chat', 'conversation_create');

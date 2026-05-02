@@ -1,4 +1,5 @@
 import React from "react";
+import { useCan } from "@/rbac";
 
 export default function RosterPeriodSummary({
   period,
@@ -10,11 +11,14 @@ export default function RosterPeriodSummary({
   onExportXlsx,
   onShowFinalizedRosters,
 }) {
+  const { can } = useCan();
+  const canFinalize = can("attendance", "period_finalize");
+  const canExport = can("attendance", "shift_export_pdf");
   if (!period) {
     return null;
   }
 
-  const exportsDisabled = !period.finalized || !onExportCsv;
+  const exportsDisabled = !period.finalized || !onExportCsv || !canExport;
 
   return (
     <div className="card attendance-card mb-3">
@@ -48,14 +52,16 @@ export default function RosterPeriodSummary({
           <div className="col-md-4">
             <div className="text-md-end d-flex flex-column align-items-stretch gap-2">
               {!period.finalized ? (
-                <button
-                  type="button"
-                  className="hm-btn hm-btn-confirm"
-                  disabled={finalizing}
-                  onClick={onFinalize}
-                >
-                  {finalizing ? "Finalizing..." : "Finalize Period"}
-                </button>
+                canFinalize && onFinalize ? (
+                  <button
+                    type="button"
+                    className="hm-btn hm-btn-confirm"
+                    disabled={finalizing}
+                    onClick={onFinalize}
+                  >
+                    {finalizing ? "Finalizing..." : "Finalize Period"}
+                  </button>
+                ) : null
               ) : (
                 <button
                   type="button"
@@ -66,7 +72,8 @@ export default function RosterPeriodSummary({
                 </button>
               )}
 
-              <div className="btn-group btn-group-sm mt-1" role="group">
+              {canExport && (
+                <div className="btn-group btn-group-sm mt-1" role="group">
                 <button
                   type="button"
                   className="btn btn-outline-dark"
@@ -86,6 +93,7 @@ export default function RosterPeriodSummary({
                   </button>
                 )}
               </div>
+              )}
               
               <button
                 type="button"

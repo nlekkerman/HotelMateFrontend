@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { Card, Row, Col, Badge, Spinner, Alert } from "react-bootstrap";
 import { useDepartmentRosterAnalytics } from "../hooks/useAttendanceData";
 import { formatDuration, formatDepartmentStats, getDepartmentWithSmallestAvg } from "../utils/durationUtils";
+import { useCan } from "@/rbac";
 
 /**
  * Component for displaying department roster analytics
@@ -13,6 +14,10 @@ export default function DepartmentAnalytics({
   department,
   refreshKey = 0 
 }) {
+  const { can } = useCan();
+  if (!can("attendance", "analytics_read")) {
+    return null;
+  }
   const { 
     loading, 
     error, 

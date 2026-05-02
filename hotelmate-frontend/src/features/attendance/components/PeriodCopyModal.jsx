@@ -3,6 +3,7 @@ import { Modal, Button, Form, Alert, Spinner } from "react-bootstrap";
 import { usePeriodManagement, useAdvancedCopyOperations } from "../hooks/usePeriodManagement";
 import { useRosterPeriods } from "../hooks/useRosterPeriods";
 import useStaffMetadata from "@/hooks/useStaffMetadata";
+import { useCan } from "@/rbac";
 
 /**
  * Modal component for copying roster periods with advanced options
@@ -13,6 +14,8 @@ export default function PeriodCopyModal({
   hotelSlug, 
   onSuccess 
 }) {
+  const { can } = useCan();
+  const canCopy = can("attendance", "shift_copy");
   const [copyMode, setCopyMode] = useState('entire'); // entire, department, advanced
   const [formData, setFormData] = useState({
     sourcePeriodId: '',
@@ -117,6 +120,7 @@ export default function PeriodCopyModal({
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (!canCopy) return;
     if (!validateForm()) {
       return;
     }
@@ -515,7 +519,7 @@ export default function PeriodCopyModal({
         <Button 
           variant="primary" 
           onClick={handleSubmit} 
-          disabled={loading}
+          disabled={loading || !canCopy}
         >
           {loading && <Spinner size="sm" className="me-2" />}
           {copyMode === 'entire' ? 'Copy Entire Period' :

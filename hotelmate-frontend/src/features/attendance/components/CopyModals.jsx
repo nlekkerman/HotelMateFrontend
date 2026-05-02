@@ -9,6 +9,7 @@ import {
 } from "react-bootstrap";
 import { format, parseISO, eachDayOfInterval } from "date-fns";
 import { executeCopyOperation, getCopyErrorMessage, getCopySuccessMessage } from "../utils/executeCopyOperation";
+import { useCan } from "@/rbac";
 
 /**
  * Copy Day Modal - Copy all shifts from one day to another
@@ -24,6 +25,8 @@ export function CopyDayModal({
   hotelSlug,
   onSuccess,
 }) {
+  const { can } = useCan();
+  const canCopy = can("attendance", "shift_copy");
   const [targetDate, setTargetDate] = useState("");
   const [departmentSlug, setDepartmentSlug] = useState(selectedDepartment || "");
   const [loading, setLoading] = useState(false);
@@ -47,6 +50,7 @@ export function CopyDayModal({
   }, [show, selectedDepartment]);
 
   const handleCopy = async () => {
+    if (!canCopy) return;
     if (!targetDate) {
       setError("Please select a target date");
       return;
@@ -170,7 +174,7 @@ export function CopyDayModal({
         <Button
           variant="primary"
           onClick={handleCopy}
-          disabled={loading || !targetDate}
+          disabled={loading || !targetDate || !canCopy}
         >
           {loading ? (
             <>
@@ -202,6 +206,8 @@ export function CopyStaffWeekModal({
   hotelSlug,
   onSuccess,
 }) {
+  const { can } = useCan();
+  const canCopy = can("attendance", "shift_copy");
   const [targetPeriodId, setTargetPeriodId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -215,6 +221,7 @@ export function CopyStaffWeekModal({
   }, [show]);
 
   const handleCopy = async () => {
+    if (!canCopy) return;
     if (!targetPeriodId) {
       setError("Please select a target period");
       return;
@@ -348,7 +355,7 @@ export function CopyStaffWeekModal({
         <Button
           variant="primary"
           onClick={handleCopy}
-          disabled={loading || !targetPeriodId}
+          disabled={loading || !targetPeriodId || !canCopy}
         >
           {loading ? (
             <>
@@ -381,6 +388,8 @@ export function CopyBulkModal({
   hotelSlug,
   onSuccess,
 }) {
+  const { can } = useCan();
+  const canCopy = can("attendance", "shift_copy");
   const [targetPeriodId, setTargetPeriodId] = useState("");
   const [departmentSlug, setDepartmentSlug] = useState(selectedDepartment || "");
   const [selectedStaffIds, setSelectedStaffIds] = useState([]);
@@ -400,6 +409,7 @@ export function CopyBulkModal({
   }, [show, selectedDepartment]);
 
   const handleCopy = async () => {
+    if (!canCopy) return;
     if (!targetPeriodId) {
       setError("Please select a target period");
       return;
@@ -686,6 +696,7 @@ export function CopyBulkModal({
           disabled={
             loading ||
             !targetPeriodId ||
+            !canCopy ||
             (copyMode === "staff" && selectedStaffIds.length === 0) ||
             (copyMode === "both" && !departmentSlug)
           }
@@ -718,6 +729,8 @@ export function CopyPeriodModal({
   hotelSlug,
   onSuccess,
 }) {
+  const { can } = useCan();
+  const canCopy = can("attendance", "shift_copy");
   const [targetPeriodId, setTargetPeriodId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -731,6 +744,7 @@ export function CopyPeriodModal({
   }, [show]);
 
   const handleCopy = async () => {
+    if (!canCopy) return;
     if (!targetPeriodId) {
       setError("Please select a target period");
       return;
@@ -824,7 +838,7 @@ export function CopyPeriodModal({
         <Button
           variant="danger"
           onClick={handleCopy}
-          disabled={loading || !targetPeriodId}
+          disabled={loading || !targetPeriodId || !canCopy}
         >
           {loading ? (
             <>

@@ -21,12 +21,20 @@ import { AttendanceDashboardSkeleton } from "../components/AttendanceSkeletons";
 import { safeNumber } from "../utils/safeUtils";
 import { handleAttendanceError, showSuccessMessage } from "../utils/errorHandling";
 import api from "@/services/api";
+import { useAuth } from '@/context/AuthContext';
+import { useCan } from "@/rbac";
+import NoAccess from "@/components/NoAccess";
 import "../styles/attendance.css";
 
 function DepartmentRosterDashboardComponent() {
   const { hotelSlug } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user: authUser } = useAuth();
+  const { can } = useCan();
+  const canReadAttendance = authUser?.rbac?.attendance?.read === true;
+  const canCreatePeriod = can("attendance", "period_create");
+  const canFinalize = can("attendance", "period_finalize");
   
   // Core state
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -157,12 +165,14 @@ function DepartmentRosterDashboardComponent() {
 
   // Period finalization
   const handleShowFinalizeModal = () => {
+    if (!canFinalize) return;
     setFinalizeError(null);
     setFinalizeCanForce(false);
     setShowFinalizeModal(true);
   };
 
   const handleFinalizePeriod = async (force = false) => {
+    if (!canFinalize) return;
     if (!selectedPeriod || !selectedDepartment) return;
 
     setFinalizing(true);
@@ -203,6 +213,10 @@ function DepartmentRosterDashboardComponent() {
   // Loading states
   const isInitialLoading = !hotelSlug || (periods.loading && departmentsLoading);
   
+  if (!canReadAttendance) {
+    return <NoAccess message="You do not have permission to view attendance." />;
+  }
+
   if (isInitialLoading) {
     return <AttendanceDashboardSkeleton />;
   }
@@ -317,6 +331,8 @@ function DepartmentRosterDashboardComponent() {
                 size="sm"
                 onClick={() => setShowCreateModal(true)}
                 className="ms-3"
+                disabled={!canCreatePeriod}
+                style={!canCreatePeriod ? { display: 'none' } : undefined}
               >
                 <i className="bi bi-plus-circle me-2"></i>
                 Create Period
@@ -330,7 +346,7 @@ function DepartmentRosterDashboardComponent() {
               <RosterPeriodSummary
                 period={selectedPeriod}
                 department={selectedDepartment}
-                onFinalize={handleShowFinalizeModal}
+                onFinalize={canFinalize ? handleShowFinalizeModal : null}
                 finalizing={finalizing}
                 error={null}
                 onShowFinalizedRosters={() => setShowFinalizedRostersModal(true)}

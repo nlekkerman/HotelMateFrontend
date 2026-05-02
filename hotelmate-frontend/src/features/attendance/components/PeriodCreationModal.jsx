@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Modal, Button, Form, Alert, Spinner } from "react-bootstrap";
 import { usePeriodManagement } from "../hooks/usePeriodManagement";
 import { useRosterPeriods } from "../hooks/useRosterPeriods";
+import { useCan } from "@/rbac";
 
 /**
  * Modal component for creating roster periods
@@ -13,6 +14,8 @@ export default function PeriodCreationModal({
   hotelSlug, 
   onSuccess 
 }) {
+  const { can } = useCan();
+  const canCreate = can("attendance", "period_create");
   const [mode, setMode] = useState('weekly'); // weekly, custom, duplicate
   const [formData, setFormData] = useState({
     weekDate: new Date().toISOString().split('T')[0],
@@ -80,6 +83,7 @@ export default function PeriodCreationModal({
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (!canCreate) return;
     if (!validateForm()) {
       return;
     }
@@ -328,7 +332,7 @@ export default function PeriodCreationModal({
         <Button 
           variant="primary" 
           onClick={handleSubmit} 
-          disabled={loading}
+          disabled={loading || !canCreate}
         >
           {loading && <Spinner size="sm" className="me-2" />}
           {mode === 'weekly' ? 'Create Weekly Period' :

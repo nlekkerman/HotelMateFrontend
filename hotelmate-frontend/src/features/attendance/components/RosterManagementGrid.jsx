@@ -23,6 +23,7 @@ import {
   CopyBulkModal,
 } from "./CopyModals";
 import { executeCopyOperation } from "../utils/executeCopyOperation";
+import { useCan } from "@/rbac";
 import "../styles/roster-grid.css";
 
 /**
@@ -66,6 +67,12 @@ function ShiftEditModal({
   onDeleteRequest,
   existingShifts = [],
 }) {
+  const { can } = useCan();
+  const canCreateShift = can("attendance", "shift_create");
+  const canUpdateShift = can("attendance", "shift_update");
+  const canDeleteShift = can("attendance", "shift_delete");
+  const isEdit = !!shift?.id;
+  const canSubmit = isEdit ? canUpdateShift : canCreateShift;
   const [formData, setFormData] = useState({
     shift_start: "",
     shift_end: "",
@@ -160,6 +167,7 @@ useEffect(() => {
   })();
 
   const handleSave = async () => {
+    if (!canSubmit) return;
     if (!formData.shift_start || !formData.shift_end) {
       setError("Start and end times are required");
       return;
@@ -216,6 +224,7 @@ useEffect(() => {
   };
 
   const handleDeleteClick = () => {
+    if (!canDeleteShift) return;
     if (!shift?.id || !onDeleteRequest) return;
     onDeleteRequest(shift);
   };
@@ -340,7 +349,7 @@ useEffect(() => {
         </Form>
       </Modal.Body>
       <Modal.Footer>
-        {shift?.id && (
+        {shift?.id && canDeleteShift && (
           <Button
             variant="danger"
             onClick={handleDeleteClick}
@@ -356,7 +365,7 @@ useEffect(() => {
         <Button 
           variant="primary" 
           onClick={handleSave} 
-          disabled={loading || !!overlapWarning}
+          disabled={loading || !!overlapWarning || !canSubmit}
         >
           {loading ? (
             <Spinner size="sm" />
@@ -408,6 +417,12 @@ export default function RosterManagementGrid({
   availablePeriods = [], // Available periods for copy operations
   onPeriodSwitch = null, // Callback to switch to different period
 }) {
+  const { can } = useCan();
+  const canCreateShift = can("attendance", "shift_create");
+  const canUpdateShift = can("attendance", "shift_update");
+  const canDeleteShift = can("attendance", "shift_delete");
+  const canBulkWrite = can("attendance", "shift_bulk_write");
+  const canCopyShifts = can("attendance", "shift_copy");
   const [shifts, setShifts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -734,10 +749,12 @@ export default function RosterManagementGrid({
 
     if (existingShifts.length > 0 && !forceNew) {
       // Edit first existing shift
+      if (!canUpdateShift) return;
       setEditingShift(existingShifts[0]);
       setIsCreatingAdditionalShift(false);
     } else {
       // Create new shift (or additional shift)
+      if (!canCreateShift) return;
       setEditingShift(null);
       setIsCreatingAdditionalShift(existingShifts.length > 0);
     }
@@ -765,6 +782,7 @@ export default function RosterManagementGrid({
   };
   
   const handleDeleteConfirm = async () => {
+    if (!canDeleteShift) return;
     setShowDeleteConfirm(false);
     try {
       await api.delete(
@@ -833,6 +851,7 @@ export default function RosterManagementGrid({
 
   // Bulk save all draft shifts
   const handleBulkSave = async () => {
+    if (!canBulkWrite) return;
     if (draftShifts.length === 0) {
       alert('No draft shifts to save');
       return;
@@ -956,11 +975,13 @@ export default function RosterManagementGrid({
 
   // Copy operation handlers
   const handleCopyDay = (date) => {
+    if (!canCopyShifts) return;
     setCopySourceDate(format(date, "yyyy-MM-dd"));
     setShowCopyDayModal(true);
   };
 
   const handleCopyStaff = (staff) => {
+    if (!canCopyShifts) return;
     setCopySourceStaff(staff);
     setShowCopyStaffModal(true);
   };
@@ -1006,6 +1027,7 @@ export default function RosterManagementGrid({
 
   // Publish all copied shifts
   const handlePublishCopiedShifts = async () => {
+    if (!canBulkWrite) return;
     if (draftCopiedShifts.length === 0) {
       alert('No copied shifts to publish');
       return;
@@ -1121,6 +1143,7 @@ export default function RosterManagementGrid({
 
   // Legacy copy function - kept for any existing usage
   const handleLegacyCopyDay = async (fromDate, toDate) => {
+    if (!canCopyShifts) return;
     if (
       !confirm(
         `Copy all shifts from ${format(fromDate, "MMM d")} to ${format(
@@ -1242,6 +1265,7 @@ export default function RosterManagementGrid({
           )}
 
           {/* Global copy controls */}
+          {canCopyShifts && (
           <div className="global-copy-controls">
             <span
               className={`global-copy-btn copy-tooltip ${selectedPeriod?.is_finalized ? 'disabled' : ''}`}
@@ -1253,6 +1277,7 @@ export default function RosterManagementGrid({
               Copy Week Roster
             </span>
           </div>
+          )}
 
           <Button
             size="sm"
@@ -1297,6 +1322,7 @@ export default function RosterManagementGrid({
                         {format(day, "MMM d")}
                       </div>
                       {/* Copy day icon */}
+                      {canCopyShifts && (
                       <span
                         className="copy-day-icon copy-tooltip"
                         data-tooltip="Copy this day to another date"
@@ -1307,6 +1333,7 @@ export default function RosterManagementGrid({
                       >
                         <i className="bi bi-copy"></i>
                       </span>
+                      )}
                     </th>
                   ))}
                 </tr>
@@ -1335,6 +1362,7 @@ export default function RosterManagementGrid({
                               </div>
                             </div>
                             {/* Copy staff icon */}
+                            {canCopyShifts && (
                             <span
                               className="copy-staff-icon copy-tooltip"
                               data-tooltip="Copy this staff member's week to another period"
@@ -1345,6 +1373,7 @@ export default function RosterManagementGrid({
                             >
                               <i className="bi bi-copy"></i>
                             </span>
+                            )}
                           </div>
                         </td>
                         {periodDays.map((day) => {
@@ -1442,7 +1471,7 @@ export default function RosterManagementGrid({
               <Button
                 variant="success"
                 onClick={handleBulkSave}
-                disabled={bulkSaving || selectedPeriod?.is_finalized}
+                disabled={bulkSaving || selectedPeriod?.is_finalized || !canBulkWrite}
               >
                 {bulkSaving ? (
                   <><Spinner size="sm" className="me-2" />Publishing...</>
@@ -1477,7 +1506,7 @@ export default function RosterManagementGrid({
               <Button
                 variant="info"
                 onClick={handlePublishCopiedShifts}
-                disabled={bulkCopying}
+                disabled={bulkCopying || !canBulkWrite}
               >
                 {bulkCopying ? (
                   <><Spinner size="sm" className="me-2" />Publishing...</>

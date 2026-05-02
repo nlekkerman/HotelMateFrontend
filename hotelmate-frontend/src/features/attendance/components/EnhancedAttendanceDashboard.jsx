@@ -11,12 +11,21 @@ import PeriodCreationModal from './PeriodCreationModal';
 import PeriodCopyModal from './PeriodCopyModal';
 import RosterManagementGrid from './RosterManagementGrid';
 import RosterPeriodSelector from './RosterPeriodSelector';
+import { useAuth } from '@/context/AuthContext';
+import { useCan } from '@/rbac';
+import NoAccess from '@/components/NoAccess';
 
 /**
  * Enhanced Attendance Dashboard with analytics and roster management
  */
 export default function EnhancedAttendanceDashboard() {
   const { hotelSlug } = useParams();
+  const { user: authUser } = useAuth();
+  const { can } = useCan();
+  const canReadAttendance = authUser?.rbac?.attendance?.read === true;
+  const canCreatePeriod = can('attendance', 'period_create');
+  const canCopyShifts = can('attendance', 'shift_copy');
+  const canReadAnalytics = can('attendance', 'analytics_read');
   const [activeTab, setActiveTab] = useState('summary'); // summary, departments, individuals, roster-mgmt
   const navigate = useNavigate();
   // Period and filter state
@@ -168,6 +177,10 @@ export default function EnhancedAttendanceDashboard() {
 
   return (
     <div className="container-fluid py-4">
+      {!canReadAttendance ? (
+        <NoAccess message="You do not have permission to view attendance." />
+      ) : (
+      <>
       {/* Header Controls */}
       <Card className="mb-4">
         <Card.Header>
@@ -189,13 +202,17 @@ export default function EnhancedAttendanceDashboard() {
                   ⚙️ Roster Management
                 </Dropdown.Toggle>
                 <Dropdown.Menu>
-                  <Dropdown.Item onClick={() => setShowCreateModal(true)}>
-                    ➕ Create Period
-                  </Dropdown.Item>
-                  <Dropdown.Item onClick={() => setShowCopyModal(true)}>
-                    📋 Copy Period
-                  </Dropdown.Item>
-                  <Dropdown.Divider />
+                  {canCreatePeriod && (
+                    <Dropdown.Item onClick={() => setShowCreateModal(true)}>
+                      ➕ Create Period
+                    </Dropdown.Item>
+                  )}
+                  {canCopyShifts && (
+                    <Dropdown.Item onClick={() => setShowCopyModal(true)}>
+                      📋 Copy Period
+                    </Dropdown.Item>
+                  )}
+                  {(canCreatePeriod || canCopyShifts) && <Dropdown.Divider />}
                   <Dropdown.Item onClick={() => {
                     navigate(`/attendance/${hotelSlug}?tab=department-roster`);
                   }}>
@@ -321,8 +338,10 @@ export default function EnhancedAttendanceDashboard() {
         <Nav.Item>
           <Nav.Link 
             active={activeTab === 'departments'}
-            onClick={() => setActiveTab('departments')}
+            onClick={() => canReadAnalytics && setActiveTab('departments')}
             className="text-dark"
+            disabled={!canReadAnalytics}
+            style={!canReadAnalytics ? { display: 'none' } : undefined}
           >
             🏢 Department Analytics
           </Nav.Link>
@@ -452,7 +471,7 @@ export default function EnhancedAttendanceDashboard() {
         </Card>
       )}
 
-      {activeTab === 'departments' && (
+      {activeTab === 'departments' && canReadAnalytics && (
         <DepartmentAnalytics
           hotelSlug={hotelSlug}
           startDate={dateRange.start}
@@ -547,6 +566,8 @@ export default function EnhancedAttendanceDashboard() {
         hotelSlug={hotelSlug}
         onSuccess={handleModalSuccess}
       />
+      </>
+      )}
     </div>
   );
 }

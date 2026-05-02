@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Button, Alert } from 'react-bootstrap';
 import StaffErrorHandlingModal from './StaffErrorHandlingModal';
+import { useCan } from '@/rbac';
 
 /**
  * PeriodFinalizeModal Component
@@ -16,9 +17,12 @@ const PeriodFinalizeModal = ({
   error = null,
   canForce = false,
 }) => {
+  const { can } = useCan();
+  const canFinalize = can('attendance', 'period_finalize');
   const [showErrorModal, setShowErrorModal] = useState(false);
 
   const handleConfirm = (force = false) => {
+    if (!canFinalize) return;
     onConfirm(force);
   };
 
@@ -86,7 +90,7 @@ const PeriodFinalizeModal = ({
                 <Button 
                   variant="warning" 
                   onClick={() => handleConfirm(true)}
-                  disabled={finalizing}
+                  disabled={finalizing || !canFinalize}
                 >
                   {finalizing ? (
                     <>
@@ -115,7 +119,7 @@ const PeriodFinalizeModal = ({
           <Button 
             variant="success" 
             onClick={() => handleConfirm(false)}
-            disabled={finalizing}
+            disabled={finalizing || !canFinalize}
           >
             {finalizing ? (
               <>

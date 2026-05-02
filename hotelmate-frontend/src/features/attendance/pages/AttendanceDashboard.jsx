@@ -25,6 +25,7 @@ import { deriveStatus } from "../utils/attendanceStatus";
 import useStaffMetadata from "@/hooks/useStaffMetadata";
 import { useAuth } from '@/context/AuthContext';
 import { useCan } from "@/rbac";
+import NoAccess from "@/components/NoAccess";
 import "../components/AttendanceCards.css";
 import { handleRealTimeStatusUpdate, showStatusNotification } from "../utils/statusUpdates";
 import { safeStaffId, safeStaffName, safeTimeSlice, safeNumber } from "../utils/safeUtils";
@@ -117,6 +118,9 @@ function AttendanceDashboardComponent() {
   const { user: authUser } = useAuth();
   const { can } = useCan();
   const canUseKiosk = can("attendance", "clock_in_out");
+  const canFinalize = can("attendance", "period_finalize");
+  const canExport = can("attendance", "shift_export_pdf");
+  const canReadAttendance = authUser?.rbac?.attendance?.read === true;
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedDate, setSelectedDate] = useState(
@@ -359,6 +363,7 @@ function AttendanceDashboardComponent() {
   }
 
   async function handleExportCsv() {
+    if (!canExport) return;
     if (!selectedPeriodId) {
       console.warn("No period selected for CSV export");
       return;
@@ -378,6 +383,7 @@ function AttendanceDashboardComponent() {
   }
 
   async function handleExportXlsx() {
+    if (!canExport) return;
     if (!selectedPeriodId) {
       console.warn("No period selected for XLSX export");
       return;
@@ -397,12 +403,14 @@ function AttendanceDashboardComponent() {
   }
 
   const handleShowFinalizeModal = () => {
+    if (!canFinalize) return;
     setFinalizeError(null);
     setFinalizeCanForce(false);
     setShowFinalizeModal(true);
   };
 
   const handleFinalizePeriod = async (force = false) => {
+    if (!canFinalize) return;
     if (!selectedPeriodId || !hotelSlug) {
       console.warn("Cannot finalize: missing period ID or hotel slug");
       return;
@@ -478,6 +486,10 @@ function AttendanceDashboardComponent() {
   // Show full loading skeleton on initial load
   const isInitialLoading = !hotelSlug || (roster.loading && logs.loading && periods.loading);
   
+  if (!canReadAttendance) {
+    return <NoAccess message="You do not have permission to view attendance." />;
+  }
+
   if (isInitialLoading) {
     return <AttendanceDashboardSkeleton />;
   }
@@ -674,11 +686,11 @@ function AttendanceDashboardComponent() {
         <RosterPeriodSummary
           period={selectedPeriod}
           stats={periodStats}
-          onFinalize={handleShowFinalizeModal}
+          onFinalize={canFinalize ? handleShowFinalizeModal : null}
           finalizing={finalizing}
           error={null}
-          onExportCsv={handleExportCsv}
-          onExportXlsx={handleExportXlsx}
+          onExportCsv={canExport ? handleExportCsv : null}
+          onExportXlsx={canExport ? handleExportXlsx : null}
         />
       )}
 
