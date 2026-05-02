@@ -253,7 +253,8 @@ export default function HotelInfo() {
     return base.filter((sec) => sec.items.length > 0);
   }, [categoryData]);
 
-  // ── Early exits ────────────────────────────────────────────────────  if (!canReadHotelInfo) {
+  // ── Early exits ────────────────────────────────────────────────────
+  if (!canReadHotelInfo) {
     return (
       <div className="container my-4">
         <div className="alert alert-warning text-center" role="alert">
