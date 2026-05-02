@@ -4,7 +4,7 @@ import { Container, Row, Col, Card, Button, Spinner, Alert, Modal, Form } from '
 import { toast } from 'react-toastify';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useAuth } from '@/context/AuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useCan } from '@/rbac';
 import HeroSectionEditor from '@/components/sections/HeroSectionEditor';
 import GallerySectionEditor from '@/components/sections/GallerySectionEditor';
 import ListSectionEditor from '@/components/sections/ListSectionEditor';
@@ -25,8 +25,16 @@ const SectionEditorPage = () => {
   const { hotelSlug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isSuperStaffAdmin } = usePermissions();
-  
+  // RBAC: backend-driven authority. Read gate controls page entry; per-action
+  // gates (create/update/delete) MUST be applied to each handler/button below.
+  // TODO(backend-rbac): backend `MODULE_POLICY` does not yet expose a
+  // `sections` module (read / section_create / section_update / section_delete)
+  // nor an `admin_settings` module. Until it does, this page is fail-closed.
+  // See RBAC_MISSING_BACKEND_POLICY_KEYS.md. Do NOT reintroduce isAdmin /
+  // role / tier / access_level fallbacks.
+  const { can } = useCan(); // eslint-disable-line no-unused-vars
+  const canRead = false;
+
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -37,14 +45,14 @@ const SectionEditorPage = () => {
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    if (!isSuperStaffAdmin) {
+    if (!canRead) {
       toast.error('You do not have permission to access this page');
       navigate(`/${hotelSlug}`);
       return;
     }
 
     fetchSections();
-  }, [hotelSlug, isSuperStaffAdmin, navigate]);
+  }, [hotelSlug, canRead, navigate]);
 
   const fetchSections = async () => {
     try {

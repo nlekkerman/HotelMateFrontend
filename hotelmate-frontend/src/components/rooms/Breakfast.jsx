@@ -17,7 +17,6 @@ const TIME_SLOTS = [
 ];
 
 const Breakfast = ({
-  isAdmin = false,
   roomNumber: propRoomNumber,
   hotelIdentifier: propHotelIdentifier,
 }) => {

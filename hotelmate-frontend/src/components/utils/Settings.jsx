@@ -3,7 +3,7 @@ import React from "react";
 import { Container, Row, Col, Alert, Card, Button } from "react-bootstrap";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { usePermissions } from "@/hooks/usePermissions";
+import { useCan } from "@/rbac";
 
 // Import section components - STAFF ONLY
 import SectionThemeSettings from "./settings-sections/SectionThemeSettings";
@@ -11,7 +11,13 @@ import SectionThemeSettings from "./settings-sections/SectionThemeSettings";
 export default function Settings() {
   const { user } = useAuth();
   const { hotelSlug } = useParams();
-  const { isAdmin, isSuperUser } = usePermissions();
+  // RBAC: backend-driven authority for the Staff Settings page.
+  // TODO(backend-rbac): backend `MODULE_POLICY` does not yet expose an
+  // `admin_settings` module / `read` action. Until it does, the page is
+  // fail-closed. See RBAC_MISSING_BACKEND_POLICY_KEYS.md.
+  // Do NOT reintroduce isAdmin / role / tier / access_level fallbacks.
+  const { can } = useCan(); // eslint-disable-line no-unused-vars
+  const canAccessSettings = false;
   const navigate = useNavigate();
   
   // Basic permission check - must be staff of this hotel
@@ -26,8 +32,7 @@ export default function Settings() {
     );
   }
 
-  // Additional permission check - must be superuser or admin
-  const canAccessSettings = isAdmin;
+  // Additional permission check - canonical RBAC action key
   if (!canAccessSettings) {
     return (
       <Container className="py-5">

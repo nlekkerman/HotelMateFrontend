@@ -28,7 +28,7 @@ const MobileNavbar = () => {
   const [presetMenuOpen, setPresetMenuOpen] = useState(false);
 
   // Use usePermissions WITHOUT argument — it reads roles from localStorage inside
-  const { canAccess, hasNavAccess } = usePermissions();
+  const { hasNavAccess } = usePermissions();
   const { visibleNavItems, categories, uncategorizedItems, hasNavigation } = useNavigation();
   const [expandedCategoryId, setExpandedCategoryId] = useState(null);
   const [roomBookingsExpanded, setRoomBookingsExpanded] = useState(false);

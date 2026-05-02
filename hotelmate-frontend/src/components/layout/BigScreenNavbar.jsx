@@ -41,7 +41,6 @@ const BigScreenNavbar = ({ chatUnreadCount }) => {
   const [showLogoutSuccess, setShowLogoutSuccess] = useState(false);
   const [forceButtonUpdate, setForceButtonUpdate] = useState(0);
 
-  const { canAccess } = usePermissions();
   const { visibleNavItems, categories, uncategorizedItems, hasNavigation } = useNavigation();
   const servicesRef = useRef(null);
   const [openCategoryId, setOpenCategoryId] = useState(null);

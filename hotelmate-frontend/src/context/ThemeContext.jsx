@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
-import { usePermissions } from "@/hooks/usePermissions";
+import { useCan } from "@/rbac";
 import { getAuthUser } from "@/lib/authStore";
 
 const ThemeContext = createContext({
@@ -26,7 +26,14 @@ const ThemeContext = createContext({
 const ThemeProvider = ({ children }) => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { isSuperUser, isSuperStaffAdmin } = usePermissions();
+  // RBAC: PATCH /staff/hotel/{slug}/settings/ is gated by the canonical
+  // `admin_settings.theme_update` action. NO tier / access_level / isAdmin.
+  // TODO(backend-rbac): backend `MODULE_POLICY` does not yet expose an
+  // `admin_settings` module / `theme_update` action. Until it does, this
+  // capability is fail-closed. See RBAC_MISSING_BACKEND_POLICY_KEYS.md.
+  // Do NOT reintroduce isAdmin / role / tier / access_level fallbacks.
+  const { can } = useCan(); // eslint-disable-line no-unused-vars
+  const canUpdateTheme = false;
   
   // Get hotel slug from logged-in user
   const hotelSlug = React.useMemo(() => {
@@ -51,12 +58,10 @@ const ThemeProvider = ({ children }) => {
       let actualHotelSlug = user?.hotel_slug;
       
       if (bridgeUser) {
-        // Fix: If user has staff-level access but is_staff is false, correct it
-        const shouldBeStaff = bridgeUser.is_superuser || 
-                             bridgeUser.access_level === 'staff_admin' || 
-                             bridgeUser.access_level === 'super_staff_admin' ||
-                             bridgeUser.staff_id;
-                             
+        // Reconcile stale AuthContext during login transitions using ONLY canonical
+        // identity flags. NO `access_level` / tier inference (banned by RBAC contract).
+        const shouldBeStaff = bridgeUser.is_superuser || !!bridgeUser.staff_id;
+
         if (shouldBeStaff && !bridgeUser.is_staff) {
           actualIsStaff = true;
           actualHotelSlug = bridgeUser.hotel_slug;
@@ -194,13 +199,12 @@ useEffect(() => {
       if (!user?.hotel_slug) {
         return Promise.reject(new Error('Not authorized to update theme'));
       }
-      
-      // Check if user has permission to update theme settings
-      // Only superusers or super staff admins can update themes
-      if (!isSuperUser && !isSuperStaffAdmin) {
-        return Promise.reject(new Error('Theme updates are only allowed for superusers and super staff admins'));
+
+      // RBAC: backend-driven authority. Fail-closed if the action key is missing.
+      if (!canUpdateTheme) {
+        return Promise.reject(new Error('Not permitted to update theme'));
       }
-      
+
       // Send all theme colors to backend
       return api.patch(`/staff/hotel/${hotelSlug}/settings/`, updatedTheme);
     },
@@ -230,12 +234,11 @@ useEffect(() => {
     if (!user?.hotel_slug) {
       throw new Error('Not authorized to update theme');
     }
-    
-    // Check if user has permission to update theme settings
-    if (!isSuperUser && !isSuperStaffAdmin) {
-      throw new Error('Theme updates are only allowed for superusers and super staff admins');
+
+    if (!canUpdateTheme) {
+      throw new Error('Not permitted to update theme');
     }
-    
+
     const result = await mutation.mutateAsync(updates);
     return result;
   };

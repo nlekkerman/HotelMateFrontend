@@ -5,15 +5,18 @@ import { useQuery } from "@tanstack/react-query";
 import api from "@/services/api";
 import { useAuth } from '@/context/AuthContext';
 
-const fetchStaffShifts = async ({ hotelSlug, staffId, start, end }) => {
-  const { data } = await api.get(`/staff/hotel/${hotelSlug}/attendance/shifts/`, {
-    params: {
-      staff: staffId,
-      staff_id: staffId,
-      start_date: start,
-      end_date: end,
-    },
-  });
+const fetchStaffShifts = async ({ hotelSlug, start, end }) => {
+  // Self-scoped roster endpoint — returns the authenticated staff's own shifts.
+  // Server force-filters staff = request.user.staff_profile, so no staff param is needed.
+  const { data } = await api.get(
+    `/staff/hotel/${hotelSlug}/attendance/shifts/mine/`,
+    {
+      params: {
+        start,
+        end,
+      },
+    }
+  );
 
   // Ensure data is always an array
   if (Array.isArray(data)) return data;
@@ -55,7 +58,6 @@ export default function StaffWeeklyRoster({
     queryFn: () =>
       fetchStaffShifts({
         hotelSlug,
-        staffId,
         start: format(start, "yyyy-MM-dd"),
         end: format(end, "yyyy-MM-dd"),
       }),

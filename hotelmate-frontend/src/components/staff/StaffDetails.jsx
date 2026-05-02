@@ -4,7 +4,6 @@ import { FaUserCircle } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useQueryClient } from "@tanstack/react-query";
 import api from "@/services/api";
-import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/context/AuthContext";
 import { useCan } from "@/rbac";
 import { useFaceAdminApi } from "@/features/faceAttendance/hooks/useFaceAdminApi";
@@ -24,8 +23,7 @@ function StaffDetails() {
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
   const { hotelSlug, id } = useParams();
-  const { canAccess } = usePermissions();
-  // Phase 1 RBAC: backend-driven action authority via `user.rbac.staff_management.actions.<key>`.
+  // Phase 1 RBAC: backend-driven action authority via `user.rbac.<module>.actions.<key>`.
   // Profile-field edits and authority assignments are intentionally separated:
   //   - profile fields (name, active) → `staff_update_profile` (or self-edit)
   //   - role / department / access_level dropdowns → matching `authority_*` keys
@@ -43,6 +41,15 @@ function StaffDetails() {
   const canAssignAccessLevel = can('staff_management', 'authority_access_level_assign');
   const canDepartmentManage = can('staff_management', 'department_manage');
   const canRoleManage = can('staff_management', 'role_manage');
+  // RBAC: face management actions live in the canonical `attendance` module.
+  // Each button below is gated on its specific action key. Section visibility
+  // is the OR of these — show if user has any of them. NO `face_manage`
+  // shortcut (that key does not exist in backend MODULE_POLICY).
+  const canRegisterOtherFace = can('attendance', 'face_register_other');
+  const canRevokeFace = can('attendance', 'face_revoke');
+  const canViewFaceAudit = can('attendance', 'face_audit_read');
+  const canShowFaceSection =
+    canRegisterOtherFace || canRevokeFace || canViewFaceAudit;
   const queryClient = useQueryClient();
   const { departments, roles, accessLevels, refetch: refetchMetadata } = useStaffMetadata(hotelSlug);
   const [newDeptName, setNewDeptName] = useState('');
@@ -420,12 +427,11 @@ function StaffDetails() {
       </div>
 
       {/* Face Management Section */}
-      {/* NOTE: Face registration belongs to the `attendance` module, not */}
-      {/* `staff_management`. This `canAccess` gate is intentionally retained */}
-      {/* until the attendance RBAC refactor pass replaces it with the */}
-      {/* corresponding `attendance` action key. Do NOT migrate it to a */}
-      {/* `staff_management` action — face data is out-of-scope for this module. */}
-      {(canAccess(['staff_admin', 'super_staff_admin']) || canAccess(['manager'])) && (
+      {/* RBAC: face data lives in the `attendance` module. Section visibility
+          is the OR of the three canonical action keys; each individual
+          control below is gated on its specific key. NO tier / role-string
+          checks. NO synthetic `face_manage` key. */}
+      {canShowFaceSection && (
         <div className="mt-4">
           <hr className="mb-4" />
           <div className="card">
@@ -463,6 +469,7 @@ function StaffDetails() {
                   </div>
                   
                   {!showRevokeConfirm ? (
+                    canRevokeFace && (
                     <button
                       className="btn btn-outline-danger"
                       onClick={() => setShowRevokeConfirm(true)}
@@ -470,6 +477,7 @@ function StaffDetails() {
                       <i className="bi bi-person-x me-2"></i>
                       Revoke Face Data
                     </button>
+                    )
                   ) : (
                     <div className="border rounded p-3 bg-light">
                       <h6 className="mb-3">Confirm Face Data Revocation</h6>
@@ -533,6 +541,7 @@ function StaffDetails() {
                     This staff member has not registered face data and cannot use face clock-in.
                   </div>
                   
+                  {canRegisterOtherFace && (
                   <button
                     className="btn btn-primary"
                     onClick={handleRegisterFace}
@@ -540,6 +549,7 @@ function StaffDetails() {
                     <i className="bi bi-camera me-2"></i>
                     Register Face Data
                   </button>
+                  )}
                 </div>
               );
               })()}

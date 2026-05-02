@@ -693,14 +693,12 @@ const BookingStatusPage = () => {
         <Container className="py-4">
           {activeService === "room_service" && canRoomService && (
             <RoomService
-              isAdmin={false}
               roomNumber={roomNumber}
               hotelIdentifier={hotelSlug}
             />
           )}
           {activeService === "breakfast" && canBreakfast && (
             <Breakfast
-              isAdmin={false}
               roomNumber={roomNumber}
               hotelIdentifier={hotelSlug}
             />

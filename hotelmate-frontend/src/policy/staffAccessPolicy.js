@@ -186,27 +186,30 @@ export function getRouteMappings() {
  */
 export function validateUserPermissions(user) {
   const issues = [];
-  
+
   if (!user) {
     issues.push("User object is null or undefined");
   } else {
     if (typeof user.is_staff !== "boolean") {
       issues.push("is_staff should be boolean");
     }
-    
+
     if (typeof user.is_superuser !== "boolean") {
-      issues.push("is_superuser should be boolean"); 
+      issues.push("is_superuser should be boolean");
     }
-    
+
     if (!Array.isArray(user.effective_navs)) {
       issues.push("effective_navs should be array of strings");
     }
-    
-    if (user.access_level && !["regular_staff", "staff_admin", "super_staff_admin"].includes(user.access_level)) {
-      issues.push(`Invalid access_level: ${user.access_level}`);
+
+    // RBAC contract: `user.rbac` is the only authority source. The frontend
+    // does NOT validate `access_level` / `tier` / `role_slug` — those fields
+    // must not influence any permission decision.
+    if (user.rbac && typeof user.rbac !== "object") {
+      issues.push("rbac should be an object keyed by module");
     }
   }
-  
+
   return {
     valid: issues.length === 0,
     issues

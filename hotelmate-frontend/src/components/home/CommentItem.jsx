@@ -4,6 +4,7 @@ import api from "@/services/api";
 import CommentComposer from "@/components/home/CommentComposer";
 import DeletionModal from "@/components/modals/DeletionModal";
 import { useAuth } from "@/context/AuthContext";
+import { useCan } from "@/rbac";
 import { FaUserCircle } from "react-icons/fa";
 import ImageModal from "@/components/modals/ImageModal";
 
@@ -24,7 +25,16 @@ export default function CommentItem({
   onDelete,
   onReplyAdded,
 }) {
-  const { user } = useAuth(); // keep if you want to restrict edit/delete to the comment owner
+  const { user } = useAuth();
+  // RBAC: backend-driven action authority. NO ownership-only authority,
+  // NO hardcoded booleans. Edit / delete must be gated by canonical keys.
+  // TODO(backend-rbac): backend `MODULE_POLICY` does not yet expose a `home`
+  // module / `comment_update` / `comment_delete` actions. Until it does,
+  // edit and delete are fail-closed. See RBAC_MISSING_BACKEND_POLICY_KEYS.md.
+  // Do NOT reintroduce isAdmin / role / tier / access_level fallbacks.
+  const { can } = useCan(); // eslint-disable-line no-unused-vars
+  const canEdit = false;
+  const canDelete = false;
 
   const [replies, setReplies] = useState(comment.replies || []);
   const [showReplies, setShowReplies] = useState(false);
@@ -38,10 +48,9 @@ export default function CommentItem({
   const avatarUrl =
     buildImageUrl(author.profile_image_url || author.profile_image) || null;
 
-  const isMyComment =
-    user && (author.user_id ? user.id === author.user_id : false);
-
   const confirmDelete = async () => {
+    // Fail-closed: never call DELETE without the canonical action key.
+    if (!canDelete) return;
     try {
       await api.delete(
         `home/${hotelSlug}/posts/${postId}/comments/${comment.id}/`
@@ -114,27 +123,29 @@ export default function CommentItem({
                 <i className="bi bi-reply-fill"></i>
               </button>
 
-              {/* Edit (optionally show only if owner) */}
-              <button
-                type="button"
-                className="btn"
-                title="Edit"
-                onClick={() => setEditing(true)}
-                disabled={false /* or !isMyComment if you want to lock it */}
-              >
-                <i className="bi bi-pencil-fill"></i>
-              </button>
+              {/* Edit — RBAC: home.comment_update */}
+              {canEdit && (
+                <button
+                  type="button"
+                  className="btn"
+                  title="Edit"
+                  onClick={() => setEditing(true)}
+                >
+                  <i className="bi bi-pencil-fill"></i>
+                </button>
+              )}
 
-              {/* Delete (optionally show only if owner) */}
-              <button
-                type="button"
-                className="btn text-danger"
-                title="Delete"
-                onClick={() => setShowDelete(true)}
-                disabled={false /* or !isMyComment */}
-              >
-                <i className="bi bi-trash-fill"></i>
-              </button>
+              {/* Delete — RBAC: home.comment_delete */}
+              {canDelete && (
+                <button
+                  type="button"
+                  className="btn text-danger"
+                  title="Delete"
+                  onClick={() => setShowDelete(true)}
+                >
+                  <i className="bi bi-trash-fill"></i>
+                </button>
+              )}
             </div>
           </div>
 

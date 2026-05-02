@@ -36,13 +36,11 @@ export default function useLogin() {
         hotel_slug: data.hotel_slug,
         is_staff: data.is_staff || data.is_superuser,
         is_superuser: data.is_superuser,
-        // Canonical backend fields
-        tier: data.tier || data.access_level,
-        access_level: data.access_level,
-        role_slug: data.role_slug || data.role,
+        // Canonical RBAC payload — the ONLY authority source on the frontend.
         effective_navs: data.effective_navs || data.allowed_navs || [],
         navigation_items: data.navigation_items || [],
         rbac: data.rbac || {},
+        // Display-only fields. NEVER read these for permission decisions.
         department: data.department,
         role: data.role,
         profile_image_url: profileImageUrl,

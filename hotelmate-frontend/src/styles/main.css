@@ -1282,7 +1282,7 @@ body.terminal-mode,
 */
 /* Hotel Logo Display - No hero/header background, just logo */
 .hotel-logo-display {
-  display: flex;
+  display: none;
   justify-content: center;
 
   padding: 1.5rem 0 1rem 0;
