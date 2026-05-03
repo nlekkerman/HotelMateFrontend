@@ -33,11 +33,12 @@ function StaffDetails() {
   const canReadModule = can('staff_management', 'staff_read');
   const isViewingOwnProfile =
     !!authUser?.id && !!staff?.user?.id && authUser.id === staff.user.id;
-  // Edit gate: explicit RBAC permission, OR self-edit on own profile.
-  // No hidden backend flags, no implicit fallbacks. Backend remains the
-  // final 403 authority; this only controls UI affordance.
+  // Edit gate: explicit RBAC permission, OR self-edit on own profile when
+  // backend has set the dedicated `can_edit_self_profile` flag. Identity
+  // alone is NOT authority — the backend must opt the user in.
   const canEditProfile =
-    can('staff_management', 'staff_update_profile') || isViewingOwnProfile;
+    can('staff_management', 'staff_update_profile') ||
+    (isViewingOwnProfile && authUser?.can_edit_self_profile === true);
   const canViewAuthority = can('staff_management', 'authority_view');
   const canAssignDepartment = can('staff_management', 'authority_department_assign');
   const canAssignRole = can('staff_management', 'authority_role_assign');
