@@ -36,6 +36,10 @@ export default function useLogin() {
         hotel_slug: data.hotel_slug,
         is_staff: data.is_staff || data.is_superuser,
         is_superuser: data.is_superuser,
+        // Backend-driven self-edit gate. Used together with
+        // `staff_management.staff_update_profile` to decide whether a
+        // staff member may edit their own profile fields.
+        can_edit_self_profile: data.can_edit_self_profile === true,
         // Canonical RBAC payload — the ONLY authority source on the frontend.
         effective_navs: data.effective_navs || data.allowed_navs || [],
         navigation_items: data.navigation_items || [],
