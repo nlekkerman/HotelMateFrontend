@@ -5,6 +5,7 @@ import StaffWeeklyRoster from "@/components/staff/StaffWeeklyRoster";
 import StaffProfileCard from "./StaffProfileCard";
 import api from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
+import { useCan } from "@/rbac";
 import "./staffProfile.css";
 
 /**
@@ -34,7 +35,12 @@ export default function StaffProfilePage() {
   });
 
   const { user } = useAuth();
+  const { can } = useCan();
   const isOwnProfile = staff && user && staff.id === user.staff_id;
+  // Edit gate: explicit RBAC permission OR self-edit when backend allows it.
+  const canEditProfile =
+    can('staff_management', 'staff_update_profile') ||
+    (isOwnProfile && user?.can_edit_self_profile === true);
 
   if (isLoading) {
     return (
@@ -74,6 +80,7 @@ export default function StaffProfilePage() {
               <StaffProfileCard
                 staff={staff}
                 isOwnProfile={isOwnProfile}
+                canEditProfile={canEditProfile}
                 hotelSlug={hotelSlug}
               />
             </section>

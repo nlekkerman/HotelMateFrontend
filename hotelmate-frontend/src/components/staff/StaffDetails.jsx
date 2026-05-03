@@ -33,8 +33,12 @@ function StaffDetails() {
   const canReadModule = authUser?.rbac?.staff_management?.read === true;
   const isOwnProfile =
     !!authUser?.id && !!staff?.user?.id && authUser.id === staff.user.id;
+  // Edit gate: explicit RBAC permission OR self-edit when backend allows it.
+  // `user.can_edit_self_profile` is a backend-provided flag that controls
+  // whether a staff member is permitted to edit their own profile fields.
   const canEditProfile =
-    isOwnProfile || can('staff_management', 'staff_update_profile');
+    can('staff_management', 'staff_update_profile') ||
+    (isOwnProfile && authUser?.can_edit_self_profile === true);
   const canViewAuthority = can('staff_management', 'authority_view');
   const canAssignDepartment = can('staff_management', 'authority_department_assign');
   const canAssignRole = can('staff_management', 'authority_role_assign');

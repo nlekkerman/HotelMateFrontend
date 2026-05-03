@@ -25,7 +25,10 @@ const prettify = (v) =>
  * Staff Profile Card Component
  * Displays staff information with inline editing capabilities
  */
-export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
+export default function StaffProfileCard({ staff, isOwnProfile, canEditProfile, hotelSlug }) {
+  // Backwards-compat: if caller does not pass `canEditProfile`, fall back to
+  // ownership only (legacy behaviour). New callers should pass the full gate.
+  const canEdit = canEditProfile === undefined ? !!isOwnProfile : !!canEditProfile;
   const [departments, setDepartments] = useState([]);
   const [roles, setRoles] = useState([]);
   const [realTimeStaff, setRealTimeStaff] = useState(staff);
@@ -162,7 +165,7 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
             {displayStaff.role_detail?.name || "Staff"}
           </p>
 
-          {isOwnProfile && (
+          {canEdit && (
             <StaffImageUploader
               staff={displayStaff}
               hotelSlug={hotelSlug}
@@ -178,7 +181,7 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
             fieldKey="email"
             valueDisplay={staff.email}
             type="text"
-            canEdit={isOwnProfile}
+            canEdit={canEdit}
             onSave={handleSaveField}
           />
 
@@ -188,7 +191,7 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
             fieldKey="access_level"
             valueDisplay={prettify(staff.access_level)}
             type="text"
-            canEdit={isOwnProfile}
+            canEdit={canEdit}
             onSave={handleSaveField}
           />
 
@@ -198,7 +201,7 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
             fieldKey="phone_number"
             valueDisplay={staff.phone_number}
             type="text"
-            canEdit={isOwnProfile}
+            canEdit={canEdit}
             onSave={handleSaveField}
           />
 
@@ -209,7 +212,7 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
             valueDisplay={staff.department_detail?.name || departments.find(d => d.id === staff.department)?.name}
             type="select"
             options={departmentOptions}
-            canEdit={isOwnProfile}
+            canEdit={canEdit}
             onSave={handleSaveField}
           />
 
@@ -220,7 +223,7 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
             valueDisplay={staff.role_detail?.name || roles.find(r => r.id === staff.role)?.name}
             type="select"
             options={roleOptions}
-            canEdit={isOwnProfile}
+            canEdit={canEdit}
             onSave={handleSaveField}
           />
 
@@ -228,7 +231,7 @@ export default function StaffProfileCard({ staff, isOwnProfile, hotelSlug }) {
             label="Status"
             value={staff.is_active}
             fieldKey="is_active"
-            canEdit={isOwnProfile}
+            canEdit={canEdit}
             onSave={handleSaveField}
           />
 
