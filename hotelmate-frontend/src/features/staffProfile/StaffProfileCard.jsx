@@ -26,9 +26,11 @@ const prettify = (v) =>
  * Displays staff information with inline editing capabilities
  */
 export default function StaffProfileCard({ staff, isOwnProfile, canEditProfile, hotelSlug }) {
-  // Backwards-compat: if caller does not pass `canEditProfile`, fall back to
-  // ownership only (legacy behaviour). New callers should pass the full gate.
-  const canEdit = canEditProfile === undefined ? !!isOwnProfile : !!canEditProfile;
+  // Strict contract: this component does NOT infer permissions.
+  // The caller (e.g. StaffProfilePage) owns the gate and must pass
+  // `canEditProfile` explicitly. `isOwnProfile` is identity-only and is
+  // used solely for identity-bound UI (e.g. face self-enrollment CTA).
+  const canEdit = !!canEditProfile;
   const [departments, setDepartments] = useState([]);
   const [roles, setRoles] = useState([]);
   const [realTimeStaff, setRealTimeStaff] = useState(staff);
