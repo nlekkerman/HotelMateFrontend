@@ -32,19 +32,17 @@ function StaffDetails() {
   const { user: authUser } = useAuth();
   const canReadModule = can('staff_management', 'staff_read');
   // Identity check: compare StaffProfile PK to StaffProfile PK.
-  // `authUser.staff_id` is the logged-in user's StaffProfile id (set in
-  // useLogin from `data.staff_id`); `staff.id` is the StaffProfile id of
-  // the profile being viewed. Do NOT use `staff.user.id` here — that is
-  // the User PK, which is unrelated to `authUser.staff_id`.
-  const viewerStaffId = authUser?.staff_id ?? authUser?.id;
+  // `authUser.staff_id` is the logged-in user's StaffProfile id; `staff.id`
+  // is the StaffProfile id of the profile being viewed. Do NOT fall back
+  // to generic `authUser.id` — it has historically been overloaded and
+  // is the root cause of mistaken identity checks. Backend must emit
+  // `staff_id` explicitly.
   const isViewingOwnProfile =
-    !!viewerStaffId && !!staff?.id && Number(viewerStaffId) === Number(staff.id);
-  // Edit gate: explicit RBAC permission, OR self-edit on own profile when
-  // backend has set the dedicated `can_edit_self_profile` flag. Identity
-  // alone is NOT authority — the backend must opt the user in.
+    !!authUser?.staff_id && !!staff?.id && Number(authUser.staff_id) === Number(staff.id);
+  // Edit gate: explicit RBAC permission OR self-edit on own profile.
+  // No hidden backend flags. Backend remains the final 403 authority.
   const canEditProfile =
-    can('staff_management', 'staff_update_profile') ||
-    (isViewingOwnProfile && authUser?.can_edit_self_profile === true);
+    can('staff_management', 'staff_update_profile') || isViewingOwnProfile;
   const canViewAuthority = can('staff_management', 'authority_view');
   const canAssignDepartment = can('staff_management', 'authority_department_assign');
   const canAssignRole = can('staff_management', 'authority_role_assign');
