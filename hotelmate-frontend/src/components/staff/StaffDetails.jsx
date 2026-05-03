@@ -31,8 +31,14 @@ function StaffDetails() {
   const { can } = useCan();
   const { user: authUser } = useAuth();
   const canReadModule = can('staff_management', 'staff_read');
+  // Identity check: compare StaffProfile PK to StaffProfile PK.
+  // `authUser.staff_id` is the logged-in user's StaffProfile id (set in
+  // useLogin from `data.staff_id`); `staff.id` is the StaffProfile id of
+  // the profile being viewed. Do NOT use `staff.user.id` here — that is
+  // the User PK, which is unrelated to `authUser.staff_id`.
+  const viewerStaffId = authUser?.staff_id ?? authUser?.id;
   const isViewingOwnProfile =
-    !!authUser?.id && !!staff?.user?.id && authUser.id === staff.user.id;
+    !!viewerStaffId && !!staff?.id && Number(viewerStaffId) === Number(staff.id);
   // Edit gate: explicit RBAC permission, OR self-edit on own profile when
   // backend has set the dedicated `can_edit_self_profile` flag. Identity
   // alone is NOT authority — the backend must opt the user in.
