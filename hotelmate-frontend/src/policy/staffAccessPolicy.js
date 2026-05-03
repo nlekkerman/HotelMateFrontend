@@ -6,6 +6,8 @@
  * NO super_staff_admin bypass - backend populates effective_navs for all tiers.
  */
 
+import { can as canAction } from "@/rbac/can";
+
 // Modules that do NOT have a nav slug exposed via `effective_navs`.
 // For these, route access is gated by `user.rbac.<module>.visible === true`
 // instead of nav membership. Backend remains the final 403 authority.
@@ -143,6 +145,19 @@ export function canAccessStaffPath({ pathname, user, requiredSlug }) {
       redirectTo: fallback,
       reason: `Access denied: User lacks '${requiredNavSlug}' permission for ${pathname}`
     };
+  }
+
+  // Capability-level gate (defense-in-depth) for surfaces whose landing
+  // page would otherwise 403. The nav slug grants visibility; the action
+  // key grants the actual read capability the page needs.
+  if (requiredNavSlug === 'staff_management') {
+    if (!canAction(user, 'staff_management', 'staff_read')) {
+      return {
+        allowed: false,
+        redirectTo: fallback,
+        reason: `Access denied: User lacks 'staff_management.staff_read' for ${pathname}`
+      };
+    }
   }
 
   // Access granted

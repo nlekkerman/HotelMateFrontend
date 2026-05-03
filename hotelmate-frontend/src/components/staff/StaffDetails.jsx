@@ -30,15 +30,14 @@ function StaffDetails() {
   // Holding an authority_* key alone must NOT grant profile-field edits.
   const { can } = useCan();
   const { user: authUser } = useAuth();
-  const canReadModule = authUser?.rbac?.staff_management?.read === true;
-  const isOwnProfile =
+  const canReadModule = can('staff_management', 'staff_read');
+  const isViewingOwnProfile =
     !!authUser?.id && !!staff?.user?.id && authUser.id === staff.user.id;
-  // Edit gate: explicit RBAC permission OR self-edit when backend allows it.
-  // `user.can_edit_self_profile` is a backend-provided flag that controls
-  // whether a staff member is permitted to edit their own profile fields.
+  // Edit gate: explicit RBAC permission, OR self-edit on own profile.
+  // No hidden backend flags, no implicit fallbacks. Backend remains the
+  // final 403 authority; this only controls UI affordance.
   const canEditProfile =
-    can('staff_management', 'staff_update_profile') ||
-    (isOwnProfile && authUser?.can_edit_self_profile === true);
+    can('staff_management', 'staff_update_profile') || isViewingOwnProfile;
   const canViewAuthority = can('staff_management', 'authority_view');
   const canAssignDepartment = can('staff_management', 'authority_department_assign');
   const canAssignRole = can('staff_management', 'authority_role_assign');

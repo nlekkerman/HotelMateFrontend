@@ -30,6 +30,10 @@ export default function StaffProfileCard({ staff, isOwnProfile, canEditProfile, 
   // The caller (e.g. StaffProfilePage) owns the gate and must pass
   // `canEditProfile` explicitly. `isOwnProfile` is identity-only and is
   // used solely for identity-bound UI (e.g. face self-enrollment CTA).
+  if (canEditProfile === undefined && process.env.NODE_ENV !== 'production') {
+    // eslint-disable-next-line no-console
+    console.warn('StaffProfileCard: missing canEditProfile prop — caller must compute this explicitly.');
+  }
   const canEdit = !!canEditProfile;
   const [departments, setDepartments] = useState([]);
   const [roles, setRoles] = useState([]);

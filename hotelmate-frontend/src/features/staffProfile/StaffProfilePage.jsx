@@ -36,11 +36,12 @@ export default function StaffProfilePage() {
 
   const { user } = useAuth();
   const { can } = useCan();
-  const isOwnProfile = staff && user && staff.id === user.staff_id;
-  // Edit gate: explicit RBAC permission OR self-edit when backend allows it.
+  const isViewingOwnProfile = !!(staff && user && staff.id === user.staff_id);
+  // Edit gate: explicit RBAC permission, OR self-edit on own profile.
+  // No hidden backend flags, no implicit fallbacks. Backend remains the
+  // final 403 authority; this only controls UI affordance.
   const canEditProfile =
-    can('staff_management', 'staff_update_profile') ||
-    (isOwnProfile && user?.can_edit_self_profile === true);
+    can('staff_management', 'staff_update_profile') || isViewingOwnProfile;
 
   if (isLoading) {
     return (
@@ -79,7 +80,7 @@ export default function StaffProfilePage() {
             <section className="staff-profile-section staff-card-section">
               <StaffProfileCard
                 staff={staff}
-                isOwnProfile={isOwnProfile}
+                isOwnProfile={isViewingOwnProfile}
                 canEditProfile={canEditProfile}
                 hotelSlug={hotelSlug}
               />

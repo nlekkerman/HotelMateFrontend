@@ -1,4 +1,5 @@
 import { useAuth } from "@/context/AuthContext";
+import { can as canAction } from "@/rbac/can";
 import {
   NAVIGATION_CATEGORIES,
   getCategoryForNavItem,
@@ -56,8 +57,20 @@ export function useNavigation() {
 
 
   
-  // Backend controls nav visibility via navigation_items and effective_navs
-  const finalVisibleItems = allNavItems;
+  // Backend controls nav visibility via navigation_items and effective_navs.
+  // Additional capability gates (defense-in-depth): a nav slug must not be
+  // shown if its landing page would 403. For `staff_management` the landing
+  // page requires `staff_read`; hide the entry when the user lacks it so
+  // there are no broken-UX entry points. Superusers bypass via `can()`'s
+  // backend-derived rbac map (no client-side superuser shortcut here).
+  const isSuperUser = !!user?.is_superuser;
+  const finalVisibleItems = allNavItems.filter((item) => {
+    if (item.slug === 'staff_management') {
+      if (isSuperUser) return true;
+      return canAction(user, 'staff_management', 'staff_read');
+    }
+    return true;
+  });
 
   // Group navigation items by category
   const groupItemsByCategory = (items) => {

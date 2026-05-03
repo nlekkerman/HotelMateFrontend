@@ -14,10 +14,10 @@ export default function Staff() {
   const { hotelSlug } = useParams();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  // Phase 1 RBAC: backend-driven module/tab visibility via `user.rbac.staff_management`.
-  // Top-level read flag gates the list/detail surface; per-action keys gate tabs.
-  const canReadModule = user?.rbac?.staff_management?.read === true;
+  // Phase 1 RBAC: backend-driven module/tab visibility via canonical action keys.
+  // Top-level read gate uses `staff_read`; per-action keys gate tabs.
   const { can, canAny } = useCan();
+  const canReadModule = can('staff_management', 'staff_read');
   const canSeePackages = can('staff_management', 'registration_package_read');
   const canSeePending = can('staff_management', 'pending_registration_read');
   const canSeeDepartmentsRoles = canAny('staff_management', ['department_read', 'role_read']);
