@@ -26,6 +26,18 @@
   --color-button-hover: #1f6391;
   --color-link: #2980b9;
   --color-link-hover: #1f6391;
+
+  /* Demo disclaimer banner height (App.jsx top banner) */
+  --demo-banner-h: 36px;
+}
+
+/* Push fixed-position chrome below the demo banner */
+.navbar.fixed-top {
+  top: var(--demo-banner-h) !important;
+}
+.desktop-launcher-root,
+.dl-panel {
+  top: var(--demo-banner-h) !important;
 }
 
 a {

@@ -22,15 +22,19 @@ export default function App() {
           aria-label="Demo disclaimer"
           style={{
             width: '100%',
+            height: 'var(--demo-banner-h, 36px)',
             background: '#ffffff',
-            color: '#222',
+            color: 'rgba(220, 38, 38, 0.6)',
             borderBottom: '1px solid #e5e7eb',
-            padding: '8px 16px',
+            padding: '0 16px',
             fontSize: '12px',
-            lineHeight: 1.4,
+            lineHeight: 1.3,
             textAlign: 'center',
             position: 'relative',
             zIndex: 2000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <strong>HotelsMates</strong> is a self-directed SaaS concept built for portfolio review.
