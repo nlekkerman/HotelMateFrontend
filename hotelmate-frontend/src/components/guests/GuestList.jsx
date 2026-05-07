@@ -43,7 +43,7 @@ const GuestList = ({ hotelIdentifier: hotelIdentifierProp } = {}) => {
     }
     async function fetchGuests() {
       try {
-        const res = await api.get(`/guests/${hotelIdentifier}/guests/`);
+        const res = await api.get(`/staff/hotel/${hotelIdentifier}/guests/`);
         setGuests(res.data.results);
       } catch {
         setError("Failed to load guests.");

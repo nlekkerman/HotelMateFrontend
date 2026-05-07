@@ -37,7 +37,7 @@ const GuestEdit = () => {
     async function fetchGuest() {
       try {
         const res = await api.get(
-          `/guests/${hotelIdentifier}/guests/${guestId}/`
+          `/staff/hotel/${hotelIdentifier}/guests/${guestId}/`
         );
         setFormData(res.data);
       } catch {
@@ -57,7 +57,7 @@ const GuestEdit = () => {
     e.preventDefault();
     if (!canGuestsUpdate) return;
     try {
-      await api.put(`/guests/${hotelIdentifier}/guests/${guestId}/`, formData);
+      await api.put(`/staff/hotel/${hotelIdentifier}/guests/${guestId}/`, formData);
       navigate(`/${hotelIdentifier}/guests`);
     } catch {
       setError("Failed to update guest.");
