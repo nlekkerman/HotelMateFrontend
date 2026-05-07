@@ -17,6 +17,25 @@ export default function App() {
   return (
     <AppProviders>
       <GlobalErrorBoundary>
+        <div
+          role="note"
+          aria-label="Demo disclaimer"
+          style={{
+            width: '100%',
+            background: '#ffffff',
+            color: '#222',
+            borderBottom: '1px solid #e5e7eb',
+            padding: '8px 16px',
+            fontSize: '12px',
+            lineHeight: 1.4,
+            textAlign: 'center',
+            position: 'relative',
+            zIndex: 2000,
+          }}
+        >
+          <strong>HotelsMates</strong> is a self-directed SaaS concept built for portfolio review.
+          {' '}Demo data only — no real hotel, guest, staff, or payment data.
+        </div>
         <NetworkHandler />
         <MessengerWidget position="bottom-right" />
         <AppLayoutShell
