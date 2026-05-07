@@ -30,7 +30,7 @@ export default function App() {
             fontSize: '12px',
             lineHeight: 1.3,
             textAlign: 'center',
-            position: 'sticky',
+            position: 'fixed',
             top: 0,
             zIndex: 2000,
             display: 'flex',

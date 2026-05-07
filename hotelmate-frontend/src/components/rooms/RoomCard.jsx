@@ -88,7 +88,7 @@ const RoomCard = ({ room }) => {
   return (
     <div className="col">
       <div
-        className="card h-100 shadow-sm position-relative"
+        className="card h-100 position-relative room-card-glass"
         style={{ cursor: "pointer" }}
         onClick={() =>
           navigate(

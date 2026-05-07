@@ -2690,3 +2690,93 @@ body.terminal-mode,
 .card-header.bg-danger.text-white {
   animation: managerGlow 3s ease-in-out infinite;
 }
+
+/* ================================================================
+   ROOM CARD � Blue/white glassmorphism (matches Attendance/DesktopLauncher)
+   Applied via .room-card-glass on the card root.
+   ================================================================ */
+.room-card-glass {
+  position: relative;
+  border: 1px solid rgba(147, 197, 253, 0.55) !important;
+  border-radius: 18px !important;
+  background: linear-gradient(
+    135deg,
+    rgba(219, 234, 254, 0.85) 0%,
+    rgba(191, 219, 254, 0.75) 50%,
+    rgba(239, 246, 255, 0.85) 100%
+  ) !important;
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow:
+    0 12px 30px rgba(30, 64, 175, 0.18),
+    0 3px 8px rgba(30, 64, 175, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+/* Top glossy sheen */
+.room-card-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 65% 0;
+  border-radius: 18px 18px 40% 40% / 18px 18px 60% 60%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.18) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Diagonal gloss streak */
+.room-card-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0) 35%,
+    rgba(255, 255, 255, 0.22) 50%,
+    rgba(255, 255, 255, 0) 65%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.room-card-glass:hover {
+  transform: translateY(-2px);
+  border-color: rgba(96, 165, 250, 0.7) !important;
+  box-shadow:
+    0 18px 40px rgba(30, 64, 175, 0.28),
+    0 5px 12px rgba(30, 64, 175, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+.room-card-glass:hover::after { opacity: 1; }
+
+/* Keep all card content above the gloss layers */
+.room-card-glass > .card-body,
+.room-card-glass > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Fallback: solid translucent background where backdrop-filter is unsupported */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .room-card-glass {
+    background: linear-gradient(
+      135deg,
+      rgba(219, 234, 254, 0.98) 0%,
+      rgba(191, 219, 254, 0.98) 50%,
+      rgba(239, 246, 255, 0.98) 100%
+    ) !important;
+  }
+}
