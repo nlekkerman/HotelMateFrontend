@@ -401,7 +401,7 @@ const SuperUser = () => {
   };
 
   return (
-    <Container fluid className="py-4">
+    <Container fluid className="py-4 super-user-page">
       <Row>
         <Col lg={10} className="mx-auto">
           <div className="d-flex align-items-center justify-content-between mb-4">
