@@ -1,26 +1,32 @@
 // src/pages/staff/RoomBookingsHub.jsx
 // Canonical entry for the Room Bookings module.
 // Replaces /bookings and /staff/hotel/:hotelSlug/booking-management.
-import React from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
-import BookingList from '@/components/staff/bookings/BookingList';
-import BookingManagementDashboard from '@/components/bookings/BookingManagementDashboard';
-import './BookingManagement.css';
+import React from "react";
+import { useParams, useSearchParams } from "react-router-dom";
+import BookingList from "@/components/staff/bookings/BookingList";
+import BookingManagementDashboard from "@/components/bookings/BookingManagementDashboard";
+import "./BookingManagement.css";
 
 const TABS = [
-  { key: 'list', label: 'Bookings', icon: 'bi-calendar-check' },
-  { key: 'settings', label: 'Booking Settings', icon: 'bi-gear' },
+  { key: "list", label: "Bookings", icon: "bi-calendar-check" },
+  { key: "settings", label: "Booking Settings", icon: "bi-gear" },
 ];
 
 export default function RoomBookingsHub() {
   const { hotelSlug } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'list';
-
+  const activeTab = searchParams.get("tab") || "list";
+  const hotelName = hotelSlug
+    ? hotelSlug
+        .split("-")
+        .filter(Boolean)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ")
+    : "Hotel";
   const selectTab = (key) => {
     const next = new URLSearchParams(searchParams);
-    if (key === 'list') next.delete('tab');
-    else next.set('tab', key);
+    if (key === "list") next.delete("tab");
+    else next.set("tab", key);
     setSearchParams(next, { replace: true });
   };
 
@@ -31,7 +37,9 @@ export default function RoomBookingsHub() {
           <div className="d-flex justify-content-between align-items-center py-3">
             <div>
               <h1 className="h3 mb-1">Room Bookings</h1>
-              <p className="text-muted mb-0">Manage reservations, guest stays, and booking policies</p>
+              <p className="text-muted mb-0">
+                Manage reservations, guest stays, and booking policies
+              </p>
             </div>
           </div>
 
@@ -40,7 +48,7 @@ export default function RoomBookingsHub() {
               <li className="nav-item" key={t.key}>
                 <button
                   type="button"
-                  className={`nav-link ${activeTab === t.key ? 'active' : ''}`}
+                  className={`nav-link ${activeTab === t.key ? "active" : ""}`}
                   onClick={() => selectTab(t.key)}
                   role="tab"
                 >
@@ -54,8 +62,10 @@ export default function RoomBookingsHub() {
       </div>
 
       <div className="booking-management-content">
-        {activeTab === 'list' && <BookingList hotelSlug={hotelSlug} />}
-        {activeTab === 'settings' && <BookingManagementDashboard hotelSlug={hotelSlug} />}
+        {activeTab === "list" && <BookingList hotelSlug={hotelSlug} />}
+        {activeTab === "settings" && (
+          <BookingManagementDashboard hotelSlug={hotelSlug} />
+        )}
       </div>
     </div>
   );

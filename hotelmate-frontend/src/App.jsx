@@ -40,7 +40,7 @@ export default function App() {
             justifyContent: 'center',
           }}
         >
-          <strong>HotelsMates</strong> is a self-directed SaaS concept built for portfolio review.
+          <strong>HotelsMates </strong> is a self-directed SaaS concept built for portfolio review.
           {' '}Demo data only — no real hotel, guest, staff, or payment data.
         </div>
         <NetworkHandler />
