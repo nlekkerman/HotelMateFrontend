@@ -23,7 +23,13 @@ export default function RoomsHub() {
   // RoomManagementPage originally had its own sub-tab for room-types vs rooms;
   // keep that same behaviour inside the management tab via a secondary query param.
   const managementSubTab = searchParams.get('mgmt') || 'room-types';
-
+const hotelName = hotelSlug
+    ? hotelSlug
+        .split("-")
+        .filter(Boolean)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ")
+    : "Hotel";
   const selectTab = (key) => {
     const next = new URLSearchParams(searchParams);
     if (key === 'list') next.delete('tab');
@@ -46,7 +52,7 @@ export default function RoomsHub() {
         <div className="container-fluid">
           <div className="d-flex justify-content-between align-items-center py-3">
             <div>
-              <h1 className="h3 mb-1">Rooms</h1>
+              <h1 className="h3 mb-1"><strong>{hotelName}</strong> Rooms</h1>
               <p className="text-muted mb-0">Room inventory, live status and in-house guests</p>
             </div>
           </div>
@@ -71,7 +77,7 @@ export default function RoomsHub() {
 
       <div className="room-management-content">
         <div className="container-fluid">
-          {activeTab === 'list' && <RoomList />}
+          {activeTab === 'list' && <RoomList hotelSlug={hotelSlug} />}
           {activeTab === 'management' && (
             <div>
               <ul className="nav nav-pills mb-3">
@@ -98,7 +104,7 @@ export default function RoomsHub() {
               {managementSubTab === 'rooms' && <RoomsTab hotelSlug={hotelSlug} />}
             </div>
           )}
-          {activeTab === 'guests' && <GuestList />}
+          {activeTab === 'guests' && <GuestList hotelSlug={hotelSlug} />}
         </div>
       </div>
     </div>
