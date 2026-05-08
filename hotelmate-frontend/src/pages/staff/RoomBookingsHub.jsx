@@ -36,7 +36,7 @@ export default function RoomBookingsHub() {
         <div className="container-fluid">
           <div className="d-flex justify-content-between align-items-center py-3">
             <div>
-              <h1 className="h3 mb-1">Room Bookings</h1>
+              <h1 className="h3 mb-1"> {hotelName} Room Bookings</h1>
               <p className="text-muted mb-0">
                 Manage reservations, guest stays, and booking policies
               </p>
