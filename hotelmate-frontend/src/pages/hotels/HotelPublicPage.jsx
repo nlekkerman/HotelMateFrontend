@@ -301,8 +301,8 @@ const HotelPublicPage = () => {
       className={`hotel-public-page page-style-${currentPreset} ${canEditPublicPage ? 'has-preset-selector' : ''}`}
       data-preset={presetValue}
     >
-      {/* Preset Selector — own-hotel admin staff only */}
-      {canEditPublicPage && (
+      {/* Preset Selector — superuser only */}
+      {user?.is_superuser && (
         <PresetSelector 
           currentVariant={getCurrentVariant()}
           onVariantChange={handleStyleChange}

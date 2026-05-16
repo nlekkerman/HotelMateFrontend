@@ -2913,7 +2913,7 @@
 .footer--preset-1 .footer__hotel-name,
 .footer--preset-1 .footer__location,
 .footer--preset-1 .footer__copyright {
-  color: red !important;
+  color: #1a1a1a;
 }
   /* Add vertical line separators between children (except last) */
   .footer__content-centered > *:not(:last-child)::after {
