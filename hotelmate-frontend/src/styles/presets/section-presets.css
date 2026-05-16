@@ -234,7 +234,6 @@
 
 /* Footer Section - Preset 1 */
 .footer--preset-1 {
-  background-color: #ffffff;
   background-image: linear-gradient(
     135deg,
     rgba(var(--preset-1-tint), 0.1),
@@ -2909,6 +2908,13 @@
     gap: 3rem;
   }
 
+
+/* Fix: Ensure footer preset-1 text is visible on light background */
+.footer--preset-1 .footer__hotel-name,
+.footer--preset-1 .footer__location,
+.footer--preset-1 .footer__copyright {
+  color: red !important;
+}
   /* Add vertical line separators between children (except last) */
   .footer__content-centered > *:not(:last-child)::after {
     content: "";
