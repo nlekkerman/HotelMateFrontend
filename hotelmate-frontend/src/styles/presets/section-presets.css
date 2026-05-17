@@ -1207,6 +1207,7 @@
 .footer--preset-1 {
   border-top: 2px solid rgba(189, 220, 255, 0.3);
   padding: 2rem 0;
+  padding-inline: clamp(1rem, 4vw, 3rem);
   color: #1a1a1a;
   box-shadow: var(--shadow-card);
 }
@@ -1255,11 +1256,16 @@
   color: rgba(189, 220, 255, 0.6);
 }
 
+.footer--preset-1 .footer__content-centered {
+  text-align: center;
+}
+
 /* ── Preset 2: Dark & Elegant ───────────────────────────────────────────── */
 /* Background set in the background block above. Text must be light on dark. */
 .footer--preset-2 {
   border-top: 3px solid rgba(242, 201, 76, 0.3);
   padding: 2rem 0;
+  padding-inline: clamp(1rem, 4vw, 3rem);
   color: #f8f9fa;
 }
 
@@ -1270,6 +1276,7 @@
   font-weight: 700;
   letter-spacing: 0.03em;
   color: var(--gold);
+  margin-bottom: 0.75rem;
 }
 
 .footer--preset-2 .footer__text,
@@ -1303,11 +1310,19 @@
   border-top: 1px solid rgba(242, 201, 76, 0.2);
   margin-top: 2rem;
   padding-top: 1rem;
+  text-align: center;
   color: #b7bcc8;
 }
 
 .footer--preset-2 .footer__minimal-divider {
   color: rgba(242, 201, 76, 0.4);
+}
+
+.footer--preset-2 .footer__social-links {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
 }
 
 /* ── Preset 2 heading class overrides ───────────────────────────────────── */
@@ -1339,6 +1354,7 @@ footer.footer--preset-2 h6 {
 .footer--preset-3 {
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   padding: 2rem 0;
+  padding-inline: clamp(1rem, 4vw, 3rem);
   color: #1a1a1a;
 }
 
@@ -1389,10 +1405,20 @@ footer.footer--preset-2 h6 {
   color: rgba(0, 0, 0, 0.2);
 }
 
+.footer--preset-3 .footer__minimal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  text-align: center;
+}
+
 /* ── Preset 4: Vibrant & Playful ────────────────────────────────────────── */
 .footer--preset-4 {
   border-top: 3px solid var(--accent-blue);
   padding: 2rem 0;
+  padding-inline: clamp(1rem, 4vw, 3rem);
   color: #1a1a1a;
   box-shadow: var(--shadow-mid);
 }
@@ -1461,6 +1487,8 @@ footer.footer--preset-2 h6 {
   font-family: var(--font-playful-body);
   font-size: 0.9rem;
   margin: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .footer--preset-4 .footer__bottom,
@@ -1481,6 +1509,7 @@ footer.footer--preset-2 h6 {
 .footer--preset-5 {
   border-top: 3px solid rgba(48, 225, 124, 0.4);
   padding: 2rem 0;
+  padding-inline: clamp(1rem, 4vw, 3rem);
   color: #1a1a1a;
   box-shadow: var(--shadow-soft);
 }
@@ -1492,6 +1521,7 @@ footer.footer--preset-2 h6 {
   font-weight: 600;
   letter-spacing: -0.5px;
   color: var(--accent-green);
+  margin-bottom: 0.75rem;
 }
 
 .footer--preset-5 .footer__text,
@@ -1542,6 +1572,23 @@ footer.footer--preset-2 h6 {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+/* Strip Bootstrap button chrome from Preset 5 quick-link items */
+.footer--preset-5 .footer__link.btn {
+  display: block;
+  padding: 0.2rem 0;
+  background: none;
+  border: none;
+  text-align: left;
+  width: 100%;
+  box-shadow: none;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.footer--preset-5 .footer__bottom-structured {
+  text-align: left;
 }
 
 /* ========================================
@@ -3268,7 +3315,7 @@ footer.footer--preset-2 h6 {
   .footer__content-centered {
     flex-direction: row;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
     gap: 3rem;
   }
 
