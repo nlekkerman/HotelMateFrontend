@@ -13,7 +13,7 @@ import { Row, Col } from 'react-bootstrap';
 const DEMO_DISCLAIMER = 'HotelsMates is a self-directed SaaS concept built for portfolio review. Demo data only — no real hotel, guest, staff, or payment data.';
 
 const FooterSectionPreset = ({ section, hotel }) => {
-  const variant = section?.style_variant ?? 1; // Default to Preset 1
+  const variant = section?.style_variant ?? hotel?.preset ?? 1; // hotel.preset used when no footer section exists
   const footerData = section?.footer_data || {};
   
   // Use hotel data if footer_data is not available

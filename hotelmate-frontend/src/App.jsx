@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useMediaQuery } from 'react-responsive';
 import '@/styles/main.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -10,6 +11,44 @@ import AppLayoutShell from '@/components/app/AppLayoutShell';
 import NetworkHandler from '@/components/offline/NetworkHandler';
 import MessengerWidget from '@/staff_chat/components/MessengerWidget';
 
+/**
+ * DemoBanner — shown only on staff pages.
+ * Must be a separate component so useLocation() is called inside BrowserRouter context
+ * (BrowserRouter is provided by AppProviders, not in App itself).
+ */
+function DemoBanner() {
+  const { pathname } = useLocation();
+  if (!pathname.startsWith('/staff/')) return null;
+  return (
+    <div
+      role="note"
+      aria-label="Demo disclaimer"
+      style={{
+        width: '100%',
+        height: 'var(--demo-banner-h, 36px)',
+        background: '#ffffff',
+        color: 'rgba(220, 38, 38, 0.6)',
+        borderBottom: '1px solid #e5e7eb',
+        padding: '0 16px',
+        fontSize: '12px',
+        lineHeight: 1.3,
+        textAlign: 'center',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 2000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <strong>HotelsMates </strong> is a self-directed SaaS concept built for portfolio review.
+      {' '}Demo data only — no real hotel, guest, staff, or payment data.
+    </div>
+  );
+}
+
 export default function App() {
   const [collapsed, setCollapsed] = useState(false);
   const isMobile = useMediaQuery({ maxWidth: 991 });
@@ -17,32 +56,7 @@ export default function App() {
   return (
     <AppProviders>
       <GlobalErrorBoundary>
-        <div
-          role="note"
-          aria-label="Demo disclaimer"
-          style={{
-            width: '100%',
-            height: 'var(--demo-banner-h, 36px)',
-            background: '#ffffff',
-            color: 'rgba(220, 38, 38, 0.6)',
-            borderBottom: '1px solid #e5e7eb',
-            padding: '0 16px',
-            fontSize: '12px',
-            lineHeight: 1.3,
-            textAlign: 'center',
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 2000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <strong>HotelsMates </strong> is a self-directed SaaS concept built for portfolio review.
-          {' '}Demo data only — no real hotel, guest, staff, or payment data.
-        </div>
+        <DemoBanner />
         <NetworkHandler />
         <MessengerWidget position="bottom-right" />
         <AppLayoutShell
