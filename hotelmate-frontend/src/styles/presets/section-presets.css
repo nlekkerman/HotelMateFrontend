@@ -1198,40 +1198,315 @@
 
 /* ========================================
    FOOTER SECTION PRESETS (5 variants)
+   Derived from the same design tokens used by
+   Hero, Gallery, List, News, and Rooms presets.
    ======================================== */
 
-/* Preset 1: Clean & Modern */
+/* ── Preset 1: Clean & Modern ───────────────────────────────────────────── */
 .footer--preset-1 {
   border-top: 2px solid rgba(189, 220, 255, 0.3);
   padding: 2rem 0;
   color: #1a1a1a;
+  box-shadow: var(--shadow-card);
 }
 
-/* Preset 2: Dark & Elegant */
+.footer--preset-1 .footer__hotel-name,
+.footer--preset-1 .footer__section-title,
+.footer--preset-1 .footer__heading {
+  font-family: var(--font-clean-heading);
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.footer--preset-1 .footer__text,
+.footer--preset-1 .footer__location,
+.footer--preset-1 .footer__copyright,
+.footer--preset-1 .footer__copyright-small,
+.footer--preset-1 .footer__minimal-text,
+.footer--preset-1 .footer__minimal-copyright,
+.footer--preset-1 .footer__text-small {
+  font-family: var(--font-clean-body);
+  color: #1a1a1a;
+}
+
+.footer--preset-1 .footer__link,
+.footer--preset-1 .footer__social-link,
+.footer--preset-1 .footer__social-btn {
+  color: var(--preset-1-primary);
+}
+
+.footer--preset-1 .footer__link:hover,
+.footer--preset-1 .footer__social-link:hover,
+.footer--preset-1 .footer__social-btn:hover {
+  color: var(--preset-1-accent);
+}
+
+.footer--preset-1 .footer__bottom,
+.footer--preset-1 .footer__bottom-structured,
+.footer--preset-1 .footer__bottom-colorful {
+  border-top: 1px solid rgba(189, 220, 255, 0.3);
+  margin-top: 2rem;
+  padding-top: 1rem;
+  color: #1a1a1a;
+}
+
+.footer--preset-1 .footer__minimal-divider {
+  color: rgba(189, 220, 255, 0.6);
+}
+
+/* ── Preset 2: Dark & Elegant ───────────────────────────────────────────── */
+/* Background set in the background block above. Text must be light on dark. */
 .footer--preset-2 {
   border-top: 3px solid rgba(242, 201, 76, 0.3);
+  padding: 2rem 0;
+  color: #f8f9fa;
+}
+
+.footer--preset-2 .footer__hotel-name,
+.footer--preset-2 .footer__section-title,
+.footer--preset-2 .footer__heading {
+  font-family: var(--font-elegant-heading);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--gold);
+}
+
+.footer--preset-2 .footer__text,
+.footer--preset-2 .footer__location,
+.footer--preset-2 .footer__copyright,
+.footer--preset-2 .footer__copyright-small,
+.footer--preset-2 .footer__minimal-text,
+.footer--preset-2 .footer__minimal-copyright,
+.footer--preset-2 .footer__text-small {
+  font-family: var(--font-elegant-body);
+  color: #f8f9fa;
+}
+
+.footer--preset-2 .footer__link,
+.footer--preset-2 .footer__social-link,
+.footer--preset-2 .footer__social-btn {
+  color: var(--gold);
+  border-color: rgba(242, 201, 76, 0.35);
+}
+
+.footer--preset-2 .footer__link:hover,
+.footer--preset-2 .footer__social-link:hover,
+.footer--preset-2 .footer__social-btn:hover {
+  color: var(--preset-2-accent);
+  background: rgba(242, 201, 76, 0.1);
+}
+
+.footer--preset-2 .footer__bottom,
+.footer--preset-2 .footer__bottom-structured,
+.footer--preset-2 .footer__bottom-colorful {
+  border-top: 1px solid rgba(242, 201, 76, 0.2);
+  margin-top: 2rem;
+  padding-top: 1rem;
+  color: #b7bcc8;
+}
+
+.footer--preset-2 .footer__minimal-divider {
+  color: rgba(242, 201, 76, 0.4);
+}
+
+/* ── Preset 3: Minimal & Sleek ──────────────────────────────────────────── */
+.footer--preset-3 {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
   padding: 2rem 0;
   color: #1a1a1a;
 }
 
-/* Preset 3: Minimal & Sleek */
-.footer--preset-3 {
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  padding: 2rem 0;
+.footer--preset-3 .footer__hotel-name,
+.footer--preset-3 .footer__section-title,
+.footer--preset-3 .footer__heading {
+  font-family: var(--font-minimal-heading);
+  font-weight: 300;
+  letter-spacing: 2px;
+  color: #1a1a1a;
 }
 
-/* Preset 4: Vibrant & Playful */
+.footer--preset-3 .footer__text,
+.footer--preset-3 .footer__location,
+.footer--preset-3 .footer__copyright,
+.footer--preset-3 .footer__copyright-small,
+.footer--preset-3 .footer__minimal-text,
+.footer--preset-3 .footer__minimal-copyright,
+.footer--preset-3 .footer__text-small {
+  font-family: var(--font-minimal-body);
+  font-weight: 300;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.footer--preset-3 .footer__link,
+.footer--preset-3 .footer__social-link,
+.footer--preset-3 .footer__social-btn {
+  color: rgba(0, 0, 0, 0.55);
+  font-weight: 300;
+}
+
+.footer--preset-3 .footer__link:hover,
+.footer--preset-3 .footer__social-link:hover,
+.footer--preset-3 .footer__social-btn:hover {
+  color: #1a1a1a;
+}
+
+.footer--preset-3 .footer__bottom,
+.footer--preset-3 .footer__bottom-structured,
+.footer--preset-3 .footer__bottom-colorful {
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  margin-top: 2rem;
+  padding-top: 1rem;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.footer--preset-3 .footer__minimal-divider {
+  color: rgba(0, 0, 0, 0.2);
+}
+
+/* ── Preset 4: Vibrant & Playful ────────────────────────────────────────── */
 .footer--preset-4 {
   border-top: 3px solid var(--accent-blue);
   padding: 2rem 0;
   color: #1a1a1a;
+  box-shadow: var(--shadow-mid);
 }
 
-/* Preset 5: Professional & Structured */
+.footer--preset-4 .footer__hotel-name,
+.footer--preset-4 .footer__section-title,
+.footer--preset-4 .footer__heading {
+  font-family: var(--font-playful-heading);
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.footer--preset-4 .footer__text,
+.footer--preset-4 .footer__location,
+.footer--preset-4 .footer__copyright,
+.footer--preset-4 .footer__copyright-small,
+.footer--preset-4 .footer__minimal-text,
+.footer--preset-4 .footer__minimal-copyright,
+.footer--preset-4 .footer__text-small {
+  font-family: var(--font-playful-body);
+  color: #1a1a1a;
+}
+
+.footer--preset-4 .footer__link,
+.footer--preset-4 .footer__social-link,
+.footer--preset-4 .footer__social-btn {
+  color: var(--accent-blue);
+}
+
+.footer--preset-4 .footer__link:hover,
+.footer--preset-4 .footer__social-link:hover,
+.footer--preset-4 .footer__social-btn:hover {
+  color: var(--accent-pink);
+}
+
+/* Colorful info boxes — derived from Preset 4 accent palette */
+.footer--preset-4 .footer__box {
+  border-radius: var(--radius-xl);
+  padding: 1.25rem 1rem;
+  text-align: center;
+  color: white;
+}
+
+.footer--preset-4 .footer__box--1 { background: linear-gradient(135deg, var(--accent-blue), #5fe0ff); }
+.footer--preset-4 .footer__box--2 { background: linear-gradient(135deg, var(--accent-pink), #ff8dd4); }
+.footer--preset-4 .footer__box--3 { background: linear-gradient(135deg, #ffa06b, #ffc56b); }
+.footer--preset-4 .footer__box--4 { background: linear-gradient(135deg, var(--accent-green), #4fffaa); color: #0e131f; }
+
+.footer--preset-4 .footer__box-icon {
+  font-size: 1.5rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.footer--preset-4 .footer__box-title,
+.footer--preset-4 .footer__box-text {
+  font-family: var(--font-playful-body);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.footer--preset-4 .footer__bottom,
+.footer--preset-4 .footer__bottom-colorful,
+.footer--preset-4 .footer__bottom-structured {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 2px dashed rgba(59, 169, 255, 0.3);
+  text-align: center;
+  color: #1a1a1a;
+}
+
+.footer--preset-4 .footer__minimal-divider {
+  color: var(--accent-pink);
+}
+
+/* ── Preset 5: Professional & Structured ────────────────────────────────── */
 .footer--preset-5 {
   border-top: 3px solid rgba(48, 225, 124, 0.4);
   padding: 2rem 0;
   color: #1a1a1a;
+  box-shadow: var(--shadow-soft);
+}
+
+.footer--preset-5 .footer__hotel-name,
+.footer--preset-5 .footer__section-title,
+.footer--preset-5 .footer__heading {
+  font-family: var(--font-pro-heading);
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  color: var(--accent-green);
+}
+
+.footer--preset-5 .footer__text,
+.footer--preset-5 .footer__location,
+.footer--preset-5 .footer__copyright,
+.footer--preset-5 .footer__copyright-small,
+.footer--preset-5 .footer__minimal-text,
+.footer--preset-5 .footer__minimal-copyright,
+.footer--preset-5 .footer__text-small {
+  font-family: var(--font-pro-body);
+  color: #1a1a1a;
+}
+
+.footer--preset-5 .footer__link,
+.footer--preset-5 .footer__social-link,
+.footer--preset-5 .footer__social-btn {
+  color: var(--accent-green);
+  border-color: rgba(48, 225, 124, 0.3);
+}
+
+.footer--preset-5 .footer__link:hover,
+.footer--preset-5 .footer__social-link:hover,
+.footer--preset-5 .footer__social-btn:hover {
+  color: var(--preset-5-accent);
+  background: rgba(48, 225, 124, 0.08);
+}
+
+.footer--preset-5 .footer__bottom,
+.footer--preset-5 .footer__bottom-structured,
+.footer--preset-5 .footer__bottom-colorful {
+  border-top: 2px solid rgba(48, 225, 124, 0.25);
+  margin-top: 2rem;
+  padding-top: 1rem;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.footer--preset-5 .footer__minimal-divider {
+  color: rgba(48, 225, 124, 0.5);
+}
+
+.footer--preset-5 .footer__links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer--preset-5 .footer__social-structured {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 /* ========================================
@@ -2908,13 +3183,6 @@
     gap: 3rem;
   }
 
-
-/* Fix: Ensure footer preset-1 text is visible on light background */
-.footer--preset-1 .footer__hotel-name,
-.footer--preset-1 .footer__location,
-.footer--preset-1 .footer__copyright {
-  color: #1a1a1a;
-}
   /* Add vertical line separators between children (except last) */
   .footer__content-centered > *:not(:last-child)::after {
     content: "";
@@ -2923,7 +3191,12 @@
     top: 0;
     bottom: 0;
     width: 1px;
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.1);
+  }
+
+  /* Preset 2 dark bg: use gold separator */
+  .footer--preset-2 .footer__content-centered > *:not(:last-child)::after {
+    background: rgba(242, 201, 76, 0.25);
   }
 }
 
