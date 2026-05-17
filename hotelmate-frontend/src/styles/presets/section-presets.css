@@ -1203,6 +1203,14 @@
    Hero, Gallery, List, News, and Rooms presets.
    ======================================== */
 
+/* Common: constrain content width and center on wide screens.
+   The <footer> element spans full viewport width (background fills edge-to-edge);
+   section-container inside is capped so columns do not stretch absurdly wide. */
+.footer .section-container {
+  max-width: 1200px;
+  margin-inline: auto;
+}
+
 /* ── Preset 1: Clean & Modern ───────────────────────────────────────────── */
 .footer--preset-1 {
   border-top: 2px solid rgba(189, 220, 255, 0.3);
@@ -1503,6 +1511,23 @@ footer.footer--preset-2 h6 {
 
 .footer--preset-4 .footer__minimal-divider {
   color: var(--accent-pink);
+}
+
+/* Force all 4 vibrant boxes into a single row from 700 px upward.
+   At sm (576 px) Bootstrap gives col-sm-6 = 50 % = 2-per-row which is too
+   narrow for the colorful-box design. Override to 25% starting at 700 px. */
+@media (min-width: 700px) {
+  .footer--preset-4 .col-sm-6 {
+    flex: 0 0 auto;
+    width: 25%;
+  }
+}
+
+/* Tighten box padding on the sm/narrow range so text fits without heavy wrapping */
+@media (max-width: 699px) {
+  .footer--preset-4 .footer__box {
+    padding: 1rem 0.75rem;
+  }
 }
 
 /* ── Preset 5: Professional & Structured ────────────────────────────────── */
