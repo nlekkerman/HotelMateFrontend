@@ -608,6 +608,7 @@
 .hero--preset-2 .hero__logo {
   border-bottom: 3px solid rgba(242, 201, 76, 0.3);
   padding: 1rem;
+  margin-top: 100px;
 }
 
 .hero--preset-2 .hero__image {
@@ -1317,7 +1318,9 @@
 .footer--preset-2 .font-preset-2-heading {
   background-color: transparent;
   width: auto;
-  color: var(--gold); /* restore intended gold; overrides the !important via specificity chain */
+  color: var(
+    --gold
+  ); /* restore intended gold; overrides the !important via specificity chain */
 }
 
 /* theme-presets.css (.page-style-2 h5 { color: #1a1a1a }) loads after
@@ -1433,10 +1436,19 @@ footer.footer--preset-2 h6 {
   color: white;
 }
 
-.footer--preset-4 .footer__box--1 { background: linear-gradient(135deg, var(--accent-blue), #5fe0ff); }
-.footer--preset-4 .footer__box--2 { background: linear-gradient(135deg, var(--accent-pink), #ff8dd4); }
-.footer--preset-4 .footer__box--3 { background: linear-gradient(135deg, #ffa06b, #ffc56b); }
-.footer--preset-4 .footer__box--4 { background: linear-gradient(135deg, var(--accent-green), #4fffaa); color: #0e131f; }
+.footer--preset-4 .footer__box--1 {
+  background: linear-gradient(135deg, var(--accent-blue), #5fe0ff);
+}
+.footer--preset-4 .footer__box--2 {
+  background: linear-gradient(135deg, var(--accent-pink), #ff8dd4);
+}
+.footer--preset-4 .footer__box--3 {
+  background: linear-gradient(135deg, #ffa06b, #ffc56b);
+}
+.footer--preset-4 .footer__box--4 {
+  background: linear-gradient(135deg, var(--accent-green), #4fffaa);
+  color: #0e131f;
+}
 
 .footer--preset-4 .footer__box-icon {
   font-size: 1.5rem;
@@ -2758,7 +2770,10 @@ footer.footer--preset-2 h6 {
 .booking-page.page-style-1 .booking-step .card.border-primary .btn-success * {
   color: #ffffff !important;
 }
-.booking-page.page-style-1 .booking-step .card.border-primary .btn-success:hover {
+.booking-page.page-style-1
+  .booking-step
+  .card.border-primary
+  .btn-success:hover {
   background: #0a3a85 !important;
   box-shadow: 0 6px 18px rgba(13, 71, 161, 0.55) !important;
   transform: translateY(-2px);
@@ -2767,10 +2782,18 @@ footer.footer--preset-2 h6 {
   border-color: rgba(13, 71, 161, 0.25) !important;
   background: rgba(255, 255, 255, 0.7) !important;
 }
-.booking-page.page-style-1 .booking-step .card.border-primary .border.rounded * {
+.booking-page.page-style-1
+  .booking-step
+  .card.border-primary
+  .border.rounded
+  * {
   color: #0d47a1 !important;
 }
-.booking-page.page-style-1 .booking-step .card.border-primary .border.rounded .text-muted {
+.booking-page.page-style-1
+  .booking-step
+  .card.border-primary
+  .border.rounded
+  .text-muted {
   color: #37474f !important;
 }
 
@@ -2820,7 +2843,10 @@ footer.footer--preset-2 h6 {
 .booking-page.page-style-2 .booking-step .card.border-primary .btn-success * {
   color: #1a1000 !important;
 }
-.booking-page.page-style-2 .booking-step .card.border-primary .btn-success:hover {
+.booking-page.page-style-2
+  .booking-step
+  .card.border-primary
+  .btn-success:hover {
   background: linear-gradient(135deg, #e6c15c, #f7d96a) !important;
   box-shadow: 0 6px 20px rgba(242, 201, 76, 0.65) !important;
   transform: translateY(-2px);
@@ -2829,10 +2855,18 @@ footer.footer--preset-2 h6 {
   border-color: rgba(212, 168, 56, 0.35) !important;
   background: rgba(255, 255, 255, 0.06) !important;
 }
-.booking-page.page-style-2 .booking-step .card.border-primary .border.rounded * {
+.booking-page.page-style-2
+  .booking-step
+  .card.border-primary
+  .border.rounded
+  * {
   color: #f2c94c !important;
 }
-.booking-page.page-style-2 .booking-step .card.border-primary .border.rounded .text-muted {
+.booking-page.page-style-2
+  .booking-step
+  .card.border-primary
+  .border.rounded
+  .text-muted {
   color: rgba(255, 255, 255, 0.6) !important;
 }
 
@@ -2885,7 +2919,10 @@ footer.footer--preset-2 h6 {
 .booking-page.page-style-3 .booking-step .card.border-primary .btn-success * {
   color: #ffffff !important;
 }
-.booking-page.page-style-3 .booking-step .card.border-primary .btn-success:hover {
+.booking-page.page-style-3
+  .booking-step
+  .card.border-primary
+  .btn-success:hover {
   background: #222222 !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
   transform: translateY(-2px);
@@ -2894,10 +2931,18 @@ footer.footer--preset-2 h6 {
   border-color: rgba(0, 0, 0, 0.15) !important;
   background: #f9f9f9 !important;
 }
-.booking-page.page-style-3 .booking-step .card.border-primary .border.rounded * {
+.booking-page.page-style-3
+  .booking-step
+  .card.border-primary
+  .border.rounded
+  * {
   color: #000000 !important;
 }
-.booking-page.page-style-3 .booking-step .card.border-primary .border.rounded .text-muted {
+.booking-page.page-style-3
+  .booking-step
+  .card.border-primary
+  .border.rounded
+  .text-muted {
   color: #555555 !important;
 }
 
@@ -2951,7 +2996,10 @@ footer.footer--preset-2 h6 {
 .booking-page.page-style-4 .booking-step .card.border-primary .btn-success * {
   color: #8e0038 !important;
 }
-.booking-page.page-style-4 .booking-step .card.border-primary .btn-success:hover {
+.booking-page.page-style-4
+  .booking-step
+  .card.border-primary
+  .btn-success:hover {
   background: #fce4ec !important;
   box-shadow: 0 6px 20px rgba(255, 255, 255, 0.5) !important;
   transform: translateY(-2px);
@@ -2960,10 +3008,18 @@ footer.footer--preset-2 h6 {
   border-color: rgba(255, 255, 255, 0.3) !important;
   background: rgba(255, 255, 255, 0.1) !important;
 }
-.booking-page.page-style-4 .booking-step .card.border-primary .border.rounded * {
+.booking-page.page-style-4
+  .booking-step
+  .card.border-primary
+  .border.rounded
+  * {
   color: #ffffff !important;
 }
-.booking-page.page-style-4 .booking-step .card.border-primary .border.rounded .text-muted {
+.booking-page.page-style-4
+  .booking-step
+  .card.border-primary
+  .border.rounded
+  .text-muted {
   color: rgba(255, 255, 255, 0.7) !important;
 }
 
@@ -3017,7 +3073,10 @@ footer.footer--preset-2 h6 {
 .booking-page.page-style-5 .booking-step .card.border-primary .btn-success * {
   color: #145a1e !important;
 }
-.booking-page.page-style-5 .booking-step .card.border-primary .btn-success:hover {
+.booking-page.page-style-5
+  .booking-step
+  .card.border-primary
+  .btn-success:hover {
   background: #e8f5e9 !important;
   box-shadow: 0 6px 18px rgba(255, 255, 255, 0.5) !important;
   transform: translateY(-2px);
@@ -3026,10 +3085,18 @@ footer.footer--preset-2 h6 {
   border-color: rgba(255, 255, 255, 0.3) !important;
   background: rgba(255, 255, 255, 0.1) !important;
 }
-.booking-page.page-style-5 .booking-step .card.border-primary .border.rounded * {
+.booking-page.page-style-5
+  .booking-step
+  .card.border-primary
+  .border.rounded
+  * {
   color: #ffffff !important;
 }
-.booking-page.page-style-5 .booking-step .card.border-primary .border.rounded .text-muted {
+.booking-page.page-style-5
+  .booking-step
+  .card.border-primary
+  .border.rounded
+  .text-muted {
   color: rgba(255, 255, 255, 0.7) !important;
 }
 
@@ -3132,7 +3199,6 @@ footer.footer--preset-2 h6 {
   border: 1px solid rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(5px);
 }
-
 
 .page-style-3 .card .card-title,
 .page-style-3 .card h1,
