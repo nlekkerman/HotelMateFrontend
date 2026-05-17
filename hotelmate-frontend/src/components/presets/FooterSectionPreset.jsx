@@ -10,6 +10,8 @@ import { Row, Col } from 'react-bootstrap';
  * Preset 4: Colorful boxes (Vibrant & Playful)
  * Preset 5: Structured 4-column (Professional & Structured)
  */
+const DEMO_DISCLAIMER = 'HotelsMates is a self-directed SaaS concept built for portfolio review. Demo data only — no real hotel, guest, staff, or payment data.';
+
 const FooterSectionPreset = ({ section, hotel }) => {
   const variant = section?.style_variant ?? 1; // Default to Preset 1
   const footerData = section?.footer_data || {};
@@ -37,6 +39,7 @@ const FooterSectionPreset = ({ section, hotel }) => {
               &copy; {new Date().getFullYear()} {hotelName}. All rights reserved.
             </p>
           </div>
+          <p className="footer__demo-disclaimer">{DEMO_DISCLAIMER}</p>
         </div>
       </footer>
     );
@@ -75,6 +78,7 @@ const FooterSectionPreset = ({ section, hotel }) => {
               &copy; {new Date().getFullYear()} {hotelName}. All rights reserved.
             </p>
           </div>
+          <p className="footer__demo-disclaimer">{DEMO_DISCLAIMER}</p>
         </div>
       </footer>
     );
@@ -94,6 +98,7 @@ const FooterSectionPreset = ({ section, hotel }) => {
               © {new Date().getFullYear()}
             </span>
           </div>
+          <p className="footer__demo-disclaimer">{DEMO_DISCLAIMER}</p>
         </div>
       </footer>
     );
@@ -135,6 +140,7 @@ const FooterSectionPreset = ({ section, hotel }) => {
               © {new Date().getFullYear()} {hotelName}
             </p>
           </div>
+          <p className="footer__demo-disclaimer">{DEMO_DISCLAIMER}</p>
         </div>
       </footer>
     );
@@ -192,6 +198,7 @@ const FooterSectionPreset = ({ section, hotel }) => {
               &copy; {new Date().getFullYear()} {hotelName}. All rights reserved.
             </p>
           </div>
+          <p className="footer__demo-disclaimer">{DEMO_DISCLAIMER}</p>
         </div>
       </footer>
     );
@@ -212,6 +219,7 @@ const FooterSectionPreset = ({ section, hotel }) => {
             &copy; {new Date().getFullYear()} {hotelName}. All rights reserved.
           </p>
         </div>
+        <p className="footer__demo-disclaimer">{DEMO_DISCLAIMER}</p>
       </div>
     </footer>
   );

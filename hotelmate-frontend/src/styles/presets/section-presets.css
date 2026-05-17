@@ -3210,3 +3210,23 @@
     display: none;
   }
 }
+
+/* ========================================
+   DEMO DISCLAIMER (public footer only)
+   ======================================== */
+.footer__demo-disclaimer {
+  margin-top: 1.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(0, 0, 0, 0.12);
+  font-size: 0.7rem;
+  line-height: 1.5;
+  text-align: center;
+  color: rgba(0, 0, 0, 0.4);
+  letter-spacing: 0.01em;
+}
+
+/* Preset 2 dark bg: lighten the disclaimer text */
+.footer--preset-2 .footer__demo-disclaimer {
+  border-top-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.3);
+}
