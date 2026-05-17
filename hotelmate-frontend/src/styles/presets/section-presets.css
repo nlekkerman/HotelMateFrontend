@@ -1309,6 +1309,29 @@
   color: rgba(242, 201, 76, 0.4);
 }
 
+/* ── Preset 2 heading class overrides ───────────────────────────────────── */
+/* The legacy .font-preset-2-heading rule in presets.css adds
+   background-color + width:100% (designed for hero overlays).
+   These break the footer column layout and add unwanted dark boxes.
+   Higher specificity (2 classes) beats the legacy single-class rule. */
+.footer--preset-2 .font-preset-2-heading {
+  background-color: transparent;
+  width: auto;
+  color: var(--gold); /* restore intended gold; overrides the !important via specificity chain */
+}
+
+/* theme-presets.css (.page-style-2 h5 { color: #1a1a1a }) loads after
+   section-presets.css and would make subheadings invisible on dark bg.
+   Using element + class + element gives specificity (0,1,2) > (0,1,1). */
+footer.footer--preset-2 h1,
+footer.footer--preset-2 h2,
+footer.footer--preset-2 h3,
+footer.footer--preset-2 h4,
+footer.footer--preset-2 h5,
+footer.footer--preset-2 h6 {
+  color: var(--gold);
+}
+
 /* ── Preset 3: Minimal & Sleek ──────────────────────────────────────────── */
 .footer--preset-3 {
   border-top: 1px solid rgba(0, 0, 0, 0.08);
